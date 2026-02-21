@@ -1403,3 +1403,219 @@ def test_azure_stop_words_still_applied_to_regular_responses():
         assert "Observation:" not in result
         assert "Found results" not in result
         assert "I need to search for more information" in result
+
+
+# =============================================================================
+# Tests for issue #4478: Custom deployment names with Azure OpenAI endpoints
+# =============================================================================
+
+
+def test_azure_custom_deployment_name_detected_as_openai_on_azure_openai_endpoint():
+    """
+    Test that custom deployment names (e.g. 'gpt5nano') are correctly detected
+    as OpenAI models when using an Azure OpenAI endpoint.
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4478
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = AzureCompletion(
+        model="gpt5nano",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com/openai/deployments/gpt5nano",
+    )
+
+    assert llm.is_azure_openai_endpoint is True
+    assert llm.is_openai_model is True
+    assert llm.supports_function_calling() is True
+
+
+def test_azure_custom_deployment_name_response_model_respected():
+    """
+    Test that response_model is respected for custom Azure deployment names.
+    This is the core bug from issue #4478: LLM call does not adhere to
+    pydantic response_model for custom deployment names like 'gpt5nano'.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    class SimpleResponse(BaseModel):
+        message: str = Field(description="A primary message")
+        reason: str = Field(description="Reasoning for the response")
+
+    llm = AzureCompletion(
+        model="gpt5nano",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com/openai/deployments/gpt5nano",
+    )
+
+    json_response = '{"message": "Paris", "reason": "It is the capital of France"}'
+
+    with patch.object(llm.client, 'complete') as mock_complete:
+        mock_message = MagicMock()
+        mock_message.content = json_response
+        mock_message.tool_calls = None
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = MagicMock(
+            prompt_tokens=50, completion_tokens=30, total_tokens=80
+        )
+
+        mock_complete.return_value = mock_response
+
+        result = llm.call(
+            messages=[{"role": "user", "content": "What is the capital of France?"}],
+            response_model=SimpleResponse,
+        )
+
+        assert isinstance(result, SimpleResponse)
+        assert result.message == "Paris"
+        assert result.reason == "It is the capital of France"
+
+
+def test_azure_custom_deployment_name_includes_response_format_in_params():
+    """
+    Test that _prepare_completion_params includes response_format for custom
+    deployment names on Azure OpenAI endpoints.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    class MyModel(BaseModel):
+        answer: str = Field(description="The answer")
+
+    llm = AzureCompletion(
+        model="my-custom-gpt4o",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com/openai/deployments/my-custom-gpt4o",
+    )
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "test"}],
+        response_model=MyModel,
+    )
+
+    assert "response_format" in params
+
+
+def test_azure_custom_deployment_name_includes_tools_in_params():
+    """
+    Test that _prepare_completion_params includes tools for custom deployment
+    names on Azure OpenAI endpoints.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = AzureCompletion(
+        model="my-custom-gpt4o",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com/openai/deployments/my-custom-gpt4o",
+    )
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get weather info",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"location": {"type": "string"}},
+                },
+            },
+        }
+    ]
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "test"}],
+        tools=tools,
+    )
+
+    assert "tools" in params
+    assert "tool_choice" in params
+
+
+def test_azure_non_openai_endpoint_custom_name_not_detected_as_openai():
+    """
+    Test that custom model names on non-Azure-OpenAI endpoints (like Azure AI
+    Inference) are still correctly NOT detected as OpenAI models.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = AzureCompletion(
+        model="my-custom-model",
+        api_key="test-key",
+        endpoint="https://models.inference.ai.azure.com",
+    )
+
+    assert llm.is_azure_openai_endpoint is False
+    assert llm.is_openai_model is False
+    assert llm.supports_function_calling() is False
+
+
+def test_azure_custom_deployment_name_streaming_response_model():
+    """
+    Test that streaming responses with custom deployment names also respect
+    response_model via the _finalize_streaming_response path.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    class StreamResult(BaseModel):
+        answer: str = Field(description="The answer")
+
+    llm = AzureCompletion(
+        model="gpt5nano",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com/openai/deployments/gpt5nano",
+        stream=True,
+    )
+
+    json_content = '{"answer": "42"}'
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "test"}],
+        response_model=StreamResult,
+    )
+
+    result = llm._finalize_streaming_response(
+        full_response=json_content,
+        tool_calls={},
+        usage_data={"total_tokens": 10},
+        params=params,
+        response_model=StreamResult,
+    )
+
+    assert isinstance(result, StreamResult)
+    assert result.answer == "42"
+
+
+def test_azure_various_custom_deployment_names_on_openai_endpoint():
+    """
+    Test multiple custom deployment name patterns that should all be detected
+    as OpenAI models when on an Azure OpenAI endpoint.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    custom_names = [
+        "gpt5nano",
+        "my-gpt4-deployment",
+        "production-model-v2",
+        "team-a-llm",
+        "chatbot-engine",
+    ]
+
+    for name in custom_names:
+        llm = AzureCompletion(
+            model=name,
+            api_key="test-key",
+            endpoint=f"https://test.openai.azure.com/openai/deployments/{name}",
+        )
+
+        assert llm.is_openai_model is True, (
+            f"Custom deployment '{name}' on Azure OpenAI endpoint should be detected as OpenAI model"
+        )
+        assert llm.supports_function_calling() is True, (
+            f"Custom deployment '{name}' on Azure OpenAI endpoint should support function calling"
+        )
