@@ -1,13 +1,16 @@
 """Unit tests for LLM multimodal functionality across all providers."""
 
+import asyncio
 import base64
+import json
+import logging
 import os
 from unittest.mock import patch
 
 import pytest
 
 from crewai.llm import LLM
-from crewai_files import ImageFile, PDFFile, TextFile, format_multimodal_content
+from crewai_files import File, ImageFile, PDFFile, TextFile, format_multimodal_content
 
 # Check for optional provider dependencies
 try:
@@ -373,3 +376,167 @@ class TestMultipleFilesFormatting:
         result = format_multimodal_content({}, llm.model)
 
         assert result == []
+
+
+class TestFilesStrippedWhenMultimodalUnsupported:
+    """Tests that File objects are always stripped from messages before API call.
+
+    Regression tests for https://github.com/crewAIInc/crewAI/issues/4498
+    TypeError: Object of type File is not JSON serializable
+    """
+
+    def test_base_llm_strips_files_when_multimodal_not_supported(self) -> None:
+        """BaseLLM._process_message_files must remove files when multimodal is off."""
+        from crewai.llms.base_llm import BaseLLM
+
+        class NonMultimodalLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = NonMultimodalLLM(model="test-no-multimodal")
+        assert llm.supports_multimodal() is False
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Describe this file",
+                "files": {"doc": File(source=MINIMAL_PDF)},
+            }
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert "files" not in result[0]
+        assert result[0]["content"] == "Describe this file"
+
+    def test_base_llm_strips_files_logs_warning(self, caplog) -> None:
+        """BaseLLM logs a warning when dropping files on non-multimodal models."""
+        from crewai.llms.base_llm import BaseLLM
+
+        class NonMultimodalLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+        llm = NonMultimodalLLM(model="test-no-multimodal")
+        messages = [
+            {
+                "role": "user",
+                "content": "Describe this",
+                "files": {"img": ImageFile(source=MINIMAL_PNG)},
+            }
+        ]
+
+        with caplog.at_level(logging.WARNING):
+            llm._process_message_files(messages)
+
+        assert any("dropped from the request" in r.message for r in caplog.records)
+
+    def test_litellm_strips_files_when_multimodal_not_supported(self) -> None:
+        """LLM (litellm wrapper) strips files for non-multimodal models."""
+        llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
+        assert llm.supports_multimodal() is False
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Describe this file",
+                "files": {"doc": File(source=MINIMAL_PDF)},
+            }
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert "files" not in result[0]
+        assert result[0]["content"] == "Describe this file"
+
+    def test_litellm_async_strips_files_when_multimodal_not_supported(self) -> None:
+        """LLM async path strips files for non-multimodal models."""
+        llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
+        assert llm.supports_multimodal() is False
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Describe this file",
+                "files": {"doc": File(source=MINIMAL_PDF)},
+            }
+        ]
+
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(
+                llm._aprocess_message_files(messages)
+            )
+        finally:
+            loop.close()
+
+        assert "files" not in result[0]
+        assert result[0]["content"] == "Describe this file"
+
+    def test_openai_native_strips_files_when_multimodal_not_supported(self) -> None:
+        """OpenAI native provider strips files for non-vision models."""
+        llm = LLM(model="openai/gpt-3.5-turbo")
+        assert llm.supports_multimodal() is False
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Describe this file",
+                "files": {"doc": File(source=MINIMAL_PDF)},
+            }
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert "files" not in result[0]
+
+    def test_messages_are_json_serializable_after_file_stripping(self) -> None:
+        """After _process_message_files, messages must be JSON serializable."""
+        llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Analyze this",
+                "files": {"my_file": File(source=MINIMAL_PDF)},
+            }
+        ]
+
+        result = llm._process_message_files(messages)
+
+        json.dumps(result)
+
+    def test_multiple_messages_all_stripped(self) -> None:
+        """All messages with files get stripped, not just the first."""
+        llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
+
+        messages = [
+            {
+                "role": "user",
+                "content": "First",
+                "files": {"a": File(source=MINIMAL_PDF)},
+            },
+            {
+                "role": "user",
+                "content": "Second",
+                "files": {"b": ImageFile(source=MINIMAL_PNG)},
+            },
+        ]
+
+        result = llm._process_message_files(messages)
+
+        for msg in result:
+            assert "files" not in msg
+
+    def test_messages_without_files_unchanged(self) -> None:
+        """Messages without files are not modified."""
+        llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
+
+        messages = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi"},
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result == messages

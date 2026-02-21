@@ -595,25 +595,36 @@ class BaseLLM(ABC):
         For each message with a `files` field, formats the files into
         provider-specific content blocks and updates the message content.
 
+        Always strips the ``files`` key so that non-serializable objects
+        never leak into the API payload.
+
         Args:
             messages: List of messages that may contain file attachments.
 
         Returns:
             Messages with files formatted into content blocks.
         """
-        if not HAS_CREWAI_FILES or not self.supports_multimodal():
-            return messages
-
-        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
-        api = getattr(self, "api", None)
+        can_process = HAS_CREWAI_FILES and self.supports_multimodal()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
+            if not can_process:
+                logging.warning(
+                    "Files were attached to a message but the model does not "
+                    "support multimodal input or crewai-files is not installed. "
+                    "The files have been dropped from the request."
+                )
+                msg.pop("files", None)
+                continue
+
             existing_content = msg.get("content", "")
             text = existing_content if isinstance(existing_content, str) else None
+
+            provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+            api = getattr(self, "api", None)
 
             content_blocks = format_multimodal_content(
                 files, provider, api=api, prefer_upload=self.prefer_upload, text=text
