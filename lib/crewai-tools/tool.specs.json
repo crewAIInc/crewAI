@@ -16994,6 +16994,100 @@
       }
     },
     {
+      "description": "A tool that can be used to search the internet across multiple search engines with a search_query. Supports automatic engine routing across Google, Bing, DuckDuckGo, Brave, Yahoo, and Yandex. Handles captchas and blocking automatically.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serpex",
+          "name": "SERPEX_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Search the internet with Serpex",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "base_url": {
+            "default": "https://api.serpex.dev",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "engine": {
+            "default": "auto",
+            "title": "Engine",
+            "type": "string"
+          },
+          "env_vars": {
+            "items": {
+              "$ref": "#/$defs/EnvVar"
+            },
+            "title": "Env Vars",
+            "type": "array"
+          },
+          "time_range": {
+            "default": "all",
+            "title": "Time Range",
+            "type": "string"
+          }
+        },
+        "title": "SerpexTool",
+        "type": "object"
+      },
+      "name": "SerpexTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for SerpexTool.",
+        "properties": {
+          "search_query": {
+            "description": "Mandatory search query you want to use to search the internet",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "SerpexToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool to perform to perform a job search in the US with a search_query.",
       "env_vars": [
         {
