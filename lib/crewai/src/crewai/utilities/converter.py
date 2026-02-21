@@ -21,7 +21,30 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_MARKDOWN_FENCE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^\s*```(?:json)?\s*\n(.*)\n\s*```\s*$", re.DOTALL
+)
 _I18N = get_i18n()
+
+
+def _strip_markdown_fences(text: str) -> str:
+    """Strip markdown code-block fences that some LLMs wrap around JSON.
+
+    Handles patterns like:
+        ```json\n{...}\n```
+        ```\n{...}\n```
+
+    Args:
+        text: Raw LLM response that may contain markdown fences.
+
+    Returns:
+        The inner content with fences removed, or the original text if
+        no fences are detected.
+    """
+    match = _MARKDOWN_FENCE_PATTERN.match(text)
+    if match:
+        return match.group(1)
+    return text
 
 
 class ConverterError(Exception):
@@ -65,7 +88,25 @@ class Converter(OutputConverter):
                 if isinstance(response, BaseModel):
                     result = response
                 else:
-                    result = self.model.model_validate_json(response)
+                    cleaned = _strip_markdown_fences(response)
+                    try:
+                        result = self.model.model_validate_json(cleaned)
+                    except (ValidationError, ValueError):
+                        result = handle_partial_json(
+                            result=response,
+                            model=self.model,
+                            is_json_output=False,
+                            agent=None,
+                        )
+                        if not isinstance(result, BaseModel):
+                            if isinstance(result, dict):
+                                result = self.model.model_validate(result)
+                            elif isinstance(result, str):
+                                result = self.model.model_validate_json(result)
+                            else:
+                                raise ConverterError(
+                                    "handle_partial_json returned an unexpected type."
+                                ) from None
             else:
                 response = self.llm.call(
                     [
@@ -74,9 +115,9 @@ class Converter(OutputConverter):
                     ]
                 )
                 try:
-                    # Try to directly validate the response JSON
-                    result = self.model.model_validate_json(response)
-                except ValidationError:
+                    cleaned = _strip_markdown_fences(response)
+                    result = self.model.model_validate_json(cleaned)
+                except (ValidationError, ValueError):
                     # If direct validation fails, attempt to extract valid JSON
                     result = handle_partial_json(  # type: ignore[assignment]
                         result=response,
@@ -185,7 +226,8 @@ def convert_to_model(
         )
 
     try:
-        escaped_result = json.dumps(json.loads(result, strict=False))
+        cleaned_result = _strip_markdown_fences(result)
+        escaped_result = json.dumps(json.loads(cleaned_result, strict=False))
         return validate_model(
             result=escaped_result, model=model, is_json_output=bool(output_json)
         )
