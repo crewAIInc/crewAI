@@ -18,16 +18,24 @@ except ImportError:
     AsyncTavilyClient = Any
 
 
-class TavilyExtractorToolSchema(BaseModel):
-    """Input schema for TavilyExtractorTool."""
+class TavilyExtractToolSchema(BaseModel):
+    """Input schema for TavilyExtractTool."""
 
     urls: list[str] | str = Field(
         ...,
         description="The URL(s) to extract data from. Can be a single URL or a list of URLs.",
     )
+    extract_depth: Literal["basic", "advanced"] | None = Field(
+        default=None,
+        description="Extraction depth - 'basic' for main content, 'advanced' for comprehensive extraction.",
+    )
+    query: str | None = Field(
+        default=None,
+        description="User intent query for reranking extracted content chunks.",
+    )
 
 
-class TavilyExtractorTool(BaseTool):
+class TavilyExtractTool(BaseTool):
     package_dependencies: list[str] = Field(default_factory=lambda: ["tavily-python"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -52,14 +60,15 @@ class TavilyExtractorTool(BaseTool):
         include_images: Whether to include images in the extraction.
         extract_depth: The depth of extraction.
         timeout: The timeout for the extraction request in seconds.
+        extra_kwargs: Additional kwargs passed directly to tavily-python's extract() method.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     client: TavilyClient | None = None
     async_client: AsyncTavilyClient | None = None
-    name: str = "TavilyExtractorTool"
+    name: str = "TavilyExtractTool"
     description: str = "Extracts content from one or more web pages using the Tavily API. Returns structured data."
-    args_schema: type[BaseModel] = TavilyExtractorToolSchema
+    args_schema: type[BaseModel] = TavilyExtractToolSchema
     api_key: str | None = Field(
         default_factory=lambda: os.getenv("TAVILY_API_KEY"),
         description="The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
@@ -80,9 +89,30 @@ class TavilyExtractorTool(BaseTool):
         default=60,
         description="The timeout for the extraction request in seconds.",
     )
+    format: Literal["markdown", "text"] | None = Field(
+        default=None,
+        description="The format of the extracted content.",
+    )
+    include_favicon: bool | None = Field(
+        default=None,
+        description="Whether to include favicon URLs in the extraction results.",
+    )
+    include_usage: bool | None = Field(
+        default=None,
+        description="Whether to include credit usage information in the response.",
+    )
+    chunks_per_source: int | None = Field(
+        default=None,
+        description="Maximum number of content chunks per source (1-5). Only used when query is provided.",
+    )
+    extra_kwargs: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional keyword arguments to pass directly to tavily-python's extract() method. "
+        "Use this for new tavily-python parameters not yet explicitly supported.",
+    )
 
     def __init__(self, **kwargs: Any):
-        """Initializes the TavilyExtractorTool.
+        """Initializes the TavilyExtractTool.
 
         Args:
             **kwargs: Additional keyword arguments.
@@ -105,32 +135,36 @@ class TavilyExtractorTool(BaseTool):
                 ) from None
 
             if click.confirm(
-                "You are missing the 'tavily-python' package, which is required for TavilyExtractorTool. Would you like to install it?"
+                "You are missing the 'tavily-python' package, which is required for TavilyExtractTool. Would you like to install it?"
             ):
                 try:
                     subprocess.run(["uv pip", "install", "tavily-python"], check=True)  # noqa: S607
                     raise ImportError(
-                        "'tavily-python' has been installed. Please restart your Python application to use the TavilyExtractorTool."
+                        "'tavily-python' has been installed. Please restart your Python application to use the TavilyExtractTool."
                     )
                 except subprocess.CalledProcessError as e:
                     raise ImportError(
                         f"Attempted to install 'tavily-python' but failed: {e}. "
-                        f"Please install it manually to use the TavilyExtractorTool."
+                        f"Please install it manually to use the TavilyExtractTool."
                     ) from e
             else:
                 raise ImportError(
-                    "The 'tavily-python' package is required to use the TavilyExtractorTool. "
+                    "The 'tavily-python' package is required to use the TavilyExtractTool. "
                     "Please install it with: uv add tavily-python"
                 )
 
     def _run(
         self,
         urls: list[str] | str,
+        extract_depth: Literal["basic", "advanced"] | None = None,
+        query: str | None = None,
     ) -> str:
         """Synchronously extracts content from the given URL(s).
 
         Args:
             urls: The URL(s) to extract data from.
+            extract_depth: Extraction depth (overrides class default if provided).
+            query: User intent query for reranking content (overrides class default if provided).
 
         Returns:
             A JSON string containing the extracted data.
@@ -143,9 +177,15 @@ class TavilyExtractorTool(BaseTool):
         return json.dumps(
             self.client.extract(
                 urls=urls,
-                extract_depth=self.extract_depth,
+                extract_depth=extract_depth if extract_depth is not None else self.extract_depth,
                 include_images=self.include_images,
+                format=self.format,
                 timeout=self.timeout,
+                include_favicon=self.include_favicon,
+                include_usage=self.include_usage,
+                query=query,
+                chunks_per_source=self.chunks_per_source,
+                **self.extra_kwargs,
             ),
             indent=2,
         )
@@ -153,11 +193,15 @@ class TavilyExtractorTool(BaseTool):
     async def _arun(
         self,
         urls: list[str] | str,
+        extract_depth: Literal["basic", "advanced"] | None = None,
+        query: str | None = None,
     ) -> str:
         """Asynchronously extracts content from the given URL(s).
 
         Args:
             urls: The URL(s) to extract data from.
+            extract_depth: Extraction depth (overrides class default if provided).
+            query: User intent query for reranking content (overrides class default if provided).
 
         Returns:
             A JSON string containing the extracted data.
@@ -169,8 +213,14 @@ class TavilyExtractorTool(BaseTool):
 
         results = await self.async_client.extract(
             urls=urls,
-            extract_depth=self.extract_depth,
+            extract_depth=extract_depth if extract_depth is not None else self.extract_depth,
             include_images=self.include_images,
+            format=self.format,
             timeout=self.timeout,
+            include_favicon=self.include_favicon,
+            include_usage=self.include_usage,
+            query=query,
+            chunks_per_source=self.chunks_per_source,
+            **self.extra_kwargs,
         )
         return json.dumps(results, indent=2)
