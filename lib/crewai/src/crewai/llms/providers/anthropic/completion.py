@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeGuard, cast
 
 from pydantic import BaseModel
 
+from crewai import __version__
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
@@ -231,6 +232,7 @@ class AnthropicCompletion(BaseLLM):
             "base_url": self.base_url,
             "timeout": self.timeout,
             "max_retries": self.max_retries,
+            "default_headers": {"User-Agent": f"crewai/{__version__}"},
         }
 
         if self.interceptor:
@@ -239,7 +241,20 @@ class AnthropicCompletion(BaseLLM):
             client_params["http_client"] = http_client  # type: ignore[assignment]
 
         if self.client_params:
-            client_params.update(self.client_params)
+            # Deep-merge default_headers so User-Agent is preserved
+            # even when the caller provides custom headers.
+            if "default_headers" in self.client_params:
+                client_params["default_headers"].update(
+                    self.client_params["default_headers"]
+                )
+                remaining = {
+                    k: v
+                    for k, v in self.client_params.items()
+                    if k != "default_headers"
+                }
+                client_params.update(remaining)
+            else:
+                client_params.update(self.client_params)
 
         return client_params
 
