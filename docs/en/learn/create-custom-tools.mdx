@@ -36,7 +36,6 @@ class MyCustomTool(BaseTool):
 
 #### Securing Custom Tools with SIGIL
 
-When building custom tools that connect to external or untrusted data sources, it's highly recommended to use the [SIGIL Protocol](https://sigil-protocol.org) to prevent prompt injection and data exfiltration.
 
 You can secure any custom tool by applying the `@sigil_gate` decorator. SIGIL will automatically scan the tool's inputs and outputs against thousands of threat patterns before execution.
 
