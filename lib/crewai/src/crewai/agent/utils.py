@@ -273,6 +273,46 @@ def save_last_messages(agent: Agent) -> None:
     agent._last_messages = sanitized_messages
 
 
+def _inject_mcp_tools(agent: Agent, tools: list[BaseTool]) -> list[BaseTool]:
+    """Inject MCP tools into the tools list if the agent has MCP servers configured.
+
+    This ensures MCP tools are available even when the agent is invoked
+    outside the normal Crew task-execution flow (e.g. via delegation).
+
+    Args:
+        agent: The agent instance that may have MCP servers configured.
+        tools: Current list of tools.
+
+    Returns:
+        Updated list of tools with MCP tools added (if any).
+    """
+    mcps = getattr(agent, "mcps", None)
+    if not mcps:
+        return tools
+
+    if not hasattr(agent, "get_mcp_tools"):
+        return tools
+
+    try:
+        mcp_tools = agent.get_mcp_tools(mcps=mcps)
+        if mcp_tools:
+            # Merge without duplicates based on tool name
+            existing_names = {tool.name for tool in tools}
+            for tool in mcp_tools:
+                if tool.name not in existing_names:
+                    tools.append(tool)
+                    existing_names.add(tool.name)
+    except Exception:
+        # Log but don't fail task execution if MCP tool loading fails
+        agent._logger.log(
+            "warning",
+            "Failed to load MCP tools during task execution",
+            color="yellow",
+        )
+
+    return tools
+
+
 def prepare_tools(
     agent: Agent, tools: list[BaseTool] | None, task: Task
 ) -> list[BaseTool]:
@@ -286,7 +326,13 @@ def prepare_tools(
     Returns:
         The list of tools to use.
     """
-    final_tools = tools or agent.tools or []
+    final_tools = list(tools or agent.tools or [])
+
+    # Inject MCP tools when the agent has MCP servers configured.
+    # This is needed for delegation scenarios where the Crew's
+    # _prepare_tools() is not called for the delegated-to agent.
+    final_tools = _inject_mcp_tools(agent, final_tools)
+
     agent.create_agent_executor(tools=final_tools, task=task)
     return final_tools
 
