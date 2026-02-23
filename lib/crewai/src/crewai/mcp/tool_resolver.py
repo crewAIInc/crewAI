@@ -113,6 +113,9 @@ class MCPToolResolver:
         self, amp_refs: list[tuple[str, str | None]]
     ) -> tuple[list[BaseTool], list[Any]]:
         """Fetch AMP configs in bulk and return their tools and clients."""
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.mcp_events import MCPConfigFetchFailedEvent
+
         unique_slugs = list(dict.fromkeys(slug for slug, _ in amp_refs))
         amp_configs_map = self._fetch_amp_mcp_configs(unique_slugs)
 
@@ -122,9 +125,13 @@ class MCPToolResolver:
         for slug, specific_tool in amp_refs:
             config_dict = amp_configs_map.get(slug)
             if not config_dict:
-                self._logger.log(
-                    "warning",
-                    f"Failed to fetch MCP config for '{slug}'. Make sure it is connected in your account.",
+                crewai_event_bus.emit(
+                    self,
+                    MCPConfigFetchFailedEvent(
+                        slug=slug,
+                        error=f"Config for '{slug}' not found. Make sure it is connected in your account.",
+                        error_type="not_connected",
+                    ),
                 )
                 continue
 
@@ -143,8 +150,13 @@ class MCPToolResolver:
                 if client:
                     all_clients.append(client)
             except Exception as e:
-                self._logger.log(
-                    "warning", f"Failed to get MCP tools from '{slug}': {e}"
+                crewai_event_bus.emit(
+                    self,
+                    MCPConfigFetchFailedEvent(
+                        slug=slug,
+                        error=str(e),
+                        error_type="connection_failed",
+                    ),
                 )
 
         return all_tools, all_clients
@@ -156,6 +168,9 @@ class MCPToolResolver:
 
         Sends a GET request to the CrewAI+ mcps/configs endpoint with
         comma-separated slugs. CrewAI+ proxies the request to crewai-oauth.
+
+        API-level failures return ``{}``; individual slugs will then
+        surface as ``MCPConfigFetchFailedEvent`` in :meth:`_resolve_amp`.
         """
         import requests
 
@@ -172,17 +187,17 @@ class MCPToolResolver:
                 return response.json().get("configs", {})
 
             self._logger.log(
-                "warning",
+                "debug",
                 f"Failed to fetch MCP configs: HTTP {response.status_code}",
             )
             return {}
 
         except requests.exceptions.RequestException as e:
-            self._logger.log("warning", f"Failed to fetch MCP configs: {e}")
+            self._logger.log("debug", f"Failed to fetch MCP configs: {e}")
             return {}
         except Exception as e:
             self._logger.log(
-                "warning", f"Cannot fetch AMP MCP configs: {e}"
+                "debug", f"Cannot fetch AMP MCP configs: {e}"
             )
             return {}
 

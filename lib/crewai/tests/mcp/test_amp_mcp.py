@@ -103,7 +103,7 @@ class TestBuildMCPConfigFromDict:
 
 class TestFetchAmpMCPConfigs:
     @patch("crewai.cli.plus_api.PlusAPI")
-    @patch("crewai.cli.authentication.token.get_auth_token", return_value="test-api-key")
+    @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_fetches_configs_successfully(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -134,7 +134,7 @@ class TestFetchAmpMCPConfigs:
         mock_plus_api.get_mcp_configs.assert_called_once_with(["notion", "github"])
 
     @patch("crewai.cli.plus_api.PlusAPI")
-    @patch("crewai.cli.authentication.token.get_auth_token", return_value="test-api-key")
+    @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_omits_missing_slugs(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -151,7 +151,7 @@ class TestFetchAmpMCPConfigs:
         assert "missing-server" not in result
 
     @patch("crewai.cli.plus_api.PlusAPI")
-    @patch("crewai.cli.authentication.token.get_auth_token", return_value="test-api-key")
+    @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_returns_empty_on_http_error(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
         mock_response.status_code = 500
@@ -164,7 +164,7 @@ class TestFetchAmpMCPConfigs:
         assert result == {}
 
     @patch("crewai.cli.plus_api.PlusAPI")
-    @patch("crewai.cli.authentication.token.get_auth_token", return_value="test-api-key")
+    @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_returns_empty_on_network_error(self, mock_get_token, mock_plus_api_class, resolver):
         import requests as req_lib
 
@@ -176,8 +176,8 @@ class TestFetchAmpMCPConfigs:
 
         assert result == {}
 
-    @patch("crewai.cli.authentication.token.get_auth_token", side_effect=Exception("No auth token"))
-    def test_returns_empty_when_no_auth_token(self, mock_get_token, resolver):
+    @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", side_effect=Exception("No token"))
+    def test_returns_empty_when_no_token(self, mock_get_token, resolver):
         result = resolver._fetch_amp_mcp_configs(["notion"])
 
         assert result == {}
