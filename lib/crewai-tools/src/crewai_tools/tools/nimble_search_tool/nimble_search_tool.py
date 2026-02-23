@@ -10,10 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 load_dotenv()
 try:
     from nimble_python import AsyncNimble, Nimble  # type: ignore[import-untyped]
-
-    NIMBLE_AVAILABLE = True
 except ImportError:
-    NIMBLE_AVAILABLE = False
     Nimble = Any
     AsyncNimble = Any
 
@@ -129,25 +126,17 @@ class NimbleSearchTool(BaseTool):
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-        if NIMBLE_AVAILABLE:
-            # Initialize clients with tracking headers for usage monitoring
-            headers = {
-                "X-Client-Source": "crewai-tools",
-                "X-Client-Tool": "NimbleSearchTool",
-            }
-            self.client = Nimble(api_key=self.api_key, default_headers=headers)
-            self.async_client = AsyncNimble(
-                api_key=self.api_key, default_headers=headers
-            )
-        else:
+        try:
+            from nimble_python import AsyncNimble, Nimble
+        except ImportError:
             try:
                 import subprocess
 
                 import click
             except ImportError as e:
                 raise ImportError(
-                    "The 'nimble-python' package is required. 'click' and 'subprocess' are also needed to assist with installation if the package is missing. "
-                    "Please install 'nimble-python' manually (e.g., 'pip install nimble-python') and ensure 'click' and 'subprocess' are available."
+                    "The 'nimble-python' package is required. "
+                    "Please install it with: uv add nimble-python"
                 ) from e
 
             if click.confirm(
@@ -155,9 +144,7 @@ class NimbleSearchTool(BaseTool):
             ):
                 try:
                     subprocess.run(["uv", "add", "nimble-python"], check=True)  # noqa: S607
-                    raise ImportError(
-                        "'nimble-python' has been installed. Please restart your Python application to use the NimbleSearchTool."
-                    )
+                    from nimble_python import AsyncNimble, Nimble
                 except subprocess.CalledProcessError as e:
                     raise ImportError(
                         f"Attempted to install 'nimble-python' but failed: {e}. "
@@ -168,6 +155,15 @@ class NimbleSearchTool(BaseTool):
                     "The 'nimble-python' package is required to use the NimbleSearchTool. "
                     "Please install it with: uv add nimble-python"
                 )
+
+        headers = {
+            "X-Client-Source": "crewai-tools",
+            "X-Client-Tool": "NimbleSearchTool",
+        }
+        self.client = Nimble(api_key=self.api_key, default_headers=headers)
+        self.async_client = AsyncNimble(
+            api_key=self.api_key, default_headers=headers
+        )
 
     def _convert_response(self, raw_results: Any) -> dict:
         """Convert SearchResponse object to dict."""

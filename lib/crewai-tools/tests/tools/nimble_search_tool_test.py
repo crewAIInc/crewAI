@@ -7,16 +7,6 @@ import pytest
 
 
 @pytest.fixture
-def mock_nimble_available():
-  """Mock the NIMBLE_AVAILABLE flag."""
-  with patch(
-    "crewai_tools.tools.nimble_search_tool.nimble_search_tool.NIMBLE_AVAILABLE",
-    True,
-  ):
-    yield
-
-
-@pytest.fixture
 def mock_search_response():
   """Create a mock search response matching actual Nimble API structure."""
   response_data = {
@@ -68,39 +58,36 @@ def mock_search_response_with_long_content():
   return mock_response
 
 
-def test_nimble_search_tool_initialization(mock_nimble_available):
+@patch("nimble_python.AsyncNimble")
+@patch("nimble_python.Nimble")
+def test_nimble_search_tool_initialization(mock_nimble, mock_async_nimble):
   """Test that NimbleSearchTool initializes with correct default values."""
-  with patch(
-    "crewai_tools.tools.nimble_search_tool.nimble_search_tool.Nimble"
-  ) as mock_nimble, patch(
-    "crewai_tools.tools.nimble_search_tool.nimble_search_tool.AsyncNimble"
-  ) as mock_async_nimble:
-    from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
-      NimbleSearchTool,
-    )
+  from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
+    NimbleSearchTool,
+  )
 
-    tool = NimbleSearchTool(api_key="test-key")
+  tool = NimbleSearchTool(api_key="test-key")
 
-    # Check default values
-    assert tool.name == "Nimble Search"
-    assert tool.max_results == 3
-    assert tool.deep_search is False
-    assert tool.include_answer is False
-    assert tool.parsing_type == "markdown"
-    assert tool.max_content_length_per_result == 1000
+  # Check default values
+  assert tool.name == "Nimble Search"
+  assert tool.max_results == 3
+  assert tool.deep_search is False
+  assert tool.include_answer is False
+  assert tool.parsing_type == "markdown"
+  assert tool.max_content_length_per_result == 1000
 
-    # Verify clients were initialized with tracking headers
-    mock_nimble.assert_called_once()
-    mock_async_nimble.assert_called_once()
+  # Verify clients were initialized with tracking headers
+  mock_nimble.assert_called_once()
+  mock_async_nimble.assert_called_once()
 
-    # Get the call arguments
-    nimble_call_kwargs = mock_nimble.call_args[1]
-    assert nimble_call_kwargs["api_key"] == "test-key"
-    assert "default_headers" in nimble_call_kwargs
-    assert nimble_call_kwargs["default_headers"]["X-Client-Source"] == "crewai-tools"
-    assert (
-      nimble_call_kwargs["default_headers"]["X-Client-Tool"] == "NimbleSearchTool"
-    )
+  # Get the call arguments
+  nimble_call_kwargs = mock_nimble.call_args[1]
+  assert nimble_call_kwargs["api_key"] == "test-key"
+  assert "default_headers" in nimble_call_kwargs
+  assert nimble_call_kwargs["default_headers"]["X-Client-Source"] == "crewai-tools"
+  assert (
+    nimble_call_kwargs["default_headers"]["X-Client-Tool"] == "NimbleSearchTool"
+  )
 
 
 def test_nimble_search_tool_schema():
@@ -118,10 +105,10 @@ def test_nimble_search_tool_schema():
     NimbleSearchToolSchema()
 
 
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.Nimble")
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.AsyncNimble")
+@patch("nimble_python.AsyncNimble")
+@patch("nimble_python.Nimble")
 def test_nimble_search_tool_run(
-  mock_async_nimble_class, mock_nimble_class, mock_nimble_available, mock_search_response
+  mock_nimble_class, mock_async_nimble_class, mock_search_response
 ):
   """Test synchronous search execution."""
   from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
@@ -153,11 +140,11 @@ def test_nimble_search_tool_run(
   assert parsed_result["results"][0]["title"] == "Test Result 1"
 
 
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.Nimble")
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.AsyncNimble")
+@patch("nimble_python.AsyncNimble")
+@patch("nimble_python.Nimble")
 @pytest.mark.asyncio
 async def test_nimble_search_tool_arun(
-  mock_async_nimble_class, mock_nimble_class, mock_nimble_available, mock_search_response
+  mock_nimble_class, mock_async_nimble_class, mock_search_response
 ):
   """Test asynchronous search execution."""
   from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
@@ -188,12 +175,11 @@ async def test_nimble_search_tool_arun(
   assert len(parsed_result["results"]) == 2
 
 
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.Nimble")
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.AsyncNimble")
+@patch("nimble_python.AsyncNimble")
+@patch("nimble_python.Nimble")
 def test_nimble_search_tool_content_truncation(
-  mock_async_nimble_class,
   mock_nimble_class,
-  mock_nimble_available,
+  mock_async_nimble_class,
   mock_search_response_with_long_content,
 ):
   """Test that content is truncated to max_content_length_per_result."""
@@ -220,10 +206,10 @@ def test_nimble_search_tool_content_truncation(
   assert content.startswith("A" * 500)
 
 
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.Nimble")
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.AsyncNimble")
+@patch("nimble_python.AsyncNimble")
+@patch("nimble_python.Nimble")
 def test_nimble_search_tool_with_filters(
-  mock_async_nimble_class, mock_nimble_class, mock_nimble_available, mock_search_response
+  mock_nimble_class, mock_async_nimble_class, mock_search_response
 ):
   """Test search with various filter options."""
   from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
@@ -273,11 +259,9 @@ def test_nimble_search_tool_with_filters(
   assert "results" in parsed_result
 
 
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.Nimble")
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.AsyncNimble")
-def test_nimble_search_tool_missing_client(
-  mock_async_nimble_class, mock_nimble_class, mock_nimble_available
-):
+@patch("nimble_python.AsyncNimble")
+@patch("nimble_python.Nimble")
+def test_nimble_search_tool_missing_client(mock_nimble_class, mock_async_nimble_class):
   """Test error handling when client is not initialized."""
   from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
     NimbleSearchTool,
@@ -294,11 +278,11 @@ def test_nimble_search_tool_missing_client(
   assert "Nimble client is not initialized" in str(exc_info.value)
 
 
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.Nimble")
-@patch("crewai_tools.tools.nimble_search_tool.nimble_search_tool.AsyncNimble")
+@patch("nimble_python.AsyncNimble")
+@patch("nimble_python.Nimble")
 @pytest.mark.asyncio
 async def test_nimble_search_tool_missing_async_client(
-  mock_async_nimble_class, mock_nimble_class, mock_nimble_available
+  mock_nimble_class, mock_async_nimble_class
 ):
   """Test error handling when async client is not initialized."""
   from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
@@ -318,16 +302,22 @@ async def test_nimble_search_tool_missing_async_client(
 
 def test_nimble_search_tool_missing_package():
   """Test error handling when nimble-python package is not installed."""
-  with patch(
-    "crewai_tools.tools.nimble_search_tool.nimble_search_tool.NIMBLE_AVAILABLE",
-    False,
-  ), patch("click.confirm", return_value=False):
-    # Import the tool (this should work even without the package available)
+  import builtins
+
+  original_import = builtins.__import__
+
+  def mock_import(name, *args, **kwargs):
+    if name == "nimble_python":
+      raise ImportError("No module named 'nimble_python'")
+    return original_import(name, *args, **kwargs)
+
+  with patch("builtins.__import__", side_effect=mock_import), patch(
+    "click.confirm", return_value=False
+  ):
     from crewai_tools.tools.nimble_search_tool.nimble_search_tool import (
       NimbleSearchTool,
     )
 
-    # This should raise an ImportError about missing package
     with pytest.raises(ImportError) as exc_info:
       NimbleSearchTool(api_key="test-key")
 
