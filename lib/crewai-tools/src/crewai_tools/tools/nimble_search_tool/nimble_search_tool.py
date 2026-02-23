@@ -187,6 +187,46 @@ class NimbleSearchTool(BaseTool):
                         item["content"][: self.max_content_length_per_result] + "..."
                     )
 
+    def _build_search_params(
+        self,
+        query: str,
+        max_results: int | None = None,
+        deep_search: bool | None = None,
+        include_answer: bool | None = None,
+        time_range: Literal["hour", "day", "week", "month", "year"] | None = None,
+        include_domains: list[str] | None = None,
+        exclude_domains: list[str] | None = None,
+    ) -> dict:
+        """Build search parameters from runtime overrides and init defaults."""
+        search_params = {
+            "query": query,
+            "num_results": max_results if max_results is not None else self.max_results,
+            "deep_search": deep_search if deep_search is not None else self.deep_search,
+            "include_answer": (
+                include_answer if include_answer is not None else self.include_answer
+            ),
+            "parsing_type": self.parsing_type,
+        }
+
+        if time_range is not None:
+            search_params["time_range"] = time_range
+        if include_domains is not None:
+            search_params["include_domains"] = include_domains
+        if exclude_domains is not None:
+            search_params["exclude_domains"] = exclude_domains
+        if self.locale is not None:
+            search_params["locale"] = self.locale
+        if self.country is not None:
+            search_params["country"] = self.country
+
+        return search_params
+
+    def _process_response(self, raw_results: Any) -> str:
+        """Convert raw API response to truncated JSON string."""
+        results_dict = self._convert_response(raw_results)
+        self._truncate_content(results_dict)
+        return json.dumps(results_dict, indent=2)
+
     def _run(
         self,
         query: str,
@@ -197,57 +237,18 @@ class NimbleSearchTool(BaseTool):
         include_domains: list[str] | None = None,
         exclude_domains: list[str] | None = None,
     ) -> str:
-        """Synchronously performs a search using the Nimble API.
-
-        Runtime parameters allow agents to adjust search behavior per task.
-        Configuration (locale, country, parsing_type) uses tool initialization values.
-
-        Args:
-          query: The search query string.
-          max_results: Override default max_results.
-          deep_search: Override default deep_search mode.
-          include_answer: Override default include_answer setting.
-          time_range: Filter by time period.
-          include_domains: Restrict to specific domains.
-          exclude_domains: Exclude specific domains.
-
-        Returns:
-          A JSON string containing the search results with truncated content.
-        """
+        """Synchronously performs a search using the Nimble API."""
         if not self.client:
             raise ValueError(
                 "Nimble client is not initialized. Ensure 'nimble-python' is installed and API key is set."
             )
 
-        # Build search parameters
-        search_params = {
-            "query": query,
-            "num_results": max_results if max_results is not None else self.max_results,
-            "deep_search": deep_search if deep_search is not None else self.deep_search,
-            "include_answer": (
-                include_answer if include_answer is not None else self.include_answer
-            ),
-            "parsing_type": self.parsing_type,  # Always from init
-        }
-
-        # Add optional runtime parameters
-        if time_range is not None:
-            search_params["time_range"] = time_range
-        if include_domains is not None:
-            search_params["include_domains"] = include_domains
-        if exclude_domains is not None:
-            search_params["exclude_domains"] = exclude_domains
-
-        # Add optional init parameters
-        if self.locale is not None:
-            search_params["locale"] = self.locale
-        if self.country is not None:
-            search_params["country"] = self.country
-
+        search_params = self._build_search_params(
+            query, max_results, deep_search, include_answer,
+            time_range, include_domains, exclude_domains,
+        )
         raw_results = self.client.search(**search_params)
-        results_dict = self._convert_response(raw_results)
-        self._truncate_content(results_dict)
-        return json.dumps(results_dict, indent=2)
+        return self._process_response(raw_results)
 
     async def _arun(
         self,
@@ -259,54 +260,15 @@ class NimbleSearchTool(BaseTool):
         include_domains: list[str] | None = None,
         exclude_domains: list[str] | None = None,
     ) -> str:
-        """Asynchronously performs a search using the Nimble API.
-
-        Runtime parameters allow agents to adjust search behavior per task.
-        Configuration (locale, country, parsing_type) uses tool initialization values.
-
-        Args:
-          query: The search query string.
-          max_results: Override default max_results.
-          deep_search: Override default deep_search mode.
-          include_answer: Override default include_answer setting.
-          time_range: Filter by time period.
-          include_domains: Restrict to specific domains.
-          exclude_domains: Exclude specific domains.
-
-        Returns:
-          A JSON string containing the search results with truncated content.
-        """
+        """Asynchronously performs a search using the Nimble API."""
         if not self.async_client:
             raise ValueError(
                 "Nimble async client is not initialized. Ensure 'nimble-python' is installed and API key is set."
             )
 
-        # Build search parameters
-        search_params = {
-            "query": query,
-            "num_results": max_results if max_results is not None else self.max_results,
-            "deep_search": deep_search if deep_search is not None else self.deep_search,
-            "include_answer": (
-                include_answer if include_answer is not None else self.include_answer
-            ),
-            "parsing_type": self.parsing_type,  # Always from init
-        }
-
-        # Add optional runtime parameters
-        if time_range is not None:
-            search_params["time_range"] = time_range
-        if include_domains is not None:
-            search_params["include_domains"] = include_domains
-        if exclude_domains is not None:
-            search_params["exclude_domains"] = exclude_domains
-
-        # Add optional init parameters
-        if self.locale is not None:
-            search_params["locale"] = self.locale
-        if self.country is not None:
-            search_params["country"] = self.country
-
+        search_params = self._build_search_params(
+            query, max_results, deep_search, include_answer,
+            time_range, include_domains, exclude_domains,
+        )
         raw_results = await self.async_client.search(**search_params)
-        results_dict = self._convert_response(raw_results)
-        self._truncate_content(results_dict)
-        return json.dumps(results_dict, indent=2)
+        return self._process_response(raw_results)
