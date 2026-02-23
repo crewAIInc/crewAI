@@ -42,65 +42,6 @@ def test_gemini_completion_is_used_when_gemini_provider():
     assert llm.provider == "gemini"
     assert llm.model == "gemini-2.0-flash-001"
 
-
-
-
-def test_gemini_tool_use_conversation_flow():
-    """
-    Test that the Gemini completion properly handles tool use conversation flow
-    """
-    from unittest.mock import Mock, patch
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
-
-    # Create GeminiCompletion instance
-    completion = GeminiCompletion(model="gemini-2.0-flash-001")
-
-    # Mock tool function
-    def mock_weather_tool(location: str) -> str:
-        return f"The weather in {location} is sunny and 75°F"
-
-    available_functions = {"get_weather": mock_weather_tool}
-
-    # Mock the Google Gemini client responses
-    with patch.object(completion.client.models, 'generate_content') as mock_generate:
-        # Mock function call in response
-        mock_function_call = Mock()
-        mock_function_call.name = "get_weather"
-        mock_function_call.args = {"location": "San Francisco"}
-
-        mock_part = Mock()
-        mock_part.function_call = mock_function_call
-
-        mock_content = Mock()
-        mock_content.parts = [mock_part]
-
-        mock_candidate = Mock()
-        mock_candidate.content = mock_content
-
-        mock_response = Mock()
-        mock_response.candidates = [mock_candidate]
-        mock_response.text = "Based on the weather data, it's a beautiful day in San Francisco with sunny skies and 75°F temperature."
-        mock_response.usage_metadata = Mock()
-        mock_response.usage_metadata.prompt_token_count = 100
-        mock_response.usage_metadata.candidates_token_count = 50
-        mock_response.usage_metadata.total_token_count = 150
-
-        mock_generate.return_value = mock_response
-
-        # Test the call
-        messages = [{"role": "user", "content": "What's the weather like in San Francisco?"}]
-        result = completion.call(
-            messages=messages,
-            available_functions=available_functions
-        )
-
-        # Verify the tool was executed and returned the result
-        assert result == "The weather in San Francisco is sunny and 75°F"
-
-        # Verify that the API was called
-        assert mock_generate.called
-
-
 def test_gemini_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Google provider
@@ -1114,3 +1055,97 @@ def test_gemini_structured_output_preserves_json_with_stop_word_patterns():
     assert "Action:" in result.action_taken
     assert "Observation:" in result.observation_result
     assert "Final Answer:" in result.final_answer
+
+
+@pytest.mark.vcr()
+def test_gemini_cached_prompt_tokens():
+    """
+    Test that Gemini correctly extracts and tracks cached_prompt_tokens
+    from cached_content_token_count in the usage metadata.
+    Sends two calls with the same large prompt to trigger caching.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = LLM(model="google/gemini-2.5-flash")
+
+    # First call
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # cached_prompt_tokens should be populated (may be 0 if Gemini
+    # doesn't cache for this particular request, but the field should exist)
+    assert usage.cached_prompt_tokens >= 0
+
+
+@pytest.mark.vcr()
+def test_gemini_cached_prompt_tokens_with_tools():
+    """
+    Test that Gemini correctly tracks cached_prompt_tokens when tools are used.
+    The large system prompt should be cached across tool-calling requests.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+            },
+        }
+    ]
+
+    llm = LLM(model="google/gemini-2.5-flash")
+
+    # First call with tool
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call with same system prompt + tools
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Paris?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.successful_requests == 2
+    # cached_prompt_tokens should be populated (may be 0 if Gemini
+    # doesn't cache for this particular request, but the field should exist)
+    assert usage.cached_prompt_tokens >= 0

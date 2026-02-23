@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-import requests
+import httpx
 from crewai.cli.authentication.main import AuthenticationCommand
 from crewai.cli.constants import (
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
@@ -220,7 +220,7 @@ class TestAuthenticationCommand:
         ]
         mock_console_print.assert_has_calls(expected_calls)
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     def test_get_device_code(self, mock_post):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -256,7 +256,7 @@ class TestAuthenticationCommand:
             "verification_uri_complete": "https://example.com/auth",
         }
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_success(self, mock_console_print, mock_post):
         mock_response_success = MagicMock()
@@ -305,7 +305,7 @@ class TestAuthenticationCommand:
             ]
             mock_console_print.assert_has_calls(expected_calls)
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_timeout(self, mock_console_print, mock_post):
         mock_response_pending = MagicMock()
@@ -324,7 +324,7 @@ class TestAuthenticationCommand:
             "Timeout: Failed to get the token. Please try again.", style="bold red"
         )
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     def test_poll_for_token_error(self, mock_post):
         """Test the method to poll for token (error path)."""
         # Setup mock to return error
@@ -338,5 +338,5 @@ class TestAuthenticationCommand:
 
         device_code_data = {"device_code": "test_device_code", "interval": 1}
 
-        with pytest.raises(requests.HTTPError):
+        with pytest.raises(httpx.HTTPError):
             self.auth_command._poll_for_token(device_code_data)

@@ -120,6 +120,52 @@ class FlowPlotEvent(FlowEvent):
     type: str = "flow_plot"
 
 
+class FlowInputRequestedEvent(FlowEvent):
+    """Event emitted when a flow requests user input via ``Flow.ask()``.
+
+    This event is emitted before the flow suspends waiting for user input,
+    allowing UI frameworks and observability tools to know when a flow
+    needs user interaction.
+
+    Attributes:
+        flow_name: Name of the flow requesting input.
+        method_name: Name of the flow method that called ``ask()``.
+        message: The question or prompt being shown to the user.
+        metadata: Optional metadata sent with the question (e.g., user ID,
+            channel, session context).
+    """
+
+    method_name: str
+    message: str
+    metadata: dict[str, Any] | None = None
+    type: str = "flow_input_requested"
+
+
+class FlowInputReceivedEvent(FlowEvent):
+    """Event emitted when user input is received after ``Flow.ask()``.
+
+    This event is emitted after the user provides input (or the request
+    times out), allowing UI frameworks and observability tools to track
+    input collection.
+
+    Attributes:
+        flow_name: Name of the flow that received input.
+        method_name: Name of the flow method that called ``ask()``.
+        message: The original question or prompt.
+        response: The user's response, or None if timed out / unavailable.
+        metadata: Optional metadata sent with the question.
+        response_metadata: Optional metadata from the provider about the
+            response (e.g., who responded, thread ID, timestamps).
+    """
+
+    method_name: str
+    message: str
+    response: str | None = None
+    metadata: dict[str, Any] | None = None
+    response_metadata: dict[str, Any] | None = None
+    type: str = "flow_input_received"
+
+
 class HumanFeedbackRequestedEvent(FlowEvent):
     """Event emitted when human feedback is requested.
 

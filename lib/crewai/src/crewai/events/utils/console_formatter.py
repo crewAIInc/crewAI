@@ -8,7 +8,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
-from crewai.cli.version import is_newer_version_available
+from crewai.cli.version import is_current_version_yanked, is_newer_version_available
 
 
 _disable_version_check: ContextVar[bool] = ContextVar(
@@ -104,6 +104,22 @@ To update, run: uv sync --upgrade-package crewai"""
                 )
                 self.console.print(panel)
                 self.console.print()
+
+            is_yanked, yanked_reason = is_current_version_yanked()
+            if is_yanked:
+                yanked_message = f"Version {current} has been yanked from PyPI."
+                if yanked_reason:
+                    yanked_message += f"\nReason: {yanked_reason}"
+                yanked_message += "\n\nTo update, run: uv sync --upgrade-package crewai"
+
+                yanked_panel = Panel(
+                    yanked_message,
+                    title="Yanked Version",
+                    border_style="red",
+                    padding=(1, 2),
+                )
+                self.console.print(yanked_panel)
+                self.console.print()
         except Exception:  # noqa: S110
             # Silently ignore errors in version check - it's non-critical
             pass
@@ -154,16 +170,16 @@ To enable tracing, do any one of these:
         """Create standardized status content with consistent formatting."""
         content = Text()
         content.append(f"{title}\n", style=f"{status_style} bold")
-        content.append("Name: \n", style="white")
+        content.append("Name: ", style="white")
         content.append(f"{name}\n", style=status_style)
 
         for label, value in fields.items():
-            content.append(f"{label}: \n", style="white")
+            content.append(f"{label}: ", style="white")
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
         if tool_args:
-            content.append("Tool Args: \n", style="white")
+            content.append("Tool Args: ", style="white")
             content.append(f"{tool_args}\n", style=status_style)
 
         return content
@@ -721,6 +737,27 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, title, style)
 
+    @staticmethod
+    def _simplify_tools_field(fields: dict[str, Any]) -> dict[str, Any]:
+        """Simplify the tools field to show only tool names instead of full definitions.
+
+        Args:
+            fields: Dictionary of fields that may contain a 'tools' key with
+                    full tool objects.
+
+        Returns:
+            The fields dictionary with 'tools' replaced by a comma-separated
+            string of tool names.
+        """
+        if "tools" in fields:
+            tools = fields["tools"]
+            if tools:
+                tool_names = [getattr(t, "name", str(t)) for t in tools]
+                fields["tools"] = ", ".join(tool_names) if tool_names else "None"
+            else:
+                fields["tools"] = "None"
+        return fields
+
     def handle_lite_agent_execution(
         self,
         lite_agent_role: str,
@@ -731,6 +768,8 @@ To enable tracing, do any one of these:
         """Handle lite agent execution events with panel display."""
         if not self.verbose:
             return
+
+        fields = self._simplify_tools_field(fields)
 
         if status == "started":
             self.create_lite_agent_branch(lite_agent_role)
