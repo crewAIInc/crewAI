@@ -8,7 +8,6 @@ from crewai.cli.config import Settings
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.version import get_crewai_version
 
-
 class PlusAPI:
     """
     This class exposes methods for working with the CrewAI+ API.
@@ -187,6 +186,15 @@ class PlusAPI:
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
             json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )
+
+    def get_mcp_configs(self, slugs: list[str]) -> httpx.Response:
+        """Get MCP server configurations for the given slugs."""
+        return self._make_request(
+            "GET",
+            f"{self.INTEGRATIONS_RESOURCE}/mcp_configs",
+            params={"slugs": ",".join(slugs)},
             timeout=30,
         )
 

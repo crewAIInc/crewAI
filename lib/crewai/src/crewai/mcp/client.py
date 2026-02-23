@@ -420,6 +420,7 @@ class MCPClient:
         return [
             {
                 "name": sanitize_tool_name(tool.name),
+                "original_name": tool.name,
                 "description": getattr(tool, "description", ""),
                 "inputSchema": getattr(tool, "inputSchema", {}),
             }

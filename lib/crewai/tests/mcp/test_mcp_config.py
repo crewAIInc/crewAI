@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from crewai.agent.core import Agent
@@ -46,7 +46,7 @@ def test_agent_with_stdio_mcp_config(mock_tool_definitions):
     )
 
 
-    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+    with patch("crewai.mcp.tool_resolver.MCPClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
         mock_client.connected = False  # Will trigger connect
@@ -82,7 +82,7 @@ def test_agent_with_http_mcp_config(mock_tool_definitions):
         mcps=[http_config],
     )
 
-    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+    with patch("crewai.mcp.tool_resolver.MCPClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
         mock_client.connected = False  # Will trigger connect
@@ -117,7 +117,7 @@ def test_agent_with_sse_mcp_config(mock_tool_definitions):
         mcps=[sse_config],
     )
 
-    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+    with patch("crewai.mcp.tool_resolver.MCPClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
         mock_client.connected = False
@@ -141,7 +141,7 @@ def test_mcp_tool_execution_in_sync_context(mock_tool_definitions):
     """Test MCPNativeTool execution in synchronous context (normal crew execution)."""
     http_config = MCPServerHTTP(url="https://api.example.com/mcp")
 
-    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+    with patch("crewai.mcp.tool_resolver.MCPClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
         mock_client.connected = False
@@ -173,7 +173,7 @@ async def test_mcp_tool_execution_in_async_context(mock_tool_definitions):
     """Test MCPNativeTool execution in async context (e.g., from a Flow)."""
     http_config = MCPServerHTTP(url="https://api.example.com/mcp")
 
-    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+    with patch("crewai.mcp.tool_resolver.MCPClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
         mock_client.connected = False
