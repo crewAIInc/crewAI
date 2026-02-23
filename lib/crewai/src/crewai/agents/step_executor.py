@@ -1,8 +1,13 @@
 """StepExecutor: Isolated executor for a single plan step.
 
-Implements a bounded ReAct loop scoped to ONE todo item. The tool execution
-machinery (native function calling, text-parsed tools, caching, hooks) lives
-here — moved from AgentExecutor so the outer loop stays clean.
+Implements the direct-action execution pattern from Plan-and-Act
+(arxiv 2503.09572): the Executor receives one step description,
+makes a single LLM call, executes any tool call returned, and
+returns the result immediately.
+
+There is no inner loop. Recovery from failure (retry, replan) is
+the responsibility of PlannerObserver and AgentExecutor — keeping
+this class single-purpose and fast.
 """
 
 from __future__ import annotations
@@ -13,10 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
-from crewai.agents.parser import (
-    AgentAction,
-    AgentFinish,
-)
+from crewai.agents.parser import AgentAction, AgentFinish
 from crewai.utilities.agent_utils import (
     build_tool_calls_assistant_message,
     check_native_tool_support,
@@ -46,22 +48,18 @@ if TYPE_CHECKING:
     from crewai.tools.structured_tool import CrewStructuredTool
 
 
-# Maximum number of tool-call iterations within a single step
-_MAX_STEP_ITERATIONS: int = 10
-
-
 class StepExecutor:
-    """Executes a SINGLE todo item in isolation using a bounded ReAct loop.
+    """Executes a SINGLE todo item using direct-action execution.
 
     The StepExecutor owns its own message list per invocation. It never reads
     or writes the AgentExecutor's state. Results flow back via StepResult.
 
-    The internal loop:
+    Execution pattern (per Plan-and-Act, arxiv 2503.09572):
         1. Build messages from todo + context
-        2. Call LLM (with or without native tools)
-        3. If tool call → execute tool, append result, loop back to 2
-        4. If final answer → return StepResult
-        5. If max iterations → force final answer
+        2. Call LLM once (with or without native tools)
+        3. If tool call → execute it → return tool result
+        4. If text answer → return it directly
+        No inner loop — recovery is PlannerObserver's responsibility.
 
     Args:
         llm: The language model to use for execution.
@@ -74,6 +72,7 @@ class StepExecutor:
         function_calling_llm: Optional separate LLM for function calling.
         request_within_rpm_limit: Optional RPM limit function.
         callbacks: Optional list of callbacks.
+        i18n: Optional i18n instance.
     """
 
     def __init__(
@@ -117,10 +116,11 @@ class StepExecutor:
     # ------------------------------------------------------------------
 
     def execute(self, todo: TodoItem, context: StepExecutionContext) -> StepResult:
-        """Execute a single todo item in isolation.
+        """Execute a single todo item using direct-action execution.
 
-        Builds a fresh message list, runs a bounded ReAct loop, and returns
-        the result. Never touches external state.
+        Enforces the RPM limit, builds a fresh message list, makes one LLM
+        call, executes any tool returned, and returns the result. Never
+        touches external state.
 
         Args:
             todo: The todo item to execute.
@@ -133,8 +133,13 @@ class StepExecutor:
         tool_calls_made: list[str] = []
 
         try:
+            enforce_rpm_limit(self.request_within_rpm_limit)
             messages = self._build_isolated_messages(todo, context)
-            result_text = self._run_react_loop(todo, messages, tool_calls_made)
+
+            if self._use_native_tools:
+                result_text = self._execute_native(messages, tool_calls_made)
+            else:
+                result_text = self._execute_text_parsed(messages, tool_calls_made)
 
             elapsed = time.monotonic() - start_time
             return StepResult(
@@ -168,18 +173,13 @@ class StepExecutor:
         system_prompt = self._build_system_prompt()
         user_prompt = self._build_user_prompt(todo, context)
 
-        messages: list[LLMMessage] = [
+        return [
             format_message_for_llm(system_prompt, role="system"),
             format_message_for_llm(user_prompt, role="user"),
         ]
-        return messages
 
     def _build_system_prompt(self) -> str:
-        """Build the Executor's system prompt.
-
-        Emphasizes: complete THIS step only. Do not plan ahead.
-        Includes CoT reasoning instruction (per PLAN-AND-ACT Section 3.4).
-        """
+        """Build the Executor's system prompt."""
         role = self.agent.role if self.agent else "Assistant"
         goal = self.agent.goal if self.agent else "Complete tasks efficiently"
         backstory = getattr(self.agent, "backstory", "") or ""
@@ -232,54 +232,26 @@ class StepExecutor:
         return "\n".join(parts)
 
     # ------------------------------------------------------------------
-    # Internal: Bounded ReAct loop
+    # Internal: Direct-action execution (single LLM call)
     # ------------------------------------------------------------------
 
-    def _run_react_loop(
+    def _execute_text_parsed(
         self,
-        todo: TodoItem,
         messages: list[LLMMessage],
         tool_calls_made: list[str],
     ) -> str:
-        """Run a bounded ReAct loop for a single step.
+        """Execute step using text-parsed tool calling (single LLM call).
 
-        Returns the final answer text.
+        Calls the LLM once. If the response is a tool call, executes the tool
+        and returns its result. If a final answer, returns it directly.
+        No retry loop — the PlannerObserver handles recovery.
         """
-        for _iteration in range(_MAX_STEP_ITERATIONS):
-            enforce_rpm_limit(self.request_within_rpm_limit)
-
-            if self._use_native_tools:
-                result = self._native_tool_iteration(messages, tool_calls_made)
-            else:
-                result = self._text_parsed_iteration(messages, tool_calls_made)
-
-            if result is not None:
-                # Got a final answer
-                return result
-
-            # No final answer yet — loop continues with updated messages
-
-        # Max iterations reached — force a final answer
-        return self._force_final_answer(messages)
-
-    def _text_parsed_iteration(
-        self,
-        messages: list[LLMMessage],
-        tool_calls_made: list[str],
-    ) -> str | None:
-        """Single iteration using text-parsed tool calling.
-
-        Returns final answer string if done, None to continue looping.
-        """
-        try:
-            answer = self.llm.call(
-                messages,
-                callbacks=self.callbacks,
-                from_task=self.task,
-                from_agent=self.agent,
-            )
-        except Exception:
-            raise
+        answer = self.llm.call(
+            messages,
+            callbacks=self.callbacks,
+            from_task=self.task,
+            from_agent=self.agent,
+        )
 
         if not answer:
             raise ValueError("Empty response from LLM")
@@ -292,7 +264,6 @@ class StepExecutor:
             return str(formatted.output)
 
         if isinstance(formatted, AgentAction):
-            # Execute the tool
             tool_calls_made.append(formatted.tool)
 
             fingerprint_context = {}
@@ -319,58 +290,36 @@ class StepExecutor:
                 crew=self.crew,
             )
 
-            # Append observation to messages
-            observation = f"Observation: {tool_result.result}"
-            messages.append(
-                format_message_for_llm(
-                    formatted.text + f"\n{observation}",
-                    role="assistant",
-                )
-            )
+            return str(tool_result.result)
 
-            if tool_result.result_as_answer:
-                return str(tool_result.result)
+        # Raw text response — treat as the step result
+        return answer_str
 
-            # Add reasoning prompt for next iteration
-            reasoning_prompt = self._i18n.slice("post_tool_reasoning")
-            messages.append(format_message_for_llm(reasoning_prompt, role="user"))
-
-            return None  # Continue looping
-
-        return answer_str  # Fallback: treat as final answer
-
-    def _native_tool_iteration(
+    def _execute_native(
         self,
         messages: list[LLMMessage],
         tool_calls_made: list[str],
-    ) -> str | None:
-        """Single iteration using native function calling.
+    ) -> str:
+        """Execute step using native function calling (single LLM call).
 
-        Returns final answer string if done, None to continue looping.
+        Calls the LLM once with the tool schema. If tool calls are returned,
+        executes them and returns their results. If a text answer, returns it.
+        No retry loop — the PlannerObserver handles recovery.
         """
-        try:
-            answer = self.llm.call(
-                messages,
-                tools=self._openai_tools,
-                callbacks=self.callbacks,
-                from_task=self.task,
-                from_agent=self.agent,
-            )
-        except Exception:
-            raise
+        answer = self.llm.call(
+            messages,
+            tools=self._openai_tools,
+            callbacks=self.callbacks,
+            from_task=self.task,
+            from_agent=self.agent,
+        )
 
         if not answer:
             raise ValueError("Empty response from LLM")
 
-        # Check if the response is a list of tool calls
         if isinstance(answer, list) and answer and is_tool_call_list(answer):
             return self._execute_native_tool_calls(answer, messages, tool_calls_made)
 
-        # Text response — this is the final answer
-        if isinstance(answer, str):
-            return answer
-
-        # BaseModel response
         if isinstance(answer, BaseModel):
             return answer.model_dump_json()
 
@@ -381,18 +330,17 @@ class StepExecutor:
         tool_calls: list[Any],
         messages: list[LLMMessage],
         tool_calls_made: list[str],
-    ) -> str | None:
-        """Execute a batch of native tool calls and append results to messages.
+    ) -> str:
+        """Execute a batch of native tool calls and return their results.
 
-        Returns final answer string if a tool has result_as_answer, else None.
+        Returns the result of the first tool marked result_as_answer if any,
+        otherwise returns all tool results concatenated.
         """
-        # Build and append assistant message with tool call reports
         assistant_message, _reports = build_tool_calls_assistant_message(tool_calls)
         if assistant_message:
             messages.append(assistant_message)
 
-        # Execute each tool call via shared pipeline
-        final_answer: str | None = None
+        tool_results: list[str] = []
         for tool_call in tool_calls:
             call_result = execute_single_native_tool_call(
                 tool_call,
@@ -411,43 +359,13 @@ class StepExecutor:
             if call_result.func_name:
                 tool_calls_made.append(call_result.func_name)
 
+            if call_result.result_as_answer:
+                return str(call_result.result)
+
             if call_result.tool_message:
                 messages.append(call_result.tool_message)
+                content = call_result.tool_message.get("content", "")
+                if content:
+                    tool_results.append(str(content))
 
-            if call_result.result_as_answer:
-                final_answer = call_result.result
-
-        if final_answer is not None:
-            return final_answer
-
-        return None  # Continue looping
-
-    def _force_final_answer(self, messages: list[LLMMessage]) -> str:
-        """Force the LLM to provide a final answer when max iterations reached."""
-        force_prompt = self._i18n.retrieve(
-            "planning", "step_executor_force_final_answer"
-        )
-        if not self._use_native_tools:
-            force_prompt += self._i18n.retrieve(
-                "planning", "step_executor_force_final_answer_suffix"
-            )
-
-        messages.append(format_message_for_llm(force_prompt, role="user"))
-
-        try:
-            answer = self.llm.call(
-                messages,
-                callbacks=self.callbacks,
-                from_task=self.task,
-                from_agent=self.agent,
-            )
-            if answer:
-                answer_str = str(answer)
-                # Try to extract just the final answer portion
-                if "Final Answer:" in answer_str:
-                    return answer_str.split("Final Answer:")[-1].strip()
-                return answer_str
-        except Exception:  # noqa: S110
-            pass
-
-        return self._i18n.retrieve("planning", "step_could_not_complete")
+        return "\n".join(tool_results) if tool_results else ""
