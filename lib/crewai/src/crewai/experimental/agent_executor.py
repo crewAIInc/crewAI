@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import datetime
+from datetime import datetime
 import inspect
 import json
 import threading
