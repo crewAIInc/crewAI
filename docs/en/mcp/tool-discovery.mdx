@@ -1,0 +1,85 @@
+---
+title: "MCP Tool Discovery"
+description: "Discover MCP tools by natural language using BaseDiscoveryProvider, MCPDiscoveryProvider, and DynamicDiscoveryTool."
+icon: search
+mode: "wide"
+---
+
+## Overview
+
+CrewAI supports **tool discovery** so agents can find MCP (or other) tools by semantic search instead of manual configuration. You can plug in different discovery backends (e.g. [mcp-discovery](https://github.com/yksanjo/mcp-discovery)) and expose discovery as a CrewAI tool that returns or registers tools for an agent.
+
+Main pieces:
+
+- **`BaseDiscoveryProvider`** — Abstract interface: semantic search returns `DiscoveryEntry` list; entries can be resolved to `BaseTool` instances.
+- **`DiscoveryEntry`** — Normalized result (id, name, description, source_uri, input_schema, provider_id, raw_metadata).
+- **`MCPDiscoveryProvider`** — Implementation that calls the mcp-discovery HTTP API and resolves entries to `MCPToolWrapper`.
+- **`DynamicDiscoveryTool`** — A `BaseTool` that runs discovery (via a configured provider) and optionally registers discovered tools to an agent.
+
+## Quick Example
+
+```python
+from crewai import Agent
+from crewai.tools import DynamicDiscoveryTool
+from crewai.tools.mcp_discovery_provider import MCPDiscoveryProvider
+
+# Provider that uses the mcp-discovery API
+provider = MCPDiscoveryProvider()
+
+# Optional: discovery tool that can register tools to an agent
+agent = Agent(
+    role="Assistant",
+    goal="Help the user by discovering and using the right tools.",
+    backstory="You use tool discovery to find and use MCP tools.",
+    tools=[],
+)
+discovery_tool = DynamicDiscoveryTool(
+    provider=provider,
+    limit=5,
+    agent=agent,
+    auto_register=True,
+)
+agent.tools = [discovery_tool]
+
+# When the agent uses the discovery tool with a query (e.g. "send Slack messages"),
+# the provider runs semantic search, resolves entries to BaseTool, and appends them to agent.tools.
+```
+
+## Discovery Only (No Agent)
+
+Use the provider directly to get entries or tools without registering to an agent:
+
+```python
+import asyncio
+from crewai.tools.mcp_discovery_provider import MCPDiscoveryProvider
+
+provider = MCPDiscoveryProvider()
+
+# Get discovery entries (normalized list)
+entries = asyncio.run(provider.search_semantic("database or postgres", limit=5))
+
+# Or get ready-to-use BaseTool instances (MCPToolWrapper when resolvable)
+tools = asyncio.run(provider.search_semantic_and_resolve("slack notifications", limit=3))
+```
+
+## Configuration
+
+- **MCPDiscoveryProvider**  
+  - `base_url`: API base URL (default from env `MCP_DISCOVERY_API_BASE_URL` or public deployment).  
+  - `server_url_resolver`: Optional callable `(DiscoveryEntry) -> str` to map an entry to an MCP HTTP server URL (otherwise `entry.source_uri` is used; resolve may fail if missing).
+
+- **DynamicDiscoveryTool**  
+  - `provider`: Any `BaseDiscoveryProvider` implementation.  
+  - `limit`: Default max tools per discovery run.  
+  - `agent`: Optional object with a mutable `tools` list; when set and `auto_register=True`, discovered tools are appended to `agent.tools`.  
+  - `auto_register`: If `True` and `agent` is set, discovered tools are registered to the agent.
+
+## E2E Demo
+
+From the repository root you can run the end-to-end demo:
+
+```bash
+python scripts/demo_mcp_discovery.py
+```
+
+It demonstrates semantic search, `DiscoveryEntry` parsing, `DynamicDiscoveryTool` output, and optional registration to an agent.
