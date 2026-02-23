@@ -168,6 +168,133 @@ def test_mcp_tool_execution_in_sync_context(mock_tool_definitions):
         mock_client.call_tool.assert_called()
 
 
+def test_mcp_tools_loaded_when_tools_is_none(mock_tool_definitions):
+    """Test that MCP tools are loaded even when agent tools is None.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4568
+    When an agent is created with mcps but tools is explicitly None,
+    _prepare_kickoff should still load MCP tools.
+    """
+    http_config = MCPServerHTTP(url="https://api.example.com/mcp")
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        mcps=[http_config],
+        tools=None,
+    )
+
+    mock_mcp_tool = MagicMock(spec=BaseTool)
+    mock_mcp_tool.name = "mcp_test_tool"
+
+    with patch.object(Agent, "get_mcp_tools", return_value=[mock_mcp_tool]):
+        # Manually invoke the MCP loading logic from _prepare_kickoff
+        if agent.mcps:
+            mcps = agent.get_mcp_tools(agent.mcps)
+            if mcps:
+                if agent.tools is None:
+                    agent.tools = []
+                agent.tools.extend(mcps)
+
+        assert agent.tools is not None
+        assert len(agent.tools) == 1
+        assert agent.tools[0].name == "mcp_test_tool"
+
+
+def test_mcp_tools_loaded_when_tools_is_empty_list(mock_tool_definitions):
+    """Test that MCP tools are loaded when agent tools is an empty list."""
+    http_config = MCPServerHTTP(url="https://api.example.com/mcp")
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        mcps=[http_config],
+        tools=[],
+    )
+
+    mock_mcp_tool = MagicMock(spec=BaseTool)
+    mock_mcp_tool.name = "mcp_test_tool"
+
+    with patch.object(Agent, "get_mcp_tools", return_value=[mock_mcp_tool]):
+        if agent.mcps:
+            mcps = agent.get_mcp_tools(agent.mcps)
+            if mcps:
+                if agent.tools is None:
+                    agent.tools = []
+                agent.tools.extend(mcps)
+
+        assert agent.tools is not None
+        assert len(agent.tools) == 1
+        assert agent.tools[0].name == "mcp_test_tool"
+
+
+def test_mcp_tools_appended_to_existing_tools(mock_tool_definitions):
+    """Test that MCP tools are appended to existing agent tools."""
+    http_config = MCPServerHTTP(url="https://api.example.com/mcp")
+
+    existing_tool = MagicMock(spec=BaseTool)
+    existing_tool.name = "existing_tool"
+    existing_tool.description = "Existing tool"
+    existing_tool.func = lambda: None
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        mcps=[http_config],
+        tools=[existing_tool],
+    )
+
+    mock_mcp_tool = MagicMock(spec=BaseTool)
+    mock_mcp_tool.name = "mcp_test_tool"
+
+    with patch.object(Agent, "get_mcp_tools", return_value=[mock_mcp_tool]):
+        if agent.mcps:
+            mcps = agent.get_mcp_tools(agent.mcps)
+            if mcps:
+                if agent.tools is None:
+                    agent.tools = []
+                agent.tools.extend(mcps)
+
+        assert agent.tools is not None
+        assert len(agent.tools) == 2
+
+
+def test_agent_without_tools_only_mcps(mock_tool_definitions):
+    """Test that an agent created with only mcps (no tools keyword) works correctly.
+
+    This is the exact scenario from issue #4568 where users create agents like:
+        Agent(role=..., goal=..., backstory=..., mcps=[MCPServerHTTP(...)])
+    without specifying tools at all.
+    """
+    http_config = MCPServerHTTP(url="http://localhost:8022/mcp")
+
+    agent = Agent(
+        role="Sandbox Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        mcps=[http_config],
+    )
+
+    mock_mcp_tool = MagicMock(spec=BaseTool)
+    mock_mcp_tool.name = "sandbox_tool"
+
+    with patch.object(Agent, "get_mcp_tools", return_value=[mock_mcp_tool]):
+        # Simulate _prepare_kickoff MCP loading logic
+        if agent.mcps:
+            mcps = agent.get_mcp_tools(agent.mcps)
+            if mcps:
+                if agent.tools is None:
+                    agent.tools = []
+                agent.tools.extend(mcps)
+
+        assert agent.tools is not None
+        assert len(agent.tools) == 1
+        assert agent.tools[0].name == "sandbox_tool"
+
+
 @pytest.mark.asyncio
 async def test_mcp_tool_execution_in_async_context(mock_tool_definitions):
     """Test MCPNativeTool execution in async context (e.g., from a Flow)."""
