@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 import datetime
@@ -624,11 +625,15 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
 
             if self.callback:
-                self.callback(self.output)
+                cb_result = self.callback(self.output)
+                if inspect.isawaitable(cb_result):
+                    await cb_result
 
             crew = self.agent.crew  # type: ignore[union-attr]
             if crew and crew.task_callback and crew.task_callback != self.callback:
-                crew.task_callback(self.output)
+                cb_result = crew.task_callback(self.output)
+                if inspect.isawaitable(cb_result):
+                    await cb_result
 
             if self.output_file:
                 content = (
@@ -722,11 +727,15 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
 
             if self.callback:
-                self.callback(self.output)
+                cb_result = self.callback(self.output)
+                if inspect.iscoroutine(cb_result):
+                    asyncio.run(cb_result)
 
             crew = self.agent.crew  # type: ignore[union-attr]
             if crew and crew.task_callback and crew.task_callback != self.callback:
-                crew.task_callback(self.output)
+                cb_result = crew.task_callback(self.output)
+                if inspect.iscoroutine(cb_result):
+                    asyncio.run(cb_result)
 
             if self.output_file:
                 content = (

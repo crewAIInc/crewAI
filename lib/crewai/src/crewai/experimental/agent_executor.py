@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+import inspect
 import json
 import threading
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -847,7 +849,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             from_cache = cast(bool, execution_result["from_cache"])
             original_tool = execution_result["original_tool"]
 
-            tool_message: LLMMessage = {
+            tool_message = {
                 "role": "tool",
                 "tool_call_id": call_id,
                 "name": func_name,
@@ -1435,7 +1437,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             formatted_answer: Current agent response.
         """
         if self.step_callback:
-            self.step_callback(formatted_answer)
+            cb_result = self.step_callback(formatted_answer)
+            if inspect.iscoroutine(cb_result):
+                asyncio.run(cb_result)
 
     def _append_message_to_state(
         self, text: str, role: Literal["user", "assistant", "system"] = "assistant"

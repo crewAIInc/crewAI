@@ -38,6 +38,7 @@ dependencies = [
     "json5~=0.10.0",
     "portalocker~=2.7.0",
     "pydantic-settings~=2.10.1",
+    "httpx~=0.28.1",
     "mcp~=1.26.0",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
