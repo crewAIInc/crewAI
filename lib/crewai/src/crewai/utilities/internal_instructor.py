@@ -1,3 +1,9 @@
+"""Internal Instructor wrapper for structured output with LiteLLM/OpenAI.
+
+Uses Pydantic V2 exclusively (model_dump_json, BaseModel). Compatible with
+OpenAI SDK >= 1.99 and instructor.from_litellm(completion) for Groq/other
+providers when is_litellm=True.
+"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, TypeGuard, TypeVar
@@ -116,7 +122,7 @@ class InternalInstructor(Generic[T]):
         return "openai"
 
     def to_json(self) -> str:
-        """Convert the structured output to JSON format.
+        """Convert the structured output to JSON format (Pydantic V2 API).
 
         Returns:
             JSON string representation of the structured output
