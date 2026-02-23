@@ -894,11 +894,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
+        json_parse_error: str | None = None
         if isinstance(func_args, str):
             try:
                 args_dict = json.loads(func_args)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
                 args_dict = {}
+                json_parse_error = (
+                    f"Error: Failed to parse tool arguments as JSON: {e}. "
+                    f"Please provide valid JSON arguments for the '{func_name}' tool."
+                )
         else:
             args_dict = func_args
 
@@ -980,7 +985,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     color="red",
                 )
 
-        if hook_blocked:
+        if json_parse_error:
+            result = json_parse_error
+        elif hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."

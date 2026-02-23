@@ -155,9 +155,17 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
+        if kwargs and self.args_schema is not None and self.args_schema.model_fields:
+            try:
+                validated = self.args_schema.model_validate(kwargs)
+                kwargs = validated.model_dump()
+            except Exception as e:
+                raise ValueError(
+                    f"Tool '{self.name}' arguments validation failed: {e}"
+                ) from e
+
         result = self._run(*args, **kwargs)
 
-        # If _run is async, we safely run it
         if asyncio.iscoroutine(result):
             result = asyncio.run(result)
 
@@ -331,6 +339,15 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        if kwargs and self.args_schema is not None and self.args_schema.model_fields:
+            try:
+                validated = self.args_schema.model_validate(kwargs)
+                kwargs = validated.model_dump()
+            except Exception as e:
+                raise ValueError(
+                    f"Tool '{self.name}' arguments validation failed: {e}"
+                ) from e
+
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
