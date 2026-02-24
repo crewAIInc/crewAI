@@ -11,7 +11,11 @@ from typing import Any
 from dotenv import load_dotenv
 import pytest
 from vcr.request import Request  # type: ignore[import-untyped]
-import vcr.stubs.httpx_stubs as httpx_stubs  # type: ignore[import-untyped]
+
+try:
+    import vcr.stubs.httpx_stubs as httpx_stubs  # type: ignore[import-untyped]
+except ModuleNotFoundError:
+    import vcr.stubs.httpcore_stubs as httpx_stubs  # type: ignore[import-untyped]
 
 
 env_test_path = Path(__file__).parent / ".env.test"

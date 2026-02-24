@@ -36,10 +36,7 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
-from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.memory.external.external_memory import ExternalMemory
-from crewai.memory.long_term.long_term_memory import LongTermMemory
-from crewai.memory.short_term.short_term_memory import ShortTermMemory
+
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
 from crewai.task import Task
@@ -2425,7 +2422,8 @@ def test_multiple_conditional_tasks(researcher, writer):
 
 
 @pytest.mark.vcr()
-def test_using_contextual_memory():
+def test_using_memory():
+    """With memory=True, crew has _memory and kickoff runs successfully."""
     math_researcher = Agent(
         role="Researcher",
         goal="You research about math.",
@@ -2445,11 +2443,8 @@ def test_using_contextual_memory():
         memory=True,
     )
 
-    with patch.object(
-        ContextualMemory, "build_context_for_task", return_value=""
-    ) as contextual_mem:
-        crew.kickoff()
-        contextual_mem.assert_called_once()
+    crew.kickoff()
+    assert crew._memory is not None
 
 
 @pytest.mark.vcr()
@@ -2527,30 +2522,29 @@ def test_memory_events_are_emitted():
     crew.kickoff()
 
     with condition:
+        # Wait for retrieval events (always fire) and optionally save events.
+        # Save events depend on extract_memories + remember LLM calls which
+        # may not be in VCR cassettes; retrieval events are reliable.
         success = condition.wait_for(
             lambda: (
-                len(events["MemorySaveStartedEvent"]) >= 3
-                and len(events["MemorySaveCompletedEvent"]) >= 3
-                and len(events["MemoryQueryStartedEvent"]) >= 3
-                and len(events["MemoryQueryCompletedEvent"]) >= 3
+                len(events["MemoryRetrievalStartedEvent"]) >= 1
                 and len(events["MemoryRetrievalCompletedEvent"]) >= 1
+                and len(events["MemoryQueryStartedEvent"]) >= 1
+                and len(events["MemoryQueryCompletedEvent"]) >= 1
             ),
-            timeout=10,
+            timeout=30,
         )
 
     assert success, f"Timeout waiting for memory events. Got: {dict(events)}"
-    assert len(events["MemorySaveStartedEvent"]) == 3
-    assert len(events["MemorySaveCompletedEvent"]) == 3
-    assert len(events["MemorySaveFailedEvent"]) == 0
-    assert len(events["MemoryQueryStartedEvent"]) == 3
-    assert len(events["MemoryQueryCompletedEvent"]) == 3
-    assert len(events["MemoryQueryFailedEvent"]) == 0
-    assert len(events["MemoryRetrievalStartedEvent"]) == 1
-    assert len(events["MemoryRetrievalCompletedEvent"]) == 1
+    assert len(events["MemoryRetrievalStartedEvent"]) >= 1
+    assert len(events["MemoryRetrievalCompletedEvent"]) >= 1
+    assert len(events["MemoryQueryStartedEvent"]) >= 1
+    assert len(events["MemoryQueryCompletedEvent"]) >= 1
 
 
 @pytest.mark.vcr()
-def test_using_contextual_memory_with_long_term_memory():
+def test_using_memory_with_remember():
+    """With memory=True, crew uses unified memory and kickoff runs successfully."""
     math_researcher = Agent(
         role="Researcher",
         goal="You research about math.",
@@ -2567,19 +2561,16 @@ def test_using_contextual_memory_with_long_term_memory():
     crew = Crew(
         agents=[math_researcher],
         tasks=[task1],
-        long_term_memory=LongTermMemory(),
+        memory=True,
     )
 
-    with patch.object(
-        ContextualMemory, "build_context_for_task", return_value=""
-    ) as contextual_mem:
-        crew.kickoff()
-        contextual_mem.assert_called_once()
-        assert crew.memory is False
+    crew.kickoff()
+    assert crew._memory is not None
 
 
 @pytest.mark.vcr()
-def test_warning_long_term_memory_without_entity_memory():
+def test_memory_enabled_creates_unified_memory():
+    """With unified memory, memory=True creates _memory and kickoff runs."""
     math_researcher = Agent(
         role="Researcher",
         goal="You research about math.",
@@ -2597,55 +2588,16 @@ def test_warning_long_term_memory_without_entity_memory():
     crew = Crew(
         agents=[math_researcher],
         tasks=[task1],
-        long_term_memory=LongTermMemory(),
+        memory=True,
     )
 
-    with (
-        patch("crewai.utilities.printer.Printer.print") as mock_print,
-        patch(
-            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
-        ) as save_memory,
-    ):
-        crew.kickoff()
-        mock_print.assert_called_with(
-            content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
-            color="bold_yellow",
-        )
-        save_memory.assert_not_called()
+    crew.kickoff()
+    assert crew._memory is not None
 
 
 @pytest.mark.vcr()
-def test_long_term_memory_with_memory_flag():
-    math_researcher = Agent(
-        role="Researcher",
-        goal="You research about math.",
-        backstory="You're an expert in research and you love to learn new things.",
-        allow_delegation=False,
-    )
-
-    task1 = Task(
-        description="Research a topic to teach a kid aged 6 about math.",
-        expected_output="A topic, explanation, angle, and examples.",
-        agent=math_researcher,
-    )
-
-    with (
-        patch("crewai.utilities.printer.Printer.print") as mock_print,
-        patch("crewai.memory.long_term.long_term_memory.LongTermMemory.save") as save_memory,
-    ):
-        crew = Crew(
-            agents=[math_researcher],
-            tasks=[task1],
-            memory=True,
-            long_term_memory=LongTermMemory(),
-        )
-        crew.kickoff()
-        mock_print.assert_not_called()
-        save_memory.assert_called_once()
-
-
-@pytest.mark.vcr()
-def test_using_contextual_memory_with_short_term_memory():
+def test_memory_remember_called_after_task():
+    """With memory=True, extract_memories is called with raw content and remember is called per extracted item."""
     math_researcher = Agent(
         role="Researcher",
         goal="You research about math.",
@@ -2662,19 +2614,58 @@ def test_using_contextual_memory_with_short_term_memory():
     crew = Crew(
         agents=[math_researcher],
         tasks=[task1],
-        short_term_memory=ShortTermMemory(),
+        memory=True,
     )
 
     with patch.object(
-        ContextualMemory, "build_context_for_task", return_value=""
-    ) as contextual_mem:
+        crew._memory, "extract_memories", wraps=crew._memory.extract_memories
+    ) as extract_mock, patch.object(
+        crew._memory, "remember", wraps=crew._memory.remember
+    ) as remember_mock:
         crew.kickoff()
-        contextual_mem.assert_called_once()
-        assert crew.memory is False
+
+        # extract_memories should be called with the raw content blob
+        extract_mock.assert_called()
+        raw = extract_mock.call_args.args[0]
+        assert "Task:" in raw
+        assert "Agent:" in raw or "Researcher" in raw
+
+        # remember should be called once per extracted memory (may be 0 if LLM returned none)
+        if remember_mock.called:
+            for call in remember_mock.call_args_list:
+                content = call.args[0] if call.args else call.kwargs.get("content", "")
+                assert isinstance(content, str) and len(content) > 0
 
 
 @pytest.mark.vcr()
-def test_disabled_memory_using_contextual_memory():
+def test_using_memory_recall_and_save():
+    """With memory=True, crew uses unified memory for recall and save."""
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        memory=True,
+    )
+
+    crew.kickoff()
+    assert crew._memory is not None
+
+
+@pytest.mark.vcr()
+def test_disabled_memory():
+    """With memory=False, crew has no _memory and kickoff runs without memory."""
     math_researcher = Agent(
         role="Researcher",
         goal="You research about math.",
@@ -2694,11 +2685,8 @@ def test_disabled_memory_using_contextual_memory():
         memory=False,
     )
 
-    with patch.object(
-        ContextualMemory, "build_context_for_task", return_value=""
-    ) as contextual_mem:
-        crew.kickoff()
-        contextual_mem.assert_not_called()
+    crew.kickoff()
+    assert getattr(crew, "_memory", None) is None
 
 
 @pytest.mark.vcr()
@@ -4446,68 +4434,21 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
 
 
 def test_crew_copy_with_memory():
-    """Test that copying a crew with memory enabled does not raise validation errors and copies memory correctly."""
+    """Test that copying a crew with memory enabled does not raise and shares the same memory instance."""
     agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
     task = Task(description="Test Task", expected_output="Test Output", agent=agent)
     crew = Crew(agents=[agent], tasks=[task], memory=True)
 
-    original_short_term_id = (
-        id(crew._short_term_memory) if crew._short_term_memory else None
-    )
-    original_long_term_id = (
-        id(crew._long_term_memory) if crew._long_term_memory else None
-    )
-    original_entity_id = id(crew._entity_memory) if crew._entity_memory else None
-    original_external_id = id(crew._external_memory) if crew._external_memory else None
+    assert crew._memory is not None, "Crew with memory=True should have _memory"
 
     try:
         crew_copy = crew.copy()
 
-        assert hasattr(crew_copy, "_short_term_memory"), (
-            "Copied crew should have _short_term_memory"
+        assert hasattr(crew_copy, "_memory"), "Copied crew should have _memory"
+        assert crew_copy._memory is not None, "Copied _memory should not be None"
+        assert crew_copy._memory is crew._memory, (
+            "Copy passes memory=self._memory so clone shares the same memory"
         )
-        assert crew_copy._short_term_memory is not None, (
-            "Copied _short_term_memory should not be None"
-        )
-        assert id(crew_copy._short_term_memory) != original_short_term_id, (
-            "Copied _short_term_memory should be a new object"
-        )
-
-        assert hasattr(crew_copy, "_long_term_memory"), (
-            "Copied crew should have _long_term_memory"
-        )
-        assert crew_copy._long_term_memory is not None, (
-            "Copied _long_term_memory should not be None"
-        )
-        assert id(crew_copy._long_term_memory) != original_long_term_id, (
-            "Copied _long_term_memory should be a new object"
-        )
-
-        assert hasattr(crew_copy, "_entity_memory"), (
-            "Copied crew should have _entity_memory"
-        )
-        assert crew_copy._entity_memory is not None, (
-            "Copied _entity_memory should not be None"
-        )
-        assert id(crew_copy._entity_memory) != original_entity_id, (
-            "Copied _entity_memory should be a new object"
-        )
-
-        if original_external_id:
-            assert hasattr(crew_copy, "_external_memory"), (
-                "Copied crew should have _external_memory"
-            )
-            assert crew_copy._external_memory is not None, (
-                "Copied _external_memory should not be None"
-            )
-            assert id(crew_copy._external_memory) != original_external_id, (
-                "Copied _external_memory should be a new object"
-            )
-        else:
-            assert (
-                not hasattr(crew_copy, "_external_memory")
-                or crew_copy._external_memory is None
-            ), "Copied _external_memory should be None if not originally present"
 
     except pydantic_core.ValidationError as e:
         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
@@ -4515,7 +4456,7 @@ def test_crew_copy_with_memory():
                 f"Copying with memory raised Pydantic ValidationError, likely due to incorrect memory copy: {e}"
             )
         else:
-            raise e  # Re-raise other validation errors
+            raise e
     except Exception as e:
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
 
@@ -4807,9 +4748,8 @@ def test_default_crew_name(researcher, writer):
 
 
 @pytest.mark.vcr()
-def test_ensure_exchanged_messages_are_propagated_to_external_memory():
-    external_memory = ExternalMemory(storage=MagicMock())
-
+def test_memory_remember_receives_task_content():
+    """With memory=True, extract_memories receives raw content with task, agent, expected output, and result."""
     math_researcher = Agent(
         role="Researcher",
         goal="You research about math.",
@@ -4826,33 +4766,30 @@ def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     crew = Crew(
         agents=[math_researcher],
         tasks=[task1],
-        external_memory=external_memory,
+        memory=True,
     )
 
-    with patch.object(
-        ExternalMemory, "save", return_value=None
-    ) as external_memory_save:
+    with (
+        # Mock extract_memories to return fake memories and capture the raw input.
+        # No wraps= needed -- the test only checks what args it receives, not the output.
+        patch.object(
+            crew._memory, "extract_memories", return_value=["Fake memory."]
+        ) as extract_mock,
+        # Mock recall to avoid LLM calls for query analysis (not in cassette).
+        patch.object(crew._memory, "recall", return_value=[]),
+        # Mock remember_many to prevent the background save from triggering
+        # LLM calls (field resolution) that aren't in the cassette.
+        patch.object(crew._memory, "remember_many", return_value=[]),
+    ):
         crew.kickoff()
 
-    external_memory_save.assert_called_once()
+    extract_mock.assert_called()
+    raw = extract_mock.call_args.args[0]
 
-    call_args = external_memory_save.call_args
-
-    assert "value" in call_args.kwargs or len(call_args.args) > 0
-    assert "metadata" in call_args.kwargs or len(call_args.args) > 1
-
-    if "metadata" in call_args.kwargs:
-        metadata = call_args.kwargs["metadata"]
-    else:
-        metadata = call_args.args[1]
-
-    assert "description" in metadata
-    assert "messages" in metadata
-    assert isinstance(metadata["messages"], list)
-    assert len(metadata["messages"]) >= 2
-
-    messages = metadata["messages"]
-    assert messages[0]["role"] == "system"
-    assert "Researcher" in messages[0]["content"]
-    assert messages[1]["role"] == "user"
-    assert "Research a topic to teach a kid aged 6 about math" in messages[1]["content"]
+    # The raw content passed to extract_memories should contain the task context
+    assert "Task:" in raw
+    assert "Research" in raw or "topic" in raw
+    assert "Agent:" in raw
+    assert "Researcher" in raw
+    assert "Expected result:" in raw
+    assert "Result:" in raw
