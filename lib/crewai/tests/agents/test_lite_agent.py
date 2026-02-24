@@ -659,7 +659,7 @@ def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
 
 
 @patch.dict("os.environ", {"EXA_API_KEY": "test_exa_key"})
-@patch("crewai.agent.Agent._get_external_mcp_tools")
+@patch("crewai.agent.Agent.get_mcp_tools")
 @pytest.mark.vcr()
 def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     """Test that Agent.kickoff() properly integrates MCP tools with LiteAgent"""
@@ -691,7 +691,7 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     assert result.raw is not None
 
     # Verify MCP tools were retrieved
-    mock_get_mcp_tools.assert_called_once_with("https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research")
+    mock_get_mcp_tools.assert_called_once_with(["https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research"])
 
 
 # ============================================================================
