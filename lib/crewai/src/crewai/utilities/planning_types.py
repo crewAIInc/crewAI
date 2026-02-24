@@ -174,6 +174,20 @@ class TodoList(BaseModel):
         self.items = non_pending + new_items
 
 
+class StepRefinement(BaseModel):
+    """A structured in-place update for a single pending step.
+
+    Returned as part of StepObservation when the Planner learns new
+    information that makes a pending step description more specific.
+    Applied directly — no second LLM call required.
+    """
+
+    step_number: int = Field(description="The step number to update (1-based)")
+    new_description: str = Field(
+        description="The updated, more specific description for this step"
+    )
+
+
 class StepObservation(BaseModel):
     """Planner's observation after a step execution completes.
 
@@ -189,9 +203,10 @@ class StepObservation(BaseModel):
             (e.g., "Found 3 products: A, B, C"). Used to refine upcoming steps.
         remaining_plan_still_valid: Whether pending todos still make sense
             given the new information. True does NOT mean no refinement needed.
-        suggested_refinements: Minor tweaks to upcoming step descriptions.
-            These are lightweight in-place updates, not a full replan.
-            Example: ["Step 3 should select product B instead of 'best product'"]
+        suggested_refinements: Structured in-place updates to pending step
+            descriptions. Each entry targets a specific step by number. These
+            are applied directly without a second LLM call.
+            Example: [{"step_number": 3, "new_description": "Select product B (highest rated)"}]
         needs_full_replan: The remaining plan is fundamentally wrong and must
             be regenerated from scratch. Mutually exclusive with
             remaining_plan_still_valid (if this is True, that should be False).
@@ -211,9 +226,13 @@ class StepObservation(BaseModel):
         default=True,
         description="Whether the remaining pending todos still make sense given new information",
     )
-    suggested_refinements: list[str] | None = Field(
+    suggested_refinements: list[StepRefinement] | None = Field(
         default=None,
-        description="Minor tweaks to descriptions of upcoming steps (lightweight, no full replan)",
+        description=(
+            "Structured updates to pending step descriptions based on new information. "
+            "Each entry specifies a step_number and new_description. "
+            "Applied directly — no separate replan needed."
+        ),
     )
     needs_full_replan: bool = Field(
         default=False,

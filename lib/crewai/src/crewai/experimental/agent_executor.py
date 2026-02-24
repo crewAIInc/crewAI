@@ -721,9 +721,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             observer = self._ensure_planner_observer()
             remaining = self.state.todos.get_pending_todos()
 
-            observer.refine_todos(recent_observation, remaining)
+            observer.apply_refinements(recent_observation, remaining)
 
-            # Emit refinement event
+
+            refinement_summaries = [
+                f"Step {r.step_number}: {r.new_description}"
+                for r in recent_observation.suggested_refinements
+            ]
+
             crewai_event_bus.emit(
                 self.agent,
                 event=PlanRefinementEvent(
@@ -731,7 +736,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     step_number=last_step,
                     step_description="",
                     refined_step_count=len(remaining),
-                    refinements=recent_observation.suggested_refinements,
+                    refinements=refinement_summaries,
                     from_task=self.task,
                     from_agent=self.agent,
                 ),

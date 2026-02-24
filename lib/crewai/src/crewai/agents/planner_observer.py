@@ -1,11 +1,14 @@
 """PlannerObserver: Observation phase after each step execution.
 
-Implements the "Observe" phase. After every
-step execution, the Planner analyzes what happened, what new information was
-learned, and whether the remaining plan is still valid.
+Implements the "Observe" phase. After every step execution, the Planner
+analyzes what happened, what new information was learned, and whether the
+remaining plan is still valid.
 
 This is NOT an error detector — it runs on every step, including successes,
 to incorporate runtime observations into the remaining plan.
+
+Refinements are structured (StepRefinement objects) and applied directly
+from the observation result — no second LLM call required.
 """
 
 from __future__ import annotations
@@ -96,11 +99,12 @@ class PlannerObserver:
             remaining_todos: The pending todos still in the plan.
 
         Returns:
-            StepObservation with the Planner's analysis.
+            StepObservation with the Planner's analysis. Any suggested
+            refinements are structured StepRefinement objects ready for
+            direct application — no second LLM call needed.
         """
-        agent_role = self.agent.role if self.agent else "unknown"
+        agent_role = self.agent.role
 
-        # Emit observation started event
         crewai_event_bus.emit(
             self.agent,
             event=StepObservationStartedEvent(
@@ -127,15 +131,21 @@ class PlannerObserver:
             if isinstance(response, StepObservation):
                 observation = response
             else:
-                # If the LLM returned raw text instead of structured output,
-                # parse it conservatively
                 observation = StepObservation(
                     step_completed_successfully=True,
                     key_information_learned=str(response) if response else "",
                     remaining_plan_still_valid=True,
                 )
 
-            # Emit observation completed event
+            refinement_summaries = (
+                [
+                    f"Step {r.step_number}: {r.new_description}"
+                    for r in observation.suggested_refinements
+                ]
+                if observation.suggested_refinements
+                else None
+            )
+
             crewai_event_bus.emit(
                 self.agent,
                 event=StepObservationCompletedEvent(
@@ -148,7 +158,7 @@ class PlannerObserver:
                     needs_full_replan=observation.needs_full_replan,
                     replan_reason=observation.replan_reason,
                     goal_already_achieved=observation.goal_already_achieved,
-                    suggested_refinements=observation.suggested_refinements,
+                    suggested_refinements=refinement_summaries,
                     from_task=self.task,
                     from_agent=self.agent,
                 ),
@@ -159,7 +169,6 @@ class PlannerObserver:
         except Exception as e:
             logger.warning(f"Observation LLM call failed: {e}. Defaulting to continue.")
 
-            # Emit observation failed event
             crewai_event_bus.emit(
                 self.agent,
                 event=StepObservationFailedEvent(
@@ -178,47 +187,30 @@ class PlannerObserver:
                 remaining_plan_still_valid=True,
             )
 
-    def refine_todos(
+    def apply_refinements(
         self,
         observation: StepObservation,
         remaining_todos: list[TodoItem],
     ) -> list[TodoItem]:
-        """Refine pending todo descriptions based on observation.
+        """Apply structured refinements from the observation directly to todo descriptions.
 
-        This is a LIGHTWEIGHT operation — no full replan. It updates the
-        description field of pending todos based on new information learned.
-
-        Example: Step 1 found "3 products: A, B, C" → Step 2 changes from
-        "Select the best product" to "Select product B (highest rated)"
+        No LLM call needed — refinements are already structured StepRefinement
+        objects produced by the observation call. This is a pure in-memory update.
 
         Args:
-            observation: The observation with suggested refinements.
-            remaining_todos: The pending todos to refine.
+            observation: The observation containing structured refinements.
+            remaining_todos: The pending todos to update in-place.
 
         Returns:
-            The refined todo list (same objects, updated descriptions).
+            The same todo list with updated descriptions where refinements applied.
         """
         if not observation.suggested_refinements:
             return remaining_todos
 
-        # Ask the LLM to apply the refinements to the todo descriptions
-        messages = self._build_refinement_messages(observation, remaining_todos)
-
-        try:
-            response = self.llm.call(
-                messages,
-                from_task=self.task,
-                from_agent=self.agent,
-            )
-
-            if response:
-                # Parse the LLM's refined descriptions and apply them
-                self._apply_refinements(str(response), remaining_todos)
-
-        except Exception as e:
-            logger.warning(
-                f"Refinement LLM call failed: {e}. Keeping original descriptions."
-            )
+        todo_by_step: dict[int, TodoItem] = {t.step_number: t for t in remaining_todos}
+        for refinement in observation.suggested_refinements:
+            if refinement.step_number in todo_by_step and refinement.new_description:
+                todo_by_step[refinement.step_number].description = refinement.new_description
 
         return remaining_todos
 
@@ -282,57 +274,3 @@ class PlannerObserver:
             {"role": "user", "content": user_prompt},
         ]
 
-    def _build_refinement_messages(
-        self,
-        observation: StepObservation,
-        remaining_todos: list[TodoItem],
-    ) -> list[LLMMessage]:
-        """Build messages for the refinement LLM call."""
-        system_prompt = self._i18n.retrieve("planning", "refinement_system_prompt")
-
-        refinements = "\n".join(observation.suggested_refinements or [])
-        todo_lines = "\n".join(
-            f"Step {t.step_number}: {t.description}" for t in remaining_todos
-        )
-
-        user_prompt = self._i18n.retrieve("planning", "refinement_user_prompt").format(
-            key_information_learned=observation.key_information_learned,
-            refinements=refinements,
-            todo_lines=todo_lines,
-        )
-
-        return [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-
-    def _apply_refinements(
-        self,
-        llm_response: str,
-        remaining_todos: list[TodoItem],
-    ) -> None:
-        """Parse LLM refinement response and update todo descriptions.
-
-        Expects format: "Step N: <description>" per line.
-        """
-        # Build lookup for quick access
-        todo_by_step: dict[int, TodoItem] = {t.step_number: t for t in remaining_todos}
-
-        for line in llm_response.strip().split("\n"):
-            line = line.strip()
-            if not line.startswith("Step "):
-                continue
-
-            # Parse "Step N: description"
-            try:
-                parts = line.split(":", 1)
-                if len(parts) < 2:
-                    continue
-                step_part = parts[0].strip()  # "Step N"
-                description = parts[1].strip()
-                step_num = int(step_part.replace("Step", "").strip())
-
-                if step_num in todo_by_step and description:
-                    todo_by_step[step_num].description = description
-            except (ValueError, IndexError):
-                continue
