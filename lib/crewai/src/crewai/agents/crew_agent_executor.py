@@ -50,6 +50,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    parse_tool_call_args,
     process_llm_response,
     track_delegation_if_needed,
 )
@@ -894,18 +895,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
-        json_parse_error: str | None = None
-        if isinstance(func_args, str):
-            try:
-                args_dict = json.loads(func_args)
-            except json.JSONDecodeError as e:
-                args_dict = {}
-                json_parse_error = (
-                    f"Error: Failed to parse tool arguments as JSON: {e}. "
-                    f"Please provide valid JSON arguments for the '{func_name}' tool."
-                )
-        else:
-            args_dict = func_args
+        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id, original_tool)
+        if parse_error is not None:
+            return parse_error
 
         if original_tool is None:
             for tool in self.original_tools or []:
@@ -985,9 +977,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     color="red",
                 )
 
-        if json_parse_error:
-            result = json_parse_error
-        elif hook_blocked:
+        if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
