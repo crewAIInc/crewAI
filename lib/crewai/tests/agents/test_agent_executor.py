@@ -4,16 +4,26 @@ Tests the Flow-based agent executor implementation including state management,
 flow methods, routing logic, and error handling.
 """
 
+import asyncio
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from crewai.agents.step_executor import StepExecutor
 from crewai.experimental.agent_executor import (
     AgentReActState,
     AgentExecutor,
 )
 from crewai.agents.parser import AgentAction, AgentFinish
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+)
+from crewai.tools.tool_types import ToolResult
+from crewai.utilities.step_execution_context import StepExecutionContext
+from crewai.utilities.planning_types import TodoItem
 
 class TestAgentReActState:
     """Test AgentReActState Pydantic model."""
@@ -245,6 +255,113 @@ class TestAgentExecutor:
         executor._invoke_step_callback(
             AgentFinish(thought="thinking", output="test", text="final")
         )
+
+    @pytest.mark.asyncio
+    async def test_invoke_step_callback_async_inside_running_loop(
+        self, mock_dependencies
+    ):
+        """Test async step callback scheduling when already in an event loop."""
+        callback = AsyncMock()
+        mock_dependencies["step_callback"] = callback
+        executor = AgentExecutor(**mock_dependencies)
+
+        answer = AgentFinish(thought="thinking", output="test", text="final")
+        with patch("crewai.experimental.agent_executor.asyncio.run") as mock_run:
+            executor._invoke_step_callback(answer)
+            await asyncio.sleep(0)
+
+        callback.assert_awaited_once_with(answer)
+        mock_run.assert_not_called()
+
+
+class TestStepExecutorCriticalFixes:
+    """Regression tests for critical plan-and-execute issues."""
+
+    @pytest.fixture
+    def step_executor(self):
+        llm = Mock()
+        llm.supports_stop_words.return_value = True
+
+        agent = Mock()
+        agent.role = "Test Agent"
+        agent.goal = "Execute tasks"
+        agent.verbose = False
+        agent.key = "test-agent-key"
+
+        tool = Mock()
+        tool.name = "count_words"
+        task = Mock()
+        task.name = "test-task"
+        task.description = "test task description"
+
+        return StepExecutor(
+            llm=llm,
+            tools=[tool],
+            agent=agent,
+            original_tools=[],
+            tools_handler=Mock(),
+            task=task,
+            crew=Mock(),
+            function_calling_llm=None,
+            request_within_rpm_limit=None,
+            callbacks=[],
+        )
+
+    def test_step_executor_fails_when_expected_tool_is_not_called(self, step_executor):
+        """Step should fail if a configured expected tool is not actually invoked."""
+        todo = TodoItem(
+            step_number=1,
+            description="Count words in input text.",
+            tool_to_use="count_words",
+            depends_on=[],
+            status="pending",
+        )
+        context = StepExecutionContext(task_description="task", task_goal="goal")
+
+        with patch.object(step_executor, "_build_isolated_messages", return_value=[]):
+            with patch.object(
+                step_executor, "_execute_text_parsed", return_value="No tool used."
+            ):
+                result = step_executor.execute(todo, context)
+
+        assert result.success is False
+        assert result.error is not None
+        assert "Expected tool 'count_words' was not called" in result.error
+
+    def test_step_executor_text_tool_emits_usage_events(self, step_executor):
+        """Text-parsed tool execution should emit started and finished events."""
+        started_events: list[ToolUsageStartedEvent] = []
+        finished_events: list[ToolUsageFinishedEvent] = []
+
+        tool_name = "count_words"
+        action = AgentAction(
+            thought="Need a tool",
+            tool=tool_name,
+            tool_input='{"text":"hello world"}',
+            text="Action: count_words",
+        )
+
+        @crewai_event_bus.on(ToolUsageStartedEvent)
+        def _on_started(_source, event):
+            if event.tool_name == tool_name:
+                started_events.append(event)
+
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def _on_finished(_source, event):
+            if event.tool_name == tool_name:
+                finished_events.append(event)
+
+        with patch(
+            "crewai.agents.step_executor.execute_tool_and_check_finality",
+            return_value=ToolResult(result="2", result_as_answer=False),
+        ):
+            output = step_executor._execute_text_tool_with_events(action)
+
+        crewai_event_bus.flush()
+
+        assert output == "2"
+        assert len(started_events) >= 1
+        assert len(finished_events) >= 1
 
     @patch("crewai.experimental.agent_executor.handle_output_parser_exception")
     def test_recover_from_parser_error(

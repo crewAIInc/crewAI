@@ -13,12 +13,20 @@ this class single-purpose and fast.
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
+import json
 import time
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
 from crewai.agents.parser import AgentAction, AgentFinish
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+)
 from crewai.utilities.agent_utils import (
     build_tool_calls_assistant_message,
     check_native_tool_support,
@@ -140,6 +148,7 @@ class StepExecutor:
                 result_text = self._execute_native(messages, tool_calls_made)
             else:
                 result_text = self._execute_text_parsed(messages, tool_calls_made)
+            self._validate_expected_tool_usage(todo, tool_calls_made)
 
             elapsed = time.monotonic() - start_time
             return StepResult(
@@ -265,7 +274,28 @@ class StepExecutor:
 
         if isinstance(formatted, AgentAction):
             tool_calls_made.append(formatted.tool)
+            return self._execute_text_tool_with_events(formatted)
 
+        # Raw text response — treat as the step result
+        return answer_str
+
+    def _execute_text_tool_with_events(self, formatted: AgentAction) -> str:
+        """Execute text-parsed tool calls with tool usage events."""
+        args_dict = self._parse_tool_args(formatted.tool_input)
+        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=formatted.tool,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                agent_key=agent_key,
+            ),
+        )
+
+        try:
             fingerprint_context = {}
             if (
                 self.agent
@@ -289,11 +319,75 @@ class StepExecutor:
                 function_calling_llm=self.function_calling_llm,
                 crew=self.crew,
             )
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageErrorEvent(
+                    tool_name=formatted.tool,
+                    tool_args=args_dict,
+                    from_agent=self.agent,
+                    from_task=self.task,
+                    agent_key=agent_key,
+                    error=e,
+                ),
+            )
+            raise
 
-            return str(tool_result.result)
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageFinishedEvent(
+                output=str(tool_result.result),
+                tool_name=formatted.tool,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                agent_key=agent_key,
+                started_at=started_at,
+                finished_at=datetime.now(),
+            ),
+        )
+        return str(tool_result.result)
 
-        # Raw text response — treat as the step result
-        return answer_str
+    def _parse_tool_args(self, tool_input: Any) -> dict[str, Any]:
+        """Parse tool args from the parser output into a dict payload for events."""
+        if isinstance(tool_input, dict):
+            return tool_input
+        if isinstance(tool_input, str):
+            stripped_input = tool_input.strip()
+            if not stripped_input:
+                return {}
+            try:
+                parsed = json.loads(stripped_input)
+                if isinstance(parsed, dict):
+                    return parsed
+                return {"input": parsed}
+            except json.JSONDecodeError:
+                return {"input": stripped_input}
+        return {"input": str(tool_input)}
+
+    def _validate_expected_tool_usage(
+        self,
+        todo: TodoItem,
+        tool_calls_made: list[str],
+    ) -> None:
+        """Fail step execution when a required tool is configured but not called."""
+        expected_tool = getattr(todo, "tool_to_use", None)
+        if not expected_tool:
+            return
+        expected_tool_name = sanitize_tool_name(expected_tool)
+        available_tool_names = {
+            sanitize_tool_name(tool.name)
+            for tool in self.tools
+            if getattr(tool, "name", "")
+        } | set(self._available_functions.keys())
+        if expected_tool_name not in available_tool_names:
+            return
+        called_names = {sanitize_tool_name(name) for name in tool_calls_made}
+        if expected_tool_name not in called_names:
+            raise ValueError(
+                f"Expected tool '{expected_tool_name}' was not called "
+                f"for step {todo.step_number}."
+            )
 
     def _execute_native(
         self,

@@ -2752,7 +2752,24 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         if self.step_callback:
             cb_result = self.step_callback(formatted_answer)
             if inspect.iscoroutine(cb_result):
-                asyncio.run(cb_result)
+                if is_inside_event_loop():
+                    callback_task = asyncio.create_task(cb_result)
+                    callback_task.add_done_callback(
+                        self._handle_step_callback_task_result
+                    )
+                else:
+                    asyncio.run(cb_result)
+
+    def _handle_step_callback_task_result(self, task: asyncio.Task[Any]) -> None:
+        """Surface async callback errors without crashing the flow event loop."""
+        try:
+            task.result()
+        except Exception as e:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in async step_callback task: {e!s}",
+                    color="red",
+                )
 
     def _append_message_to_state(
         self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
