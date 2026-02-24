@@ -20,8 +20,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-FAIL_VALUES = {"FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"}
-PENDING_VALUES = {"PENDING", "QUEUED", "IN_PROGRESS", "REQUESTED", "WAITING"}
+FAIL_VALUES = {
+    "FAILURE",
+    "ERROR",
+    "TIMED_OUT",
+    "CANCELLED",
+    "ACTION_REQUIRED",
+    "STARTUP_FAILURE",
+    "STALE",
+}
+PENDING_VALUES = {"PENDING", "QUEUED", "IN_PROGRESS", "REQUESTED", "WAITING", "EXPECTED"}
 POLICY_PATTERNS = [
     r"\bcla\b",
     r"license/cla",
@@ -74,9 +82,15 @@ def classify(checks: list[Check]) -> str:
     pending = [c for c in checks if c.status in PENDING_VALUES or c.conclusion in PENDING_VALUES]
 
     if failing:
-        if all(_is_policy(c) for c in failing):
-            return "policy_blocked"
-        return "failed"
+        non_policy_failures = [c for c in failing if not _is_policy(c)]
+        if non_policy_failures:
+            return "failed"
+
+        non_policy_pending = [c for c in pending if not _is_policy(c)]
+        if non_policy_pending:
+            return "pending"
+
+        return "policy_blocked"
 
     if pending:
         if all(_is_policy(c) for c in pending):
@@ -90,6 +104,8 @@ def _load_status_rollup(path: Path) -> list[dict[str, Any]]:
     payload = json.loads(path.read_text())
     if isinstance(payload, dict) and "statusCheckRollup" in payload:
         rollup = payload["statusCheckRollup"]
+        if rollup is None:
+            return []
         if isinstance(rollup, list):
             return rollup
     if isinstance(payload, list):
@@ -144,10 +160,25 @@ def _self_test() -> None:
         classify([Check("build", "FAILURE", "COMPLETED")]) == "failed"
     )
     assert (
+        classify([Check("build", "STARTUP_FAILURE", "COMPLETED")]) == "failed"
+    )
+    assert (
         classify([Check("license/cla", "", "QUEUED")]) == "policy_blocked"
     )
     assert (
         classify([Check("tests", "", "IN_PROGRESS")]) == "pending"
+    )
+    assert (
+        classify([Check("required", "EXPECTED", "EXPECTED")]) == "pending"
+    )
+    assert (
+        classify(
+            [
+                Check("license/cla", "ACTION_REQUIRED", "COMPLETED"),
+                Check("tests", "", "IN_PROGRESS"),
+            ]
+        )
+        == "pending"
     )
     print(json.dumps({"self_test": "ok"}))
 
