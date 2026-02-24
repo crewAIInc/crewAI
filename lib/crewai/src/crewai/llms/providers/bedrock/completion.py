@@ -234,7 +234,7 @@ class BedrockCompletion(BaseLLM):
         aws_access_key_id: str | None = None,
         aws_secret_access_key: str | None = None,
         aws_session_token: str | None = None,
-        region_name: str = "us-east-1",
+        region_name: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
         top_p: float | None = None,
@@ -293,7 +293,7 @@ class BedrockCompletion(BaseLLM):
             aws_secret_access_key=aws_secret_access_key
             or os.getenv("AWS_SECRET_ACCESS_KEY"),
             aws_session_token=aws_session_token or os.getenv("AWS_SESSION_TOKEN"),
-            region_name=region_name,
+            region_name=region_name or os.getenv("AWS_DEFAULT_REGION") or "us-east-1",
         )
 
         # Configure client with timeouts and retries following AWS best practices
