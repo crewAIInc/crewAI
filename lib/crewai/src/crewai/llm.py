@@ -419,8 +419,22 @@ class LLM(BaseLLM):
 
         # FALLBACK to LiteLLM
         if not LITELLM_AVAILABLE:
-            logger.error("LiteLLM is not available, falling back to LiteLLM")
-            raise ImportError("Fallback to LiteLLM is not available") from None
+            native_list = ", ".join(SUPPORTED_NATIVE_PROVIDERS)
+            error_msg = (
+                f"Unable to initialize LLM with model '{model}'. "
+                f"The model did not match any supported native provider "
+                f"({native_list}), and the LiteLLM fallback package is not "
+                f"installed.\n\n"
+                f"To fix this, either:\n"
+                f"  1. Install LiteLLM for broad model support: "
+                f"uv add litellm\n"
+                f"or\n"
+                f"pip install litellm\n\n"
+                f"For more details, see: "
+                f"https://docs.crewai.com/en/learn/llm-connections"
+            )
+            logger.error(error_msg)
+            raise ImportError(error_msg) from None
 
         instance = object.__new__(cls)
         super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)

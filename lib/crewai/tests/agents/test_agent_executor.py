@@ -4,6 +4,7 @@ Tests the Flow-based agent executor implementation including state management,
 flow methods, routing logic, and error handling.
 """
 
+import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -372,10 +373,7 @@ class TestFlowInvoke:
         task.human_input = False
 
         crew = Mock()
-        crew._short_term_memory = None
-        crew._long_term_memory = None
-        crew._entity_memory = None
-        crew._external_memory = None
+        crew._memory = None
 
         agent = Mock()
         agent.role = "Test"
@@ -398,14 +396,10 @@ class TestFlowInvoke:
         }
 
     @patch.object(AgentExecutor, "kickoff")
-    @patch.object(AgentExecutor, "_create_short_term_memory")
-    @patch.object(AgentExecutor, "_create_long_term_memory")
-    @patch.object(AgentExecutor, "_create_external_memory")
+    @patch.object(AgentExecutor, "_save_to_memory")
     def test_invoke_success(
         self,
-        mock_external_memory,
-        mock_long_term_memory,
-        mock_short_term_memory,
+        mock_save_to_memory,
         mock_kickoff,
         mock_dependencies,
     ):
@@ -425,9 +419,7 @@ class TestFlowInvoke:
 
         assert result == {"output": "Final result"}
         mock_kickoff.assert_called_once()
-        mock_short_term_memory.assert_called_once()
-        mock_long_term_memory.assert_called_once()
-        mock_external_memory.assert_called_once()
+        mock_save_to_memory.assert_called_once()
 
     @patch.object(AgentExecutor, "kickoff")
     def test_invoke_failure_no_agent_finish(self, mock_kickoff, mock_dependencies):
@@ -443,14 +435,10 @@ class TestFlowInvoke:
             executor.invoke(inputs)
 
     @patch.object(AgentExecutor, "kickoff")
-    @patch.object(AgentExecutor, "_create_short_term_memory")
-    @patch.object(AgentExecutor, "_create_long_term_memory")
-    @patch.object(AgentExecutor, "_create_external_memory")
+    @patch.object(AgentExecutor, "_save_to_memory")
     def test_invoke_with_system_prompt(
         self,
-        mock_external_memory,
-        mock_long_term_memory,
-        mock_short_term_memory,
+        mock_save_to_memory,
         mock_kickoff,
         mock_dependencies,
     ):
@@ -470,10 +458,181 @@ class TestFlowInvoke:
 
         inputs = {"input": "test", "tool_names": "", "tools": ""}
         result = executor.invoke(inputs)
-        mock_short_term_memory.assert_called_once()
-        mock_long_term_memory.assert_called_once()
-        mock_external_memory.assert_called_once()
+        mock_save_to_memory.assert_called_once()
         mock_kickoff.assert_called_once()
 
         assert result == {"output": "Done"}
         assert len(executor.state.messages) >= 2
+
+
+class TestNativeToolExecution:
+    """Test native tool execution behavior."""
+
+    @pytest.fixture
+    def mock_dependencies(self):
+        llm = Mock()
+        llm.supports_stop_words.return_value = True
+
+        task = Mock()
+        task.name = "Test Task"
+        task.description = "Test"
+        task.human_input = False
+        task.response_model = None
+
+        crew = Mock()
+        crew._memory = None
+        crew.verbose = False
+        crew._train = False
+
+        agent = Mock()
+        agent.id = "test-agent-id"
+        agent.role = "Test Agent"
+        agent.verbose = False
+        agent.key = "test-key"
+
+        prompt = {"prompt": "Test {input} {tool_names} {tools}"}
+
+        tools_handler = Mock()
+        tools_handler.cache = None
+
+        return {
+            "llm": llm,
+            "task": task,
+            "crew": crew,
+            "agent": agent,
+            "prompt": prompt,
+            "max_iter": 10,
+            "tools": [],
+            "tools_names": "",
+            "stop_words": [],
+            "tools_description": "",
+            "tools_handler": tools_handler,
+        }
+
+    def test_execute_native_tool_runs_parallel_for_multiple_calls(
+        self, mock_dependencies
+    ):
+        executor = AgentExecutor(**mock_dependencies)
+
+        def slow_one() -> str:
+            time.sleep(0.2)
+            return "one"
+
+        def slow_two() -> str:
+            time.sleep(0.2)
+            return "two"
+
+        executor._available_functions = {"slow_one": slow_one, "slow_two": slow_two}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "slow_one", "arguments": "{}"},
+            },
+            {
+                "id": "call_2",
+                "function": {"name": "slow_two", "arguments": "{}"},
+            },
+        ]
+
+        started = time.perf_counter()
+        result = executor.execute_native_tool()
+        elapsed = time.perf_counter() - started
+
+        assert result == "native_tool_completed"
+        assert elapsed < 0.5
+        tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
+        assert len(tool_messages) == 2
+        assert tool_messages[0]["tool_call_id"] == "call_1"
+        assert tool_messages[1]["tool_call_id"] == "call_2"
+
+    def test_execute_native_tool_falls_back_to_sequential_for_result_as_answer(
+        self, mock_dependencies
+    ):
+        executor = AgentExecutor(**mock_dependencies)
+
+        def slow_one() -> str:
+            time.sleep(0.2)
+            return "one"
+
+        def slow_two() -> str:
+            time.sleep(0.2)
+            return "two"
+
+        result_tool = Mock()
+        result_tool.name = "slow_one"
+        result_tool.result_as_answer = True
+        result_tool.max_usage_count = None
+        result_tool.current_usage_count = 0
+
+        executor.original_tools = [result_tool]
+        executor._available_functions = {"slow_one": slow_one, "slow_two": slow_two}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "slow_one", "arguments": "{}"},
+            },
+            {
+                "id": "call_2",
+                "function": {"name": "slow_two", "arguments": "{}"},
+            },
+        ]
+
+        started = time.perf_counter()
+        result = executor.execute_native_tool()
+        elapsed = time.perf_counter() - started
+
+        assert result == "tool_result_is_final"
+        assert elapsed >= 0.2
+        assert elapsed < 0.8
+        assert isinstance(executor.state.current_answer, AgentFinish)
+        assert executor.state.current_answer.output == "one"
+
+    def test_execute_native_tool_result_as_answer_short_circuits_remaining_calls(
+        self, mock_dependencies
+    ):
+        executor = AgentExecutor(**mock_dependencies)
+        call_counts = {"slow_one": 0, "slow_two": 0}
+
+        def slow_one() -> str:
+            call_counts["slow_one"] += 1
+            time.sleep(0.2)
+            return "one"
+
+        def slow_two() -> str:
+            call_counts["slow_two"] += 1
+            time.sleep(0.2)
+            return "two"
+
+        result_tool = Mock()
+        result_tool.name = "slow_one"
+        result_tool.result_as_answer = True
+        result_tool.max_usage_count = None
+        result_tool.current_usage_count = 0
+
+        executor.original_tools = [result_tool]
+        executor._available_functions = {"slow_one": slow_one, "slow_two": slow_two}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "slow_one", "arguments": "{}"},
+            },
+            {
+                "id": "call_2",
+                "function": {"name": "slow_two", "arguments": "{}"},
+            },
+        ]
+
+        started = time.perf_counter()
+        result = executor.execute_native_tool()
+        elapsed = time.perf_counter() - started
+
+        assert result == "tool_result_is_final"
+        assert isinstance(executor.state.current_answer, AgentFinish)
+        assert executor.state.current_answer.output == "one"
+        assert call_counts["slow_one"] == 1
+        assert call_counts["slow_two"] == 0
+        assert elapsed < 0.5
+
+        tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
+        assert len(tool_messages) == 1
+        assert tool_messages[0]["tool_call_id"] == "call_1"
