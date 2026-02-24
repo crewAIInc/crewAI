@@ -457,16 +457,16 @@ def test_bedrock_aws_credentials_configuration():
         assert llm.aws_secret_access_key == aws_secret_access_key
 
       # Test with litellm environment variables
-      with patch.dict(os.environ, {
-          "AWS_ACCESS_KEY_ID": aws_access_key_id,
-          "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
-          "AWS_REGION_NAME": aws_region_name
-      }):
-          llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    with patch.dict(os.environ, {
+        "AWS_ACCESS_KEY_ID": aws_access_key_id,
+        "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+        "AWS_REGION_NAME": aws_region_name
+    }):
+        llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-          from crewai.llms.providers.bedrock.completion import BedrockCompletion
-          assert isinstance(llm, BedrockCompletion)
-          assert llm.region_name == aws_region_name
+        from crewai.llms.providers.bedrock.completion import BedrockCompletion
+        assert isinstance(llm, BedrockCompletion)
+        assert llm.region_name == aws_region_name
 
     # Test with explicit credentials
     llm_explicit = LLM(
