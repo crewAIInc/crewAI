@@ -1,0 +1,263 @@
+---
+title: "Registros de Pacotes Privados"
+description: "Instale pacotes Python privados de registros PyPI autenticados no CrewAI AMP"
+icon: "lock"
+mode: "wide"
+---
+
+<Note>
+  Este guia aborda como configurar seu projeto CrewAI para instalar pacotes Python
+  de registros PyPI privados (Azure DevOps Artifacts, GitHub Packages, GitLab, AWS CodeArtifact, etc.)
+  ao implantar no CrewAI AMP.
+</Note>
+
+## Quando Você Precisa Disso
+
+Se seu projeto depende de pacotes Python internos ou proprietários hospedados em um registro privado
+em vez do PyPI público, você precisará:
+
+1. Informar ao UV **onde** encontrar o pacote (uma URL de index)
+2. Informar ao UV **quais** pacotes vêm desse index (um mapeamento de source)
+3. Fornecer **credenciais** para que o UV possa autenticar durante a instalação
+
+O CrewAI AMP usa [UV](https://docs.astral.sh/uv/) para resolução e instalação de dependências.
+O UV suporta registros privados autenticados por meio da configuração do `pyproject.toml` combinada
+com variáveis de ambiente para credenciais.
+
+## Passo 1: Configurar o pyproject.toml
+
+Três elementos trabalham juntos no seu `pyproject.toml`:
+
+### 1a. Declarar a dependência
+
+Adicione o pacote privado ao seu `[project.dependencies]` como qualquer outra dependência:
+
+```toml
+[project]
+dependencies = [
+    "crewai[tools]>=0.100.1,<1.0.0",
+    "my-private-package>=1.2.0",
+]
+```
+
+### 1b. Definir o index
+
+Registre seu registro privado como um index nomeado em `[[tool.uv.index]]`:
+
+```toml
+[[tool.uv.index]]
+name = "my-private-registry"
+url = "https://pkgs.dev.azure.com/my-org/_packaging/my-feed/pypi/simple/"
+explicit = true
+```
+
+<Info>
+  O campo `name` é importante — o UV o utiliza para construir os nomes das variáveis de ambiente
+  para autenticação (veja o [Passo 2](#passo-2-configurar-credenciais-de-autenticação) abaixo).
+
+  Definir `explicit = true` significa que o UV não consultará esse index para todos os pacotes — apenas
+  os que você mapear explicitamente em `[tool.uv.sources]`. Isso evita consultas desnecessárias
+  ao seu registro privado e protege contra ataques de confusão de dependências.
+</Info>
+
+### 1c. Mapear o pacote para o index
+
+Informe ao UV quais pacotes devem ser resolvidos a partir do seu index privado usando `[tool.uv.sources]`:
+
+```toml
+[tool.uv.sources]
+my-private-package = { index = "my-private-registry" }
+```
+
+### Exemplo completo
+
+```toml
+[project]
+name = "my-crew-project"
+version = "0.1.0"
+requires-python = ">=3.10,<=3.13"
+dependencies = [
+    "crewai[tools]>=0.100.1,<1.0.0",
+    "my-private-package>=1.2.0",
+]
+
+[tool.crewai]
+type = "crew"
+
+[[tool.uv.index]]
+name = "my-private-registry"
+url = "https://pkgs.dev.azure.com/my-org/_packaging/my-feed/pypi/simple/"
+explicit = true
+
+[tool.uv.sources]
+my-private-package = { index = "my-private-registry" }
+```
+
+Após atualizar o `pyproject.toml`, regenere seu arquivo lock:
+
+```bash
+uv lock
+```
+
+<Warning>
+  Sempre faça commit do `uv.lock` atualizado junto com as alterações no `pyproject.toml`.
+  O arquivo lock é obrigatório para implantação — veja [Preparar para Implantação](/pt-BR/enterprise/guides/prepare-for-deployment).
+</Warning>
+
+## Passo 2: Configurar Credenciais de Autenticação
+
+O UV autentica em indexes privados usando variáveis de ambiente que seguem uma convenção de nomenclatura
+baseada no nome do index que você definiu no `pyproject.toml`:
+
+```
+UV_INDEX_{UPPER_NAME}_USERNAME
+UV_INDEX_{UPPER_NAME}_PASSWORD
+```
+
+Onde `{UPPER_NAME}` é o nome do seu index convertido para **maiúsculas** com **hifens substituídos por underscores**.
+
+Por exemplo, um index chamado `my-private-registry` usa:
+
+| Variável | Valor |
+|----------|-------|
+| `UV_INDEX_MY_PRIVATE_REGISTRY_USERNAME` | Seu nome de usuário ou nome do token do registro |
+| `UV_INDEX_MY_PRIVATE_REGISTRY_PASSWORD` | Sua senha ou token/PAT do registro |
+
+<Warning>
+  Essas variáveis de ambiente **devem** ser adicionadas pelas configurações de **Variáveis de Ambiente** do CrewAI AMP —
+  globalmente ou no nível da implantação. Elas não podem ser definidas em arquivos `.env` ou codificadas no seu projeto.
+
+  Veja [Configurar Variáveis de Ambiente no AMP](#configurar-variáveis-de-ambiente-no-amp) abaixo.
+</Warning>
+
+## Referência de Provedores de Registro
+
+A tabela abaixo mostra o formato da URL de index e os valores de credenciais para provedores de registro comuns.
+Substitua os valores de exemplo pelos detalhes reais da sua organização e feed.
+
+| Provedor | URL do Index | Usuário | Senha |
+|----------|-------------|---------|-------|
+| **Azure DevOps Artifacts** | `https://pkgs.dev.azure.com/{org}/_packaging/{feed}/pypi/simple/` | Qualquer string não vazia (ex: `token`) | Personal Access Token (PAT) com escopo Packaging Read |
+| **GitHub Packages** | `https://pypi.pkg.github.com/{owner}/simple/` | Nome de usuário do GitHub | Personal Access Token (classic) com escopo `read:packages` |
+| **GitLab Package Registry** | `https://gitlab.com/api/v4/projects/{project_id}/packages/pypi/simple/` | `__token__` | Project ou Personal Access Token com escopo `read_api` |
+| **AWS CodeArtifact** | Use a URL de `aws codeartifact get-repository-endpoint` | `aws` | Token de `aws codeartifact get-authorization-token` |
+| **Google Artifact Registry** | `https://{region}-python.pkg.dev/{project}/{repo}/simple/` | `_json_key_base64` | Chave de conta de serviço codificada em Base64 |
+| **JFrog Artifactory** | `https://{instance}.jfrog.io/artifactory/api/pypi/{repo}/simple/` | Nome de usuário ou email | Chave API ou token de identidade |
+| **Auto-hospedado (devpi, Nexus, etc.)** | URL da API simple do seu registro | Nome de usuário do registro | Senha do registro |
+
+<Tip>
+  Para **AWS CodeArtifact**, o token de autorização expira periodicamente.
+  Você precisará atualizar o valor de `UV_INDEX_*_PASSWORD` quando ele expirar.
+  Considere automatizar isso no seu pipeline de CI/CD.
+</Tip>
+
+## Configurar Variáveis de Ambiente no AMP
+
+As credenciais do registro privado devem ser configuradas como variáveis de ambiente no CrewAI AMP.
+Você tem duas opções:
+
+<Tabs>
+  <Tab title="Interface Web">
+    1. Faça login no [CrewAI AMP](https://app.crewai.com)
+    2. Navegue até sua automação
+    3. Abra a aba **Environment Variables**
+    4. Adicione cada variável (`UV_INDEX_*_USERNAME` e `UV_INDEX_*_PASSWORD`) com seu valor
+
+    Veja o passo [Deploy para AMP — Definir Variáveis de Ambiente](/pt-BR/enterprise/guides/deploy-to-amp#definir-as-variáveis-de-ambiente) para detalhes.
+  </Tab>
+  <Tab title="Implantação via CLI">
+    Adicione as variáveis ao seu arquivo `.env` local antes de executar `crewai deploy create`.
+    A CLI as transferirá com segurança para a plataforma:
+
+    ```bash
+    # .env
+    OPENAI_API_KEY=sk-...
+    UV_INDEX_MY_PRIVATE_REGISTRY_USERNAME=token
+    UV_INDEX_MY_PRIVATE_REGISTRY_PASSWORD=your-pat-here
+    ```
+
+    ```bash
+    crewai deploy create
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  **Nunca** faça commit de credenciais no seu repositório. Use variáveis de ambiente do AMP para todos os segredos.
+  O arquivo `.env` deve estar listado no `.gitignore`.
+</Warning>
+
+Para atualizar credenciais em uma implantação existente, veja [Atualizar Seu Crew — Variáveis de Ambiente](/pt-BR/enterprise/guides/update-crew).
+
+## Como Tudo se Conecta
+
+Quando o CrewAI AMP faz o build da sua automação, o fluxo de resolução funciona assim:
+
+<Steps>
+  <Step title="Build inicia">
+    O AMP busca seu repositório e lê o `pyproject.toml` e o `uv.lock`.
+  </Step>
+  <Step title="UV resolve dependências">
+    O UV lê `[tool.uv.sources]` para determinar de qual index cada pacote deve vir.
+  </Step>
+  <Step title="UV autentica">
+    Para cada index privado, o UV busca `UV_INDEX_{NAME}_USERNAME` e `UV_INDEX_{NAME}_PASSWORD`
+    nas variáveis de ambiente que você configurou no AMP.
+  </Step>
+  <Step title="Pacotes são instalados">
+    O UV baixa e instala todos os pacotes — tanto públicos (do PyPI) quanto privados (do seu registro).
+  </Step>
+  <Step title="Automação executa">
+    Seu crew ou flow inicia com todas as dependências disponíveis.
+  </Step>
+</Steps>
+
+## Solução de Problemas
+
+### Erros de Autenticação Durante o Build
+
+**Sintoma**: Build falha com `401 Unauthorized` ou `403 Forbidden` ao resolver um pacote privado.
+
+**Verifique**:
+- Os nomes das variáveis de ambiente `UV_INDEX_*` correspondem exatamente ao nome do seu index (maiúsculas, hifens -> underscores)
+- As credenciais estão definidas nas variáveis de ambiente do AMP, não apenas em um `.env` local
+- Seu token/PAT tem as permissões de leitura necessárias para o feed de pacotes
+- O token não expirou (especialmente relevante para AWS CodeArtifact)
+
+### Pacote Não Encontrado
+
+**Sintoma**: `No matching distribution found for my-private-package`.
+
+**Verifique**:
+- A URL do index no `pyproject.toml` termina com `/simple/`
+- A entrada `[tool.uv.sources]` mapeia o nome correto do pacote para o nome correto do index
+- O pacote está realmente publicado no seu registro privado
+- Execute `uv lock` localmente com as mesmas credenciais para verificar se a resolução funciona
+
+### Conflitos no Arquivo Lock
+
+**Sintoma**: `uv lock` falha ou produz resultados inesperados após adicionar um index privado.
+
+**Solução**: Defina as credenciais localmente e regenere:
+
+```bash
+export UV_INDEX_MY_PRIVATE_REGISTRY_USERNAME=token
+export UV_INDEX_MY_PRIVATE_REGISTRY_PASSWORD=your-pat
+uv lock
+```
+
+Em seguida, faça commit do `uv.lock` atualizado.
+
+## Guias Relacionados
+
+<CardGroup cols={3}>
+  <Card title="Preparar para Implantação" icon="clipboard-check" href="/pt-BR/enterprise/guides/prepare-for-deployment">
+    Verifique a estrutura do projeto e as dependências antes de implantar.
+  </Card>
+  <Card title="Deploy para AMP" icon="rocket" href="/pt-BR/enterprise/guides/deploy-to-amp">
+    Implante seu crew ou flow e configure variáveis de ambiente.
+  </Card>
+  <Card title="Atualizar Seu Crew" icon="arrows-rotate" href="/pt-BR/enterprise/guides/update-crew">
+    Atualize variáveis de ambiente e envie alterações para uma implantação em execução.
+  </Card>
+</CardGroup>
