@@ -202,6 +202,88 @@ class TestAgentExecutor:
         assert result == "skipped"
         assert executor.state.is_finished is False
 
+    def test_finalize_skips_synthesis_for_strong_last_todo_result(
+        self, mock_dependencies
+    ):
+        """Finalize should skip synthesis when last todo is already a complete answer."""
+        with patch.object(AgentExecutor, "_show_logs") as mock_show_logs:
+            executor = AgentExecutor(**mock_dependencies)
+            executor.state.todos.items = [
+                TodoItem(
+                    step_number=1,
+                    description="Gather source details",
+                    tool_to_use="search_tool",
+                    status="completed",
+                    result="Source A and Source B identified.",
+                ),
+                TodoItem(
+                    step_number=2,
+                    description="Write final response",
+                    tool_to_use=None,
+                    status="completed",
+                    result=(
+                        "The final recommendation is to adopt a phased rollout plan with "
+                        "weekly checkpoints, explicit ownership, and a rollback path for "
+                        "each milestone. This approach keeps risk controlled while still "
+                        "moving quickly, and it aligns delivery metrics with stakeholder "
+                        "communication and operational readiness."
+                    ),
+                ),
+            ]
+
+            with patch.object(
+                executor, "_synthesize_final_answer_from_todos"
+            ) as mock_synthesize:
+                result = executor.finalize()
+
+            assert result == "completed"
+            assert isinstance(executor.state.current_answer, AgentFinish)
+            assert (
+                executor.state.current_answer.output
+                == executor.state.todos.items[1].result
+            )
+            assert executor.state.is_finished is True
+            mock_synthesize.assert_not_called()
+            mock_show_logs.assert_called_once()
+
+    def test_finalize_keeps_synthesis_when_response_model_is_set(
+        self, mock_dependencies
+    ):
+        """Finalize should still synthesize when response_model is configured."""
+        with patch.object(AgentExecutor, "_show_logs"):
+            executor = AgentExecutor(**mock_dependencies)
+            executor.response_model = Mock()
+            executor.state.todos.items = [
+                TodoItem(
+                    step_number=1,
+                    description="Write final response",
+                    tool_to_use=None,
+                    status="completed",
+                    result=(
+                        "This is already detailed prose with multiple sentences. "
+                        "It should still run synthesis because structured output "
+                        "was requested via response_model."
+                    ),
+                )
+            ]
+
+            def _set_current_answer() -> None:
+                executor.state.current_answer = AgentFinish(
+                    thought="Synthesized",
+                    output="structured-like-answer",
+                    text="structured-like-answer",
+                )
+
+            with patch.object(
+                executor,
+                "_synthesize_final_answer_from_todos",
+                side_effect=_set_current_answer,
+            ) as mock_synthesize:
+                result = executor.finalize()
+
+            assert result == "completed"
+            mock_synthesize.assert_called_once()
+
     def test_format_prompt(self, mock_dependencies):
         """Test prompt formatting."""
         executor = AgentExecutor(**mock_dependencies)

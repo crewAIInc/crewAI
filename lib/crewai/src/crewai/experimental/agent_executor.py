@@ -2146,20 +2146,21 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 color="magenta",
             )
 
-        # Plan-and-Execute path: synthesize from completed todos
-        # Check for todos with results (even if not all marked "completed" —
-        # the goal_achieved path may skip marking some as completed)
-        todos_with_results = [t for t in self.state.todos.items if t.result]
-        if todos_with_results and self.state.current_answer is None:
-            self._synthesize_final_answer_from_todos()
-
-        # Legacy path: synthesize if todos are all formally complete
-        if (
-            self.state.todos.items
-            and self.state.todos.is_complete
-            and self.state.current_answer is None
-        ):
-            self._synthesize_final_answer_from_todos()
+        if self.state.current_answer is None:
+            # Plan-and-Execute path: todos may have results even if not all are
+            # marked "completed" (e.g., goal_achieved early).
+            todos_with_results = [t for t in self.state.todos.items if t.result]
+            if todos_with_results:
+                if self._can_use_last_todo_result_as_final_answer(todos_with_results):
+                    last_todo = max(todos_with_results, key=lambda todo: todo.step_number)
+                    final_text = str(last_todo.result or "")
+                    self.state.current_answer = AgentFinish(
+                        thought="Final answer returned directly from last completed todo",
+                        output=final_text,
+                        text=final_text,
+                    )
+                else:
+                    self._synthesize_final_answer_from_todos()
 
         if self.state.current_answer is None:
             skip_text = Text()
@@ -2184,6 +2185,32 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self._show_logs(self.state.current_answer)
 
         return "completed"
+
+    def _can_use_last_todo_result_as_final_answer(
+        self, todos_with_results: list[TodoItem]
+    ) -> bool:
+        """Determine whether synthesis can be skipped for planning results."""
+        # Keep synthesis when structured output is requested.
+        if self.response_model is not None:
+            return False
+        if not todos_with_results:
+            return False
+
+        last_todo = max(todos_with_results, key=lambda todo: todo.step_number)
+        if last_todo.tool_to_use:
+            return False
+
+        last_result = str(last_todo.result or "").strip()
+        if not last_result:
+            return False
+
+        lowered_result = last_result.lower()
+        if lowered_result.startswith("error:") or "tool execution error" in lowered_result:
+            return False
+
+        word_count = len(last_result.split())
+        has_sentence_punctuation = any(ch in last_result for ch in ".!?")
+        return (len(last_result) >= 200 or word_count >= 30) and has_sentence_punctuation
 
     def _synthesize_final_answer_from_todos(self) -> None:
         """Synthesize a coherent final answer from all todo results.
