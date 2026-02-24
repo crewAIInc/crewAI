@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -233,6 +233,79 @@ def _make_mock_i18n() -> MagicMock:
         "summary": "<summary>\n{merged_summary}\n</summary>\nContinue the task.",
     }.get(key, "")
     return mock_i18n
+
+class MCPStyleInput(BaseModel):
+    """Input schema mimicking an MCP tool with optional fields."""
+
+    query: str = Field(description="Search query")
+    filter_type: Optional[Literal["internal", "user"]] = Field(
+        default=None, description="Filter type"
+    )
+    page_id: Optional[str] = Field(
+        default=None, description="Page UUID"
+    )
+
+
+class MCPStyleTool(BaseTool):
+    """A tool mimicking MCP tool schemas with optional fields."""
+
+    name: str = "mcp_search"
+    description: str = "Search with optional filters"
+    args_schema: type[BaseModel] = MCPStyleInput
+
+    def _run(self, **kwargs: Any) -> str:
+        return "result"
+
+
+class TestOptionalFieldsPreserveNull:
+    """Tests that optional tool fields preserve null in the schema."""
+
+    def test_optional_string_allows_null(self) -> None:
+        """Optional[str] fields should include null in the schema so the LLM
+        can send null instead of being forced to guess a value."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        page_id_prop = params["properties"]["page_id"]
+
+        assert "anyOf" in page_id_prop
+        type_options = [opt.get("type") for opt in page_id_prop["anyOf"]]
+        assert "string" in type_options
+        assert "null" in type_options
+
+    def test_optional_literal_allows_null(self) -> None:
+        """Optional[Literal[...]] fields should include null."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        filter_prop = params["properties"]["filter_type"]
+
+        assert "anyOf" in filter_prop
+        has_null = any(opt.get("type") == "null" for opt in filter_prop["anyOf"])
+        assert has_null
+
+    def test_required_field_stays_non_null(self) -> None:
+        """Required fields without Optional should NOT have null."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        query_prop = params["properties"]["query"]
+
+        assert query_prop.get("type") == "string"
+        assert "anyOf" not in query_prop
+
+    def test_all_fields_in_required_for_strict_mode(self) -> None:
+        """All fields (including optional) must be in required for strict mode."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        assert "query" in params["required"]
+        assert "filter_type" in params["required"]
+        assert "page_id" in params["required"]
 
 
 class TestSummarizeMessages:

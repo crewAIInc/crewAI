@@ -417,7 +417,11 @@ def strip_null_from_types(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
-def generate_model_description(model: type[BaseModel]) -> ModelDescription:
+def generate_model_description(
+    model: type[BaseModel],
+    *,
+    strip_null_types: bool = True,
+) -> ModelDescription:
     """Generate JSON schema description of a Pydantic model.
 
     This function takes a Pydantic model class and returns its JSON schema,
@@ -426,6 +430,10 @@ def generate_model_description(model: type[BaseModel]) -> ModelDescription:
 
     Args:
         model: A Pydantic model class.
+        strip_null_types: When ``True`` (default), remove ``null`` from
+            ``anyOf`` / ``type`` arrays.  Set to ``False`` for **tool
+            parameter** schemas so that the LLM can send ``null`` for
+            optional fields instead of being forced to guess a value.
 
     Returns:
         A ModelDescription with JSON schema representation of the model.
@@ -442,7 +450,9 @@ def generate_model_description(model: type[BaseModel]) -> ModelDescription:
     json_schema = fix_discriminator_mappings(json_schema)
     json_schema = convert_oneof_to_anyof(json_schema)
     json_schema = ensure_all_properties_required(json_schema)
-    json_schema = strip_null_from_types(json_schema)
+
+    if strip_null_types:
+        json_schema = strip_null_from_types(json_schema)
 
     return {
         "type": "json_schema",
