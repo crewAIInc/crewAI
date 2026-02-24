@@ -28,6 +28,10 @@ from crewai.events.types.mcp_events import (
     MCPToolExecutionStartedEvent,
 )
 from crewai.mcp.transports.base import BaseTransport
+from crewai.mcp.transports.http import HTTPTransport
+from crewai.mcp.transports.sse import SSETransport
+from crewai.mcp.transports.stdio import StdioTransport
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 class _MCPToolResult(NamedTuple):
@@ -35,10 +39,6 @@ class _MCPToolResult(NamedTuple):
 
     content: str
     is_error: bool
-from crewai.mcp.transports.http import HTTPTransport
-from crewai.mcp.transports.sse import SSETransport
-from crewai.mcp.transports.stdio import StdioTransport
-from crewai.utilities.string_utils import sanitize_tool_name
 
 
 # MCP Connection timeout constants (in seconds)

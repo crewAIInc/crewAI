@@ -166,6 +166,7 @@ __all__ = [
     "LiteAgentExecutionCompletedEvent",
     "LiteAgentExecutionErrorEvent",
     "LiteAgentExecutionStartedEvent",
+    "MCPConfigFetchFailedEvent",
     "MCPConnectionCompletedEvent",
     "MCPConnectionFailedEvent",
     "MCPConnectionStartedEvent",

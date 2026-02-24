@@ -3,9 +3,9 @@
 This module extracts all MCP-related tool resolution logic from the Agent class
 into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 
-  1. Native configs  – MCPServerStdio / MCPServerHTTP / MCPServerSSE objects.
-  2. HTTPS URLs      – e.g. "https://mcp.example.com/api"
-  3. AMP references  – e.g. "crewai-amp:notion" or "crewai-amp:notion#search"
+  1. Native configs:   MCPServerStdio / MCPServerHTTP / MCPServerSSE objects.
+  2. HTTPS URLs:       e.g. "https://mcp.example.com/api"
+  3. AMP references:   e.g. "crewai-amp:notion" or "crewai-amp:notion#search"
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from crewai.mcp.config import (
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
+
 
 if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
@@ -178,6 +179,7 @@ class MCPToolResolver:
             from crewai_tools.tools.crewai_platform_tools.misc import (
                 get_platform_integration_token,
             )
+
             from crewai.cli.plus_api import PlusAPI
 
             plus_api = PlusAPI(api_key=get_platform_integration_token())
