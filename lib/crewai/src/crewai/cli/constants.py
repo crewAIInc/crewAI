@@ -69,7 +69,7 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
         },
         {
             "prompt": "Enter your AWS Region Name (press Enter to skip)",
-            "key_name": "AWS_REGION_NAME",
+            "key_name": "AWS_DEFAULT_REGION",
         },
     ],
     "azure": [
