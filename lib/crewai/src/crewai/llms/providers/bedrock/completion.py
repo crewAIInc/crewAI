@@ -297,7 +297,12 @@ class BedrockCompletion(BaseLLM):
             tcp_keepalive=True,
         )
 
-        self.region_name = region_name or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
+        self.region_name = (
+            region_name
+            or os.getenv("AWS_DEFAULT_REGION")
+            or os.getenv("AWS_REGION_NAME")
+            or "us-east-1"
+        )
 
         self.aws_access_key_id = aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
         self.aws_secret_access_key = aws_secret_access_key or os.getenv(
