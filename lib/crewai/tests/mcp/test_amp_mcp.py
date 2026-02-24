@@ -184,20 +184,30 @@ class TestFetchAmpMCPConfigs:
 
 
 class TestParseAmpRef:
-    def test_simple_slug(self):
+    def test_bare_slug(self):
+        slug, tool = MCPToolResolver._parse_amp_ref("notion")
+        assert slug == "notion"
+        assert tool is None
+
+    def test_bare_slug_with_tool(self):
+        slug, tool = MCPToolResolver._parse_amp_ref("notion#search")
+        assert slug == "notion"
+        assert tool == "search"
+
+    def test_bare_slug_with_empty_tool(self):
+        slug, tool = MCPToolResolver._parse_amp_ref("notion#")
+        assert slug == "notion"
+        assert tool is None
+
+    def test_legacy_prefix_slug(self):
         slug, tool = MCPToolResolver._parse_amp_ref("crewai-amp:notion")
         assert slug == "notion"
         assert tool is None
 
-    def test_slug_with_tool(self):
+    def test_legacy_prefix_with_tool(self):
         slug, tool = MCPToolResolver._parse_amp_ref("crewai-amp:notion#search")
         assert slug == "notion"
         assert tool == "search"
-
-    def test_slug_with_empty_tool(self):
-        slug, tool = MCPToolResolver._parse_amp_ref("crewai-amp:notion#")
-        assert slug == "notion"
-        assert tool is None
 
 
 class TestGetMCPToolsAmpIntegration:
@@ -227,9 +237,7 @@ class TestGetMCPToolsAmpIntegration:
         mock_client.disconnect = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        tools = agent.get_mcp_tools(
-            ["crewai-amp:notion", "crewai-amp:github"]
-        )
+        tools = agent.get_mcp_tools(["notion", "github"])
 
         mock_fetch.assert_called_once_with(["notion", "github"])
         assert len(tools) == 4  # 2 tools per server
@@ -254,7 +262,7 @@ class TestGetMCPToolsAmpIntegration:
         mock_client.disconnect = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        tools = agent.get_mcp_tools(["crewai-amp:notion#search"])
+        tools = agent.get_mcp_tools(["notion#search"])
 
         mock_fetch.assert_called_once_with(["notion"])
         assert len(tools) == 1
@@ -280,9 +288,7 @@ class TestGetMCPToolsAmpIntegration:
         mock_client.disconnect = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        tools = agent.get_mcp_tools(
-            ["crewai-amp:notion#search", "crewai-amp:notion#create_page"]
-        )
+        agent.get_mcp_tools(["notion#search", "notion#create_page"])
 
         mock_fetch.assert_called_once_with(["notion"])
 
@@ -290,9 +296,34 @@ class TestGetMCPToolsAmpIntegration:
     def test_skips_missing_configs_gracefully(self, mock_fetch, agent):
         mock_fetch.return_value = {}
 
-        tools = agent.get_mcp_tools(["crewai-amp:missing-server"])
+        tools = agent.get_mcp_tools(["missing-server"])
 
         assert tools == []
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
+    def test_legacy_crewai_amp_prefix_still_works(
+        self, mock_fetch, mock_client_class, agent, mock_tool_definitions
+    ):
+        mock_fetch.return_value = {
+            "notion": {
+                "type": "sse",
+                "url": "https://mcp.notion.so/sse",
+                "headers": {"Authorization": "Bearer token"},
+            },
+        }
+
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        tools = agent.get_mcp_tools(["crewai-amp:notion"])
+
+        mock_fetch.assert_called_once_with(["notion"])
+        assert len(tools) == 2
 
     @patch("crewai.mcp.tool_resolver.MCPClient")
     @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
@@ -329,7 +360,7 @@ class TestGetMCPToolsAmpIntegration:
 
         tools = agent.get_mcp_tools(
             [
-                "crewai-amp:notion",
+                "notion",
                 "https://external.mcp.com/api",
                 http_config,
             ]

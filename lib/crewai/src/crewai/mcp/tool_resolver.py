@@ -5,7 +5,7 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 
   1. Native configs:   MCPServerStdio / MCPServerHTTP / MCPServerSSE objects.
   2. HTTPS URLs:       e.g. "https://mcp.example.com/api"
-  3. AMP references:   e.g. "crewai-amp:notion" or "crewai-amp:notion#search"
+  3. AMP references:   e.g. "notion" or "notion#search" (legacy "crewai-amp:" prefix also works)
 """
 
 from __future__ import annotations
@@ -69,10 +69,10 @@ class MCPToolResolver:
         amp_refs: list[tuple[str, str | None]] = []
 
         for mcp_config in mcps:
-            if isinstance(mcp_config, str) and mcp_config.startswith("crewai-amp:"):
-                amp_refs.append(self._parse_amp_ref(mcp_config))
-            elif isinstance(mcp_config, str):
+            if isinstance(mcp_config, str) and mcp_config.startswith("https://"):
                 all_tools.extend(self._resolve_string(mcp_config))
+            elif isinstance(mcp_config, str):
+                amp_refs.append(self._parse_amp_ref(mcp_config))
             else:
                 tools, client = self._resolve_native(mcp_config)
                 all_tools.extend(tools)
@@ -106,8 +106,13 @@ class MCPToolResolver:
 
     @staticmethod
     def _parse_amp_ref(mcp_config: str) -> tuple[str, str | None]:
-        """Parse a ``crewai-amp:`` string into *(slug, optional tool name)*."""
-        slug, _, specific_tool = mcp_config.removeprefix("crewai-amp:").partition("#")
+        """Parse an AMP reference into *(slug, optional tool name)*.
+
+        Accepts both bare slugs (``"notion"``, ``"notion#search"``) and the
+        legacy ``"crewai-amp:notion"`` form.
+        """
+        bare = mcp_config.removeprefix("crewai-amp:")
+        slug, _, specific_tool = bare.partition("#")
         return slug, specific_tool or None
 
     def _resolve_amp(

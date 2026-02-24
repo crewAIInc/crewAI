@@ -197,7 +197,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     )
     mcps: list[str | MCPServerConfig] | None = Field(
         default=None,
-        description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
+        description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
     )
     memory: Any = Field(
         default=None,
@@ -276,14 +276,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         validated_mcps: list[str | MCPServerConfig] = []
         for mcp in mcps:
             if isinstance(mcp, str):
-                if mcp.startswith(("https://", "crewai-amp:")):
-                    validated_mcps.append(mcp)
-                else:
-                    raise ValueError(
-                        f"Invalid MCP reference: {mcp}. "
-                        "String references must start with 'https://' or 'crewai-amp:'"
-                    )
-
+                validated_mcps.append(mcp)
             elif isinstance(mcp, (MCPServerConfig)):
                 validated_mcps.append(mcp)
             else:
