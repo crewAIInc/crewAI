@@ -104,7 +104,7 @@ jobs:
 
           DURATIONS_ARG=""
           if [ -f "$DURATION_FILE" ]; then
-            if git diff origin/${{ github.base_ref }}...HEAD --name-only 2>/dev/null | grep -q "^lib/.*/tests/.*\.py$"; then
+            if git diff "origin/${{ github.base_ref }}...HEAD" --name-only 2>/dev/null | grep -q "^lib/.*/tests/.*\.py$"; then
               echo "::notice::Test files changed — using even splitting"
             else
               echo "::notice::Using cached test durations for optimal splitting"
