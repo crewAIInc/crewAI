@@ -349,3 +349,87 @@ class TestToolDecoratorRunValidation:
 
         result = greet.run("World")
         assert result == "Hello, World!"
+
+
+# =============================================================================
+# Async arun() Schema Validation Tests
+# =============================================================================
+
+
+class AsyncCodeExecutorTool(BaseTool):
+    name: str = "async_code_executor"
+    description: str = "Execute code snippets asynchronously"
+    args_schema: type[BaseModel] = CodeExecutorInput
+
+    async def _arun(self, code: str, language: str = "python") -> str:
+        return f"Async executed {language}: {code}"
+
+    def _run(self, code: str, language: str = "python") -> str:
+        return f"Executed {language}: {code}"
+
+
+class TestBaseToolArunValidation:
+    """Tests for args_schema validation in BaseTool.arun()."""
+
+    @pytest.mark.asyncio
+    async def test_arun_with_valid_kwargs_passes_validation(self) -> None:
+        """Valid keyword arguments should pass schema validation in arun."""
+        t = AsyncCodeExecutorTool()
+        result = await t.arun(code="print('hello')")
+        assert result == "Async executed python: print('hello')"
+
+    @pytest.mark.asyncio
+    async def test_arun_with_missing_required_kwarg_raises(self) -> None:
+        """Missing required kwargs should raise ValueError in arun."""
+        t = AsyncCodeExecutorTool()
+        with pytest.raises(ValueError, match="validation failed"):
+            await t.arun(language="python")
+
+    @pytest.mark.asyncio
+    async def test_arun_with_wrong_field_name_raises(self) -> None:
+        """Kwargs not matching schema fields should trigger validation error in arun."""
+        t = AsyncCodeExecutorTool()
+        with pytest.raises(ValueError, match="validation failed"):
+            await t.arun(wrong_arg="value")
+
+    @pytest.mark.asyncio
+    async def test_arun_strips_extra_kwargs(self) -> None:
+        """Extra kwargs not in the schema should be stripped in arun."""
+        t = AsyncCodeExecutorTool()
+        result = await t.arun(code="1+1", extra_field="junk")
+        assert result == "Async executed python: 1+1"
+
+    @pytest.mark.asyncio
+    async def test_arun_does_not_increment_usage_on_validation_error(self) -> None:
+        """Usage count should NOT increment when arun validation fails."""
+        t = AsyncCodeExecutorTool()
+        assert t.current_usage_count == 0
+        with pytest.raises(ValueError):
+            await t.arun(wrong="bad")
+        assert t.current_usage_count == 0
+
+
+class TestToolDecoratorArunValidation:
+    """Tests for args_schema validation in Tool.arun() (decorator-based async tools)."""
+
+    @pytest.mark.asyncio
+    async def test_async_decorator_tool_arun_validates_kwargs(self) -> None:
+        """Async decorator tools should validate kwargs in arun."""
+        @tool("async_execute")
+        async def async_execute(code: str, language: str = "python") -> str:
+            """Execute code asynchronously."""
+            return f"Async {language}: {code}"
+
+        result = await async_execute.arun(code="x = 1")
+        assert result == "Async python: x = 1"
+
+    @pytest.mark.asyncio
+    async def test_async_decorator_tool_arun_rejects_missing_required(self) -> None:
+        """Async decorator tools should reject missing required args in arun."""
+        @tool("async_execute")
+        async def async_execute(code: str) -> str:
+            """Execute code asynchronously."""
+            return f"Async: {code}"
+
+        with pytest.raises(ValueError, match="validation failed"):
+            await async_execute.arun(wrong_arg="value")

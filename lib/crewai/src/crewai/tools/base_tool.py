@@ -152,11 +152,22 @@ class BaseTool(BaseModel, ABC):
         super().model_post_init(__context)
 
     def _validate_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Validate keyword arguments against args_schema if present.
+
+        Args:
+            kwargs: The keyword arguments to validate.
+
+        Returns:
+            Validated (and possibly coerced) keyword arguments.
+
+        Raises:
+            ValueError: If validation against args_schema fails.
+        """
         if kwargs and self.args_schema is not None and self.args_schema.model_fields:
             try:
                 validated = self.args_schema.model_validate(kwargs)
-                return {k: getattr(validated, k) for k in validated.model_fields}
-            except ValidationError as e:
+                retun validated.model_dump()
+            except Exception as e:
                 raise ValueError(
                     f"Tool '{self.name}' arguments validation failed: {e}"
                 ) from e
@@ -192,6 +203,7 @@ class BaseTool(BaseModel, ABC):
         Returns:
             The result of the tool execution.
         """
+        kwargs = self._validate_kwargs(kwargs)
         result = await self._arun(*args, **kwargs)
         self.current_usage_count += 1
         return result
@@ -376,6 +388,7 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        kwargs = self._validate_kwargs(kwargs)
         result = await self._arun(*args, **kwargs)
         self.current_usage_count += 1
         return result
