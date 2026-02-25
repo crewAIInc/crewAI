@@ -437,17 +437,36 @@ def test_bedrock_aws_credentials_configuration():
     """
     Test that AWS credentials configuration works properly
     """
+    aws_access_key_id = "test-access-key"
+    aws_secret_access_key = "test-secret-key"
+    aws_region_name = "us-east-1"
+
+
     # Test with environment variables
     with patch.dict(os.environ, {
-        "AWS_ACCESS_KEY_ID": "test-access-key",
-        "AWS_SECRET_ACCESS_KEY": "test-secret-key",
-        "AWS_DEFAULT_REGION": "us-east-1"
+        "AWS_ACCESS_KEY_ID": aws_access_key_id,
+        "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+        "AWS_DEFAULT_REGION": aws_region_name
     }):
         llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
         from crewai.llms.providers.bedrock.completion import BedrockCompletion
         assert isinstance(llm, BedrockCompletion)
-        assert llm.region_name == "us-east-1"
+        assert llm.region_name == aws_region_name
+        assert llm.aws_access_key_id == aws_access_key_id
+        assert llm.aws_secret_access_key == aws_secret_access_key
+
+      # Test with litellm environment variables
+    with patch.dict(os.environ, {
+        "AWS_ACCESS_KEY_ID": aws_access_key_id,
+        "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+        "AWS_REGION_NAME": aws_region_name
+    }):
+        llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+        from crewai.llms.providers.bedrock.completion import BedrockCompletion
+        assert isinstance(llm, BedrockCompletion)
+        assert llm.region_name == aws_region_name
 
     # Test with explicit credentials
     llm_explicit = LLM(
