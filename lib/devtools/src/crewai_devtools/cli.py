@@ -14,7 +14,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
 
-from crewai_devtools.prompts import RELEASE_NOTES_PROMPT
+from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
 
 
 load_dotenv()
@@ -189,6 +189,248 @@ def update_pyproject_dependencies(file_path: Path, new_version: str) -> bool:
         return True
 
     return False
+
+
+def add_docs_version(docs_json_path: Path, version: str) -> bool:
+    """Add a new version to the Mintlify docs.json versioning config.
+
+    Copies the current default version's tabs into a new version entry,
+    sets the new version as default, and marks the previous default as
+    non-default. Operates on all languages.
+
+    Args:
+        docs_json_path: Path to docs/docs.json.
+        version: Version string (e.g., "1.10.0").
+
+    Returns:
+        True if docs.json was updated, False otherwise.
+    """
+    import json
+
+    if not docs_json_path.exists():
+        return False
+
+    data = json.loads(docs_json_path.read_text())
+    version_label = f"v{version}"
+    updated = False
+
+    for lang in data.get("navigation", {}).get("languages", []):
+        versions = lang.get("versions", [])
+        if not versions:
+            continue
+
+        # Skip if this version already exists for this language
+        if any(v.get("version") == version_label for v in versions):
+            continue
+
+        # Find the current default and copy its tabs
+        default_version = next(
+            (v for v in versions if v.get("default")),
+            versions[0],
+        )
+
+        new_version = {
+            "version": version_label,
+            "default": True,
+            "tabs": default_version.get("tabs", []),
+        }
+
+        # Remove default flag from old default
+        default_version.pop("default", None)
+
+        # Insert new version at the beginning
+        versions.insert(0, new_version)
+        updated = True
+
+    if not updated:
+        return False
+
+    docs_json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return True
+
+
+_PT_BR_MONTHS = {
+    1: "jan",
+    2: "fev",
+    3: "mar",
+    4: "abr",
+    5: "mai",
+    6: "jun",
+    7: "jul",
+    8: "ago",
+    9: "set",
+    10: "out",
+    11: "nov",
+    12: "dez",
+}
+
+_CHANGELOG_LOCALES: dict[str, dict[str, str]] = {
+    "en": {
+        "link_text": "View release on GitHub",
+        "language_name": "English",
+    },
+    "pt-BR": {
+        "link_text": "Ver release no GitHub",
+        "language_name": "Brazilian Portuguese",
+    },
+    "ko": {
+        "link_text": "GitHub 릴리스 보기",
+        "language_name": "Korean",
+    },
+}
+
+
+def translate_release_notes(
+    release_notes: str,
+    lang: str,
+    client: OpenAI,
+) -> str:
+    """Translate release notes into the target language using OpenAI.
+
+    Args:
+        release_notes: English release notes markdown.
+        lang: Language code (e.g., "pt-BR", "ko").
+        client: OpenAI client instance.
+
+    Returns:
+        Translated release notes, or original on failure.
+    """
+    locale_cfg = _CHANGELOG_LOCALES.get(lang)
+    if not locale_cfg:
+        return release_notes
+
+    language_name = locale_cfg["language_name"]
+    prompt = TRANSLATE_RELEASE_NOTES_PROMPT.substitute(
+        language=language_name,
+        release_notes=release_notes,
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"You are a professional translator. Translate technical documentation into {language_name}.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+        return response.choices[0].message.content or release_notes
+    except Exception as e:
+        console.print(
+            f"[yellow]Warning:[/yellow] Could not translate to {language_name}: {e}"
+        )
+        return release_notes
+
+
+def _format_changelog_date(lang: str) -> str:
+    """Format today's date for a changelog entry in the given language."""
+    from datetime import datetime
+
+    now = datetime.now()
+    if lang == "ko":
+        return f"{now.year}년 {now.month}월 {now.day}일"
+    if lang == "pt-BR":
+        return f"{now.day:02d} {_PT_BR_MONTHS[now.month]} {now.year}"
+    return now.strftime("%b %d, %Y")
+
+
+def update_changelog(
+    changelog_path: Path,
+    version: str,
+    release_notes: str,
+    lang: str = "en",
+) -> bool:
+    """Prepend a new release entry to a docs changelog file.
+
+    Args:
+        changelog_path: Path to the changelog.mdx file.
+        version: Version string (e.g., "1.9.3").
+        release_notes: Markdown release notes content.
+        lang: Language code for localized date/link text.
+
+    Returns:
+        True if changelog was updated, False otherwise.
+    """
+    if not changelog_path.exists():
+        return False
+
+    locale_cfg = _CHANGELOG_LOCALES.get(lang, _CHANGELOG_LOCALES["en"])
+    date_label = _format_changelog_date(lang)
+    link_text = locale_cfg["link_text"]
+
+    # Indent each non-empty line with 2 spaces to match <Update> block format
+    indented_lines = []
+    for line in release_notes.splitlines():
+        if line.strip():
+            indented_lines.append(f"  {line}")
+        else:
+            indented_lines.append("")
+    indented_notes = "\n".join(indented_lines)
+
+    entry = (
+        f'<Update label="{date_label}">\n'
+        f"  ## v{version}\n"
+        f"\n"
+        f"  [{link_text}]"
+        f"(https://github.com/crewAIInc/crewAI/releases/tag/{version})\n"
+        f"\n"
+        f"{indented_notes}\n"
+        f"\n"
+        f"</Update>"
+    )
+
+    content = changelog_path.read_text()
+
+    # Insert after the frontmatter closing ---
+    parts = content.split("---", 2)
+    if len(parts) >= 3:
+        new_content = (
+            parts[0]
+            + "---"
+            + parts[1]
+            + "---\n"
+            + entry
+            + "\n\n"
+            + parts[2].lstrip("\n")
+        )
+    else:
+        new_content = entry + "\n\n" + content
+
+    changelog_path.write_text(new_content)
+    return True
+
+
+def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
+    """Update crewai dependency versions in CLI template pyproject.toml files.
+
+    Handles both pinned (==) and minimum (>=) version specifiers,
+    as well as extras like [tools].
+
+    Args:
+        templates_dir: Path to the CLI templates directory.
+        new_version: New version string.
+
+    Returns:
+        List of paths that were updated.
+    """
+    import re
+
+    updated = []
+    for pyproject in templates_dir.rglob("pyproject.toml"):
+        content = pyproject.read_text()
+        new_content = re.sub(
+            r'"crewai(\[tools\])?(==|>=)[^"]*"',
+            lambda m: f'"crewai{(m.group(1) or "")!s}=={new_version}"',
+            content,
+        )
+        if new_content != content:
+            pyproject.write_text(new_content)
+            updated.append(pyproject)
+
+    return updated
 
 
 def find_version_files(base_path: Path) -> list[Path]:
@@ -394,6 +636,22 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
                 "[yellow]Warning:[/yellow] No __version__ attributes found to update"
             )
 
+        # Update CLI template pyproject.toml files
+        templates_dir = lib_dir / "crewai" / "src" / "crewai" / "cli" / "templates"
+        if templates_dir.exists():
+            if dry_run:
+                for tpl in templates_dir.rglob("pyproject.toml"):
+                    console.print(
+                        f"[dim][DRY RUN][/dim] Would update template: {tpl.relative_to(cwd)}"
+                    )
+            else:
+                tpl_updated = update_template_dependencies(templates_dir, version)
+                for tpl in tpl_updated:
+                    console.print(
+                        f"[green]✓[/green] Updated template: {tpl.relative_to(cwd)}"
+                    )
+                    updated_files.append(tpl)
+
         if not dry_run:
             console.print("\nSyncing workspace...")
             run_command(["uv", "sync"])
@@ -575,9 +833,9 @@ def tag(dry_run: bool, no_edit: bool) -> None:
 
             github_contributors = get_github_contributors(commit_range)
 
-            if commits.strip():
-                client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+            if commits.strip():
                 contributors_section = ""
                 if github_contributors:
                     contributors_section = f"\n\n## Contributors\n\n{', '.join([f'@{u}' for u in github_contributors])}"
@@ -588,7 +846,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                     contributors_section=contributors_section,
                 )
 
-                response = client.chat.completions.create(
+                response = openai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
                         {
@@ -643,6 +901,77 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                 "\n[green]✓[/green] Using generated release notes without editing"
             )
 
+        is_prerelease = any(
+            indicator in version.lower()
+            for indicator in ["a", "b", "rc", "alpha", "beta", "dev"]
+        )
+
+        # Update docs: changelogs + version switcher
+        docs_json_path = cwd / "docs" / "docs.json"
+        changelog_langs = ["en", "pt-BR", "ko"]
+        if not dry_run:
+            docs_files_staged = []
+
+            for lang in changelog_langs:
+                cl_path = cwd / "docs" / lang / "changelog.mdx"
+                if lang == "en":
+                    notes_for_lang = release_notes
+                else:
+                    console.print(f"[dim]Translating release notes to {lang}...[/dim]")
+                    notes_for_lang = translate_release_notes(
+                        release_notes, lang, openai_client
+                    )
+                if update_changelog(cl_path, version, notes_for_lang, lang=lang):
+                    console.print(
+                        f"[green]✓[/green] Updated {cl_path.relative_to(cwd)}"
+                    )
+                    docs_files_staged.append(str(cl_path))
+                else:
+                    console.print(
+                        f"[yellow]Warning:[/yellow] Changelog not found at {cl_path.relative_to(cwd)}"
+                    )
+
+            if not is_prerelease:
+                if add_docs_version(docs_json_path, version):
+                    console.print(
+                        f"[green]✓[/green] Added v{version} to docs version switcher"
+                    )
+                    docs_files_staged.append(str(docs_json_path))
+                else:
+                    console.print(
+                        f"[yellow]Warning:[/yellow] docs.json not found at {docs_json_path.relative_to(cwd)}"
+                    )
+
+            if docs_files_staged:
+                for f in docs_files_staged:
+                    run_command(["git", "add", f])
+                run_command(
+                    [
+                        "git",
+                        "commit",
+                        "-m",
+                        f"docs: update changelog and version for v{version}",
+                    ]
+                )
+                console.print("[green]✓[/green] Committed docs updates")
+                run_command(["git", "push"])
+                console.print("[green]✓[/green] Pushed docs updates")
+        else:
+            for lang in changelog_langs:
+                cl_path = cwd / "docs" / lang / "changelog.mdx"
+                translated = " (translated)" if lang != "en" else ""
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would update {cl_path.relative_to(cwd)}{translated}"
+                )
+            if not is_prerelease:
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would add v{version} to docs version switcher"
+                )
+            else:
+                console.print(
+                    "[dim][DRY RUN][/dim] Skipping docs version (pre-release)"
+                )
+
         if not dry_run:
             with console.status(f"[cyan]Creating tag {tag_name}..."):
                 try:
@@ -659,11 +988,6 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                     console.print(f"[red]✗[/red] Pushed tag {tag_name}: {e}")
                     sys.exit(1)
             console.print(f"[green]✓[/green] Pushed tag {tag_name}")
-
-            is_prerelease = any(
-                indicator in version.lower()
-                for indicator in ["a", "b", "rc", "alpha", "beta", "dev"]
-            )
 
             with console.status("[cyan]Creating GitHub Release..."):
                 try:
