@@ -27,41 +27,9 @@ jobs:
             echo 'python-versions=["3.12","3.13"]' >> "$GITHUB_OUTPUT"
           fi
 
-  install:
-    name: install (py${{ matrix.python-version }})
-    needs: configure
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ${{ fromJSON(needs.configure.outputs.python-versions) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: "0.8.4"
-          python-version: ${{ matrix.python-version }}
-          enable-cache: true
-
-      - name: Install the project
-        run: uv sync --all-groups --all-extras --frozen
-
-      - name: Package virtualenv
-        run: tar czf /tmp/venv.tar.gz .venv
-
-      - name: Upload virtualenv
-        uses: actions/upload-artifact@v4
-        with:
-          name: venv-py${{ matrix.python-version }}
-          path: /tmp/venv.tar.gz
-          retention-days: 1
-          compression-level: 0
-
   tests:
     name: tests (py${{ matrix.python-version }}, ${{ matrix.group }}/4)
-    needs: [configure, install]
+    needs: configure
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -80,16 +48,10 @@ jobs:
         with:
           version: "0.8.4"
           python-version: ${{ matrix.python-version }}
-          enable-cache: false
+          enable-cache: true
 
-      - name: Download virtualenv
-        uses: actions/download-artifact@v4
-        with:
-          name: venv-py${{ matrix.python-version }}
-          path: /tmp
-
-      - name: Restore virtualenv
-        run: tar xzf /tmp/venv.tar.gz
+      - name: Install the project
+        run: uv sync --all-groups --all-extras --frozen
 
       - name: Restore test durations
         uses: actions/cache/restore@v4
