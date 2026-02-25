@@ -180,6 +180,10 @@ from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
     TavilyExtractorTool,
 )
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
+from crewai_tools.tools.valyu_extractor_tool.valyu_extractor_tool import (
+    ValyuExtractorTool,
+)
+from crewai_tools.tools.valyu_search_tool.valyu_search_tool import ValyuSearchTool
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
 from crewai_tools.tools.weaviate_tool.vector_search import WeaviateVectorSearchTool
@@ -281,6 +285,8 @@ __all__ = [
     "TXTSearchTool",
     "TavilyExtractorTool",
     "TavilySearchTool",
+    "ValyuExtractorTool",
+    "ValyuSearchTool",
     "VisionTool",
     "WeaviateVectorSearchTool",
     "WebsiteSearchTool",
