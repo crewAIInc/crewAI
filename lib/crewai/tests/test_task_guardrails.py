@@ -768,3 +768,114 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_receives_pydantic_output_on_first_attempt():
+    """Test that TaskOutput.pydantic is populated on first guardrail invocation.
+
+    Regression test for issue #4369: Previously, when guardrails were configured,
+    _export_output() was skipped on the first attempt, causing task_output.pydantic
+    to be None. This made it difficult to write guardrail functions that need to
+    access the structured Pydantic output.
+    """
+    from pydantic import BaseModel
+
+    class MyOutput(BaseModel):
+        message: str
+        status: str
+
+    pydantic_values_received = []
+
+    def guardrail_check_pydantic(result: TaskOutput) -> tuple[bool, TaskOutput]:
+        """Guardrail that captures the pydantic value on each invocation."""
+        pydantic_values_received.append(result.pydantic)
+        return (True, result)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    # Return valid JSON that can be parsed into MyOutput
+    agent.execute_task.return_value = '{"message": "hello", "status": "ok"}'
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test pydantic availability",
+        expected_output="JSON with message and status",
+        output_pydantic=MyOutput,
+        guardrail=guardrail_check_pydantic,
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    # The guardrail should have been called exactly once (first attempt succeeded)
+    assert len(pydantic_values_received) == 1
+
+    # The pydantic value should NOT be None on the first attempt
+    first_pydantic = pydantic_values_received[0]
+    assert first_pydantic is not None, (
+        "TaskOutput.pydantic should be populated on first guardrail invocation, "
+        "but was None (regression of issue #4369)"
+    )
+
+    # Verify it's the correct type and values
+    assert isinstance(first_pydantic, MyOutput)
+    assert first_pydantic.message == "hello"
+    assert first_pydantic.status == "ok"
+
+    # Verify the final result also has pydantic populated
+    assert result.pydantic is not None
+    assert isinstance(result.pydantic, MyOutput)
+
+
+@pytest.mark.asyncio
+async def test_async_guardrail_receives_pydantic_output_on_first_attempt():
+    """Test that TaskOutput.pydantic is populated on first async guardrail invocation.
+
+    Async version of the regression test for issue #4369.
+    """
+    from pydantic import BaseModel
+
+    class MyOutput(BaseModel):
+        message: str
+        status: str
+
+    pydantic_values_received = []
+
+    def guardrail_check_pydantic(result: TaskOutput) -> tuple[bool, TaskOutput]:
+        """Guardrail that captures the pydantic value on each invocation."""
+        pydantic_values_received.append(result.pydantic)
+        return (True, result)
+
+    agent = Mock()
+    agent.role = "test_agent"
+
+    async def async_execute_task(task, context, tools):
+        return '{"message": "async hello", "status": "ok"}'
+
+    agent.aexecute_task = async_execute_task
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test async pydantic availability",
+        expected_output="JSON with message and status",
+        output_pydantic=MyOutput,
+        guardrail=guardrail_check_pydantic,
+    )
+
+    result = await task.execute_async(agent=agent)
+
+    # The guardrail should have been called exactly once
+    assert len(pydantic_values_received) == 1
+
+    # The pydantic value should NOT be None on the first attempt
+    first_pydantic = pydantic_values_received[0]
+    assert first_pydantic is not None, (
+        "TaskOutput.pydantic should be populated on first async guardrail invocation, "
+        "but was None (regression of issue #4369)"
+    )
+
+    # Verify it's the correct type and values
+    assert isinstance(first_pydantic, MyOutput)
+    assert first_pydantic.message == "async hello"
+    assert first_pydantic.status == "ok"
