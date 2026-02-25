@@ -1,0 +1,203 @@
+---
+title: LangWatch Integration
+description: Learn how to instrument the CrewAI Python SDK with LangWatch using OpenLLMetry.
+keywords: crewai, python, sdk, instrumentation, opentelemetry, langwatch, tracing, openllmetry
+icon: magnifying-glass-chart
+---
+
+LangWatch does not have a built-in auto-tracking integration for CrewAI. However, you can use OpenLLMetry to integrate CrewAI with LangWatch for comprehensive observability.
+
+## OpenLLMetry Integration
+
+**OpenLLMetry** is the recommended choice for CrewAI instrumentation with LangWatch. It provides:
+
+- **Comprehensive Coverage**: Full instrumentation of CrewAI agents, tasks, and tools
+- **Active Development**: Well-maintained with regular updates
+- **Proven Integration**: Successfully used with multiple observability platforms
+- **OpenTelemetry Native**: Built on OpenTelemetry standards for maximum compatibility
+
+## Installation
+
+Install the OpenLLMetry CrewAI instrumentor:
+
+```bash
+pip install opentelemetry-instrumentation-crewai
+```
+
+## Integration Methods
+
+There are two main ways to integrate OpenLLMetry with LangWatch:
+
+### 1. Via `langwatch.setup()` (Recommended)
+
+This method lets LangWatch manage the lifecycle of the instrumentor, ensuring proper setup and teardown.
+
+```python openllmetry_setup.py
+import langwatch
+from crewai import Agent, Task, Crew
+import os
+from opentelemetry_instrumentation_crewai import CrewAIInstrumentor
+
+# Ensure LANGWATCH_API_KEY is set in your environment, or set it in `setup`
+langwatch.setup(
+    instrumentors=[CrewAIInstrumentor()]
+)
+
+# Define your CrewAI agents and tasks
+researcher = Agent(
+    role='Senior Researcher',
+    goal='Discover new insights on AI',
+    backstory='A seasoned researcher with a knack for uncovering hidden gems.'
+)
+writer = Agent(
+    role='Expert Writer',
+    goal='Craft compelling content on AI discoveries',
+    backstory='A wordsmith who can make complex AI topics accessible and engaging.'
+)
+
+task1 = Task(description='Investigate the latest advancements in LLM prompting techniques.', agent=researcher)
+task2 = Task(description='Write a blog post summarizing the findings.', agent=writer)
+
+# Create and run the crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[task1, task2],
+    verbose=2
+)
+
+@langwatch.trace(name="CrewAI Execution with OpenLLMetry")
+def run_crewai_process_ollm():
+    result = crew.kickoff()
+    return result
+
+if __name__ == "__main__":
+    print("Running CrewAI process with OpenLLMetry...")
+    output = run_crewai_process_ollm()
+    print("\n\nCrewAI Process Output:")
+    print(output)
+```
+
+### 2. Direct Instrumentation
+
+If you prefer to manage the instrumentor lifecycle yourself or have an existing OpenTelemetry setup, you can use direct instrumentation.
+
+```python openllmetry_direct.py
+import langwatch
+from crewai import Agent, Task, Crew
+from opentelemetry_instrumentation_crewai import CrewAIInstrumentor
+
+# Initialize LangWatch
+langwatch.setup()
+
+# Instrument CrewAI directly using OpenLLMetry
+CrewAIInstrumentor().instrument()
+
+# Define your agents and tasks
+planner = Agent(
+    role='Event Planner',
+    goal='Plan an engaging tech conference',
+    backstory='An experienced planner with a passion for technology events.'
+)
+task_planner = Task(description='Outline the agenda for a 3-day AI conference.', agent=planner)
+conference_crew = Crew(agents=[planner], tasks=[task_planner])
+
+@langwatch.trace(name="CrewAI Direct Instrumentation with OpenLLMetry")
+def plan_conference():
+    agenda = conference_crew.kickoff()
+    return agenda
+
+if __name__ == "__main__":
+    print("Planning conference with OpenLLMetry (direct)...")
+    conference_agenda = plan_conference()
+    print("\n\nConference Agenda:")
+    print(conference_agenda)
+```
+
+Now you can see the traces in LangWatch.
+
+![OpenLLMetry Integration](/images/langwatch_crewai.png)
+
+## Key Benefits
+
+### Automatic Instrumentation
+
+- **Agent Operations**: All agent interactions and decision-making processes
+- **Task Execution**: Complete task lifecycle from creation to completion
+- **Tool Usage**: Integration with external tools and APIs
+- **LLM Calls**: Detailed tracking of model interactions and responses
+
+### Seamless Integration
+
+- **LangWatch Management**: Automatic lifecycle management when using `langwatch.setup()`
+- **OpenTelemetry Compatible**: Works with existing OpenTelemetry infrastructure
+- **Global Coverage**: Once instrumented, captures all CrewAI operations automatically
+
+## Best Practices
+
+### 1. **Choose the Right Method**
+
+- **Use `langwatch.setup()`** for new projects or when you want LangWatch to manage everything
+- **Use Direct Instrumentation** when you have existing OpenTelemetry setup or need custom control
+
+### 2. **Environment Configuration**
+
+```bash
+# Set your LangWatch API key
+export LANGWATCH_API_KEY="your-api-key-here"
+
+# Optional: Configure OpenTelemetry endpoint
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.langwatch.ai:4317"
+```
+
+### 3. **Error Handling**
+
+```python
+try:
+    # Your CrewAI operations
+    result = crew.kickoff()
+except Exception as e:
+    # Errors will be automatically captured in traces
+    print(f"Error: {e}")
+```
+
+### 4. **Performance Monitoring**
+
+- Monitor execution times for agents and tasks
+- Track token usage and API costs
+- Identify bottlenecks in your workflow
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Instrumentation Not Working**
+
+   - Ensure the instrumentor is properly imported and initialized
+   - Check that LangWatch is configured with the correct API key
+   - Verify OpenTelemetry endpoints are accessible
+
+2. **Missing Traces**
+
+   - Confirm the instrumentor is called before CrewAI operations
+   - Check LangWatch dashboard for data ingestion
+   - Verify network connectivity to LangWatch
+
+3. **Performance Impact**
+
+   - Instrumentation adds minimal overhead
+   - Consider sampling for high-volume production environments
+   - Monitor resource usage during development
+
+### Getting Help
+
+- **OpenLLMetry**: [Documentation](https://opentelemetry.io/docs/)
+- **LangWatch**: [Documentation](https://docs.langwatch.ai)
+
+## Next Steps
+
+1. **Set Up LangWatch**: Configure your API key and project settings
+2. **Install OpenLLMetry**: Run the installation command above
+3. **Instrument Your Code**: Use one of the integration methods above
+4. **Monitor and Optimize**: Use the collected data to improve your CrewAI workflows
+
+For more advanced configurations and use cases, refer to the [OpenLLMetry documentation](https://opentelemetry.io/docs/) and the [LangWatch documentation](https://docs.langwatch.ai).
