@@ -894,7 +894,7 @@ class GeminiCompletion(BaseLLM):
         content = self._extract_text_from_response(response)
 
         effective_response_model = None if self.tools else response_model
-        if not effective_response_model:
+        if not response_model:
             content = self._apply_stop_words(content)
 
         return self._finalize_completion_response(
@@ -1295,11 +1295,13 @@ class GeminiCompletion(BaseLLM):
         """Extract token usage from Gemini response."""
         if response.usage_metadata:
             usage = response.usage_metadata
+            cached_tokens = getattr(usage, "cached_content_token_count", 0) or 0
             return {
                 "prompt_token_count": getattr(usage, "prompt_token_count", 0),
                 "candidates_token_count": getattr(usage, "candidates_token_count", 0),
                 "total_token_count": getattr(usage, "total_token_count", 0),
                 "total_tokens": getattr(usage, "total_token_count", 0),
+                "cached_prompt_tokens": cached_tokens,
             }
         return {"total_tokens": 0}
 

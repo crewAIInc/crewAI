@@ -71,7 +71,6 @@ from crewai.mcp import (
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
-from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -311,19 +310,12 @@ class Agent(BaseAgent):
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 
     def _is_any_available_memory(self) -> bool:
-        """Check if any memory is available."""
-        if not self.crew:
-            return False
-
-        memory_attributes = [
-            "memory",
-            "_short_term_memory",
-            "_long_term_memory",
-            "_entity_memory",
-            "_external_memory",
-        ]
-
-        return any(getattr(self.crew, attr) for attr in memory_attributes)
+        """Check if unified memory is available (agent or crew)."""
+        if getattr(self, "memory", None):
+            return True
+        if self.crew and getattr(self.crew, "_memory", None):
+            return True
+        return False
 
     def _supports_native_tool_calling(self, tools: list[BaseTool]) -> bool:
         """Check if the LLM supports native function calling with the given tools.
@@ -387,15 +379,16 @@ class Agent(BaseAgent):
             memory = ""
 
             try:
-                contextual_memory = ContextualMemory(
-                    self.crew._short_term_memory,
-                    self.crew._long_term_memory,
-                    self.crew._entity_memory,
-                    self.crew._external_memory,
-                    agent=self,
-                    task=task,
+                unified_memory = getattr(self, "memory", None) or (
+                    getattr(self.crew, "_memory", None) if self.crew else None
                 )
-                memory = contextual_memory.build_context_for_task(task, context or "")
+                if unified_memory is not None:
+                    query = task.description
+                    matches = unified_memory.recall(query, limit=10)
+                    if matches:
+                        memory = "Relevant memories:\n" + "\n".join(
+                            f"- {m.record.content}" for m in matches
+                        )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
 
@@ -624,17 +617,16 @@ class Agent(BaseAgent):
             memory = ""
 
             try:
-                contextual_memory = ContextualMemory(
-                    self.crew._short_term_memory,
-                    self.crew._long_term_memory,
-                    self.crew._entity_memory,
-                    self.crew._external_memory,
-                    agent=self,
-                    task=task,
+                unified_memory = getattr(self, "memory", None) or (
+                    getattr(self.crew, "_memory", None) if self.crew else None
                 )
-                memory = await contextual_memory.abuild_context_for_task(
-                    task, context or ""
-                )
+                if unified_memory is not None:
+                    query = task.description
+                    matches = unified_memory.recall(query, limit=10)
+                    if matches:
+                        memory = "Relevant memories:\n" + "\n".join(
+                            f"- {m.record.content}" for m in matches
+                        )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
 
@@ -872,7 +864,11 @@ class Agent(BaseAgent):
                 respect_context_window=self.respect_context_window,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
-                response_model=task.response_model if task else None,
+                response_model=(
+                    task.response_model or task.output_pydantic or task.output_json
+                )
+                if task
+                else None,
             )
 
     def _update_executor_parameters(
@@ -901,7 +897,11 @@ class Agent(BaseAgent):
         self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
-        self.agent_executor.response_model = task.response_model if task else None
+        self.agent_executor.response_model = (
+            (task.response_model or task.output_pydantic or task.output_json)
+            if task
+            else None
+        )
 
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
@@ -1712,6 +1712,19 @@ class Agent(BaseAgent):
 
         # Prepare tools
         raw_tools: list[BaseTool] = self.tools or []
+
+        # Inject memory tools for standalone kickoff (crew path handles its own)
+        agent_memory = getattr(self, "memory", None)
+        if agent_memory is not None:
+            from crewai.tools.memory_tools import create_memory_tools
+
+            existing_names = {sanitize_tool_name(t.name) for t in raw_tools}
+            raw_tools.extend(
+                mt
+                for mt in create_memory_tools(agent_memory)
+                if sanitize_tool_name(mt.name) not in existing_names
+            )
+
         parsed_tools = parse_tools(raw_tools)
 
         # Build agent_info for backward-compatible event emission
@@ -1786,6 +1799,49 @@ class Agent(BaseAgent):
         if input_files:
             all_files.update(input_files)
 
+        # Inject memory context for standalone kickoff (recall before execution)
+        if agent_memory is not None:
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalStartedEvent(
+                        task_id=None,
+                        source_type="agent_kickoff",
+                        from_agent=self,
+                    ),
+                )
+                start_time = time.time()
+                matches = agent_memory.recall(formatted_messages, limit=10)
+                memory_block = ""
+                if matches:
+                    memory_block = "Relevant memories:\n" + "\n".join(
+                        f"- {m.record.content}" for m in matches
+                    )
+                if memory_block:
+                    formatted_messages += "\n\n" + self.i18n.slice("memory").format(
+                        memory=memory_block
+                    )
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalCompletedEvent(
+                        task_id=None,
+                        memory_content=memory_block,
+                        retrieval_time_ms=(time.time() - start_time) * 1000,
+                        source_type="agent_kickoff",
+                        from_agent=self,
+                    ),
+                )
+            except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalFailedEvent(
+                        task_id=None,
+                        source_type="agent_kickoff",
+                        from_agent=self,
+                        error=str(e),
+                    ),
+                )
+
         # Build the input dict for the executor
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1856,6 +1912,9 @@ class Agent(BaseAgent):
                     response_format=response_format,
                 )
 
+            # Save to memory after execution (passive save)
+            self._save_kickoff_to_memory(messages, output.raw)
+
             crewai_event_bus.emit(
                 self,
                 event=LiteAgentExecutionCompletedEvent(
@@ -1875,6 +1934,32 @@ class Agent(BaseAgent):
                 ),
             )
             raise
+
+    def _save_kickoff_to_memory(
+        self, messages: str | list[LLMMessage], output_text: str
+    ) -> None:
+        """Save kickoff result to memory. No-op if agent has no memory."""
+        agent_memory = getattr(self, "memory", None)
+        if agent_memory is None:
+            return
+        try:
+            if isinstance(messages, str):
+                input_str = messages
+            else:
+                input_str = (
+                    "\n".join(
+                        str(msg.get("content", ""))
+                        for msg in messages
+                        if msg.get("content")
+                    )
+                    or "User request"
+                )
+            raw = f"Input: {input_str}\nAgent: {self.role}\nResult: {output_text}"
+            extracted = agent_memory.extract_memories(raw)
+            if extracted:
+                agent_memory.remember_many(extracted)
+        except Exception as e:
+            self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
     def _execute_and_build_output(
         self,
@@ -2157,6 +2242,9 @@ class Agent(BaseAgent):
                     inputs=inputs,
                     response_format=response_format,
                 )
+
+            # Save to memory after async execution (passive save)
+            self._save_kickoff_to_memory(messages, output.raw)
 
             crewai_event_bus.emit(
                 self,
