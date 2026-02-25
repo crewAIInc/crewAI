@@ -431,9 +431,8 @@ def generate_model_description(
     Args:
         model: A Pydantic model class.
         strip_null_types: When ``True`` (default), remove ``null`` from
-            ``anyOf`` / ``type`` arrays.  Set to ``False`` for **tool
-            parameter** schemas so that the LLM can send ``null`` for
-            optional fields instead of being forced to guess a value.
+            ``anyOf`` / ``type`` arrays.  Set to ``False`` to allow sending ``null`` for
+            optional fields.
 
     Returns:
         A ModelDescription with JSON schema representation of the model.
