@@ -1655,6 +1655,89 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
             )
 
 
+def test_unsafe_code_execution_requires_explicit_allow_policy():
+    with patch.object(Agent, "_validate_docker_installation"):
+        agent = Agent(
+            role="Programmer",
+            goal="Write code to solve problems.",
+            backstory="You're a programmer who loves to solve problems with code.",
+            allow_code_execution=True,
+            code_execution_mode="unsafe",
+        )
+
+    task = Task(
+        description="Write a script.",
+        expected_output="A working script.",
+        agent=agent,
+        human_input=True,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.raises(
+        ValueError, match="Set allow_unsafe_code_execution=True to opt in."
+    ):
+        crew.kickoff()
+
+
+def test_unsafe_code_execution_requires_confirmation_setting():
+    with patch.object(Agent, "_validate_docker_installation"):
+        agent = Agent(
+            role="Programmer",
+            goal="Write code to solve problems.",
+            backstory="You're a programmer who loves to solve problems with code.",
+            allow_code_execution=True,
+            allow_unsafe_code_execution=True,
+            code_execution_mode="unsafe",
+        )
+
+    task = Task(
+        description="Write a script.",
+        expected_output="A working script.",
+        agent=agent,
+        human_input=False,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.raises(
+        ValueError,
+        match="Unsafe code execution requires task.human_input=True",
+    ):
+        crew.kickoff()
+
+
+def test_unsafe_code_execution_allowed_with_policy_and_confirmation():
+    with patch.object(Agent, "_validate_docker_installation"):
+        agent = Agent(
+            role="Programmer",
+            goal="Write code to solve problems.",
+            backstory="You're a programmer who loves to solve problems with code.",
+            allow_code_execution=True,
+            allow_unsafe_code_execution=True,
+            code_execution_mode="unsafe",
+        )
+
+    task = Task(
+        description="Write a script.",
+        expected_output="A working script.",
+        agent=agent,
+        human_input=True,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent"
+    )
+
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
+        crew.kickoff()
+        _, kwargs = mock_execute_sync.call_args
+        used_tools = kwargs["tools"]
+        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), (
+            "CodeInterpreterTool should be present"
+        )
+
+
 @pytest.mark.vcr()
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     researcher = Agent(

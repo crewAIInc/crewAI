@@ -75,6 +75,7 @@ class AgentConfig(TypedDict, total=False):
 
     # Code execution
     allow_code_execution: bool
+    allow_unsafe_code_execution: bool
     code_execution_mode: Literal["safe", "unsafe"]
 
     # Context and performance
