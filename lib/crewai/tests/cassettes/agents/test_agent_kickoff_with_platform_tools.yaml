@@ -40,23 +40,23 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.5
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6L3fqygkUIZ3bN4wvSpAhdaSk7MF\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770403287,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8D6N1Fkz1at9vvgiZp4cYgerJbuU\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849359,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_RuWuYzjzgRL3byVGhLlPi0rq\",\n            \"type\":
+        \           \"id\": \"call_lLWMJ8icAP8pCVCANTDjIl9s\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"create_issue\",\n
-        \             \"arguments\": \"{\\\"title\\\":\\\"Test issue\\\",\\\"body\\\":\\\"This
-        is a test issue created for testing purposes.\\\"}\"\n            }\n          }\n
-        \       ],\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-        \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
-        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 93,\n    \"completion_tokens\":
-        28,\n    \"total_tokens\": 121,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        \             \"arguments\": \"{\\\"title\\\":\\\"Test GitHub Issue\\\",\\\"body\\\":\\\"This
+        is a test GitHub issue created for testing purposes.\\\"}\"\n            }\n
+        \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 93,\n    \"completion_tokens\":
+        30,\n    \"total_tokens\": 123,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -69,11 +69,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 18:41:28 GMT
+      - Wed, 11 Feb 2026 22:36:00 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -89,11 +87,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1406'
+      - '2999'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -116,8 +116,8 @@ interactions:
 - request:
     body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
       personal goal is: Test goal"},{"role":"user","content":"\nCurrent Task: Create
-      a GitHub issue"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RuWuYzjzgRL3byVGhLlPi0rq","type":"function","function":{"name":"create_issue","arguments":"{\"title\":\"Test
-      issue\",\"body\":\"This is a test issue created for testing purposes.\"}"}}]},{"role":"tool","tool_call_id":"call_RuWuYzjzgRL3byVGhLlPi0rq","name":"create_issue","content":"{\n  \"success\":
+      a GitHub issue"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_lLWMJ8icAP8pCVCANTDjIl9s","type":"function","function":{"name":"create_issue","arguments":"{\"title\":\"Test
+      GitHub Issue\",\"body\":\"This is a test GitHub issue created for testing purposes.\"}"}}]},{"role":"tool","tool_call_id":"call_lLWMJ8icAP8pCVCANTDjIl9s","name":"create_issue","content":"{\n  \"success\":
       true,\n  \"issue_url\": \"https://github.com/test/repo/issues/1\"\n}"}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_issue","description":"Create
       a GitHub issue","strict":true,"parameters":{"additionalProperties":false,"properties":{"title":{"description":"Issue
       title","title":"Title","type":"string"},"body":{"default":null,"description":"Issue
@@ -134,7 +134,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1028'
+      - '1042'
       content-type:
       - application/json
       cookie:
@@ -158,19 +158,19 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.5
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6L3hfuBxk36LIb3ekD1IVwFD5VVL\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770403289,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8D6Q2wrEW1ncIy69lWGrk2NTH9ln\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849362,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"I have successfully created a GitHub
-        issue for testing purposes. You can view the issue at this URL: [Test issue](https://github.com/test/repo/issues/1)\",\n
+        \"assistant\",\n        \"content\": \"I have successfully created a test
+        GitHub issue. You can view it at [this link](https://github.com/test/repo/issues/1).\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        154,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 190,\n    \"prompt_tokens_details\":
+        156,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 186,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -183,7 +183,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 18:41:29 GMT
+      - Wed, 11 Feb 2026 22:36:03 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -201,11 +201,127 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '888'
+      - '2740'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal"},{"role":"user","content":"\nCurrent Task: Create
+      a GitHub issue"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_lLWMJ8icAP8pCVCANTDjIl9s","type":"function","function":{"name":"create_issue","arguments":"{\"title\":\"Test
+      GitHub Issue\",\"body\":\"This is a test GitHub issue created for testing purposes.\"}"}}]},{"role":"tool","tool_call_id":"call_lLWMJ8icAP8pCVCANTDjIl9s","name":"create_issue","content":"{\n  \"success\":
+      true,\n  \"issue_url\": \"https://github.com/test/repo/issues/1\"\n}"},{"role":"assistant","content":"I
+      have successfully created a test GitHub issue. You can view it at [this link](https://github.com/test/repo/issues/1)."}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_issue","description":"Create
+      a GitHub issue","strict":true,"parameters":{"additionalProperties":false,"properties":{"title":{"description":"Issue
+      title","title":"Title","type":"string"},"body":{"default":null,"description":"Issue
+      body","title":"Body","type":"string"}},"required":["title","body"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1195'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8D6R4KzXuzOPsV3Sa6gWnZyrLjm0\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849363,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Test goal\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        189,\n    \"completion_tokens\": 3,\n    \"total_tokens\": 192,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 22:36:03 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '515'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

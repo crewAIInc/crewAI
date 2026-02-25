@@ -93,6 +93,14 @@ from crewai.events.types.memory_events import (
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
 )
+from crewai.events.types.observation_events import (
+    GoalAchievedEarlyEvent,
+    PlanRefinementEvent,
+    PlanReplanTriggeredEvent,
+    StepObservationCompletedEvent,
+    StepObservationFailedEvent,
+    StepObservationStartedEvent,
+)
 from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
@@ -436,6 +444,39 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: AgentReasoningFailedEvent
         ) -> None:
             self._handle_action_event("agent_reasoning_failed", source, event)
+
+        # Observation events (Plan-and-Execute)
+        @event_bus.on(StepObservationStartedEvent)
+        def on_step_observation_started(
+            source: Any, event: StepObservationStartedEvent
+        ) -> None:
+            self._handle_action_event("step_observation_started", source, event)
+
+        @event_bus.on(StepObservationCompletedEvent)
+        def on_step_observation_completed(
+            source: Any, event: StepObservationCompletedEvent
+        ) -> None:
+            self._handle_action_event("step_observation_completed", source, event)
+
+        @event_bus.on(StepObservationFailedEvent)
+        def on_step_observation_failed(
+            source: Any, event: StepObservationFailedEvent
+        ) -> None:
+            self._handle_action_event("step_observation_failed", source, event)
+
+        @event_bus.on(PlanRefinementEvent)
+        def on_plan_refinement(source: Any, event: PlanRefinementEvent) -> None:
+            self._handle_action_event("plan_refinement", source, event)
+
+        @event_bus.on(PlanReplanTriggeredEvent)
+        def on_plan_replan_triggered(
+            source: Any, event: PlanReplanTriggeredEvent
+        ) -> None:
+            self._handle_action_event("plan_replan_triggered", source, event)
+
+        @event_bus.on(GoalAchievedEarlyEvent)
+        def on_goal_achieved_early(source: Any, event: GoalAchievedEarlyEvent) -> None:
+            self._handle_action_event("goal_achieved_early", source, event)
 
         @event_bus.on(KnowledgeRetrievalStartedEvent)
         def on_knowledge_retrieval_started(

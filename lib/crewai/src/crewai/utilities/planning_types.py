@@ -101,3 +101,148 @@ class TodoList(BaseModel):
             item.status = "completed"
             if result:
                 item.result = result
+
+    def _dependencies_satisfied(self, item: TodoItem) -> bool:
+        """Check if all dependencies for a todo item are completed.
+
+        Args:
+            item: The todo item to check dependencies for.
+
+        Returns:
+            True if all dependencies are completed, False otherwise.
+        """
+        for dep_num in item.depends_on:
+            dep = self.get_by_step_number(dep_num)
+            if dep is None or dep.status != "completed":
+                return False
+        return True
+
+    def get_ready_todos(self) -> list[TodoItem]:
+        """Get all todos that are ready to execute (pending with satisfied dependencies).
+
+        Returns:
+            List of TodoItem objects that can be executed now.
+        """
+        ready: list[TodoItem] = []
+        for item in self.items:
+            if item.status != "pending":
+                continue
+            if self._dependencies_satisfied(item):
+                ready.append(item)
+        return ready
+
+    @property
+    def can_parallelize(self) -> bool:
+        """Check if multiple todos can run in parallel.
+
+        Returns:
+            True if more than one todo is ready to execute.
+        """
+        return len(self.get_ready_todos()) > 1
+
+    @property
+    def running_count(self) -> int:
+        """Count of currently running todos."""
+        return sum(1 for item in self.items if item.status == "running")
+
+    def get_completed_todos(self) -> list[TodoItem]:
+        """Get all completed todos.
+
+        Returns:
+            List of completed TodoItem objects.
+        """
+        return [item for item in self.items if item.status == "completed"]
+
+    def get_pending_todos(self) -> list[TodoItem]:
+        """Get all pending todos.
+
+        Returns:
+            List of pending TodoItem objects.
+        """
+        return [item for item in self.items if item.status == "pending"]
+
+    def replace_pending_todos(self, new_items: list[TodoItem]) -> None:
+        """Replace all pending todos with new items.
+
+        Preserves completed and running todos, replaces only pending ones.
+        Used during replanning to swap in a new plan for remaining work.
+
+        Args:
+            new_items: The new todo items to replace pending ones.
+        """
+        non_pending = [item for item in self.items if item.status != "pending"]
+        self.items = non_pending + new_items
+
+
+class StepRefinement(BaseModel):
+    """A structured in-place update for a single pending step.
+
+    Returned as part of StepObservation when the Planner learns new
+    information that makes a pending step description more specific.
+    Applied directly — no second LLM call required.
+    """
+
+    step_number: int = Field(description="The step number to update (1-based)")
+    new_description: str = Field(
+        description="The updated, more specific description for this step"
+    )
+
+
+class StepObservation(BaseModel):
+    """Planner's observation after a step execution completes.
+
+    Returned by the PlannerObserver after EVERY step — not just failures.
+    The Planner uses this to decide whether to continue, refine, or replan.
+
+    Based on PLAN-AND-ACT (Section 3.3): the Planner observes what the Executor
+    did and incorporates new information into the remaining plan.
+
+    Attributes:
+        step_completed_successfully: Whether the step achieved its objective.
+        key_information_learned: New information revealed by this step
+            (e.g., "Found 3 products: A, B, C"). Used to refine upcoming steps.
+        remaining_plan_still_valid: Whether pending todos still make sense
+            given the new information. True does NOT mean no refinement needed.
+        suggested_refinements: Structured in-place updates to pending step
+            descriptions. Each entry targets a specific step by number. These
+            are applied directly without a second LLM call.
+            Example: [{"step_number": 3, "new_description": "Select product B (highest rated)"}]
+        needs_full_replan: The remaining plan is fundamentally wrong and must
+            be regenerated from scratch. Mutually exclusive with
+            remaining_plan_still_valid (if this is True, that should be False).
+        replan_reason: Explanation of why a full replan is needed (None if not).
+        goal_already_achieved: The overall task goal has been satisfied early.
+            No more steps needed — skip remaining todos and finalize.
+    """
+
+    step_completed_successfully: bool = Field(
+        description="Whether the step achieved what it was asked to do"
+    )
+    key_information_learned: str = Field(
+        default="",
+        description="What new information this step revealed",
+    )
+    remaining_plan_still_valid: bool = Field(
+        default=True,
+        description="Whether the remaining pending todos still make sense given new information",
+    )
+    suggested_refinements: list[StepRefinement] | None = Field(
+        default=None,
+        description=(
+            "Structured updates to pending step descriptions based on new information. "
+            "Each entry specifies a step_number and new_description. "
+            "Applied directly — no separate replan needed."
+        ),
+    )
+    needs_full_replan: bool = Field(
+        default=False,
+        description="The remaining plan is fundamentally wrong and must be regenerated",
+    )
+    replan_reason: str | None = Field(
+        default=None,
+        description="Explanation of why a full replan is needed",
+    )
+    goal_already_achieved: bool = Field(
+        default=False,
+        description="The overall task goal has been satisfied early; no more steps needed",
+    )

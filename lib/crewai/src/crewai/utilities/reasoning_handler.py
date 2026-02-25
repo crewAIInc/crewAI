@@ -26,12 +26,6 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 
-if TYPE_CHECKING:
-    from crewai.agent import Agent
-    from crewai.agent.planning_config import PlanningConfig
-    from crewai.task import Task
-
-
 class ReasoningPlan(BaseModel):
     """Model representing a reasoning plan for a task."""
 
@@ -270,7 +264,6 @@ class AgentReasoning:
             A tuple of the plan summary, list of steps, and whether the agent is ready.
         """
         planning_prompt = self._create_planning_prompt()
-        planning_prompt = self._create_planning_prompt()
 
         if self.llm.supports_function_calling():
             plan, steps, ready = self._call_with_function(
@@ -320,7 +313,6 @@ class AgentReasoning:
             except Exception:  # noqa: S110
                 pass
 
-            refine_prompt = self._create_refine_prompt(plan)
             refine_prompt = self._create_refine_prompt(plan)
 
             if self.llm.supports_function_calling():

@@ -1748,7 +1748,8 @@ class Agent(BaseAgent):
 
             existing_names = {sanitize_tool_name(t.name) for t in raw_tools}
             raw_tools.extend(
-                mt for mt in create_memory_tools(agent_memory)
+                mt
+                for mt in create_memory_tools(agent_memory)
                 if sanitize_tool_name(mt.name) not in existing_names
             )
 
@@ -1973,19 +1974,101 @@ class Agent(BaseAgent):
             if isinstance(messages, str):
                 input_str = messages
             else:
-                input_str = "\n".join(
-                    str(msg.get("content", "")) for msg in messages if msg.get("content")
-                ) or "User request"
-            raw = (
-                f"Input: {input_str}\n"
-                f"Agent: {self.role}\n"
-                f"Result: {output_text}"
-            )
+                input_str = (
+                    "\n".join(
+                        str(msg.get("content", ""))
+                        for msg in messages
+                        if msg.get("content")
+                    )
+                    or "User request"
+                )
+            raw = f"Input: {input_str}\nAgent: {self.role}\nResult: {output_text}"
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
+
+    def _build_output_from_result(
+        self,
+        result: dict[str, Any],
+        executor: AgentExecutor,
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Build a LiteAgentOutput from an executor result dict.
+
+        Shared logic used by both sync and async execution paths.
+
+        Args:
+            result: The result dictionary from executor.invoke / invoke_async.
+            executor: The executor instance.
+            response_format: Optional response format.
+
+        Returns:
+            LiteAgentOutput with raw output, formatted result, and metrics.
+        """
+        import json
+
+        output = result.get("output", "")
+
+        # Handle response format conversion
+        formatted_result: BaseModel | None = None
+        raw_output: str
+
+        if isinstance(output, BaseModel):
+            formatted_result = output
+            raw_output = output.model_dump_json()
+        elif response_format:
+            raw_output = str(output) if not isinstance(output, str) else output
+            try:
+                model_schema = generate_model_description(response_format)
+                schema = json.dumps(model_schema, indent=2)
+                instructions = self.i18n.slice("formatted_task_instructions").format(
+                    output_format=schema
+                )
+
+                converter = Converter(
+                    llm=self.llm,
+                    text=raw_output,
+                    model=response_format,
+                    instructions=instructions,
+                )
+
+                conversion_result = converter.to_pydantic()
+                if isinstance(conversion_result, BaseModel):
+                    formatted_result = conversion_result
+            except ConverterError:
+                pass  # Keep raw output if conversion fails
+        else:
+            raw_output = str(output) if not isinstance(output, str) else output
+
+        # Get token usage metrics
+        if isinstance(self.llm, BaseLLM):
+            usage_metrics = self.llm.get_token_usage_summary()
+        else:
+            usage_metrics = self._token_process.get_summary()
+
+        raw_str = (
+            raw_output
+            if isinstance(raw_output, str)
+            else raw_output.model_dump_json()
+            if isinstance(raw_output, BaseModel)
+            else str(raw_output)
+        )
+
+        todo_results = LiteAgentOutput.from_todo_items(executor.state.todos.items)
+
+        return LiteAgentOutput(
+            raw=raw_str,
+            pydantic=formatted_result,
+            agent_role=self.role,
+            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=list(executor.state.messages),
+            plan=executor.state.plan,
+            todos=todo_results,
+            replan_count=executor.state.replan_count,
+            last_replan_reason=executor.state.last_replan_reason,
+        )
 
     def _execute_and_build_output(
         self,
@@ -1993,74 +2076,9 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent and build the output object.
-
-        Args:
-            executor: The executor instance.
-            inputs: Input dictionary for execution.
-            response_format: Optional response format.
-
-        Returns:
-            LiteAgentOutput with raw output, formatted result, and metrics.
-        """
-        import json
-
-        # Execute the agent (this is called from sync path, so invoke returns dict)
+        """Execute the agent synchronously and build the output object."""
         result = cast(dict[str, Any], executor.invoke(inputs))
-        output = result.get("output", "")
-
-        # Handle response format conversion
-        formatted_result: BaseModel | None = None
-        raw_output: str
-
-        if isinstance(output, BaseModel):
-            formatted_result = output
-            raw_output = output.model_dump_json()
-        elif response_format:
-            raw_output = str(output) if not isinstance(output, str) else output
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
-
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
-
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
-        else:
-            raw_output = str(output) if not isinstance(output, str) else output
-
-        # Get token usage metrics
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
-
-        raw_str = (
-            raw_output
-            if isinstance(raw_output, str)
-            else raw_output.model_dump_json()
-            if isinstance(raw_output, BaseModel)
-            else str(raw_output)
-        )
-
-        return LiteAgentOutput(
-            raw=raw_str,
-            pydantic=formatted_result,
-            agent_role=self.role,
-            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
-        )
+        return self._build_output_from_result(result, executor, response_format)
 
     async def _execute_and_build_output_async(
         self,
@@ -2068,77 +2086,9 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent asynchronously and build the output object.
-
-        This is the async version of _execute_and_build_output that uses
-        invoke_async() for native async execution within event loops.
-
-        Args:
-            executor: The executor instance.
-            inputs: Input dictionary for execution.
-            response_format: Optional response format.
-
-        Returns:
-            LiteAgentOutput with raw output, formatted result, and metrics.
-        """
-        import json
-
-        # Execute the agent asynchronously
+        """Execute the agent asynchronously and build the output object."""
         result = await executor.invoke_async(inputs)
-        output = result.get("output", "")
-
-        # Handle response format conversion
-        formatted_result: BaseModel | None = None
-        raw_output: str
-
-        if isinstance(output, BaseModel):
-            formatted_result = output
-            raw_output = output.model_dump_json()
-        elif response_format:
-            raw_output = str(output) if not isinstance(output, str) else output
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
-
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
-
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
-        else:
-            raw_output = str(output) if not isinstance(output, str) else output
-
-        # Get token usage metrics
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
-
-        raw_str = (
-            raw_output
-            if isinstance(raw_output, str)
-            else raw_output.model_dump_json()
-            if isinstance(raw_output, BaseModel)
-            else str(raw_output)
-        )
-
-        return LiteAgentOutput(
-            raw=raw_str,
-            pydantic=formatted_result,
-            agent_role=self.role,
-            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
-        )
+        return self._build_output_from_result(result, executor, response_format)
 
     def _process_kickoff_guardrail(
         self,

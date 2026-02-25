@@ -5,19 +5,26 @@ interactions:
       a focused execution plan for the following task:\n\n## Task\nCalculate the sum
       of the first 3 prime numbers, then multiply that result by 2. Show your work
       for each step.\n\n## Expected Output\nComplete the task successfully\n\n## Available
-      Tools\nNo tools available\n\n## Instructions\nCreate ONLY the essential steps
-      needed to complete this task. Use the MINIMUM number of steps required - do
-      NOT pad your plan with unnecessary steps. Most tasks need only 2-5 steps.\n\nFor
-      each step:\n- State the specific action to take\n- Specify which tool to use
-      (if any)\n\nDo NOT include:\n- Setup or preparation steps that are obvious\n-
-      Verification steps unless critical\n- Documentation or cleanup steps unless
-      explicitly required\n- Generic steps like \"review results\" or \"finalize output\"\n\nAfter
-      your plan, state:\n- \"READY: I am ready to execute the task.\" if the plan
-      is complete\n- \"NOT READY: I need to refine my plan because [reason].\" if
-      you need more thinking"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_reasoning_plan","description":"Create
-      or refine a reasoning plan for a task","strict":true,"parameters":{"type":"object","properties":{"plan":{"type":"string","description":"The
-      detailed reasoning plan for the task."},"ready":{"type":"boolean","description":"Whether
-      the agent is ready to execute the task."}},"required":["plan","ready"],"additionalProperties":false}}}]}'
+      Tools\nNo tools available\n\n## Planning Principles\nFocus on WHAT needs to
+      be accomplished, not HOW. Group related actions into logical units. Fewer steps
+      = better. Most tasks need 3-6 steps. Hard limit: 10 steps.\n\n## Step Types
+      (only these are valid):\n1. **Tool Step**: Uses a tool to gather information
+      or take action\n2. **Output Step**: Synthesizes prior results into the final
+      deliverable (usually the last step)\n\n## Rules:\n- Each step must either USE
+      A TOOL or PRODUCE THE FINAL OUTPUT\n- Combine related tool calls: \"Research
+      A, B, and C\" = ONE step, not three\n- Combine all synthesis into ONE final
+      output step\n- NO standalone \"thinking\" steps (review, verify, confirm, refine,
+      analyze) - these happen naturally between steps\n\nFor each step: State the
+      action, specify the tool (if any), and note dependencies.\n\nAfter your plan,
+      state READY or NOT READY."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_reasoning_plan","description":"Create
+      or refine a reasoning plan for a task with structured steps","strict":true,"parameters":{"type":"object","properties":{"plan":{"type":"string","description":"A
+      brief summary of the overall plan."},"steps":{"type":"array","description":"List
+      of discrete steps to execute the plan","items":{"type":"object","properties":{"step_number":{"type":"integer","description":"Step
+      number (1-based)"},"description":{"type":"string","description":"What to do
+      in this step"},"tool_to_use":{"type":["string","null"],"description":"Tool to
+      use for this step, or null if no tool needed"},"depends_on":{"type":"array","items":{"type":"integer"},"description":"Step
+      numbers this step depends on (empty array if none)"}},"required":["step_number","description","tool_to_use","depends_on"],"additionalProperties":false}},"ready":{"type":"boolean","description":"Whether
+      the agent is ready to execute the task."}},"required":["plan","steps","ready"],"additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -30,7 +37,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1636'
+      - '2410'
       content-type:
       - application/json
       host:
@@ -57,20 +64,26 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D4yTWa7FxCHkHwHF25AYXXeJDBOuY\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770078150,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D7ste1jQXBpsjpTrjyYCn1JsraF0N\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771690,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"## Execution Plan\\n\\n1. Identify
-        the first 3 prime numbers: 2, 3, and 5.\\n2. Calculate the sum: \\\\(2 + 3
-        + 5 = 10\\\\).\\n3. Multiply the sum by 2: \\\\(10 \\\\times 2 = 20\\\\).\\n\\nREADY:
-        I am ready to execute the task.\",\n        \"refusal\": null,\n        \"annotations\":
-        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 299,\n    \"completion_tokens\":
-        74,\n    \"total_tokens\": 373,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_gISy7gux5P3VvQMLihZG4UIr\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"create_reasoning_plan\",\n
+        \             \"arguments\": \"{\\\"plan\\\":\\\"Calculate the sum of the
+        first 3 prime numbers and multiply by 2.\\\",\\\"steps\\\":[{\\\"step_number\\\":1,\\\"description\\\":\\\"Identify
+        the first 3 prime numbers (2, 3, 5).\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[]},{\\\"step_number\\\":2,\\\"description\\\":\\\"Calculate
+        the sum of the identified prime numbers (2 + 3 + 5).\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[1]},{\\\"step_number\\\":3,\\\"description\\\":\\\"Multiply
+        the sum by 2.\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[2]},{\\\"step_number\\\":4,\\\"description\\\":\\\"Present
+        the final result.\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[3]}],\\\"ready\\\":true}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 458,\n    \"completion_tokens\":
+        158,\n    \"total_tokens\": 616,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -79,11 +92,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 00:22:32 GMT
+      - Wed, 11 Feb 2026 01:01:35 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -99,11 +110,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1716'
+      - '4780'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -125,10 +138,13 @@ interactions:
       message: OK
 - request:
     body: '{"messages":[{"role":"system","content":"You are Math Tutor. An expert
-      math tutor who breaks down problems step by step\nYour personal goal is: Solve
-      multi-step math problems accurately"},{"role":"user","content":"\nCurrent Task:
-      Calculate the sum of the first 3 prime numbers, then multiply that result by
-      2. Show your work for each step.\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
+      math tutor who breaks down problems step by step\n\nYour goal: Solve multi-step
+      math problems accurately\n\nYou are executing a specific step in a multi-step
+      plan. Focus ONLY on completing\nthe current step. Do not plan ahead or worry
+      about future steps.\n\nBefore acting, briefly reason about what you need to
+      do and which approach\nor tool would be most helpful for this specific step."},{"role":"user","content":"##
+      Current Step\nIdentify the first 3 prime numbers (2, 3, 5).\n\nComplete this
+      step and provide your result."}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -141,7 +157,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '400'
+      - '622'
       content-type:
       - application/json
       cookie:
@@ -170,30 +186,23 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D4yTYJgCZf2oY7wiPMZmN4QEQhHb5\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770078152,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D7stji7FbO2RvU9vi9jPmeQg4f0qn\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771695,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"To solve the problem, let's break it
-        down into two main steps: \\n\\n1. Calculate the sum of the first 3 prime
-        numbers.\\n2. Multiply the result of that sum by 2.\\n\\n### Step 1: Identify
-        the first 3 prime numbers\\nPrime numbers are natural numbers greater than
-        1 that have no positive divisors other than 1 and themselves. \\n\\nThe first
-        three prime numbers are:\\n- 2\\n- 3\\n- 5\\n\\n### Step 2: Calculate the
-        sum of the first 3 prime numbers\\nNow, we add these prime numbers together:\\n\\n\\\\[\\n2
-        + 3 + 5\\n\\\\]\\n\\nCalculating this step-by-step:\\n- First, add 2 and 3:\\n
-        \ \\\\[\\n  2 + 3 = 5\\n  \\\\]\\n  \\n- Next, add this result to 5:\\n  \\\\[\\n
-        \ 5 + 5 = 10\\n  \\\\]\\n\\nSo, the sum of the first 3 prime numbers is \\\\(10\\\\).\\n\\n###
-        Step 3: Multiply the sum by 2\\nNext, we take the sum we calculated and multiply
-        it by 2:\\n\\n\\\\[\\n10 \\\\times 2\\n\\\\]\\n\\nCalculating this:\\n\\\\[\\n10
-        \\\\times 2 = 20\\n\\\\]\\n\\n### Final Answer\\nThus, the final result obtained
-        after performing all the steps is:\\n\\n\\\\[\\n\\\\boxed{20}\\n\\\\]\",\n
-        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        74,\n    \"completion_tokens\": 288,\n    \"total_tokens\": 362,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"To identify the first three prime numbers,
+        I will recall the definition of a prime number. A prime number is a natural
+        number greater than 1 that has no positive divisors other than 1 and itself.\\n\\n1.
+        The first prime number is 2 (it can only be divided by 1 and 2).\\n2. The
+        second prime number is 3 (it can only be divided by 1 and 3).\\n3. The third
+        prime number is 5 (it can only be divided by 1 and 5).\\n\\nThus, the result
+        is: **2, 3, 5**.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 123,\n    \"completion_tokens\":
+        124,\n    \"total_tokens\": 247,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_6951a4e4b3\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -202,7 +211,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 00:22:37 GMT
+      - Wed, 11 Feb 2026 01:01:38 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -220,11 +229,1141 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '4751'
+      - '3256'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a Planning Agent
+      observing execution progress. After each step completes, you analyze what happened
+      and decide whether the remaining plan is still valid.\\n\\nReason step-by-step
+      about:\\n1. What new information was learned from this step's result\\n2. Whether
+      the remaining steps still make sense given this new information\\n3. What refinements,
+      if any, are needed for upcoming steps\\n4. Whether the overall goal has already
+      been achieved\\n\\nBe conservative about triggering full replans \u2014 only
+      do so when the remaining plan is fundamentally wrong, not just suboptimal.\"},{\"role\":\"user\",\"content\":\"##
+      Original task\\n\\n\\n## Expected output\\n\\n\\n\\n## Just completed step 1\\nDescription:
+      Identify the first 3 prime numbers (2, 3, 5).\\nResult: To identify the first
+      three prime numbers, I will recall the definition of a prime number. A prime
+      number is a natural number greater than 1 that has no positive divisors other
+      than 1 and itself.\\n\\n1. The first prime number is 2 (it can only be divided
+      by 1 and 2).\\n2. The second prime number is 3 (it can only be divided by 1
+      and 3).\\n3. The third prime number is 5 (it can only be divided by 1 and 5).\\n\\nThus,
+      the result is: **2, 3, 5**.\\n\\n## Remaining plan steps:\\n  Step 2: Calculate
+      the sum of the identified prime numbers (2 + 3 + 5).\\n  Step 3: Multiply the
+      sum by 2.\\n  Step 4: Present the final result.\\n\\nAnalyze this step's result
+      and provide your observation.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Planner's
+      observation after a step execution completes.\\n\\nReturned by the PlannerObserver
+      after EVERY step \u2014 not just failures.\\nThe Planner uses this to decide
+      whether to continue, refine, or replan.\\n\\nBased on PLAN-AND-ACT (Section
+      3.3): the Planner observes what the Executor\\ndid and incorporates new information
+      into the remaining plan.\\n\\nAttributes:\\n    step_completed_successfully:
+      Whether the step achieved its objective.\\n    key_information_learned: New
+      information revealed by this step\\n        (e.g., \\\"Found 3 products: A,
+      B, C\\\"). Used to refine upcoming steps.\\n    remaining_plan_still_valid:
+      Whether pending todos still make sense\\n        given the new information.
+      True does NOT mean no refinement needed.\\n    suggested_refinements: Minor
+      tweaks to upcoming step descriptions.\\n        These are lightweight in-place
+      updates, not a full replan.\\n        Example: [\\\"Step 3 should select product
+      B instead of 'best product'\\\"]\\n    needs_full_replan: The remaining plan
+      is fundamentally wrong and must\\n        be regenerated from scratch. Mutually
+      exclusive with\\n        remaining_plan_still_valid (if this is True, that should
+      be False).\\n    replan_reason: Explanation of why a full replan is needed (None
+      if not).\\n    goal_already_achieved: The overall task goal has been satisfied
+      early.\\n        No more steps needed \u2014 skip remaining todos and finalize.\",\"properties\":{\"step_completed_successfully\":{\"description\":\"Whether
+      the step achieved what it was asked to do\",\"title\":\"Step Completed Successfully\",\"type\":\"boolean\"},\"key_information_learned\":{\"default\":\"\",\"description\":\"What
+      new information this step revealed\",\"title\":\"Key Information Learned\",\"type\":\"string\"},\"remaining_plan_still_valid\":{\"default\":true,\"description\":\"Whether
+      the remaining pending todos still make sense given new information\",\"title\":\"Remaining
+      Plan Still Valid\",\"type\":\"boolean\"},\"suggested_refinements\":{\"anyOf\":[{\"items\":{\"type\":\"string\"},\"type\":\"array\"},{\"type\":\"null\"}],\"description\":\"Minor
+      tweaks to descriptions of upcoming steps (lightweight, no full replan)\",\"title\":\"Suggested
+      Refinements\"},\"needs_full_replan\":{\"default\":false,\"description\":\"The
+      remaining plan is fundamentally wrong and must be regenerated\",\"title\":\"Needs
+      Full Replan\",\"type\":\"boolean\"},\"replan_reason\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"Explanation
+      of why a full replan is needed\",\"title\":\"Replan Reason\"},\"goal_already_achieved\":{\"default\":false,\"description\":\"The
+      overall task goal has been satisfied early; no more steps needed\",\"title\":\"Goal
+      Already Achieved\",\"type\":\"boolean\"}},\"required\":[\"step_completed_successfully\",\"key_information_learned\",\"remaining_plan_still_valid\",\"suggested_refinements\",\"needs_full_replan\",\"replan_reason\",\"goal_already_achieved\"],\"title\":\"StepObservation\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"StepObservation\",\"strict\":true}},\"stream\":false}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4482'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7stmqezi6SxfBUV2xKpIW5YzNlpd\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771698,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"step_completed_successfully\\\":true,\\\"key_information_learned\\\":\\\"Identified
+        the first three prime numbers: 2, 3, 5.\\\",\\\"remaining_plan_still_valid\\\":true,\\\"suggested_refinements\\\":null,\\\"needs_full_replan\\\":false,\\\"replan_reason\\\":null,\\\"goal_already_achieved\\\":false}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        918,\n    \"completion_tokens\": 69,\n    \"total_tokens\": 987,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:41 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '3089'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Math Tutor. An expert
+      math tutor who breaks down problems step by step\n\nYour goal: Solve multi-step
+      math problems accurately\n\nYou are executing a specific step in a multi-step
+      plan. Focus ONLY on completing\nthe current step. Do not plan ahead or worry
+      about future steps.\n\nBefore acting, briefly reason about what you need to
+      do and which approach\nor tool would be most helpful for this specific step."},{"role":"user","content":"##
+      Current Step\nCalculate the sum of the identified prime numbers (2 + 3 + 5).\n\n##
+      Context from previous steps:\nStep 1 result: To identify the first three prime
+      numbers, I will recall the definition of a prime number. A prime number is a
+      natural number greater than 1 that has no positive divisors other than 1 and
+      itself.\n\n1. The first prime number is 2 (it can only be divided by 1 and 2).\n2.
+      The second prime number is 3 (it can only be divided by 1 and 3).\n3. The third
+      prime number is 5 (it can only be divided by 1 and 5).\n\nThus, the result is:
+      **2, 3, 5**.\n\nComplete this step and provide your result."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1133'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7stq3Nhwoh2x5QSxmQ0Zv2NzcSlU\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771702,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"To find the sum of the identified prime
+        numbers (2, 3, and 5), I will add them together.\\n\\nLet's calculate:\\n\\n1.
+        Start by adding the first two numbers:  \\n   \\\\(2 + 3 = 5\\\\)\\n\\n2.
+        Then add the result to the third prime number:  \\n   \\\\(5 + 5 = 10\\\\)\\n\\nThus,
+        the sum of the prime numbers 2, 3, and 5 is **10**.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        259,\n    \"completion_tokens\": 96,\n    \"total_tokens\": 355,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:44 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2509'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a Planning Agent
+      observing execution progress. After each step completes, you analyze what happened
+      and decide whether the remaining plan is still valid.\\n\\nReason step-by-step
+      about:\\n1. What new information was learned from this step's result\\n2. Whether
+      the remaining steps still make sense given this new information\\n3. What refinements,
+      if any, are needed for upcoming steps\\n4. Whether the overall goal has already
+      been achieved\\n\\nBe conservative about triggering full replans \u2014 only
+      do so when the remaining plan is fundamentally wrong, not just suboptimal.\"},{\"role\":\"user\",\"content\":\"##
+      Original task\\n\\n\\n## Expected output\\n\\n\\n## Previously completed steps:\\n
+      \ Step 1: Identify the first 3 prime numbers (2, 3, 5).\\n    Result: To identify
+      the first three prime numbers, I will recall the definition of a prime number.
+      A prime number is a natural number greater than 1 that has no positive divisors
+      other than 1 and itself.\\n\\n1. \\n\\n## Just completed step 2\\nDescription:
+      Calculate the sum of the identified prime numbers (2 + 3 + 5).\\nResult: To
+      find the sum of the identified prime numbers (2, 3, and 5), I will add them
+      together.\\n\\nLet's calculate:\\n\\n1. Start by adding the first two numbers:
+      \ \\n   \\\\(2 + 3 = 5\\\\)\\n\\n2. Then add the result to the third prime number:
+      \ \\n   \\\\(5 + 5 = 10\\\\)\\n\\nThus, the sum of the prime numbers 2, 3, and
+      5 is **10**.\\n\\n## Remaining plan steps:\\n  Step 3: Multiply the sum by 2.\\n
+      \ Step 4: Present the final result.\\n\\nAnalyze this step's result and provide
+      your observation.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Planner's
+      observation after a step execution completes.\\n\\nReturned by the PlannerObserver
+      after EVERY step \u2014 not just failures.\\nThe Planner uses this to decide
+      whether to continue, refine, or replan.\\n\\nBased on PLAN-AND-ACT (Section
+      3.3): the Planner observes what the Executor\\ndid and incorporates new information
+      into the remaining plan.\\n\\nAttributes:\\n    step_completed_successfully:
+      Whether the step achieved its objective.\\n    key_information_learned: New
+      information revealed by this step\\n        (e.g., \\\"Found 3 products: A,
+      B, C\\\"). Used to refine upcoming steps.\\n    remaining_plan_still_valid:
+      Whether pending todos still make sense\\n        given the new information.
+      True does NOT mean no refinement needed.\\n    suggested_refinements: Minor
+      tweaks to upcoming step descriptions.\\n        These are lightweight in-place
+      updates, not a full replan.\\n        Example: [\\\"Step 3 should select product
+      B instead of 'best product'\\\"]\\n    needs_full_replan: The remaining plan
+      is fundamentally wrong and must\\n        be regenerated from scratch. Mutually
+      exclusive with\\n        remaining_plan_still_valid (if this is True, that should
+      be False).\\n    replan_reason: Explanation of why a full replan is needed (None
+      if not).\\n    goal_already_achieved: The overall task goal has been satisfied
+      early.\\n        No more steps needed \u2014 skip remaining todos and finalize.\",\"properties\":{\"step_completed_successfully\":{\"description\":\"Whether
+      the step achieved what it was asked to do\",\"title\":\"Step Completed Successfully\",\"type\":\"boolean\"},\"key_information_learned\":{\"default\":\"\",\"description\":\"What
+      new information this step revealed\",\"title\":\"Key Information Learned\",\"type\":\"string\"},\"remaining_plan_still_valid\":{\"default\":true,\"description\":\"Whether
+      the remaining pending todos still make sense given new information\",\"title\":\"Remaining
+      Plan Still Valid\",\"type\":\"boolean\"},\"suggested_refinements\":{\"anyOf\":[{\"items\":{\"type\":\"string\"},\"type\":\"array\"},{\"type\":\"null\"}],\"description\":\"Minor
+      tweaks to descriptions of upcoming steps (lightweight, no full replan)\",\"title\":\"Suggested
+      Refinements\"},\"needs_full_replan\":{\"default\":false,\"description\":\"The
+      remaining plan is fundamentally wrong and must be regenerated\",\"title\":\"Needs
+      Full Replan\",\"type\":\"boolean\"},\"replan_reason\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"Explanation
+      of why a full replan is needed\",\"title\":\"Replan Reason\"},\"goal_already_achieved\":{\"default\":false,\"description\":\"The
+      overall task goal has been satisfied early; no more steps needed\",\"title\":\"Goal
+      Already Achieved\",\"type\":\"boolean\"}},\"required\":[\"step_completed_successfully\",\"key_information_learned\",\"remaining_plan_still_valid\",\"suggested_refinements\",\"needs_full_replan\",\"replan_reason\",\"goal_already_achieved\"],\"title\":\"StepObservation\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"StepObservation\",\"strict\":true}},\"stream\":false}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4600'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7stsAQbBLIodnZNdYK5ZT8O2Y42G\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771704,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"step_completed_successfully\\\":true,\\\"key_information_learned\\\":\\\"The
+        sum of the identified prime numbers (2, 3, and 5) is 10.\\\",\\\"remaining_plan_still_valid\\\":true,\\\"suggested_refinements\\\":null,\\\"needs_full_replan\\\":false,\\\"replan_reason\\\":null,\\\"goal_already_achieved\\\":false}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        943,\n    \"completion_tokens\": 73,\n    \"total_tokens\": 1016,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:46 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2187'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Math Tutor. An expert
+      math tutor who breaks down problems step by step\n\nYour goal: Solve multi-step
+      math problems accurately\n\nYou are executing a specific step in a multi-step
+      plan. Focus ONLY on completing\nthe current step. Do not plan ahead or worry
+      about future steps.\n\nBefore acting, briefly reason about what you need to
+      do and which approach\nor tool would be most helpful for this specific step."},{"role":"user","content":"##
+      Current Step\nMultiply the sum by 2.\n\n## Context from previous steps:\nStep
+      2 result: To find the sum of the identified prime numbers (2, 3, and 5), I will
+      add them together.\n\nLet''s calculate:\n\n1. Start by adding the first two
+      numbers:  \n   \\(2 + 3 = 5\\)\n\n2. Then add the result to the third prime
+      number:  \n   \\(5 + 5 = 10\\)\n\nThus, the sum of the prime numbers 2, 3, and
+      5 is **10**.\n\nComplete this step and provide your result."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '963'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7stvaQGlh75hgqmL1nj3fBOIxvtz\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771707,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"To complete the current step, I need
+        to multiply the sum, which is **10**, by **2**.\\n\\nSo, the calculation will
+        be:  \\n\\\\[ 10 \\\\times 2 = 20 \\\\]\\n\\nTherefore, the result of multiplying
+        the sum by 2 is **20**.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 221,\n    \"completion_tokens\":
+        59,\n    \"total_tokens\": 280,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:48 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1413'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a Planning Agent
+      observing execution progress. After each step completes, you analyze what happened
+      and decide whether the remaining plan is still valid.\\n\\nReason step-by-step
+      about:\\n1. What new information was learned from this step's result\\n2. Whether
+      the remaining steps still make sense given this new information\\n3. What refinements,
+      if any, are needed for upcoming steps\\n4. Whether the overall goal has already
+      been achieved\\n\\nBe conservative about triggering full replans \u2014 only
+      do so when the remaining plan is fundamentally wrong, not just suboptimal.\"},{\"role\":\"user\",\"content\":\"##
+      Original task\\n\\n\\n## Expected output\\n\\n\\n## Previously completed steps:\\n
+      \ Step 1: Identify the first 3 prime numbers (2, 3, 5).\\n    Result: To identify
+      the first three prime numbers, I will recall the definition of a prime number.
+      A prime number is a natural number greater than 1 that has no positive divisors
+      other than 1 and itself.\\n\\n1. \\n  Step 2: Calculate the sum of the identified
+      prime numbers (2 + 3 + 5).\\n    Result: To find the sum of the identified prime
+      numbers (2, 3, and 5), I will add them together.\\n\\nLet's calculate:\\n\\n1.
+      Start by adding the first two numbers:  \\n   \\\\(2 + 3 = 5\\\\)\\n\\n2. Then
+      add the result to the \\n\\n## Just completed step 3\\nDescription: Multiply
+      the sum by 2.\\nResult: To complete the current step, I need to multiply the
+      sum, which is **10**, by **2**.\\n\\nSo, the calculation will be:  \\n\\\\[
+      10 \\\\times 2 = 20 \\\\]\\n\\nTherefore, the result of multiplying the sum
+      by 2 is **20**.\\n\\n## Remaining plan steps:\\n  Step 4: Present the final
+      result.\\n\\nAnalyze this step's result and provide your observation.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Planner's
+      observation after a step execution completes.\\n\\nReturned by the PlannerObserver
+      after EVERY step \u2014 not just failures.\\nThe Planner uses this to decide
+      whether to continue, refine, or replan.\\n\\nBased on PLAN-AND-ACT (Section
+      3.3): the Planner observes what the Executor\\ndid and incorporates new information
+      into the remaining plan.\\n\\nAttributes:\\n    step_completed_successfully:
+      Whether the step achieved its objective.\\n    key_information_learned: New
+      information revealed by this step\\n        (e.g., \\\"Found 3 products: A,
+      B, C\\\"). Used to refine upcoming steps.\\n    remaining_plan_still_valid:
+      Whether pending todos still make sense\\n        given the new information.
+      True does NOT mean no refinement needed.\\n    suggested_refinements: Minor
+      tweaks to upcoming step descriptions.\\n        These are lightweight in-place
+      updates, not a full replan.\\n        Example: [\\\"Step 3 should select product
+      B instead of 'best product'\\\"]\\n    needs_full_replan: The remaining plan
+      is fundamentally wrong and must\\n        be regenerated from scratch. Mutually
+      exclusive with\\n        remaining_plan_still_valid (if this is True, that should
+      be False).\\n    replan_reason: Explanation of why a full replan is needed (None
+      if not).\\n    goal_already_achieved: The overall task goal has been satisfied
+      early.\\n        No more steps needed \u2014 skip remaining todos and finalize.\",\"properties\":{\"step_completed_successfully\":{\"description\":\"Whether
+      the step achieved what it was asked to do\",\"title\":\"Step Completed Successfully\",\"type\":\"boolean\"},\"key_information_learned\":{\"default\":\"\",\"description\":\"What
+      new information this step revealed\",\"title\":\"Key Information Learned\",\"type\":\"string\"},\"remaining_plan_still_valid\":{\"default\":true,\"description\":\"Whether
+      the remaining pending todos still make sense given new information\",\"title\":\"Remaining
+      Plan Still Valid\",\"type\":\"boolean\"},\"suggested_refinements\":{\"anyOf\":[{\"items\":{\"type\":\"string\"},\"type\":\"array\"},{\"type\":\"null\"}],\"description\":\"Minor
+      tweaks to descriptions of upcoming steps (lightweight, no full replan)\",\"title\":\"Suggested
+      Refinements\"},\"needs_full_replan\":{\"default\":false,\"description\":\"The
+      remaining plan is fundamentally wrong and must be regenerated\",\"title\":\"Needs
+      Full Replan\",\"type\":\"boolean\"},\"replan_reason\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"Explanation
+      of why a full replan is needed\",\"title\":\"Replan Reason\"},\"goal_already_achieved\":{\"default\":false,\"description\":\"The
+      overall task goal has been satisfied early; no more steps needed\",\"title\":\"Goal
+      Already Achieved\",\"type\":\"boolean\"}},\"required\":[\"step_completed_successfully\",\"key_information_learned\",\"remaining_plan_still_valid\",\"suggested_refinements\",\"needs_full_replan\",\"replan_reason\",\"goal_already_achieved\"],\"title\":\"StepObservation\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"StepObservation\",\"strict\":true}},\"stream\":false}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4720'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7stwRZWA9by2pVaAN7xF0yRRuCXq\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771708,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"step_completed_successfully\\\":true,\\\"key_information_learned\\\":\\\"The
+        sum of the first three prime numbers (2, 3, and 5) is 10, and multiplying
+        that sum by 2 gives 20.\\\",\\\"remaining_plan_still_valid\\\":true,\\\"suggested_refinements\\\":null,\\\"needs_full_replan\\\":false,\\\"replan_reason\\\":null,\\\"goal_already_achieved\\\":false}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        968,\n    \"completion_tokens\": 85,\n    \"total_tokens\": 1053,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:51 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2509'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Math Tutor. An expert
+      math tutor who breaks down problems step by step\n\nYour goal: Solve multi-step
+      math problems accurately\n\nYou are executing a specific step in a multi-step
+      plan. Focus ONLY on completing\nthe current step. Do not plan ahead or worry
+      about future steps.\n\nBefore acting, briefly reason about what you need to
+      do and which approach\nor tool would be most helpful for this specific step."},{"role":"user","content":"##
+      Current Step\nPresent the final result.\n\n## Context from previous steps:\nStep
+      3 result: To complete the current step, I need to multiply the sum, which is
+      **10**, by **2**.\n\nSo, the calculation will be:  \n\\[ 10 \\times 2 = 20 \\]\n\nTherefore,
+      the result of multiplying the sum by 2 is **20**.\n\nComplete this step and
+      provide your result."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '863'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7stz9RzY00Dz8I2dDPV9FhctoWX8\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771711,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"The final result of multiplying the
+        sum by 2 is **20**.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 182,\n    \"completion_tokens\":
+        15,\n    \"total_tokens\": 197,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:52 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '673'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a Planning Agent
+      observing execution progress. After each step completes, you analyze what happened
+      and decide whether the remaining plan is still valid.\\n\\nReason step-by-step
+      about:\\n1. What new information was learned from this step's result\\n2. Whether
+      the remaining steps still make sense given this new information\\n3. What refinements,
+      if any, are needed for upcoming steps\\n4. Whether the overall goal has already
+      been achieved\\n\\nBe conservative about triggering full replans \u2014 only
+      do so when the remaining plan is fundamentally wrong, not just suboptimal.\"},{\"role\":\"user\",\"content\":\"##
+      Original task\\n\\n\\n## Expected output\\n\\n\\n## Previously completed steps:\\n
+      \ Step 1: Identify the first 3 prime numbers (2, 3, 5).\\n    Result: To identify
+      the first three prime numbers, I will recall the definition of a prime number.
+      A prime number is a natural number greater than 1 that has no positive divisors
+      other than 1 and itself.\\n\\n1. \\n  Step 2: Calculate the sum of the identified
+      prime numbers (2 + 3 + 5).\\n    Result: To find the sum of the identified prime
+      numbers (2, 3, and 5), I will add them together.\\n\\nLet's calculate:\\n\\n1.
+      Start by adding the first two numbers:  \\n   \\\\(2 + 3 = 5\\\\)\\n\\n2. Then
+      add the result to the \\n  Step 3: Multiply the sum by 2.\\n    Result: To complete
+      the current step, I need to multiply the sum, which is **10**, by **2**.\\n\\nSo,
+      the calculation will be:  \\n\\\\[ 10 \\\\times 2 = 20 \\\\]\\n\\nTherefore,
+      the result of multiplying the sum by 2 is **20**\\n\\n## Just completed step
+      4\\nDescription: Present the final result.\\nResult: The final result of multiplying
+      the sum by 2 is **20**.\\n\\n\\nAnalyze this step's result and provide your
+      observation.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Planner's
+      observation after a step execution completes.\\n\\nReturned by the PlannerObserver
+      after EVERY step \u2014 not just failures.\\nThe Planner uses this to decide
+      whether to continue, refine, or replan.\\n\\nBased on PLAN-AND-ACT (Section
+      3.3): the Planner observes what the Executor\\ndid and incorporates new information
+      into the remaining plan.\\n\\nAttributes:\\n    step_completed_successfully:
+      Whether the step achieved its objective.\\n    key_information_learned: New
+      information revealed by this step\\n        (e.g., \\\"Found 3 products: A,
+      B, C\\\"). Used to refine upcoming steps.\\n    remaining_plan_still_valid:
+      Whether pending todos still make sense\\n        given the new information.
+      True does NOT mean no refinement needed.\\n    suggested_refinements: Minor
+      tweaks to upcoming step descriptions.\\n        These are lightweight in-place
+      updates, not a full replan.\\n        Example: [\\\"Step 3 should select product
+      B instead of 'best product'\\\"]\\n    needs_full_replan: The remaining plan
+      is fundamentally wrong and must\\n        be regenerated from scratch. Mutually
+      exclusive with\\n        remaining_plan_still_valid (if this is True, that should
+      be False).\\n    replan_reason: Explanation of why a full replan is needed (None
+      if not).\\n    goal_already_achieved: The overall task goal has been satisfied
+      early.\\n        No more steps needed \u2014 skip remaining todos and finalize.\",\"properties\":{\"step_completed_successfully\":{\"description\":\"Whether
+      the step achieved what it was asked to do\",\"title\":\"Step Completed Successfully\",\"type\":\"boolean\"},\"key_information_learned\":{\"default\":\"\",\"description\":\"What
+      new information this step revealed\",\"title\":\"Key Information Learned\",\"type\":\"string\"},\"remaining_plan_still_valid\":{\"default\":true,\"description\":\"Whether
+      the remaining pending todos still make sense given new information\",\"title\":\"Remaining
+      Plan Still Valid\",\"type\":\"boolean\"},\"suggested_refinements\":{\"anyOf\":[{\"items\":{\"type\":\"string\"},\"type\":\"array\"},{\"type\":\"null\"}],\"description\":\"Minor
+      tweaks to descriptions of upcoming steps (lightweight, no full replan)\",\"title\":\"Suggested
+      Refinements\"},\"needs_full_replan\":{\"default\":false,\"description\":\"The
+      remaining plan is fundamentally wrong and must be regenerated\",\"title\":\"Needs
+      Full Replan\",\"type\":\"boolean\"},\"replan_reason\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"Explanation
+      of why a full replan is needed\",\"title\":\"Replan Reason\"},\"goal_already_achieved\":{\"default\":false,\"description\":\"The
+      overall task goal has been satisfied early; no more steps needed\",\"title\":\"Goal
+      Already Achieved\",\"type\":\"boolean\"}},\"required\":[\"step_completed_successfully\",\"key_information_learned\",\"remaining_plan_still_valid\",\"suggested_refinements\",\"needs_full_replan\",\"replan_reason\",\"goal_already_achieved\"],\"title\":\"StepObservation\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"StepObservation\",\"strict\":true}},\"stream\":false}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4762'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7su0QOoaiD26Dna2tFEaNm5sia2L\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771712,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"step_completed_successfully\\\":true,\\\"key_information_learned\\\":\\\"The
+        final result of the calculations is 20, achieved by multiplying the sum of
+        prime numbers (10) by 2.\\\",\\\"remaining_plan_still_valid\\\":false,\\\"suggested_refinements\\\":null,\\\"needs_full_replan\\\":false,\\\"replan_reason\\\":null,\\\"goal_already_achieved\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        980,\n    \"completion_tokens\": 77,\n    \"total_tokens\": 1057,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:54 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2174'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Math Tutor. You have completed
+      a multi-step task. Synthesize the results from all steps into a single, coherent
+      final response that directly addresses the original task. Do NOT list step numbers
+      or say ''Step 1 result''. Produce a clean, polished answer as if you did it
+      all at once."},{"role":"user","content":"## Original Task\nCalculate the sum
+      of the first 3 prime numbers, then multiply that result by 2. Show your work
+      for each step.\n\n## Results from each step\nStep 1 (Identify the first 3 prime
+      numbers (2, 3, 5).):\nTo identify the first three prime numbers, I will recall
+      the definition of a prime number. A prime number is a natural number greater
+      than 1 that has no positive divisors other than 1 and itself.\n\n1. The first
+      prime number is 2 (it can only be divided by 1 and 2).\n2. The second prime
+      number is 3 (it can only be divided by 1 and 3).\n3. The third prime number
+      is 5 (it can only be divided by 1 and 5).\n\nThus, the result is: **2, 3, 5**.\n\nStep
+      2 (Calculate the sum of the identified prime numbers (2 + 3 + 5).):\nTo find
+      the sum of the identified prime numbers (2, 3, and 5), I will add them together.\n\nLet''s
+      calculate:\n\n1. Start by adding the first two numbers:  \n   \\(2 + 3 = 5\\)\n\n2.
+      Then add the result to the third prime number:  \n   \\(5 + 5 = 10\\)\n\nThus,
+      the sum of the prime numbers 2, 3, and 5 is **10**.\n\nStep 3 (Multiply the
+      sum by 2.):\nTo complete the current step, I need to multiply the sum, which
+      is **10**, by **2**.\n\nSo, the calculation will be:  \n\\[ 10 \\times 2 = 20
+      \\]\n\nTherefore, the result of multiplying the sum by 2 is **20**.\n\nStep
+      4 (Present the final result.):\nThe final result of multiplying the sum by 2
+      is **20**.\n\nSynthesize these results into a single, coherent final answer."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1841'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7su2r0i4Ta1rjGN1Sn36FyeCaDhJ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771714,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"To solve the task of calculating the
+        sum of the first three prime numbers and then multiplying that result by 2,
+        we first identify the first three prime numbers: 2, 3, and 5. \\n\\nNext,
+        we calculate their sum:\\n\\\\[ \\n2 + 3 + 5 = 10 \\n\\\\]\\n\\nAfter getting
+        the sum of the prime numbers, we then multiply this result by 2:\\n\\\\[ \\n10
+        \\\\times 2 = 20 \\n\\\\]\\n\\nThus, the final result is **20**.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        480,\n    \"completion_tokens\": 106,\n    \"total_tokens\": 586,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:01:58 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '3550'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

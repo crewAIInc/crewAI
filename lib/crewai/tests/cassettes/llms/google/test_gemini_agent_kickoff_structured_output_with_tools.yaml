@@ -40,31 +40,31 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
         [\n          {\n            \"functionCall\": {\n              \"name\": \"add_numbers\",\n
-        \             \"args\": {\n                \"b\": 27,\n                \"a\":
-        15\n              }\n            }\n          }\n        ],\n        \"role\":
-        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
-        -5.0267503995980534e-05\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        98,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 105,\n    \"promptTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 98\n
-        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
-        \"TEXT\",\n        \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\":
-        \"gemini-2.0-flash-001\",\n  \"responseId\": \"0AV8acutBq6PjMcPkpfamQQ\"\n}\n"
+        \             \"args\": {\n                \"a\": 15,\n                \"b\":
+        27\n              }\n            },\n            \"thoughtSignature\": \"CqMFAb4+9vtoEAola3khZd5LD4cccGlQsdVI9cPJGQBURT0qF5Xqp8o1L7oGN4s5trQpk7NPhKe1CYDMXDJueC7zM/zGlcy2daSJAeuTd9pxAbtndEXCGjM/9Nt8QRpvaDV3Ff2bkKSn/JCOJdzsN5m6G5C6BMRGVt8bZyRHelwu7tjCNYiMEvFqVoQIWN6d+CWKkHnbSwOlSUTDXJEcWvUwP82Ou7s68l2k7XNbDWCY5Tt8LUdPgeqjfH15JoEgZUbPxbVKA0ykRln1svfpvQ4Vm3Hn7PL3voWZWGzP5uLnH6JF2M8H6TokSDYZETvlDo5bK1Cx9IzrdUgHkku6gNbct/e53CPEUgqSKbY1VhsLAXAHieT4PKqeMQ4B+7gyCLXHeL6TOGjqSVGBBOQLtF9yCbKbkXa5pPu3+DnPhoOeH7jEPb+bqIWv6rxERErbKhu0IlP+UNBRAAj+wXNDZxQvLnlrlXrLtWllO9wFshr1DzgDgNZSRsPQeVQq2L0bL+KRobCXAfjMpH/8bhxdTI3sgsCtU3+dKwV5Z8Fg6e5oRyBAss8AE2CmYtdnYpt+iss9IT8NlSpI2DcdmVErEFNsebVcSwnr+9YXoESh4O1i8er9lX59hKTBdYXdP2GJ63cq9cSOalzx/doKxA2FzP3QhdV+H11LiUQzsQCXHqv0D+D290z1QoPhpsHEd7b/1EoW7D/2rub4acV8tpUcG2oe/Mj1kzYQoiEwZkgM56JoUs++5+5tWBMW68e4y1AmkyhDTCDkiNIa4noE6AOdNsLjL/+EHvcNFRmayFXXiUShIcMT0WQ9xNriWQP/dbhd6F5K7BKSajdB1391OYeHVmSEzzXYxjnUWXd+jqORQcsiPNIVRQkZI7ZGl6+4exmZsfrKzbFy\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        202,\n    \"candidatesTokenCount\": 22,\n    \"totalTokenCount\": 403,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 202\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 179\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"AlCOadrrK7aVjMcPksrU-A0\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 30 Jan 2026 01:13:52 GMT
+      - Thu, 12 Feb 2026 22:11:14 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=555
+      - gfet4t7; dur=1417
       Transfer-Encoding:
       - chunked
       Vary:
@@ -83,26 +83,27 @@ interactions:
 - request:
     body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate 15 + 27 using
       your add_numbers tool. Report the result."}], "role": "user"}, {"parts": [{"functionCall":
-      {"args": {"b": 27, "a": 15}, "name": "add_numbers"}}], "role": "model"}, {"parts":
-      [{"functionResponse": {"name": "add_numbers", "response": {"result": 42}}}],
-      "role": "user"}], "systemInstruction": {"parts": [{"text": "You are Calculator.
-      You are a calculator assistant that uses tools to compute results.\nYour personal
-      goal is: Perform calculations using available tools"}], "role": "user"}, "tools":
-      [{"functionDeclarations": [{"description": "Add two numbers together and return
-      the sum.", "name": "add_numbers", "parameters_json_schema": {"properties": {"a":
-      {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
-      "required": ["a", "b"], "type": "object", "additionalProperties": false}}, {"description":
-      "Use this tool to provide your final structured response. Call this tool when
-      you have gathered all necessary information and are ready to provide the final
-      answer in the required format.", "name": "structured_output", "parameters_json_schema":
-      {"description": "Structured output for calculation results.", "properties":
-      {"operation": {"description": "The mathematical operation performed", "title":
-      "Operation", "type": "string"}, "result": {"description": "The result of the
-      calculation", "title": "Result", "type": "integer"}, "explanation": {"description":
-      "Brief explanation of the calculation", "title": "Explanation", "type": "string"}},
-      "required": ["operation", "result", "explanation"], "title": "CalculationResult",
-      "type": "object", "additionalProperties": false, "propertyOrdering": ["operation",
-      "result", "explanation"]}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+      {"args": {"a": 15, "b": 27}, "name": "add_numbers"}, "thoughtSignature": "CqMFAb4-9vtoEAola3khZd5LD4cccGlQsdVI9cPJGQBURT0qF5Xqp8o1L7oGN4s5trQpk7NPhKe1CYDMXDJueC7zM_zGlcy2daSJAeuTd9pxAbtndEXCGjM_9Nt8QRpvaDV3Ff2bkKSn_JCOJdzsN5m6G5C6BMRGVt8bZyRHelwu7tjCNYiMEvFqVoQIWN6d-CWKkHnbSwOlSUTDXJEcWvUwP82Ou7s68l2k7XNbDWCY5Tt8LUdPgeqjfH15JoEgZUbPxbVKA0ykRln1svfpvQ4Vm3Hn7PL3voWZWGzP5uLnH6JF2M8H6TokSDYZETvlDo5bK1Cx9IzrdUgHkku6gNbct_e53CPEUgqSKbY1VhsLAXAHieT4PKqeMQ4B-7gyCLXHeL6TOGjqSVGBBOQLtF9yCbKbkXa5pPu3-DnPhoOeH7jEPb-bqIWv6rxERErbKhu0IlP-UNBRAAj-wXNDZxQvLnlrlXrLtWllO9wFshr1DzgDgNZSRsPQeVQq2L0bL-KRobCXAfjMpH_8bhxdTI3sgsCtU3-dKwV5Z8Fg6e5oRyBAss8AE2CmYtdnYpt-iss9IT8NlSpI2DcdmVErEFNsebVcSwnr-9YXoESh4O1i8er9lX59hKTBdYXdP2GJ63cq9cSOalzx_doKxA2FzP3QhdV-H11LiUQzsQCXHqv0D-D290z1QoPhpsHEd7b_1EoW7D_2rub4acV8tpUcG2oe_Mj1kzYQoiEwZkgM56JoUs--5-5tWBMW68e4y1AmkyhDTCDkiNIa4noE6AOdNsLjL_-EHvcNFRmayFXXiUShIcMT0WQ9xNriWQP_dbhd6F5K7BKSajdB1391OYeHVmSEzzXYxjnUWXd-jqORQcsiPNIVRQkZI7ZGl6-4exmZsfrKzbFy"}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "add_numbers", "response":
+      {"result": 42}}}], "role": "user"}], "systemInstruction": {"parts": [{"text":
+      "You are Calculator. You are a calculator assistant that uses tools to compute
+      results.\nYour personal goal is: Perform calculations using available tools"}],
+      "role": "user"}, "tools": [{"functionDeclarations": [{"description": "Add two
+      numbers together and return the sum.", "name": "add_numbers", "parameters_json_schema":
+      {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B",
+      "type": "integer"}}, "required": ["a", "b"], "type": "object", "additionalProperties":
+      false}}, {"description": "Use this tool to provide your final structured response.
+      Call this tool when you have gathered all necessary information and are ready
+      to provide the final answer in the required format.", "name": "structured_output",
+      "parameters_json_schema": {"description": "Structured output for calculation
+      results.", "properties": {"operation": {"description": "The mathematical operation
+      performed", "title": "Operation", "type": "string"}, "result": {"description":
+      "The result of the calculation", "title": "Result", "type": "integer"}, "explanation":
+      {"description": "Brief explanation of the calculation", "title": "Explanation",
+      "type": "string"}}, "required": ["operation", "result", "explanation"], "title":
+      "CalculationResult", "type": "object", "additionalProperties": false, "propertyOrdering":
+      ["operation", "result", "explanation"]}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -113,7 +114,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1797'
+      - '2725'
       content-type:
       - application/json
       host:
@@ -123,32 +124,32 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
         [\n          {\n            \"functionCall\": {\n              \"name\": \"structured_output\",\n
-        \             \"args\": {\n                \"result\": 42,\n                \"operation\":
-        \"Addition\",\n                \"explanation\": \"15 + 27 = 42\"\n              }\n
-        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
-        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.09667918417188856\n
-        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 110,\n    \"candidatesTokenCount\":
-        18,\n    \"totalTokenCount\": 128,\n    \"promptTokensDetails\": [\n      {\n
-        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 110\n      }\n    ],\n
-        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 18\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n
-        \ \"responseId\": \"0AV8ac_4Kr_yjMcPg_a4gA0\"\n}\n"
+        \             \"args\": {\n                \"result\": 42,\n                \"explanation\":
+        \"The sum of 15 and 27 is 42.\",\n                \"operation\": \"Addition\"\n
+        \             }\n            },\n            \"thoughtSignature\": \"CtYCAb4+9vsKJoVFV1W8ORKk+Likt7GS9CuzuE53V9sbS2gFuiEjJ7ghBqWDG2UrgyRYFjPl6EalXUBnEbEq9rZNYGY27VpcweI1tv6p+477bgz1pmZnL0nfAcrp4nuphL+Ij0nXZQoo5cF4Gk29RQSNy49VRn3eP9eUW0hG7EpkPmfJiUSSDuaQENHN1UBBnFS9QUC+Fw+unnQ10B57fauyiXWNrBUkE2PYqgj5vELa5lVMtk5beh4ydWNnZ04t8gvQniCJ38EWWQr8VAXrSqE156oCBMwkFaFM7huPWHZk53n/HAG/VsQgPayf045STWKWjBzp6uTiwH9pYtoI1LBah3uxVbJRKOzH7HI4U0cHsffQqIIUn8cW4SP1UK/nvAivU1l0p6Bot8KIVJ5vqoF+o2oDmTuZv0HkDo5+UvXRqfsO5AylpUdM+JMGaXVAA7oZNqVPQybw\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        240,\n    \"candidatesTokenCount\": 39,\n    \"totalTokenCount\": 357,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 240\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 78\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"A1COaaWbKvKGjMcPsN-EkAs\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 30 Jan 2026 01:13:53 GMT
+      - Thu, 12 Feb 2026 22:11:15 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=936
+      - gfet4t7; dur=906
       Transfer-Encoding:
       - chunked
       Vary:
