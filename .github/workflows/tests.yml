@@ -13,29 +13,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  configure:
-    name: Configure matrix
-    runs-on: ubuntu-latest
-    outputs:
-      python-versions: ${{ steps.matrix.outputs.python-versions }}
-    steps:
-      - id: matrix
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo 'python-versions=["3.10","3.11","3.12","3.13"]' >> "$GITHUB_OUTPUT"
-          else
-            echo 'python-versions=["3.12","3.13"]' >> "$GITHUB_OUTPUT"
-          fi
-
   tests:
-    name: tests (py${{ matrix.python-version }}, ${{ matrix.group }}/4)
-    needs: configure
+    name: tests (${{ matrix.python-version }}, ${{ matrix.group }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: true
       matrix:
-        python-version: ${{ fromJSON(needs.configure.outputs.python-versions) }}
+        python-version: ['3.10', '3.11', '3.12', '3.13']
         group: [1, 2, 3, 4]
     steps:
       - name: Checkout code
