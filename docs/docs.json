@@ -310,6 +310,7 @@
                   "en/observability/opik",
                   "en/observability/patronus-evaluation",
                   "en/observability/portkey",
+                  "en/observability/signoz",
                   "en/observability/weave",
                   "en/observability/truefoundry"
                 ]
