@@ -166,7 +166,7 @@ class BaseTool(BaseModel, ABC):
         if kwargs and self.args_schema is not None and self.args_schema.model_fields:
             try:
                 validated = self.args_schema.model_validate(kwargs)
-                retun validated.model_dump()
+                return validated.model_dump()
             except Exception as e:
                 raise ValueError(
                     f"Tool '{self.name}' arguments validation failed: {e}"
