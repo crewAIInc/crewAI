@@ -17,6 +17,7 @@ from crewai.utilities.agent_utils import (
     _format_messages_for_summary,
     _split_messages_into_chunks,
     convert_tools_to_openai_schema,
+    parse_tool_call_args,
     summarize_messages,
 )
 
@@ -922,3 +923,56 @@ class TestParallelSummarizationVCR:
         assert summary_msg["role"] == "user"
         assert "files" in summary_msg
         assert "report.pdf" in summary_msg["files"]
+
+
+class TestParseToolCallArgs:
+    """Unit tests for parse_tool_call_args."""
+
+    def test_valid_json_string_returns_dict(self) -> None:
+        args_dict, error = parse_tool_call_args('{"code": "print(1)"}', "run_code", "call_1")
+        assert error is None
+        assert args_dict == {"code": "print(1)"}
+
+    def test_malformed_json_returns_error_dict(self) -> None:
+        args_dict, error = parse_tool_call_args('{"code": "print("hi")"}', "run_code", "call_1")
+        assert args_dict is None
+        assert error is not None
+        assert error["call_id"] == "call_1"
+        assert error["func_name"] == "run_code"
+        assert error["from_cache"] is False
+        assert "Failed to parse tool arguments as JSON" in error["result"]
+        assert "run_code" in error["result"]
+
+    def test_malformed_json_preserves_original_tool(self) -> None:
+        mock_tool = object()
+        _, error = parse_tool_call_args("{bad}", "my_tool", "call_2", original_tool=mock_tool)
+        assert error is not None
+        assert error["original_tool"] is mock_tool
+
+    def test_malformed_json_original_tool_defaults_to_none(self) -> None:
+        _, error = parse_tool_call_args("{bad}", "my_tool", "call_3")
+        assert error is not None
+        assert error["original_tool"] is None
+
+    def test_dict_input_returned_directly(self) -> None:
+        func_args = {"code": "x = 42"}
+        args_dict, error = parse_tool_call_args(func_args, "run_code", "call_4")
+        assert error is None
+        assert args_dict == {"code": "x = 42"}
+
+    def test_empty_dict_input_returned_directly(self) -> None:
+        args_dict, error = parse_tool_call_args({}, "run_code", "call_5")
+        assert error is None
+        assert args_dict == {}
+
+    def test_valid_json_with_nested_values(self) -> None:
+        args_dict, error = parse_tool_call_args(
+            '{"query": "hello", "options": {"limit": 10}}', "search", "call_6"
+        )
+        assert error is None
+        assert args_dict == {"query": "hello", "options": {"limit": 10}}
+
+    def test_error_result_has_correct_keys(self) -> None:
+        _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
+        assert error is not None
+        assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}

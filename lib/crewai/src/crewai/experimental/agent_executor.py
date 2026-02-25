@@ -66,6 +66,7 @@ from crewai.utilities.agent_utils import (
     has_reached_max_iterations,
     is_context_length_exceeded,
     is_inside_event_loop,
+    parse_tool_call_args,
     process_llm_response,
     track_delegation_if_needed,
 )
@@ -848,13 +849,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         call_id, func_name, func_args = info
 
         # Parse arguments
-        if isinstance(func_args, str):
-            try:
-                args_dict = json.loads(func_args)
-            except json.JSONDecodeError:
-                args_dict = {}
-        else:
-            args_dict = func_args
+        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+        if parse_error is not None:
+            return parse_error
 
         # Get agent_key for event tracking
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
