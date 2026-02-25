@@ -1,106 +1,110 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
-      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
-      the title\nTo give my best complete final answer to the task use the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
-      title: ''The impact of AI in the future of work''\n\nThis is the expect criteria
-      for your final answer: The score of the title.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o"}'
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title"},{"role":"user","content":"\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '915'
+      - '522'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-AB7gKOb785BSjHMwGUL7QpXJHDfmJ\",\n  \"object\"\
-        : \"chat.completion\",\n  \"created\": 1727214500,\n  \"model\": \"gpt-4o-2024-05-13\"\
-        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
-        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
-        \ give a great answer\\nFinal Answer: 4\",\n        \"refusal\": null\n  \
-        \    },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
-        \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 186,\n    \"completion_tokens\"\
-        : 15,\n    \"total_tokens\": 201,\n    \"completion_tokens_details\": {\n\
-        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
-        fp_52a7f40b0b\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-DDG9vqGZskrNpGfY0XnTHvzJGDu5u\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052751,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"4\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 101,\n    \"completion_tokens\":
+        1,\n    \"total_tokens\": 102,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a391f2cee0\"\n}\n"
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 8c85fa63ed091cf3-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:48:21 GMT
+      - Wed, 25 Feb 2026 20:52:32 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '199'
+      - '276'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '29999781'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_93411fed8e9bb5607df0dbc5d178f2cb
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

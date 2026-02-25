@@ -864,7 +864,11 @@ class Agent(BaseAgent):
                 respect_context_window=self.respect_context_window,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
-                response_model=task.response_model if task else None,
+                response_model=(
+                    task.response_model or task.output_pydantic or task.output_json
+                )
+                if task
+                else None,
             )
 
     def _update_executor_parameters(
@@ -893,7 +897,11 @@ class Agent(BaseAgent):
         self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
-        self.agent_executor.response_model = task.response_model if task else None
+        self.agent_executor.response_model = (
+            (task.response_model or task.output_pydantic or task.output_json)
+            if task
+            else None
+        )
 
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
@@ -1712,7 +1720,8 @@ class Agent(BaseAgent):
 
             existing_names = {sanitize_tool_name(t.name) for t in raw_tools}
             raw_tools.extend(
-                mt for mt in create_memory_tools(agent_memory)
+                mt
+                for mt in create_memory_tools(agent_memory)
                 if sanitize_tool_name(mt.name) not in existing_names
             )
 
@@ -1937,14 +1946,15 @@ class Agent(BaseAgent):
             if isinstance(messages, str):
                 input_str = messages
             else:
-                input_str = "\n".join(
-                    str(msg.get("content", "")) for msg in messages if msg.get("content")
-                ) or "User request"
-            raw = (
-                f"Input: {input_str}\n"
-                f"Agent: {self.role}\n"
-                f"Result: {output_text}"
-            )
+                input_str = (
+                    "\n".join(
+                        str(msg.get("content", ""))
+                        for msg in messages
+                        if msg.get("content")
+                    )
+                    or "User request"
+                )
+            raw = f"Input: {input_str}\nAgent: {self.role}\nResult: {output_text}"
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)
