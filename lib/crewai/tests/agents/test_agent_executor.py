@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from crewai.agents.step_executor import StepExecutor
+from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (
     AgentReActState,
     AgentExecutor,
@@ -847,6 +848,64 @@ class TestNativeToolExecution:
         tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
         assert len(tool_messages) == 1
         assert tool_messages[0]["tool_call_id"] == "call_1"
+
+    def test_check_native_todo_completion_requires_expected_tool_match(
+        self, mock_dependencies
+    ):
+        from crewai.utilities.planning_types import TodoList
+
+        executor = AgentExecutor(**mock_dependencies)
+        running = TodoItem(
+            step_number=1,
+            description="Use the expected tool",
+            tool_to_use="expected_tool",
+            status="running",
+        )
+        executor.state.todos = TodoList(items=[running])
+
+        executor.state.last_native_tools_executed = ["other_tool"]
+        assert executor.check_native_todo_completion() == "todo_not_satisfied"
+
+        executor.state.last_native_tools_executed = ["expected_tool"]
+        assert executor.check_native_todo_completion() == "todo_satisfied"
+
+        running.tool_to_use = None
+        executor.state.last_native_tools_executed = ["any_tool"]
+        assert executor.check_native_todo_completion() == "todo_not_satisfied"
+
+
+class TestPlannerObserver:
+    def test_observe_fallback_is_conservative_on_llm_error(self):
+        llm = Mock()
+        llm.call.side_effect = RuntimeError("llm unavailable")
+
+        agent = Mock()
+        agent.role = "Observer Test Agent"
+        agent.llm = llm
+        agent.planning_config = None
+
+        task = Mock()
+        task.description = "Test task"
+        task.expected_output = "Expected result"
+
+        observer = PlannerObserver(agent=agent, task=task)
+
+        completed_step = TodoItem(
+            step_number=1,
+            description="Do something",
+            status="running",
+        )
+        observation = observer.observe(
+            completed_step=completed_step,
+            result="Error: tool timeout",
+            all_completed=[],
+            remaining_todos=[],
+        )
+
+        assert observation.step_completed_successfully is False
+        assert observation.remaining_plan_still_valid is False
+        assert observation.needs_full_replan is True
+        assert observation.replan_reason == "Observer failed to evaluate step result safely"
 
 
 class TestAgentExecutorPlanning:

@@ -167,7 +167,9 @@ class PlannerObserver:
             return observation
 
         except Exception as e:
-            logger.warning(f"Observation LLM call failed: {e}. Defaulting to continue.")
+            logger.warning(
+                f"Observation LLM call failed: {e}. Defaulting to conservative replan."
+            )
 
             crewai_event_bus.emit(
                 self.agent,
@@ -182,9 +184,11 @@ class PlannerObserver:
             )
 
             return StepObservation(
-                step_completed_successfully=True,
+                step_completed_successfully=False,
                 key_information_learned="",
-                remaining_plan_still_valid=True,
+                remaining_plan_still_valid=False,
+                needs_full_replan=True,
+                replan_reason="Observer failed to evaluate step result safely",
             )
 
     def apply_refinements(
@@ -273,4 +277,3 @@ class PlannerObserver:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-
