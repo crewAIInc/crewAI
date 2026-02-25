@@ -586,10 +586,7 @@ class Task(BaseModel):
 
             self._post_agent_execution(agent)
 
-            if not self._guardrails and not self._guardrail:
-                pydantic_output, json_output = self._export_output(result)
-            else:
-                pydantic_output, json_output = None, None
+            pydantic_output, json_output = self._export_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,
