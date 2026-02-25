@@ -957,6 +957,47 @@ def test_gemini_agent_kickoff_structured_output_with_tools():
 
 
 
+@pytest.mark.vcr()
+def test_gemini_crew_structured_output_with_tools():
+    """
+    Test that a crew with Gemini can use both tools and output_pydantic on a task.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="google/gemini-2.0-flash-001"),
+        tools=[add_numbers],
+    )
+
+    task = Task(
+        description="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        expected_output="A structured calculation result",
+        output_pydantic=CalculationResult,
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff()
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult)
+    assert result.pydantic.result == 42, f"Expected 42 but got {result.pydantic.result}"
+
+
 def test_gemini_stop_words_not_applied_to_structured_output():
     """
     Test that stop words are NOT applied when response_model is provided.
