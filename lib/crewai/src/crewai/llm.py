@@ -175,10 +175,10 @@ class FilteredStream(io.TextIOBase):
 
 def enable_litellm_filtering() -> None:
     """Enable filtering of LiteLLM debug output from stdout/stderr.
-    
+
     This wraps sys.stdout and sys.stderr with FilteredStream to suppress
     noisy LiteLLM banners and debug messages.
-    
+
     Can also be enabled via environment variable: CREWAI_FILTER_LITELLM_OUTPUT=1
     """
     if not isinstance(sys.stdout, FilteredStream):
