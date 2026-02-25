@@ -876,6 +876,12 @@ class LiteAgent(FlowTrackable, BaseModel):
                 except Exception as e:
                     raise e
 
+                # Handle dict response from Bedrock system tools
+                # When system tools are used, Bedrock returns full response dict
+                # Extract processed_text for agent processing
+                if isinstance(answer, dict) and "processed_text" in answer:
+                    answer = answer["processed_text"]
+
                 formatted_answer = process_llm_response(
                     cast(str, answer), self.use_stop_words
                 )
