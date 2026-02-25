@@ -1,0 +1,197 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate 15 + 27 using
+      your add_numbers tool. Report the result.\n\nThis is the expected criteria for
+      your final answer: A structured calculation result\nyou MUST return the actual
+      complete content as the final answer, not a summary.\nFormat your final answer
+      according to the following OpenAPI schema: {\n  \"properties\": {\n    \"operation\":
+      {\n      \"description\": \"The mathematical operation performed\",\n      \"title\":
+      \"Operation\",\n      \"type\": \"string\"\n    },\n    \"result\": {\n      \"description\":
+      \"The result of the calculation\",\n      \"title\": \"Result\",\n      \"type\":
+      \"integer\"\n    },\n    \"explanation\": {\n      \"description\": \"Brief
+      explanation of the calculation\",\n      \"title\": \"Explanation\",\n      \"type\":
+      \"string\"\n    }\n  },\n  \"required\": [\n    \"operation\",\n    \"result\",\n    \"explanation\"\n  ],\n  \"title\":
+      \"CalculationResult\",\n  \"type\": \"object\",\n  \"additionalProperties\":
+      false\n}\n\nIMPORTANT: Preserve the original content exactly as-is. Do NOT rewrite,
+      paraphrase, or modify the meaning of the content. Only structure it to match
+      the schema format.\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python."}], "role": "user"}], "systemInstruction": {"parts": [{"text":
+      "You are Calculator. You are a calculator assistant that uses tools to compute
+      results.\nYour personal goal is: Perform calculations using available tools"}],
+      "role": "user"}, "tools": [{"functionDeclarations": [{"description": "Add two
+      numbers together and return the sum.", "name": "add_numbers", "parameters_json_schema":
+      {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B",
+      "type": "integer"}}, "required": ["a", "b"], "type": "object", "additionalProperties":
+      false}}, {"description": "Use this tool to provide your final structured response.
+      Call this tool when you have gathered all necessary information and are ready
+      to provide the final answer in the required format.", "name": "structured_output",
+      "parameters_json_schema": {"properties": {"operation": {"description": "The
+      mathematical operation performed", "title": "Operation", "type": "string"},
+      "result": {"description": "The result of the calculation", "title": "Result",
+      "type": "integer"}, "explanation": {"description": "Brief explanation of the
+      calculation", "title": "Explanation", "type": "string"}}, "required": ["operation",
+      "result", "explanation"], "title": "CalculationResult", "type": "object", "additionalProperties":
+      false, "propertyOrdering": ["operation", "result", "explanation"]}}]}], "generationConfig":
+      {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2763'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.12
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"add_numbers\",\n
+        \             \"args\": {\n                \"a\": 15,\n                \"b\":
+        27\n              }\n            }\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        4.3579145442760951e-06\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        377,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 384,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 377\n
+        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash-001\",\n  \"responseId\": \"vVefaYDSOouXjMcPicLCsQY\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 25 Feb 2026 20:12:46 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=718
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate 15 + 27 using
+      your add_numbers tool. Report the result.\n\nThis is the expected criteria for
+      your final answer: A structured calculation result\nyou MUST return the actual
+      complete content as the final answer, not a summary.\nFormat your final answer
+      according to the following OpenAPI schema: {\n  \"properties\": {\n    \"operation\":
+      {\n      \"description\": \"The mathematical operation performed\",\n      \"title\":
+      \"Operation\",\n      \"type\": \"string\"\n    },\n    \"result\": {\n      \"description\":
+      \"The result of the calculation\",\n      \"title\": \"Result\",\n      \"type\":
+      \"integer\"\n    },\n    \"explanation\": {\n      \"description\": \"Brief
+      explanation of the calculation\",\n      \"title\": \"Explanation\",\n      \"type\":
+      \"string\"\n    }\n  },\n  \"required\": [\n    \"operation\",\n    \"result\",\n    \"explanation\"\n  ],\n  \"title\":
+      \"CalculationResult\",\n  \"type\": \"object\",\n  \"additionalProperties\":
+      false\n}\n\nIMPORTANT: Preserve the original content exactly as-is. Do NOT rewrite,
+      paraphrase, or modify the meaning of the content. Only structure it to match
+      the schema format.\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python."}], "role": "user"}, {"parts": [{"functionCall": {"args": {"a":
+      15, "b": 27}, "name": "add_numbers"}}], "role": "model"}, {"parts": [{"functionResponse":
+      {"name": "add_numbers", "response": {"result": 42}}}], "role": "user"}, {"parts":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}],
+      "role": "user"}], "systemInstruction": {"parts": [{"text": "You are Calculator.
+      You are a calculator assistant that uses tools to compute results.\nYour personal
+      goal is: Perform calculations using available tools"}], "role": "user"}, "tools":
+      [{"functionDeclarations": [{"description": "Add two numbers together and return
+      the sum.", "name": "add_numbers", "parameters_json_schema": {"properties": {"a":
+      {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
+      "required": ["a", "b"], "type": "object", "additionalProperties": false}}, {"description":
+      "Use this tool to provide your final structured response. Call this tool when
+      you have gathered all necessary information and are ready to provide the final
+      answer in the required format.", "name": "structured_output", "parameters_json_schema":
+      {"properties": {"operation": {"description": "The mathematical operation performed",
+      "title": "Operation", "type": "string"}, "result": {"description": "The result
+      of the calculation", "title": "Result", "type": "integer"}, "explanation": {"description":
+      "Brief explanation of the calculation", "title": "Explanation", "type": "string"}},
+      "required": ["operation", "result", "explanation"], "title": "CalculationResult",
+      "type": "object", "additionalProperties": false, "propertyOrdering": ["operation",
+      "result", "explanation"]}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3166'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.12
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"structured_output\",\n
+        \             \"args\": {\n                \"result\": 42,\n                \"explanation\":
+        \"15 + 27 = 42\",\n                \"operation\": \"addition\"\n              }\n
+        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.07498827245500353\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 421,\n    \"candidatesTokenCount\":
+        18,\n    \"totalTokenCount\": 439,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 421\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 18\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n
+        \ \"responseId\": \"vlefac7bJb6TjMcPzYWh0Ag\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 25 Feb 2026 20:12:47 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=774
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
