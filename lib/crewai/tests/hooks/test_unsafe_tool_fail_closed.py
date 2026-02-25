@@ -10,16 +10,12 @@ See: https://github.com/crewAIInc/crewAI/issues/4593
 
 from __future__ import annotations
 
-from unittest.mock import Mock
-
 import pytest
 
 from crewai.hooks import tool_hooks
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
-    get_before_tool_call_hooks,
     register_before_tool_call_hook,
-    unregister_before_tool_call_hook,
 )
 from crewai.tools import BaseTool, tool
 from crewai.tools.structured_tool import CrewStructuredTool
