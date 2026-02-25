@@ -11,7 +11,7 @@ import os
 import threading
 import time
 from collections import Counter
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import BaseModel, Field
@@ -1129,3 +1129,150 @@ class TestMaxUsageCountWithNativeToolCalling:
         # Verify the requested calls occurred while keeping usage bounded.
         assert tool.current_usage_count >= 2
         assert tool.current_usage_count <= tool.max_usage_count
+
+
+# =============================================================================
+# JSON Parse Error Handling Tests
+# =============================================================================
+
+
+class TestNativeToolCallingJsonParseError:
+    """Tests that malformed JSON tool arguments produce clear errors
+    instead of silently dropping all arguments."""
+
+    def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
+        """Create a minimal CrewAgentExecutor with mocked dependencies."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.tools.base_tool import to_langchain
+
+        structured_tools = to_langchain(tools)
+        mock_agent = Mock()
+        mock_agent.key = "test_agent"
+        mock_agent.role = "tester"
+        mock_agent.verbose = False
+        mock_agent.fingerprint = None
+        mock_agent.tools_results = []
+
+        mock_task = Mock()
+        mock_task.name = "test"
+        mock_task.description = "test"
+        mock_task.id = "test-id"
+
+        executor = object.__new__(CrewAgentExecutor)
+        executor.agent = mock_agent
+        executor.task = mock_task
+        executor.crew = Mock()
+        executor.tools = structured_tools
+        executor.original_tools = tools
+        executor.tools_handler = None
+        executor._printer = Mock()
+        executor.messages = []
+
+        return executor
+
+    def test_malformed_json_returns_parse_error(self) -> None:
+        """Malformed JSON args must return a descriptive error, not silently become {}."""
+
+        class CodeTool(BaseTool):
+            name: str = "execute_code"
+            description: str = "Run code"
+
+            def _run(self, code: str) -> str:
+                return f"ran: {code}"
+
+        tool = CodeTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions = convert_tools_to_openai_schema([tool])
+
+        malformed_json = '{"code": "print("hello")"}'
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_123",
+            func_name="execute_code",
+            func_args=malformed_json,
+            available_functions=available_functions,
+        )
+
+        assert "Failed to parse tool arguments as JSON" in result["result"]
+        assert tool.current_usage_count == 0
+
+    def test_valid_json_still_executes_normally(self) -> None:
+        """Valid JSON args should execute the tool as before."""
+
+        class CodeTool(BaseTool):
+            name: str = "execute_code"
+            description: str = "Run code"
+
+            def _run(self, code: str) -> str:
+                return f"ran: {code}"
+
+        tool = CodeTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions = convert_tools_to_openai_schema([tool])
+
+        valid_json = '{"code": "print(1)"}'
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_456",
+            func_name="execute_code",
+            func_args=valid_json,
+            available_functions=available_functions,
+        )
+
+        assert result["result"] == "ran: print(1)"
+
+    def test_dict_args_bypass_json_parsing(self) -> None:
+        """When func_args is already a dict, no JSON parsing occurs."""
+
+        class CodeTool(BaseTool):
+            name: str = "execute_code"
+            description: str = "Run code"
+
+            def _run(self, code: str) -> str:
+                return f"ran: {code}"
+
+        tool = CodeTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions = convert_tools_to_openai_schema([tool])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_789",
+            func_name="execute_code",
+            func_args={"code": "x = 42"},
+            available_functions=available_functions,
+        )
+
+        assert result["result"] == "ran: x = 42"
+
+    def test_schema_validation_catches_missing_args_on_native_path(self) -> None:
+        """The native function calling path should now enforce args_schema,
+        catching missing required fields before _run is called."""
+
+        class StrictTool(BaseTool):
+            name: str = "strict_tool"
+            description: str = "A tool with required args"
+
+            def _run(self, code: str, language: str) -> str:
+                return f"{language}: {code}"
+
+        tool = StrictTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions = convert_tools_to_openai_schema([tool])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_schema",
+            func_name="strict_tool",
+            func_args={"code": "print(1)"},
+            available_functions=available_functions,
+        )
+
+        assert "Error" in result["result"]
+        assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
