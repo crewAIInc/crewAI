@@ -65,6 +65,7 @@ openpyxl = [
     "openpyxl~=3.1.5",
 ]
 mem0 = ["mem0ai~=0.1.94"]
+mengram = ["mengram-ai>=2.15.0"]
 docling = [
     "docling~=2.63.0",
 ]
