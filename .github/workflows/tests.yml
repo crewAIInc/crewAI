@@ -1,37 +1,79 @@
 name: Run Tests
 
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: tests-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  tests:
-    name: tests (${{ matrix.python-version }})
+  configure:
+    name: Configure matrix
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    outputs:
+      python-versions: ${{ steps.matrix.outputs.python-versions }}
+    steps:
+      - id: matrix
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo 'python-versions=["3.10","3.11","3.12","3.13"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'python-versions=["3.12","3.13"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  install:
+    name: install (py${{ matrix.python-version }})
+    needs: configure
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ${{ fromJSON(needs.configure.outputs.python-versions) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install the project
+        run: uv sync --all-groups --all-extras --frozen
+
+      - name: Package virtualenv
+        run: tar czf /tmp/venv.tar.gz .venv
+
+      - name: Upload virtualenv
+        uses: actions/upload-artifact@v4
+        with:
+          name: venv-py${{ matrix.python-version }}
+          path: /tmp/venv.tar.gz
+          retention-days: 1
+          compression-level: 0
+
+  tests:
+    name: tests (py${{ matrix.python-version }}, ${{ matrix.group }}/4)
+    needs: [configure, install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
-        group: [1, 2, 3, 4, 5, 6, 7, 8]
+        python-version: ${{ fromJSON(needs.configure.outputs.python-versions) }}
+        group: [1, 2, 3, 4]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for proper diff
-
-      - name: Restore global uv cache
-        id: cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-main-py${{ matrix.python-version }}-
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -40,8 +82,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: false
 
-      - name: Install the project
-        run: uv sync --all-groups --all-extras
+      - name: Download virtualenv
+        uses: actions/download-artifact@v4
+        with:
+          name: venv-py${{ matrix.python-version }}
+          path: /tmp
+
+      - name: Restore virtualenv
+        run: tar xzf /tmp/venv.tar.gz
 
       - name: Restore test durations
         uses: actions/cache/restore@v4
@@ -49,52 +97,56 @@ jobs:
           path: .test_durations_py*
           key: test-durations-py${{ matrix.python-version }}
 
-      - name: Run tests (group ${{ matrix.group }} of 8)
+      - name: Run tests (group ${{ matrix.group }} of 4)
         run: |
           PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
           DURATION_FILE="../../.test_durations_py${PYTHON_VERSION_SAFE}"
 
-          # Temporarily always skip cached durations to fix test splitting
-          # When durations don't match, pytest-split runs duplicate tests instead of splitting
-          echo "Using even test splitting (duration cache disabled until fix merged)"
           DURATIONS_ARG=""
+          if [ -f "$DURATION_FILE" ]; then
+            if git diff origin/${{ github.base_ref }}...HEAD --name-only 2>/dev/null | grep -q "^lib/.*/tests/.*\.py$"; then
+              echo "::notice::Test files changed — using even splitting"
+            else
+              echo "::notice::Using cached test durations for optimal splitting"
+              DURATIONS_ARG="--durations-path=${DURATION_FILE}"
+            fi
+          else
+            echo "::notice::No cached durations — using even splitting"
+          fi
 
-          # Original logic (disabled temporarily):
-          # if [ ! -f "$DURATION_FILE" ]; then
-          #   echo "No cached durations found, tests will be split evenly"
-          #   DURATIONS_ARG=""
-          # elif git diff origin/${{ github.base_ref }}...HEAD --name-only 2>/dev/null | grep -q "^tests/.*\.py$"; then
-          #   echo "Test files have changed, skipping cached durations to avoid mismatches"
-          #   DURATIONS_ARG=""
-          # else
-          #   echo "No test changes detected, using cached test durations for optimal splitting"
-          #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
-          # fi
-
-          cd lib/crewai && uv run pytest \
+          cd lib/crewai && uv run --frozen pytest \
             -vv \
-            --splits 8 \
+            --splits 4 \
             --group ${{ matrix.group }} \
             $DURATIONS_ARG \
+            --splitting-algorithm least_duration \
             --durations=10 \
             --maxfail=3
 
-      - name: Run tool tests (group ${{ matrix.group }} of 8)
+      - name: Run tool tests (group ${{ matrix.group }} of 4)
         run: |
-          cd lib/crewai-tools && uv run pytest \
+          cd lib/crewai-tools && uv run --frozen pytest \
             -vv \
-            --splits 8 \
+            --splits 4 \
             --group ${{ matrix.group }} \
             --durations=10 \
             --maxfail=3
 
-
-      - name: Save uv caches
-        if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+  # Gate jobs matching required status checks in branch protection
+  tests-gate:
+    name: tests (${{ matrix.python-version }})
+    needs: [tests]
+    if: always()
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.tests.result }}" = "success" ]; then
+            echo "All tests passed"
+          else
+            echo "Tests failed: ${{ needs.tests.result }}"
+            exit 1
+          fi
