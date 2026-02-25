@@ -1948,6 +1948,9 @@ class BedrockCompletion(BaseLLM):
     ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
+        from crewai.utilities.pydantic_schema_utils import (
+            strip_openai_specific_schema_fields,
+        )
 
         converse_tools: list[ConverseToolTypeDef] = []
 
@@ -1961,6 +1964,7 @@ class BedrockCompletion(BaseLLM):
                 }
 
                 if parameters and isinstance(parameters, dict):
+                    parameters = strip_openai_specific_schema_fields(parameters)
                     input_schema: ToolInputSchema = {"json": parameters}
                     tool_spec["inputSchema"] = input_schema
 

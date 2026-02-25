@@ -559,6 +559,39 @@ class TestAnthropicNativeToolCalling:
         _assert_tools_overlapped()
 
 
+_MCP_OPTIONAL_FIELDS_TOOL_DEFS = [
+    {
+        "name": "filtered_search",
+        "description": (
+            "Search a knowledge base. Pass null for any filter you don't need."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query string",
+                },
+                "filter_type": {
+                    "anyOf": [
+                        {"type": "string", "enum": ["news", "blog", "docs"]},
+                        {"type": "null"},
+                    ],
+                    "default": None,
+                    "description": "Optional content-type filter",
+                },
+                "page_id": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                    "description": "Optional page UUID",
+                },
+            },
+            "required": ["query"],
+        },
+    }
+]
+
+
 # =============================================================================
 # Google/Gemini Provider Tests
 # =============================================================================
@@ -796,6 +829,9 @@ class TestAzureNativeToolCalling:
         _assert_tools_overlapped()
 
 
+    
+
+
 # =============================================================================
 # Bedrock Provider Tests
 # =============================================================================
@@ -928,6 +964,135 @@ class TestNativeToolCallingBehavior:
         llm = LLM(model="gemini/gemini-2.5-flash")
         assert hasattr(llm, "supports_function_calling")
         assert llm.supports_function_calling() is True
+
+    @pytest.mark.vcr()
+    def test_gemini_mcp_tool_with_optional_fields_no_schema_error(self) -> None:
+        """MCP tools with Optional fields must not cause Gemini schema validation errors.
+
+        Regression test for https://github.com/crewAIInc/crewAI/issues/4472.
+
+        Before the fix, generate_model_description() added additionalProperties:false
+        to the tool schema. Gemini rejects this field, raising:
+          "value at properties.<field> must be a list"
+
+        With the fix, strip_openai_specific_schema_fields() removes it before the
+        schema is sent to the Gemini API.
+
+        To record the cassette:
+            RUN_LIVE_GEMINI_TESTS=true GOOGLE_API_KEY=<key> \\
+            uv run pytest tests/agents/test_native_tool_calling.py \\
+                ::TestGeminiNativeToolCalling::test_gemini_mcp_tool_with_optional_fields_no_schema_error \\
+                --record-mode=once -v
+        """
+        from unittest.mock import AsyncMock, patch
+
+        from crewai.mcp.config import MCPServerStdio
+
+        stdio_config = MCPServerStdio(command="python", args=["fake_mcp_server.py"])
+
+        agent = Agent(
+            role="Knowledge Researcher",
+            goal="Search a knowledge base and return relevant results",
+            backstory="You are a helpful researcher who uses the filtered_search tool.",
+            mcps=[stdio_config],
+            llm=LLM(model="gemini/gemini-2.5-flash"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        with patch("crewai.agent.core.MCPClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.list_tools = AsyncMock(
+                return_value=_MCP_OPTIONAL_FIELDS_TOOL_DEFS
+            )
+            mock_client.connected = False
+            mock_client.connect = AsyncMock()
+            mock_client.disconnect = AsyncMock()
+            mock_client.call_tool = AsyncMock(
+                return_value="Search results: Introduction to agents, Tool integration guide"
+            )
+            mock_client_class.return_value = mock_client
+
+            task = Task(
+                description=(
+                    "Search the knowledge base for information about CrewAI agents. "
+                    "No filters needed — just a general search."
+                ),
+                expected_output="A brief summary of relevant search results.",
+                agent=agent,
+            )
+
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw is not None
+
+    @pytest.mark.vcr()
+    def test_bedrock_mcp_tool_with_optional_fields_no_schema_error(self) -> None:
+        """MCP tools with Optional fields must not cause Bedrock schema validation errors.
+
+        Regression test for https://github.com/crewAIInc/crewAI/issues/4472.
+
+        Before the fix, generate_model_description() added additionalProperties:false
+        to the tool schema. The Bedrock Converse API rejects this field, raising:
+          "JSON schema is invalid"
+
+        With the fix, strip_openai_specific_schema_fields() removes it before the
+        schema is sent to Bedrock.
+
+        Note: MCPClient is mocked — no Bedrock credentials are needed to run this
+        test. The LLM call is replayed from the VCR cassette.
+
+        To record the cassette:
+            AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<secret> AWS_DEFAULT_REGION=us-east-1 \\
+            uv run pytest tests/agents/test_native_tool_calling.py \\
+                ::TestNativeToolCallingBehavior::test_bedrock_mcp_tool_with_optional_fields_no_schema_error \\
+                --record-mode=once -v
+        """
+        from unittest.mock import AsyncMock, patch
+
+        from crewai.mcp.config import MCPServerStdio
+
+        stdio_config = MCPServerStdio(command="python", args=["fake_mcp_server.py"])
+
+        agent = Agent(
+            role="Knowledge Researcher",
+            goal="Search a knowledge base and return relevant results",
+            backstory="You are a helpful researcher who uses the filtered_search tool.",
+            mcps=[stdio_config],
+            llm=LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        with patch("crewai.agent.core.MCPClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.list_tools = AsyncMock(
+                return_value=_MCP_OPTIONAL_FIELDS_TOOL_DEFS
+            )
+            mock_client.connected = False
+            mock_client.connect = AsyncMock()
+            mock_client.disconnect = AsyncMock()
+            mock_client.call_tool = AsyncMock(
+                return_value="Search results: Introduction to agents, Tool integration guide"
+            )
+            mock_client_class.return_value = mock_client
+
+            task = Task(
+                description=(
+                    "Search the knowledge base for information about CrewAI agents. "
+                    "No filters needed — just a general search."
+                ),
+                expected_output="A brief summary of relevant search results.",
+                agent=agent,
+            )
+
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw is not None
 
 
 # =============================================================================

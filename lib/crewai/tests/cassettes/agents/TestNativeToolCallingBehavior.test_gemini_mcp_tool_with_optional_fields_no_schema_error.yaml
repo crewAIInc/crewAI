@@ -1,0 +1,161 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Search the knowledge
+      base for information about CrewAI agents. No filters needed \u2014 just a general
+      search.\n\nThis is the expected criteria for your final answer: A brief summary
+      of relevant search results.\nyou MUST return the actual complete content as
+      the final answer, not a summary."}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are Knowledge Researcher. You are a helpful researcher
+      who uses the filtered_search tool.\nYour personal goal is: Search a knowledge
+      base and return relevant results"}], "role": "user"}, "tools": [{"functionDeclarations":
+      [{"description": "Search a knowledge base. Pass null for any filter you don''t
+      need.", "name": "python_fake_mcp_server_py_filtered_search", "parameters_json_schema":
+      {"properties": {"query": {"description": "Search query string", "title": "Query",
+      "type": "string"}, "filter_type": {"anyOf": [{"type": "string"}, {"type": "object"},
+      {"type": "null"}], "default": null, "description": "Optional content-type filter",
+      "title": "Filter Type"}, "page_id": {"anyOf": [{"type": "string"}, {"type":
+      "object"}, {"type": "null"}], "default": null, "description": "Optional page
+      UUID", "title": "Page Id"}}, "required": ["query", "filter_type", "page_id"],
+      "type": "object"}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1360'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"python_fake_mcp_server_py_filtered_search\",\n
+        \             \"args\": {\n                \"query\": \"CrewAI agents\"\n
+        \             }\n            },\n            \"thoughtSignature\": \"CsMEAb4+9vuUI8bbZhI2K5IFCJz+FZPQ+EP/o+hvgBgIAImbCgAE3lyB3kNCn3FcFFSBSPP0KKDiEqq/J0tZjsSmNolNSZr2qAc2kLpzDkI26PhKOk4X3WQ9JEUuaCopvsFYd4mBgZqLaK8PAASQQX8zFD5X54TCk6RFtood4o82kouQbXPCUZAKiC9V/tkz3Qqe5M+K7W69MKzsKGiQakO5I5UfIKc/KD69rROuf/ZUw5oU+8+0qQVhvp8HuPWyQW815eyVZidwIUfFRaswRzZp48PefjNWKhf/1NcVM5fy+RLq5M88FQZ9zhcY9wjV3H66G439VHPCH1SekLJ7A7se/60Sj7/oXfzl93FZ9kb4RMA2PsEJSFqb+EDVDhEmkRxsqCERSoEm7vSVut7AEJiO4UG3+5986MjV52IOpgdTZxWwUoJbQ9xKH7fov6rEDLa1ExSYLmqvnPJbZEhfR39vVmTM105qIlzFSVOBekOsqc6VCSX5P0iwmlxGib7YTRYFaqyY2ZuEWp4Xw+m82MjBIFRZPHW80tSG285VSTFUx6dxkMsfC1XT0TzqjwmeV+xSQ9fvuu8hM6EO5XN+vHIJSC2WPrN+Hc0WIaZb8Ol1q4BITA7jxAp8RLg7PD4FI7VzzMzyDMdf7kffSVMRGOdaNC8zGfM2KbSP3J2QA/InmM9bUawKsOz+nMLsjTs2fTp2nvMmNRePWlNkKOxV0DUfxCQRPtQOZk/OKd9U6GpCd/omHtGkk8hWcgYwhxQxXsNOqnIb\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        203,\n    \"candidatesTokenCount\": 28,\n    \"totalTokenCount\": 361,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 203\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 130\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"bICfafeTH_T5-8YP8rnE6Qo\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 25 Feb 2026 23:06:21 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1210
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Search the knowledge
+      base for information about CrewAI agents. No filters needed \u2014 just a general
+      search.\n\nThis is the expected criteria for your final answer: A brief summary
+      of relevant search results.\nyou MUST return the actual complete content as
+      the final answer, not a summary."}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"query": "CrewAI agents"}, "name": "python_fake_mcp_server_py_filtered_search"}}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "python_fake_mcp_server_py_filtered_search",
+      "response": {"result": "Search results: Introduction to agents, Tool integration
+      guide"}}}], "role": "user"}, {"parts": [{"text": "Analyze the tool result. If
+      requirements are met, provide the Final Answer. Otherwise, call the next tool.
+      Deliver only the answer without meta-commentary."}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are Knowledge Researcher. You are a helpful researcher
+      who uses the filtered_search tool.\nYour personal goal is: Search a knowledge
+      base and return relevant results"}], "role": "user"}, "tools": [{"functionDeclarations":
+      [{"description": "Search a knowledge base. Pass null for any filter you don''t
+      need.", "name": "python_fake_mcp_server_py_filtered_search", "parameters_json_schema":
+      {"properties": {"query": {"description": "Search query string", "title": "Query",
+      "type": "string"}, "filter_type": {"anyOf": [{"type": "string"}, {"type": "object"},
+      {"type": "null"}], "default": null, "description": "Optional content-type filter",
+      "title": "Filter Type"}, "page_id": {"anyOf": [{"type": "string"}, {"type":
+      "object"}, {"type": "null"}], "default": null, "description": "Optional page
+      UUID", "title": "Page Id"}}, "required": ["query", "filter_type", "page_id"],
+      "type": "object"}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1893'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Search results: Introduction to agents,
+        Tool integration guide\"\n          }\n        ],\n        \"role\": \"model\"\n
+        \     },\n      \"finishReason\": \"STOP\",\n      \"index\": 0\n    }\n  ],\n
+        \ \"usageMetadata\": {\n    \"promptTokenCount\": 299,\n    \"candidatesTokenCount\":
+        10,\n    \"totalTokenCount\": 309,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 299\n      }\n    ]\n
+        \ },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"bYCfacPnLsD4-8YP6p64sQs\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 25 Feb 2026 23:06:22 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=380
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

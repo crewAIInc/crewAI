@@ -309,6 +309,105 @@ class TestOptionalFieldsPreserveNull:
         assert "page_id" in params["required"]
 
 
+class TestStripOpenAISpecificSchemaFields:
+    """Tests for strip_openai_specific_schema_fields.
+
+    All tests call the real schema pipeline with real tool instances —
+    no mocking of internal functions.
+    """
+
+    def test_removes_additional_properties_at_root(self) -> None:
+        """additionalProperties must be absent after stripping."""
+        from crewai.utilities.pydantic_schema_utils import (
+            strip_openai_specific_schema_fields,
+        )
+
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+        params = schemas[0]["function"]["parameters"]
+
+        # Confirm it's present in the OpenAI-format schema
+        assert params.get("additionalProperties") is False
+
+        clean = strip_openai_specific_schema_fields(params)
+        assert "additionalProperties" not in clean
+
+    def test_removes_additional_properties_recursively(self) -> None:
+        """Nested objects must also have additionalProperties removed."""
+        from crewai.utilities.pydantic_schema_utils import (
+            strip_openai_specific_schema_fields,
+        )
+
+        class NestedInput(BaseModel):
+            config: dict[str, Any] = Field(default_factory=dict)
+            query: str = Field(description="query")
+
+        class NestedTool(BaseTool):
+            name: str = "nested_tool"
+            description: str = "tool with nested object"
+            args_schema: type[BaseModel] = NestedInput
+
+            def _run(self, **kwargs: Any) -> str:
+                return "ok"
+
+        schemas, _ = convert_tools_to_openai_schema([NestedTool()])
+        params = schemas[0]["function"]["parameters"]
+        clean = strip_openai_specific_schema_fields(params)
+
+        def has_additional_properties(obj: Any) -> bool:
+            if isinstance(obj, dict):
+                if "additionalProperties" in obj:
+                    return True
+                return any(has_additional_properties(v) for v in obj.values())
+            if isinstance(obj, list):
+                return any(has_additional_properties(i) for i in obj)
+            return False
+
+        assert not has_additional_properties(clean)
+
+    def test_preserves_required_and_properties(self) -> None:
+        """required and properties must survive the strip."""
+        from crewai.utilities.pydantic_schema_utils import (
+            strip_openai_specific_schema_fields,
+        )
+
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+        params = schemas[0]["function"]["parameters"]
+        clean = strip_openai_specific_schema_fields(params)
+
+        assert "properties" in clean
+        assert "required" in clean
+        assert "query" in clean["properties"]
+
+    def test_gemini_bedrock_path_extracts_clean_parameters(self) -> None:
+        """extract_tool_info returns the same parameters dict that
+        strip_openai_specific_schema_fields will clean — verifying the
+        full Gemini/Bedrock conversion pipeline produces a valid schema."""
+        from crewai.llms.providers.utils.common import extract_tool_info
+        from crewai.utilities.pydantic_schema_utils import (
+            strip_openai_specific_schema_fields,
+        )
+
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        # extract_tool_info is what Gemini/Bedrock call internally
+        _name, _desc, parameters = extract_tool_info(schemas[0])
+
+        assert parameters.get("additionalProperties") is False, (
+            "Raw OpenAI schema should have additionalProperties=false"
+        )
+
+        clean = strip_openai_specific_schema_fields(parameters)
+        assert "additionalProperties" not in clean
+        # null types preserved for optional fields
+        assert any(
+            opt.get("type") == "null"
+            for opt in clean["properties"]["page_id"].get("anyOf", [])
+        )
+
+
 class TestSummarizeMessages:
     """Tests for summarize_messages function."""
 

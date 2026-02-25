@@ -417,6 +417,35 @@ def strip_null_from_types(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def strip_openai_specific_schema_fields(schema: dict[str, Any]) -> dict[str, Any]:
+    """Remove OpenAI strict-mode fields that are incompatible with other providers.
+
+    OpenAI strict mode requires ``additionalProperties: false`` on every object
+    and all properties listed in ``required``.  Gemini and Bedrock reject these
+    fields with schema validation errors, so we strip them before handing off to
+    non-OpenAI providers.
+
+    Specifically removes (recursively):
+    - ``additionalProperties`` — not supported by Gemini / Bedrock tool schemas
+
+    Args:
+        schema: JSON schema dictionary (mutated in place and returned).
+
+    Returns:
+        The modified schema.
+    """
+    if isinstance(schema, dict):
+        schema.pop("additionalProperties", None)
+        for value in schema.values():
+            if isinstance(value, dict):
+                strip_openai_specific_schema_fields(value)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        strip_openai_specific_schema_fields(item)
+    return schema
+
+
 def generate_model_description(
     model: type[BaseModel],
     *,

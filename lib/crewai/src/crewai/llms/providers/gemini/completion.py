@@ -529,9 +529,15 @@ class GeminiCompletion(BaseLLM):
         gemini_tools = []
 
         from crewai.llms.providers.utils.common import safe_tool_conversion
+        from crewai.utilities.pydantic_schema_utils import (
+            strip_openai_specific_schema_fields,
+        )
 
         for tool in tools:
             name, description, parameters = safe_tool_conversion(tool, "Gemini")
+
+            if parameters:
+                parameters = strip_openai_specific_schema_fields(parameters)
 
             function_declaration = types.FunctionDeclaration(
                 name=name,
