@@ -16,6 +16,8 @@ from crewai.memory.storage.mengram_storage import (
     MengramConfig,
     MengramMemory,
     _MengramClient,
+    _QuotaExceededError,
+    _UPGRADE_URL,
     _chunk_to_match,
     _episodic_to_match,
     _procedural_to_match,
@@ -657,6 +659,198 @@ class TestListRecords:
     def test_returns_empty(self) -> None:
         mem, _client = _make_memory()
         assert mem.list_records() == []
+
+
+# ===========================================================================
+# TestQuotaExceededError
+# ===========================================================================
+
+class TestQuotaExceededError:
+    def test_attributes(self) -> None:
+        err = _QuotaExceededError(action="adds", plan="free", limit=100, used=100)
+        assert err.action == "adds"
+        assert err.plan == "free"
+        assert err.limit == 100
+        assert err.used == 100
+
+    def test_message_contains_upgrade_url(self) -> None:
+        err = _QuotaExceededError(action="adds", plan="free", limit=100, used=100)
+        assert _UPGRADE_URL in str(err)
+        assert "free" in str(err)
+
+    def test_is_runtime_error(self) -> None:
+        err = _QuotaExceededError(action="adds", plan="free", limit=100, used=100)
+        assert isinstance(err, RuntimeError)
+
+
+# ===========================================================================
+# TestQuotaGracefulDegradation
+# ===========================================================================
+
+class TestQuotaGracefulDegradation:
+    """Verify that the crew does NOT crash when Mengram quota is exceeded."""
+
+    def test_remember_returns_record_on_quota_exceeded(self) -> None:
+        mem, client = _make_memory()
+        client.add_text.side_effect = _QuotaExceededError(
+            action="adds", plan="free", limit=100, used=100,
+        )
+        record = mem.remember("important data", scope="/test", categories=["info"])
+        assert isinstance(record, MemoryRecord)
+        assert record.content == "important data"
+        assert record.scope == "/test"
+        assert record.metadata["mengram_job_id"] == ""
+
+    def test_recall_returns_empty_on_quota_exceeded(self) -> None:
+        mem, client = _make_memory()
+        client.search_all.side_effect = _QuotaExceededError(
+            action="searches", plan="free", limit=500, used=500,
+        )
+        matches = mem.recall("test query", depth="deep")
+        assert matches == []
+
+    def test_recall_shallow_returns_empty_on_quota_exceeded(self) -> None:
+        mem, client = _make_memory()
+        client.search.side_effect = _QuotaExceededError(
+            action="searches", plan="free", limit=500, used=500,
+        )
+        matches = mem.recall("test query", depth="shallow")
+        assert matches == []
+
+    def test_remember_many_handles_quota_exceeded(self) -> None:
+        mem, client = _make_memory()
+        client.add_text.side_effect = _QuotaExceededError(
+            action="adds", plan="free", limit=100, used=100,
+        )
+        result = mem.remember_many(["a", "b", "c"])
+        assert result == []
+        mem.drain_writes()  # should not raise
+
+    def test_warning_logged_once_for_remember(self) -> None:
+        mem, client = _make_memory()
+        client.add_text.side_effect = _QuotaExceededError(
+            action="adds", plan="free", limit=100, used=100,
+        )
+        assert not mem._quota_warned
+        mem.remember("first")
+        assert mem._quota_warned
+        # Second call should not log again (flag already set)
+        mem.remember("second")
+        assert mem._quota_warned
+
+    def test_warning_logged_once_for_recall(self) -> None:
+        mem, client = _make_memory()
+        client.search_all.side_effect = _QuotaExceededError(
+            action="searches", plan="free", limit=500, used=500,
+        )
+        assert not mem._quota_warned
+        mem.recall("first")
+        assert mem._quota_warned
+        mem.recall("second")
+        assert mem._quota_warned
+
+    def test_quota_warned_shared_across_remember_and_recall(self) -> None:
+        """Once warned by remember(), recall() should not warn again."""
+        mem, client = _make_memory()
+        client.add_text.side_effect = _QuotaExceededError(
+            action="adds", plan="free", limit=100, used=100,
+        )
+        client.search_all.side_effect = _QuotaExceededError(
+            action="searches", plan="free", limit=500, used=500,
+        )
+        mem.remember("data")
+        assert mem._quota_warned
+        # recall should silently return [] without re-warning
+        matches = mem.recall("query")
+        assert matches == []
+
+
+# ===========================================================================
+# TestClientQuotaDetection
+# ===========================================================================
+
+class TestClientQuotaDetection:
+    """Verify that _MengramClient._request raises _QuotaExceededError on 402."""
+
+    @patch("crewai.memory.storage.mengram_storage.urllib.request.urlopen")
+    def test_402_raises_quota_error(self, mock_urlopen: MagicMock) -> None:
+        import urllib.error
+
+        error_body = json.dumps({
+            "detail": {
+                "action": "adds",
+                "limit": 100,
+                "used": 100,
+                "plan": "free",
+            }
+        }).encode()
+        error_resp = MagicMock()
+        error_resp.read.return_value = error_body
+
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            url="https://mengram.io/v1/add_text",
+            code=402,
+            msg="Payment Required",
+            hdrs={},
+            fp=error_resp,
+        )
+
+        client = _MengramClient(api_key="om-key", base_url="https://mengram.io")
+        with pytest.raises(_QuotaExceededError) as exc_info:
+            client.add_text("test", user_id="user1")
+
+        err = exc_info.value
+        assert err.action == "adds"
+        assert err.plan == "free"
+        assert err.limit == 100
+        assert err.used == 100
+
+    @patch("crewai.memory.storage.mengram_storage.urllib.request.urlopen")
+    def test_402_no_retry(self, mock_urlopen: MagicMock) -> None:
+        """HTTP 402 should NOT be retried (unlike 429/5xx)."""
+        import urllib.error
+
+        error_resp = MagicMock()
+        error_resp.read.return_value = b'{"detail": {"action": "adds", "plan": "free", "limit": 100, "used": 100}}'
+
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            url="https://mengram.io/v1/add_text",
+            code=402,
+            msg="Payment Required",
+            hdrs={},
+            fp=error_resp,
+        )
+
+        client = _MengramClient(api_key="om-key", base_url="https://mengram.io")
+        with pytest.raises(_QuotaExceededError):
+            client.add_text("test")
+
+        # Should only have been called once (no retries)
+        assert mock_urlopen.call_count == 1
+
+    @patch("crewai.memory.storage.mengram_storage.urllib.request.urlopen")
+    def test_402_malformed_body_still_raises(self, mock_urlopen: MagicMock) -> None:
+        """Even with unparseable body, 402 should raise _QuotaExceededError."""
+        import urllib.error
+
+        error_resp = MagicMock()
+        error_resp.read.return_value = b"not json"
+
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            url="https://mengram.io/v1/add_text",
+            code=402,
+            msg="Payment Required",
+            hdrs={},
+            fp=error_resp,
+        )
+
+        client = _MengramClient(api_key="om-key", base_url="https://mengram.io")
+        with pytest.raises(_QuotaExceededError) as exc_info:
+            client.add_text("test")
+
+        # Falls back to defaults when body can't be parsed
+        assert exc_info.value.plan == "free"
+        assert exc_info.value.action == "unknown"
 
 
 # need json import for TestMengramClient

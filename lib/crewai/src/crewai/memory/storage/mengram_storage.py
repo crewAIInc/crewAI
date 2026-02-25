@@ -37,6 +37,22 @@ from crewai.memory.types import MemoryMatch, MemoryRecord, ScopeInfo
 
 logger = logging.getLogger(__name__)
 
+_UPGRADE_URL = "https://mengram.io/billing"
+
+
+class _QuotaExceededError(RuntimeError):
+    """Raised when the Mengram API returns HTTP 402 (quota exceeded)."""
+
+    def __init__(self, action: str, plan: str, limit: int, used: int) -> None:
+        self.action = action
+        self.plan = plan
+        self.limit = limit
+        self.used = used
+        super().__init__(
+            f"Mengram {plan} plan quota exceeded for {action} "
+            f"({used}/{limit}). Upgrade at {_UPGRADE_URL}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Lightweight Mengram HTTP client (stdlib only -- no extra dependency)
@@ -89,6 +105,21 @@ class _MengramClient:
                     return json.loads(resp.read())
             except urllib.error.HTTPError as exc:
                 resp_body = exc.read().decode()
+                if exc.code == 402:
+                    try:
+                        detail = json.loads(resp_body).get("detail", {})
+                    except Exception:
+                        detail = {}
+                    if isinstance(detail, dict):
+                        raise _QuotaExceededError(
+                            action=detail.get("action", "unknown"),
+                            plan=detail.get("plan", "free"),
+                            limit=detail.get("limit", 0),
+                            used=detail.get("used", 0),
+                        ) from exc
+                    raise _QuotaExceededError(
+                        action="unknown", plan="free", limit=0, used=0,
+                    ) from exc
                 if exc.code in (429, 502, 503, 504) and attempt < 2:
                     time.sleep(1 * (attempt + 1))
                     last_err = exc
@@ -388,6 +419,7 @@ class MengramMemory:
         )
         self._pending_saves: list[Future[Any]] = []
         self._pending_lock = threading.Lock()
+        self._quota_warned = False
 
     # -- Background write helpers -------------------------------------------
 
@@ -447,6 +479,16 @@ class MengramMemory:
                 text=enriched, user_id=self.config.user_id,
             )
             job_id = result.get("job_id", "")
+        except _QuotaExceededError as exc:
+            if not self._quota_warned:
+                logger.warning(
+                    "Mengram %s plan quota reached — memory writes disabled. "
+                    "Your crew will continue working without memory. "
+                    "Upgrade at %s",
+                    exc.plan,
+                    _UPGRADE_URL,
+                )
+                self._quota_warned = True
         except Exception as exc:
             logger.warning("Mengram remember failed: %s", exc)
 
@@ -491,6 +533,16 @@ class MengramMemory:
         def _background() -> None:
             try:
                 self._client.add_text(text=combined, user_id=self.config.user_id)
+            except _QuotaExceededError as exc:
+                if not self._quota_warned:
+                    logger.warning(
+                        "Mengram %s plan quota reached — memory writes disabled. "
+                        "Your crew will continue working without memory. "
+                        "Upgrade at %s",
+                        exc.plan,
+                        _UPGRADE_URL,
+                    )
+                    self._quota_warned = True
             except Exception as exc:
                 logger.warning("Mengram background save failed: %s", exc)
 
@@ -520,6 +572,17 @@ class MengramMemory:
             if depth == "shallow":
                 return self._recall_shallow(query, limit)
             return self._recall_deep(query, limit)
+        except _QuotaExceededError as exc:
+            if not self._quota_warned:
+                logger.warning(
+                    "Mengram %s plan quota reached — memory search disabled. "
+                    "Your crew will continue working without memory context. "
+                    "Upgrade at %s",
+                    exc.plan,
+                    _UPGRADE_URL,
+                )
+                self._quota_warned = True
+            return []
         except Exception as exc:
             logger.warning("Mengram recall failed: %s", exc)
             return []
