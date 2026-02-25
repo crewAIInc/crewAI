@@ -23,23 +23,26 @@ class MockTool(BaseTool):
     )
     my_parameter: str = Field("This is default value", description="What a description")
     my_parameter_bool: bool = Field(False)
+    # Use default_factory like real tools do (not direct default)
     package_dependencies: list[str] = Field(
-        ["this-is-a-required-package", "another-required-package"], description=""
+        default_factory=lambda: ["this-is-a-required-package", "another-required-package"]
     )
-    env_vars: list[EnvVar] = [
-        EnvVar(
-            name="SERPER_API_KEY",
-            description="API key for Serper",
-            required=True,
-            default=None,
-        ),
-        EnvVar(
-            name="API_RATE_LIMIT",
-            description="API rate limit",
-            required=False,
-            default="100",
-        ),
-    ]
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPER_API_KEY",
+                description="API key for Serper",
+                required=True,
+                default=None,
+            ),
+            EnvVar(
+                name="API_RATE_LIMIT",
+                description="API rate limit",
+                required=False,
+                default="100",
+            ),
+        ]
+    )
 
 
 @pytest.fixture

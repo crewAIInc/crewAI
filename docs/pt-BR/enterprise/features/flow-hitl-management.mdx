@@ -38,22 +38,21 @@ O CrewAI Enterprise oferece um sistema abrangente de gerenciamento Human-in-the-
 Configure checkpoints de revisão humana em seus Flows usando o decorador `@human_feedback`. Quando a execução atinge um ponto de revisão, o sistema pausa, notifica o responsável via email e aguarda uma resposta.
 
 ```python
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, start, listen, or_
 from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
 
 class ContentApprovalFlow(Flow):
     @start()
     def generate_content(self):
-        # IA gera conteúdo
         return "Texto de marketing gerado para campanha Q1..."
 
-    @listen(generate_content)
     @human_feedback(
         message="Por favor, revise este conteúdo para conformidade com a marca:",
         emit=["approved", "rejected", "needs_revision"],
     )
-    def review_content(self, content):
-        return content
+    @listen(or_("generate_content", "needs_revision"))
+    def review_content(self):
+        return "Texto de marketing para revisão..."
 
     @listen("approved")
     def publish_content(self, result: HumanFeedbackResult):
@@ -62,10 +61,6 @@ class ContentApprovalFlow(Flow):
     @listen("rejected")
     def archive_content(self, result: HumanFeedbackResult):
         print(f"Conteúdo rejeitado. Motivo: {result.feedback}")
-
-    @listen("needs_revision")
-    def revise_content(self, result: HumanFeedbackResult):
-        print(f"Revisão solicitada: {result.feedback}")
 ```
 
 Para detalhes completos de implementação, consulte o guia [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).

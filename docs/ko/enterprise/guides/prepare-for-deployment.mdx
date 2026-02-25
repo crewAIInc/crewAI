@@ -256,6 +256,12 @@ Crews와 Flows 모두 `src/project_name/main.py`에 진입점이 있습니다:
 1. **LLM API 키** (OpenAI, Anthropic, Google 등)
 2. **도구 API 키** - 외부 도구를 사용하는 경우 (Serper 등)
 
+<Info>
+  프로젝트가 **프라이빗 PyPI 레지스트리**의 패키지에 의존하는 경우, 레지스트리 인증 자격 증명도
+  환경 변수로 구성해야 합니다. 자세한 내용은
+  [프라이빗 패키지 레지스트리](/ko/enterprise/guides/private-package-registry) 가이드를 참조하세요.
+</Info>
+
 <Tip>
   구성 문제를 조기에 발견하기 위해 배포 전에 동일한 환경 변수로
   로컬에서 프로젝트를 테스트하세요.

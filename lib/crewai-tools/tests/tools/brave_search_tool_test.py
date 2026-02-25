@@ -1,7 +1,9 @@
+import json
 from unittest.mock import patch
 
-from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
 import pytest
+
+from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
 
 
 @pytest.fixture
@@ -30,16 +32,46 @@ def test_brave_tool_search(mock_get, brave_tool):
     }
     mock_get.return_value.json.return_value = mock_response
 
-    result = brave_tool.run(search_query="test")
-    assert "Test Title" in result
-    assert "http://test.com" in result
+    result = brave_tool.run(query="test")
+    data = json.loads(result)
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    assert data[0]["title"] == "Test Title"
+    assert data[0]["url"] == "http://test.com"
 
 
-def test_brave_tool():
-    tool = BraveSearchTool(
-        n_results=2,
-    )
-    tool.run(search_query="ChatGPT")
+@patch("requests.get")
+def test_brave_tool(mock_get):
+    mock_response = {
+        "web": {
+            "results": [
+                {
+                    "title": "Brave Browser",
+                    "url": "https://brave.com",
+                    "description": "Brave Browser description",
+                }
+            ]
+        }
+    }
+    mock_get.return_value.json.return_value = mock_response
+
+    tool = BraveSearchTool(n_results=2)
+    result = tool.run(query="Brave Browser")
+    assert result is not None
+
+    # Parse JSON so we can examine the structure
+    data = json.loads(result)
+    assert isinstance(data, list)
+    assert len(data) >= 1
+
+    # First item should have expected fields: title, url, and description
+    first = data[0]
+    assert "title" in first
+    assert first["title"] == "Brave Browser"
+    assert "url" in first
+    assert first["url"] == "https://brave.com"
+    assert "description" in first
+    assert first["description"] == "Brave Browser description"
 
 
 if __name__ == "__main__":

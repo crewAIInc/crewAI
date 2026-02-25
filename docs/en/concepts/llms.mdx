@@ -470,7 +470,7 @@ In this section, you'll find detailed examples that help you select, configure, 
       To get an Express mode API key:
       - New Google Cloud users: Get an [express mode API key](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)
       - Existing Google Cloud users: Get a [Google Cloud API key bound to a service account](https://cloud.google.com/docs/authentication/api-keys)
-      
+
       For more details, see the [Vertex AI Express mode documentation](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey).
     </Info>
 
@@ -652,6 +652,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     # Optional
     AWS_SESSION_TOKEN=<your-session-token>  # For temporary credentials
     AWS_DEFAULT_REGION=<your-region>  # Defaults to us-east-1
+    AWS_REGION_NAME=<your-region>  # Alternative configuration for backwards compatibility with LiteLLM. Defaults to us-east-1
     ```
 
     **Basic Usage:**
@@ -695,6 +696,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     - `AWS_SECRET_ACCESS_KEY`: AWS secret key (required)
     - `AWS_SESSION_TOKEN`: AWS session token for temporary credentials (optional)
     - `AWS_DEFAULT_REGION`: AWS region (defaults to `us-east-1`)
+    - `AWS_REGION_NAME`: AWS region (defaults to `us-east-1`). Alternative configuration for backwards compatibility with LiteLLM
 
     **Features:**
     - Native tool calling support via Converse API

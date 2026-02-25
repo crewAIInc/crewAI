@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -293,33 +293,45 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-            self.tools = tools
-            effective_response_model = response_model or self.response_format
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+                self.tools = tools
+                effective_response_model = response_model or self.response_format
 
-            formatted_content, system_instruction = self._format_messages_for_gemini(
-                messages
-            )
+                formatted_content, system_instruction = (
+                    self._format_messages_for_gemini(messages)
+                )
 
-            messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+                messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
-            if not self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                if not self._invoke_before_llm_call_hooks(
+                    messages_for_hooks, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            config = self._prepare_generation_config(
-                system_instruction, tools, effective_response_model
-            )
+                config = self._prepare_generation_config(
+                    system_instruction, tools, effective_response_model
+                )
 
-            if self.stream:
-                return self._handle_streaming_completion(
+                if self.stream:
+                    return self._handle_streaming_completion(
+                        formatted_content,
+                        config,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return self._handle_completion(
                     formatted_content,
                     config,
                     available_functions,
@@ -328,29 +340,20 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            return self._handle_completion(
-                formatted_content,
-                config,
-                available_functions,
-                from_task,
-                from_agent,
-                effective_response_model,
-            )
-
-        except APIError as e:
-            error_msg = f"Google Gemini API error: {e.code} - {e.message}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
-        except Exception as e:
-            error_msg = f"Google Gemini API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except APIError as e:
+                error_msg = f"Google Gemini API error: {e.code} - {e.message}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
+            except Exception as e:
+                error_msg = f"Google Gemini API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     async def acall(
         self,
@@ -376,28 +379,38 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-            self.tools = tools
-            effective_response_model = response_model or self.response_format
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+                self.tools = tools
+                effective_response_model = response_model or self.response_format
 
-            formatted_content, system_instruction = self._format_messages_for_gemini(
-                messages
-            )
+                formatted_content, system_instruction = (
+                    self._format_messages_for_gemini(messages)
+                )
 
-            config = self._prepare_generation_config(
-                system_instruction, tools, effective_response_model
-            )
+                config = self._prepare_generation_config(
+                    system_instruction, tools, effective_response_model
+                )
 
-            if self.stream:
-                return await self._ahandle_streaming_completion(
+                if self.stream:
+                    return await self._ahandle_streaming_completion(
+                        formatted_content,
+                        config,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return await self._ahandle_completion(
                     formatted_content,
                     config,
                     available_functions,
@@ -406,29 +419,20 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            return await self._ahandle_completion(
-                formatted_content,
-                config,
-                available_functions,
-                from_task,
-                from_agent,
-                effective_response_model,
-            )
-
-        except APIError as e:
-            error_msg = f"Google Gemini API error: {e.code} - {e.message}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
-        except Exception as e:
-            error_msg = f"Google Gemini API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except APIError as e:
+                error_msg = f"Google Gemini API error: {e.code} - {e.message}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
+            except Exception as e:
+                error_msg = f"Google Gemini API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     def _prepare_generation_config(
         self,
@@ -1291,11 +1295,13 @@ class GeminiCompletion(BaseLLM):
         """Extract token usage from Gemini response."""
         if response.usage_metadata:
             usage = response.usage_metadata
+            cached_tokens = getattr(usage, "cached_content_token_count", 0) or 0
             return {
                 "prompt_token_count": getattr(usage, "prompt_token_count", 0),
                 "candidates_token_count": getattr(usage, "candidates_token_count", 0),
                 "total_token_count": getattr(usage, "total_token_count", 0),
                 "total_tokens": getattr(usage, "total_token_count", 0),
+                "cached_prompt_tokens": cached_tokens,
             }
         return {"total_tokens": 0}
 

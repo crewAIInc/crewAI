@@ -37,9 +37,10 @@ class BaseAgentAdapter(BaseAgent, ABC):
             tools: Optional list of BaseTool instances to be configured
         """
 
-    def configure_structured_output(self, structured_output: Any) -> None:
+    @abstractmethod
+    def configure_structured_output(self, task: Any) -> None:
         """Configure the structured output for the specific agent implementation.
 
         Args:
-            structured_output: The structured output to be configured
+            task: The task object containing output format specifications.
         """
