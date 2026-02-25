@@ -74,6 +74,9 @@ linkup-sdk = [
 tavily-python = [
     "tavily-python>=0.5.4",
 ]
+parallel-web = [
+    "parallel-web>=0.3.4",
+]
 hyperbrowser = [
     "hyperbrowser>=0.18.0",
 ]
