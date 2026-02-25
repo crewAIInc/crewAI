@@ -35,21 +35,21 @@ interactions:
       x-amz-date:
       - X-AMZ-DATE-XXX
     method: POST
-    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":1322},"output":{"message":{"content":[{"text":"Okay,
-        let''s search the knowledge base for information about CrewAI agents:"},{"toolUse":{"input":{"query":"CrewAI
-        agents","filter_type":null,"page_id":null},"name":"python_fake_mcp_server_py_filtered_search","toolUseId":"tooluse_KjK6AV9oUkSLKCHlXDoc05"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":572,"outputTokens":125,"serverToolUsage":{},"totalTokens":697}}'
+      string: '{"metrics":{"latencyMs":1866},"output":{"message":{"content":[{"text":"Understood.
+        Here is the search query to find information about CrewAI agents in the knowledge
+        base:"},{"toolUse":{"input":{"query":"CrewAI agents","filter_type":null,"page_id":null},"name":"python_fake_mcp_server_py_filtered_search","toolUseId":"tooluse_DH3PzO6KYfG8Zn9tGJZrvL"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":572,"outputTokens":129,"serverToolUsage":{},"totalTokens":701}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '458'
+      - '483'
       Content-Type:
       - application/json
       Date:
-      - Wed, 25 Feb 2026 23:26:08 GMT
+      - Wed, 25 Feb 2026 23:49:21 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
@@ -61,8 +61,8 @@ interactions:
       just a general search.\n\nThis is the expected criteria for your final answer:
       A brief summary of relevant search results.\nyou MUST return the actual complete
       content as the final answer, not a summary."}]}, {"role": "assistant", "content":
-      [{"toolUse": {"toolUseId": "tooluse_KjK6AV9oUkSLKCHlXDoc05", "name": "python_fake_mcp_server_py_filtered_search",
-      "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_KjK6AV9oUkSLKCHlXDoc05",
+      [{"toolUse": {"toolUseId": "tooluse_DH3PzO6KYfG8Zn9tGJZrvL", "name": "python_fake_mcp_server_py_filtered_search",
+      "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_DH3PzO6KYfG8Zn9tGJZrvL",
       "content": [{"text": "Search results: Introduction to agents, Tool integration
       guide"}]}}]}, {"role": "user", "content": [{"text": "Analyze the tool result.
       If requirements are met, provide the Final Answer. Otherwise, call the next
@@ -97,28 +97,29 @@ interactions:
       x-amz-date:
       - X-AMZ-DATE-XXX
     method: POST
-    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":2372},"output":{"message":{"content":[{"text":"<result>\nIntroduction
-        to agents:\nCrewAI agents are designed to assist humans with a variety of
-        tasks. They can be integrated with other tools and systems to provide automation,
-        task completion, and data processing capabilities. Agents have access to information
-        and can collaborate with each other to achieve objectives.\n\nTool integration
-        guide:\nThe CrewAI tool integration guide provides instructions for connecting
-        agents with other applications and services. This allows agents to access
-        data, trigger actions, and exchange information across different platforms.
-        The guide covers API integration, event handling, and customization options
-        to tailor agent behavior.\n</result>"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":680,"outputTokens":130,"serverToolUsage":{},"totalTokens":810}}'
+      string: '{"metrics":{"latencyMs":2324},"output":{"message":{"content":[{"text":"<result>\nIntroduction
+        to agents:\nCrewAI agents are autonomous software entities that can perform
+        a variety of tasks within a larger system or application. They are designed
+        to be modular, scalable, and highly configurable, allowing them to be integrated
+        into a wide range of use cases. Agents can handle tasks such as data processing,
+        decision-making, and event-driven automation.\n\nTool integration guide:\nThe
+        CrewAI tool integration guide provides detailed instructions on how to integrate
+        CrewAI agents into your existing software systems and workflows. It covers
+        topics such as agent deployment, configuration, communication protocols, and
+        monitoring/reporting. The guide includes code samples and best practices to
+        ensure seamless integration.\n</result>"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":680,"outputTokens":154,"serverToolUsage":{},"totalTokens":834}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '890'
+      - '969'
       Content-Type:
       - application/json
       Date:
-      - Wed, 25 Feb 2026 23:26:10 GMT
+      - Wed, 25 Feb 2026 23:49:24 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
