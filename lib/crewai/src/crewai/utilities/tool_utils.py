@@ -104,18 +104,41 @@ async def aexecute_tool_and_check_finality(
             crew=crew,
         )
 
+        # Determine if the tool is marked as unsafe
+        is_unsafe = getattr(tool, "unsafe", False)
+
+        hook_blocked = False
+        hook_explicitly_allowed = False
         before_hooks = get_before_tool_call_hooks()
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
-                    blocked_message = (
-                        f"Tool execution blocked by hook. "
-                        f"Tool: {tool_calling.tool_name}"
-                    )
-                    return ToolResult(blocked_message, False)
+                    hook_blocked = True
+                    break
+                if result is True:
+                    hook_explicitly_allowed = True
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")
+
+        # Enforce fail-closed for unsafe tools: require explicit True from a hook
+        if is_unsafe and not hook_explicitly_allowed:
+            hook_blocked = True
+
+        if hook_blocked and is_unsafe and not hook_explicitly_allowed:
+            blocked_message = (
+                f"Unsafe tool execution denied (fail-closed): Tool '{tool_calling.tool_name}' is marked as "
+                f"unsafe and requires an explicit safety policy (a before_tool_call hook "
+                f"returning True) to execute. Register a before_tool_call hook that returns "
+                f"True to allow this tool."
+            )
+            return ToolResult(blocked_message, False)
+        if hook_blocked:
+            blocked_message = (
+                f"Tool execution blocked by hook. "
+                f"Tool: {tool_calling.tool_name}"
+            )
+            return ToolResult(blocked_message, False)
 
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
 
@@ -224,18 +247,41 @@ def execute_tool_and_check_finality(
             crew=crew,
         )
 
+        # Determine if the tool is marked as unsafe
+        is_unsafe = getattr(tool, "unsafe", False)
+
+        hook_blocked = False
+        hook_explicitly_allowed = False
         before_hooks = get_before_tool_call_hooks()
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
-                    blocked_message = (
-                        f"Tool execution blocked by hook. "
-                        f"Tool: {tool_calling.tool_name}"
-                    )
-                    return ToolResult(blocked_message, False)
+                    hook_blocked = True
+                    break
+                if result is True:
+                    hook_explicitly_allowed = True
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")
+
+        # Enforce fail-closed for unsafe tools: require explicit True from a hook
+        if is_unsafe and not hook_explicitly_allowed:
+            hook_blocked = True
+
+        if hook_blocked and is_unsafe and not hook_explicitly_allowed:
+            blocked_message = (
+                f"Unsafe tool execution denied (fail-closed): Tool '{tool_calling.tool_name}' is marked as "
+                f"unsafe and requires an explicit safety policy (a before_tool_call hook "
+                f"returning True) to execute. Register a before_tool_call hook that returns "
+                f"True to allow this tool."
+            )
+            return ToolResult(blocked_message, False)
+        if hook_blocked:
+            blocked_message = (
+                f"Tool execution blocked by hook. "
+                f"Tool: {tool_calling.tool_name}"
+            )
+            return ToolResult(blocked_message, False)
 
         tool_result = tool_usage.use(tool_calling, agent_action.text)
 

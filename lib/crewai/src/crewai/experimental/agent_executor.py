@@ -909,7 +909,15 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 structured_tool = structured
                 break
 
+        # Determine if the tool is marked as unsafe
+        is_unsafe = False
+        if structured_tool and getattr(structured_tool, "unsafe", False):
+            is_unsafe = True
+        elif original_tool and getattr(original_tool, "unsafe", False):
+            is_unsafe = True
+
         hook_blocked = False
+        hook_explicitly_allowed = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
@@ -925,6 +933,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 if hook_result is False:
                     hook_blocked = True
                     break
+                if hook_result is True:
+                    hook_explicitly_allowed = True
         except Exception as hook_error:
             if self.agent.verbose:
                 self._printer.print(
@@ -932,7 +942,18 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     color="red",
                 )
 
-        if hook_blocked:
+        # Enforce fail-closed for unsafe tools: require explicit True from a hook
+        if is_unsafe and not hook_explicitly_allowed:
+            hook_blocked = True
+
+        if hook_blocked and is_unsafe and not hook_explicitly_allowed:
+            result = (
+                f"Unsafe tool execution denied (fail-closed): Tool '{func_name}' is marked as "
+                f"unsafe and requires an explicit safety policy (a before_tool_call hook "
+                f"returning True) to execute. Register a before_tool_call hook that returns "
+                f"True to allow this tool."
+            )
+        elif hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
         elif not from_cache and not max_usage_reached:
             result = "Tool not found"
