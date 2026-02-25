@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Sequence
+import concurrent.futures
+import inspect
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -27,6 +30,8 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
@@ -34,9 +39,12 @@ from crewai.utilities.types import LLMMessage
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
+
+_create_plus_client_hook: Callable[[], Any] | None = None
 
 
 class SummaryContent(TypedDict):
@@ -52,6 +60,23 @@ class SummaryContent(TypedDict):
 console = Console()
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
+
+
+def is_inside_event_loop() -> bool:
+    """Check if code is currently running inside an asyncio event loop.
+
+    This is used to detect when code is being called from within an async context
+    (e.g., inside a Flow). In such cases, callers should return a coroutine
+    instead of executing synchronously to avoid nested event loop errors.
+
+    Returns:
+        True if inside a running event loop, False otherwise.
+    """
+    try:
+        asyncio.get_running_loop()
+        return True
+    except RuntimeError:
+        return False
 
 
 def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
@@ -70,7 +95,11 @@ def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
 
     for tool in tools:
         if isinstance(tool, CrewAITool):
-            tools_list.append(tool.to_structured_tool())
+            structured_tool = tool.to_structured_tool()
+            structured_tool.current_usage_count = 0
+            if structured_tool._original_tool:
+                structured_tool._original_tool.current_usage_count = 0
+            tools_list.append(structured_tool)
         else:
             raise ValueError("Tool is not a CrewStructuredTool or BaseTool")
 
@@ -78,15 +107,15 @@ def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
 
 
 def get_tool_names(tools: Sequence[CrewStructuredTool | BaseTool]) -> str:
-    """Get the names of the tools.
+    """Get the sanitized names of the tools.
 
     Args:
         tools: List of tools to get names from.
 
     Returns:
-        Comma-separated string of tool names.
+        Comma-separated string of sanitized tool names.
     """
-    return ", ".join([t.name for t in tools])
+    return ", ".join([sanitize_tool_name(t.name) for t in tools])
 
 
 def render_text_description_and_args(
@@ -106,6 +135,68 @@ def render_text_description_and_args(
     """
     tool_strings = [tool.description for tool in tools]
     return "\n".join(tool_strings)
+
+
+def convert_tools_to_openai_schema(
+    tools: Sequence[BaseTool | CrewStructuredTool],
+) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
+    """Convert CrewAI tools to OpenAI function calling format.
+
+    This function converts CrewAI BaseTool and CrewStructuredTool objects
+    into the OpenAI-compatible tool schema format that can be passed to
+    LLM providers for native function calling.
+
+    Args:
+        tools: List of CrewAI tool objects to convert.
+
+    Returns:
+        Tuple containing:
+        - List of OpenAI-format tool schema dictionaries
+        - Dict mapping tool names to their callable run() methods
+
+    Example:
+        >>> tools = [CalculatorTool(), SearchTool()]
+        >>> schemas, functions = convert_tools_to_openai_schema(tools)
+        >>> # schemas can be passed to llm.call(tools=schemas)
+        >>> # functions can be passed to llm.call(available_functions=functions)
+    """
+    openai_tools: list[dict[str, Any]] = []
+    available_functions: dict[str, Callable[..., Any]] = {}
+
+    for tool in tools:
+        # Get the JSON schema for tool parameters
+        parameters: dict[str, Any] = {}
+        if hasattr(tool, "args_schema") and tool.args_schema is not None:
+            try:
+                schema_output = generate_model_description(tool.args_schema)
+                parameters = schema_output.get("json_schema", {}).get("schema", {})
+                # Remove title and description from schema root as they're redundant
+                parameters.pop("title", None)
+                parameters.pop("description", None)
+            except Exception:
+                parameters = {}
+
+        # Extract original description from formatted description
+        # BaseTool formats description as "Tool Name: ...\nTool Arguments: ...\nTool Description: {original}"
+        description = tool.description
+        if "Tool Description:" in description:
+            description = description.split("Tool Description:")[-1].strip()
+
+        sanitized_name = sanitize_tool_name(tool.name)
+
+        schema: dict[str, Any] = {
+            "type": "function",
+            "function": {
+                "name": sanitized_name,
+                "description": description,
+                "parameters": parameters,
+                "strict": True,
+            },
+        }
+        openai_tools.append(schema)
+        available_functions[sanitized_name] = tool.run  # type: ignore[union-attr]
+
+    return openai_tools, available_functions
 
 
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
@@ -128,6 +219,7 @@ def handle_max_iterations_exceeded(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
+    verbose: bool = True,
 ) -> AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
@@ -138,14 +230,16 @@ def handle_max_iterations_exceeded(
         messages: List of messages to send to the LLM.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
+        verbose: Whether to print output.
 
     Returns:
         AgentFinish with the final answer after exceeding max iterations.
     """
-    printer.print(
-        content="Maximum iterations reached. Requesting final answer.",
-        color="yellow",
-    )
+    if verbose:
+        printer.print(
+            content="Maximum iterations reached. Requesting final answer.",
+            color="yellow",
+        )
 
     if formatted_answer and hasattr(formatted_answer, "text"):
         assistant_message = (
@@ -163,10 +257,11 @@ def handle_max_iterations_exceeded(
     )
 
     if answer is None or answer == "":
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
     formatted = format_answer(answer=answer)
@@ -234,11 +329,14 @@ def get_llm_response(
     messages: list[LLMMessage],
     callbacks: list[TokenCalcHandler],
     printer: Printer,
+    tools: list[dict[str, Any]] | None = None,
+    available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | LiteAgent | None = None,
-) -> str:
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
+    verbose: bool = True,
+) -> str | BaseModel | Any:
     """Call the LLM and return the response, handling any invalid responses.
 
     Args:
@@ -246,13 +344,17 @@ def get_llm_response(
         messages: The messages to send to the LLM.
         callbacks: List of callbacks for the LLM call.
         printer: Printer instance for output.
+        tools: Optional list of tool schemas for native function calling.
+        available_functions: Optional dict mapping function names to callables.
         from_task: Optional task context for the LLM call.
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
+        verbose: Whether to print output.
 
     Returns:
-        The response from the LLM as a string.
+        The response from the LLM as a string, Pydantic model (when response_model is provided),
+        or tool call results if native function calling is used.
 
     Raises:
         Exception: If an error occurs.
@@ -260,14 +362,16 @@ def get_llm_response(
     """
 
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer):
+        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
             raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
 
     try:
         answer = llm.call(
             messages,
+            tools=tools,
             callbacks=callbacks,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
@@ -275,13 +379,16 @@ def get_llm_response(
     except Exception as e:
         raise e
     if not answer:
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    return _setup_after_llm_call_hooks(executor_context, answer, printer)
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
+    )
 
 
 async def aget_llm_response(
@@ -289,11 +396,14 @@ async def aget_llm_response(
     messages: list[LLMMessage],
     callbacks: list[TokenCalcHandler],
     printer: Printer,
+    tools: list[dict[str, Any]] | None = None,
+    available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | None = None,
-) -> str:
+    executor_context: CrewAgentExecutor | AgentExecutor | None = None,
+    verbose: bool = True,
+) -> str | BaseModel | Any:
     """Call the LLM asynchronously and return the response.
 
     Args:
@@ -301,27 +411,32 @@ async def aget_llm_response(
         messages: The messages to send to the LLM.
         callbacks: List of callbacks for the LLM call.
         printer: Printer instance for output.
+        tools: Optional list of tool schemas for native function calling.
+        available_functions: Optional dict mapping function names to callables.
         from_task: Optional task context for the LLM call.
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
 
     Returns:
-        The response from the LLM as a string.
+        The response from the LLM as a string, Pydantic model (when response_model is provided),
+        or tool call results if native function calling is used.
 
     Raises:
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer):
+        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
             raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
 
     try:
         answer = await llm.acall(
             messages,
+            tools=tools,
             callbacks=callbacks,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
@@ -329,13 +444,16 @@ async def aget_llm_response(
     except Exception as e:
         raise e
     if not answer:
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    return _setup_after_llm_call_hooks(executor_context, answer, printer)
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
+    )
 
 
 def process_llm_response(
@@ -384,7 +502,9 @@ def handle_agent_action_core(
         - TODO: Remove messages parameter and its usage.
     """
     if step_callback:
-        step_callback(tool_result)
+        cb_result = step_callback(tool_result)
+        if inspect.iscoroutine(cb_result):
+            asyncio.run(cb_result)
 
     formatted_answer.text += f"\nObservation: {tool_result.result}"
     formatted_answer.result = tool_result.result
@@ -402,13 +522,19 @@ def handle_agent_action_core(
     return formatted_answer
 
 
-def handle_unknown_error(printer: Printer, exception: Exception) -> None:
+def handle_unknown_error(
+    printer: Printer, exception: Exception, verbose: bool = True
+) -> None:
     """Handle unknown errors by informing the user.
 
     Args:
         printer: Printer instance for output
         exception: The exception that occurred
+        verbose: Whether to print output.
     """
+    if not verbose:
+        return
+
     error_message = str(exception)
 
     if "litellm" in error_message:
@@ -430,6 +556,7 @@ def handle_output_parser_exception(
     iterations: int,
     log_error_after: int = 3,
     printer: Printer | None = None,
+    verbose: bool = True,
 ) -> AgentAction:
     """Handle OutputParserError by updating messages and formatted_answer.
 
@@ -452,7 +579,7 @@ def handle_output_parser_exception(
         thought="",
     )
 
-    if iterations > log_error_after and printer:
+    if verbose and iterations > log_error_after and printer:
         printer.print(
             content=f"Error parsing LLM output, agent will retry: {e.error}",
             color="red",
@@ -482,6 +609,7 @@ def handle_context_length(
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
     i18n: I18N,
+    verbose: bool = True,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
 
@@ -497,19 +625,197 @@ def handle_context_length(
         SystemExit: If context length is exceeded and user opts not to summarize
     """
     if respect_context_window:
-        printer.print(
-            content="Context length exceeded. Summarizing content to fit the model context window. Might take a while...",
-            color="yellow",
+        if verbose:
+            printer.print(
+                content="Context length exceeded. Summarizing content to fit the model context window. Might take a while...",
+                color="yellow",
+            )
+        summarize_messages(
+            messages=messages, llm=llm, callbacks=callbacks, i18n=i18n, verbose=verbose
         )
-        summarize_messages(messages=messages, llm=llm, callbacks=callbacks, i18n=i18n)
     else:
-        printer.print(
-            content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
+                color="red",
+            )
         raise SystemExit(
             "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
         )
+
+
+def _estimate_token_count(text: str) -> int:
+    """Estimate token count using a conservative cross-provider heuristic.
+
+    Args:
+        text: The text to estimate tokens for.
+
+    Returns:
+        Estimated token count (roughly 1 token per 4 characters).
+    """
+    return len(text) // 4
+
+
+def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
+    """Format messages with role labels for summarization.
+
+    Skips system messages. Handles None content, tool_calls, and
+    multimodal content blocks.
+
+    Args:
+        messages: List of messages to format.
+
+    Returns:
+        Role-labeled conversation text.
+    """
+    lines: list[str] = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        if role == "system":
+            continue
+
+        content = msg.get("content")
+        if content is None:
+            # Check for tool_calls on assistant messages with no content
+            tool_calls = msg.get("tool_calls")
+            if tool_calls:
+                tool_names = []
+                for tc in tool_calls:
+                    func = tc.get("function", {})
+                    name = (
+                        func.get("name", "unknown")
+                        if isinstance(func, dict)
+                        else "unknown"
+                    )
+                    tool_names.append(name)
+                content = f"[Called tools: {', '.join(tool_names)}]"
+            else:
+                content = ""
+        elif isinstance(content, list):
+            # Multimodal content blocks — extract text parts
+            text_parts = [
+                block.get("text", "")
+                for block in content
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
+            content = " ".join(text_parts) if text_parts else "[multimodal content]"
+
+        if role == "assistant":
+            label = "[ASSISTANT]:"
+        elif role == "tool":
+            tool_name = msg.get("name", "unknown")
+            label = f"[TOOL_RESULT ({tool_name})]:"
+        else:
+            label = "[USER]:"
+
+        lines.append(f"{label} {content}")
+
+    return "\n\n".join(lines)
+
+
+def _split_messages_into_chunks(
+    messages: list[LLMMessage], max_tokens: int
+) -> list[list[LLMMessage]]:
+    """Split messages into chunks at message boundaries.
+
+    Excludes system messages from chunks. Each chunk stays under
+    max_tokens based on estimated token count.
+
+    Args:
+        messages: List of messages to split.
+        max_tokens: Maximum estimated tokens per chunk.
+
+    Returns:
+        List of message chunks.
+    """
+    non_system = [m for m in messages if m.get("role") != "system"]
+    if not non_system:
+        return []
+
+    chunks: list[list[LLMMessage]] = []
+    current_chunk: list[LLMMessage] = []
+    current_tokens = 0
+
+    for msg in non_system:
+        content = msg.get("content")
+        if content is None:
+            msg_text = ""
+        elif isinstance(content, list):
+            msg_text = str(content)
+        else:
+            msg_text = str(content)
+
+        msg_tokens = _estimate_token_count(msg_text)
+
+        # If adding this message would exceed the limit and we already have
+        # messages in the current chunk, start a new chunk
+        if current_chunk and (current_tokens + msg_tokens) > max_tokens:
+            chunks.append(current_chunk)
+            current_chunk = []
+            current_tokens = 0
+
+        current_chunk.append(msg)
+        current_tokens += msg_tokens
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
+
+
+def _extract_summary_tags(text: str) -> str:
+    """Extract content between <summary></summary> tags.
+
+    Falls back to the full text if no tags are found.
+
+    Args:
+        text: Text potentially containing summary tags.
+
+    Returns:
+        Extracted summary content, or full text if no tags found.
+    """
+    match = re.search(r"<summary>(.*?)</summary>", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
+
+
+async def _asummarize_chunks(
+    chunks: list[list[LLMMessage]],
+    llm: LLM | BaseLLM,
+    callbacks: list[TokenCalcHandler],
+    i18n: I18N,
+) -> list[SummaryContent]:
+    """Summarize multiple message chunks concurrently using asyncio.
+
+    Args:
+        chunks: List of message chunks to summarize.
+        llm: LLM instance (must support ``acall``).
+        callbacks: List of callbacks for the LLM.
+        i18n: I18N instance for prompt templates.
+
+    Returns:
+        Ordered list of summary contents, one per chunk.
+    """
+
+    async def _summarize_one(chunk: list[LLMMessage]) -> SummaryContent:
+        conversation_text = _format_messages_for_summary(chunk)
+        summarization_messages = [
+            format_message_for_llm(
+                i18n.slice("summarizer_system_message"), role="system"
+            ),
+            format_message_for_llm(
+                i18n.slice("summarize_instruction").format(
+                    conversation=conversation_text
+                ),
+            ),
+        ]
+        summary = await llm.acall(summarization_messages, callbacks=callbacks)
+        extracted = _extract_summary_tags(str(summary))
+        return {"content": extracted}
+
+    results = await asyncio.gather(*[_summarize_one(chunk) for chunk in chunks])
+    return list(results)
 
 
 def summarize_messages(
@@ -517,54 +823,96 @@ def summarize_messages(
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
     i18n: I18N,
+    verbose: bool = True,
 ) -> None:
     """Summarize messages to fit within context window.
 
+    Uses structured context compaction: preserves system messages,
+    splits at message boundaries, formats with role labels, and
+    produces structured summaries for seamless task continuation.
+
+    Preserves any files attached to user messages and re-attaches them to
+    the summarized message. Files from all user messages are merged.
+
     Args:
-        messages: List of messages to summarize
+        messages: List of messages to summarize (modified in-place)
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
+        verbose: Whether to print progress.
     """
-    messages_string = " ".join([message["content"] for message in messages])  # type: ignore[misc]
-    cut_size = llm.get_context_window_size()
+    # 1. Extract & preserve file attachments from user messages
+    preserved_files: dict[str, Any] = {}
+    for msg in messages:
+        if msg.get("role") == "user" and msg.get("files"):
+            preserved_files.update(msg["files"])
 
-    messages_groups = [
-        {"content": messages_string[i : i + cut_size]}
-        for i in range(0, len(messages_string), cut_size)
-    ]
+    # 2. Extract system messages — never summarize them
+    system_messages = [m for m in messages if m.get("role") == "system"]
+    non_system_messages = [m for m in messages if m.get("role") != "system"]
 
-    summarized_contents: list[SummaryContent] = []
+    # If there are only system messages (or no non-system messages), nothing to summarize
+    if not non_system_messages:
+        return
 
-    total_groups = len(messages_groups)
-    for idx, group in enumerate(messages_groups, 1):
-        Printer().print(
-            content=f"Summarizing {idx}/{total_groups}...",
-            color="yellow",
+    # 3. Split non-system messages into chunks at message boundaries
+    max_tokens = llm.get_context_window_size()
+    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
+
+    # 4. Summarize each chunk with role-labeled formatting
+    total_chunks = len(chunks)
+
+    if total_chunks <= 1:
+        # Single chunk — no benefit from async overhead
+        summarized_contents: list[SummaryContent] = []
+        for idx, chunk in enumerate(chunks, 1):
+            if verbose:
+                Printer().print(
+                    content=f"Summarizing {idx}/{total_chunks}...",
+                    color="yellow",
+                )
+            conversation_text = _format_messages_for_summary(chunk)
+            summarization_messages = [
+                format_message_for_llm(
+                    i18n.slice("summarizer_system_message"), role="system"
+                ),
+                format_message_for_llm(
+                    i18n.slice("summarize_instruction").format(
+                        conversation=conversation_text
+                    ),
+                ),
+            ]
+            summary = llm.call(summarization_messages, callbacks=callbacks)
+            extracted = _extract_summary_tags(str(summary))
+            summarized_contents.append({"content": extracted})
+    else:
+        # Multiple chunks — summarize in parallel via asyncio
+        if verbose:
+            Printer().print(
+                content=f"Summarizing {total_chunks} chunks in parallel...",
+                color="yellow",
+            )
+        coro = _asummarize_chunks(
+            chunks=chunks, llm=llm, callbacks=callbacks, i18n=i18n
         )
+        if is_inside_event_loop():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                summarized_contents = pool.submit(asyncio.run, coro).result()
+        else:
+            summarized_contents = asyncio.run(coro)
 
-        messages = [
-            format_message_for_llm(
-                i18n.slice("summarizer_system_message"), role="system"
-            ),
-            format_message_for_llm(
-                i18n.slice("summarize_instruction").format(group=group["content"]),
-            ),
-        ]
-        summary = llm.call(
-            messages,
-            callbacks=callbacks,
-        )
-        summarized_contents.append({"content": str(summary)})
+    merged_summary = "\n\n".join(content["content"] for content in summarized_contents)
 
-    merged_summary = " ".join(content["content"] for content in summarized_contents)
-
+    # 6. Reconstruct messages: [system messages...] + [summary user message]
     messages.clear()
-    messages.append(
-        format_message_for_llm(
-            i18n.slice("summary").format(merged_summary=merged_summary)
-        )
+    messages.extend(system_messages)
+
+    summary_message = format_message_for_llm(
+        i18n.slice("summary").format(merged_summary=merged_summary)
     )
+    if preserved_files:
+        summary_message["files"] = preserved_files
+    messages.append(summary_message)
 
 
 def show_agent_logs(
@@ -683,12 +1031,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        from crewai.cli.authentication.token import get_auth_token
-        from crewai.cli.plus_api import PlusAPI
+        if callable(_create_plus_client_hook):
+            client = _create_plus_client_hook()
+        else:
+            from crewai.cli.authentication.token import get_auth_token
+            from crewai.cli.plus_api import PlusAPI
 
-        client = PlusAPI(api_key=get_auth_token())
+            client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
-        response = client.get_agent(from_repository)
+        response = asyncio.run(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
@@ -726,14 +1077,86 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     return attributes
 
 
+DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
+    [
+        sanitize_tool_name("Delegate work to coworker"),
+        sanitize_tool_name("Ask question to coworker"),
+    ]
+)
+
+
+# native tool calling tracking for delegation
+def track_delegation_if_needed(
+    tool_name: str,
+    tool_args: dict[str, Any],
+    task: Task | None,
+) -> None:
+    """Track delegation if the tool is a delegation tool.
+
+    Args:
+        tool_name: Name of the tool being executed.
+        tool_args: Arguments passed to the tool.
+        task: The task being executed (used to track delegations).
+    """
+    if sanitize_tool_name(tool_name) in DELEGATION_TOOL_NAMES and task is not None:
+        coworker = tool_args.get("coworker")
+        task.increment_delegations(coworker)
+
+
+def extract_tool_call_info(
+    tool_call: Any,
+) -> tuple[str, str, dict[str, Any] | str] | None:
+    """Extract tool call ID, name, and arguments from various provider formats.
+
+    Args:
+        tool_call: The tool call object to extract info from.
+
+    Returns:
+        Tuple of (call_id, func_name, func_args) or None if format is unrecognized.
+    """
+    if hasattr(tool_call, "function"):
+        # OpenAI-style: has .function.name and .function.arguments
+        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        return (
+            call_id,
+            sanitize_tool_name(tool_call.function.name),
+            tool_call.function.arguments,
+        )
+    if hasattr(tool_call, "function_call") and tool_call.function_call:
+        # Gemini-style: has .function_call.name and .function_call.args
+        call_id = f"call_{id(tool_call)}"
+        return (
+            call_id,
+            sanitize_tool_name(tool_call.function_call.name),
+            dict(tool_call.function_call.args) if tool_call.function_call.args else {},
+        )
+    if hasattr(tool_call, "name") and hasattr(tool_call, "input"):
+        # Anthropic format: has .name and .input (ToolUseBlock)
+        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        return call_id, sanitize_tool_name(tool_call.name), tool_call.input
+    if isinstance(tool_call, dict):
+        # Support OpenAI "id", Bedrock "toolUseId", or generate one
+        call_id = (
+            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+        )
+        func_info = tool_call.get("function", {})
+        func_name = func_info.get("name", "") or tool_call.get("name", "")
+        func_args = func_info.get("arguments") or tool_call.get("input") or {}
+        return call_id, sanitize_tool_name(func_name), func_args
+    return None
+
+
 def _setup_before_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None, printer: Printer
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    printer: Printer,
+    verbose: bool = True,
 ) -> bool:
     """Setup and invoke before_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
         printer: Printer instance for error logging.
+        verbose: Whether to print output.
 
     Returns:
         True if LLM execution should proceed, False if blocked by a hook.
@@ -748,26 +1171,29 @@ def _setup_before_llm_call_hooks(
             for hook in executor_context.before_llm_call_hooks:
                 result = hook(hook_context)
                 if result is False:
-                    printer.print(
-                        content="LLM call blocked by before_llm_call hook",
-                        color="yellow",
-                    )
+                    if verbose:
+                        printer.print(
+                            content="LLM call blocked by before_llm_call hook",
+                            color="yellow",
+                        )
                     return False
         except Exception as e:
-            printer.print(
-                content=f"Error in before_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in before_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         if not isinstance(executor_context.messages, list):
-            printer.print(
-                content=(
-                    "Warning: before_llm_call hook replaced messages with non-list. "
-                    "Restoring original messages list. Hooks should modify messages in-place, "
-                    "not replace the list (e.g., use context.messages.append() not context.messages = [])."
-                ),
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=(
+                        "Warning: before_llm_call hook replaced messages with non-list. "
+                        "Restoring original messages list. Hooks should modify messages in-place, "
+                        "not replace the list (e.g., use context.messages.append() not context.messages = [])."
+                    ),
+                    color="yellow",
+                )
             if isinstance(original_messages, list):
                 executor_context.messages = original_messages
             else:
@@ -777,50 +1203,80 @@ def _setup_before_llm_call_hooks(
 
 
 def _setup_after_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None,
-    answer: str,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    answer: str | BaseModel,
     printer: Printer,
-) -> str:
+    verbose: bool = True,
+) -> str | BaseModel:
     """Setup and invoke after_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
-        answer: The LLM response string.
+        answer: The LLM response (string or Pydantic model).
         printer: Printer instance for error logging.
+        verbose: Whether to print output.
 
     Returns:
-        The potentially modified response string.
+        The potentially modified response (string or Pydantic model).
     """
     if executor_context and executor_context.after_llm_call_hooks:
         from crewai.hooks.llm_hooks import LLMCallHookContext
 
         original_messages = executor_context.messages
 
-        hook_context = LLMCallHookContext(executor_context, response=answer)
+        # For Pydantic models, serialize to JSON for hooks
+        if isinstance(answer, BaseModel):
+            pydantic_answer = answer
+            hook_response: str = pydantic_answer.model_dump_json()
+            original_json: str = hook_response
+        else:
+            pydantic_answer = None
+            hook_response = str(answer)
+
+        hook_context = LLMCallHookContext(executor_context, response=hook_response)
         try:
             for hook in executor_context.after_llm_call_hooks:
                 modified_response = hook(hook_context)
                 if modified_response is not None and isinstance(modified_response, str):
-                    answer = modified_response
+                    hook_response = modified_response
 
         except Exception as e:
-            printer.print(
-                content=f"Error in after_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in after_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         if not isinstance(executor_context.messages, list):
-            printer.print(
-                content=(
-                    "Warning: after_llm_call hook replaced messages with non-list. "
-                    "Restoring original messages list. Hooks should modify messages in-place, "
-                    "not replace the list (e.g., use context.messages.append() not context.messages = [])."
-                ),
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=(
+                        "Warning: after_llm_call hook replaced messages with non-list. "
+                        "Restoring original messages list. Hooks should modify messages in-place, "
+                        "not replace the list (e.g., use context.messages.append() not context.messages = [])."
+                    ),
+                    color="yellow",
+                )
             if isinstance(original_messages, list):
                 executor_context.messages = original_messages
             else:
                 executor_context.messages = []
+
+        # If hooks modified the response, update answer accordingly
+        if pydantic_answer is not None:
+            # For Pydantic models, reparse the JSON if it was modified
+            if hook_response != original_json:
+                try:
+                    model_class: type[BaseModel] = type(pydantic_answer)
+                    answer = model_class.model_validate_json(hook_response)
+                except Exception as e:
+                    if verbose:
+                        printer.print(
+                            content=f"Warning: Hook modified response but failed to reparse as {type(pydantic_answer).__name__}: {e}. Using original model.",
+                            color="yellow",
+                        )
+        else:
+            # For string responses, use the hook-modified response
+            answer = hook_response
 
     return answer

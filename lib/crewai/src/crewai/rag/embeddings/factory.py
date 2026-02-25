@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     )
     from chromadb.utils.embedding_functions.google_embedding_function import (
         GoogleGenerativeAiEmbeddingFunction,
-        GoogleVertexEmbeddingFunction,
     )
     from chromadb.utils.embedding_functions.huggingface_embedding_function import (
         HuggingFaceEmbeddingFunction,
@@ -52,6 +51,9 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
     from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
     from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+    from crewai.rag.embeddings.providers.google.genai_vertex_embedding import (
+        GoogleGenAIVertexEmbeddingFunction,
+    )
     from crewai.rag.embeddings.providers.google.types import (
         GenerativeAiProviderSpec,
         VertexAIProviderSpec,
@@ -163,7 +165,7 @@ def build_embedder_from_dict(spec: OpenAIProviderSpec) -> OpenAIEmbeddingFunctio
 @overload
 def build_embedder_from_dict(
     spec: VertexAIProviderSpec,
-) -> GoogleVertexEmbeddingFunction: ...
+) -> GoogleGenAIVertexEmbeddingFunction: ...
 
 
 @overload
@@ -296,7 +298,9 @@ def build_embedder(spec: OpenAIProviderSpec) -> OpenAIEmbeddingFunction: ...
 
 
 @overload
-def build_embedder(spec: VertexAIProviderSpec) -> GoogleVertexEmbeddingFunction: ...
+def build_embedder(
+    spec: VertexAIProviderSpec,
+) -> GoogleGenAIVertexEmbeddingFunction: ...
 
 
 @overload

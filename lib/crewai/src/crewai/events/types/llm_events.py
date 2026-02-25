@@ -9,6 +9,8 @@ from crewai.events.base_events import BaseEvent
 class LLMEventBase(BaseEvent):
     from_task: Any | None = None
     from_agent: Any | None = None
+    model: str | None = None
+    call_id: str
 
     def __init__(self, **data: Any) -> None:
         if data.get("from_task"):
@@ -42,7 +44,6 @@ class LLMCallStartedEvent(LLMEventBase):
     """
 
     type: str = "llm_call_started"
-    model: str | None = None
     messages: str | list[dict[str, Any]] | None = None
     tools: list[dict[str, Any]] | None = None
     callbacks: list[Any] | None = None
@@ -56,7 +57,6 @@ class LLMCallCompletedEvent(LLMEventBase):
     messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
-    model: str | None = None
 
 
 class LLMCallFailedEvent(LLMEventBase):
@@ -85,3 +85,4 @@ class LLMStreamChunkEvent(LLMEventBase):
     chunk: str
     tool_call: ToolCall | None = None
     call_type: LLMCallType | None = None
+    response_id: str | None = None

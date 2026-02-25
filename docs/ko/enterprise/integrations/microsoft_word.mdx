@@ -97,6 +97,26 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `file_id` (string, 필수): 삭제할 문서의 ID.
 
   </Accordion>
+
+  <Accordion title="microsoft_word/copy_document">
+    **설명:** OneDrive의 새 위치에 문서를 복사합니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): 복사할 문서의 ID.
+    - `name` (string, 선택사항): 복사된 문서의 새 이름.
+    - `parent_id` (string, 선택사항): 대상 폴더의 ID (기본값: 루트).
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/move_document">
+    **설명:** OneDrive의 새 위치로 문서를 이동합니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): 이동할 문서의 ID.
+    - `parent_id` (string, 필수): 대상 폴더의 ID.
+    - `name` (string, 선택사항): 이동된 문서의 새 이름.
+
+  </Accordion>
 </AccordionGroup>
 
 ## 사용 예제

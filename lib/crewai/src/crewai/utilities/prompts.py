@@ -22,7 +22,15 @@ class SystemPromptResult(StandardPromptResult):
     user: Annotated[str, "The user prompt component"]
 
 
-COMPONENTS = Literal["role_playing", "tools", "no_tools", "task"]
+COMPONENTS = Literal[
+    "role_playing",
+    "tools",
+    "no_tools",
+    "native_tools",
+    "task",
+    "native_task",
+    "task_no_tools",
+]
 
 
 class Prompts(BaseModel):
@@ -35,6 +43,10 @@ class Prompts(BaseModel):
     i18n: I18N = Field(default_factory=get_i18n)
     has_tools: bool = Field(
         default=False, description="Indicates if the agent has access to tools"
+    )
+    use_native_tool_calling: bool = Field(
+        default=False,
+        description="Whether to use native function calling instead of ReAct format",
     )
     system_template: str | None = Field(
         default=None, description="Custom system prompt template"
@@ -58,12 +70,25 @@ class Prompts(BaseModel):
             A dictionary containing the constructed prompt(s).
         """
         slices: list[COMPONENTS] = ["role_playing"]
+        # When using native tool calling with tools, use native_tools instructions
+        # When using ReAct pattern with tools, use tools instructions
+        # When no tools are available, use no_tools instructions
         if self.has_tools:
-            slices.append("tools")
+            if not self.use_native_tool_calling:
+                slices.append("tools")
         else:
             slices.append("no_tools")
         system: str = self._build_prompt(slices)
-        slices.append("task")
+
+        # Determine which task slice to use:
+        task_slice: COMPONENTS
+        if self.use_native_tool_calling:
+            task_slice = "native_task"
+        elif self.has_tools:
+            task_slice = "task"
+        else:
+            task_slice = "task_no_tools"
+        slices.append(task_slice)
 
         if (
             not self.system_template
@@ -72,7 +97,7 @@ class Prompts(BaseModel):
         ):
             return SystemPromptResult(
                 system=system,
-                user=self._build_prompt(["task"]),
+                user=self._build_prompt([task_slice]),
                 prompt=self._build_prompt(slices),
             )
         return StandardPromptResult(

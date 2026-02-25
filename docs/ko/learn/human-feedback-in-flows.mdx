@@ -7,6 +7,10 @@ mode: "wide"
 
 ## 개요
 
+<Note>
+`@human_feedback` 데코레이터는 **CrewAI 버전 1.8.0 이상**이 필요합니다. 이 기능을 사용하기 전에 설치를 업데이트하세요.
+</Note>
+
 `@human_feedback` 데코레이터는 CrewAI Flow 내에서 직접 human-in-the-loop(HITL) 워크플로우를 가능하게 합니다. Flow 실행을 일시 중지하고, 인간에게 검토를 위해 출력을 제시하고, 피드백을 수집하고, 선택적으로 피드백 결과에 따라 다른 리스너로 라우팅할 수 있습니다.
 
 이는 특히 다음과 같은 경우에 유용합니다:
@@ -69,6 +73,8 @@ flow.kickoff()
 | `default_outcome` | `str` | 아니오 | 피드백이 제공되지 않을 때 사용할 outcome. `emit`에 있어야 합니다 |
 | `metadata` | `dict` | 아니오 | 엔터프라이즈 통합을 위한 추가 데이터 |
 | `provider` | `HumanFeedbackProvider` | 아니오 | 비동기/논블로킹 피드백을 위한 커스텀 프로바이더. [비동기 인간 피드백](#비동기-인간-피드백-논블로킹) 참조 |
+| `learn` | `bool` | 아니오 | HITL 학습 활성화: 피드백에서 교훈을 추출하고 향후 출력을 사전 검토합니다. 기본값 `False`. [피드백에서 학습하기](#피드백에서-학습하기) 참조 |
+| `learn_limit` | `int` | 아니오 | 사전 검토를 위해 불러올 최대 과거 교훈 수. 기본값 `5` |
 
 ### 기본 사용법 (라우팅 없음)
 
@@ -92,32 +98,42 @@ def handle_feedback(self, result):
 `emit`을 지정하면, 데코레이터는 라우터가 됩니다. 인간의 자유 형식 피드백이 LLM에 의해 해석되어 지정된 outcome 중 하나로 매핑됩니다:
 
 ```python Code
-@start()
-@human_feedback(
-    message="이 콘텐츠의 출판을 승인하시겠습니까?",
-    emit=["approved", "rejected", "needs_revision"],
-    llm="gpt-4o-mini",
-    default_outcome="needs_revision",
-)
-def review_content(self):
-    return "블로그 게시물 초안 내용..."
+from crewai.flow.flow import Flow, start, listen, or_
+from crewai.flow.human_feedback import human_feedback
 
-@listen("approved")
-def publish(self, result):
-    print(f"출판 중! 사용자 의견: {result.feedback}")
+class ReviewFlow(Flow):
+    @start()
+    def generate_content(self):
+        return "블로그 게시물 초안 내용..."
 
-@listen("rejected")
-def discard(self, result):
-    print(f"폐기됨. 이유: {result.feedback}")
+    @human_feedback(
+        message="이 콘텐츠의 출판을 승인하시겠습니까?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+    )
+    @listen(or_("generate_content", "needs_revision"))
+    def review_content(self):
+        return "블로그 게시물 초안 내용..."
 
-@listen("needs_revision")
-def revise(self, result):
-    print(f"다음을 기반으로 수정 중: {result.feedback}")
+    @listen("approved")
+    def publish(self, result):
+        print(f"출판 중! 사용자 의견: {result.feedback}")
+
+    @listen("rejected")
+    def discard(self, result):
+        print(f"폐기됨. 이유: {result.feedback}")
 ```
+
+사용자가 "더 자세한 내용이 필요합니다"와 같이 말하면, LLM이 이를 `"needs_revision"`으로 매핑하고, `or_()`를 통해 `review_content`가 다시 트리거됩니다 — 수정 루프가 생성됩니다. outcome이 `"approved"` 또는 `"rejected"`가 될 때까지 루프가 계속됩니다.
 
 <Tip>
 LLM은 가능한 경우 구조화된 출력(function calling)을 사용하여 응답이 지정된 outcome 중 하나임을 보장합니다. 이로 인해 라우팅이 신뢰할 수 있고 예측 가능해집니다.
 </Tip>
+
+<Warning>
+`@start()` 메서드는 flow 시작 시 한 번만 실행됩니다. 수정 루프가 필요한 경우, start 메서드를 review 메서드와 분리하고 review 메서드에 `@listen(or_("trigger", "revision_outcome"))`를 사용하여 self-loop을 활성화하세요.
+</Warning>
 
 ## HumanFeedbackResult
 
@@ -187,116 +203,162 @@ def summarize(self):
 <CodeGroup>
 
 ```python Code
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, start, listen, or_
 from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
 from pydantic import BaseModel
 
 
 class ContentState(BaseModel):
-    topic: str = ""
     draft: str = ""
-    final_content: str = ""
     revision_count: int = 0
+    status: str = "pending"
 
 
 class ContentApprovalFlow(Flow[ContentState]):
-    """콘텐츠를 생성하고 인간의 승인을 받는 Flow입니다."""
+    """콘텐츠를 생성하고 승인될 때까지 반복하는 Flow."""
 
     @start()
-    def get_topic(self):
-        self.state.topic = input("어떤 주제에 대해 글을 쓸까요? ")
-        return self.state.topic
-
-    @listen(get_topic)
-    def generate_draft(self, topic):
-        # 실제 사용에서는 LLM을 호출합니다
-        self.state.draft = f"# {topic}\n\n{topic}에 대한 초안입니다..."
+    def generate_draft(self):
+        self.state.draft = "# AI 안전\n\nAI 안전에 대한 초안..."
         return self.state.draft
 
-    @listen(generate_draft)
     @human_feedback(
-        message="이 초안을 검토해 주세요. 'approved', 'rejected'로 답하거나 수정 피드백을 제공해 주세요:",
+        message="이 초안을 검토해 주세요. 승인, 거부 또는 변경이 필요한 사항을 설명해 주세요:",
         emit=["approved", "rejected", "needs_revision"],
         llm="gpt-4o-mini",
         default_outcome="needs_revision",
     )
-    def review_draft(self, draft):
-        return draft
+    @listen(or_("generate_draft", "needs_revision"))
+    def review_draft(self):
+        self.state.revision_count += 1
+        return f"{self.state.draft} (v{self.state.revision_count})"
 
     @listen("approved")
     def publish_content(self, result: HumanFeedbackResult):
-        self.state.final_content = result.output
-        print("\n✅ 콘텐츠가 승인되어 출판되었습니다!")
-        print(f"검토자 코멘트: {result.feedback}")
+        self.state.status = "published"
+        print(f"콘텐츠 승인 및 게시! 리뷰어 의견: {result.feedback}")
         return "published"
 
     @listen("rejected")
     def handle_rejection(self, result: HumanFeedbackResult):
-        print("\n❌ 콘텐츠가 거부되었습니다")
-        print(f"이유: {result.feedback}")
+        self.state.status = "rejected"
+        print(f"콘텐츠 거부됨. 이유: {result.feedback}")
         return "rejected"
 
-    @listen("needs_revision")
-    def revise_content(self, result: HumanFeedbackResult):
-        self.state.revision_count += 1
-        print(f"\n📝 수정 #{self.state.revision_count} 요청됨")
-        print(f"피드백: {result.feedback}")
 
-        # 실제 Flow에서는 generate_draft로 돌아갈 수 있습니다
-        # 이 예제에서는 단순히 확인합니다
-        return "revision_requested"
-
-
-# Flow 실행
 flow = ContentApprovalFlow()
 result = flow.kickoff()
-print(f"\nFlow 완료. 요청된 수정: {flow.state.revision_count}")
+print(f"\nFlow 완료. 상태: {flow.state.status}, 검토 횟수: {flow.state.revision_count}")
 ```
 
 ```text Output
-어떤 주제에 대해 글을 쓸까요? AI 안전
+==================================================
+OUTPUT FOR REVIEW:
+==================================================
+# AI 안전
+
+AI 안전에 대한 초안... (v1)
+==================================================
+
+이 초안을 검토해 주세요. 승인, 거부 또는 변경이 필요한 사항을 설명해 주세요:
+(Press Enter to skip, or type your feedback)
+
+Your feedback: 더 자세한 내용이 필요합니다
 
 ==================================================
 OUTPUT FOR REVIEW:
 ==================================================
 # AI 안전
 
-AI 안전에 대한 초안입니다...
+AI 안전에 대한 초안... (v2)
 ==================================================
 
-이 초안을 검토해 주세요. 'approved', 'rejected'로 답하거나 수정 피드백을 제공해 주세요:
+이 초안을 검토해 주세요. 승인, 거부 또는 변경이 필요한 사항을 설명해 주세요:
 (Press Enter to skip, or type your feedback)
 
 Your feedback: 좋아 보입니다, 승인!
 
-✅ 콘텐츠가 승인되어 출판되었습니다!
-검토자 코멘트: 좋아 보입니다, 승인!
+콘텐츠 승인 및 게시! 리뷰어 의견: 좋아 보입니다, 승인!
 
-Flow 완료. 요청된 수정: 0
+Flow 완료. 상태: published, 검토 횟수: 2
 ```
 
 </CodeGroup>
 
 ## 다른 데코레이터와 결합하기
 
-`@human_feedback` 데코레이터는 다른 Flow 데코레이터와 함께 작동합니다. 가장 안쪽 데코레이터(함수에 가장 가까운)로 배치하세요:
+`@human_feedback` 데코레이터는 `@start()`, `@listen()`, `or_()`와 함께 작동합니다. 데코레이터 순서는 두 가지 모두 동작합니다—프레임워크가 양방향으로 속성을 전파합니다—하지만 권장 패턴은 다음과 같습니다:
 
 ```python Code
-# 올바름: @human_feedback이 가장 안쪽(함수에 가장 가까움)
+# Flow 시작 시 일회성 검토 (self-loop 없음)
 @start()
-@human_feedback(message="이것을 검토해 주세요:")
+@human_feedback(message="이것을 검토해 주세요:", emit=["approved", "rejected"], llm="gpt-4o-mini")
 def my_start_method(self):
     return "content"
 
+# 리스너에서 선형 검토 (self-loop 없음)
 @listen(other_method)
-@human_feedback(message="이것도 검토해 주세요:")
+@human_feedback(message="이것도 검토해 주세요:", emit=["good", "bad"], llm="gpt-4o-mini")
 def my_listener(self, data):
     return f"processed: {data}"
+
+# Self-loop: 수정을 위해 반복할 수 있는 검토
+@human_feedback(message="승인 또는 수정 요청?", emit=["approved", "revise"], llm="gpt-4o-mini")
+@listen(or_("upstream_method", "revise"))
+def review_with_loop(self):
+    return "content for review"
 ```
 
-<Tip>
-`@human_feedback`를 가장 안쪽 데코레이터(마지막/함수에 가장 가까움)로 배치하여 메서드를 직접 래핑하고 Flow 시스템에 전달하기 전에 반환 값을 캡처할 수 있도록 하세요.
-</Tip>
+### Self-loop 패턴
+
+수정 루프를 만들려면 `or_()`를 사용하여 검토 메서드가 **상위 트리거**와 **자체 수정 outcome**을 모두 리스닝해야 합니다:
+
+```python Code
+@start()
+def generate(self):
+    return "initial draft"
+
+@human_feedback(
+    message="승인하시겠습니까, 아니면 변경을 요청하시겠습니까?",
+    emit=["revise", "approved"],
+    llm="gpt-4o-mini",
+    default_outcome="approved",
+)
+@listen(or_("generate", "revise"))
+def review(self):
+    return "content"
+
+@listen("approved")
+def publish(self):
+    return "published"
+```
+
+outcome이 `"revise"`이면 flow가 `review`로 다시 라우팅됩니다 (`or_()`를 통해 `"revise"`를 리스닝하기 때문). outcome이 `"approved"`이면 flow가 `publish`로 계속됩니다. flow 엔진이 라우터를 "한 번만 실행" 규칙에서 제외하여 각 루프 반복마다 재실행할 수 있기 때문에 이 패턴이 동작합니다.
+
+### 체인된 라우터
+
+한 라우터의 outcome으로 트리거된 리스너가 그 자체로 라우터가 될 수 있습니다:
+
+```python Code
+@start()
+@human_feedback(message="첫 번째 검토:", emit=["approved", "rejected"], llm="gpt-4o-mini")
+def draft(self):
+    return "draft content"
+
+@listen("approved")
+@human_feedback(message="최종 검토:", emit=["publish", "revise"], llm="gpt-4o-mini")
+def final_review(self, prev):
+    return "final content"
+
+@listen("publish")
+def on_publish(self, prev):
+    return "published"
+```
+
+### 제한 사항
+
+- **`@start()` 메서드는 한 번만 실행**: `@start()` 메서드는 self-loop할 수 없습니다. 수정 주기가 필요하면 별도의 `@start()` 메서드를 진입점으로 사용하고 `@listen()` 메서드에 `@human_feedback`를 배치하세요.
+- **동일 메서드에 `@start()` + `@listen()` 불가**: 이는 Flow 프레임워크 제약입니다. 메서드는 시작점이거나 리스너여야 하며, 둘 다일 수 없습니다.
 
 ## 모범 사례
 
@@ -510,9 +572,9 @@ class ContentPipeline(Flow):
     @start()
     @human_feedback(
         message="이 콘텐츠의 출판을 승인하시겠습니까?",
-        emit=["approved", "rejected", "needs_revision"],
+        emit=["approved", "rejected"],
         llm="gpt-4o-mini",
-        default_outcome="needs_revision",
+        default_outcome="rejected",
         provider=SlackNotificationProvider("#content-reviews"),
     )
     def generate_content(self):
@@ -527,11 +589,6 @@ class ContentPipeline(Flow):
     def archive(self, result):
         print(f"보관됨. 이유: {result.feedback}")
         return {"status": "archived"}
-
-    @listen("needs_revision")
-    def queue_revision(self, result):
-        print(f"수정 대기열에 추가됨: {result.feedback}")
-        return {"status": "revision_needed"}
 
 
 # Flow 시작 (Slack 응답을 기다리며 일시 중지)
@@ -572,6 +629,64 @@ async def on_slack_feedback_async(flow_id: str, slack_message: str):
 5. **자동 영속성**: `HumanFeedbackPending`이 발생하면 상태가 자동으로 저장되며 기본적으로 `SQLiteFlowPersistence` 사용
 6. **커스텀 영속성**: 필요한 경우 `from_pending()`에 커스텀 영속성 인스턴스 전달
 
+## 피드백에서 학습하기
+
+`learn=True` 매개변수는 인간 검토자와 메모리 시스템 간의 피드백 루프를 활성화합니다. 활성화되면 시스템은 과거 인간의 수정 사항에서 학습하여 출력을 점진적으로 개선합니다.
+
+### 작동 방식
+
+1. **피드백 후**: LLM이 출력 + 피드백에서 일반화 가능한 교훈을 추출하고 `source="hitl"`로 메모리에 저장합니다. 피드백이 단순한 승인(예: "좋아 보입니다")인 경우 아무것도 저장하지 않습니다.
+2. **다음 검토 전**: 과거 HITL 교훈을 메모리에서 불러와 LLM이 인간이 보기 전에 출력을 개선하는 데 적용합니다.
+
+시간이 지남에 따라 각 수정 사항이 향후 검토에 반영되므로 인간은 점진적으로 더 나은 사전 검토된 출력을 보게 됩니다.
+
+### 예제
+
+```python Code
+class ArticleReviewFlow(Flow):
+    @start()
+    def generate_article(self):
+        return self.crew.kickoff(inputs={"topic": "AI Safety"}).raw
+
+    @human_feedback(
+        message="이 글 초안을 검토해 주세요:",
+        emit=["approved", "needs_revision"],
+        llm="gpt-4o-mini",
+        learn=True,
+    )
+    @listen(or_("generate_article", "needs_revision"))
+    def review_article(self):
+        return self.last_human_feedback.output if self.last_human_feedback else "article draft"
+
+    @listen("approved")
+    def publish(self):
+        print(f"Publishing: {self.last_human_feedback.output}")
+```
+
+**첫 번째 실행**: 인간이 원시 출력을 보고 "사실에 대한 주장에는 항상 인용을 포함하세요."라고 말합니다. 교훈이 추출되어 메모리에 저장됩니다.
+
+**두 번째 실행**: 시스템이 인용 교훈을 불러와 출력을 사전 검토하여 인용을 추가한 후 개선된 버전을 표시합니다. 인간의 역할이 "모든 것을 수정"에서 "시스템이 놓친 것을 찾기"로 전환됩니다.
+
+### 구성
+
+| 매개변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `learn` | `False` | HITL 학습 활성화 |
+| `learn_limit` | `5` | 사전 검토를 위해 불러올 최대 과거 교훈 수 |
+
+### 주요 설계 결정
+
+- **모든 것에 동일한 LLM 사용**: 데코레이터의 `llm` 매개변수는 outcome 매핑, 교훈 추출, 사전 검토에 공유됩니다. 여러 모델을 구성할 필요가 없습니다.
+- **구조화된 출력**: 추출과 사전 검토 모두 LLM이 지원하는 경우 Pydantic 모델과 함께 function calling을 사용하고, 그렇지 않으면 텍스트 파싱으로 폴백합니다.
+- **논블로킹 저장**: 교훈은 백그라운드 스레드에서 실행되는 `remember_many()`를 통해 저장됩니다 -- Flow는 즉시 계속됩니다.
+- **우아한 저하**: 추출 중 LLM이 실패하면 아무것도 저장하지 않습니다. 사전 검토 중 실패하면 원시 출력이 표시됩니다. 어느 쪽의 실패도 Flow를 차단하지 않습니다.
+- **범위/카테고리 불필요**: 교훈을 저장할 때 `source`만 전달됩니다. 인코딩 파이프라인이 범위, 카테고리, 중요도를 자동으로 추론합니다.
+
+<Note>
+`learn=True`는 Flow에 메모리가 사용 가능해야 합니다. Flow는 기본적으로 자동으로 메모리를 얻지만, `_skip_auto_memory`로 비활성화한 경우 HITL 학습은 조용히 건너뜁니다.
+</Note>
+
+
 ## 관련 문서
 
 - [Flow 개요](/ko/concepts/flows) - CrewAI Flow에 대해 알아보기
@@ -579,3 +694,4 @@ async def on_slack_feedback_async(flow_id: str, slack_message: str):
 - [Flow 영속성](/ko/concepts/flows#persistence) - Flow 상태 영속화
 - [@router를 사용한 라우팅](/ko/concepts/flows#router) - 조건부 라우팅에 대해 더 알아보기
 - [실행 시 인간 입력](/ko/learn/human-input-on-execution) - 태스크 수준 인간 입력
+- [메모리](/ko/concepts/memory) - HITL 학습에서 사용되는 통합 메모리 시스템

@@ -1,45 +1,22 @@
-import inspect
-
-from pydantic import BaseModel, Field, InstanceOf, model_validator
+from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
-from crewai.flow.flow import Flow
+from crewai.flow.flow_context import current_flow_id, current_flow_request_id
 
 
 class FlowTrackable(BaseModel):
-    """Mixin that tracks the Flow instance that instantiated the object, e.g. a
-    Flow instance that created a Crew or Agent.
+    """Mixin that tracks flow execution context for objects created within flows.
 
-    Automatically finds and stores a reference to the parent Flow instance by
-    inspecting the call stack.
+    When a Crew or Agent is instantiated inside a flow execution, this mixin
+    automatically captures the flow ID and request ID from context variables,
+    enabling proper tracking and association with the parent flow execution.
     """
 
-    parent_flow: InstanceOf[Flow] | None = Field(
-        default=None,
-        description="The parent flow of the instance, if it was created inside a flow.",
-    )
-
     @model_validator(mode="after")
-    def _set_parent_flow(self) -> Self:
-        max_depth = 5
-        frame = inspect.currentframe()
-
-        try:
-            if frame is None:
-                return self
-
-            frame = frame.f_back
-            for _ in range(max_depth):
-                if frame is None:
-                    break
-
-                candidate = frame.f_locals.get("self")
-                if isinstance(candidate, Flow):
-                    self.parent_flow = candidate
-                    break
-
-                frame = frame.f_back
-        finally:
-            del frame
+    def _set_flow_context(self) -> Self:
+        request_id = current_flow_request_id.get()
+        if request_id:
+            self._request_id = request_id
+            self._flow_id = current_flow_id.get()
 
         return self

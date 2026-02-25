@@ -50,17 +50,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxJK2OCJSkUj1plgbj59b4dC39QV2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738698990,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AxJK2OCJSkUj1plgbj59b4dC39QV2\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1738698990,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: hi\",\n        \"refusal\": null\n      },\n  \
+        \    \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+        \  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\": 12,\n\
+        \    \"total_tokens\": 173,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+        : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-RAY:
       - 90cd396c0ab71698-SJC
@@ -104,8 +107,9 @@ interactions:
       - 0s
       x-request-id:
       - req_2c3cb5caed61ccd1e058ef3e6301c691
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       Cq0TCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkShBMKEgoQY3Jld2FpLnRl
@@ -245,24 +249,27 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxJK3bJiyqGhPeqdCcCjoeNavGHrR\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738698991,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_uAFkclWHIRqgrXFrQFcEoUIS\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
-      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Include additional
-      context for the greeting to make it more meaningful.\\\",\\\"Specify if you
-      want a casual or formal tone for greetings.\\\",\\\"Provide examples of variations
-      of the greeting if necessary.\\\"],\\\"quality\\\":10,\\\"entities\\\":[],\\\"relationships\\\":[]}\"\n
-      \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\": 50,\n
-      \   \"total_tokens\": 323,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AxJK3bJiyqGhPeqdCcCjoeNavGHrR\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1738698991,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+        : [\n          {\n            \"id\": \"call_uAFkclWHIRqgrXFrQFcEoUIS\",\n\
+        \            \"type\": \"function\",\n            \"function\": {\n      \
+        \        \"name\": \"TaskEvaluation\",\n              \"arguments\": \"{\\\
+        \"suggestions\\\":[\\\"Include additional context for the greeting to make\
+        \ it more meaningful.\\\",\\\"Specify if you want a casual or formal tone\
+        \ for greetings.\\\",\\\"Provide examples of variations of the greeting if\
+        \ necessary.\\\"],\\\"quality\\\":10,\\\"entities\\\":[],\\\"relationships\\\
+        \":[]}\"\n            }\n          }\n        ],\n        \"refusal\": null\n\
+        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n\
+        \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\"\
+        : 50,\n    \"total_tokens\": 323,\n    \"prompt_tokens_details\": {\n    \
+        \  \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_bd83329f63\"\n}\n"
     headers:
       CF-RAY:
       - 90cd3973589f1698-SJC
@@ -306,6 +313,7 @@ interactions:
       - 0s
       x-request-id:
       - req_519fd27ca3d5da4d541c4331654e0520
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

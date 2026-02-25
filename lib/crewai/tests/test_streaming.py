@@ -207,16 +207,17 @@ class TestCrewKickoffStreaming:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="Hello ",
+                        call_id="test-call-id",
                     ),
                 )
                 crewai_event_bus.emit(
@@ -224,6 +225,7 @@ class TestCrewKickoffStreaming:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="World!",
+                        call_id="test-call-id",
                     ),
                 )
                 return mock_output
@@ -274,16 +276,17 @@ class TestCrewKickoffStreaming:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="",
+                        call_id="test-call-id",
                         tool_call=ToolCall(
                             id="call-123",
                             function=FunctionCall(
@@ -329,10 +332,10 @@ class TestCrewKickoffStreamingAsync:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 return mock_output
 
@@ -356,12 +359,15 @@ class TestCrewKickoffStreamingAsync:
         mock_output = MagicMock()
         mock_output.raw = "Test output"
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(
+            self: Any, inputs: Any = None, input_files: Any = None, **kwargs: Any
+        ) -> Any:
             crewai_event_bus.emit(
                 crew,
                 LLMStreamChunkEvent(
                     type="llm_stream_chunk",
                     chunk="Async ",
+                    call_id="test-call-id",
                 ),
             )
             crewai_event_bus.emit(
@@ -369,6 +375,7 @@ class TestCrewKickoffStreamingAsync:
                 LLMStreamChunkEvent(
                     type="llm_stream_chunk",
                     chunk="Stream!",
+                    call_id="test-call-id",
                 ),
             )
             return mock_output
@@ -439,16 +446,17 @@ class TestFlowKickoffStreaming:
         original_kickoff = Flow.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     flow,
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="Flow ",
+                        call_id="test-call-id",
                     ),
                 )
                 crewai_event_bus.emit(
@@ -456,6 +464,7 @@ class TestFlowKickoffStreaming:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="output!",
+                        call_id="test-call-id",
                     ),
                 )
                 return "done"
@@ -484,10 +493,10 @@ class TestFlowKickoffStreaming:
         original_kickoff = Flow.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 return "flow result"
 
@@ -532,10 +541,10 @@ class TestFlowKickoffStreamingAsync:
         original_kickoff = Flow.kickoff_async
         call_count = [0]
 
-        async def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        async def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return await original_kickoff(self, inputs)
+                return await original_kickoff(self, inputs, **kwargs)
             else:
                 await asyncio.sleep(0.01)
                 crewai_event_bus.emit(
@@ -543,6 +552,7 @@ class TestFlowKickoffStreamingAsync:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="Async flow ",
+                        call_id="test-call-id",
                     ),
                 )
                 await asyncio.sleep(0.01)
@@ -551,6 +561,7 @@ class TestFlowKickoffStreamingAsync:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="stream!",
+                        call_id="test-call-id",
                     ),
                 )
                 await asyncio.sleep(0.01)
@@ -583,10 +594,10 @@ class TestFlowKickoffStreamingAsync:
         original_kickoff = Flow.kickoff_async
         call_count = [0]
 
-        async def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        async def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return await original_kickoff(self, inputs)
+                return await original_kickoff(self, inputs, **kwargs)
             else:
                 return "async flow result"
 
@@ -615,10 +626,10 @@ class TestStreamingEdgeCases:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 raise ValueError("Test error")
 
@@ -673,10 +684,10 @@ class TestStreamingEdgeCases:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
@@ -684,6 +695,7 @@ class TestStreamingEdgeCases:
                         type="llm_stream_chunk",
                         chunk="Task 1",
                         task_name="First task",
+                        call_id="test-call-id",
                     ),
                 )
                 return mock_output

@@ -10,9 +10,48 @@ from crewai.agent import Agent
 from crewai.task import Task
 
 
+def _create_bedrock_mocks():
+    """Helper to create Bedrock mocks."""
+    mock_session_class = MagicMock()
+    mock_session_instance = MagicMock()
+    mock_client = MagicMock()
+
+    # Set up default mock responses to prevent hanging
+    default_response = {
+        'output': {
+            'message': {
+                'role': 'assistant',
+                'content': [
+                    {'text': 'Test response'}
+                ]
+            }
+        },
+        'usage': {
+            'inputTokens': 10,
+            'outputTokens': 5,
+            'totalTokens': 15
+        }
+    }
+    mock_client.converse.return_value = default_response
+    mock_client.converse_stream.return_value = {'stream': []}
+
+    # Configure the mock session instance to return the mock client
+    mock_session_instance.client.return_value = mock_client
+
+    # Configure the mock Session class to return the mock session instance
+    mock_session_class.return_value = mock_session_instance
+
+    return mock_session_class, mock_client
+
+
 @pytest.fixture(autouse=True)
 def mock_aws_credentials():
-    """Automatically mock AWS credentials and boto3 Session for all tests in this module."""
+    """Mock AWS credentials and boto3 Session for tests only if real credentials are not set."""
+    # If real AWS credentials exist, don't mock - allow real API calls
+    if "AWS_ACCESS_KEY_ID" in os.environ and "AWS_SECRET_ACCESS_KEY" in os.environ:
+        yield None, None
+        return
+
     with patch.dict(os.environ, {
         "AWS_ACCESS_KEY_ID": "test-access-key",
         "AWS_SECRET_ACCESS_KEY": "test-secret-key",
@@ -20,7 +59,6 @@ def mock_aws_credentials():
     }):
         # Mock boto3 Session to prevent actual AWS connections
         with patch('crewai.llms.providers.bedrock.completion.Session') as mock_session_class:
-            # Create mock session instance
             mock_session_instance = MagicMock()
             mock_client = MagicMock()
 
@@ -47,6 +85,44 @@ def mock_aws_credentials():
             mock_session_instance.client.return_value = mock_client
 
             # Configure the mock Session class to return the mock session instance
+            mock_session_class.return_value = mock_session_instance
+
+            yield mock_session_class, mock_client
+
+
+@pytest.fixture
+def bedrock_mocks():
+    """Fixture that always provides Bedrock mocks, regardless of real credentials.
+
+    Use this fixture for tests that explicitly need to test mock behavior.
+    """
+    with patch.dict(os.environ, {
+        "AWS_ACCESS_KEY_ID": "test-access-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret-key",
+        "AWS_DEFAULT_REGION": "us-east-1"
+    }):
+        with patch('crewai.llms.providers.bedrock.completion.Session') as mock_session_class:
+            mock_session_instance = MagicMock()
+            mock_client = MagicMock()
+
+            default_response = {
+                'output': {
+                    'message': {
+                        'role': 'assistant',
+                        'content': [
+                            {'text': 'Test response'}
+                        ]
+                    }
+                },
+                'usage': {
+                    'inputTokens': 10,
+                    'outputTokens': 5,
+                    'totalTokens': 15
+                }
+            }
+            mock_client.converse.return_value = default_response
+            mock_client.converse_stream.return_value = {'stream': []}
+            mock_session_instance.client.return_value = mock_client
             mock_session_class.return_value = mock_session_instance
 
             yield mock_session_class, mock_client
@@ -336,12 +412,12 @@ def test_bedrock_completion_with_tools():
             assert len(call_kwargs['tools']) > 0
 
 
-def test_bedrock_raises_error_when_model_not_found(mock_aws_credentials):
+def test_bedrock_raises_error_when_model_not_found(bedrock_mocks):
     """Test that BedrockCompletion raises appropriate error when model not found"""
     from botocore.exceptions import ClientError
 
     # Get the mock client from the fixture
-    _, mock_client = mock_aws_credentials
+    _, mock_client = bedrock_mocks
 
     error_response = {
         'Error': {
@@ -361,17 +437,36 @@ def test_bedrock_aws_credentials_configuration():
     """
     Test that AWS credentials configuration works properly
     """
+    aws_access_key_id = "test-access-key"
+    aws_secret_access_key = "test-secret-key"
+    aws_region_name = "us-east-1"
+
+
     # Test with environment variables
     with patch.dict(os.environ, {
-        "AWS_ACCESS_KEY_ID": "test-access-key",
-        "AWS_SECRET_ACCESS_KEY": "test-secret-key",
-        "AWS_DEFAULT_REGION": "us-east-1"
+        "AWS_ACCESS_KEY_ID": aws_access_key_id,
+        "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+        "AWS_DEFAULT_REGION": aws_region_name
     }):
         llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
         from crewai.llms.providers.bedrock.completion import BedrockCompletion
         assert isinstance(llm, BedrockCompletion)
-        assert llm.region_name == "us-east-1"
+        assert llm.region_name == aws_region_name
+        assert llm.aws_access_key_id == aws_access_key_id
+        assert llm.aws_secret_access_key == aws_secret_access_key
+
+      # Test with litellm environment variables
+    with patch.dict(os.environ, {
+        "AWS_ACCESS_KEY_ID": aws_access_key_id,
+        "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+        "AWS_REGION_NAME": aws_region_name
+    }):
+        llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+        from crewai.llms.providers.bedrock.completion import BedrockCompletion
+        assert isinstance(llm, BedrockCompletion)
+        assert llm.region_name == aws_region_name
 
     # Test with explicit credentials
     llm_explicit = LLM(
@@ -549,11 +644,11 @@ def test_bedrock_tool_conversion():
     assert "inputSchema" in bedrock_tools[0]["toolSpec"]
 
 
-def test_bedrock_environment_variable_credentials(mock_aws_credentials):
+def test_bedrock_environment_variable_credentials(bedrock_mocks):
     """
     Test that AWS credentials are properly loaded from environment
     """
-    mock_session_class, _ = mock_aws_credentials
+    mock_session_class, _ = bedrock_mocks
 
     # Reset the mock to clear any previous calls
     mock_session_class.reset_mock()
@@ -789,3 +884,86 @@ def test_bedrock_stop_sequences_sent_to_api():
         assert "inferenceConfig" in call_kwargs
         assert "stopSequences" in call_kwargs["inferenceConfig"]
         assert call_kwargs["inferenceConfig"]["stopSequences"] == ["\nObservation:", "\nThought:"]
+
+
+# =============================================================================
+# Agent Kickoff Structured Output Tests
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_bedrock_agent_kickoff_structured_output_without_tools():
+    """
+    Test that agent kickoff returns structured output without tools.
+    This tests native structured output handling for Bedrock models.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnalysisResult(BaseModel):
+        """Structured output for analysis results."""
+
+        topic: str = Field(description="The topic analyzed")
+        key_points: list[str] = Field(description="Key insights from the analysis")
+        summary: str = Field(description="Brief summary of findings")
+
+    agent = Agent(
+        role="Analyst",
+        goal="Provide structured analysis on topics",
+        backstory="You are an expert analyst who provides clear, structured insights.",
+        llm=LLM(model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
+        tools=[],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Analyze the benefits of remote work briefly. Keep it concise.",
+        response_format=AnalysisResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, AnalysisResult), f"Expected AnalysisResult but got {type(result.pydantic)}"
+    assert result.pydantic.topic, "Topic should not be empty"
+    assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
+    assert result.pydantic.summary, "Summary should not be empty"
+
+
+@pytest.mark.vcr()
+def test_bedrock_agent_kickoff_structured_output_with_tools():
+    """
+    Test that agent kickoff returns structured output after using tools.
+    This tests post-tool-call structured output handling for Bedrock models.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        """Structured output for calculation results."""
+
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        response_format=CalculationResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult), f"Expected CalculationResult but got {type(result.pydantic)}"
+    assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
+    assert result.pydantic.operation, "Operation should not be empty"
+    assert result.pydantic.explanation, "Explanation should not be empty"

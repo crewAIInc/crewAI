@@ -199,6 +199,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
     )
+    memory: Any = Field(
+        default=None,
+        description=(
+            "Enable agent memory. Pass True for default Memory(), "
+            "or a Memory/MemoryScope/MemorySlice instance for custom configuration. "
+            "If not set, falls back to crew memory."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -327,6 +335,17 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             )
         if not self._token_process:
             self._token_process = TokenProcess()
+        return self
+
+    @model_validator(mode="after")
+    def resolve_memory(self) -> Self:
+        """Resolve memory field: True creates a default Memory(), instance is used as-is."""
+        if self.memory is True:
+            from crewai.memory.unified_memory import Memory
+
+            self.memory = Memory()
+        elif self.memory is False:
+            self.memory = None
         return self
 
     @property

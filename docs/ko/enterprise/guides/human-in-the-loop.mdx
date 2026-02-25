@@ -5,9 +5,54 @@ icon: "user-check"
 mode: "wide"
 ---
 
-인간-중심(Human-In-The-Loop, HITL)은 인공지능과 인간 전문 지식을 결합하여 의사결정을 강화하고 작업 결과를 향상시키는 강력한 접근 방식입니다. 이 가이드는 CrewAI 내에서 HITL을 구현하는 방법을 보여줍니다.
+인간-중심(Human-In-The-Loop, HITL)은 인공지능과 인간 전문 지식을 결합하여 의사결정을 강화하고 작업 결과를 향상시키는 강력한 접근 방식입니다. 이 가이드는 CrewAI Enterprise 내에서 HITL을 구현하는 방법을 보여줍니다.
 
-## HITL 워크플로 설정
+## CrewAI의 HITL 접근 방식
+
+CrewAI는 human-in-the-loop 워크플로우를 구현하기 위한 두 가지 접근 방식을 제공합니다:
+
+| 접근 방식 | 적합한 용도 | 버전 |
+|----------|----------|---------|
+| **Flow 기반** (`@human_feedback` 데코레이터) | Enterprise UI를 사용한 프로덕션, 이메일 우선 워크플로우, 전체 플랫폼 기능 | **1.8.0+** |
+| **Webhook 기반** | 커스텀 통합, 외부 시스템 (Slack, Teams 등), 레거시 설정 | 모든 버전 |
+
+## Enterprise 플랫폼과 Flow 기반 HITL
+
+<Note>
+`@human_feedback` 데코레이터는 **CrewAI 버전 1.8.0 이상**이 필요합니다.
+</Note>
+
+Flow에서 `@human_feedback` 데코레이터를 사용하면, CrewAI Enterprise는 이메일 주소가 있는 누구나 검토 요청에 응답할 수 있는 **이메일 우선 HITL 시스템**을 제공합니다:
+
+<CardGroup cols={2}>
+  <Card title="이메일 우선 설계" icon="envelope">
+    응답자가 이메일 알림을 받고 직접 회신할 수 있습니다—로그인이 필요 없습니다.
+  </Card>
+  <Card title="대시보드 검토" icon="desktop">
+    원할 때 Enterprise 대시보드에서 HITL 요청을 검토하고 응답하세요.
+  </Card>
+  <Card title="유연한 라우팅" icon="route">
+    메서드 패턴에 따라 특정 이메일로 요청을 라우팅하거나 Flow 상태에서 가져오세요.
+  </Card>
+  <Card title="자동 응답" icon="clock">
+    타임아웃 내에 인간이 응답하지 않을 경우 자동 대체 응답을 구성하세요.
+  </Card>
+</CardGroup>
+
+### 주요 이점
+
+- **외부 응답자**: 플랫폼 사용자가 아니어도 이메일이 있는 누구나 응답 가능
+- **동적 할당**: Flow 상태에서 담당자 이메일 가져오기 (예: `account_owner_email`)
+- **간단한 구성**: 이메일 기반 라우팅은 사용자/역할 관리보다 설정이 쉬움
+- **배포 생성자 대체**: 라우팅 규칙이 일치하지 않으면 배포 생성자에게 알림
+
+<Tip>
+`@human_feedback` 데코레이터의 구현 세부 사항은 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows) 가이드를 참조하세요.
+</Tip>
+
+## Webhook 기반 HITL 워크플로 설정
+
+Slack, Microsoft Teams 또는 자체 애플리케이션과 같은 외부 시스템과의 커스텀 통합을 위해 webhook 기반 접근 방식을 사용할 수 있습니다:
 
 <Steps>
     <Step title="작업 구성">
@@ -99,3 +144,14 @@ HITL 워크플로우는 특히 다음과 같은 경우에 유용합니다:
 - 민감하거나 위험도가 높은 작업
 - 인간의 판단이 필요한 창의적 작업
 - 준수 및 규제 검토
+
+## 자세히 알아보기
+
+<CardGroup cols={2}>
+  <Card title="Flow HITL 관리" icon="users-gear" href="/ko/enterprise/features/flow-hitl-management">
+    이메일 알림, 라우팅 규칙, 자동 응답 및 분석을 포함한 전체 Enterprise Flow HITL 플랫폼 기능을 살펴보세요.
+  </Card>
+  <Card title="Flow에서 인간 피드백" icon="code" href="/ko/learn/human-feedback-in-flows">
+    Flow에서 `@human_feedback` 데코레이터 구현 가이드.
+  </Card>
+</CardGroup>

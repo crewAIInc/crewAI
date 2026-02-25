@@ -8,6 +8,7 @@ from hashlib import md5
 import json
 import re
 from typing import (
+    TYPE_CHECKING,
     Any,
     cast,
 )
@@ -30,6 +31,21 @@ from pydantic_core import PydanticCustomError
 from rich.console import Console
 from rich.panel import Panel
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai_files import FileInput
+
+try:
+    from crewai_files import get_supported_content_types
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
+
+    def get_supported_content_types(provider: str, api: str | None = None) -> list[str]:
+        return []
+
 
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -67,10 +83,6 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.entity.entity_memory import EntityMemory
-from crewai.memory.external.external_memory import ExternalMemory
-from crewai.memory.long_term.long_term_memory import LongTermMemory
-from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
@@ -80,6 +92,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
@@ -88,6 +101,7 @@ from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import FileHandler
+from crewai.utilities.file_store import clear_files, get_all_files
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -104,6 +118,7 @@ from crewai.utilities.streaming import (
     signal_end,
     signal_error,
 )
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -155,10 +170,7 @@ class Crew(FlowTrackable, BaseModel):
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default_factory=CacheHandler)
-    _short_term_memory: InstanceOf[ShortTermMemory] | None = PrivateAttr()
-    _long_term_memory: InstanceOf[LongTermMemory] | None = PrivateAttr()
-    _entity_memory: InstanceOf[EntityMemory] | None = PrivateAttr()
-    _external_memory: InstanceOf[ExternalMemory] | None = PrivateAttr()
+    _memory: Any = PrivateAttr(default=None)  # Unified Memory | MemoryScope
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
     _inputs: dict[str, Any] | None = PrivateAttr(default=None)
@@ -168,6 +180,7 @@ class Crew(FlowTrackable, BaseModel):
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
+    _kickoff_event_id: str | None = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -175,25 +188,12 @@ class Crew(FlowTrackable, BaseModel):
     agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool = Field(
+    memory: bool | Any = Field(
         default=False,
-        description="If crew should use memory to store memories of it's execution",
-    )
-    short_term_memory: InstanceOf[ShortTermMemory] | None = Field(
-        default=None,
-        description="An Instance of the ShortTermMemory to be used by the Crew",
-    )
-    long_term_memory: InstanceOf[LongTermMemory] | None = Field(
-        default=None,
-        description="An Instance of the LongTermMemory to be used by the Crew",
-    )
-    entity_memory: InstanceOf[EntityMemory] | None = Field(
-        default=None,
-        description="An Instance of the EntityMemory to be used by the Crew",
-    )
-    external_memory: InstanceOf[ExternalMemory] | None = Field(
-        default=None,
-        description="An Instance of the ExternalMemory to be used by the Crew",
+        description=(
+            "Enable crew memory. Pass True for default Memory(), "
+            "or a Memory/MemoryScope/MemorySlice instance for custom configuration."
+        ),
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -352,31 +352,23 @@ class Crew(FlowTrackable, BaseModel):
 
         return self
 
-    def _initialize_default_memories(self) -> None:
-        self._long_term_memory = self._long_term_memory or LongTermMemory()
-        self._short_term_memory = self._short_term_memory or ShortTermMemory(
-            crew=self,
-            embedder_config=self.embedder,
-        )
-        self._entity_memory = self.entity_memory or EntityMemory(
-            crew=self, embedder_config=self.embedder
-        )
-
     @model_validator(mode="after")
     def create_crew_memory(self) -> Crew:
-        """Initialize private memory attributes."""
-        self._external_memory = (
-            # External memory does not support a default value since it was
-            # designed to be managed entirely externally
-            self.external_memory.set_crew(self) if self.external_memory else None
-        )
+        """Initialize unified memory, respecting crew embedder config."""
+        if self.memory is True:
+            from crewai.memory.unified_memory import Memory
 
-        self._long_term_memory = self.long_term_memory
-        self._short_term_memory = self.short_term_memory
-        self._entity_memory = self.entity_memory
+            embedder = None
+            if self.embedder is not None:
+                from crewai.rag.embeddings.factory import build_embedder
 
-        if self.memory:
-            self._initialize_default_memories()
+                embedder = build_embedder(self.embedder)
+            self._memory = Memory(embedder=embedder)
+        elif self.memory:
+            # User passed a Memory / MemoryScope / MemorySlice instance
+            self._memory = self.memory
+        else:
+            self._memory = None
 
         return self
 
@@ -676,7 +668,17 @@ class Crew(FlowTrackable, BaseModel):
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
+        """Execute the crew's workflow.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            CrewOutput or CrewStreamingOutput if streaming is enabled.
+        """
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext()
@@ -685,7 +687,7 @@ class Crew(FlowTrackable, BaseModel):
                 """Execute the crew and capture the result."""
                 try:
                     self.stream = False
-                    crew_result = self.kickoff(inputs=inputs)
+                    crew_result = self.kickoff(inputs=inputs, input_files=input_files)
                     if isinstance(crew_result, CrewOutput):
                         ctx.result_holder.append(crew_result)
                 except Exception as exc:
@@ -708,7 +710,7 @@ class Crew(FlowTrackable, BaseModel):
         token = attach(baggage_ctx)
 
         try:
-            inputs = prepare_kickoff(self, inputs)
+            inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
@@ -722,22 +724,44 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
+            result = self._post_kickoff(result)
+
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
+            # Ensure all background memory saves complete before returning
+            if self._memory is not None and hasattr(self._memory, "drain_writes"):
+                self._memory.drain_writes()
+            clear_files(self.id)
             detach(token)
 
+    def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
+        return result
+
     def kickoff_for_each(
-        self, inputs: list[dict[str, Any]]
+        self,
+        inputs: list[dict[str, Any]],
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput]:
         """Executes the Crew's workflow for each input and aggregates results.
+
+        Args:
+            inputs: List of input dictionaries, one per execution.
+            input_files: Optional dict of named file inputs shared across all executions.
+
+        Returns:
+            List of CrewOutput or CrewStreamingOutput objects.
 
         If stream=True, returns a list of CrewStreamingOutput objects that must
         each be iterated to get stream chunks and access results.
@@ -749,7 +773,7 @@ class Crew(FlowTrackable, BaseModel):
         for input_data in inputs:
             crew = self.copy()
 
-            output = crew.kickoff(inputs=input_data)
+            output = crew.kickoff(inputs=input_data, input_files=input_files)
 
             if not self.stream and crew.usage_metrics:
                 total_usage_metrics.add_usage_metrics(crew.usage_metrics)
@@ -762,9 +786,18 @@ class Crew(FlowTrackable, BaseModel):
         return results
 
     async def kickoff_async(
-        self, inputs: dict[str, Any] | None = None
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Asynchronous kickoff method to start the crew execution.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            CrewOutput or CrewStreamingOutput if streaming is enabled.
 
         If stream=True, returns a CrewStreamingOutput that can be async-iterated
         to get stream chunks. After iteration completes, access the final result
@@ -779,7 +812,7 @@ class Crew(FlowTrackable, BaseModel):
             async def run_crew() -> None:
                 try:
                     self.stream = False
-                    result = await asyncio.to_thread(self.kickoff, inputs)
+                    result = await asyncio.to_thread(self.kickoff, inputs, input_files)
                     if isinstance(result, CrewOutput):
                         ctx.result_holder.append(result)
                 except Exception as e:
@@ -797,12 +830,21 @@ class Crew(FlowTrackable, BaseModel):
 
             return streaming_output
 
-        return await asyncio.to_thread(self.kickoff, inputs)
+        return await asyncio.to_thread(self.kickoff, inputs, input_files)
 
     async def kickoff_for_each_async(
-        self, inputs: list[dict[str, Any]]
+        self,
+        inputs: list[dict[str, Any]],
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
         """Executes the Crew's workflow for each input asynchronously.
+
+        Args:
+            inputs: List of input dictionaries, one per execution.
+            input_files: Optional dict of named file inputs shared across all executions.
+
+        Returns:
+            List of CrewOutput or CrewStreamingOutput objects.
 
         If stream=True, returns a single CrewStreamingOutput that yields chunks
         from all crews as they arrive. After iteration, access results via .results
@@ -812,18 +854,27 @@ class Crew(FlowTrackable, BaseModel):
         async def kickoff_fn(
             crew: Crew, input_data: dict[str, Any]
         ) -> CrewOutput | CrewStreamingOutput:
-            return await crew.kickoff_async(inputs=input_data)
+            return await crew.kickoff_async(inputs=input_data, input_files=input_files)
 
         return await run_for_each_async(self, inputs, kickoff_fn)
 
     async def akickoff(
-        self, inputs: dict[str, Any] | None = None
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Native async kickoff method using async task execution throughout.
 
         Unlike kickoff_async which wraps sync kickoff in a thread, this method
         uses native async/await for all operations including task execution,
         memory operations, and knowledge queries.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
         if self.stream:
             enable_agent_streaming(self.agents)
@@ -832,7 +883,7 @@ class Crew(FlowTrackable, BaseModel):
             async def run_crew() -> None:
                 try:
                     self.stream = False
-                    inner_result = await self.akickoff(inputs)
+                    inner_result = await self.akickoff(inputs, input_files)
                     if isinstance(inner_result, CrewOutput):
                         ctx.result_holder.append(inner_result)
                 except Exception as exc:
@@ -856,7 +907,7 @@ class Crew(FlowTrackable, BaseModel):
         token = attach(baggage_ctx)
 
         try:
-            inputs = prepare_kickoff(self, inputs)
+            inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
                 result = await self._arun_sequential_process()
@@ -870,24 +921,41 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
+            result = self._post_kickoff(result)
+
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
+            clear_files(self.id)
             detach(token)
 
     async def akickoff_for_each(
-        self, inputs: list[dict[str, Any]]
+        self,
+        inputs: list[dict[str, Any]],
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
         """Native async execution of the Crew's workflow for each input.
 
         Uses native async throughout rather than thread-based async.
+
+        Args:
+            inputs: List of input dictionaries, one per execution.
+            input_files: Optional dict of named file inputs shared across all executions.
+
+        Returns:
+            List of CrewOutput or CrewStreamingOutput objects.
+
         If stream=True, returns a single CrewStreamingOutput that yields chunks
         from all crews as they arrive.
         """
@@ -895,7 +963,7 @@ class Crew(FlowTrackable, BaseModel):
         async def kickoff_fn(
             crew: Crew, input_data: dict[str, Any]
         ) -> CrewOutput | CrewStreamingOutput:
-            return await crew.akickoff(inputs=input_data)
+            return await crew.akickoff(inputs=input_data, input_files=input_files)
 
         return await run_for_each_async(self, inputs, kickoff_fn)
 
@@ -1104,6 +1172,9 @@ class Crew(FlowTrackable, BaseModel):
             self.manager_agent = manager
         manager.crew = self
 
+    def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
+        return None
+
     def _execute_tasks(
         self,
         tasks: list[Task],
@@ -1120,6 +1191,9 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+        custom_start = self._get_execution_start_index(tasks)
+        if custom_start is not None:
+            start_index = custom_start
 
         task_outputs: list[TaskOutput] = []
         futures: list[tuple[Task, Future[TaskOutput], int]] = []
@@ -1215,7 +1289,8 @@ class Crew(FlowTrackable, BaseModel):
             and hasattr(agent, "multimodal")
             and getattr(agent, "multimodal", False)
         ):
-            tools = self._add_multimodal_tools(agent, tools)
+            if not (agent.llm and agent.llm.supports_multimodal()):
+                tools = self._add_multimodal_tools(agent, tools)
 
         if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
             tools = self._add_platform_tools(task, tools)
@@ -1223,7 +1298,35 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
-        # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
+        # Add memory tools if memory is available (agent or crew level)
+        resolved_memory = getattr(agent, "memory", None) or self._memory
+        if resolved_memory is not None:
+            tools = self._add_memory_tools(tools, resolved_memory)
+
+        files = get_all_files(self.id, task.id)
+        if files:
+            supported_types: list[str] = []
+            if agent and agent.llm and agent.llm.supports_multimodal():
+                provider = (
+                    getattr(agent.llm, "provider", None)
+                    or getattr(agent.llm, "model", None)
+                    or "openai"
+                )
+                api = getattr(agent.llm, "api", None)
+                supported_types = get_supported_content_types(provider, api)
+
+            def is_auto_injected(content_type: str) -> bool:
+                return any(content_type.startswith(t) for t in supported_types)
+
+            # Only add read_file tool if there are files that need it
+            files_needing_tool = {
+                name: f
+                for name, f in files.items()
+                if not is_auto_injected(f.content_type)
+            }
+            if files_needing_tool:
+                tools = self._add_file_tools(tools, files_needing_tool)
+
         return tools
 
     def _get_agent_to_use(self, task: Task) -> BaseAgent | None:
@@ -1241,10 +1344,14 @@ class Crew(FlowTrackable, BaseModel):
             return existing_tools
 
         # Create mapping of tool names to new tools
-        new_tool_map = {tool.name: tool for tool in new_tools}
+        new_tool_map = {sanitize_tool_name(tool.name): tool for tool in new_tools}
 
         # Remove any existing tools that will be replaced
-        tools = [tool for tool in existing_tools if tool.name not in new_tool_map]
+        tools = [
+            tool
+            for tool in existing_tools
+            if sanitize_tool_name(tool.name) not in new_tool_map
+        ]
 
         # Add all new tools
         tools.extend(new_tools)
@@ -1302,6 +1409,38 @@ class Crew(FlowTrackable, BaseModel):
             # Cast code_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
+
+    def _add_memory_tools(
+        self, tools: list[BaseTool], memory: Any
+    ) -> list[BaseTool]:
+        """Add recall and remember tools when memory is available.
+
+        Args:
+            tools: Current list of tools.
+            memory: The resolved Memory, MemoryScope, or MemorySlice instance.
+
+        Returns:
+            Updated list with memory tools added.
+        """
+        from crewai.tools.memory_tools import create_memory_tools
+
+        return self._merge_tools(tools, create_memory_tools(memory))
+
+    def _add_file_tools(
+        self, tools: list[BaseTool], files: dict[str, Any]
+    ) -> list[BaseTool]:
+        """Add file reading tool when input files are available.
+
+        Args:
+            tools: Current list of tools.
+            files: Dictionary of input files.
+
+        Returns:
+            Updated list with file tool added.
+        """
+        read_file_tool = ReadFileTool()
+        read_file_tool.set_files(files)
+        return self._merge_tools(tools, [read_file_tool])
 
     def _add_delegation_tools(
         self, task: Task, tools: list[BaseTool]
@@ -1383,12 +1522,14 @@ class Crew(FlowTrackable, BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         self.token_usage = self.calculate_usage_metrics()
+        crewai_event_bus.flush()
         crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
                 crew_name=self.name,
                 output=final_task_output,
                 total_tokens=self.token_usage.total_tokens,
+                started_event_id=self._kickoff_event_id,
             ),
         )
 
@@ -1529,10 +1670,7 @@ class Crew(FlowTrackable, BaseModel):
             "_execution_span",
             "_file_handler",
             "_cache_handler",
-            "_short_term_memory",
-            "_long_term_memory",
-            "_entity_memory",
-            "_external_memory",
+            "_memory",
             "agents",
             "tasks",
             "knowledge_sources",
@@ -1566,18 +1704,8 @@ class Crew(FlowTrackable, BaseModel):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        if self.short_term_memory:
-            copied_data["short_term_memory"] = self.short_term_memory.model_copy(
-                deep=True
-            )
-        if self.long_term_memory:
-            copied_data["long_term_memory"] = self.long_term_memory.model_copy(
-                deep=True
-            )
-        if self.entity_memory:
-            copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
-        if self.external_memory:
-            copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
+        if getattr(self, "_memory", None):
+            copied_data["memory"] = self._memory
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
@@ -1708,23 +1836,24 @@ class Crew(FlowTrackable, BaseModel):
 
         Args:
             command_type: Type of memory to reset.
-                Valid options: 'long', 'short', 'entity', 'knowledge', 'agent_knowledge'
-                'kickoff_outputs', or 'all'
+                Valid options: 'memory', 'knowledge', 'agent_knowledge',
+                'kickoff_outputs', or 'all'. Legacy names 'long', 'short',
+                'entity', 'external' are treated as 'memory'.
 
         Raises:
             ValueError: If an invalid command type is provided.
             RuntimeError: If memory reset operation fails.
         """
+        legacy_memory = frozenset(["long", "short", "entity", "external"])
+        if command_type in legacy_memory:
+            command_type = "memory"
         valid_types = frozenset(
             [
-                "long",
-                "short",
-                "entity",
+                "memory",
                 "knowledge",
                 "agent_knowledge",
                 "kickoff_outputs",
                 "all",
-                "external",
             ]
         )
 
@@ -1830,25 +1959,10 @@ class Crew(FlowTrackable, BaseModel):
         ) + agent_knowledges
 
         return {
-            "short": {
-                "system": getattr(self, "_short_term_memory", None),
+            "memory": {
+                "system": getattr(self, "_memory", None),
                 "reset": default_reset,
-                "name": "Short Term",
-            },
-            "entity": {
-                "system": getattr(self, "_entity_memory", None),
-                "reset": default_reset,
-                "name": "Entity",
-            },
-            "external": {
-                "system": getattr(self, "_external_memory", None),
-                "reset": default_reset,
-                "name": "External",
-            },
-            "long": {
-                "system": getattr(self, "_long_term_memory", None),
-                "reset": default_reset,
-                "name": "Long Term",
+                "name": "Memory",
             },
             "kickoff_outputs": {
                 "system": getattr(self, "_task_output_handler", None),
@@ -1892,7 +2006,13 @@ class Crew(FlowTrackable, BaseModel):
     @staticmethod
     def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
-        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            should_suppress_tracing_messages,
+        )
+
+        if should_suppress_tracing_messages():
+            return
 
         console = Console()
 

@@ -11,10 +11,10 @@ Human-in-the-Loop (HITL) is a powerful approach that combines artificial intelli
 
 CrewAI offers two main approaches for implementing human-in-the-loop workflows:
 
-| Approach | Best For | Integration |
-|----------|----------|-------------|
-| **Flow-based** (`@human_feedback` decorator) | Local development, console-based review, synchronous workflows | [Human Feedback in Flows](/en/learn/human-feedback-in-flows) |
-| **Webhook-based** (Enterprise) | Production deployments, async workflows, external integrations (Slack, Teams, etc.) | This guide |
+| Approach | Best For | Integration | Version |
+|----------|----------|-------------|---------|
+| **Flow-based** (`@human_feedback` decorator) | Local development, console-based review, synchronous workflows | [Human Feedback in Flows](/en/learn/human-feedback-in-flows) | **1.8.0+** |
+| **Webhook-based** (Enterprise) | Production deployments, async workflows, external integrations (Slack, Teams, etc.) | This guide | - |
 
 <Tip>
 If you're building flows and want to add human review steps with routing based on feedback, check out the [Human Feedback in Flows](/en/learn/human-feedback-in-flows) guide for the `@human_feedback` decorator.
@@ -151,3 +151,9 @@ HITL workflows are particularly valuable for:
 - Sensitive or high-stakes operations
 - Creative tasks requiring human judgment
 - Compliance and regulatory reviews
+
+## Enterprise Features
+
+<Card title="Flow HITL Management Platform" icon="users-gear" href="/en/enterprise/features/flow-hitl-management">
+  CrewAI Enterprise provides a comprehensive HITL management system for Flows with in-platform review, responder assignment, permissions, escalation policies, SLA management, dynamic routing, and full analytics. [Learn more →](/en/enterprise/features/flow-hitl-management)
+</Card>

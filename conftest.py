@@ -1,6 +1,8 @@
 """Pytest configuration for crewAI workspace."""
 
+import base64
 from collections.abc import Generator
+import gzip
 import os
 from pathlib import Path
 import tempfile
@@ -10,10 +12,34 @@ from dotenv import load_dotenv
 import pytest
 from vcr.request import Request  # type: ignore[import-untyped]
 
+try:
+    import vcr.stubs.httpx_stubs as httpx_stubs  # type: ignore[import-untyped]
+except ModuleNotFoundError:
+    import vcr.stubs.httpcore_stubs as httpx_stubs  # type: ignore[import-untyped]
+
 
 env_test_path = Path(__file__).parent / ".env.test"
 load_dotenv(env_test_path, override=True)
 load_dotenv(override=True)
+
+
+def _patched_make_vcr_request(httpx_request: Any, **kwargs: Any) -> Any:
+    """Patched version of VCR's _make_vcr_request that handles binary content.
+
+    The original implementation fails on binary request bodies (like file uploads)
+    because it assumes all content can be decoded as UTF-8.
+    """
+    raw_body = httpx_request.read()
+    try:
+        body = raw_body.decode("utf-8")
+    except UnicodeDecodeError:
+        body = base64.b64encode(raw_body).decode("ascii")
+    uri = str(httpx_request.url)
+    headers = dict(httpx_request.headers)
+    return Request(httpx_request.method, uri, body, headers)
+
+
+httpx_stubs._make_vcr_request = _patched_make_vcr_request
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -29,6 +55,21 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
             crewai_event_bus._async_handlers.clear()
     except Exception:  # noqa: S110
         pass
+
+
+@pytest.fixture(autouse=True, scope="function")
+def reset_event_state() -> None:
+    """Reset event system state before each test for isolation."""
+    from crewai.events.base_events import reset_emission_counter
+    from crewai.events.event_context import (
+        EventContextConfig,
+        _event_context_config,
+        _event_id_stack,
+    )
+
+    reset_emission_counter()
+    _event_id_stack.set(())
+    _event_context_config.set(EventContextConfig())
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -133,19 +174,42 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
                 request.headers[variant] = [replacement]
 
     request.method = request.method.upper()
+
+    # Normalize Azure OpenAI endpoints to a consistent placeholder for cassette matching.
+    if request.host and request.host.endswith(".openai.azure.com"):
+        original_host = request.host
+        placeholder_host = "fake-azure-endpoint.openai.azure.com"
+        request.uri = request.uri.replace(original_host, placeholder_host)
+
     return request
 
 
-def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any]:
-    """Filter sensitive headers from response before recording."""
-    # Remove Content-Encoding to prevent decompression issues on replay
+def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any] | None:
+    """Filter sensitive headers from response before recording.
+
+    Returns None to skip recording responses with empty bodies. This handles
+    duplicate recordings caused by OpenAI's stainless client using
+    with_raw_response which triggers httpx to re-read the consumed stream.
+    """
+    body = response.get("body", {}).get("string", "")
+    headers = response.get("headers", {})
+    content_length = headers.get("content-length", headers.get("Content-Length", []))
+
+    if body == "" or body == b"" or content_length == ["0"]:
+        return None
+
     for encoding_header in ["Content-Encoding", "content-encoding"]:
-        response["headers"].pop(encoding_header, None)
+        if encoding_header in headers:
+            encoding = headers.pop(encoding_header)
+            if encoding and encoding[0] == "gzip":
+                body = response.get("body", {}).get("string", b"")
+                if isinstance(body, bytes) and body.startswith(b"\x1f\x8b"):
+                    response["body"]["string"] = gzip.decompress(body).decode("utf-8")
 
     for header_name, replacement in HEADERS_TO_FILTER.items():
         for variant in [header_name, header_name.upper(), header_name.title()]:
-            if variant in response["headers"]:
-                response["headers"][variant] = [replacement]
+            if variant in headers:
+                headers[variant] = [replacement]
     return response
 
 
@@ -160,7 +224,10 @@ def vcr_cassette_dir(request: Any) -> str:
     test_file = Path(request.fspath)
 
     for parent in test_file.parents:
-        if parent.name in ("crewai", "crewai-tools") and parent.parent.name == "lib":
+        if (
+            parent.name in ("crewai", "crewai-tools", "crewai-files")
+            and parent.parent.name == "lib"
+        ):
             package_root = parent
             break
     else:

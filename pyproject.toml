@@ -28,6 +28,7 @@ dev = [
     "boto3-stubs[bedrock-runtime]==1.40.54",
     "types-psycopg2==2.9.21.20251012",
     "types-pymysql==1.1.0.20250916",
+    "types-aiofiles~=25.1.0",
 ]
 
 
@@ -104,6 +105,7 @@ ignore-decorators = ["typing.overload"]
 [tool.ruff.lint.per-file-ignores]
 "lib/crewai/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements, unnecessary assignments, and hardcoded passwords in tests
 "lib/crewai-tools/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "RUF012", "N818", "E402", "RUF043", "S110", "B017"]  # Allow various test-specific patterns
+"lib/crewai-files/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "B017", "F841"]  # Allow assert statements and blind exception assertions in tests
 
 
 [tool.mypy]
@@ -116,8 +118,8 @@ warn_return_any = true
 show_error_codes = true
 warn_unused_ignores = true
 python_version = "3.12"
-exclude = "(?x)(^lib/crewai/src/crewai/cli/templates/ | ^lib/crewai/tests/ | ^lib/crewai-tools/tests/)"
-plugins = ["pydantic.mypy", "crewai.mypy"]
+exclude = "(?x)(^lib/crewai/src/crewai/cli/templates/|^lib/crewai/tests/|^lib/crewai-tools/tests/|^lib/crewai-files/tests/)"
+plugins = ["pydantic.mypy"]
 
 
 [tool.bandit]
@@ -131,6 +133,7 @@ markers = [
 testpaths = [
     "lib/crewai/tests",
     "lib/crewai-tools/tests",
+    "lib/crewai-files/tests",
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
@@ -139,12 +142,21 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 
+[tool.uv]
+
+# composio-core pins rich<14 but textual requires rich>=14.
+# onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
+override-dependencies = [
+    "rich>=13.7.1",
+    "onnxruntime<1.24; python_version < '3.11'",
+]
 
 [tool.uv.workspace]
 members = [
     "lib/crewai",
     "lib/crewai-tools",
     "lib/devtools",
+    "lib/crewai-files",
 ]
 
 
@@ -152,3 +164,4 @@ members = [
 crewai = { workspace = true }
 crewai-tools = { workspace = true }
 crewai-devtools = { workspace = true }
+crewai-files = { workspace = true }

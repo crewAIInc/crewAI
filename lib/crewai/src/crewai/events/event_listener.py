@@ -209,10 +209,9 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
             # Handle telemetry
-            span = self.execution_spans.get(source)
+            span = self.execution_spans.pop(source, None)
             if span:
                 self._telemetry.task_ended(span, source, source.agent.crew)
-            self.execution_spans[source] = None
 
             # Pass task name if it exists
             task_name = get_task_name(source)
@@ -222,11 +221,10 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
-            span = self.execution_spans.get(source)
+            span = self.execution_spans.pop(source, None)
             if span:
                 if source.agent and source.agent.crew:
                     self._telemetry.task_ended(span, source, source.agent.crew)
-                self.execution_spans[source] = None
 
             # Pass task name if it exists
             task_name = get_task_name(source)
@@ -379,6 +377,12 @@ class EventListener(BaseEventListener):
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_finished(
                     event.tool_name,
+                )
+            else:
+                self.formatter.handle_tool_usage_finished(
+                    event.tool_name,
+                    event.output,
+                    getattr(event, "run_attempts", None),
                 )
 
         @crewai_event_bus.on(ToolUsageErrorEvent)
