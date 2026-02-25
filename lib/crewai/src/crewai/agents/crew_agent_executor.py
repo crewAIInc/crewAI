@@ -50,6 +50,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    parse_tool_call_args,
     process_llm_response,
     track_delegation_if_needed,
 )
@@ -894,13 +895,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
-        if isinstance(func_args, str):
-            try:
-                args_dict = json.loads(func_args)
-            except json.JSONDecodeError:
-                args_dict = {}
-        else:
-            args_dict = func_args
+        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id, original_tool)
+        if parse_error is not None:
+            return parse_error
 
         if original_tool is None:
             for tool in self.original_tools or []:
