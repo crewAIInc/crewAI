@@ -105,6 +105,15 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
   </Tab>
 </Tabs>
 
+<Info>
+  O CrewAI oferece integrações nativas via SDK para OpenAI, Anthropic, Google (Gemini API), Azure e AWS Bedrock — sem necessidade de instalação extra além dos extras específicos do provedor (ex.: `uv add "crewai[openai]"`).
+
+  Todos os outros provedores são alimentados pelo **LiteLLM**. Se você planeja usar algum deles, adicione-o como dependência ao seu projeto:
+  ```bash
+  uv add litellm
+  ```
+</Info>
+
 ## Exemplos de Configuração de Provedores
 
 O CrewAI suporta uma grande variedade de provedores de LLM, cada um com recursos, métodos de autenticação e capacidades de modelo únicos.
@@ -214,6 +223,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | Texto, Imagem | Texto |
     | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | Texto | Texto |
     | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | Texto | Texto |
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Anthropic">
@@ -354,6 +368,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     | gemini-1.5-flash                 | 1M tokens          | Modelo multimodal equilibrado, bom para maioria das tarefas         |
     | gemini-1.5-flash-8B              | 1M tokens          | Mais rápido, mais eficiente em custo, adequado para tarefas de alta frequência |
     | gemini-1.5-pro                   | 2M tokens          | Melhor desempenho para uma ampla variedade de tarefas de raciocínio, incluindo lógica, codificação e colaboração criativa |
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Azure">
@@ -438,6 +457,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         model="sagemaker/<my-endpoint>"
     )
     ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Mistral">
@@ -452,6 +476,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         model="mistral/mistral-large-latest",
         temperature=0.7
     )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
     ```
   </Accordion>
 
@@ -539,6 +568,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     | rakuten/rakutenai-7b-instruct                                            | 1.024 tokens       | LLM topo de linha, compreensão, raciocínio e geração textual.|
     | rakuten/rakutenai-7b-chat                                                | 1.024 tokens       | LLM topo de linha, compreensão, raciocínio e geração textual.|
     | baichuan-inc/baichuan2-13b-chat                                          | 4.096 tokens       | Suporte a chat em chinês/inglês, programação, matemática, seguir instruções, resolver quizzes.|
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
@@ -579,6 +613,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
 
         # ...
     ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Groq">
@@ -600,6 +639,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     | Llama 3.1 70B/8B  | 131.072 tokens      | Alta performance e tarefas de contexto grande|
     | Llama 3.2 Série   | 8.192 tokens        | Tarefas gerais                          |
     | Mixtral 8x7B      | 32.768 tokens       | Equilíbrio entre performance e contexto  |
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="IBM watsonx.ai">
@@ -622,6 +666,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         base_url="https://api.watsonx.ai/v1"
     )
     ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Ollama (LLMs Locais)">
@@ -634,6 +683,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         model="ollama/llama3:70b",
         base_url="http://localhost:11434"
     )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
     ```
   </Accordion>
 
@@ -650,6 +704,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         temperature=0.7
     )
     ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Perplexity AI">
@@ -665,6 +724,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         base_url="https://api.perplexity.ai/"
     )
     ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Hugging Face">
@@ -678,6 +742,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     llm = LLM(
         model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
     )
+    ```
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
     ```
   </Accordion>
 
@@ -702,6 +771,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     | Llama 3.2 Série   | 8.192 tokens              | Tarefas gerais e multimodais                 |
     | Llama 3.3 70B     | Até 131.072 tokens        | Desempenho e qualidade de saída elevada      |
     | Família Qwen2     | 8.192 tokens              | Desempenho e qualidade de saída elevada      |
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Cerebras">
@@ -727,6 +801,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
       - Equilíbrio entre velocidade e qualidade
       - Suporte a longas janelas de contexto
     </Info>
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 
   <Accordion title="Open Router">
@@ -749,6 +828,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
       - openrouter/deepseek/deepseek-r1
       - openrouter/deepseek/deepseek-chat
     </Info>
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add litellm
+    ```
   </Accordion>
 </AccordionGroup>
 
