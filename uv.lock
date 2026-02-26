@@ -1204,7 +1204,7 @@ requires-dist = [
     { name = "json-repair", specifier = "~=0.25.2" },
     { name = "json5", specifier = "~=0.10.0" },
     { name = "jsonref", specifier = "~=1.1.0" },
-    { name = "lancedb", specifier = ">=0.4.0" },
+    { name = "lancedb", specifier = ">=0.29.2" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.9,<3" },
     { name = "mcp", specifier = "~=1.26.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = "~=0.1.94" },
@@ -1286,7 +1286,6 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "crewai" },
     { name = "docker" },
-    { name = "lancedb" },
     { name = "pymupdf" },
     { name = "python-docx" },
     { name = "pytube" },
@@ -1428,7 +1427,6 @@ requires-dist = [
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
     { name = "gitpython", marker = "extra == 'github'", specifier = "==3.1.38" },
     { name = "hyperbrowser", marker = "extra == 'hyperbrowser'", specifier = ">=0.18.0" },
-    { name = "lancedb", specifier = "~=0.5.4" },
     { name = "langchain-apify", marker = "extra == 'apify'", specifier = ">=0.1.2,<1.0.0" },
     { name = "linkup-sdk", marker = "extra == 'linkup-sdk'", specifier = ">=0.2.2" },
     { name = "lxml", marker = "extra == 'rag'", specifier = ">=5.3.0,<5.4.0" },
@@ -3226,27 +3224,54 @@ wheels = [
 ]
 
 [[package]]
-name = "lancedb"
-version = "0.5.7"
+name = "lance-namespace"
+version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "cachetools" },
-    { name = "click" },
-    { name = "deprecation" },
-    { name = "overrides" },
+    { name = "lance-namespace-urllib3-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2b/c6/aec0d7752e15536564b50cf9a8926f0e5d7780aa3ab8ce8bca46daa55659/lance_namespace-0.5.2.tar.gz", hash = "sha256:566cc33091b5631793ab411f095d46c66391db0a62343cd6b4470265bb04d577", size = 10274, upload-time = "2026-02-20T03:14:31.777Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/3d/737c008d8fb2861e7ce260e2ffab0d5058eae41556181f80f1a1c3b52ef5/lance_namespace-0.5.2-py3-none-any.whl", hash = "sha256:6ccaf5649bf6ee6aa92eed9c535a114b7b4eb08e89f40426f58bc1466cbcffa3", size = 12087, upload-time = "2026-02-20T03:14:35.261Z" },
+]
+
+[[package]]
+name = "lance-namespace-urllib3-client"
+version = "0.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
     { name = "pydantic" },
-    { name = "pylance" },
-    { name = "pyyaml" },
-    { name = "ratelimiter" },
-    { name = "requests" },
-    { name = "retry" },
-    { name = "semver" },
+    { name = "python-dateutil" },
+    { name = "typing-extensions" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.6.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e9/64/51622c93ec8c164483c83b68764e5e76e52286c0137a8247bc6a7fac25f4/lance_namespace_urllib3_client-0.5.2.tar.gz", hash = "sha256:8a3a238006e6eabc01fc9d385ac3de22ba933aef0ae8987558f3c3199c9b3799", size = 172578, upload-time = "2026-02-20T03:14:33.031Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2a/10/f86d994498b37f7f35d0b8c2f7626a16fe4cb1949b518c1e5d5052ecf95f/lance_namespace_urllib3_client-0.5.2-py3-none-any.whl", hash = "sha256:83cefb6fd6e5df0b99b5e866ee3d46300d375b75e8af32c27bc16fbf7c1a5978", size = 300351, upload-time = "2026-02-20T03:14:34.236Z" },
+]
+
+[[package]]
+name = "lancedb"
+version = "0.29.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "deprecation" },
+    { name = "lance-namespace" },
+    { name = "numpy" },
+    { name = "overrides", marker = "python_full_version < '3.12'" },
+    { name = "packaging" },
+    { name = "pyarrow" },
+    { name = "pydantic" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/14/1b/f87a2b6420f6f55ea64e5f8f18f231450cc602a0854739bcf946cebc080a/lancedb-0.5.7.tar.gz", hash = "sha256:878914b493f91d09a77b14f1528104741f273234cbdd6671be705f447701fd51", size = 102890, upload-time = "2024-02-22T20:11:29.988Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/21/ecb191feff512640a59e17fe1737bd9c33970bc857c59a77fa61d5e314d9/lancedb-0.5.7-py3-none-any.whl", hash = "sha256:6169966f715ef530be545950e1aaf9f3f160967e4ba7456cd67c9f30f678095d", size = 115104, upload-time = "2024-02-22T20:11:25.726Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/77/fbb25946a234928958e016c5448343fd314bd601315f9587568321591a17/lancedb-0.29.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:bc1faf2e12addb9585569d0fb114ecc25ec3867e4e1aa6934e9343cfb5265ee4", size = 42341708, upload-time = "2026-02-09T06:21:31.677Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/95/d3a7b6d0237e343ad5b2afef2bdb99423746d5c3e882a9cab68dc041c2d0/lancedb-0.29.2-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0fec19cfc52a5b9d98e060bd2f02a1c9df6a0bfd15b36021b6017327a41893a3", size = 44147347, upload-time = "2026-02-09T06:31:02.567Z" },
+    { url = "https://files.pythonhosted.org/packages/66/21/153a42294279c5b66d763f357808dde0899b71c5c8e41ad5ecbeeb8728df/lancedb-0.29.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:636939ab9225d435020ba17c231f5eaba15312a07813bcebcd71128204cc039f", size = 47186355, upload-time = "2026-02-09T06:34:47.726Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/f7/f7041ae7d7730332b2754fe7adc2e0bd496f92bf526ac710b7eb3caf1d0a/lancedb-0.29.2-cp39-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:f79b32083fcab139009db521d2f7fcd6afe4cca98a78c06c5940ff00a170cc1a", size = 44172354, upload-time = "2026-02-09T06:31:03.834Z" },
+    { url = "https://files.pythonhosted.org/packages/72/6f/c152497c18cea0f36b523fc03b8e0a48be2b120276cc15a86d79b8b83cde/lancedb-0.29.2-cp39-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:991043a28c1f49f14df2479b554a95c759a85666dc58573cc86c1b9df05db794", size = 47228009, upload-time = "2026-02-09T06:34:40.872Z" },
+    { url = "https://files.pythonhosted.org/packages/66/50/bd47bca59a87a88a4ca291a0718291422440750d84b34318048c70a537c2/lancedb-0.29.2-cp39-abi3-win_amd64.whl", hash = "sha256:101eb0ac018bb0b643dd9ea22065f6f2102e9d44c9ac58a197477ccbfbc0b9fa", size = 52028768, upload-time = "2026-02-09T07:00:02.272Z" },
 ]
 
 [[package]]
@@ -5415,15 +5440,6 @@ wheels = [
 ]
 
 [[package]]
-name = "py"
-version = "1.11.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/98/ff/fec109ceb715d2a6b4c4a85a61af3b40c723a961e8828319fbcb15b868dc/py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719", size = 207796, upload-time = "2021-11-04T17:17:01.377Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/f0/10642828a8dfb741e5f3fbaac830550a518a775c7fff6f04a007259b0548/py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378", size = 98708, upload-time = "2021-11-04T17:17:00.152Z" },
-]
-
-[[package]]
 name = "py-rust-stemmers"
 version = "0.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -5914,22 +5930,6 @@ wheels = [
 [package.optional-dependencies]
 crypto = [
     { name = "cryptography" },
-]
-
-[[package]]
-name = "pylance"
-version = "0.9.18"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-    { name = "pyarrow" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ca/b8/15d4d380f0858dde46d42891776017e3bf9eb40129b3fe222637eecf8f43/pylance-0.9.18-cp38-abi3-macosx_10_15_x86_64.whl", hash = "sha256:fe2445d922c594d90e89111385106f6b152caab27996217db7bb4b8947eb0bea", size = 20319043, upload-time = "2024-02-19T07:36:11.206Z" },
-    { url = "https://files.pythonhosted.org/packages/1f/f8/69f927a215d415362300d14a50b3cbc6575fd640ca5e632d488e022d3af1/pylance-0.9.18-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:a2c424c50f5186edbbcc5a26f34063ed09d9a7390e28033395728ce02b5658f0", size = 18780426, upload-time = "2024-02-19T07:30:10.963Z" },
-    { url = "https://files.pythonhosted.org/packages/a1/b8/991e4544cfa21de2c7de5dd6bd8410df454fec5b374680fa96cd8698763b/pylance-0.9.18-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:10af06edfde3e8451bf2251381d3980a0a164eab9d4c3d4dc8b6318969e958a6", size = 21584420, upload-time = "2024-02-19T07:32:30.283Z" },
-    { url = "https://files.pythonhosted.org/packages/3c/5e/ff80f31d995315790393cbe599565f55d03eb717654cfeb65b701803e887/pylance-0.9.18-cp38-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:d8bb9045d7163cc966b9fe34a917044192be37a90915475b77461e5b7d89e442", size = 19960982, upload-time = "2024-02-19T07:32:49.686Z" },
-    { url = "https://files.pythonhosted.org/packages/2d/e5/c0e0a6cad08ab86a9c0bce7e8caef8f666337bb7950e2ab151ea4f88242d/pylance-0.9.18-cp38-abi3-win_amd64.whl", hash = "sha256:5ea80b7bf70d992f3fe63bce2d2f064f742124c04eaedeb76baca408ded85a2c", size = 22089079, upload-time = "2024-02-19T07:42:43.262Z" },
 ]
 
 [[package]]
@@ -6630,15 +6630,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ratelimiter"
-version = "1.2.0.post0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5b/e0/b36010bddcf91444ff51179c076e4a09c513674a56758d7cfea4f6520e29/ratelimiter-1.2.0.post0.tar.gz", hash = "sha256:5c395dcabdbbde2e5178ef3f89b568a3066454a6ddc223b76473dac22f89b4f7", size = 9182, upload-time = "2017-12-12T00:33:38.783Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/80/2164fa1e863ad52cc8d870855fba0fbb51edd943edffd516d54b5f6f8ff8/ratelimiter-1.2.0.post0-py3-none-any.whl", hash = "sha256:a52be07bc0bb0b3674b4b304550f10c769bbb00fead3072e035904474259809f", size = 6642, upload-time = "2017-12-12T00:33:37.505Z" },
-]
-
-[[package]]
 name = "redis"
 version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6792,19 +6783,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/61/d7545dafb7ac2230c70d38d31cbfe4cc64f7144dc41f6e4e4b78ecd9f5bb/requests-toolbelt-1.0.0.tar.gz", hash = "sha256:7681a0a3d047012b5bdc0ee37d7f8f07ebe76ab08caeccfc3921ce23c88d5bc6", size = 206888, upload-time = "2023-05-01T04:11:33.229Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3f/51/d4db610ef29373b879047326cbf6fa98b6c1969d6f6dc423279de2b1be2c/requests_toolbelt-1.0.0-py2.py3-none-any.whl", hash = "sha256:cccfdd665f0a24fcf4726e690f65639d272bb0637b9b92dfd91a5568ccf6bd06", size = 54481, upload-time = "2023-05-01T04:11:28.427Z" },
-]
-
-[[package]]
-name = "retry"
-version = "0.9.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "decorator" },
-    { name = "py" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/72/75d0b85443fbc8d9f38d08d2b1b67cc184ce35280e4a3813cda2f445f3a4/retry-0.9.2.tar.gz", hash = "sha256:f8bfa8b99b69c4506d6f5bd3b0aabf77f98cdb17f3c9fc3f5ca820033336fba4", size = 6448, upload-time = "2016-05-11T13:58:51.541Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/0d/53aea75710af4528a25ed6837d71d117602b01946b307a3912cb3cfcbcba/retry-0.9.2-py2.py3-none-any.whl", hash = "sha256:ccddf89761fa2c726ab29391837d4327f819ea14d244c232a1d24c67a2f98606", size = 7986, upload-time = "2016-05-11T13:58:39.925Z" },
 ]
 
 [[package]]
