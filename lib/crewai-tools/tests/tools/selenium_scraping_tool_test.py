@@ -42,7 +42,7 @@ def test_tool_initialization(mocked_chrome):
 
     try:
         os.rmdir(temp_dir)
-    except:
+    except Exception:
         pass
 
 
