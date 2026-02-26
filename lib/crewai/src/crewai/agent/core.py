@@ -906,14 +906,14 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
+        # Update the executor's saved original stop words so that
+        # _set_llm_stop_words / _restore_llm_stop_words work correctly.
+        # We intentionally do NOT mutate self.agent_executor.llm.stop here
+        # to avoid polluting the shared LLM object across executor lifecycles
+        # (see https://github.com/crewAIInc/crewAI/issues/4603).
         if self.agent_executor.llm:
-            existing_stop = getattr(self.agent_executor.llm, "stop", [])
-            self.agent_executor.llm.stop = list(
-                set(
-                    existing_stop + stop_words
-                    if isinstance(existing_stop, list)
-                    else stop_words
-                )
+            self.agent_executor._original_llm_stop = list(
+                getattr(self.agent_executor.llm, "stop", []) or []
             )
 
     def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
