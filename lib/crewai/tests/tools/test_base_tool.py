@@ -274,6 +274,16 @@ class TestBaseToolRunValidation:
         with pytest.raises(ValueError, match="validation failed"):
             t.run(language="python")
 
+    def test_run_with_no_kwargs_raises_when_required_fields_exist(self) -> None:
+        """Calling run() with no arguments should raise ValueError when schema
+        has required fields (not a cryptic TypeError about positional args).
+
+        Regression test for https://github.com/crewAIInc/crewAI/issues/4611
+        """
+        t = CodeExecutorTool()
+        with pytest.raises(ValueError, match="validation failed"):
+            t.run()
+
     def test_run_with_wrong_field_name_raises(self) -> None:
         """Kwargs not matching any schema field should trigger validation error
         for missing required fields."""
