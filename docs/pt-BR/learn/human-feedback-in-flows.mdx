@@ -73,6 +73,8 @@ Quando este flow é executado, ele irá:
 | `default_outcome` | `str` | Não | Outcome a usar se nenhum feedback for fornecido. Deve estar em `emit` |
 | `metadata` | `dict` | Não | Dados adicionais para integrações enterprise |
 | `provider` | `HumanFeedbackProvider` | Não | Provider customizado para feedback assíncrono/não-bloqueante. Veja [Feedback Humano Assíncrono](#feedback-humano-assíncrono-não-bloqueante) |
+| `learn` | `bool` | Não | Habilitar aprendizado HITL: destila lições do feedback e pré-revisa saídas futuras. Padrão `False`. Veja [Aprendendo com Feedback](#aprendendo-com-feedback) |
+| `learn_limit` | `int` | Não | Máximo de lições passadas para recuperar na pré-revisão. Padrão `5` |
 
 ### Uso Básico (Sem Roteamento)
 
@@ -96,32 +98,42 @@ def handle_feedback(self, result):
 Quando você especifica `emit`, o decorador se torna um roteador. O feedback livre do humano é interpretado por um LLM e mapeado para um dos outcomes especificados:
 
 ```python Code
-@start()
-@human_feedback(
-    message="Você aprova este conteúdo para publicação?",
-    emit=["approved", "rejected", "needs_revision"],
-    llm="gpt-4o-mini",
-    default_outcome="needs_revision",
-)
-def review_content(self):
-    return "Rascunho do post do blog aqui..."
+from crewai.flow.flow import Flow, start, listen, or_
+from crewai.flow.human_feedback import human_feedback
 
-@listen("approved")
-def publish(self, result):
-    print(f"Publicando! Usuário disse: {result.feedback}")
+class ReviewFlow(Flow):
+    @start()
+    def generate_content(self):
+        return "Rascunho do post do blog aqui..."
 
-@listen("rejected")
-def discard(self, result):
-    print(f"Descartando. Motivo: {result.feedback}")
+    @human_feedback(
+        message="Você aprova este conteúdo para publicação?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+    )
+    @listen(or_("generate_content", "needs_revision"))
+    def review_content(self):
+        return "Rascunho do post do blog aqui..."
 
-@listen("needs_revision")
-def revise(self, result):
-    print(f"Revisando baseado em: {result.feedback}")
+    @listen("approved")
+    def publish(self, result):
+        print(f"Publicando! Usuário disse: {result.feedback}")
+
+    @listen("rejected")
+    def discard(self, result):
+        print(f"Descartando. Motivo: {result.feedback}")
 ```
+
+Quando o humano diz algo como "precisa de mais detalhes", o LLM mapeia para `"needs_revision"`, que dispara `review_content` novamente via `or_()` — criando um loop de revisão. O loop continua até que o outcome seja `"approved"` ou `"rejected"`.
 
 <Tip>
 O LLM usa saídas estruturadas (function calling) quando disponível para garantir que a resposta seja um dos seus outcomes especificados. Isso torna o roteamento confiável e previsível.
 </Tip>
+
+<Warning>
+Um método `@start()` só executa uma vez no início do flow. Se você precisa de um loop de revisão, separe o método start do método de revisão e use `@listen(or_("trigger", "revision_outcome"))` no método de revisão para habilitar o self-loop.
+</Warning>
 
 ## HumanFeedbackResult
 
@@ -191,116 +203,162 @@ Aqui está um exemplo completo implementando um fluxo de revisão e aprovação 
 <CodeGroup>
 
 ```python Code
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, start, listen, or_
 from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
 from pydantic import BaseModel
 
 
 class ContentState(BaseModel):
-    topic: str = ""
     draft: str = ""
-    final_content: str = ""
     revision_count: int = 0
+    status: str = "pending"
 
 
 class ContentApprovalFlow(Flow[ContentState]):
-    """Um flow que gera conteúdo e obtém aprovação humana."""
+    """Um flow que gera conteúdo e faz loop até o humano aprovar."""
 
     @start()
-    def get_topic(self):
-        self.state.topic = input("Sobre qual tópico devo escrever? ")
-        return self.state.topic
-
-    @listen(get_topic)
-    def generate_draft(self, topic):
-        # Em uso real, isso chamaria um LLM
-        self.state.draft = f"# {topic}\n\nEste é um rascunho sobre {topic}..."
+    def generate_draft(self):
+        self.state.draft = "# IA Segura\n\nEste é um rascunho sobre IA Segura..."
         return self.state.draft
 
-    @listen(generate_draft)
     @human_feedback(
-        message="Por favor, revise este rascunho. Responda 'approved', 'rejected', ou forneça feedback de revisão:",
+        message="Por favor, revise este rascunho. Aprove, rejeite ou descreva o que precisa mudar:",
         emit=["approved", "rejected", "needs_revision"],
         llm="gpt-4o-mini",
         default_outcome="needs_revision",
     )
-    def review_draft(self, draft):
-        return draft
+    @listen(or_("generate_draft", "needs_revision"))
+    def review_draft(self):
+        self.state.revision_count += 1
+        return f"{self.state.draft} (v{self.state.revision_count})"
 
     @listen("approved")
     def publish_content(self, result: HumanFeedbackResult):
-        self.state.final_content = result.output
-        print("\n✅ Conteúdo aprovado e publicado!")
-        print(f"Comentário do revisor: {result.feedback}")
+        self.state.status = "published"
+        print(f"Conteúdo aprovado e publicado! Revisor disse: {result.feedback}")
         return "published"
 
     @listen("rejected")
     def handle_rejection(self, result: HumanFeedbackResult):
-        print("\n❌ Conteúdo rejeitado")
-        print(f"Motivo: {result.feedback}")
+        self.state.status = "rejected"
+        print(f"Conteúdo rejeitado. Motivo: {result.feedback}")
         return "rejected"
 
-    @listen("needs_revision")
-    def revise_content(self, result: HumanFeedbackResult):
-        self.state.revision_count += 1
-        print(f"\n📝 Revisão #{self.state.revision_count} solicitada")
-        print(f"Feedback: {result.feedback}")
 
-        # Em um flow real, você pode voltar para generate_draft
-        # Para este exemplo, apenas reconhecemos
-        return "revision_requested"
-
-
-# Executar o flow
 flow = ContentApprovalFlow()
 result = flow.kickoff()
-print(f"\nFlow concluído. Revisões solicitadas: {flow.state.revision_count}")
+print(f"\nFlow finalizado. Status: {flow.state.status}, Revisões: {flow.state.revision_count}")
 ```
 
 ```text Output
-Sobre qual tópico devo escrever? Segurança em IA
+==================================================
+OUTPUT FOR REVIEW:
+==================================================
+# IA Segura
+
+Este é um rascunho sobre IA Segura... (v1)
+==================================================
+
+Por favor, revise este rascunho. Aprove, rejeite ou descreva o que precisa mudar:
+(Press Enter to skip, or type your feedback)
+
+Your feedback: Preciso de mais detalhes sobre segurança em IA.
 
 ==================================================
 OUTPUT FOR REVIEW:
 ==================================================
-# Segurança em IA
+# IA Segura
 
-Este é um rascunho sobre Segurança em IA...
+Este é um rascunho sobre IA Segura... (v2)
 ==================================================
 
-Por favor, revise este rascunho. Responda 'approved', 'rejected', ou forneça feedback de revisão:
+Por favor, revise este rascunho. Aprove, rejeite ou descreva o que precisa mudar:
 (Press Enter to skip, or type your feedback)
 
 Your feedback: Parece bom, aprovado!
 
-✅ Conteúdo aprovado e publicado!
-Comentário do revisor: Parece bom, aprovado!
+Conteúdo aprovado e publicado! Revisor disse: Parece bom, aprovado!
 
-Flow concluído. Revisões solicitadas: 0
+Flow finalizado. Status: published, Revisões: 2
 ```
 
 </CodeGroup>
 
 ## Combinando com Outros Decoradores
 
-O decorador `@human_feedback` funciona com outros decoradores de flow. Coloque-o como o decorador mais interno (mais próximo da função):
+O decorador `@human_feedback` funciona com `@start()`, `@listen()` e `or_()`. Ambas as ordens de decoradores funcionam — o framework propaga atributos em ambas as direções — mas os padrões recomendados são:
 
 ```python Code
-# Correto: @human_feedback é o mais interno (mais próximo da função)
+# Revisão única no início do flow (sem self-loop)
 @start()
-@human_feedback(message="Revise isto:")
+@human_feedback(message="Revise isto:", emit=["approved", "rejected"], llm="gpt-4o-mini")
 def my_start_method(self):
     return "content"
 
+# Revisão linear em um listener (sem self-loop)
 @listen(other_method)
-@human_feedback(message="Revise isto também:")
+@human_feedback(message="Revise isto também:", emit=["good", "bad"], llm="gpt-4o-mini")
 def my_listener(self, data):
     return f"processed: {data}"
+
+# Self-loop: revisão que pode voltar para revisões
+@human_feedback(message="Aprovar ou revisar?", emit=["approved", "revise"], llm="gpt-4o-mini")
+@listen(or_("upstream_method", "revise"))
+def review_with_loop(self):
+    return "content for review"
 ```
 
-<Tip>
-Coloque `@human_feedback` como o decorador mais interno (último/mais próximo da função) para que ele envolva o método diretamente e possa capturar o valor de retorno antes de passar para o sistema de flow.
-</Tip>
+### Padrão de self-loop
+
+Para criar um loop de revisão, o método de revisão deve escutar **ambos** um gatilho upstream e seu próprio outcome de revisão usando `or_()`:
+
+```python Code
+@start()
+def generate(self):
+    return "initial draft"
+
+@human_feedback(
+    message="Aprovar ou solicitar alterações?",
+    emit=["revise", "approved"],
+    llm="gpt-4o-mini",
+    default_outcome="approved",
+)
+@listen(or_("generate", "revise"))
+def review(self):
+    return "content"
+
+@listen("approved")
+def publish(self):
+    return "published"
+```
+
+Quando o outcome é `"revise"`, o flow roteia de volta para `review` (porque ele escuta `"revise"` via `or_()`). Quando o outcome é `"approved"`, o flow continua para `publish`. Isso funciona porque o engine de flow isenta roteadores da regra "fire once", permitindo que eles re-executem em cada iteração do loop.
+
+### Roteadores encadeados
+
+Um listener disparado pelo outcome de um roteador pode ser ele mesmo um roteador:
+
+```python Code
+@start()
+@human_feedback(message="Primeira revisão:", emit=["approved", "rejected"], llm="gpt-4o-mini")
+def draft(self):
+    return "draft content"
+
+@listen("approved")
+@human_feedback(message="Revisão final:", emit=["publish", "revise"], llm="gpt-4o-mini")
+def final_review(self, prev):
+    return "final content"
+
+@listen("publish")
+def on_publish(self, prev):
+    return "published"
+```
+
+### Limitações
+
+- **Métodos `@start()` executam uma vez**: Um método `@start()` não pode fazer self-loop. Se você precisa de um ciclo de revisão, use um método `@start()` separado como ponto de entrada e coloque o `@human_feedback` em um método `@listen()`.
+- **Sem `@start()` + `@listen()` no mesmo método**: Esta é uma restrição do framework de Flow. Um método é ou um ponto de início ou um listener, não ambos.
 
 ## Melhores Práticas
 
@@ -514,9 +572,9 @@ class ContentPipeline(Flow):
     @start()
     @human_feedback(
         message="Aprova este conteúdo para publicação?",
-        emit=["approved", "rejected", "needs_revision"],
+        emit=["approved", "rejected"],
         llm="gpt-4o-mini",
-        default_outcome="needs_revision",
+        default_outcome="rejected",
         provider=SlackNotificationProvider("#content-reviews"),
     )
     def generate_content(self):
@@ -531,11 +589,6 @@ class ContentPipeline(Flow):
     def archive(self, result):
         print(f"Arquivado. Motivo: {result.feedback}")
         return {"status": "archived"}
-
-    @listen("needs_revision")
-    def queue_revision(self, result):
-        print(f"Na fila para revisão: {result.feedback}")
-        return {"status": "revision_needed"}
 
 
 # Iniciando o flow (vai pausar e aguardar resposta do Slack)
@@ -576,6 +629,64 @@ Se você está usando um framework web assíncrono (FastAPI, aiohttp, Slack Bolt
 5. **Persistência automática**: O estado é automaticamente salvo quando `HumanFeedbackPending` é lançado e usa `SQLiteFlowPersistence` por padrão
 6. **Persistência customizada**: Passe uma instância de persistência customizada para `from_pending()` se necessário
 
+## Aprendendo com Feedback
+
+O parâmetro `learn=True` habilita um ciclo de feedback entre revisores humanos e o sistema de memória. Quando habilitado, o sistema melhora progressivamente suas saídas aprendendo com correções humanas anteriores.
+
+### Como Funciona
+
+1. **Após o feedback**: O LLM extrai lições generalizáveis da saída + feedback e as armazena na memória com `source="hitl"`. Se o feedback for apenas aprovação (ex: "parece bom"), nada é armazenado.
+2. **Antes da próxima revisão**: Lições HITL passadas são recuperadas da memória e aplicadas pelo LLM para melhorar a saída antes que o humano a veja.
+
+Com o tempo, o humano vê saídas pré-revisadas progressivamente melhores porque cada correção informa revisões futuras.
+
+### Exemplo
+
+```python Code
+class ArticleReviewFlow(Flow):
+    @start()
+    def generate_article(self):
+        return self.crew.kickoff(inputs={"topic": "AI Safety"}).raw
+
+    @human_feedback(
+        message="Revise este rascunho do artigo:",
+        emit=["approved", "needs_revision"],
+        llm="gpt-4o-mini",
+        learn=True,  # enable HITL learning
+    )
+    @listen(or_("generate_article", "needs_revision"))
+    def review_article(self):
+        return self.last_human_feedback.output if self.last_human_feedback else "article draft"
+
+    @listen("approved")
+    def publish(self):
+        print(f"Publishing: {self.last_human_feedback.output}")
+```
+
+**Primeira execução**: O humano vê a saída bruta e diz "Sempre inclua citações para afirmações factuais." A lição é destilada e armazenada na memória.
+
+**Segunda execução**: O sistema recupera a lição sobre citações, pré-revisa a saída para adicionar citações e então mostra a versão melhorada. O trabalho do humano muda de "corrigir tudo" para "identificar o que o sistema deixou passar."
+
+### Configuração
+
+| Parâmetro | Padrão | Descrição |
+|-----------|--------|-----------|
+| `learn` | `False` | Habilitar aprendizado HITL |
+| `learn_limit` | `5` | Máximo de lições passadas para recuperar na pré-revisão |
+
+### Decisões de Design Principais
+
+- **Mesmo LLM para tudo**: O parâmetro `llm` no decorador é compartilhado pelo mapeamento de outcome, destilação de lições e pré-revisão. Não é necessário configurar múltiplos modelos.
+- **Saída estruturada**: Tanto a destilação quanto a pré-revisão usam function calling com modelos Pydantic quando o LLM suporta, com fallback para parsing de texto caso contrário.
+- **Armazenamento não-bloqueante**: Lições são armazenadas via `remember_many()` que executa em uma thread em segundo plano -- o flow continua imediatamente.
+- **Degradação graciosa**: Se o LLM falhar durante a destilação, nada é armazenado. Se falhar durante a pré-revisão, a saída bruta é mostrada. Nenhuma falha bloqueia o flow.
+- **Sem escopo/categorias necessários**: Ao armazenar lições, apenas `source` é passado. O pipeline de codificação infere escopo, categorias e importância automaticamente.
+
+<Note>
+`learn=True` requer que o Flow tenha memória disponível. Flows obtêm memória automaticamente por padrão, mas se você a desabilitou com `_skip_auto_memory`, o aprendizado HITL será silenciosamente ignorado.
+</Note>
+
+
 ## Documentação Relacionada
 
 - [Visão Geral de Flows](/pt-BR/concepts/flows) - Aprenda sobre CrewAI Flows
@@ -583,3 +694,4 @@ Se você está usando um framework web assíncrono (FastAPI, aiohttp, Slack Bolt
 - [Persistência de Flows](/pt-BR/concepts/flows#persistence) - Persistindo estado de flows
 - [Roteamento com @router](/pt-BR/concepts/flows#router) - Mais sobre roteamento condicional
 - [Input Humano na Execução](/pt-BR/learn/human-input-on-execution) - Input humano no nível de task
+- [Memória](/pt-BR/concepts/memory) - O sistema unificado de memória usado pelo aprendizado HITL
