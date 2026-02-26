@@ -106,6 +106,15 @@ There are different places in CrewAI code where you can specify the model to use
   </Tab>
 </Tabs>
 
+<Info>
+  CrewAI provides native SDK integrations for OpenAI, Anthropic, Google (Gemini API), Azure, and AWS Bedrock — no extra install needed beyond the provider-specific extras (e.g. `uv add "crewai[openai]"`).
+
+  All other providers are powered by **LiteLLM**. If you plan to use any of them, add it as a dependency to your project:
+  ```bash
+  uv add 'crewai[litellm]'
+  ```
+</Info>
+
 ## Provider Configuration Examples
 
 CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities.
@@ -275,6 +284,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | Text, Image | Text |
     | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | Text | Text |
     | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | Text | Text |
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Anthropic">
@@ -571,6 +585,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
     | gemini-1.5-flash-8B            | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
     | gemini-1.5-pro                 | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Azure">
@@ -766,6 +785,11 @@ In this section, you'll find detailed examples that help you select, configure, 
         model="sagemaker/<my-endpoint>"
     )
     ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Mistral">
@@ -780,6 +804,11 @@ In this section, you'll find detailed examples that help you select, configure, 
         model="mistral/mistral-large-latest",
         temperature=0.7
     )
+    ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
     ```
   </Accordion>
 
@@ -867,6 +896,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     | rakuten/rakutenai-7b-instruct                                     | 1,024 tokens   | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
     | rakuten/rakutenai-7b-chat                                         | 1,024 tokens   | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
     | baichuan-inc/baichuan2-13b-chat                                  | 4,096 tokens   | Support Chinese and English chat, coding, math, instruction following, solving quizzes |
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
@@ -907,6 +941,11 @@ In this section, you'll find detailed examples that help you select, configure, 
 
         # ...
     ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Groq">
@@ -928,6 +967,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     | Llama 3.1 70B/8B  | 131,072 tokens   | High-performance, large context tasks      |
     | Llama 3.2 Series  | 8,192 tokens     | General-purpose tasks                      |
     | Mixtral 8x7B      | 32,768 tokens    | Balanced performance and context           |
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="IBM watsonx.ai">
@@ -950,6 +994,11 @@ In this section, you'll find detailed examples that help you select, configure, 
         base_url="https://api.watsonx.ai/v1"
     )
     ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Ollama (Local LLMs)">
@@ -962,6 +1011,11 @@ In this section, you'll find detailed examples that help you select, configure, 
         model="ollama/llama3:70b",
         base_url="http://localhost:11434"
     )
+    ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
     ```
   </Accordion>
 
@@ -978,6 +1032,11 @@ In this section, you'll find detailed examples that help you select, configure, 
         temperature=0.7
     )
     ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Perplexity AI">
@@ -993,6 +1052,11 @@ In this section, you'll find detailed examples that help you select, configure, 
         base_url="https://api.perplexity.ai/"
     )
     ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Hugging Face">
@@ -1006,6 +1070,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     llm = LLM(
         model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
     )
+    ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
     ```
   </Accordion>
 
@@ -1030,6 +1099,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     | Llama 3.2 Series   | 8,192 tokens           | General-purpose, multimodal tasks            |
     | Llama 3.3 70B      | Up to 131,072 tokens   | High-performance and output quality          |
     | Qwen2 familly      | 8,192 tokens           | High-performance and output quality          |
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Cerebras">
@@ -1055,6 +1129,11 @@ In this section, you'll find detailed examples that help you select, configure, 
       - Good balance of speed and quality
       - Support for long context windows
     </Info>
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Open Router">
@@ -1077,6 +1156,11 @@ In this section, you'll find detailed examples that help you select, configure, 
       - openrouter/deepseek/deepseek-r1
       - openrouter/deepseek/deepseek-chat
     </Info>
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Nebius AI Studio">
@@ -1099,6 +1183,11 @@ In this section, you'll find detailed examples that help you select, configure, 
       - Competitive pricing
       - Good balance of speed and quality
     </Info>
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 </AccordionGroup>
 
