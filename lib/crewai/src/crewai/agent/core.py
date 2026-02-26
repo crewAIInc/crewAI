@@ -334,6 +334,15 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        # Ensure MCP tools are resolved for delegated agents that haven't
+        # gone through the full kickoff preparation path.
+        if self.mcps and self._mcp_resolver is None:
+            mcp_tools = self.get_mcp_tools(self.mcps)
+            if mcp_tools:
+                if self.tools is None:
+                    self.tools = []
+                self.tools.extend(mcp_tools)
+
         handle_reasoning(self, task)
         self._inject_date_to_task(task)
 
