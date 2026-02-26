@@ -290,13 +290,20 @@ class MemoryTUI(App[None]):
         if self._memory is None:
             panel.update(self._init_error or "No memory loaded.")
             return
+        display_limit = 1000
         info = self._memory.info(path)
         self._last_scope_info = info
-        self._entries = self._memory.list_records(scope=path, limit=200)
+        self._entries = self._memory.list_records(scope=path, limit=display_limit)
         panel.update(_format_scope_info(info))
         panel.border_title = "Detail"
         entry_list = self.query_one("#entry-list", OptionList)
-        entry_list.border_title = f"Entries ({len(self._entries)})"
+        capped = info.record_count > display_limit
+        count_label = (
+            f"Entries (showing {display_limit} of {info.record_count} — display limit)"
+            if capped
+            else f"Entries ({len(self._entries)})"
+        )
+        entry_list.border_title = count_label
         self._populate_entry_list()
 
     def on_option_list_option_highlighted(
@@ -376,6 +383,11 @@ class MemoryTUI(App[None]):
                 return
 
             info_lines: list[str] = []
+            info_lines.append(
+                "[dim italic]Searched the full dataset"
+                + (f" within [bold]{scope}[/]" if scope else "")
+                + " using the recall flow (semantic + recency + importance).[/]\n"
+            )
             if not self._custom_embedder:
                 info_lines.append(
                     "[dim italic]Note: Using default OpenAI embedder. "
