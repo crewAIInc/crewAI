@@ -200,7 +200,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self._has_been_invoked: bool = False
         self._flow_initialized: bool = False
 
-        self._instance_id = str(uuid4())[:8]
+        # Keep full UUID entropy for collision resistance across concurrent runs.
+        self._instance_id = str(uuid4())
 
         self.before_llm_call_hooks: list[
             BeforeLLMCallHookType | BeforeLLMCallHookCallable
