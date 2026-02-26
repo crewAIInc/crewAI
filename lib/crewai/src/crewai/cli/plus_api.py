@@ -190,6 +190,15 @@ class PlusAPI:
             timeout=30,
         )
 
+    def get_mcp_configs(self, slugs: list[str]) -> httpx.Response:
+        """Get MCP server configurations for the given slugs."""
+        return self._make_request(
+            "GET",
+            f"{self.INTEGRATIONS_RESOURCE}/mcp_configs",
+            params={"slugs": ",".join(slugs)},
+            timeout=30,
+        )
+
     def get_triggers(self) -> httpx.Response:
         """Get all available triggers from integrations."""
         return self._make_request("GET", f"{self.INTEGRATIONS_RESOURCE}/apps")
