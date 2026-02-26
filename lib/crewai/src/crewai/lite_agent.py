@@ -599,8 +599,8 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
 
     def _save_to_memory(self, output_text: str) -> None:
-        """Extract discrete memories from the run and remember each. No-op if _memory is None."""
-        if self._memory is None:
+        """Extract discrete memories from the run and remember each. No-op if _memory is None or read-only."""
+        if self._memory is None or getattr(self._memory, "_read_only", False):
             return
         input_str = self._get_last_user_content() or "User request"
         try:

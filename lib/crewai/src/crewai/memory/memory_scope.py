@@ -145,7 +145,7 @@ class MemoryScope:
 
 
 class MemorySlice:
-    """View over multiple scopes: recall searches all, remember requires explicit scope unless read_only."""
+    """View over multiple scopes: recall searches all, remember is a no-op when read_only."""
 
     def __init__(
         self,
@@ -160,7 +160,7 @@ class MemorySlice:
             memory: The underlying Memory instance.
             scopes: List of scope paths to include.
             categories: Optional category filter for recall.
-            read_only: If True, remember() raises PermissionError.
+            read_only: If True, remember() is a silent no-op.
         """
         self._memory = memory
         self._scopes = [s.rstrip("/") or "/" for s in scopes]
@@ -176,10 +176,10 @@ class MemorySlice:
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
-    ) -> MemoryRecord:
-        """Remember into an explicit scope. Required when read_only=False."""
+    ) -> MemoryRecord | None:
+        """Remember into an explicit scope. No-op when read_only=True."""
         if self._read_only:
-            raise PermissionError("This MemorySlice is read-only")
+            return None
         return self._memory.remember(
             content,
             scope=scope,
