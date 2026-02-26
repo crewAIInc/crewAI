@@ -99,7 +99,7 @@ class MemoryMatch(BaseModel):
             lines.append(f"  categories: {', '.join(self.record.categories)}")
         if self.record.metadata:
             for key, value in self.record.metadata.items():
-                if value:
+                if value is not None:
                     lines.append(f"  {key}: {value}")
         return "\n".join(lines)
 
@@ -307,7 +307,7 @@ def embed_text(embedder: Any, text: str) -> list[float]:
         return []
     first = result[0]
     if hasattr(first, "tolist"):
-        return first.tolist()
+        return list(first.tolist())
     if isinstance(first, list):
         return [float(x) for x in first]
     return list(first)
