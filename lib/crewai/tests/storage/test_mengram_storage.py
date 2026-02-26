@@ -279,6 +279,14 @@ class TestMengramMemoryRecall:
         matches = mem.recall("test", depth="deep", limit=2)
         assert len(matches) <= 2
 
+    def test_deep_passes_limit_to_api(self) -> None:
+        """Caller's limit should be forwarded to search_all, not just config default."""
+        mem, client = _make_memory()
+        client.search_all.return_value = {"semantic": [], "episodic": [], "procedural": []}
+        mem.recall("test", depth="deep", limit=50)
+        call_kwargs = client.search_all.call_args.kwargs
+        assert call_kwargs["limit"] >= 50
+
     def test_empty_results(self) -> None:
         mem, client = _make_memory()
         client.search_all.return_value = {"semantic": [], "episodic": [], "procedural": []}

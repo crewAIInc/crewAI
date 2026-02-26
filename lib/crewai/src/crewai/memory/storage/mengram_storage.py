@@ -597,10 +597,13 @@ class MengramMemory:
         return [_semantic_to_match(r) for r in results[:limit]]
 
     def _recall_deep(self, query: str, limit: int) -> list[MemoryMatch]:
+        # Request enough results per type so we can fill the caller's limit
+        # after merging and sorting across all memory types.
+        per_type = max(limit, self.config.search_limit)
         result = self._client.search_all(
             query=query,
             user_id=self.config.user_id,
-            limit=self.config.search_limit,
+            limit=per_type,
             graph_depth=self.config.graph_depth,
         )
 
