@@ -163,7 +163,7 @@ class BaseTool(BaseModel, ABC):
         Raises:
             ValueError: If validation against args_schema fails.
         """
-        if kwargs and self.args_schema is not None and self.args_schema.model_fields:
+        if self.args_schema is not None and self.args_schema.model_fields:
             try:
                 validated = self.args_schema.model_validate(kwargs)
                 return validated.model_dump()
@@ -178,7 +178,8 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        kwargs = self._validate_kwargs(kwargs)
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)
 
         result = self._run(*args, **kwargs)
 
@@ -203,7 +204,8 @@ class BaseTool(BaseModel, ABC):
         Returns:
             The result of the tool execution.
         """
-        kwargs = self._validate_kwargs(kwargs)
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)
         result = await self._arun(*args, **kwargs)
         self.current_usage_count += 1
         return result
@@ -356,7 +358,8 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
-        kwargs = self._validate_kwargs(kwargs)
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)
 
         result = self.func(*args, **kwargs)
 
@@ -388,7 +391,8 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
-        kwargs = self._validate_kwargs(kwargs)
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)
         result = await self._arun(*args, **kwargs)
         self.current_usage_count += 1
         return result
