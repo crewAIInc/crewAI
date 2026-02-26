@@ -27,14 +27,16 @@ class MCPNativeTool(BaseTool):
         tool_name: str,
         tool_schema: dict[str, Any],
         server_name: str,
+        original_tool_name: str | None = None,
     ) -> None:
         """Initialize native MCP tool.
 
         Args:
             mcp_client: MCPClient instance with active session.
-            tool_name: Original name of the tool on the MCP server.
+            tool_name: Name of the tool (may be prefixed).
             tool_schema: Schema information for the tool.
             server_name: Name of the MCP server for prefixing.
+            original_tool_name: Original name of the tool on the MCP server.
         """
         # Create tool name with server prefix to avoid conflicts
         prefixed_name = f"{server_name}_{tool_name}"
@@ -57,7 +59,7 @@ class MCPNativeTool(BaseTool):
 
         # Set instance attributes after super().__init__
         self._mcp_client = mcp_client
-        self._original_tool_name = tool_name
+        self._original_tool_name = original_tool_name or tool_name
         self._server_name = server_name
         # self._logger = logging.getLogger(__name__)
 
