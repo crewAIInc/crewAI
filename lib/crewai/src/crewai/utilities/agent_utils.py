@@ -168,7 +168,9 @@ def convert_tools_to_openai_schema(
         parameters: dict[str, Any] = {}
         if hasattr(tool, "args_schema") and tool.args_schema is not None:
             try:
-                schema_output = generate_model_description(tool.args_schema)
+                schema_output = generate_model_description(
+                    tool.args_schema, strip_null_types=False
+                )
                 parameters = schema_output.get("json_schema", {}).get("schema", {})
                 # Remove title and description from schema root as they're redundant
                 parameters.pop("title", None)
