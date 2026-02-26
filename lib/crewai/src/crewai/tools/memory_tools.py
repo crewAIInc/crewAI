@@ -57,7 +57,7 @@ class RecallMemoryTool(BaseTool):
 
         if not all_lines:
             return "No relevant memories found."
-        return "Found memories:\n" + "\n".join(all_lines)
+        return "Found memories:\n" + "\n\n".join(all_lines)
 
 
 class RememberSchema(BaseModel):

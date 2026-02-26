@@ -384,9 +384,9 @@ class Agent(BaseAgent):
                 )
                 if unified_memory is not None:
                     query = task.description
-                    matches = unified_memory.recall(query, limit=5)
+                    matches = unified_memory.recall(query, limit=10)
                     if matches:
-                        memory = "Relevant memories:\n" + "\n".join(
+                        memory = "Relevant memories:\n" + "\n\n".join(
                             m.format() for m in matches
                         )
                 if memory.strip() != "":
@@ -1811,10 +1811,10 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=5)
+                matches = agent_memory.recall(formatted_messages, limit=10)
                 memory_block = ""
                 if matches:
-                    memory_block = "Relevant memories:\n" + "\n".join(
+                    memory_block = "Relevant memories:\n" + "\n\n".join(
                         m.format() for m in matches
                     )
                 if memory_block:

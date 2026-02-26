@@ -100,7 +100,11 @@ class MemoryMatch(BaseModel):
         if self.record.metadata:
             for key, value in self.record.metadata.items():
                 if value:
-                    lines.append(f"  {key}: {value}")
+                    if isinstance(value, list):
+                        rendered_value = ", ".join(str(item) for item in value)
+                    else:
+                        rendered_value = str(value)
+                    lines.append(f"  {key}: {rendered_value}")
         return "\n".join(lines)
 
 
