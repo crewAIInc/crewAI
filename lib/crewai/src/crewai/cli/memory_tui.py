@@ -290,16 +290,16 @@ class MemoryTUI(App[None]):
         if self._memory is None:
             panel.update(self._init_error or "No memory loaded.")
             return
-        _DISPLAY_LIMIT = 1000
+        display_limit = 1000
         info = self._memory.info(path)
         self._last_scope_info = info
-        self._entries = self._memory.list_records(scope=path, limit=_DISPLAY_LIMIT)
+        self._entries = self._memory.list_records(scope=path, limit=display_limit)
         panel.update(_format_scope_info(info))
         panel.border_title = "Detail"
         entry_list = self.query_one("#entry-list", OptionList)
-        capped = info.record_count > _DISPLAY_LIMIT
+        capped = info.record_count > display_limit
         count_label = (
-            f"Entries (showing {_DISPLAY_LIMIT} of {info.record_count} — display limit)"
+            f"Entries (showing {display_limit} of {info.record_count} — display limit)"
             if capped
             else f"Entries ({len(self._entries)})"
         )

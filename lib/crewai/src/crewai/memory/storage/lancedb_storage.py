@@ -93,7 +93,7 @@ class LanceDBStorage:
             soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
             if soft < 4096:
                 resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, 4096), hard))
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # Windows or already at the max hard limit — safe to ignore
 
         self._compact_every = compact_every
@@ -217,7 +217,7 @@ class LanceDBStorage:
             return
         try:
             self._table.create_scalar_index("scope", index_type="BTREE", replace=False)
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # index already exists, table empty, or unsupported version
 
     # ------------------------------------------------------------------
