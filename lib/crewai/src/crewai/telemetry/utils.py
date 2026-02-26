@@ -80,6 +80,7 @@ def add_task_attributes(
     """
     add_attribute_fn(span, "task_key", task.key)
     add_attribute_fn(span, "task_id", str(task.id))
+    add_attribute_fn(span, "task_run_id", task.run_id)
 
     if include_fingerprint and hasattr(task, "fingerprint") and task.fingerprint:
         add_attribute_fn(span, "task_fingerprint", task.fingerprint.uuid_str)
