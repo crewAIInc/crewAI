@@ -218,14 +218,15 @@ def test_memory_slice_recall(tmp_path: Path, mock_embedder: MagicMock) -> None:
     assert isinstance(matches, list)
 
 
-def test_memory_slice_remember_raises_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
+def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
     from crewai.memory.memory_scope import MemorySlice
 
     mem = Memory(storage=str(tmp_path / "db7"), llm=MagicMock(), embedder=mock_embedder)
     sl = MemorySlice(mem, ["/a"], read_only=True)
-    with pytest.raises(PermissionError):
-        sl.remember("x", scope="/a")
+    result = sl.remember("x", scope="/a")
+    assert result is None
+    assert mem.list_records() == []
 
 
 # --- Flow memory ---

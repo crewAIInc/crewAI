@@ -104,20 +104,28 @@ class RememberTool(BaseTool):
 def create_memory_tools(memory: Any) -> list[BaseTool]:
     """Create Recall and Remember tools for the given memory instance.
 
+    When memory is read-only (``_read_only=True``), only the RecallMemoryTool
+    is returned — the RememberTool is omitted so agents are never offered a
+    save capability they cannot use.
+
     Args:
         memory: A Memory, MemoryScope, or MemorySlice instance.
 
     Returns:
-        List containing a RecallMemoryTool and a RememberTool.
+        List containing a RecallMemoryTool and, if not read-only, a RememberTool.
     """
     i18n = get_i18n()
-    return [
+    tools: list[BaseTool] = [
         RecallMemoryTool(
             memory=memory,
             description=i18n.tools("recall_memory"),
         ),
-        RememberTool(
-            memory=memory,
-            description=i18n.tools("save_to_memory"),
-        ),
     ]
+    if not getattr(memory, "_read_only", False):
+        tools.append(
+            RememberTool(
+                memory=memory,
+                description=i18n.tools("save_to_memory"),
+            )
+        )
+    return tools

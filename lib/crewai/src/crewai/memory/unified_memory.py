@@ -88,6 +88,10 @@ class Memory:
         # Queries shorter than this skip LLM analysis (saving ~1-3s).
         # Longer queries (full task descriptions) benefit from LLM distillation.
         query_analysis_threshold: int = 200,
+        # When True, all write operations (remember, remember_many) are silently
+        # skipped. Useful for sharing a read-only view of memory across agents
+        # without any of them persisting new memories.
+        read_only: bool = False,
     ) -> None:
         """Initialize Memory.
 
@@ -107,7 +111,9 @@ class Memory:
             complex_query_threshold: For complex queries, explore deeper below this confidence.
             exploration_budget: Number of LLM-driven exploration rounds during deep recall.
             query_analysis_threshold: Queries shorter than this skip LLM analysis during deep recall.
+            read_only: If True, remember() and remember_many() are silent no-ops.
         """
+        self._read_only = read_only
         self._config = MemoryConfig(
             recency_weight=recency_weight,
             semantic_weight=semantic_weight,
@@ -335,11 +341,13 @@ class Memory:
             agent_role: Optional agent role for event metadata.
 
         Returns:
-            The created MemoryRecord.
+            The created MemoryRecord, or None if this memory is read-only.
 
         Raises:
             Exception: On save failure (events emitted).
         """
+        if self._read_only:
+            return None  # type: ignore[return-value]
         _source_type = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -420,7 +428,7 @@ class Memory:
         Returns:
             Empty list (records are not available until the background save completes).
         """
-        if not contents:
+        if not contents or self._read_only:
             return []
 
         self._submit_save(
