@@ -631,6 +631,30 @@ class AnthropicCompletion(BaseLLM):
             # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
+        # Strip trailing whitespace from final assistant message (Anthropic requirement)
+        if formatted_messages and formatted_messages[-1].get("role") == "assistant":
+            content = formatted_messages[-1].get("content")
+            if isinstance(content, str):
+                formatted_messages[-1]["content"] = content.rstrip()
+            elif isinstance(content, list):
+                for i in range(len(content) - 1, -1, -1):
+                    block = content[i]
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text = block.get("text", "")
+                        if isinstance(text, str):
+                            content[i]["text"] = text.rstrip()
+                        break
+
+        # Filter out user messages with empty content (Anthropic requirement)
+        formatted_messages = [
+            msg for msg in formatted_messages
+            if not (
+                msg.get("role") == "user"
+                and isinstance(msg.get("content"), str)
+                and not msg["content"].strip()
+            )
+        ]
+
         return formatted_messages, system_message
 
     def _handle_completion(
