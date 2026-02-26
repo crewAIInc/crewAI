@@ -2353,3 +2353,103 @@ def test_agent_without_apps_no_platform_tools():
 
     tools = crew._prepare_tools(agent, task, [])
     assert tools == []
+
+
+def test_execute_task_loads_mcp_tools_for_sub_agent():
+    """Test that MCP tools are prepared when execute_task is called directly.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4571
+    When a main_agent delegates to a sub_agent that has MCP tools, the
+    sub_agent's execute_task is called directly (not through kickoff or
+    crew._prepare_tools). This test verifies that MCP tools are loaded
+    in that code path.
+    """
+    from crewai.tools.base_tool import BaseTool
+
+    class FakeMCPTool(BaseTool):
+        name: str = "fake_mcp_search"
+        description: str = "A fake MCP tool for testing"
+
+        def _run(self, query: str) -> str:
+            return "fake result"
+
+    fake_tool = FakeMCPTool()
+
+    sub_agent = Agent(
+        role="Sub Agent",
+        goal="Help with tasks",
+        backstory="A helpful sub agent",
+        mcps=["https://example.com/mcp"],
+    )
+
+    # Verify MCP tools are not yet loaded
+    assert not sub_agent._mcps_prepared
+
+    # Patch get_mcp_tools at the CLASS level (Pydantic models require this)
+    with patch.object(Agent, "get_mcp_tools", return_value=[fake_tool]) as mock_get:
+        with patch.object(Agent, "create_agent_executor"):
+            task = Task(
+                description="Test task",
+                agent=sub_agent,
+                expected_output="test output",
+            )
+            try:
+                sub_agent.execute_task(task)
+            except Exception:
+                # Will fail downstream (no real agent_executor), but MCP
+                # loading happens at the very start of execute_task.
+                pass
+
+        mock_get.assert_called_once_with(mcps=["https://example.com/mcp"])
+
+    # The key assertion: MCP tools should be in agent.tools now
+    assert sub_agent._mcps_prepared is True
+    assert fake_tool in sub_agent.tools
+
+
+def test_ensure_mcp_tools_loaded_is_idempotent():
+    """Test that _ensure_mcp_tools_loaded does not duplicate tools on repeat calls."""
+    from crewai.tools.base_tool import BaseTool
+
+    class FakeMCPTool(BaseTool):
+        name: str = "fake_mcp_tool"
+        description: str = "A fake tool"
+
+        def _run(self) -> str:
+            return "result"
+
+    fake_tool = FakeMCPTool()
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        mcps=["https://example.com/mcp"],
+    )
+
+    with patch.object(Agent, "get_mcp_tools", return_value=[fake_tool]):
+        agent._ensure_mcp_tools_loaded()
+
+    assert agent._mcps_prepared is True
+    assert len([t for t in agent.tools if t.name == "fake_mcp_tool"]) == 1
+
+    # Second call should be a no-op (flag is set so get_mcp_tools won't be called)
+    with patch.object(Agent, "get_mcp_tools") as mock_get:
+        agent._ensure_mcp_tools_loaded()
+        mock_get.assert_not_called()
+
+    # Tools count should not change
+    assert len([t for t in agent.tools if t.name == "fake_mcp_tool"]) == 1
+
+
+def test_ensure_mcp_tools_loaded_no_mcps():
+    """Test that _ensure_mcp_tools_loaded is a no-op when agent has no mcps."""
+    agent = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+    )
+
+    # Should not raise and should not set the flag
+    agent._ensure_mcp_tools_loaded()
+    assert agent._mcps_prepared is False

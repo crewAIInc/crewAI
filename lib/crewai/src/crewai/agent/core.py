@@ -155,6 +155,7 @@ class Agent(BaseAgent):
 
     _times_executed: int = PrivateAttr(default=0)
     _mcp_clients: list[Any] = PrivateAttr(default_factory=list)
+    _mcps_prepared: bool = PrivateAttr(default=False)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
@@ -354,6 +355,10 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        # Ensure MCP tools are loaded for this agent (needed when the agent
+        # receives delegated work without going through kickoff/crew._prepare_tools).
+        self._ensure_mcp_tools_loaded()
+
         handle_reasoning(self, task)
         self._inject_date_to_task(task)
 
@@ -592,6 +597,10 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        # Ensure MCP tools are loaded for this agent (needed when the agent
+        # receives delegated work without going through kickoff/crew._prepare_tools).
+        self._ensure_mcp_tools_loaded()
+
         handle_reasoning(self, task)
         self._inject_date_to_task(task)
 
@@ -959,6 +968,32 @@ class Agent(BaseAgent):
         # Store clients for cleanup
         self._mcp_clients.extend(clients)
         return all_tools
+
+    def _ensure_mcp_tools_loaded(self) -> None:
+        """Ensure MCP tools are loaded into the agent's tools list.
+
+        This is called at the start of execute_task/aexecute_task so that
+        sub-agents receiving delegated work get their MCP tools prepared
+        even though they never went through kickoff() or the crew's
+        _prepare_tools() path.
+
+        The method is idempotent: once MCP tools have been loaded
+        (tracked via ``_mcps_prepared``), subsequent calls are no-ops.
+        """
+        if not self.mcps or self._mcps_prepared:
+            return
+
+        mcp_tools = self.get_mcp_tools(mcps=self.mcps)
+        if mcp_tools:
+            if self.tools is None:
+                self.tools = []
+            existing_names = {
+                getattr(t, "name", None) for t in self.tools
+            }
+            for tool in mcp_tools:
+                if getattr(tool, "name", None) not in existing_names:
+                    self.tools.append(tool)
+        self._mcps_prepared = True
 
     def _cleanup_mcp_clients(self) -> None:
         """Cleanup MCP client connections after task execution."""
@@ -1709,6 +1744,7 @@ class Agent(BaseAgent):
             mcps = self.get_mcp_tools(self.mcps)
             if mcps and self.tools is not None:
                 self.tools.extend(mcps)
+            self._mcps_prepared = True
 
         # Prepare tools
         raw_tools: list[BaseTool] = self.tools or []
