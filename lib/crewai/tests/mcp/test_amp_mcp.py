@@ -166,10 +166,10 @@ class TestFetchAmpMCPConfigs:
     @patch("crewai.cli.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_returns_empty_on_network_error(self, mock_get_token, mock_plus_api_class, resolver):
-        import requests as req_lib
+        import httpx
 
         mock_plus_api = MagicMock()
-        mock_plus_api.get_mcp_configs.side_effect = req_lib.exceptions.ConnectionError("Connection refused")
+        mock_plus_api.get_mcp_configs.side_effect = httpx.ConnectError("Connection refused")
         mock_plus_api_class.return_value = mock_plus_api
 
         result = resolver._fetch_amp_mcp_configs(["notion"])
@@ -288,9 +288,10 @@ class TestGetMCPToolsAmpIntegration:
         mock_client.disconnect = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        agent.get_mcp_tools(["notion#search", "notion#create_page"])
+        tools = agent.get_mcp_tools(["notion#search", "notion#create_page"])
 
         mock_fetch.assert_called_once_with(["notion"])
+        assert len(tools) == 2
 
     @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
     def test_skips_missing_configs_gracefully(self, mock_fetch, agent):

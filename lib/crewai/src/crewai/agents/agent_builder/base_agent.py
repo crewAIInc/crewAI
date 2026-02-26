@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Literal
+import re
+from typing import Any, Final, Literal
 import uuid
 
 from pydantic import (
@@ -34,6 +35,11 @@ from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
+
+
+_SLUG_RE: Final[re.Pattern[str]] = re.compile(
+    r"^(?:crewai-amp:)?[a-zA-Z0-9][a-zA-Z0-9_-]*(?:#\w+)?$"
+)
 
 
 PlatformApp = Literal[
@@ -276,7 +282,16 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         validated_mcps: list[str | MCPServerConfig] = []
         for mcp in mcps:
             if isinstance(mcp, str):
-                validated_mcps.append(mcp)
+                if mcp.startswith("https://"):
+                    validated_mcps.append(mcp)
+                elif _SLUG_RE.match(mcp):
+                    validated_mcps.append(mcp)
+                else:
+                    raise ValueError(
+                        f"Invalid MCP reference: {mcp!r}. "
+                        "String references must be an 'https://' URL or a valid "
+                        "slug (e.g. 'notion', 'notion#search', 'crewai-amp:notion')."
+                    )
             elif isinstance(mcp, (MCPServerConfig)):
                 validated_mcps.append(mcp)
             else:

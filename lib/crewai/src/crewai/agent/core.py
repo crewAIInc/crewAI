@@ -916,6 +916,7 @@ class Agent(BaseAgent):
 
         Delegates to :class:`~crewai.mcp.tool_resolver.MCPToolResolver`.
         """
+        self._cleanup_mcp_clients()
         self._mcp_resolver = MCPToolResolver(agent=self, logger=self._logger)
         return self._mcp_resolver.resolve(mcps)
 

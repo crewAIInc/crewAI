@@ -70,7 +70,7 @@ class MCPToolResolver:
 
         for mcp_config in mcps:
             if isinstance(mcp_config, str) and mcp_config.startswith("https://"):
-                all_tools.extend(self._resolve_string(mcp_config))
+                all_tools.extend(self._resolve_external(mcp_config))
             elif isinstance(mcp_config, str):
                 amp_refs.append(self._parse_amp_ref(mcp_config))
             else:
@@ -103,7 +103,6 @@ class MCPToolResolver:
         finally:
             self._clients.clear()
 
-
     @staticmethod
     def _parse_amp_ref(mcp_config: str) -> tuple[str, str | None]:
         """Parse an AMP reference into *(slug, optional tool name)*.
@@ -118,7 +117,11 @@ class MCPToolResolver:
     def _resolve_amp(
         self, amp_refs: list[tuple[str, str | None]]
     ) -> tuple[list[BaseTool], list[Any]]:
-        """Fetch AMP configs in bulk and return their tools and clients."""
+        """Fetch AMP configs in bulk and return their tools and clients.
+
+        Resolves each unique slug only once (single connection per server),
+        then applies per-ref tool filters to select specific tools.
+        """
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.types.mcp_events import MCPConfigFetchFailedEvent
 
@@ -128,7 +131,9 @@ class MCPToolResolver:
         all_tools: list[BaseTool] = []
         all_clients: list[Any] = []
 
-        for slug, specific_tool in amp_refs:
+        resolved_cache: dict[str, tuple[list[BaseTool], Any | None]] = {}
+
+        for slug in unique_slugs:
             config_dict = amp_configs_map.get(slug)
             if not config_dict:
                 crewai_event_bus.emit(
@@ -143,16 +148,9 @@ class MCPToolResolver:
 
             mcp_server_config = self._build_mcp_config_from_dict(config_dict)
 
-            if specific_tool:
-                from crewai.mcp.filters import create_static_tool_filter
-
-                mcp_server_config.tool_filter = create_static_tool_filter(
-                    allowed_tool_names=[specific_tool]
-                )
-
             try:
                 tools, client = self._resolve_native(mcp_server_config)
-                all_tools.extend(tools)
+                resolved_cache[slug] = (tools, client)
                 if client:
                     all_clients.append(client)
             except Exception as e:
@@ -165,11 +163,22 @@ class MCPToolResolver:
                     ),
                 )
 
+        for slug, specific_tool in amp_refs:
+            cached = resolved_cache.get(slug)
+            if not cached:
+                continue
+
+            slug_tools, _ = cached
+            if specific_tool:
+                all_tools.extend(
+                    t for t in slug_tools if t.name.endswith(f"_{specific_tool}")
+                )
+            else:
+                all_tools.extend(slug_tools)
+
         return all_tools, all_clients
 
-    def _fetch_amp_mcp_configs(
-        self, slugs: list[str]
-    ) -> dict[str, dict[str, Any]]:
+    def _fetch_amp_mcp_configs(self, slugs: list[str]) -> dict[str, dict[str, Any]]:
         """Fetch MCP server configurations via CrewAI+ API.
 
         Sends a GET request to the CrewAI+ mcps/configs endpoint with
@@ -178,7 +187,7 @@ class MCPToolResolver:
         API-level failures return ``{}``; individual slugs will then
         surface as ``MCPConfigFetchFailedEvent`` in :meth:`_resolve_amp`.
         """
-        import requests
+        import httpx
 
         try:
             from crewai_tools.tools.crewai_platform_tools.misc import (
@@ -191,7 +200,8 @@ class MCPToolResolver:
             response = plus_api.get_mcp_configs(slugs)
 
             if response.status_code == 200:
-                return response.json().get("configs", {})
+                configs: dict[str, dict[str, Any]] = response.json().get("configs", {})
+                return configs
 
             self._logger.log(
                 "debug",
@@ -199,20 +209,12 @@ class MCPToolResolver:
             )
             return {}
 
-        except requests.exceptions.RequestException as e:
+        except httpx.HTTPError as e:
             self._logger.log("debug", f"Failed to fetch MCP configs: {e}")
             return {}
         except Exception as e:
-            self._logger.log(
-                "debug", f"Cannot fetch AMP MCP configs: {e}"
-            )
+            self._logger.log("debug", f"Cannot fetch AMP MCP configs: {e}")
             return {}
-
-    def _resolve_string(self, mcp_ref: str) -> list[BaseTool]:
-        """Resolve a plain string MCP reference (currently only HTTPS URLs)."""
-        if mcp_ref.startswith("https://"):
-            return self._resolve_external(mcp_ref)
-        return []
 
     def _resolve_external(self, mcp_ref: str) -> list[BaseTool]:
         """Resolve an HTTPS MCP server URL into tools."""
@@ -578,9 +580,7 @@ class MCPToolResolver:
                 return schemas
 
     @staticmethod
-    def _json_schema_to_pydantic(
-        tool_name: str, json_schema: dict[str, Any]
-    ) -> type:
+    def _json_schema_to_pydantic(tool_name: str, json_schema: dict[str, Any]) -> type:
         """Convert JSON Schema to a Pydantic model for tool arguments."""
         from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
