@@ -14,6 +14,38 @@ import typing_extensions as te
 logger = logging.getLogger(__name__)
 
 
+_JSON_TYPE_MAP: dict[str, type] = {
+    "string": str,
+    "integer": int,
+    "number": float,
+    "boolean": bool,
+}
+
+
+def _map_json_type(json_type: str, schema: dict[str, Any] | None = None) -> Any:
+    """Map a JSON schema type string to a Python type."""
+    if json_type in _JSON_TYPE_MAP:
+        return _JSON_TYPE_MAP[json_type]
+    if json_type == "array":
+        # Determine items type to avoid producing "items": {} (no type key)
+        # which OpenAI's strict schema validation rejects
+        if schema and "items" in schema:
+            items_type = schema["items"].get("type")
+            if items_type == "string":
+                return list[str]
+            if items_type == "integer":
+                return list[int]
+            if items_type == "number":
+                return list[float]
+            if items_type == "boolean":
+                return list[bool]
+        # Default to list[dict] — produces "items": {"type": "object"}
+        return list[dict[str, Any]]
+    if json_type == "object":
+        return dict[str, Any]
+    return Any
+
+
 class MergeAgentHandlerToolError(Exception):
     """Base exception for Merge Agent Handler tool errors."""
 
@@ -259,38 +291,17 @@ class MergeAgentHandlerTool(BaseTool):
                                                 if type_def.get("type") == "null":
                                                     is_nullable = True
                                                 elif "type" in type_def:
-                                                    # Use the non-null type
-                                                    json_type = type_def["type"]
-                                                    if json_type == "string":
-                                                        field_type = str
-                                                    elif json_type == "integer":
-                                                        field_type = int
-                                                    elif json_type == "number":
-                                                        field_type = float
-                                                    elif json_type == "boolean":
-                                                        field_type = bool
-                                                    elif json_type == "array":
-                                                        field_type = list[Any]
-                                                    elif json_type == "object":
-                                                        field_type = dict[str, Any]
+                                                    field_type = _map_json_type(
+                                                        type_def["type"], type_def
+                                                    )
                                     else:
-                                        # Map JSON schema types to Python types
                                         json_type = field_schema.get("type", "string")
-                                        if json_type == "string":
-                                            field_type = str
-                                        elif json_type == "integer":
-                                            field_type = int
-                                        elif json_type == "number":
-                                            field_type = float
-                                        elif json_type == "boolean":
-                                            field_type = bool
-                                        elif json_type == "array":
-                                            field_type = list[Any]
-                                        elif json_type == "object":
-                                            field_type = dict[str, Any]
+                                        field_type = _map_json_type(
+                                            json_type, field_schema
+                                        )
 
-                                    # Add None to type union if field is nullable
-                                    if is_nullable:
+                                    # Add None to type union if field is nullable or optional
+                                    if is_nullable or field_name not in required:
                                         field_type = field_type | None
 
                                     # Only set default to None if field is not required

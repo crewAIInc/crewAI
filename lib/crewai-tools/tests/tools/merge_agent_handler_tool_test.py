@@ -882,6 +882,12 @@ def test_optional_non_nullable_field(mock_post):
     assert not fields["optional_field"].is_required()
     assert fields["optional_field"].default is None
 
+    # Type annotation should include None so default=None is valid
+    from typing import get_args
+    annotation = fields["optional_field"].annotation
+    args = get_args(annotation)
+    assert type(None) in args
+
 
 @patch("requests.post")
 def test_optional_nullable_field(mock_post):
@@ -945,6 +951,80 @@ def test_optional_nullable_field(mock_post):
 
     valid_omitted_instance = tool.args_schema()
     assert valid_omitted_instance.optional_nullable is None
+
+
+@patch("requests.post")
+def test_array_field_produces_valid_schema(mock_post):
+    """Test that array fields produce schemas with 'type' key in items (not bare 'items': {})."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {
+            "tools": [
+                {
+                    "name": "slack__post_message",
+                    "description": "Post a message to Slack",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["input"],
+                        "properties": {
+                            "input": {
+                                "type": "object",
+                                "required": ["channel", "text"],
+                                "properties": {
+                                    "channel": {
+                                        "type": "string",
+                                        "description": "Channel to post to",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Message text",
+                                    },
+                                    "blocks": {
+                                        "type": "array",
+                                        "description": "Block Kit blocks",
+                                    },
+                                    "string_items": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": "Array of strings",
+                                    },
+                                },
+                            }
+                        },
+                    },
+                }
+            ]
+        },
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="slack__post_message",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    schema = tool.args_schema.model_json_schema()
+
+    # blocks and string_items are optional, so Pydantic wraps them in anyOf
+    # Find the array variant inside anyOf
+    blocks_schema = schema["properties"]["blocks"]
+    assert "anyOf" in blocks_schema
+    array_variant = next(v for v in blocks_schema["anyOf"] if v.get("type") == "array")
+    assert "items" in array_variant
+    assert "type" in array_variant["items"], (
+        "Array items must have a 'type' key for OpenAI schema validation"
+    )
+
+    # "string_items" has items.type = "string" — should produce list[str]
+    string_items_schema = schema["properties"]["string_items"]
+    assert "anyOf" in string_items_schema
+    str_array_variant = next(v for v in string_items_schema["anyOf"] if v.get("type") == "array")
+    assert "items" in str_array_variant
+    assert str_array_variant["items"]["type"] == "string"
 
 
 if __name__ == "__main__":
