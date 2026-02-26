@@ -30,7 +30,7 @@ class CrewAgentExecutorMixin:
         memory = getattr(self.agent, "memory", None) or (
             getattr(self.crew, "_memory", None) if self.crew else None
         )
-        if memory is None or not self.task:
+        if memory is None or not self.task or getattr(memory, "_read_only", False):
             return
         if (
             f"Action: {sanitize_tool_name('Delegate work to coworker')}"

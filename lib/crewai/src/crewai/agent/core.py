@@ -384,10 +384,10 @@ class Agent(BaseAgent):
                 )
                 if unified_memory is not None:
                     query = task.description
-                    matches = unified_memory.recall(query, limit=10)
+                    matches = unified_memory.recall(query, limit=5)
                     if matches:
                         memory = "Relevant memories:\n" + "\n".join(
-                            f"- {m.record.content}" for m in matches
+                            m.format() for m in matches
                         )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
@@ -622,10 +622,10 @@ class Agent(BaseAgent):
                 )
                 if unified_memory is not None:
                     query = task.description
-                    matches = unified_memory.recall(query, limit=10)
+                    matches = unified_memory.recall(query, limit=5)
                     if matches:
                         memory = "Relevant memories:\n" + "\n".join(
-                            f"- {m.record.content}" for m in matches
+                            m.format() for m in matches
                         )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
@@ -1811,11 +1811,11 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=10)
+                matches = agent_memory.recall(formatted_messages, limit=5)
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(
-                        f"- {m.record.content}" for m in matches
+                        m.format() for m in matches
                     )
                 if memory_block:
                     formatted_messages += "\n\n" + self.i18n.slice("memory").format(

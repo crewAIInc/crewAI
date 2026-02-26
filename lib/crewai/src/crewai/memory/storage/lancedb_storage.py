@@ -53,6 +53,7 @@ class LanceDBStorage:
         path: str | Path | None = None,
         table_name: str = "memories",
         vector_dim: int | None = None,
+        compact_every: int = 100,
     ) -> None:
         """Initialize LanceDB storage.
 
@@ -64,6 +65,10 @@ class LanceDBStorage:
             vector_dim: Dimensionality of the embedding vector. When ``None``
                   (default), the dimension is auto-detected from the existing
                   table schema or from the first saved embedding.
+            compact_every: Number of ``save()`` calls between automatic
+                  background compactions.  Each ``save()`` creates one new
+                  fragment file; compaction merges them, keeping query
+                  performance consistent.  Set to 0 to disable.
         """
         if path is None:
             storage_dir = os.environ.get("CREWAI_STORAGE_DIR")
@@ -78,6 +83,22 @@ class LanceDBStorage:
         self._table_name = table_name
         self._db = lancedb.connect(str(self._path))
 
+        # On macOS and Linux the default per-process open-file limit is 256.
+        # A LanceDB table stores one file per fragment (one fragment per save()
+        # call by default).  With hundreds of fragments, a single full-table
+        # scan opens all of them simultaneously, exhausting the limit.
+        # Raise it proactively so scans on large tables never hit OS error 24.
+        try:
+            import resource
+            soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft < 4096:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, 4096), hard))
+        except Exception:  # noqa: S110
+            pass  # Windows or already at the max hard limit — safe to ignore
+
+        self._compact_every = compact_every
+        self._save_count = 0
+
         # Get or create a shared write lock for this database path.
         resolved = str(self._path.resolve())
         with LanceDBStorage._path_locks_guard:
@@ -91,6 +112,11 @@ class LanceDBStorage:
         try:
             self._table: lancedb.table.Table | None = self._db.open_table(self._table_name)
             self._vector_dim: int = self._infer_dim_from_table(self._table)
+            # Best-effort: create the scope index if it doesn't exist yet.
+            self._ensure_scope_index()
+            # Compact in the background if the table has accumulated many
+            # fragments from previous runs (each save() creates one).
+            self._compact_if_needed()
         except Exception:
             self._table = None
             self._vector_dim = vector_dim or 0  # 0 = not yet known
@@ -178,6 +204,56 @@ class LanceDBStorage:
         table.delete("id = '__schema_placeholder__'")
         return table
 
+    def _ensure_scope_index(self) -> None:
+        """Create a BTREE scalar index on the ``scope`` column if not present.
+
+        A scalar index lets LanceDB skip a full table scan when filtering by
+        scope prefix, which is the hot path for ``list_records``,
+        ``get_scope_info``, and ``list_scopes``.  The call is best-effort:
+        if the table is empty or the index already exists the exception is
+        swallowed silently.
+        """
+        if self._table is None:
+            return
+        try:
+            self._table.create_scalar_index("scope", index_type="BTREE", replace=False)
+        except Exception:  # noqa: S110
+            pass  # index already exists, table empty, or unsupported version
+
+    # ------------------------------------------------------------------
+    # Automatic background compaction
+    # ------------------------------------------------------------------
+
+    def _compact_if_needed(self) -> None:
+        """Spawn a background compaction on startup.
+
+        Called whenever an existing table is opened so that fragments
+        accumulated in previous sessions are silently merged before the
+        first query.  ``optimize()`` returns quickly when the table is
+        already compact, so the cost is negligible in the common case.
+        """
+        if self._table is None or self._compact_every <= 0:
+            return
+        self._compact_async()
+
+    def _compact_async(self) -> None:
+        """Fire-and-forget: compact the table in a daemon background thread."""
+        threading.Thread(
+            target=self._compact_safe,
+            daemon=True,
+            name="lancedb-compact",
+        ).start()
+
+    def _compact_safe(self) -> None:
+        """Run ``table.optimize()`` in a background thread, absorbing errors."""
+        try:
+            if self._table is not None:
+                self._table.optimize()
+                # Refresh the scope index so new fragments are covered.
+                self._ensure_scope_index()
+        except Exception:
+            _logger.debug("LanceDB background compaction failed", exc_info=True)
+
     def _ensure_table(self, vector_dim: int | None = None) -> lancedb.table.Table:
         """Return the table, creating it lazily if needed.
 
@@ -239,6 +315,7 @@ class LanceDBStorage:
             if r.embedding and len(r.embedding) > 0:
                 dim = len(r.embedding)
                 break
+        is_new_table = self._table is None
         with self._write_lock:
             self._ensure_table(vector_dim=dim)
             rows = [self._record_to_row(r) for r in records]
@@ -246,6 +323,13 @@ class LanceDBStorage:
                 if r["vector"] is None or len(r["vector"]) != self._vector_dim:
                     r["vector"] = [0.0] * self._vector_dim
             self._retry_write("add", rows)
+        # Create the scope index on the first save so it covers the initial dataset.
+        if is_new_table:
+            self._ensure_scope_index()
+        # Auto-compact every N saves so fragment files don't pile up.
+        self._save_count += 1
+        if self._compact_every > 0 and self._save_count % self._compact_every == 0:
+            self._compact_async()
 
     def update(self, record: MemoryRecord) -> None:
         """Update a record by ID. Preserves created_at, updates last_accessed."""
@@ -261,6 +345,10 @@ class LanceDBStorage:
     def touch_records(self, record_ids: list[str]) -> None:
         """Update last_accessed to now for the given record IDs.
 
+        Uses a single batch ``table.update()`` call instead of N
+        delete-and-re-add cycles, which is both faster and avoids
+        unnecessary write amplification.
+
         Args:
             record_ids: IDs of records to touch.
         """
@@ -268,25 +356,20 @@ class LanceDBStorage:
             return
         with self._write_lock:
             now = datetime.utcnow().isoformat()
-            for rid in record_ids:
-                safe_id = str(rid).replace("'", "''")
-                rows = (
-                    self._table.search([0.0] * self._vector_dim)
-                    .where(f"id = '{safe_id}'")
-                    .limit(1)
-                    .to_list()
-                )
-                if rows:
-                    rows[0]["last_accessed"] = now
-                    self._retry_write("delete", f"id = '{safe_id}'")
-                    self._retry_write("add", [rows[0]])
+            safe_ids = [str(rid).replace("'", "''") for rid in record_ids]
+            ids_expr = ", ".join(f"'{rid}'" for rid in safe_ids)
+            self._retry_write(
+                "update",
+                where=f"id IN ({ids_expr})",
+                values={"last_accessed": now},
+            )
 
     def get_record(self, record_id: str) -> MemoryRecord | None:
         """Return a single record by ID, or None if not found."""
         if self._table is None:
             return None
         safe_id = str(record_id).replace("'", "''")
-        rows = self._table.search([0.0] * self._vector_dim).where(f"id = '{safe_id}'").limit(1).to_list()
+        rows = self._table.search().where(f"id = '{safe_id}'").limit(1).to_list()
         if not rows:
             return None
         return self._row_to_record(rows[0])
@@ -374,13 +457,31 @@ class LanceDBStorage:
             self._retry_write("delete", where_expr)
             return before - self._table.count_rows()
 
-    def _scan_rows(self, scope_prefix: str | None = None, limit: int = _SCAN_ROWS_LIMIT) -> list[dict[str, Any]]:
-        """Scan rows optionally filtered by scope prefix."""
+    def _scan_rows(
+        self,
+        scope_prefix: str | None = None,
+        limit: int = _SCAN_ROWS_LIMIT,
+        columns: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Scan rows optionally filtered by scope prefix.
+
+        Uses a full table scan (no vector query) so the limit is applied after
+        the scope filter, not to ANN candidates before filtering.
+
+        Args:
+            scope_prefix: Optional scope path prefix to filter by.
+            limit: Maximum number of rows to return (applied after filtering).
+            columns: Optional list of column names to fetch.  Pass only the
+                columns you need for metadata operations to avoid reading the
+                heavy ``vector`` column unnecessarily.
+        """
         if self._table is None:
             return []
-        q = self._table.search([0.0] * self._vector_dim)
+        q = self._table.search()
         if scope_prefix is not None and scope_prefix.strip("/"):
             q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+        if columns is not None:
+            q = q.select(columns)
         return q.limit(limit).to_list()
 
     def list_records(
@@ -406,7 +507,10 @@ class LanceDBStorage:
         prefix = scope if scope != "/" else ""
         if prefix and not prefix.startswith("/"):
             prefix = "/" + prefix
-        rows = self._scan_rows(prefix or None)
+        rows = self._scan_rows(
+            prefix or None,
+            columns=["scope", "categories_str", "created_at"],
+        )
         if not rows:
             return ScopeInfo(
                 path=scope or "/",
@@ -453,7 +557,7 @@ class LanceDBStorage:
     def list_scopes(self, parent: str = "/") -> list[str]:
         parent = parent.rstrip("/") or ""
         prefix = (parent + "/") if parent else "/"
-        rows = self._scan_rows(prefix if prefix != "/" else None)
+        rows = self._scan_rows(prefix if prefix != "/" else None, columns=["scope"])
         children: set[str] = set()
         for row in rows:
             sc = str(row.get("scope", ""))
@@ -465,7 +569,7 @@ class LanceDBStorage:
         return sorted(children)
 
     def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:
-        rows = self._scan_rows(scope_prefix)
+        rows = self._scan_rows(scope_prefix, columns=["categories_str"])
         counts: dict[str, int] = {}
         for row in rows:
             cat_str = row.get("categories_str") or "[]"
@@ -497,6 +601,21 @@ class LanceDBStorage:
         prefix = scope_prefix.rstrip("/")
         if prefix:
             self._table.delete(f"scope >= '{prefix}' AND scope < '{prefix}/\uFFFF'")
+
+    def optimize(self) -> None:
+        """Compact the table synchronously and refresh the scope index.
+
+        Under normal usage this is called automatically in the background
+        (every ``compact_every`` saves and on startup when the table is
+        fragmented).  Call this explicitly only when you need the compaction
+        to be complete before the next operation — for example immediately
+        after a large bulk import, before a latency-sensitive recall.
+        It is a no-op if the table does not exist.
+        """
+        if self._table is None:
+            return
+        self._table.optimize()
+        self._ensure_scope_index()
 
     async def asave(self, records: list[MemoryRecord]) -> None:
         self.save(records)

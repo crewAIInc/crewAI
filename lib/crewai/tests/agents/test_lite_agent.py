@@ -1136,6 +1136,7 @@ def test_lite_agent_memory_instance_recall_and_save_called():
         successful_requests=1,
     )
     mock_memory = Mock()
+    mock_memory._read_only = False
     mock_memory.recall.return_value = []
     mock_memory.extract_memories.return_value = ["Fact one.", "Fact two."]
 

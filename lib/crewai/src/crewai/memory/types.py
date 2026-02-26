@@ -87,6 +87,22 @@ class MemoryMatch(BaseModel):
         description="Information the system looked for but could not find.",
     )
 
+    def format(self) -> str:
+        """Format this match as a human-readable string including metadata.
+
+        Returns:
+            A multi-line string with score, content, categories, and non-empty
+            metadata fields.
+        """
+        lines = [f"- (score={self.score:.2f}) {self.record.content}"]
+        if self.record.categories:
+            lines.append(f"  categories: {', '.join(self.record.categories)}")
+        if self.record.metadata:
+            for key, value in self.record.metadata.items():
+                if value is not None:
+                    lines.append(f"  {key}: {value}")
+        return "\n".join(lines)
+
 
 class ScopeInfo(BaseModel):
     """Information about a scope in the memory hierarchy."""
@@ -291,7 +307,7 @@ def embed_text(embedder: Any, text: str) -> list[float]:
         return []
     first = result[0]
     if hasattr(first, "tolist"):
-        return first.tolist()
+        return list(first.tolist())
     if isinstance(first, list):
         return [float(x) for x in first]
     return list(first)
