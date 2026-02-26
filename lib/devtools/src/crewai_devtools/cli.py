@@ -943,6 +943,8 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                     )
 
             if docs_files_staged:
+                docs_branch = f"docs/changelog-v{version}"
+                run_command(["git", "checkout", "-b", docs_branch])
                 for f in docs_files_staged:
                     run_command(["git", "add", f])
                 run_command(
@@ -954,8 +956,69 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                     ]
                 )
                 console.print("[green]✓[/green] Committed docs updates")
-                run_command(["git", "push"])
-                console.print("[green]✓[/green] Pushed docs updates")
+
+                run_command(["git", "push", "-u", "origin", docs_branch])
+                console.print(f"[green]✓[/green] Pushed branch {docs_branch}")
+
+                run_command(
+                    [
+                        "gh",
+                        "pr",
+                        "create",
+                        "--base",
+                        "main",
+                        "--title",
+                        f"docs: update changelog and version for v{version}",
+                        "--body",
+                        "",
+                    ]
+                )
+                console.print("[green]✓[/green] Created docs PR")
+
+                run_command(
+                    [
+                        "gh",
+                        "pr",
+                        "merge",
+                        docs_branch,
+                        "--squash",
+                        "--auto",
+                        "--delete-branch",
+                    ]
+                )
+                console.print("[green]✓[/green] Enabled auto-merge on docs PR")
+
+                import time
+
+                console.print("[cyan]Waiting for PR checks to pass and merge...[/cyan]")
+                while True:
+                    time.sleep(10)
+                    try:
+                        state = run_command(
+                            [
+                                "gh",
+                                "pr",
+                                "view",
+                                docs_branch,
+                                "--json",
+                                "state",
+                                "--jq",
+                                ".state",
+                            ]
+                        )
+                    except subprocess.CalledProcessError:
+                        state = ""
+
+                    if state == "MERGED":
+                        break
+
+                    console.print("[dim]Still waiting for PR to merge...[/dim]")
+
+                console.print("[green]✓[/green] Docs PR merged")
+
+                run_command(["git", "checkout", "main"])
+                run_command(["git", "pull"])
+                console.print("[green]✓[/green] main branch updated with docs changes")
         else:
             for lang in changelog_langs:
                 cl_path = cwd / "docs" / lang / "changelog.mdx"
@@ -971,6 +1034,9 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                 console.print(
                     "[dim][DRY RUN][/dim] Skipping docs version (pre-release)"
                 )
+            console.print(
+                f"[dim][DRY RUN][/dim] Would create branch docs/changelog-v{version}, PR, and merge"
+            )
 
         if not dry_run:
             with console.status(f"[cyan]Creating tag {tag_name}..."):
