@@ -1423,10 +1423,25 @@ class Crew(FlowTrackable, BaseModel):
                 "Set allow_unsafe_code_execution=True to opt in."
             )
 
-        if not getattr(task, "human_input", False):
+        confirmation_gate = getattr(agent, "unsafe_code_execution_confirmation", None)
+        if not callable(confirmation_gate):
             raise ValueError(
-                "Unsafe code execution requires task.human_input=True "
-                "for explicit operator confirmation."
+                "Unsafe code execution requires agent.unsafe_code_execution_confirmation "
+                "to be a callable that returns True before execution."
+            )
+
+        try:
+            confirmed = bool(confirmation_gate(task))
+        except TypeError:
+            confirmed = bool(confirmation_gate())
+        except Exception as exc:
+            raise ValueError(
+                "Unsafe code execution confirmation gate raised an exception."
+            ) from exc
+
+        if not confirmed:
+            raise ValueError(
+                "Unsafe code execution confirmation gate must return True."
             )
 
     def _add_memory_tools(self, tools: list[BaseTool], memory: Any) -> list[BaseTool]:

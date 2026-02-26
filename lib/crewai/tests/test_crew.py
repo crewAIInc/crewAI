@@ -1669,7 +1669,6 @@ def test_unsafe_code_execution_requires_explicit_allow_policy():
         description="Write a script.",
         expected_output="A working script.",
         agent=agent,
-        human_input=True,
     )
     crew = Crew(agents=[agent], tasks=[task])
 
@@ -1694,18 +1693,17 @@ def test_unsafe_code_execution_requires_confirmation_setting():
         description="Write a script.",
         expected_output="A working script.",
         agent=agent,
-        human_input=False,
     )
     crew = Crew(agents=[agent], tasks=[task])
 
     with pytest.raises(
         ValueError,
-        match="Unsafe code execution requires task.human_input=True",
+        match="unsafe_code_execution_confirmation",
     ):
         crew.kickoff()
 
 
-def test_unsafe_code_execution_allowed_with_policy_and_confirmation():
+def test_unsafe_code_execution_requires_positive_confirmation():
     with patch.object(Agent, "_validate_docker_installation"):
         agent = Agent(
             role="Programmer",
@@ -1713,6 +1711,7 @@ def test_unsafe_code_execution_allowed_with_policy_and_confirmation():
             backstory="You're a programmer who loves to solve problems with code.",
             allow_code_execution=True,
             allow_unsafe_code_execution=True,
+            unsafe_code_execution_confirmation=lambda *_args: False,
             code_execution_mode="unsafe",
         )
 
@@ -1720,7 +1719,32 @@ def test_unsafe_code_execution_allowed_with_policy_and_confirmation():
         description="Write a script.",
         expected_output="A working script.",
         agent=agent,
-        human_input=True,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.raises(
+        ValueError,
+        match="confirmation gate must return True",
+    ):
+        crew.kickoff()
+
+
+def test_unsafe_code_execution_allowed_with_policy_and_confirmation_gate():
+    with patch.object(Agent, "_validate_docker_installation"):
+        agent = Agent(
+            role="Programmer",
+            goal="Write code to solve problems.",
+            backstory="You're a programmer who loves to solve problems with code.",
+            allow_code_execution=True,
+            allow_unsafe_code_execution=True,
+            unsafe_code_execution_confirmation=lambda *_args: True,
+            code_execution_mode="unsafe",
+        )
+
+    task = Task(
+        description="Write a script.",
+        expected_output="A working script.",
+        agent=agent,
     )
     crew = Crew(agents=[agent], tasks=[task])
     mock_task_output = TaskOutput(
