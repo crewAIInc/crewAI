@@ -4,6 +4,59 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 2월 26일">
+  ## v1.10.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - MCP 도구 해상도 및 관련 이벤트 향상
+  - lancedb 버전 업데이트 및 lance-namespace 패키지 추가
+  - CrewAgentExecutor 및 BaseTool에서 JSON 인수 파싱 및 검증 향상
+  - CLI http 클라이언트를 requests에서 httpx로 마이그레이션
+  - Flows에서 사용자 입력 처리 구현
+  - 인간 피드백 통합 테스트에서 HITL 자기 루프 기능 향상
+  - 새로운 통합 메모리 시스템 도입
+  - 버전 노트에 대한 yanked 감지 추가
+  - 버전 확인 및 업데이트 알림 통합
+  - tools.specs 자동 업데이트
+
+  ### 버그 수정
+  - 빈 경우에도 도구 kwargs 검증하여 모호한 TypeError 방지
+  - LLM을 위한 도구 매개변수 스키마에서 null 타입 유지
+  - output_pydantic/output_json을 네이티브 구조화된 출력에 매핑
+  - 환경 변수를 존중하도록 bedrock 지역 수정
+  - 약속이 있는 경우 콜백이 실행/대기되도록 보장
+  - 예외 컨텍스트에서 메서드 이름 캡처
+  - 라우터 결과에서 enum 타입 유지 및 타입 개선
+  - 입력에 persistence ID가 전달될 때 순환 흐름이 깨지는 문제 수정
+  - CLI 플래그 형식을 --skip-provider에서 --skip_provider로 수정
+  - openai 도구 호출 스트림이 완료되도록 보장
+  - mcp 도구에서 복잡한 스키마 $ref 포인터 해결
+  - 크루 폴더에 대해 예약된 스크립트 이름 거부
+  - 이중 이벤트 범위 팝을 유발하는 도구 오류 수정
+  - 가드레일 이벤트 방출 테스트에서 경쟁 조건 해결
+  - openai 및 litellm 의존성 제약 완화
+  - 스키마에서 additionalProperties=false 강제 적용
+
+  ### 문서
+  - 비네이티브 LLM 제공자를 위한 litellm 의존성 노트 추가
+  - NL2SQL 보안 모델 및 강화 지침 명확화
+  - 9개의 통합에서 96개의 누락된 작업 추가
+
+  ### 리팩토링
+  - 크루를 제공자 패턴으로 리팩토링
+  - HITL을 제공자 패턴으로 추출
+  - 훅 타이핑 및 등록 개선
+
+  ## 기여자
+
+  @dependabot[bot], @github-actions[bot], @github-code-quality[bot], @greysonlalonde, @heitorado, @hobostay, @joaomdmoura, @johnvan7, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha, @mplachta, @nicoferdi96, @theCyberTech, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="2026년 1월 26일">
   ## v1.9.0
 

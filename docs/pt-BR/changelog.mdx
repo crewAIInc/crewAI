@@ -4,6 +4,59 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="26 fev 2026">
+  ## v1.10.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.0)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar a resolução da ferramenta MCP e eventos relacionados
+  - Atualizar a versão do lancedb e adicionar pacotes lance-namespace
+  - Aprimorar a análise e validação de argumentos JSON no CrewAgentExecutor e BaseTool
+  - Migrar o cliente http da CLI de requests para httpx
+  - Implementar o manuseio de entrada do usuário em Flows
+  - Aprimorar a funcionalidade de auto-loop HITL nos testes de integração de feedback humano
+  - Introduzir um Novo Sistema de Memória Unificado
+  - Adicionar detecção de versões removidas para notas de versão
+  - Adicionar verificação de versão e integrar avisos de atualização
+  - Atualizar automaticamente tools.specs
+
+  ### Correções de Bugs
+  - Validar kwargs da ferramenta mesmo quando vazios para evitar TypeError crípticos
+  - Preservar tipos nulos nos esquemas de parâmetros da ferramenta para LLM
+  - Mapear output_pydantic/output_json para saída estruturada nativa
+  - Corrigir a região do bedrock para respeitar a variável de ambiente
+  - Garantir que callbacks sejam executados/aguardados se forem promessas
+  - Capturar o nome do método no contexto da exceção
+  - Preservar o tipo enum no resultado do roteador e melhorar os tipos
+  - Corrigir fluxos cíclicos quebrando quando o ID de persistência é passado nas entradas
+  - Corrigir o formato da flag da CLI de --skip-provider para --skip_provider
+  - Garantir que a chamada da ferramenta openai seja finalizada
+  - Resolver ponteiros $ref de esquema complexos nas ferramentas mcp
+  - Rejeitar nomes de scripts reservados para pastas de equipe
+  - Corrigir erro da ferramenta que causa a duplicação do escopo de eventos
+  - Resolver condição de corrida no teste de emissão de eventos de guardrail
+  - Relaxar as restrições de dependência do openai e litellm
+  - Impor additionalProperties=false nos esquemas
+
+  ### Documentação
+  - Adicionar nota de dependência do litellm para provedores de LLM não nativos
+  - Esclarecer o modelo de segurança do NL2SQL e orientações de endurecimento
+  - Adicionar 96 ações ausentes em 9 integrações
+
+  ### Refatoração
+  - Refatorar a equipe para o padrão de provedor
+  - Extrair HITL para o padrão de provedor
+  - Melhorar a tipagem e registro de hooks
+
+  ## Contribuidores
+
+  @dependabot[bot], @github-actions[bot], @github-code-quality[bot], @greysonlalonde, @heitorado, @hobostay, @joaomdmoura, @johnvan7, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha, @mplachta, @nicoferdi96, @theCyberTech, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="26 jan 2026">
   ## v1.9.0
 
