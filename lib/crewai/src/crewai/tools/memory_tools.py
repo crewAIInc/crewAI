@@ -20,14 +20,6 @@ class RecallMemorySchema(BaseModel):
             "or multiple items to search for several things at once."
         ),
     )
-    scope: str | None = Field(
-        default=None,
-        description="Optional scope to narrow the search (e.g. /project/alpha)",
-    )
-    depth: str = Field(
-        default="shallow",
-        description="'shallow' for fast vector search, 'deep' for LLM-analyzed retrieval",
-    )
 
 
 class RecallMemoryTool(BaseTool):
@@ -41,32 +33,27 @@ class RecallMemoryTool(BaseTool):
     def _run(
         self,
         queries: list[str] | str,
-        scope: str | None = None,
-        depth: str = "shallow",
         **kwargs: Any,
     ) -> str:
         """Search memory for relevant information.
 
         Args:
             queries: One or more search queries (string or list of strings).
-            scope: Optional scope prefix to narrow the search.
-            depth: "shallow" for fast vector search, "deep" for LLM-analyzed retrieval.
 
         Returns:
             Formatted string of matching memories, or a message if none found.
         """
         if isinstance(queries, str):
             queries = [queries]
-        actual_depth = depth if depth in ("shallow", "deep") else "shallow"
 
         all_lines: list[str] = []
         seen_ids: set[str] = set()
         for query in queries:
-            matches = self.memory.recall(query, scope=scope, limit=5, depth=actual_depth)
+            matches = self.memory.recall(query)
             for m in matches:
                 if m.record.id not in seen_ids:
                     seen_ids.add(m.record.id)
-                    all_lines.append(f"- (score={m.score:.2f}) {m.record.content}")
+                    all_lines.append(m.format())
 
         if not all_lines:
             return "No relevant memories found."
