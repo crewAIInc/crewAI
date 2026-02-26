@@ -319,6 +319,7 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     from crewai.agents.parser import AgentFinish
 
     mock_memory = MagicMock()
+    mock_memory._read_only = False
     mock_memory.extract_memories.return_value = ["Fact A.", "Fact B."]
 
     mock_agent = MagicMock()
@@ -359,6 +360,7 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
     from crewai.utilities.string_utils import sanitize_tool_name
 
     mock_memory = MagicMock()
+    mock_memory._read_only = False
     mock_agent = MagicMock()
     mock_agent.memory = mock_memory
     mock_agent._logger = MagicMock()
