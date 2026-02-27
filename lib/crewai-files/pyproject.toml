@@ -13,7 +13,7 @@ dependencies = [
     "python-magic>=0.4.27",
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",
-    "tinytag~=1.10.0",
+    "tinytag~=1.10.1a",
     "av~=13.0.0",
 ]
 
