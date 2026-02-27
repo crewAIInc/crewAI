@@ -50,9 +50,9 @@ tools = session.tools()
 Read more about sessions and user management [here](https://docs.composio.dev/docs/configuring-sessions)
 </CodeGroup>
 
-3. Authenticating user manually
+3. Authenticating users manually
 
-Composio automatically authenticates the user based on the session. However, you can also authenticate the user manually by calling the `authorize` method.
+Composio automatically authenticates the users during the agent chat session. However, you can also authenticate the user manually by calling the `authorize` method.
 ```python Code
 connection_request = session.authorize("github")
 print(f"Open this URL to authenticate: {connection_request.redirect_url}")
