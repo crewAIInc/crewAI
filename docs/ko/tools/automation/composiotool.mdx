@@ -18,76 +18,45 @@ Composio는 AI 에이전트를 250개 이상의 도구와 연결할 수 있는 �
 Composio 도구를 프로젝트에 통합하려면 아래 지침을 따르세요:
 
 ```shell
-pip install composio-crewai
+pip install composio composio-crewai
 pip install crewai
 ```
 
-설치가 완료된 후, `composio login`을 실행하거나 Composio API 키를 `COMPOSIO_API_KEY`로 export하세요. Composio API 키는 [여기](https://app.composio.dev)에서 받을 수 있습니다.
+설치가 완료되면 Composio API 키를 `COMPOSIO_API_KEY`로 설정하세요. Composio API 키는 [여기](https://platform.composio.dev)에서 받을 수 있습니다.
 
 ## 예시
 
-다음 예시는 도구를 초기화하고 github action을 실행하는 방법을 보여줍니다:
+다음 예시는 도구를 초기화하고 GitHub 액션을 실행하는 방법을 보여줍니다:
 
-1. Composio 도구 세트 초기화
+1. CrewAI와 함께 Composio 초기화
 
 ```python Code
-from composio_crewai import ComposioToolSet, App, Action
+from composio_crewai import ComposioProvider
+from composio import Composio
 from crewai import Agent, Task, Crew
 
-toolset = ComposioToolSet()
+composio = Composio(provider=ComposioProvider())
 ```
 
-2. GitHub 계정 연결
+2. 새 Composio 세션을 만들고 도구 가져오기
 <CodeGroup>
-```shell CLI
-composio add github
+```python
+session = composio.create(
+    user_id="your-user-id",
+    toolkits=["gmail", "github"] # optional, default is all toolkits
+)
+tools = session.tools()
 ```
-```python Code
-request = toolset.initiate_connection(app=App.GITHUB)
-print(f"Open this URL to authenticate: {request.redirectUrl}")
-```
+세션 및 사용자 관리에 대한 자세한 내용은 [여기](https://docs.composio.dev/docs/configuring-sessions)를 참고하세요.
 </CodeGroup>
 
-3. 도구 가져오기
+3. 사용자 수동 인증
 
-- 앱에서 모든 도구를 가져오기 (프로덕션 환경에서는 권장하지 않음):
+Composio는 세션을 기반으로 사용자를 자동 인증합니다. 하지만 `authorize` 메서드를 호출해 수동으로 인증할 수도 있습니다.
 ```python Code
-tools = toolset.get_tools(apps=[App.GITHUB])
+connection_request = session.authorize("github")
+print(f"Open this URL to authenticate: {connection_request.redirect_url}")
 ```
-
-- 태그를 기반으로 도구 필터링:
-```python Code
-tag = "users"
-
-filtered_action_enums = toolset.find_actions_by_tags(
-    App.GITHUB,
-    tags=[tag], 
-)
-
-tools = toolset.get_tools(actions=filtered_action_enums)
-```
-
-- 사용 사례를 기반으로 도구 필터링:
-```python Code
-use_case = "Star a repository on GitHub"
-
-filtered_action_enums = toolset.find_actions_by_use_case(
-    App.GITHUB, use_case=use_case, advanced=False
-)
-
-tools = toolset.get_tools(actions=filtered_action_enums)
-```
-<Tip>`advanced`를 True로 설정하면 복잡한 사용 사례를 위한 액션을 가져올 수 있습니다</Tip>
-
-- 특정 도구 사용하기:
-
-이 데모에서는 GitHub 앱의 `GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER` 액션을 사용합니다.
-```python Code
-tools = toolset.get_tools(
-    actions=[Action.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER]
-)
-```
-액션 필터링에 대해 더 자세한 내용을 보려면 [여기](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions)를 참고하세요.
 
 4. 에이전트 정의
 
@@ -116,4 +85,4 @@ crew = Crew(agents=[crewai_agent], tasks=[task])
 crew.kickoff()
 ```
 
-* 더욱 자세한 도구 리스트는 [여기](https://app.composio.dev)에서 확인하실 수 있습니다.
+* 더욱 자세한 도구 목록은 [여기](https://docs.composio.dev/toolkits)에서 확인할 수 있습니다.

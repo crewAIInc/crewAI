@@ -11,83 +11,52 @@ mode: "wide"
 Composio é uma plataforma de integração que permite conectar seus agentes de IA a mais de 250 ferramentas. Os principais recursos incluem:
 
 - **Autenticação de Nível Empresarial**: Suporte integrado para OAuth, Chaves de API, JWT com atualização automática de token
-- **Observabilidade Completa**: Logs detalhados de uso das ferramentas, registros de execução, e muito mais
+- **Observabilidade Completa**: Logs detalhados de uso das ferramentas, carimbos de data/hora de execução e muito mais
 
 ## Instalação
 
 Para incorporar as ferramentas Composio em seu projeto, siga as instruções abaixo:
 
 ```shell
-pip install composio-crewai
+pip install composio composio-crewai
 pip install crewai
 ```
 
-Após a conclusão da instalação, execute `composio login` ou exporte sua chave de API do composio como `COMPOSIO_API_KEY`. Obtenha sua chave de API Composio [aqui](https://app.composio.dev)
+Após concluir a instalação, defina sua chave de API do Composio como `COMPOSIO_API_KEY`. Obtenha sua chave de API do Composio [aqui](https://platform.composio.dev)
 
 ## Exemplo
 
-O exemplo a seguir demonstra como inicializar a ferramenta e executar uma ação do github:
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma ação do GitHub:
 
-1. Inicialize o conjunto de ferramentas Composio
+1. Inicialize o Composio com CrewAI
 
 ```python Code
-from composio_crewai import ComposioToolSet, App, Action
+from composio_crewai import ComposioProvider
+from composio import Composio
 from crewai import Agent, Task, Crew
 
-toolset = ComposioToolSet()
+composio = Composio(provider=ComposioProvider())
 ```
 
-2. Conecte sua conta do GitHub
+2. Crie uma nova sessão Composio e recupere as ferramentas
 <CodeGroup>
-```shell CLI
-composio add github
+```python
+session = composio.create(
+    user_id="your-user-id",
+    toolkits=["gmail", "github"] # optional, default is all toolkits
+)
+tools = session.tools()
 ```
-```python Code
-request = toolset.initiate_connection(app=App.GITHUB)
-print(f"Open this URL to authenticate: {request.redirectUrl}")
-```
+Leia mais sobre sessões e gerenciamento de usuários [aqui](https://docs.composio.dev/docs/configuring-sessions)
 </CodeGroup>
 
-3. Obtenha ferramentas
+3. Autenticação manual do usuário
 
-- Recuperando todas as ferramentas de um app (não recomendado em produção):
+O Composio autentica automaticamente o usuário com base na sessão. No entanto, você também pode autenticar o usuário manualmente chamando o método `authorize`.
 ```python Code
-tools = toolset.get_tools(apps=[App.GITHUB])
+connection_request = session.authorize("github")
+print(f"Open this URL to authenticate: {connection_request.redirect_url}")
 ```
-
-- Filtrando ferramentas com base em tags:
-```python Code
-tag = "users"
-
-filtered_action_enums = toolset.find_actions_by_tags(
-    App.GITHUB,
-    tags=[tag], 
-)
-
-tools = toolset.get_tools(actions=filtered_action_enums)
-```
-
-- Filtrando ferramentas com base no caso de uso:
-```python Code
-use_case = "Star a repository on GitHub"
-
-filtered_action_enums = toolset.find_actions_by_use_case(
-    App.GITHUB, use_case=use_case, advanced=False
-)
-
-tools = toolset.get_tools(actions=filtered_action_enums)
-```
-<Tip>Defina `advanced` como True para obter ações para casos de uso complexos</Tip>
-
-- Usando ferramentas específicas:
-
-Neste exemplo, usaremos a ação `GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER` do app GitHub.
-```python Code
-tools = toolset.get_tools(
-    actions=[Action.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER]
-)
-```
-Saiba mais sobre como filtrar ações [aqui](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions)
 
 4. Defina o agente
 
@@ -116,4 +85,4 @@ crew = Crew(agents=[crewai_agent], tasks=[task])
 crew.kickoff()
 ```
 
-* Uma lista mais detalhada de ferramentas pode ser encontrada [aqui](https://app.composio.dev)
+* Uma lista mais detalhada de ferramentas pode ser encontrada [aqui](https://docs.composio.dev/toolkits)
