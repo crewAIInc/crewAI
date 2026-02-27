@@ -28,7 +28,7 @@ Após concluir a instalação, defina sua chave de API do Composio como `COMPOSI
 
 O exemplo a seguir demonstra como inicializar a ferramenta e executar uma ação do GitHub:
 
-1. Inicialize o Composio com CrewAI
+1. Inicialize o Composio com o Provider do CrewAI
 
 ```python Code
 from composio_crewai import ComposioProvider
@@ -50,9 +50,9 @@ tools = session.tools()
 Leia mais sobre sessões e gerenciamento de usuários [aqui](https://docs.composio.dev/docs/configuring-sessions)
 </CodeGroup>
 
-3. Autenticação manual do usuário
+3. Autenticação manual dos usuários
 
-O Composio autentica automaticamente o usuário com base na sessão. No entanto, você também pode autenticar o usuário manualmente chamando o método `authorize`.
+O Composio autentica automaticamente os usuários durante a sessão de chat do agente. No entanto, você também pode autenticar o usuário manualmente chamando o método `authorize`.
 ```python Code
 connection_request = session.authorize("github")
 print(f"Open this URL to authenticate: {connection_request.redirect_url}")

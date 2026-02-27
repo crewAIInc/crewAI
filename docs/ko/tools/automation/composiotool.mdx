@@ -28,7 +28,7 @@ pip install crewai
 
 다음 예시는 도구를 초기화하고 GitHub 액션을 실행하는 방법을 보여줍니다:
 
-1. CrewAI와 함께 Composio 초기화
+1. CrewAI Provider와 함께 Composio 초기화
 
 ```python Code
 from composio_crewai import ComposioProvider
@@ -50,9 +50,9 @@ tools = session.tools()
 세션 및 사용자 관리에 대한 자세한 내용은 [여기](https://docs.composio.dev/docs/configuring-sessions)를 참고하세요.
 </CodeGroup>
 
-3. 사용자 수동 인증
+3. 사용자 수동 인증하기
 
-Composio는 세션을 기반으로 사용자를 자동 인증합니다. 하지만 `authorize` 메서드를 호출해 수동으로 인증할 수도 있습니다.
+Composio는 에이전트 채팅 세션 중에 사용자를 자동으로 인증합니다. 하지만 `authorize` 메서드를 호출해 사용자를 수동으로 인증할 수도 있습니다.
 ```python Code
 connection_request = session.authorize("github")
 print(f"Open this URL to authenticate: {connection_request.redirect_url}")
