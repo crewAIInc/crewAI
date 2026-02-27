@@ -2079,12 +2079,18 @@ class BedrockCompletion(BaseLLM):
         model_lower = self.model.lower()
         vision_models = (
             "anthropic.claude-3",
+            "anthropic.claude-sonnet-4",
+            "anthropic.claude-opus-4",
+            "anthropic.claude-haiku-4",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
             "us.amazon.nova-lite",
             "us.amazon.nova-pro",
             "us.amazon.nova-premier",
+            "us.anthropic.claude-sonnet-4",
+            "us.anthropic.claude-opus-4",
+            "us.anthropic.claude-haiku-4",
         )
         return any(model_lower.startswith(m) for m in vision_models)
 

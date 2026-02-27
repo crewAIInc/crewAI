@@ -2416,6 +2416,9 @@ class LLM(BaseLLM):
             "gpt-4.1",
             "claude-3",
             "claude-4",
+            "claude-sonnet-4",
+            "claude-opus-4",
+            "claude-haiku-4",
             "gemini",
         )
         model_lower = self.model.lower()
