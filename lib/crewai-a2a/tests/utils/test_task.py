@@ -6,13 +6,12 @@ import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-import pytest_asyncio
 from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import Message, Task as A2ATask, TaskState, TaskStatus
-
-from crewai.a2a.utils.task import cancel, cancellable, execute
+from crewai_a2a.utils.task import cancel, cancellable, execute
+import pytest
+import pytest_asyncio
 
 
 @pytest.fixture
@@ -85,8 +84,11 @@ class TestCancellableDecorator:
         assert call_count == 1
 
     @pytest.mark.asyncio
-    async def test_executes_function_with_context(self, mock_context: MagicMock) -> None:
+    async def test_executes_function_with_context(
+        self, mock_context: MagicMock
+    ) -> None:
         """Function executes normally with RequestContext when not cancelled."""
+
         @cancellable
         async def my_func(context: RequestContext) -> str:
             await asyncio.sleep(0.01)
@@ -134,6 +136,7 @@ class TestCancellableDecorator:
     @pytest.mark.asyncio
     async def test_extracts_context_from_kwargs(self, mock_context: MagicMock) -> None:
         """Context can be passed as keyword argument."""
+
         @cancellable
         async def my_func(value: int, context: RequestContext | None = None) -> int:
             return value + 1
@@ -156,8 +159,8 @@ class TestExecute:
     ) -> None:
         """Execute completes successfully and enqueues completed task."""
         with (
-            patch("crewai.a2a.utils.task.Task", return_value=mock_task),
-            patch("crewai.a2a.utils.task.crewai_event_bus") as mock_bus,
+            patch("crewai_a2a.utils.task.Task", return_value=mock_task),
+            patch("crewai_a2a.utils.task.crewai_event_bus") as mock_bus,
         ):
             await execute(mock_agent, mock_context, mock_event_queue)
 
@@ -175,8 +178,8 @@ class TestExecute:
     ) -> None:
         """Execute emits A2AServerTaskStartedEvent."""
         with (
-            patch("crewai.a2a.utils.task.Task", return_value=mock_task),
-            patch("crewai.a2a.utils.task.crewai_event_bus") as mock_bus,
+            patch("crewai_a2a.utils.task.Task", return_value=mock_task),
+            patch("crewai_a2a.utils.task.crewai_event_bus") as mock_bus,
         ):
             await execute(mock_agent, mock_context, mock_event_queue)
 
@@ -197,8 +200,8 @@ class TestExecute:
     ) -> None:
         """Execute emits A2AServerTaskCompletedEvent on success."""
         with (
-            patch("crewai.a2a.utils.task.Task", return_value=mock_task),
-            patch("crewai.a2a.utils.task.crewai_event_bus") as mock_bus,
+            patch("crewai_a2a.utils.task.Task", return_value=mock_task),
+            patch("crewai_a2a.utils.task.crewai_event_bus") as mock_bus,
         ):
             await execute(mock_agent, mock_context, mock_event_queue)
 
@@ -221,8 +224,8 @@ class TestExecute:
         mock_agent.aexecute_task = AsyncMock(side_effect=ValueError("Test error"))
 
         with (
-            patch("crewai.a2a.utils.task.Task", return_value=mock_task),
-            patch("crewai.a2a.utils.task.crewai_event_bus") as mock_bus,
+            patch("crewai_a2a.utils.task.Task", return_value=mock_task),
+            patch("crewai_a2a.utils.task.crewai_event_bus") as mock_bus,
         ):
             with pytest.raises(Exception):
                 await execute(mock_agent, mock_context, mock_event_queue)
@@ -245,8 +248,8 @@ class TestExecute:
         mock_agent.aexecute_task = AsyncMock(side_effect=asyncio.CancelledError())
 
         with (
-            patch("crewai.a2a.utils.task.Task", return_value=mock_task),
-            patch("crewai.a2a.utils.task.crewai_event_bus") as mock_bus,
+            patch("crewai_a2a.utils.task.Task", return_value=mock_task),
+            patch("crewai_a2a.utils.task.crewai_event_bus") as mock_bus,
         ):
             with pytest.raises(asyncio.CancelledError):
                 await execute(mock_agent, mock_context, mock_event_queue)
@@ -354,6 +357,7 @@ class TestExecuteAndCancelIntegration:
         mock_task: MagicMock,
     ) -> None:
         """Calling cancel stops a running execute."""
+
         async def slow_task(**kwargs: Any) -> str:
             await asyncio.sleep(2.0)
             return "should not complete"
@@ -361,8 +365,8 @@ class TestExecuteAndCancelIntegration:
         mock_agent.aexecute_task = slow_task
 
         with (
-            patch("crewai.a2a.utils.task.Task", return_value=mock_task),
-            patch("crewai.a2a.utils.task.crewai_event_bus"),
+            patch("crewai_a2a.utils.task.Task", return_value=mock_task),
+            patch("crewai_a2a.utils.task.crewai_event_bus"),
         ):
             execute_task = asyncio.create_task(
                 execute(mock_agent, mock_context, mock_event_queue)

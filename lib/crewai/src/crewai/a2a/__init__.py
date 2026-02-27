@@ -1,10 +1,13 @@
-"""Agent-to-Agent (A2A) protocol communication module for CrewAI."""
+"""Backward-compatibility shim — use ``crewai_a2a`` instead."""
 
-from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
+import warnings
 
 
-__all__ = [
-    "A2AClientConfig",
-    "A2AConfig",
-    "A2AServerConfig",
-]
+warnings.warn(
+    "'crewai.a2a' has been moved to 'crewai_a2a'. "
+    "Please update your imports. The old path will be removed in v2.0.0.",
+    FutureWarning,
+    stacklevel=2,
+)
+
+from crewai_a2a import *  # noqa: E402, F403

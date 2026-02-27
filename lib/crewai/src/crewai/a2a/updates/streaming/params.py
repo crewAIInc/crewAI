@@ -1,28 +1,13 @@
-"""Common parameter extraction for streaming handlers."""
+"""Backward-compatibility shim — use ``crewai_a2a.updates.streaming.params`` instead."""
 
-from __future__ import annotations
-
-from a2a.types import TaskStatusUpdateEvent
+import warnings
 
 
-def process_status_update(
-    update: TaskStatusUpdateEvent,
-    result_parts: list[str],
-) -> bool:
-    """Process a status update event and extract text parts.
+warnings.warn(
+    "'crewai.a2a.updates.streaming.params' has been moved to 'crewai_a2a.updates.streaming.params'. "
+    "Please update your imports. The old path will be removed in v2.0.0.",
+    FutureWarning,
+    stacklevel=2,
+)
 
-    Args:
-        update: The status update event.
-        result_parts: List to append text parts to (modified in place).
-
-    Returns:
-        True if this is a final update, False otherwise.
-    """
-    is_final = update.final
-    if update.status and update.status.message and update.status.message.parts:
-        result_parts.extend(
-            part.root.text
-            for part in update.status.message.parts
-            if part.root.kind == "text" and part.root.text
-        )
-    return is_final
+from crewai_a2a.updates.streaming.params import *  # noqa: E402, F403

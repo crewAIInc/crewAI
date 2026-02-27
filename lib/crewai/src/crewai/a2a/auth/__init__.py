@@ -1,36 +1,13 @@
-"""A2A authentication schemas."""
+"""Backward-compatibility shim — use ``crewai_a2a.auth`` instead."""
 
-from crewai.a2a.auth.client_schemes import (
-    APIKeyAuth,
-    AuthScheme,
-    BearerTokenAuth,
-    ClientAuthScheme,
-    HTTPBasicAuth,
-    HTTPDigestAuth,
-    OAuth2AuthorizationCode,
-    OAuth2ClientCredentials,
-    TLSConfig,
-)
-from crewai.a2a.auth.server_schemes import (
-    AuthenticatedUser,
-    OIDCAuth,
-    ServerAuthScheme,
-    SimpleTokenAuth,
+import warnings
+
+
+warnings.warn(
+    "'crewai.a2a.auth' has been moved to 'crewai_a2a.auth'. "
+    "Please update your imports. The old path will be removed in v2.0.0.",
+    FutureWarning,
+    stacklevel=2,
 )
 
-
-__all__ = [
-    "APIKeyAuth",
-    "AuthScheme",
-    "AuthenticatedUser",
-    "BearerTokenAuth",
-    "ClientAuthScheme",
-    "HTTPBasicAuth",
-    "HTTPDigestAuth",
-    "OAuth2AuthorizationCode",
-    "OAuth2ClientCredentials",
-    "OIDCAuth",
-    "ServerAuthScheme",
-    "SimpleTokenAuth",
-    "TLSConfig",
-]
+from crewai_a2a.auth import *  # noqa: E402, F403

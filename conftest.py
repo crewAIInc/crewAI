@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import pytest
 from vcr.request import Request  # type: ignore[import-untyped]
 
+
 try:
     import vcr.stubs.httpx_stubs as httpx_stubs  # type: ignore[import-untyped]
 except ModuleNotFoundError:
@@ -225,7 +226,7 @@ def vcr_cassette_dir(request: Any) -> str:
 
     for parent in test_file.parents:
         if (
-            parent.name in ("crewai", "crewai-tools", "crewai-files")
+            parent.name in ("crewai", "crewai-tools", "crewai-files", "crewai-a2a")
             and parent.parent.name == "lib"
         ):
             package_root = parent

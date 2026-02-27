@@ -15,6 +15,7 @@ resolution-markers = [
 [manifest]
 members = [
     "crewai",
+    "crewai-a2a",
     "crewai-devtools",
     "crewai-files",
     "crewai-tools",
@@ -1124,10 +1125,7 @@ dependencies = [
 
 [package.optional-dependencies]
 a2a = [
-    { name = "a2a-sdk" },
-    { name = "aiocache", extra = ["memcached", "redis"] },
-    { name = "httpx-auth" },
-    { name = "httpx-sse" },
+    { name = "crewai-a2a" },
 ]
 anthropic = [
     { name = "anthropic" },
@@ -1181,9 +1179,7 @@ watson = [
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=2.25.2" },
-    { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = "~=0.73.0" },
     { name = "appdirs", specifier = "~=1.4.4" },
@@ -1192,13 +1188,12 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'bedrock'", specifier = "~=1.40.45" },
     { name = "chromadb", specifier = "~=1.1.0" },
     { name = "click", specifier = "~=8.1.7" },
+    { name = "crewai-a2a", marker = "extra == 'a2a'", editable = "lib/crewai-a2a" },
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.63.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = "~=1.49.0" },
     { name = "httpx", specifier = "~=0.28.1" },
-    { name = "httpx-auth", marker = "extra == 'a2a'", specifier = "~=0.23.1" },
-    { name = "httpx-sse", marker = "extra == 'a2a'", specifier = "~=0.4.0" },
     { name = "ibm-watsonx-ai", marker = "extra == 'watson'", specifier = "~=1.3.39" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = "~=0.25.2" },
@@ -1232,6 +1227,26 @@ requires-dist = [
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
 provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "tools", "voyageai", "watson"]
+
+[[package]]
+name = "crewai-a2a"
+source = { editable = "lib/crewai-a2a" }
+dependencies = [
+    { name = "a2a-sdk" },
+    { name = "aiocache", extra = ["memcached", "redis"] },
+    { name = "crewai" },
+    { name = "httpx-auth" },
+    { name = "httpx-sse" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "a2a-sdk", specifier = "~=0.3.10" },
+    { name = "aiocache", extras = ["memcached", "redis"], specifier = "~=0.12.3" },
+    { name = "crewai", editable = "lib/crewai" },
+    { name = "httpx-auth", specifier = "~=0.23.1" },
+    { name = "httpx-sse", specifier = "~=0.4.0" },
+]
 
 [[package]]
 name = "crewai-devtools"

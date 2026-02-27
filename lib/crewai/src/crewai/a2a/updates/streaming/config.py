@@ -1,9 +1,13 @@
-"""Streaming update mechanism configuration."""
+"""Backward-compatibility shim — use ``crewai_a2a.updates.streaming.config`` instead."""
 
-from __future__ import annotations
-
-from pydantic import BaseModel
+import warnings
 
 
-class StreamingConfig(BaseModel):
-    """Configuration for SSE-based task updates."""
+warnings.warn(
+    "'crewai.a2a.updates.streaming.config' has been moved to 'crewai_a2a.updates.streaming.config'. "
+    "Please update your imports. The old path will be removed in v2.0.0.",
+    FutureWarning,
+    stacklevel=2,
+)
+
+from crewai_a2a.updates.streaming.config import *  # noqa: E402, F403

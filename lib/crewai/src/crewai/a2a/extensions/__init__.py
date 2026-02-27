@@ -1,37 +1,13 @@
-"""A2A Protocol Extensions for CrewAI.
+"""Backward-compatibility shim — use ``crewai_a2a.extensions`` instead."""
 
-This module contains extensions to the A2A (Agent-to-Agent) protocol.
+import warnings
 
-**Client-side extensions** (A2AExtension) allow customizing how the A2A wrapper
-processes requests and responses during delegation to remote agents. These provide
-hooks for tool injection, prompt augmentation, and response processing.
 
-**Server-side extensions** (ServerExtension) allow agents to offer additional
-functionality beyond the core A2A specification. Clients activate extensions
-via the X-A2A-Extensions header.
-
-See: https://a2a-protocol.org/latest/topics/extensions/
-"""
-
-from crewai.a2a.extensions.base import (
-    A2AExtension,
-    ConversationState,
-    ExtensionRegistry,
-    ValidatedA2AExtension,
-)
-from crewai.a2a.extensions.server import (
-    ExtensionContext,
-    ServerExtension,
-    ServerExtensionRegistry,
+warnings.warn(
+    "'crewai.a2a.extensions' has been moved to 'crewai_a2a.extensions'. "
+    "Please update your imports. The old path will be removed in v2.0.0.",
+    FutureWarning,
+    stacklevel=2,
 )
 
-
-__all__ = [
-    "A2AExtension",
-    "ConversationState",
-    "ExtensionContext",
-    "ExtensionRegistry",
-    "ServerExtension",
-    "ServerExtensionRegistry",
-    "ValidatedA2AExtension",
-]
+from crewai_a2a.extensions import *  # noqa: E402, F403

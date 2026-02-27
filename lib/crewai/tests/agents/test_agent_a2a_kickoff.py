@@ -7,7 +7,7 @@ import os
 import pytest
 
 from crewai import Agent
-from crewai.a2a.config import A2AClientConfig
+from crewai_a2a.config import A2AClientConfig
 
 
 A2A_TEST_ENDPOINT = os.getenv(

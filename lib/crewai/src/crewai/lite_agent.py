@@ -31,9 +31,8 @@ from typing_extensions import Self
 
 
 if TYPE_CHECKING:
+    from crewai_a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai_files import FileInput
-
-    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
@@ -120,8 +119,9 @@ def _kickoff_with_a2a_support(
     Returns:
         LiteAgentOutput from either local execution or A2A delegation.
     """
-    from crewai.a2a.utils.response_model import get_a2a_agents_and_response_model
-    from crewai.a2a.wrapper import _execute_task_with_a2a
+    from crewai_a2a.utils.response_model import get_a2a_agents_and_response_model
+    from crewai_a2a.wrapper import _execute_task_with_a2a
+
     from crewai.task import Task
 
     a2a_agents, agent_response_model = get_a2a_agents_and_response_model(agent.a2a)
@@ -319,11 +319,11 @@ class LiteAgent(FlowTrackable, BaseModel):
     def setup_a2a_support(self) -> Self:
         """Setup A2A extensions and server methods if a2a config exists."""
         if self.a2a:
-            from crewai.a2a.config import A2AClientConfig, A2AConfig
-            from crewai.a2a.extensions.registry import (
+            from crewai_a2a.config import A2AClientConfig, A2AConfig
+            from crewai_a2a.extensions.registry import (
                 create_extension_registry_from_config,
             )
-            from crewai.a2a.utils.agent_card import inject_a2a_server_methods
+            from crewai_a2a.utils.agent_card import inject_a2a_server_methods
 
             configs = self.a2a if isinstance(self.a2a, list) else [self.a2a]
             client_configs = [
@@ -995,7 +995,7 @@ class LiteAgent(FlowTrackable, BaseModel):
 
 
 try:
-    from crewai.a2a.config import (
+    from crewai_a2a.config import (
         A2AClientConfig as _A2AClientConfig,
         A2AConfig as _A2AConfig,
         A2AServerConfig as _A2AServerConfig,

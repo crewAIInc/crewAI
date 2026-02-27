@@ -96,12 +96,7 @@ azure-ai-inference = [
 anthropic = [
     "anthropic~=0.73.0",
 ]
-a2a = [
-     "a2a-sdk~=0.3.10",
-     "httpx-auth~=0.23.1",
-     "httpx-sse~=0.4.0",
-     "aiocache[redis,memcached]~=0.12.3",
-]
+a2a = ["crewai-a2a==1.10.1b1"]
 file-processing = [
     "crewai-files",
 ]
@@ -132,6 +127,7 @@ torchvision = [
   { index = "pytorch", marker = "python_version < '3.13'" },
 ]
 crewai-files = { workspace = true }
+crewai-a2a = { workspace = true }
 
 
 [build-system]
