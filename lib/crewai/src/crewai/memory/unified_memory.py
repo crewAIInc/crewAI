@@ -21,7 +21,6 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
 from crewai.memory.recall_flow import RecallFlow
 from crewai.memory.storage.backend import StorageBackend
-from crewai.memory.storage.lancedb_storage import LanceDBStorage
 from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
@@ -148,12 +147,10 @@ class Memory:
             else None
         )
 
-        # Storage is initialized eagerly (local, no API key needed).
-        self._storage: StorageBackend
-        if storage == "lancedb":
-            self._storage = LanceDBStorage()
-        elif isinstance(storage, str):
-            self._storage = LanceDBStorage(path=storage)
+        if isinstance(storage, str):
+            from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+            self._storage = LanceDBStorage() if storage == "lancedb" else LanceDBStorage(path=storage)
         else:
             self._storage = storage
 
