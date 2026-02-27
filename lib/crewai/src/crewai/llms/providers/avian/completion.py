@@ -8,6 +8,17 @@ from crewai.llms.providers.openai.completion import OpenAICompletion
 
 AVIAN_API_BASE = "https://api.avian.io/v1"
 
+# Context window sizes for Avian-hosted models
+AVIAN_CONTEXT_WINDOWS: dict[str, int] = {
+    "deepseek/deepseek-v3.2": 164000,
+    "moonshotai/kimi-k2.5": 131000,
+    "z-ai/glm-5": 131000,
+    "minimax/minimax-m2.5": 1000000,
+}
+
+# Sensible default for unknown future models on Avian
+_DEFAULT_AVIAN_CONTEXT_WINDOW = 131000
+
 
 class AvianCompletion(OpenAICompletion):
     """Avian native completion implementation.
@@ -63,3 +74,20 @@ class AvianCompletion(OpenAICompletion):
             base_url=resolved_base_url,
             **kwargs,
         )
+
+    def get_context_window_size(self) -> int:
+        """Get the context window size for the model.
+
+        The inherited OpenAICompletion implementation only recognizes GPT-
+        prefixed models and returns a misleadingly small default for Avian
+        models.  This override provides the correct context window sizes.
+        """
+        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+
+        # Find the best match for the model name
+        for model_prefix, size in AVIAN_CONTEXT_WINDOWS.items():
+            if self.model.startswith(model_prefix):
+                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
+
+        # Default for unknown Avian models
+        return int(_DEFAULT_AVIAN_CONTEXT_WINDOW * CONTEXT_WINDOW_USAGE_RATIO)

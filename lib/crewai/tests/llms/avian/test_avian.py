@@ -148,3 +148,41 @@ def test_avian_env_base_url_override():
         llm = LLM(model="avian/deepseek/deepseek-v3.2")
 
     assert llm.base_url == "https://staging.avian.io/v1"
+
+
+class TestAvianContextWindowSize:
+    """Tests for AvianCompletion.get_context_window_size()."""
+
+    RATIO = 0.85  # CONTEXT_WINDOW_USAGE_RATIO
+
+    def test_deepseek_v3_context_window(self):
+        with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+            llm = LLM(model="avian/deepseek/deepseek-v3.2")
+        assert llm.get_context_window_size() == int(164000 * self.RATIO)
+
+    def test_kimi_context_window(self):
+        with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+            llm = LLM(model="avian/moonshotai/kimi-k2.5")
+        assert llm.get_context_window_size() == int(131000 * self.RATIO)
+
+    def test_glm_context_window(self):
+        with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+            llm = LLM(model="avian/z-ai/glm-5")
+        assert llm.get_context_window_size() == int(131000 * self.RATIO)
+
+    def test_minimax_context_window(self):
+        with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+            llm = LLM(model="avian/minimax/minimax-m2.5")
+        assert llm.get_context_window_size() == int(1000000 * self.RATIO)
+
+    def test_unknown_model_gets_default_context_window(self):
+        with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+            llm = AvianCompletion(model="some-future/model")
+        assert llm.get_context_window_size() == int(131000 * self.RATIO)
+
+    def test_context_window_not_openai_default(self):
+        """Ensure Avian models don't fall through to the OpenAI default (~6963)."""
+        with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+            llm = LLM(model="avian/deepseek/deepseek-v3.2")
+        # OpenAI default is int(8192 * 0.85) = 6963
+        assert llm.get_context_window_size() > 100000
