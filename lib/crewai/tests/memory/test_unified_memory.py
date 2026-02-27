@@ -218,14 +218,15 @@ def test_memory_slice_recall(tmp_path: Path, mock_embedder: MagicMock) -> None:
     assert isinstance(matches, list)
 
 
-def test_memory_slice_remember_raises_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
+def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
     from crewai.memory.memory_scope import MemorySlice
 
     mem = Memory(storage=str(tmp_path / "db7"), llm=MagicMock(), embedder=mock_embedder)
     sl = MemorySlice(mem, ["/a"], read_only=True)
-    with pytest.raises(PermissionError):
-        sl.remember("x", scope="/a")
+    result = sl.remember("x", scope="/a")
+    assert result is None
+    assert mem.list_records() == []
 
 
 # --- Flow memory ---
@@ -318,6 +319,7 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     from crewai.agents.parser import AgentFinish
 
     mock_memory = MagicMock()
+    mock_memory._read_only = False
     mock_memory.extract_memories.return_value = ["Fact A.", "Fact B."]
 
     mock_agent = MagicMock()
@@ -358,6 +360,7 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
     from crewai.utilities.string_utils import sanitize_tool_name
 
     mock_memory = MagicMock()
+    mock_memory._read_only = False
     mock_agent = MagicMock()
     mock_agent.memory = mock_memory
     mock_agent._logger = MagicMock()

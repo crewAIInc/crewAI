@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-import time
 from functools import wraps
 import inspect
 import json
+import time
 from types import MethodType
 from typing import (
     TYPE_CHECKING,
@@ -49,15 +49,20 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
+from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
-from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.hooks.llm_hooks import get_after_llm_call_hooks, get_before_llm_call_hooks
-from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
+from crewai.hooks.types import (
+    AfterLLMCallHookCallable,
+    AfterLLMCallHookType,
+    BeforeLLMCallHookCallable,
+    BeforeLLMCallHookType,
+)
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
@@ -270,11 +275,11 @@ class LiteAgent(FlowTrackable, BaseModel):
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
-    _before_llm_call_hooks: list[BeforeLLMCallHookType] = PrivateAttr(
-        default_factory=get_before_llm_call_hooks
+    _before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
+        PrivateAttr(default_factory=get_before_llm_call_hooks)
     )
-    _after_llm_call_hooks: list[AfterLLMCallHookType] = PrivateAttr(
-        default_factory=get_after_llm_call_hooks
+    _after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = (
+        PrivateAttr(default_factory=get_after_llm_call_hooks)
     )
     _memory: Any = PrivateAttr(default=None)
 
@@ -440,12 +445,16 @@ class LiteAgent(FlowTrackable, BaseModel):
         return self.role
 
     @property
-    def before_llm_call_hooks(self) -> list[BeforeLLMCallHookType]:
+    def before_llm_call_hooks(
+        self,
+    ) -> list[BeforeLLMCallHookType | BeforeLLMCallHookCallable]:
         """Get the before_llm_call hooks for this agent."""
         return self._before_llm_call_hooks
 
     @property
-    def after_llm_call_hooks(self) -> list[AfterLLMCallHookType]:
+    def after_llm_call_hooks(
+        self,
+    ) -> list[AfterLLMCallHookType | AfterLLMCallHookCallable]:
         """Get the after_llm_call hooks for this agent."""
         return self._after_llm_call_hooks
 
@@ -482,11 +491,12 @@ class LiteAgent(FlowTrackable, BaseModel):
         # Inject memory tools once if memory is configured (mirrors Agent._prepare_kickoff)
         if self._memory is not None:
             from crewai.tools.memory_tools import create_memory_tools
-            from crewai.utilities.agent_utils import sanitize_tool_name
+            from crewai.utilities.string_utils import sanitize_tool_name
 
             existing_names = {sanitize_tool_name(t.name) for t in self._parsed_tools}
             memory_tools = [
-                mt for mt in create_memory_tools(self._memory)
+                mt
+                for mt in create_memory_tools(self._memory)
                 if sanitize_tool_name(mt.name) not in existing_names
             ]
             if memory_tools:
@@ -565,9 +575,10 @@ class LiteAgent(FlowTrackable, BaseModel):
             if memory_block:
                 formatted = self.i18n.slice("memory").format(memory=memory_block)
                 if self._messages and self._messages[0].get("role") == "system":
-                    self._messages[0]["content"] = (
-                        self._messages[0].get("content", "") + "\n\n" + formatted
-                    )
+                    existing_content = self._messages[0].get("content", "")
+                    if not isinstance(existing_content, str):
+                        existing_content = ""
+                    self._messages[0]["content"] = existing_content + "\n\n" + formatted
             crewai_event_bus.emit(
                 self,
                 event=MemoryRetrievalCompletedEvent(
@@ -588,16 +599,12 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
 
     def _save_to_memory(self, output_text: str) -> None:
-        """Extract discrete memories from the run and remember each. No-op if _memory is None."""
-        if self._memory is None:
+        """Extract discrete memories from the run and remember each. No-op if _memory is None or read-only."""
+        if self._memory is None or getattr(self._memory, "_read_only", False):
             return
         input_str = self._get_last_user_content() or "User request"
         try:
-            raw = (
-                f"Input: {input_str}\n"
-                f"Agent: {self.role}\n"
-                f"Result: {output_text}"
-            )
+            raw = f"Input: {input_str}\nAgent: {self.role}\nResult: {output_text}"
             extracted = self._memory.extract_memories(raw)
             if extracted:
                 self._memory.remember_many(extracted, agent_role=self.role)
@@ -622,13 +629,20 @@ class LiteAgent(FlowTrackable, BaseModel):
         )
 
         # Execute the agent using invoke loop
-        agent_finish = self._invoke_loop()
+        active_response_format = response_format or self.response_format
+        agent_finish = self._invoke_loop(response_model=active_response_format)
         if self._memory is not None:
-            self._save_to_memory(agent_finish.output)
+            output_text = (
+                agent_finish.output.model_dump_json()
+                if isinstance(agent_finish.output, BaseModel)
+                else agent_finish.output
+            )
+            self._save_to_memory(output_text)
         formatted_result: BaseModel | None = None
 
-        active_response_format = response_format or self.response_format
-        if active_response_format:
+        if isinstance(agent_finish.output, BaseModel):
+            formatted_result = agent_finish.output
+        elif active_response_format:
             try:
                 model_schema = generate_model_description(active_response_format)
                 schema = json.dumps(model_schema, indent=2)
@@ -660,8 +674,13 @@ class LiteAgent(FlowTrackable, BaseModel):
             usage_metrics = self._token_process.get_summary()
 
         # Create output
+        raw_output = (
+            agent_finish.output.model_dump_json()
+            if isinstance(agent_finish.output, BaseModel)
+            else agent_finish.output
+        )
         output = LiteAgentOutput(
-            raw=agent_finish.output,
+            raw=raw_output,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
@@ -838,9 +857,14 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         return formatted_messages
 
-    def _invoke_loop(self) -> AgentFinish:
+    def _invoke_loop(
+        self, response_model: type[BaseModel] | None = None
+    ) -> AgentFinish:
         """
         Run the agent's thought process until it reaches a conclusion or max iterations.
+
+        Args:
+            response_model: Optional Pydantic model for native structured output.
 
         Returns:
             AgentFinish: The final result of the agent execution.
@@ -870,11 +894,18 @@ class LiteAgent(FlowTrackable, BaseModel):
                         printer=self._printer,
                         from_agent=self,
                         executor_context=self,
+                        response_model=response_model,
                         verbose=self.verbose,
                     )
 
                 except Exception as e:
                     raise e
+
+                if isinstance(answer, BaseModel):
+                    formatted_answer = AgentFinish(
+                        thought="", output=answer, text=answer.model_dump_json()
+                    )
+                    break
 
                 formatted_answer = process_llm_response(
                     cast(str, answer), self.use_stop_words
@@ -901,7 +932,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     )
 
                 self._append_message(formatted_answer.text, role="assistant")
-            except OutputParserError as e:  # noqa: PERF203
+            except OutputParserError as e:
                 if self.verbose:
                     self._printer.print(
                         content="Failed to parse LLM output. Retrying...",
