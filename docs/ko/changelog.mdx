@@ -4,6 +4,56 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 2월 26일">
+  ## v1.10.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - MCP 도구 해상도 및 관련 이벤트 개선
+  - lancedb 버전 업데이트 및 lance-namespace 패키지 추가
+  - CrewAgentExecutor 및 BaseTool에서 JSON 인수 파싱 및 검증 개선
+  - CLI HTTP 클라이언트를 requests에서 httpx로 마이그레이션
+  - 버전화된 문서 추가
+  - 버전 노트에 대한 yanked 감지 추가
+  - Flows에서 사용자 입력 처리 구현
+  - 인간 피드백 통합 테스트에서 HITL 자기 루프 기능 개선
+  - eventbus에 started_event_id 추가 및 설정
+  - tools.specs 자동 업데이트
+
+  ### 버그 수정
+  - 빈 경우에도 도구 kwargs를 검증하여 모호한 TypeError 방지
+  - LLM을 위한 도구 매개변수 스키마에서 null 타입 유지
+  - output_pydantic/output_json을 네이티브 구조화된 출력으로 매핑
+  - 약속이 있는 경우 콜백이 실행/대기되도록 보장
+  - 예외 컨텍스트에서 메서드 이름 캡처
+  - 라우터 결과에서 enum 타입 유지; 타입 개선
+  - 입력으로 지속성 ID가 전달될 때 조용히 깨지는 순환 흐름 수정
+  - CLI 플래그 형식을 --skip-provider에서 --skip_provider로 수정
+  - OpenAI 도구 호출 스트림이 완료되도록 보장
+  - MCP 도구에서 복잡한 스키마 $ref 포인터 해결
+  - 스키마에서 additionalProperties=false 강제 적용
+  - 크루 폴더에 대해 예약된 스크립트 이름 거부
+  - 가드레일 이벤트 방출 테스트에서 경쟁 조건 해결
+
+  ### 문서
+  - 비네이티브 LLM 공급자를 위한 litellm 종속성 노트 추가
+  - NL2SQL 보안 모델 및 강화 지침 명확화
+  - 9개 통합에서 96개의 누락된 작업 추가
+
+  ### 리팩토링
+  - crew를 provider로 리팩토링
+  - HITL을 provider 패턴으로 추출
+  - 훅 타이핑 및 등록 개선
+
+  ## 기여자
+
+  @dependabot[bot], @github-actions[bot], @github-code-quality[bot], @greysonlalonde, @heitorado, @hobostay, @joaomdmoura, @johnvan7, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha, @mplachta, @nicoferdi96, @theCyberTech, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="2026년 1월 26일">
   ## v1.9.0
 

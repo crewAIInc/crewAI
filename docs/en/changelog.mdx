@@ -4,6 +4,56 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Feb 26, 2026">
+  ## v1.10.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.0)
+
+  ## What's Changed
+
+  ### Features
+  - Enhance MCP tool resolution and related events
+  - Update lancedb version and add lance-namespace packages
+  - Enhance JSON argument parsing and validation in CrewAgentExecutor and BaseTool
+  - Migrate CLI HTTP client from requests to httpx
+  - Add versioned documentation
+  - Add yanked detection for version notes
+  - Implement user input handling in Flows
+  - Enhance HITL self-loop functionality in human feedback integration tests
+  - Add started_event_id and set in eventbus
+  - Auto update tools.specs
+
+  ### Bug Fixes
+  - Validate tool kwargs even when empty to prevent cryptic TypeError
+  - Preserve null types in tool parameter schemas for LLM
+  - Map output_pydantic/output_json to native structured output
+  - Ensure callbacks are ran/awaited if promise
+  - Capture method name in exception context
+  - Preserve enum type in router result; improve types
+  - Fix cyclic flows silently breaking when persistence ID is passed in inputs
+  - Correct CLI flag format from --skip-provider to --skip_provider
+  - Ensure OpenAI tool call stream is finalized
+  - Resolve complex schema $ref pointers in MCP tools
+  - Enforce additionalProperties=false in schemas
+  - Reject reserved script names for crew folders
+  - Resolve race condition in guardrail event emission test
+
+  ### Documentation
+  - Add litellm dependency note for non-native LLM providers
+  - Clarify NL2SQL security model and hardening guidance
+  - Add 96 missing actions across 9 integrations
+
+  ### Refactoring
+  - Refactor crew to provider
+  - Extract HITL to provider pattern
+  - Improve hook typing and registration
+
+  ## Contributors
+
+  @dependabot[bot], @github-actions[bot], @github-code-quality[bot], @greysonlalonde, @heitorado, @hobostay, @joaomdmoura, @johnvan7, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha, @mplachta, @nicoferdi96, @theCyberTech, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="Jan 26, 2026">
   ## v1.9.0
 
