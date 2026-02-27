@@ -601,7 +601,16 @@ class BaseLLM(ABC):
         Returns:
             Messages with files formatted into content blocks.
         """
-        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+        if not HAS_CREWAI_FILES:
+            return messages
+
+        if not self.supports_multimodal():
+            if any(msg.get("files") for msg in messages):
+                raise ValueError(
+                    f"Model '{self.model}' does not support multimodal input, "
+                    "but files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the file inputs."
+                )
             return messages
 
         provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
