@@ -11,7 +11,7 @@ dependencies = [
     "pytube~=15.0.0",
     "requests~=2.32.5",
     "docker~=7.1.0",
-    "crewai==1.10.1b",
+    "crewai==1.10.1b1",
     "tiktoken~=0.8.0",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",

@@ -16,7 +16,7 @@ from collections.abc import (
     Sequence,
     ValuesView,
 )
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 import copy
 import enum
 import inspect
@@ -1739,7 +1739,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
         async def _run_flow() -> Any:
             return await self.kickoff_async(inputs, input_files)
 
-        return asyncio.run(_run_flow())
+        try:
+            asyncio.get_running_loop()
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, _run_flow()).result()
+        except RuntimeError:
+            return asyncio.run(_run_flow())
 
     async def kickoff_async(
         self,

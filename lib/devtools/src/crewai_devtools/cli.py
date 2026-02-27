@@ -200,7 +200,7 @@ def add_docs_version(docs_json_path: Path, version: str) -> bool:
 
     Args:
         docs_json_path: Path to docs/docs.json.
-        version: Version string (e.g., "1.10.1b").
+        version: Version string (e.g., "1.10.1b1").
 
     Returns:
         True if docs.json was updated, False otherwise.
