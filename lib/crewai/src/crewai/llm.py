@@ -40,6 +40,7 @@ from crewai.events.types.tool_usage_events import (
 from crewai.llms.base_llm import BaseLLM, get_current_call_id, llm_call_context
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
+    AVIAN_MODELS,
     AZURE_MODELS,
     BEDROCK_MODELS,
     GEMINI_MODELS,
@@ -321,6 +322,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "claude",
     "azure",
     "azure_openai",
+    "avian",
     "google",
     "gemini",
     "bedrock",
@@ -380,6 +382,7 @@ class LLM(BaseLLM):
                 "claude": "anthropic",
                 "azure": "azure",
                 "azure_openai": "azure",
+                "avian": "avian",
                 "google": "gemini",
                 "gemini": "gemini",
                 "bedrock": "bedrock",
@@ -514,6 +517,9 @@ class LLM(BaseLLM):
         if provider == "bedrock" and model in BEDROCK_MODELS:
             return True
 
+        if provider == "avian" and model in AVIAN_MODELS:
+            return True
+
         if provider == "azure":
             # azure does not provide a list of available models, determine a better way to handle this
             return True
@@ -581,6 +587,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "avian":
+            from crewai.llms.providers.avian.completion import AvianCompletion
+
+            return AvianCompletion
 
         return None
 
