@@ -95,7 +95,7 @@ class MCPClient:
         self.discovery_timeout = discovery_timeout
         self.max_retries = max_retries
         self.cache_tools_list = cache_tools_list
-        # self._logger = logger or logging.getLogger(__name__)
+        self._logger = logger or logging.getLogger(__name__)
         self._session: Any = None
         self._initialized = False
         self._exit_stack = AsyncExitStack()
@@ -358,10 +358,12 @@ class MCPClient:
         """Cleanup resources when an error occurs during connection."""
         try:
             await self._exit_stack.aclose()
-
-        except Exception as e:
-            # Best effort cleanup - ignore all other errors
-            raise RuntimeError(f"Error during MCP client cleanup: {e}") from e
+        except (RuntimeError, BaseExceptionGroup) as e:
+            error_msg = str(e).lower()
+            if "cancel scope" not in error_msg and "task" not in error_msg:
+                raise RuntimeError(f"Error during MCP client cleanup: {e}") from e
+        except Exception:
+            self._logger.debug("Suppressed error during MCP cleanup", exc_info=True)
         finally:
             self._session = None
             self._initialized = False
@@ -374,8 +376,12 @@ class MCPClient:
 
         try:
             await self._exit_stack.aclose()
-        except Exception as e:
-            raise RuntimeError(f"Error during MCP client disconnect: {e}") from e
+        except (RuntimeError, BaseExceptionGroup) as e:
+            error_msg = str(e).lower()
+            if "cancel scope" not in error_msg and "task" not in error_msg:
+                raise RuntimeError(f"Error during MCP client disconnect: {e}") from e
+        except Exception:
+            self._logger.debug("Suppressed error during MCP disconnect", exc_info=True)
         finally:
             self._session = None
             self._initialized = False
