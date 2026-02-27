@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
+import re
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
@@ -17,6 +18,7 @@ from openai.types.responses import Response
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.llms.auth.openai_auth import OpenAIAuthError, resolve_openai_bearer_token
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -182,6 +184,38 @@ class OpenAICompletion(BaseLLM):
         "code_interpreter": "code_interpreter",
         "computer_use": "computer_use_preview",
     }
+    CODEX_CHATGPT_DEFAULT_BASE_URL: ClassVar[str] = (
+        "https://chatgpt.com/backend-api/codex"
+    )
+    CODEX_CHATGPT_BASE_URL_ENV: ClassVar[str] = "CREWAI_CODEX_CHATGPT_BASE_URL"
+    CHATGPT_BACKEND_DEFAULT_INSTRUCTIONS: ClassVar[str] = (
+        "You are a helpful assistant."
+    )
+    CHATGPT_BACKEND_ALWAYS_STRIP_PARAMS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "max_output_tokens",
+            "max_tokens",
+            "max_completion_tokens",
+            "metadata",
+        }
+    )
+    CHATGPT_BACKEND_RETRY_STRIP_ORDER: ClassVar[tuple[str, ...]] = (
+        "metadata",
+        "max_output_tokens",
+        "max_tokens",
+        "max_completion_tokens",
+        "reasoning",
+        "text",
+        "temperature",
+        "top_p",
+        "seed",
+        "include",
+        "store",
+    )
+    CHATGPT_BACKEND_MODEL_ALIASES: ClassVar[dict[str, str]] = {
+        "gpt-5.2-pro": "gpt-5.2",
+        "gpt-5-pro": "gpt-5",
+    }
 
     def __init__(
         self,
@@ -240,12 +274,14 @@ class OpenAICompletion(BaseLLM):
         super().__init__(
             model=model,
             temperature=temperature,
-            api_key=api_key or os.getenv("OPENAI_API_KEY"),
+            api_key=api_key,
             base_url=base_url,
             timeout=timeout,
             provider=provider,
             **kwargs,
         )
+        self._resolved_openai_auth = None
+        self._use_codex_chatgpt_backend = False
 
         client_config = self._get_client_params()
         if self.interceptor:
@@ -332,19 +368,50 @@ class OpenAICompletion(BaseLLM):
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""
 
-        if self.api_key is None:
-            self.api_key = os.getenv("OPENAI_API_KEY")
-            if self.api_key is None:
-                raise ValueError("OPENAI_API_KEY is required")
+        if not self.api_key:
+            try:
+                resolved_auth = resolve_openai_bearer_token()
+            except OpenAIAuthError as exc:
+                raise ValueError(str(exc)) from exc
+
+            self.api_key = resolved_auth.token
+            self._resolved_openai_auth = resolved_auth
+            self._use_codex_chatgpt_backend = self._should_use_codex_chatgpt_backend(
+                resolved_auth
+            )
+
+            if resolved_auth.account_id and not self._use_codex_chatgpt_backend:
+                account_header = (
+                    os.getenv("CREWAI_OPENAI_ACCOUNT_HEADER", "OpenAI-Account")
+                    .strip()
+                )
+                if account_header:
+                    existing_headers = dict(self.default_headers or {})
+                    if not any(
+                        header.lower() == account_header.lower()
+                        for header in existing_headers
+                    ):
+                        existing_headers[account_header] = resolved_auth.account_id
+                        self.default_headers = existing_headers
+
+        if self._resolved_openai_auth:
+            self._use_codex_chatgpt_backend = self._should_use_codex_chatgpt_backend(
+                self._resolved_openai_auth
+            )
+        else:
+            self._use_codex_chatgpt_backend = False
+
+        resolved_base_url = self.base_url or self.api_base
+        if self._use_codex_chatgpt_backend:
+            resolved_base_url = resolved_base_url or self._resolve_codex_chatgpt_base_url()
+        else:
+            resolved_base_url = resolved_base_url or os.getenv("OPENAI_BASE_URL") or None
 
         base_params = {
             "api_key": self.api_key,
             "organization": self.organization,
             "project": self.project,
-            "base_url": self.base_url
-            or self.api_base
-            or os.getenv("OPENAI_BASE_URL")
-            or None,
+            "base_url": resolved_base_url,
             "timeout": self.timeout,
             "max_retries": self.max_retries,
             "default_headers": self.default_headers,
@@ -357,6 +424,34 @@ class OpenAICompletion(BaseLLM):
             client_params.update(self.client_params)
 
         return client_params
+
+    def _should_use_codex_chatgpt_backend(
+        self, resolved_auth: Any | None
+    ) -> bool:
+        """Determine whether to route OAuth Codex auth through ChatGPT backend."""
+        if resolved_auth is None:
+            return False
+        if not getattr(resolved_auth, "is_oauth", False):
+            return False
+        if getattr(resolved_auth, "source", None) not in {
+            "codex_auth_json_oauth",
+            "codex_keyring_oauth",
+        }:
+            return False
+        if os.getenv("OPENAI_API_KEY"):
+            return False
+        auth_mode = os.getenv("CREWAI_OPENAI_AUTH_MODE", "").strip().lower()
+        return auth_mode in {"", "oauth_codex"}
+
+    def _resolve_codex_chatgpt_base_url(self) -> str:
+        """Resolve ChatGPT backend base URL for Codex OAuth mode."""
+        configured = os.getenv(
+            self.CODEX_CHATGPT_BASE_URL_ENV, self.CODEX_CHATGPT_DEFAULT_BASE_URL
+        )
+        base_url = configured.strip().rstrip("/")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3].rstrip("/")
+        return base_url
 
     def call(
         self,
@@ -567,7 +662,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self.stream or bool(params.get("stream")):
             return self._handle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -598,7 +693,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self.stream or bool(params.get("stream")):
             return await self._ahandle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -735,7 +830,162 @@ class OpenAICompletion(BaseLLM):
             "timeout",
         }
 
-        return {k: v for k, v in params.items() if k not in crewai_specific_params}
+        filtered_params = {
+            k: v for k, v in params.items() if k not in crewai_specific_params
+        }
+        if self._use_codex_chatgpt_backend:
+            return self._prepare_chatgpt_backend_responses_params(filtered_params)
+        return filtered_params
+
+    def _prepare_chatgpt_backend_responses_params(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Adjust Responses payload for ChatGPT subscription backend compatibility."""
+        adjusted = dict(params)
+        requested_model = adjusted.get("model")
+        if isinstance(requested_model, str):
+            alias_model = self.CHATGPT_BACKEND_MODEL_ALIASES.get(
+                requested_model, requested_model
+            )
+            if alias_model != requested_model:
+                adjusted["model"] = alias_model
+                logging.info(
+                    "Mapped ChatGPT backend model alias %s -> %s for oauth_codex.",
+                    requested_model,
+                    alias_model,
+                )
+
+        if not adjusted.get("instructions"):
+            adjusted["instructions"] = self.CHATGPT_BACKEND_DEFAULT_INSTRUCTIONS
+
+        for key in self.CHATGPT_BACKEND_ALWAYS_STRIP_PARAMS:
+            adjusted.pop(key, None)
+
+        adjusted["store"] = False
+        adjusted["stream"] = True
+
+        if "input" in adjusted and not isinstance(adjusted.get("input"), list):
+            adjusted["input"] = [
+                {"role": "user", "content": str(adjusted.get("input", ""))}
+            ]
+
+        return adjusted
+
+    def _extract_openai_error_status(self, error: Exception) -> int | None:
+        status = getattr(error, "status_code", None)
+        if isinstance(status, int):
+            return status
+        response = getattr(error, "response", None)
+        response_status = getattr(response, "status_code", None)
+        if isinstance(response_status, int):
+            return response_status
+        return None
+
+    def _extract_openai_error_message(self, error: Exception) -> str:
+        body = getattr(error, "body", None)
+        if isinstance(body, dict):
+            payload = body.get("error") if isinstance(body.get("error"), dict) else body
+            if isinstance(payload, dict):
+                message = payload.get("message")
+                if isinstance(message, str) and message:
+                    return message
+            return json.dumps(body)
+
+        response = getattr(error, "response", None)
+        if response is not None:
+            try:
+                response_json = response.json()
+                if isinstance(response_json, dict):
+                    payload = (
+                        response_json.get("error")
+                        if isinstance(response_json.get("error"), dict)
+                        else response_json
+                    )
+                    if isinstance(payload, dict):
+                        message = payload.get("message")
+                        if isinstance(message, str) and message:
+                            return message
+                    return json.dumps(response_json)
+            except Exception:  # noqa: BLE001
+                pass
+
+        return str(error)
+
+    def _pick_chatgpt_retry_strip_key(
+        self, params: dict[str, Any], error: Exception
+    ) -> str | None:
+        message = self._extract_openai_error_message(error).lower()
+
+        for key in self.CHATGPT_BACKEND_RETRY_STRIP_ORDER:
+            if key in params and key in message:
+                return key
+
+        for raw_key in re.findall(r"[`'\"]([a-zA-Z0-9_.-]+)[`'\"]", message):
+            normalized_key = raw_key.replace("-", "_")
+            if normalized_key in params:
+                return normalized_key
+            if "." in normalized_key:
+                leaf_key = normalized_key.split(".")[-1]
+                if leaf_key in params:
+                    return leaf_key
+
+        for key in self.CHATGPT_BACKEND_RETRY_STRIP_ORDER:
+            if key in params:
+                return key
+
+        return None
+
+    def _responses_create_with_retry(self, params: dict[str, Any]) -> Any:
+        if not self._use_codex_chatgpt_backend:
+            return self.client.responses.create(**params)
+
+        attempt_params = dict(params)
+        max_attempts = len(self.CHATGPT_BACKEND_RETRY_STRIP_ORDER) + 1
+        for _ in range(max_attempts):
+            try:
+                return self.client.responses.create(**attempt_params)
+            except Exception as exc:  # noqa: BLE001
+                status = self._extract_openai_error_status(exc)
+                if status != 400:
+                    raise
+
+                strip_key = self._pick_chatgpt_retry_strip_key(attempt_params, exc)
+                if not strip_key or strip_key not in attempt_params:
+                    raise
+
+                attempt_params.pop(strip_key, None)
+                logging.warning(
+                    "Retrying ChatGPT backend Responses call without unsupported param '%s'.",
+                    strip_key,
+                )
+
+        return self.client.responses.create(**attempt_params)
+
+    async def _aresponses_create_with_retry(self, params: dict[str, Any]) -> Any:
+        if not self._use_codex_chatgpt_backend:
+            return await self.async_client.responses.create(**params)
+
+        attempt_params = dict(params)
+        max_attempts = len(self.CHATGPT_BACKEND_RETRY_STRIP_ORDER) + 1
+        for _ in range(max_attempts):
+            try:
+                return await self.async_client.responses.create(**attempt_params)
+            except Exception as exc:  # noqa: BLE001
+                status = self._extract_openai_error_status(exc)
+                if status != 400:
+                    raise
+
+                strip_key = self._pick_chatgpt_retry_strip_key(attempt_params, exc)
+                if not strip_key or strip_key not in attempt_params:
+                    raise
+
+                attempt_params.pop(strip_key, None)
+                logging.warning(
+                    "Retrying ChatGPT backend Responses call without unsupported param '%s'.",
+                    strip_key,
+                )
+
+        return await self.async_client.responses.create(**attempt_params)
 
     def _convert_tools_for_responses(
         self, tools: list[dict[str, BaseTool]]
@@ -789,7 +1039,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle non-streaming Responses API call."""
         try:
-            response: Response = self.client.responses.create(**params)
+            response: Response = self._responses_create_with_retry(params)
 
             # Track response ID for auto-chaining
             if self.auto_chain and response.id:
@@ -921,7 +1171,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle async non-streaming Responses API call."""
         try:
-            response: Response = await self.async_client.responses.create(**params)
+            response: Response = await self._aresponses_create_with_retry(params)
 
             # Track response ID for auto-chaining
             if self.auto_chain and response.id:
@@ -1052,7 +1302,7 @@ class OpenAICompletion(BaseLLM):
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
 
-        stream = self.client.responses.create(**params)
+        stream = self._responses_create_with_retry(params)
         response_id_stream = None
 
         for event in stream:
@@ -1176,7 +1426,7 @@ class OpenAICompletion(BaseLLM):
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
 
-        stream = await self.async_client.responses.create(**params)
+        stream = await self._aresponses_create_with_retry(params)
         response_id_stream = None
 
         async for event in stream:

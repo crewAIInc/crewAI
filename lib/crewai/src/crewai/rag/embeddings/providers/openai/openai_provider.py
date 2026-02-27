@@ -5,8 +5,10 @@ from typing import Any
 from chromadb.utils.embedding_functions.openai_embedding_function import (
     OpenAIEmbeddingFunction,
 )
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
+from typing_extensions import Self
 
+from crewai.llms.auth.openai_auth import OpenAIAuthError, resolve_openai_bearer_token
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 
 
@@ -72,3 +74,15 @@ class OpenAIProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
             "EMBEDDINGS_OPENAI_ORGANIZATION_ID", "OPENAI_ORGANIZATION_ID"
         ),
     )
+
+    @model_validator(mode="after")
+    def resolve_api_key(self) -> Self:
+        """Resolve OAuth token when OPENAI_API_KEY is absent."""
+        if self.api_key:
+            return self
+        try:
+            self.api_key = resolve_openai_bearer_token().token
+        except OpenAIAuthError:
+            # Keep provider initialization compatible with existing behavior.
+            pass
+        return self

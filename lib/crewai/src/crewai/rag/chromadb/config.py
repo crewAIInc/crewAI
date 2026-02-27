@@ -8,6 +8,7 @@ import warnings
 from chromadb.config import Settings
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
+from crewai.llms.auth.openai_auth import OpenAIAuthError, resolve_openai_bearer_token
 from crewai.rag.chromadb.constants import (
     DEFAULT_DATABASE,
     DEFAULT_STORAGE_PATH,
@@ -55,10 +56,17 @@ def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
         OpenAIEmbeddingFunction,
     )
 
+    resolved_api_key = os.getenv("OPENAI_API_KEY")
+    if not resolved_api_key:
+        try:
+            resolved_api_key = resolve_openai_bearer_token().token
+        except OpenAIAuthError:
+            resolved_api_key = None
+
     return cast(
         ChromaEmbeddingFunctionWrapper,
         OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"),
+            api_key=resolved_api_key,
             model_name="text-embedding-3-small",
             api_key_env_var="OPENAI_API_KEY",
         ),

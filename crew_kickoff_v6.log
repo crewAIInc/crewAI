@@ -1,0 +1,11 @@
+== ENV ==
+CREWAI_OPENAI_AUTH_MODE=oauth_codex
+OPENAI_API_KEY=unset
+CREWAI_CODEX_CHATGPT_BASE_URL=<default>
+auth.source=codex_auth_json_oauth
+auth.token=len=1935 eyJhbG...PUlQ
+client.base_url=https://chatgpt.com/backend-api/codex
+== CREW CHECK ==
+PASS label=crew.responses.gpt-5.2-pro detail='OK'
+PASS label=crew.responses.gpt-5.2-codex detail='print("OK")'
+RESULT PASS

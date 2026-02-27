@@ -187,8 +187,38 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
 
     **Supported Environment Variables:**
-    - `OPENAI_API_KEY`: Your OpenAI API key (required)
+    - `OPENAI_API_KEY`: Your OpenAI API key (highest priority)
+    - `OPENAI_OAUTH_ACCESS_TOKEN`: Explicit OpenAI OAuth access token
+    - `CREWAI_OPENAI_AUTH_MODE`: `api_key` (default), `oauth_token`, or `oauth_codex`
+    - `CODEX_HOME`: Codex auth directory (defaults to `~/.codex`)
     - `OPENAI_BASE_URL`: Custom base URL for OpenAI API (optional)
+
+    **Credential Priority (high to low):**
+    1. `LLM(api_key=...)` / explicit `api_key` parameter
+    2. `OPENAI_API_KEY`
+    3. `OPENAI_OAUTH_ACCESS_TOKEN`
+    4. Local Codex login state (`CODEX_HOME/auth.json` or keyring)
+
+    **Using OpenAI OAuth from Codex login:**
+    ```bash Code
+    codex login
+    export CREWAI_OPENAI_AUTH_MODE=oauth_codex
+    unset OPENAI_API_KEY
+
+    python - <<'PY'
+    from crewai import LLM
+
+    llm = LLM(model="openai/gpt-4.1")
+    print(llm.call("Reply with exactly: oauth_ok"))
+    PY
+    ```
+
+    Expected result:
+    - The call succeeds without `OPENAI_API_KEY`.
+    - If the local `access_token` is expired, CrewAI refreshes it and updates `CODEX_HOME/auth.json`.
+
+    **Common OAuth refresh error:**
+    - If refresh returns `401`, your refresh token is no longer valid. Run `codex login` again.
 
     **Features:**
     - Native function calling support (except o1 models)

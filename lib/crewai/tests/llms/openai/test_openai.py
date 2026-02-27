@@ -7,6 +7,7 @@ import openai
 import pytest
 
 from crewai.llm import LLM
+from crewai.llms.auth.openai_auth import ResolvedOpenAIAuth
 from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
 from crewai.crew import Crew
 from crewai.agent import Agent
@@ -489,6 +490,154 @@ def test_openai_get_client_params_no_base_url(monkeypatch):
     client_params = llm._get_client_params()
     # When no base_url is provided, it should not be in the params (filtered out as None)
     assert "base_url" not in client_params or client_params.get("base_url") is None
+
+
+def test_openai_get_client_params_resolves_oauth_token(monkeypatch):
+    """Test OAuth token resolver integration for OpenAI native provider."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_OAUTH_ACCESS_TOKEN", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "api_key")
+
+    with patch(
+        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        return_value=ResolvedOpenAIAuth(
+            token="oauth-token",
+            source="codex_auth_json_oauth",
+            account_id="acct_123",
+            is_oauth=True,
+        ),
+    ) as mock_resolve:
+        llm = OpenAICompletion(model="gpt-4o")
+        params = llm._get_client_params()
+        assert params["api_key"] == "oauth-token"
+        assert params["default_headers"]["OpenAI-Account"] == "acct_123"
+        assert mock_resolve.call_count >= 1
+
+
+def test_openai_get_client_params_routes_codex_oauth_to_chatgpt_backend(monkeypatch):
+    """Codex OAuth should route to ChatGPT backend by default."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+    monkeypatch.setenv(
+        "CREWAI_CODEX_CHATGPT_BASE_URL", "https://chatgpt.com/backend-api/codex"
+    )
+
+    with patch(
+        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        return_value=ResolvedOpenAIAuth(
+            token="oauth-token",
+            source="codex_auth_json_oauth",
+            account_id="acct_123",
+            is_oauth=True,
+        ),
+    ):
+        llm = OpenAICompletion(model="gpt-5.2-pro", api="responses")
+        params = llm._get_client_params()
+
+    assert params["base_url"] == "https://chatgpt.com/backend-api/codex"
+    assert "default_headers" not in params or "OpenAI-Account" not in params.get(
+        "default_headers", {}
+    )
+
+
+def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch):
+    """ChatGPT backend should remove unsupported fields and enforce instructions."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+
+    with patch(
+        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        return_value=ResolvedOpenAIAuth(
+            token="oauth-token",
+            source="codex_auth_json_oauth",
+            is_oauth=True,
+        ),
+    ):
+        llm = OpenAICompletion(
+            model="gpt-5.2-pro",
+            api="responses",
+            max_tokens=128,
+            metadata={"trace_id": "abc"},
+        )
+
+    params = llm._prepare_responses_params(
+        messages=[{"role": "user", "content": "Say OK"}]
+    )
+
+    assert params["instructions"] == "You are a helpful assistant."
+    assert "max_output_tokens" not in params
+    assert "metadata" not in params
+    assert params["model"] == "gpt-5.2"
+    assert params["store"] is False
+    assert params["stream"] is True
+
+
+def test_call_responses_uses_stream_handler_when_chatgpt_backend_sets_stream(monkeypatch):
+    """Forced stream flag from ChatGPT backend should route via streaming handler."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+
+    with patch(
+        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        return_value=ResolvedOpenAIAuth(
+            token="oauth-token",
+            source="codex_auth_json_oauth",
+            is_oauth=True,
+        ),
+    ):
+        llm = OpenAICompletion(model="gpt-5.2-pro", api="responses")
+
+    with patch.object(
+        llm, "_prepare_responses_params", return_value={"stream": True}
+    ) as mock_prepare, patch.object(
+        llm, "_handle_streaming_responses", return_value="stream-ok"
+    ) as mock_streaming:
+        result = llm._call_responses(messages=[])
+
+    assert result == "stream-ok"
+    mock_prepare.assert_called_once()
+    mock_streaming.assert_called_once()
+
+
+def test_chatgpt_backend_retries_by_stripping_bad_request_param(monkeypatch):
+    """400 invalid_request should trigger adaptive stripping for ChatGPT backend."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+
+    with patch(
+        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        return_value=ResolvedOpenAIAuth(
+            token="oauth-token",
+            source="codex_auth_json_oauth",
+            is_oauth=True,
+        ),
+    ):
+        llm = OpenAICompletion(model="gpt-5.2-pro", api="responses")
+
+    class _BadRequest(Exception):
+        status_code = 400
+
+        def __str__(self) -> str:
+            return "Unsupported parameter: 'metadata'."
+
+    response = MagicMock()
+    response.output_text = "OK"
+    response.id = "resp_123"
+    response.usage = None
+
+    llm.client.responses.create = MagicMock(side_effect=[_BadRequest(), response])
+    params = {
+        "model": "gpt-5.2-pro",
+        "input": [{"role": "user", "content": "ok"}],
+        "instructions": "You are a helpful assistant.",
+        "metadata": {"trace_id": "abc"},
+    }
+    result = llm._responses_create_with_retry(params)
+
+    assert result is response
+    assert llm.client.responses.create.call_count == 2
+    _, second_kwargs = llm.client.responses.create.call_args
+    assert "metadata" not in second_kwargs
 
 
 def test_openai_streaming_with_response_model():
