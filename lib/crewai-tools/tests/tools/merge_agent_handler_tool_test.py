@@ -26,34 +26,55 @@ def mock_tool_pack_response():
                 {
                     "name": "linear__create_issue",
                     "description": "Creates a new issue in Linear",
-                    "parameters": {
+                    "inputSchema": {
                         "type": "object",
+                        "required": ["input"],
                         "properties": {
-                            "title": {
-                                "type": "string",
-                                "description": "The issue title",
-                            },
-                            "description": {
-                                "type": "string",
-                                "description": "The issue description",
-                            },
-                            "priority": {
-                                "type": "integer",
-                                "description": "Priority level (1-4)",
-                            },
+                            "input": {
+                                "type": "object",
+                                "required": ["title"],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "description": "The issue title",
+                                    },
+                                    "description": {
+                                        "anyOf": [
+                                            {"type": "string"},
+                                            {"type": "null"}
+                                        ],
+                                        "description": "The issue description",
+                                    },
+                                    "priority": {
+                                        "anyOf": [
+                                            {"type": "integer"},
+                                            {"type": "null"}
+                                        ],
+                                        "description": "Priority level (1-4)",
+                                    },
+                                },
+                            }
                         },
-                        "required": ["title"],
                     },
                 },
                 {
                     "name": "linear__get_issues",
                     "description": "Get issues from Linear",
-                    "parameters": {
+                    "inputSchema": {
                         "type": "object",
+                        "required": ["input"],
                         "properties": {
-                            "filter": {
+                            "input": {
                                 "type": "object",
-                                "description": "Filter criteria",
+                                "properties": {
+                                    "filter": {
+                                        "anyOf": [
+                                            {"type": "object"},
+                                            {"type": "null"}
+                                        ],
+                                        "description": "Filter criteria",
+                                    }
+                                },
                             }
                         },
                     },
@@ -428,11 +449,12 @@ def test_tool_parameters_are_passed_in_request(mock_post):
     assert payload["params"]["name"] == "linear__update_issue"
     assert "arguments" in payload["params"]
 
-    # Verify the actual arguments were passed
+    # Verify the actual arguments were passed wrapped in "input"
     arguments = payload["params"]["arguments"]
-    assert arguments["id"] == "issue-123"
-    assert arguments["title"] == "New Title"
-    assert arguments["priority"] == 1
+    assert "input" in arguments
+    assert arguments["input"]["id"] == "issue-123"
+    assert arguments["input"]["title"] == "New Title"
+    assert arguments["input"]["priority"] == 1
 
 
 @patch("requests.post")
@@ -475,15 +497,534 @@ def test_tool_run_method_passes_parameters(mock_post, mock_tool_pack_response):
     assert payload["method"] == "tools/call"
     assert payload["params"]["name"] == "linear__create_issue"
 
-    # Verify parameters were passed
+    # Verify parameters were passed wrapped in "input"
     arguments = payload["params"]["arguments"]
-    assert arguments["title"] == "Test Issue"
-    assert arguments["description"] == "Test description"
-    assert arguments["priority"] == 2
+    assert "input" in arguments
+    assert arguments["input"]["title"] == "Test Issue"
+    assert arguments["input"]["description"] == "Test description"
+    assert arguments["input"]["priority"] == 2
 
     # Verify result was returned
     assert result["success"] is True
     assert result["id"] == "issue-123"
+
+
+@patch("requests.post")
+def test_schema_parsing_from_input_schema(mock_post, mock_tool_pack_response):
+    """Test that schemas are properly parsed from MCP inputSchema format."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_tool_pack_response
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="linear__create_issue",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    # Verify schema was loaded
+    assert hasattr(tool, 'args_schema')
+    assert tool.args_schema is not None
+
+    # Get the schema
+    schema = tool.args_schema.model_json_schema()
+
+    # Verify properties are not empty
+    assert "properties" in schema
+    assert len(schema["properties"]) > 0
+
+    # Verify actual parameters are present (not wrapped in "input")
+    assert "title" in schema["properties"]
+    assert "description" in schema["properties"]
+    assert "priority" in schema["properties"]
+
+    # Verify required fields
+    assert "required" in schema
+    assert "title" in schema["required"]
+
+    # Verify optional fields have defaults
+    assert schema["properties"]["description"].get("default") is None
+    assert schema["properties"]["priority"].get("default") is None
+
+
+@patch("requests.post")
+def test_schema_handles_nullable_types(mock_post, mock_tool_pack_response):
+    """Test that anyOf nullable types are properly parsed as optional."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_tool_pack_response
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="linear__create_issue",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    schema = tool.args_schema.model_json_schema()
+
+    # Check that nullable fields are marked as optional with anyOf
+    description_schema = schema["properties"]["description"]
+    assert "anyOf" in description_schema or description_schema.get("default") is None
+
+    priority_schema = schema["properties"]["priority"]
+    assert "anyOf" in priority_schema or priority_schema.get("default") is None
+
+
+@patch("requests.post")
+def test_from_tool_pack_creates_proper_schemas(mock_post, mock_tool_pack_response):
+    """Test that from_tool_pack creates tools with proper schemas."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = mock_tool_pack_response
+    mock_post.return_value = mock_response
+
+    tools = MergeAgentHandlerTool.from_tool_pack(
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    # Verify all tools have schemas
+    for tool in tools:
+        assert hasattr(tool, 'args_schema')
+        assert tool.args_schema is not None
+
+        schema = tool.args_schema.model_json_schema()
+        assert "properties" in schema
+
+        # At least one tool should have non-empty properties
+        if tool.name == "linear__create_issue":
+            assert len(schema["properties"]) > 0
+            assert "title" in schema["properties"]
+
+
+@patch("requests.post")
+def test_backwards_compatibility_with_wrapped_input(mock_post):
+    """Test that tool handles pre-wrapped input for backwards compatibility."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {"content": [{"type": "text", "text": '{"success": true}'}]},
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool(
+        name="test_tool",
+        description="Test tool",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+        tool_name="test_tool",
+    )
+
+    # Call with pre-wrapped input (legacy format)
+    tool._run(input={"title": "Test", "priority": 1})
+
+    # Verify request was made
+    mock_post.assert_called_once()
+    payload = mock_post.call_args.kwargs["json"]
+
+    # Should keep the input wrapper as-is
+    arguments = payload["params"]["arguments"]
+    assert "input" in arguments
+    assert arguments["input"]["title"] == "Test"
+    assert arguments["input"]["priority"] == 1
+
+
+@patch("requests.post")
+def test_tool_with_input_parameter_non_dict_value(mock_post):
+    """Test that a tool with a single parameter named 'input' (non-dict value) is correctly wrapped."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {"content": [{"type": "text", "text": '{"success": true}'}]},
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool(
+        name="test_tool",
+        description="Test tool",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+        tool_name="test_tool",
+    )
+
+    # Call with a single parameter named "input" with a non-dict value
+    tool._run(input="some_string_value")
+
+    # Verify request was made
+    mock_post.assert_called_once()
+    payload = mock_post.call_args.kwargs["json"]
+
+    # Should wrap the parameter: {"input": {"input": "some_string_value"}}
+    arguments = payload["params"]["arguments"]
+    assert "input" in arguments
+    assert isinstance(arguments["input"], dict)
+    assert "input" in arguments["input"]
+    assert arguments["input"]["input"] == "some_string_value"
+
+
+@patch("requests.post")
+def test_tool_with_input_parameter_numeric_value(mock_post):
+    """Test that a tool with a single parameter named 'input' (numeric value) is correctly wrapped."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {"content": [{"type": "text", "text": '{"success": true}'}]},
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool(
+        name="test_tool",
+        description="Test tool",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+        tool_name="test_tool",
+    )
+
+    # Call with a single parameter named "input" with a numeric value
+    tool._run(input=42)
+
+    # Verify request was made
+    mock_post.assert_called_once()
+    payload = mock_post.call_args.kwargs["json"]
+
+    # Should wrap the parameter: {"input": {"input": 42}}
+    arguments = payload["params"]["arguments"]
+    assert "input" in arguments
+    assert isinstance(arguments["input"], dict)
+    assert "input" in arguments["input"]
+    assert arguments["input"]["input"] == 42
+
+
+@patch("requests.post")
+def test_required_non_nullable_field(mock_post):
+    """Test that required non-nullable fields have no default value."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {
+            "tools": [
+                {
+                    "name": "test_tool",
+                    "description": "Test tool",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["input"],
+                        "properties": {
+                            "input": {
+                                "type": "object",
+                                "required": ["name"],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Required non-nullable field",
+                                    }
+                                },
+                            }
+                        },
+                    },
+                }
+            ]
+        },
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="test_tool",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    # Verify args_schema is created correctly
+    assert tool.args_schema is not None
+    fields = tool.args_schema.model_fields
+
+    # Field should be required (no default value)
+    assert "name" in fields
+    assert fields["name"].is_required()
+    # In Pydantic v2, check that required is True
+    assert fields["name"].annotation == str
+
+
+@patch("requests.post")
+def test_required_nullable_field(mock_post):
+    """Test that required nullable fields are still required but accept None."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {
+            "tools": [
+                {
+                    "name": "test_tool",
+                    "description": "Test tool",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["input"],
+                        "properties": {
+                            "input": {
+                                "type": "object",
+                                "required": ["description"],
+                                "properties": {
+                                    "description": {
+                                        "anyOf": [
+                                            {"type": "string"},
+                                            {"type": "null"},
+                                        ],
+                                        "description": "Required but can be null",
+                                    }
+                                },
+                            }
+                        },
+                    },
+                }
+            ]
+        },
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="test_tool",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    # Verify args_schema is created correctly
+    assert tool.args_schema is not None
+    fields = tool.args_schema.model_fields
+
+    # Field should be required (no default value) but accept None
+    assert "description" in fields
+    assert fields["description"].is_required()
+
+    # In Pydantic v2, check the annotation includes None as a valid type
+    from typing import get_args
+    annotation = fields["description"].annotation
+    # Should be str | None, so get_args should include str and NoneType
+    args = get_args(annotation)
+    assert str in args
+    assert type(None) in args
+
+    # Test that the field accepts None
+    from pydantic import ValidationError
+
+    # Should accept string value
+    valid_instance = tool.args_schema(description="test")
+    assert valid_instance.description == "test"
+
+    # Should accept None value
+    valid_null_instance = tool.args_schema(description=None)
+    assert valid_null_instance.description is None
+
+    # Should reject missing field - this is the key test for the bug fix
+    with pytest.raises(ValidationError) as exc_info:
+        tool.args_schema()
+    assert "description" in str(exc_info.value)
+
+
+@patch("requests.post")
+def test_optional_non_nullable_field(mock_post):
+    """Test that optional non-nullable fields have a None default."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {
+            "tools": [
+                {
+                    "name": "test_tool",
+                    "description": "Test tool",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["input"],
+                        "properties": {
+                            "input": {
+                                "type": "object",
+                                "required": [],
+                                "properties": {
+                                    "optional_field": {
+                                        "type": "string",
+                                        "description": "Optional non-nullable field",
+                                    }
+                                },
+                            }
+                        },
+                    },
+                }
+            ]
+        },
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="test_tool",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    # Verify args_schema is created correctly
+    assert tool.args_schema is not None
+    fields = tool.args_schema.model_fields
+
+    # Field should be optional with None default
+    assert "optional_field" in fields
+    assert not fields["optional_field"].is_required()
+    assert fields["optional_field"].default is None
+
+    # Type annotation should include None so default=None is valid
+    from typing import get_args
+    annotation = fields["optional_field"].annotation
+    args = get_args(annotation)
+    assert type(None) in args
+
+
+@patch("requests.post")
+def test_optional_nullable_field(mock_post):
+    """Test that optional nullable fields have a None default and accept None."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {
+            "tools": [
+                {
+                    "name": "test_tool",
+                    "description": "Test tool",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["input"],
+                        "properties": {
+                            "input": {
+                                "type": "object",
+                                "required": [],
+                                "properties": {
+                                    "optional_nullable": {
+                                        "anyOf": [
+                                            {"type": "integer"},
+                                            {"type": "null"},
+                                        ],
+                                        "description": "Optional and can be null",
+                                    }
+                                },
+                            }
+                        },
+                    },
+                }
+            ]
+        },
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="test_tool",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    # Verify args_schema is created correctly
+    assert tool.args_schema is not None
+    fields = tool.args_schema.model_fields
+
+    # Field should be optional with None default
+    assert "optional_nullable" in fields
+    assert not fields["optional_nullable"].is_required()
+    assert fields["optional_nullable"].default is None
+
+    # Should accept integer, None, or be omitted
+    valid_instance = tool.args_schema(optional_nullable=42)
+    assert valid_instance.optional_nullable == 42
+
+    valid_null_instance = tool.args_schema(optional_nullable=None)
+    assert valid_null_instance.optional_nullable is None
+
+    valid_omitted_instance = tool.args_schema()
+    assert valid_omitted_instance.optional_nullable is None
+
+
+@patch("requests.post")
+def test_array_field_produces_valid_schema(mock_post):
+    """Test that array fields produce schemas with 'type' key in items (not bare 'items': {})."""
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "jsonrpc": "2.0",
+        "id": "test-id",
+        "result": {
+            "tools": [
+                {
+                    "name": "slack__post_message",
+                    "description": "Post a message to Slack",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["input"],
+                        "properties": {
+                            "input": {
+                                "type": "object",
+                                "required": ["channel", "text"],
+                                "properties": {
+                                    "channel": {
+                                        "type": "string",
+                                        "description": "Channel to post to",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "Message text",
+                                    },
+                                    "blocks": {
+                                        "type": "array",
+                                        "description": "Block Kit blocks",
+                                    },
+                                    "string_items": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": "Array of strings",
+                                    },
+                                },
+                            }
+                        },
+                    },
+                }
+            ]
+        },
+    }
+    mock_post.return_value = mock_response
+
+    tool = MergeAgentHandlerTool.from_tool_name(
+        tool_name="slack__post_message",
+        tool_pack_id="test-pack-id",
+        registered_user_id="test-user-id",
+    )
+
+    schema = tool.args_schema.model_json_schema()
+
+    # blocks and string_items are optional, so Pydantic wraps them in anyOf
+    # Find the array variant inside anyOf
+    blocks_schema = schema["properties"]["blocks"]
+    assert "anyOf" in blocks_schema
+    array_variant = next(v for v in blocks_schema["anyOf"] if v.get("type") == "array")
+    assert "items" in array_variant
+    assert "type" in array_variant["items"], (
+        "Array items must have a 'type' key for OpenAI schema validation"
+    )
+
+    # "string_items" has items.type = "string" — should produce list[str]
+    string_items_schema = schema["properties"]["string_items"]
+    assert "anyOf" in string_items_schema
+    str_array_variant = next(v for v in string_items_schema["anyOf"] if v.get("type") == "array")
+    assert "items" in str_array_variant
+    assert str_array_variant["items"]["type"] == "string"
 
 
 if __name__ == "__main__":
