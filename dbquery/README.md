@@ -1,6 +1,31 @@
-# Dbquery Crew
+# 🤖 CrewAI: Secure Database Analysis Crew
 
-Welcome to the Dbquery Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+This feature introduces a robust, production-ready **Database Querying Crew**. It bridges the gap between natural language and SQL databases while implementing two critical production guardrails: **Read-Only Security Enforcement** and **Token Management**.
+
+---
+
+## 🌟 Key Features
+
+### 1. Safe NL2SQL Tooling (`SafeNL2SQLTool`)
+Prevents accidental or malicious database modification by wrapping the standard NL2SQLTool.
+
+- **Command Filtering:** Automatically blocks `DROP`, `DELETE`, `TRUNCATE`, `UPDATE`, `INSERT`, `ALTER`, and `GRANT`.
+- **Select-Only Policy:** Only permits queries starting with `SELECT`.
+
+### 2. The Token Gatekeeper
+A specialized agent and task callback that prevents "Context Overflow" errors.
+
+- **Token Truncation:** If data exceeds `MAX_TOKEN_LIMIT`, it truncates the context and injects a **System Notice** header so the subsequent Analyst Agent knows they are working with a partial dataset.
+
+### 3. Structured Output 
+The crew returns a validated **Pydantic object**:
+
+- `summary`: A human-readable breakdown.
+- `sql_query_used`: The exact SQL code generated.
+- `row_count`: Total rows processed.
+- `data`: The raw data list.
+- `recommendation`: AI-driven business advice (can be grounded with external or domain specific knowledge).
+
 
 ## Installation
 
@@ -45,40 +70,6 @@ $ crewai run
 This command initializes the dbquery Crew, assembling the agents and assigning them tasks as defined in your configuration.
 
 This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
-
-## Understanding Your Crew
-
-The dbquery Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
-
-# 🤖 CrewAI: Secure Database Analysis Crew
-
-This feature introduces a robust, production-ready **Database Querying Crew**. It bridges the gap between natural language and SQL databases while implementing two critical production guardrails: **Read-Only Security Enforcement** and **Context-Aware Token Management**.
-
----
-
-## 🌟 Key Features
-
-### 1. Safe NL2SQL Tooling (`SafeNL2SQLTool`)
-Prevents accidental or malicious database modification by wrapping the standard NL2SQLTool.
-
-- **Command Filtering:** Automatically blocks `DROP`, `DELETE`, `TRUNCATE`, `UPDATE`, `INSERT`, `ALTER`, and `GRANT`.
-- **Select-Only Policy:** Only permits queries starting with `SELECT`.
-- **Error Reporting:** Returns a `"Read Only Access"` error message directly to the agent to allow for self-correction.
-
-### 2. The Token Gatekeeper (tiktoken Integration)
-A specialized agent and task callback that prevents "Context Overflow" errors.
-
-- **Live Token Counting:** Uses `tiktoken` (specifically for `gpt-4o-mini` encoding) to measure the exact size of database results.
-- **Smart Truncation:** If data exceeds `MAX_TOKEN_LIMIT`, it truncates the payload and injects a **System Notice** header so the subsequent Analyst knows they are working with a partial dataset.
-
-### 3. Structured Intelligence (`DatabaseResponse`)
-The crew doesn't just return text; it returns a validated **Pydantic object**:
-
-- `summary`: A human-readable breakdown.
-- `sql_query_used`: The exact SQL code generated.
-- `row_count`: Total rows processed.
-- `data`: The raw data list.
-- `recommendation`: AI-driven business advice.
 
 ---
 
