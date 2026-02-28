@@ -768,3 +768,42 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_pydantic_output_available_on_first_attempt():
+    """Guardrail should receive pydantic output on the first invocation, not just retries.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4369
+    """
+    from pydantic import BaseModel as PydanticBaseModel
+
+    class MyOutput(PydanticBaseModel):
+        message: str
+
+    pydantic_values: list = []
+
+    def guardrail(result: TaskOutput):
+        pydantic_values.append(result.pydantic)
+        return (True, result)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = '{"message": "hello"}'
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        output_pydantic=MyOutput,
+        guardrail=guardrail,
+    )
+
+    task.execute_sync(agent=agent)
+
+    assert len(pydantic_values) == 1, "Guardrail should be called once"
+    assert pydantic_values[0] is not None, (
+        "pydantic should not be None on first guardrail attempt"
+    )
+    assert isinstance(pydantic_values[0], MyOutput)
+    assert pydantic_values[0].message == "hello"
