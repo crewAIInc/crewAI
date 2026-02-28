@@ -21719,6 +21719,118 @@
       }
     },
     {
+      "description": "Load webpages url using Tzafon and return its contents",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tzafon services",
+          "name": "TZAFON_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "Tzafon web load tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "TzafonLoadTool.\n\nA tool for loading and extracting content from webpages using Tzafon's browser.\nRequires the `tzafon` package.\nGet your API Key from https://tzafon.ai/dashboard\n\nArgs:\n    api_key: The Tzafon API key, can be set as an environment variable `TZAFON_API_KEY` or passed directly\n    text_content: If True, returns only text content. If False, returns full HTML. Defaults to True.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The Tzafon API key, can be set as an environment variable `TZAFON_API_KEY` or passed directly",
+            "title": "Api Key"
+          },
+          "tzafon": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tzafon"
+          },
+          "text_content": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": true,
+            "description": "Retrieve only text content. Default is True.",
+            "title": "Text Content"
+          }
+        },
+        "title": "TzafonLoadTool",
+        "type": "object"
+      },
+      "name": "TzafonLoadTool",
+      "package_dependencies": [
+        "tzafon",
+        "playwright"
+      ],
+      "run_params_schema": {
+        "description": "Input for TzafonLoadTool.",
+        "properties": {
+          "url": {
+            "description": "Website URL",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "TzafonLoadToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool uses OpenAI's Vision API to describe the contents of an image.",
       "env_vars": [
         {
