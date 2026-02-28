@@ -173,6 +173,14 @@ class Telemetry:
 
         self._original_handlers: dict[int, Any] = {}
 
+        if threading.current_thread() is not threading.main_thread():
+            logger.debug(
+                "CrewAI telemetry: Skipping signal handler registration (not running in main thread). "
+                "To disable this warning or disable crewai telemetry entirely, set CREWAI_DISABLE_TELEMETRY=true. "
+                "See: https://docs.crewai.com/telemetry"
+            )
+            return
+
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
         if hasattr(signal, "SIGHUP"):
