@@ -5,6 +5,7 @@ flow methods, routing logic, and error handling.
 """
 
 import time
+import uuid
 from unittest.mock import Mock, patch
 
 import pytest
@@ -97,6 +98,13 @@ class TestAgentExecutor:
         assert executor.crew == mock_dependencies["crew"]
         assert executor.max_iter == 10
         assert executor.use_stop_words is True
+
+    def test_executor_instance_id_uses_full_uuid(self, mock_dependencies):
+        """Executor instance ids should keep full UUID entropy."""
+        executor = AgentExecutor(**mock_dependencies)
+
+        parsed = uuid.UUID(executor._instance_id)
+        assert str(parsed) == executor._instance_id
 
     def test_initialize_reasoning(self, mock_dependencies):
         """Test flow entry point."""
