@@ -140,6 +140,10 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+pyobvector = [
+    "pyobvector>=0.2.16",
+    "numpy>=1.24.0",
+]
 
 
 [build-system]

@@ -173,11 +173,12 @@ class RagTool(BaseTool):
         )
         provider_config: dict[str, Any] = vectordb_cfg.get("config", {})
 
-        supported = ("chromadb", "qdrant")
+        supported: tuple[str, ...] = ("chromadb", "qdrant")
         if provider not in supported:
             raise ValueError(
                 f"Unsupported vector database provider: '{provider}'. "
-                f"CrewAI RAG currently supports: {', '.join(supported)}."
+                f"CrewAI RAG currently supports: {', '.join(supported)}. "
+                "For OceanBase vector search, use OceanBaseVectorSearchTool instead."
             )
 
         embedding_spec: ProviderSpec | None = config.get("embedding_model")
