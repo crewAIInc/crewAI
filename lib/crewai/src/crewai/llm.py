@@ -433,7 +433,7 @@ class LLM(BaseLLM):
                 f"installed.\n\n"
                 f"To fix this, either:\n"
                 f"  1. Install LiteLLM for broad model support: "
-                f"uv add litellm\n"
+                f"uv add 'crewai[litellm]'\n"
                 f"or\n"
                 f"pip install litellm\n\n"
                 f"For more details, see: "

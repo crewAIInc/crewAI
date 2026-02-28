@@ -1,0 +1,247 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"\nCurrent Task:
+      This is a tool-calling compliance test. In your next assistant turn, emit exactly
+      3 tool calls in the same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary."}],"model":"claude-sonnet-4-6","stop_sequences":["\nObservation:"],"stream":false,"system":"You
+      are Parallel Tool Agent. You follow tool instructions precisely.\nYour personal
+      goal is: Use both tools exactly as instructed","tools":[{"name":"parallel_local_search_one","description":"Local
+      search tool #1 for concurrency testing.","input_schema":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}},{"name":"parallel_local_search_two","description":"Local
+      search tool #2 for concurrency testing.","input_schema":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}},{"name":"parallel_local_search_three","description":"Local
+      search tool #3 for concurrency testing.","input_schema":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '1639'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.73.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-6","id":"msg_01XeN1XTXZgmPyLMMGjivabb","type":"message","role":"assistant","content":[{"type":"text","text":"I''ll
+        execute all 3 parallel searches simultaneously right now!"},{"type":"tool_use","id":"toolu_01NwzvrxEz6tvT3A8ydvMtHu","name":"parallel_local_search_one","input":{"query":"latest
+        OpenAI model release notes"},"caller":{"type":"direct"}},{"type":"tool_use","id":"toolu_01YCxzSB1suk9uPVC1uwfHz9","name":"parallel_local_search_two","input":{"query":"latest
+        Anthropic model release notes"},"caller":{"type":"direct"}},{"type":"tool_use","id":"toolu_01Mauvxzv58eDY7pUt9HMKGy","name":"parallel_local_search_three","input":{"query":"latest
+        Gemini model release notes"},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":914,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":169,"service_tier":"standard","inference_geo":"global"}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Feb 2026 23:54:43 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '20000'
+      anthropic-ratelimit-requests-remaining:
+      - '19999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-02-18T23:54:41Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '2099'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"\nCurrent Task:
+      This is a tool-calling compliance test. In your next assistant turn, emit exactly
+      3 tool calls in the same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01NwzvrxEz6tvT3A8ydvMtHu","name":"parallel_local_search_one","input":{"query":"latest
+      OpenAI model release notes"}},{"type":"tool_use","id":"toolu_01YCxzSB1suk9uPVC1uwfHz9","name":"parallel_local_search_two","input":{"query":"latest
+      Anthropic model release notes"}},{"type":"tool_use","id":"toolu_01Mauvxzv58eDY7pUt9HMKGy","name":"parallel_local_search_three","input":{"query":"latest
+      Gemini model release notes"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01NwzvrxEz6tvT3A8ydvMtHu","content":"[one]
+      latest OpenAI model release notes"},{"type":"tool_result","tool_use_id":"toolu_01YCxzSB1suk9uPVC1uwfHz9","content":"[two]
+      latest Anthropic model release notes"},{"type":"tool_result","tool_use_id":"toolu_01Mauvxzv58eDY7pUt9HMKGy","content":"[three]
+      latest Gemini model release notes"}]}],"model":"claude-sonnet-4-6","stop_sequences":["\nObservation:"],"stream":false,"system":"You
+      are Parallel Tool Agent. You follow tool instructions precisely.\nYour personal
+      goal is: Use both tools exactly as instructed","tools":[{"name":"parallel_local_search_one","description":"Local
+      search tool #1 for concurrency testing.","input_schema":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}},{"name":"parallel_local_search_two","description":"Local
+      search tool #2 for concurrency testing.","input_schema":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}},{"name":"parallel_local_search_three","description":"Local
+      search tool #3 for concurrency testing.","input_schema":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '2517'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.73.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: "{\"model\":\"claude-sonnet-4-6\",\"id\":\"msg_01PFXqwwdwwHWadPdtNU5tUZ\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"The
+        three parallel searches were executed successfully, each targeting the latest
+        release notes for the leading AI model families. The search results confirm
+        that queries were dispatched simultaneously to retrieve the most recent developments
+        from **OpenAI** (via tool one), **Anthropic** (via tool two), and **Google's
+        Gemini** (via tool three). While the local search tools returned placeholder
+        outputs in this test environment rather than detailed release notes, the structure
+        of the test validates that all three parallel tool calls were emitted correctly
+        and in the specified order \u2014 demonstrating proper concurrent tool-call
+        behavior with no dependencies between the three independent searches.\"}],\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"usage\":{\"input_tokens\":1197,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":0},\"output_tokens\":131,\"service_tier\":\"standard\",\"inference_geo\":\"global\"}}"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Feb 2026 23:54:49 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '20000'
+      anthropic-ratelimit-requests-remaining:
+      - '19999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-02-18T23:54:44Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '4092'
+    status:
+      code: 200
+      message: OK
+version: 1

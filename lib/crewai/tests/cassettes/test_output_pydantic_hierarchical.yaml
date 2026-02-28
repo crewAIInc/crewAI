@@ -10,28 +10,29 @@ interactions:
       Task: Give me an integer score between 1-5 for the following title: ''The impact
       of AI in the future of work''\n\nThis is the expected criteria for your final
       answer: The score of the title.\nyou MUST return the actual complete content
-      as the final answer, not a summary.\nEnsure your final answer strictly adheres
-      to the following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
+      as the final answer, not a summary.\nFormat your final answer according to the
+      following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
       \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
-      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo
+      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nIMPORTANT:
+      Preserve the original content exactly as-is. Do NOT rewrite, paraphrase, or
+      modify the meaning of the content. Only structure it to match the schema format.\n\nDo
       not include the OpenAPI schema in the final output. Ensure the final output
-      does not include any code block markers like ```json or ```python.\n\nThis is
-      VERY important to you, your job depends on it!"}],"model":"gpt-4o","tool_choice":"auto","tools":[{"type":"function","function":{"name":"Delegate_work_to_coworker","description":"Delegate
+      does not include any code block markers like ```json or ```python."}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"score":{"title":"Score","type":"integer"}},"required":["score"],"title":"ScoreOutput","type":"object","additionalProperties":false},"name":"ScoreOutput","strict":true}},"stream":false,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"delegate_work_to_coworker","description":"Delegate
       a specific task to one of the following coworkers: Scorer\nThe input to this
       tool should be the coworker, the task you want them to do, and ALL necessary
       context to execute the task, they know nothing about the task, so share absolutely
-      everything you know, don''t reference things but instead explain them.","parameters":{"properties":{"task":{"description":"The
+      everything you know, don''t reference things but instead explain them.","strict":true,"parameters":{"properties":{"task":{"description":"The
       task to delegate","title":"Task","type":"string"},"context":{"description":"The
       context for the task","title":"Context","type":"string"},"coworker":{"description":"The
-      role/name of the coworker to delegate to","title":"Coworker","type":"string"}},"required":["task","context","coworker"],"type":"object"}}},{"type":"function","function":{"name":"Ask_question_to_coworker","description":"Ask
+      role/name of the coworker to delegate to","title":"Coworker","type":"string"}},"required":["task","context","coworker"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"ask_question_to_coworker","description":"Ask
       a specific question to one of the following coworkers: Scorer\nThe input to
       this tool should be the coworker, the question you have for them, and ALL necessary
       context to ask the question properly, they know nothing about the question,
       so share absolutely everything you know, don''t reference things but instead
-      explain them.","parameters":{"properties":{"question":{"description":"The question
-      to ask","title":"Question","type":"string"},"context":{"description":"The context
-      for the question","title":"Context","type":"string"},"coworker":{"description":"The
-      role/name of the coworker to ask","title":"Coworker","type":"string"}},"required":["question","context","coworker"],"type":"object"}}}]}'
+      explain them.","strict":true,"parameters":{"properties":{"question":{"description":"The
+      question to ask","title":"Question","type":"string"},"context":{"description":"The
+      context for the question","title":"Context","type":"string"},"coworker":{"description":"The
+      role/name of the coworker to ask","title":"Coworker","type":"string"}},"required":["question","context","coworker"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -44,7 +45,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2959'
+      - '3415'
       content-type:
       - application/json
       host:
@@ -53,6 +54,8 @@ interactions:
       - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
       x-stainless-lang:
       - python
       x-stainless-os:
@@ -66,31 +69,33 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0u1dSPVqe5art2HXWibsPOp3SOti\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769107733,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-DDG9wKD6IRmnAwBS1tw4NMVccsPnZ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052752,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_AEHe6pv1NqguBRA5q9CHVSn3\",\n            \"type\":
-        \"function\",\n            \"function\": {\n              \"name\": \"Delegate_work_to_coworker\",\n
-        \             \"arguments\": \"{\\\"task\\\":\\\"Provide an integer score
-        between 1-5 for the title 'The impact of AI in the future of work'. The score
-        should reflect how engaging, relevant, and thought-provoking the title is.\\\",\\\"context\\\":\\\"You
-        need to evaluate how well the title 'The impact of AI in the future of work'
-        meets the criteria of being engaging, relevant, and thought-provoking in the
-        context of emerging technologies and their implications on future work environments.\\\",\\\"coworker\\\":\\\"Scorer\\\"}\"\n
-        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
-        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
-        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 562,\n    \"completion_tokens\":
-        111,\n    \"total_tokens\": 673,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        \           \"id\": \"call_VzfUuCi89kzEC9gJgiMCz5B2\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"delegate_work_to_coworker\",\n
+        \             \"arguments\": \"{\\\"task\\\":\\\"Evaluate the title 'The impact
+        of AI in the future of work' and give an integer score between 1-5 based on
+        how compelling or effective the title is.\\\",\\\"context\\\":\\\"You are
+        asked to evaluate a title 'The impact of AI in the future of work' and provide
+        an integer score between 1-5. The criteria for evaluation include how informative,
+        engaging, relevant, and clear the title is. Additionally, consider how the
+        title may attract the intended audience's interest and its potential impact
+        on readers.\\\",\\\"coworker\\\":\\\"Scorer\\\"}\"\n            }\n          }\n
+        \       ],\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 613,\n    \"completion_tokens\":
+        127,\n    \"total_tokens\": 740,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_deacdd5f6f\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_64dfa806c7\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -99,11 +104,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:48:56 GMT
+      - Wed, 25 Feb 2026 20:52:34 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -119,146 +122,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3849'
+      - '2259'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '3973'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-requests:
-      - X-RATELIMIT-LIMIT-REQUESTS-XXX
-      x-ratelimit-limit-tokens:
-      - X-RATELIMIT-LIMIT-TOKENS-XXX
-      x-ratelimit-remaining-requests:
-      - X-RATELIMIT-REMAINING-REQUESTS-XXX
-      x-ratelimit-remaining-tokens:
-      - X-RATELIMIT-REMAINING-TOKENS-XXX
-      x-ratelimit-reset-requests:
-      - X-RATELIMIT-RESET-REQUESTS-XXX
-      x-ratelimit-reset-tokens:
-      - X-RATELIMIT-RESET-TOKENS-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
-      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
-      give my best complete final answer to the task respond using the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
-      Task: Provide an integer score between 1-5 for the title ''The impact of AI
-      in the future of work''. The score should reflect how engaging, relevant, and
-      thought-provoking the title is.\n\nThis is the expected criteria for your final
-      answer: Your best answer to your coworker asking you this, accounting for the
-      context shared.\nyou MUST return the actual complete content as the final answer,
-      not a summary.\n\nThis is the context you''re working with:\nYou need to evaluate
-      how well the title ''The impact of AI in the future of work'' meets the criteria
-      of being engaging, relevant, and thought-provoking in the context of emerging
-      technologies and their implications on future work environments.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
-    headers:
-      User-Agent:
-      - X-USER-AGENT-XXX
-      accept:
-      - application/json
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-      authorization:
-      - AUTHORIZATION-XXX
-      connection:
-      - keep-alive
-      content-length:
-      - '1348'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      x-stainless-arch:
-      - X-STAINLESS-ARCH-XXX
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - X-STAINLESS-OS-XXX
-      x-stainless-package-version:
-      - 1.83.0
-      x-stainless-read-timeout:
-      - X-STAINLESS-READ-TIMEOUT-XXX
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.3
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-D0u1hKGQrrJVYOcW1tAlQMgAjcaDX\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769107737,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
-        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-        Answer: The title 'The impact of AI in the future of work' is highly relevant
-        given the current and growing significance of artificial intelligence in transforming
-        work environments across industries. It is engaging because AI's influence
-        on future employment is a topic of widespread interest and concern, prompting
-        readers to explore its implications. Furthermore, it is thought-provoking
-        as it invites consideration of both the opportunities and challenges AI presents
-        for the workforce, including changes in job roles, skills, and economic structures.
-        However, the title could be more captivating or specific to heighten curiosity
-        and emphasize particular aspects of AI's impact. Overall, it effectively meets
-        the criteria but could be slightly enhanced for maximum engagement. Considering
-        all factors, I would score it a 4 out of 5.\",\n        \"refusal\": null,\n
-        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 264,\n    \"completion_tokens\":
-        160,\n    \"total_tokens\": 424,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
-    headers:
-      CF-RAY:
-      - CF-RAY-XXX
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Thu, 22 Jan 2026 18:49:00 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
+      set-cookie:
       - SET-COOKIE-XXX
-      Strict-Transport-Security:
-      - STS-XXX
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - X-CONTENT-TYPE-XXX
-      access-control-expose-headers:
-      - ACCESS-CONTROL-XXX
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - OPENAI-ORG-XXX
-      openai-processing-ms:
-      - '3273'
-      openai-project:
-      - OPENAI-PROJECT-XXX
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '3299'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -289,47 +159,29 @@ interactions:
       Task: Give me an integer score between 1-5 for the following title: ''The impact
       of AI in the future of work''\n\nThis is the expected criteria for your final
       answer: The score of the title.\nyou MUST return the actual complete content
-      as the final answer, not a summary.\nEnsure your final answer strictly adheres
-      to the following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
+      as the final answer, not a summary.\nFormat your final answer according to the
+      following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
       \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
-      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo
+      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nIMPORTANT:
+      Preserve the original content exactly as-is. Do NOT rewrite, paraphrase, or
+      modify the meaning of the content. Only structure it to match the schema format.\n\nDo
       not include the OpenAPI schema in the final output. Ensure the final output
-      does not include any code block markers like ```json or ```python.\n\nThis is
-      VERY important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_AEHe6pv1NqguBRA5q9CHVSn3","type":"function","function":{"name":"Delegate_work_to_coworker","arguments":"{\"task\":\"Provide
-      an integer score between 1-5 for the title ''The impact of AI in the future
-      of work''. The score should reflect how engaging, relevant, and thought-provoking
-      the title is.\",\"context\":\"You need to evaluate how well the title ''The
-      impact of AI in the future of work'' meets the criteria of being engaging, relevant,
-      and thought-provoking in the context of emerging technologies and their implications
-      on future work environments.\",\"coworker\":\"Scorer\"}"}}]},{"role":"tool","tool_call_id":"call_AEHe6pv1NqguBRA5q9CHVSn3","content":"The
-      title ''The impact of AI in the future of work'' is highly relevant given the
-      current and growing significance of artificial intelligence in transforming
-      work environments across industries. It is engaging because AI''s influence
-      on future employment is a topic of widespread interest and concern, prompting
-      readers to explore its implications. Furthermore, it is thought-provoking as
-      it invites consideration of both the opportunities and challenges AI presents
-      for the workforce, including changes in job roles, skills, and economic structures.
-      However, the title could be more captivating or specific to heighten curiosity
-      and emphasize particular aspects of AI''s impact. Overall, it effectively meets
-      the criteria but could be slightly enhanced for maximum engagement. Considering
-      all factors, I would score it a 4 out of 5."},{"role":"user","content":"Analyze
-      the tool result. If requirements are met, provide the Final Answer. Otherwise,
-      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4o","tool_choice":"auto","tools":[{"type":"function","function":{"name":"Delegate_work_to_coworker","description":"Delegate
+      does not include any code block markers like ```json or ```python."}],"model":"gpt-4o","tool_choice":"auto","tools":[{"type":"function","function":{"name":"delegate_work_to_coworker","description":"Delegate
       a specific task to one of the following coworkers: Scorer\nThe input to this
       tool should be the coworker, the task you want them to do, and ALL necessary
       context to execute the task, they know nothing about the task, so share absolutely
-      everything you know, don''t reference things but instead explain them.","parameters":{"properties":{"task":{"description":"The
+      everything you know, don''t reference things but instead explain them.","strict":true,"parameters":{"properties":{"task":{"description":"The
       task to delegate","title":"Task","type":"string"},"context":{"description":"The
       context for the task","title":"Context","type":"string"},"coworker":{"description":"The
-      role/name of the coworker to delegate to","title":"Coworker","type":"string"}},"required":["task","context","coworker"],"type":"object"}}},{"type":"function","function":{"name":"Ask_question_to_coworker","description":"Ask
+      role/name of the coworker to delegate to","title":"Coworker","type":"string"}},"required":["task","context","coworker"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"ask_question_to_coworker","description":"Ask
       a specific question to one of the following coworkers: Scorer\nThe input to
       this tool should be the coworker, the question you have for them, and ALL necessary
       context to ask the question properly, they know nothing about the question,
       so share absolutely everything you know, don''t reference things but instead
-      explain them.","parameters":{"properties":{"question":{"description":"The question
-      to ask","title":"Question","type":"string"},"context":{"description":"The context
-      for the question","title":"Context","type":"string"},"coworker":{"description":"The
-      role/name of the coworker to ask","title":"Coworker","type":"string"}},"required":["question","context","coworker"],"type":"object"}}}]}'
+      explain them.","strict":true,"parameters":{"properties":{"question":{"description":"The
+      question to ask","title":"Question","type":"string"},"context":{"description":"The
+      context for the question","title":"Context","type":"string"},"coworker":{"description":"The
+      role/name of the coworker to ask","title":"Coworker","type":"string"}},"required":["question","context","coworker"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -342,7 +194,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4694'
+      - '3151'
       content-type:
       - application/json
       cookie:
@@ -366,22 +218,31 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0u1kZrAEdxxk1GHhh8iEvvddrv5C\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769107740,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-DDG9zJ5ZtuBIJLBxuTBqV4pYyaAf3\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052755,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"score\\\":4}\",\n        \"refusal\":
-        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
-        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        868,\n    \"completion_tokens\": 6,\n    \"total_tokens\": 874,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_IdyahKEb4Ez9fWTlL0SWNU97\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"ask_question_to_coworker\",\n
+        \             \"arguments\": \"{\\\"question\\\":\\\"What score would you
+        give between 1-5 to the following title: 'The impact of AI in the future of
+        work' and why?\\\",\\\"context\\\":\\\"Your task is to evaluate the title
+        based on its ability to intrigue, its clarity, and relevance. You need to
+        provide an integer score between 1 and 5 for this title, considering these
+        aspects.\\\",\\\"coworker\\\":\\\"Scorer\\\"}\"\n            }\n          }\n
+        \       ],\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 581,\n    \"completion_tokens\":
+        97,\n    \"total_tokens\": 678,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_deacdd5f6f\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_18e61aa3bc\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -390,7 +251,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:49:00 GMT
+      - Wed, 25 Feb 2026 20:52:36 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -408,13 +269,299 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '480'
+      - '1686'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '503'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title"},{"role":"user","content":"\nCurrent
+      Task: What score would you give between 1-5 to the following title: ''The impact
+      of AI in the future of work'' and why?\n\nThis is the expected criteria for
+      your final answer: Your best answer to your coworker asking you this, accounting
+      for the context shared.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is the context you''re working with:\nYour
+      task is to evaluate the title based on its ability to intrigue, its clarity,
+      and relevance. You need to provide an integer score between 1 and 5 for this
+      title, considering these aspects.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '831'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DDGA1eLxVsUvh5Ptopxsrctx3s8fF\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052757,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"I would give the title \\\"The impact
+        of AI in the future of work\\\" a score of 4 out of 5.\\n\\nHere's why:\\n\\n-
+        **Clarity:** The title is clear and straightforward; it immediately tells
+        the reader that the focus is on how AI will influence the work landscape going
+        forward. There is no ambiguity about the subject matter.\\n\\n- **Relevance:**
+        The topic is highly relevant in today's context, as AI technologies are rapidly
+        transforming industries and workplace dynamics. This makes the title timely
+        and likely to attract interest from professionals, academics, and anyone curious
+        about technological impacts on employment.\\n\\n- **Intrigue:** While the
+        title is clear and relevant, it lacks a bit of punch or uniqueness that might
+        make it stand out more. It's somewhat generic\u2014many articles use similar
+        phrasing. Adding an element that hints at specific insights or a fresh perspective
+        could increase intrigue.\\n\\nOverall, the title effectively conveys the subject
+        and relevance but could be slightly improved with more compelling language
+        to boost interest.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 164,\n    \"completion_tokens\":
+        198,\n    \"total_tokens\": 362,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a391f2cee0\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 25 Feb 2026 20:52:41 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '4344'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Crew Manager.
+      You are a seasoned manager with a knack for getting the best out of your team.\\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\\nEven though you
+      don't perform tasks by yourself, you have a lot of experience in the field,
+      which allows you to properly evaluate the work of your team members.\\nYour
+      personal goal is: Manage the team to complete the task in the best way possible.\"},{\"role\":\"user\",\"content\":\"\\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: 'The impact
+      of AI in the future of work'\\n\\nThis is the expected criteria for your final
+      answer: The score of the title.\\nyou MUST return the actual complete content
+      as the final answer, not a summary.\\nFormat your final answer according to
+      the following OpenAPI schema: {\\n  \\\"properties\\\": {\\n    \\\"score\\\":
+      {\\n      \\\"title\\\": \\\"Score\\\",\\n      \\\"type\\\": \\\"integer\\\"\\n
+      \   }\\n  },\\n  \\\"required\\\": [\\n    \\\"score\\\"\\n  ],\\n  \\\"title\\\":
+      \\\"ScoreOutput\\\",\\n  \\\"type\\\": \\\"object\\\",\\n  \\\"additionalProperties\\\":
+      false\\n}\\n\\nIMPORTANT: Preserve the original content exactly as-is. Do NOT
+      rewrite, paraphrase, or modify the meaning of the content. Only structure it
+      to match the schema format.\\n\\nDo not include the OpenAPI schema in the final
+      output. Ensure the final output does not include any code block markers like
+      ```json or ```python.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_IdyahKEb4Ez9fWTlL0SWNU97\",\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"arguments\":\"{\\\"question\\\":\\\"What
+      score would you give between 1-5 to the following title: 'The impact of AI in
+      the future of work' and why?\\\",\\\"context\\\":\\\"Your task is to evaluate
+      the title based on its ability to intrigue, its clarity, and relevance. You
+      need to provide an integer score between 1 and 5 for this title, considering
+      these aspects.\\\",\\\"coworker\\\":\\\"Scorer\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_IdyahKEb4Ez9fWTlL0SWNU97\",\"name\":\"ask_question_to_coworker\",\"content\":\"I
+      would give the title \\\"The impact of AI in the future of work\\\" a score
+      of 4 out of 5.\\n\\nHere's why:\\n\\n- **Clarity:** The title is clear and straightforward;
+      it immediately tells the reader that the focus is on how AI will influence the
+      work landscape going forward. There is no ambiguity about the subject matter.\\n\\n-
+      **Relevance:** The topic is highly relevant in today's context, as AI technologies
+      are rapidly transforming industries and workplace dynamics. This makes the title
+      timely and likely to attract interest from professionals, academics, and anyone
+      curious about technological impacts on employment.\\n\\n- **Intrigue:** While
+      the title is clear and relevant, it lacks a bit of punch or uniqueness that
+      might make it stand out more. It's somewhat generic\u2014many articles use similar
+      phrasing. Adding an element that hints at specific insights or a fresh perspective
+      could increase intrigue.\\n\\nOverall, the title effectively conveys the subject
+      and relevance but could be slightly improved with more compelling language to
+      boost interest.\"},{\"role\":\"user\",\"content\":\"Analyze the tool result.
+      If requirements are met, provide the Final Answer. Otherwise, call the next
+      tool. Deliver only the answer without meta-commentary.\"}],\"model\":\"gpt-4o\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"properties\":{\"score\":{\"title\":\"Score\",\"type\":\"integer\"}},\"required\":[\"score\"],\"title\":\"ScoreOutput\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"ScoreOutput\",\"strict\":true}},\"stream\":false,\"tool_choice\":\"auto\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"delegate_work_to_coworker\",\"description\":\"Delegate
+      a specific task to one of the following coworkers: Scorer\\nThe input to this
+      tool should be the coworker, the task you want them to do, and ALL necessary
+      context to execute the task, they know nothing about the task, so share absolutely
+      everything you know, don't reference things but instead explain them.\",\"strict\":true,\"parameters\":{\"properties\":{\"task\":{\"description\":\"The
+      task to delegate\",\"title\":\"Task\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the task\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to delegate to\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"task\",\"context\",\"coworker\"],\"type\":\"object\",\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"description\":\"Ask
+      a specific question to one of the following coworkers: Scorer\\nThe input to
+      this tool should be the coworker, the question you have for them, and ALL necessary
+      context to ask the question properly, they know nothing about the question,
+      so share absolutely everything you know, don't reference things but instead
+      explain them.\",\"strict\":true,\"parameters\":{\"properties\":{\"question\":{\"description\":\"The
+      question to ask\",\"title\":\"Question\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the question\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to ask\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"question\",\"context\",\"coworker\"],\"type\":\"object\",\"additionalProperties\":false}}}]}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '5297'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DDGA5qDbleuzKoN7uVs5MFOC6X5DG\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052761,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"score\\\":4}\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        956,\n    \"completion_tokens\": 10,\n    \"total_tokens\": 966,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_64dfa806c7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 25 Feb 2026 20:52:42 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '508'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

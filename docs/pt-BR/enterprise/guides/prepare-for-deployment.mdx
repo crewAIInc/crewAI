@@ -256,6 +256,12 @@ Antes da implantação, certifique-se de ter:
 1. **Chaves de API de LLM** prontas (OpenAI, Anthropic, Google, etc.)
 2. **Chaves de API de ferramentas** se estiver usando ferramentas externas (Serper, etc.)
 
+<Info>
+  Se seu projeto depende de pacotes de um **registro PyPI privado**, você também precisará configurar
+  credenciais de autenticação do registro como variáveis de ambiente. Consulte o guia
+  [Registros de Pacotes Privados](/pt-BR/enterprise/guides/private-package-registry) para mais detalhes.
+</Info>
+
 <Tip>
   Teste seu projeto localmente com as mesmas variáveis de ambiente antes de implantar
   para detectar problemas de configuração antecipadamente.
