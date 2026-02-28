@@ -21,7 +21,33 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_CODE_BLOCK_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"```(?:json)?\s*([\s\S]*?)```"
+)
 _I18N = get_i18n()
+
+
+def _strip_markdown_code_fences(text: str) -> str:
+    """Strip markdown code fences from LLM response text.
+
+    LLMs sometimes wrap JSON responses in markdown code fences like:
+        ```json
+        {"key": "value"}
+        ```
+
+    This function extracts the inner content if code fences are present,
+    otherwise returns the original text unchanged.
+
+    Args:
+        text: The raw LLM response text.
+
+    Returns:
+        The text with markdown code fences removed, if present.
+    """
+    match = _CODE_BLOCK_PATTERN.search(text)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
 
 
 class ConverterError(Exception):
@@ -73,6 +99,9 @@ class Converter(OutputConverter):
                         {"role": "user", "content": self.text},
                     ]
                 )
+                # Strip markdown code fences (```json ... ```) that LLMs
+                # sometimes wrap around JSON responses before parsing.
+                response = _strip_markdown_code_fences(response)
                 try:
                     # Try to directly validate the response JSON
                     result = self.model.model_validate_json(response)
@@ -183,6 +212,10 @@ def convert_to_model(
             agent=agent,
             converter_cls=converter_cls,
         )
+
+    # Strip markdown code fences (```json ... ```) that LLMs
+    # sometimes wrap around JSON responses before parsing.
+    result = _strip_markdown_code_fences(result)
 
     try:
         escaped_result = json.dumps(json.loads(result, strict=False))
