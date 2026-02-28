@@ -658,6 +658,73 @@ def _estimate_token_count(text: str) -> int:
     return len(text) // 4
 
 
+def check_context_window_proactively(
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+    respect_context_window: bool,
+    printer: Printer,
+    callbacks: list[TokenCalcHandler],
+    i18n: I18N,
+    verbose: bool = True,
+) -> None:
+    """Proactively check if messages will exceed context window and summarize if needed.
+
+    This prevents context length errors by checking before the LLM call
+    instead of only reacting after an error. This is especially important
+    for custom LLMs that may not have built-in context limits.
+
+    Args:
+        messages: List of messages to check (modified in-place if summarization needed)
+        llm: LLM instance for context window size and summarization
+        respect_context_window: Whether to respect context window
+        printer: Printer instance for output
+        callbacks: List of callbacks for LLM
+        i18n: I18N instance for messages
+        verbose: Whether to print progress
+
+    Returns:
+        None (messages are modified in-place if summarization occurs)
+    """
+    if not respect_context_window:
+        return
+
+    try:
+        max_tokens = llm.get_context_window_size()
+    except Exception:
+        # If we can't get context window size, skip proactive check
+        # and rely on reactive handling after error
+        return
+
+    # Estimate total tokens in messages
+    total_chars = 0
+    for msg in messages:
+        content = msg.get("content", "")
+        if isinstance(content, str):
+            total_chars += len(content)
+        elif isinstance(content, list):
+            # Handle multimodal content blocks
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    total_chars += len(block.get("text", ""))
+
+    estimated_tokens = _estimate_token_count(str(total_chars))
+
+    # If we're approaching the limit (90% threshold), proactively summarize
+    if estimated_tokens > max_tokens * 0.9:
+        if verbose:
+            printer.print(
+                content=f"Proactively summarizing: estimated {estimated_tokens} tokens exceeds {max_tokens} context window",
+                color="yellow",
+            )
+        summarize_messages(
+            messages=messages,
+            llm=llm,
+            callbacks=callbacks,
+            i18n=i18n,
+            verbose=verbose,
+        )
+
+
 def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
     """Format messages with role labels for summarization.
 

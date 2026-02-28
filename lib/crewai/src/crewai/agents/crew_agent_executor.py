@@ -39,6 +39,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.utilities.agent_utils import (
     aget_llm_response,
+    check_context_window_proactively,
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
     format_message_for_llm,
@@ -351,6 +352,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # Proactively check context window before LLM call
+                check_context_window_proactively(
+                    messages=self.messages,
+                    llm=self.llm,
+                    respect_context_window=self.respect_context_window,
+                    printer=self._printer,
+                    callbacks=self.callbacks,
+                    i18n=self._i18n,
+                    verbose=self.agent.verbose,
+                )
+
                 answer = get_llm_response(
                     llm=self.llm,
                     messages=self.messages,
@@ -507,6 +519,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     return formatted_answer
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
+
+                # Proactively check context window before LLM call
+                check_context_window_proactively(
+                    messages=self.messages,
+                    llm=self.llm,
+                    respect_context_window=self.respect_context_window,
+                    printer=self._printer,
+                    callbacks=self.callbacks,
+                    i18n=self._i18n,
+                    verbose=self.agent.verbose,
+                )
 
                 # Call LLM with native tools
                 # Pass available_functions=None so the LLM returns tool_calls
