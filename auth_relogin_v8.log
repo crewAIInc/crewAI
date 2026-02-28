@@ -1,0 +1,53 @@
+timestamp 2026-02-28T15:16:20+08:00
+auth_path /home/wangguanran/.codex/auth.json
+auth_mtime_before 2026-02-28 14:24:15.021637267 +0800
+backup_dir /tmp/crewai-v8-relogin-1772262980
+-- codex login status (before) --
+Logged in using ChatGPT
+-- codex logout --
+Successfully logged out
+-- codex login --device-auth (timeout 900s) --
+
+Welcome to Codex [v[90m0.106.0[0m]
+[90mOpenAI's command-line coding agent[0m
+
+Follow these steps to sign in with ChatGPT using device code authorization:
+
+1. Open this link in your browser and sign in to your account
+   [94mhttps://auth.openai.com/codex/device[0m
+
+2. Enter this one-time code [90m(expires in 15 minutes)[0m
+   [94m5QV9-G8BOK[0m
+
+[90mDevice codes are a common phishing target. Never share this code.[0m
+
+-- interruption notice --
+workflow_interrupted_by_user true
+reason 不要执行codex logout
+post_interrupt_action restored_auth_json_from_backup
+post_interrupt_codex_login_status Logged in using ChatGPT
+
+-- no-logout relogin attempt --
+timestamp 2026-02-28T15:33:06+08:00
+user_constraint no_codex_logout
+-- codex login status (before) --
+Logged in using ChatGPT
+auth_mtime_before 2026-02-28 15:31:42.626903181 +0800
+-- codex login --device-auth (timeout 900s) --
+
+Welcome to Codex [v[90m0.106.0[0m]
+[90mOpenAI's command-line coding agent[0m
+
+Follow these steps to sign in with ChatGPT using device code authorization:
+
+1. Open this link in your browser and sign in to your account
+   [94mhttps://auth.openai.com/codex/device[0m
+
+2. Enter this one-time code [90m(expires in 15 minutes)[0m
+   [94m5RN7-JFMG0[0m
+
+[90mDevice codes are a common phishing target. Never share this code.[0m
+
+-- final v8 relogin status --
+relogin_skipped_by_user_constraint true
+constraint_detail 云端环境无法发起浏览器授权；用户要求不执行重登录

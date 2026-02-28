@@ -1,0 +1,27 @@
+timestamp 2026-02-28T07:14:57.239948+00:00
+auth_path /home/wangguanran/.codex/auth.json
+auth_exists True
+auth_mtime 2026-02-28T06:24:15.021637+00:00
+OPENAI_API_KEY.exists True
+OPENAI_API_KEY.empty True
+OPENAI_API_KEY.mask <none>
+tokens.access_token.exists True
+tokens.access_token.mask eyJhbG...PUlQ (len=1935)
+tokens.id_token.exists True
+tokens.id_token.mask eyJhbG..._xpk (len=2008)
+tokens.refresh_token.exists True
+tokens.refresh_token.mask rt_Wne...9vOE (len=90)
+last_refresh.exists True
+last_refresh 2026-02-21T15:36:45.209268343Z
+access_token.exp 2026-03-03T15:36:45+00:00
+access_token.organization_id.exists False
+access_token.project_id.exists False
+access_token.completed_platform_onboarding None
+access_token.aud ['https://api.openai.com/v1']
+access_token.iss https://auth.openai.com
+id_token.exp 2026-02-21T16:36:44+00:00
+id_token.organization_id.exists False
+id_token.project_id.exists False
+id_token.completed_platform_onboarding None
+id_token.aud ['app_EMoamEEZ73f0CkXaXp7hrann']
+id_token.iss https://auth.openai.com

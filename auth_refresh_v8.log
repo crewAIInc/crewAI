@@ -1,0 +1,25 @@
+timestamp 2026-02-28T07:15:33.795628+00:00
+auth_path /home/wangguanran/.codex/auth.json
+lock_path /home/wangguanran/.codex/auth.auth.lock
+auth_exists True
+pre.refresh_token rt_Wne...9vOE (len=90)
+pre.id_token eyJhbG..._xpk (len=2008)
+pre.last_refresh 2026-02-21T15:36:45.209268343Z
+lock_acquired True
+disk.refresh_token rt_Wne...9vOE (len=90)
+disk.id_token eyJhbG..._xpk (len=2008)
+disk.last_refresh 2026-02-21T15:36:45.209268343Z
+compare.refresh_changed False
+compare.id_changed False
+compare.last_refresh_newer False
+action.use_disk_newer False
+active.refresh_token rt_Wne...9vOE (len=90)
+active.id_token eyJhbG..._xpk (len=2008)
+refresh.attempt once
+refresh.client_id app_EMoamEEZ73f0CkXaXp7hrann
+refresh.status_code 401
+refresh.error_code refresh_token_reused
+refresh.error_message Your refresh token has already been used to generate a new access token. Please try signing in again.
+refresh.completed False
+needs_relogin True
+lock_released True

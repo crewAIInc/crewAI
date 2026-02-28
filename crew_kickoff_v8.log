@@ -1,0 +1,8 @@
+timestamp 2026-02-28T07:54:14.145631+00:00
+OPENAI_API_KEY.env unset
+CREWAI_OPENAI_AUTH_MODE <unset>
+PASS case=crew.responses.gpt-5.2-codex requested_model=gpt-5.2-codex effective_model=gpt-5.2-codex api=responses base_url=https://chatgpt.com/backend-api/codex credential_source=codex_auth_json_oauth status_code=200 error.type=None error.code=None category=OK message='OK'
+platform_credential.source none
+platform_credential.mask <none>
+platform_credential.reason refresh_failed:refresh_token_reused
+FAIL case=crew.responses.gpt-5.2-pro requested_model=gpt-5.2-pro effective_model=gpt-5.2-pro api=responses base_url=https://api.openai.com/v1 credential_source=none status_code=None error.type=None error.code=None category=LOCAL_AUTH_STATE_BROKEN message=Platform credential unavailable from local Codex auth cache (refresh_failed:refresh_token_reused)
