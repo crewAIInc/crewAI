@@ -13,6 +13,9 @@ from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
+from openai.types.chat.chat_completion_message_tool_call import (
+    ChatCompletionMessageToolCall,
+)
 from openai.types.responses import Response
 from pydantic import BaseModel
 
@@ -1775,6 +1778,31 @@ class OpenAICompletion(BaseLLM):
 
                 if result is not None:
                     return result
+
+        # Handle case where only tool_calls are present (no content)
+        # This mirrors the non-streaming behavior in _handle_completion
+        if tool_calls and not available_functions:
+            tool_calls_list = [
+                ChatCompletionMessageToolCall(
+                    id=call_data["id"],
+                    function={
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                    type="function",
+                )
+                for call_data in tool_calls.values()
+            ]
+
+            self._emit_call_completed_event(
+                response=tool_calls_list,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+
+            return tool_calls_list
 
         full_response = self._apply_stop_words(full_response)
 
