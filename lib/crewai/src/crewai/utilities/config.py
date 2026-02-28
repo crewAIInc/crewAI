@@ -15,6 +15,9 @@ def process_config(
     Returns:
         The updated values dictionary.
     """
+    if not isinstance(values, dict):
+        return values
+
     config = values.get("config", {})
     if not config:
         return values
