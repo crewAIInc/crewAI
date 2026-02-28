@@ -566,3 +566,12 @@ BEDROCK_MODELS: list[BedrockModels] = [
     "qwen.qwen3-coder-30b-a3b-v1:0",
     "twelvelabs.pegasus-1-2-v1:0",
 ]
+
+
+# NVIDIA models (Jan 2026) - pattern matching handles all models with "/" format
+NVIDIA_MODELS = [
+    "qwen/qwen3-next-80b-a3b-instruct",  # Latest Qwen3-Next, excellent tool calling (Jan 2026)
+    "qwen/qwen2.5-7b-instruct",  # Efficient general-purpose model
+    "deepseek-ai/deepseek-r1-distill-qwen-14b",  # Reasoning with Qwen base (Jan 2026)
+    "nvidia/cosmos-reason2-8b",  # Vision + reasoning model (Jan 2026)
+]

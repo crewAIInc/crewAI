@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import threading
+import time
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -23,6 +24,12 @@ from dotenv import load_dotenv
 import httpx
 from pydantic import BaseModel, Field
 from typing_extensions import Self
+
+# Cache for NVIDIA model list to avoid repeated API calls
+_nvidia_models_cache: set[str] | None = None
+_nvidia_cache_timestamp: float | None = None
+_NVIDIA_CACHE_TTL = 3600  # 1 hour cache expiration
+_nvidia_cache_lock = threading.Lock()
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
@@ -325,6 +332,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "nvidia",
 ]
 
 
@@ -346,6 +354,75 @@ class FunctionArgs(BaseModel):
 
 class AccumulatedToolArgs(BaseModel):
     function: FunctionArgs = Field(default_factory=FunctionArgs)
+
+
+def _get_nvidia_models() -> set[str]:
+    """Fetch and cache the list of models available from NVIDIA NIM API.
+
+    Returns:
+        Set of model IDs available in NVIDIA's catalog
+    """
+    global _nvidia_models_cache, _nvidia_cache_timestamp
+
+    # Check if cache exists and hasn't expired
+    if _nvidia_models_cache is not None and _nvidia_cache_timestamp is not None:
+        if time.time() - _nvidia_cache_timestamp < _NVIDIA_CACHE_TTL:
+            return _nvidia_models_cache
+        # Cache expired - will refresh below
+
+    # Thread-safe cache initialization
+    with _nvidia_cache_lock:
+        # Double-check after acquiring lock (with TTL check)
+        if _nvidia_models_cache is not None and _nvidia_cache_timestamp is not None:
+            if time.time() - _nvidia_cache_timestamp < _NVIDIA_CACHE_TTL:
+                return _nvidia_models_cache
+            # Cache expired - proceed with refresh
+
+        # Accept both NVIDIA_API_KEY (build.nvidia.com) and NVIDIA_NIM_API_KEY (cloud endpoints)
+        api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY")
+        if not api_key:
+            _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
+            return _nvidia_models_cache
+
+        try:
+            # Use httpx instead of requests for better security and async support
+            # All HTTP logic inside lock to prevent race conditions
+            with httpx.Client(timeout=5.0) as client:
+                response = client.get(
+                    "https://integrate.api.nvidia.com/v1/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                )
+
+                if response.status_code == 200:
+                    models = response.json().get("data", [])
+                    # Dedupe model IDs (NVIDIA API has some duplicates)
+                    _nvidia_models_cache = set([m["id"] for m in models])
+                    _nvidia_cache_timestamp = time.time()
+                else:
+                    logging.warning(
+                        f"NVIDIA API returned status {response.status_code}"
+                    )
+                    _nvidia_models_cache = set()
+                    _nvidia_cache_timestamp = time.time()
+        except httpx.TimeoutException:
+            logging.warning("NVIDIA API request timed out")
+            _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
+        except httpx.HTTPError as e:
+            # Sanitize error message to avoid leaking API keys
+            error_msg = str(e).replace(api_key, "***")
+            logging.warning(f"NVIDIA API request failed: {error_msg}")
+            _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
+        except Exception as e:
+            # Catch-all for unexpected errors, with API key sanitization
+            error_msg = str(e).replace(api_key, "***") if api_key else str(e)
+            logging.warning(f"Failed to fetch NVIDIA models: {error_msg}")
+            _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
+
+    return _nvidia_models_cache
 
 
 class LLM(BaseLLM):
@@ -372,32 +449,75 @@ class LLM(BaseLLM):
             use_native = True
             model_string = model
         elif "/" in model:
-            prefix, _, model_part = model.partition("/")
+            # If NVIDIA API key is set, check if model is in NVIDIA's catalog FIRST
+            # This is the most accurate way: route to NVIDIA if they have it
+            # Accept both NVIDIA_API_KEY and NVIDIA_NIM_API_KEY
+            if os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY"):
+                nvidia_models = _get_nvidia_models()
 
-            provider_mapping = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-            }
+                if model in nvidia_models:
+                    # Model is in NVIDIA's catalog - use NVIDIA
+                    provider = "nvidia"
+                    use_native = True
+                    model_string = model
+                else:
+                    # Model NOT in NVIDIA catalog - fall back to standard routing
+                    prefix, _, model_part = model.partition("/")
 
-            canonical_provider = provider_mapping.get(prefix.lower())
+                    provider_mapping = {
+                        "openai": "openai",
+                        "anthropic": "anthropic",
+                        "claude": "anthropic",
+                        "azure": "azure",
+                        "azure_openai": "azure",
+                        "google": "gemini",
+                        "gemini": "gemini",
+                        "bedrock": "bedrock",
+                        "aws": "bedrock",
+                    }
 
-            if canonical_provider and cls._validate_model_in_constants(
-                model_part, canonical_provider
-            ):
-                provider = canonical_provider
-                use_native = True
-                model_string = model_part
+                    canonical_provider = provider_mapping.get(prefix.lower())
+
+                    if canonical_provider and cls._validate_model_in_constants(
+                        model_part, canonical_provider
+                    ):
+                        provider = canonical_provider
+                        use_native = True
+                        model_string = model_part
+                    else:
+                        # Not in NVIDIA and not recognized - try litellm
+                        provider = prefix
+                        use_native = False
+                        model_string = model_part
             else:
-                provider = prefix
-                use_native = False
-                model_string = model_part
+                prefix, _, model_part = model.partition("/")
+
+                provider_mapping = {
+                    "openai": "openai",
+                    "anthropic": "anthropic",
+                    "claude": "anthropic",
+                    "azure": "azure",
+                    "azure_openai": "azure",
+                    "google": "gemini",
+                    "gemini": "gemini",
+                    "bedrock": "bedrock",
+                    "aws": "bedrock",
+                }
+
+                canonical_provider = provider_mapping.get(prefix.lower())
+
+                if canonical_provider and cls._validate_model_in_constants(
+                    model_part, canonical_provider
+                ):
+                    provider = canonical_provider
+                    use_native = True
+                    model_string = model_part
+                else:
+                    # Unknown provider - fall back to LiteLLM
+                    # (NVIDIA models are handled by catalog check above when API key is set)
+                    provider = prefix
+                    use_native = False
+                    model_string = model_part
         else:
             provider = cls._infer_provider_from_model(model)
             use_native = True
@@ -469,10 +589,9 @@ class LLM(BaseLLM):
             )
 
         if provider == "gemini" or provider == "google":
-            return any(
-                model_lower.startswith(prefix)
-                for prefix in ["gemini-", "gemma-", "learnlm-"]
-            )
+            # Only match Gemini-specific models, not open models like Gemma
+            # Gemma can be hosted on NVIDIA/other providers
+            return model_lower.startswith("gemini-") or model_lower.startswith("learnlm-")
 
         if provider == "bedrock":
             return "." in model_lower
@@ -482,6 +601,9 @@ class LLM(BaseLLM):
                 model_lower.startswith(prefix)
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
+
+        # NVIDIA routing is handled by dynamic catalog check in __new__
+        # No static pattern matching needed - always use catalog lookup
 
         return False
 
@@ -581,6 +703,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "nvidia":
+            from crewai.llms.providers.nvidia.completion import NvidiaCompletion
+
+            return NvidiaCompletion
 
         return None
 

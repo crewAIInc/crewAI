@@ -16,6 +16,7 @@ from crewai.rag.embeddings.providers.ibm.types import (
 )
 from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
 from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
+from crewai.rag.embeddings.providers.nvidia.types import NvidiaProviderSpec
 from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
 from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
 from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
@@ -38,6 +39,7 @@ ProviderSpec: TypeAlias = (
     | HuggingFaceProviderSpec
     | InstructorProviderSpec
     | JinaProviderSpec
+    | NvidiaProviderSpec
     | OllamaProviderSpec
     | ONNXProviderSpec
     | OpenAIProviderSpec
@@ -60,6 +62,7 @@ AllowedEmbeddingProviders = Literal[
     "huggingface",
     "instructor",
     "jina",
+    "nvidia",
     "ollama",
     "onnx",
     "openai",
