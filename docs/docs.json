@@ -319,6 +319,12 @@
                     ]
                   },
                   {
+                    "group": "Governance",
+                    "pages": [
+                      "en/governance/agentsystems-notary"
+                    ]
+                  },
+                  {
                     "group": "Learn",
                     "pages": [
                       "en/learn/overview",
