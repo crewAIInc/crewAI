@@ -1,7 +1,18 @@
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
+from crewai_tools.tools.brave_search_tool.brave_local_pois_tool import (
+    BraveLocalPOIsDescriptionTool,
+    BraveLocalPOIsTool,
+)
+from crewai_tools.tools.brave_search_tool.brave_news_tool import BraveNewsSearchTool
 from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
+from crewai_tools.tools.brave_search_tool.brave_video_tool import BraveVideoSearchTool
+from crewai_tools.tools.brave_search_tool.brave_web_tool import BraveWebSearchTool
+from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
+    BraveLLMContextTool,
+)
 from crewai_tools.tools.brightdata_tool import (
     BrightDataDatasetTool,
     BrightDataSearchTool,
@@ -185,7 +196,14 @@ __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
+    "BraveImageSearchTool",
+    "BraveLLMContextTool",
+    "BraveLocalPOIsDescriptionTool",
+    "BraveLocalPOIsTool",
+    "BraveNewsSearchTool",
     "BraveSearchTool",
+    "BraveVideoSearchTool",
+    "BraveWebSearchTool",
     "BrightDataDatasetTool",
     "BrightDataSearchTool",
     "BrightDataWebUnlockerTool",

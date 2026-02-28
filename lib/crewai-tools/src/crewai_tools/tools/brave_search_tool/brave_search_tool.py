@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 from pydantic.types import StringConstraints
 import requests
 
+from crewai_tools.tools.brave_search_tool.schemas import WebSearchParams
+
+
 load_dotenv()
 
 
@@ -28,61 +31,16 @@ Freshness = FreshnessPreset | FreshnessRange
 SafeSearch = Literal["off", "moderate", "strict"]
 
 
-class BraveSearchToolSchema(BaseModel):
-    """Input for BraveSearchTool"""
-
-    query: str = Field(..., description="Search query to perform")
-    country: str | None = Field(
-        default=None,
-        description="Country code for geo-targeting (e.g., 'US', 'BR').",
-    )
-    search_language: str | None = Field(
-        default=None,
-        description="Language code for the search results (e.g., 'en', 'es').",
-    )
-    count: int | None = Field(
-        default=None,
-        description="The maximum number of results to return. Actual number may be less.",
-    )
-    offset: int | None = Field(
-        default=None, description="Skip the first N result sets/pages. Max is 9."
-    )
-    safesearch: SafeSearch | None = Field(
-        default=None,
-        description="Filter out explicit content. Options: off/moderate/strict",
-    )
-    spellcheck: bool | None = Field(
-        default=None,
-        description="Attempt to correct spelling errors in the search query.",
-    )
-    freshness: Freshness | None = Field(
-        default=None,
-        description="Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
-    )
-    text_decorations: bool | None = Field(
-        default=None,
-        description="Include markup to highlight search terms in the results.",
-    )
-    extra_snippets: bool | None = Field(
-        default=None,
-        description="Include up to 5 text snippets for each page if possible.",
-    )
-    operators: bool | None = Field(
-        default=None,
-        description="Whether to apply search operators (e.g., site:example.com).",
-    )
-
-
 # TODO: Extend support to additional endpoints (e.g., /images, /news, etc.)
 class BraveSearchTool(BaseTool):
     """A tool that performs web searches using the Brave Search API."""
 
-    name: str = "Brave Search"
+    name: str = "Brave Web Search"
     description: str = (
         "A tool that performs web searches using the Brave Search API. "
         "Results are returned as structured JSON data."
     )
-    args_schema: type[BaseModel] = BraveSearchToolSchema
+    args_schema: type[BaseModel] = WebSearchParams
     search_url: str = "https://api.search.brave.com/res/v1/web/search"
     n_results: int = 10
     save_file: bool = False
@@ -129,8 +87,8 @@ class BraveSearchTool(BaseTool):
             if country := kwargs.get("country"):
                 payload["country"] = country
 
-            if search_language := kwargs.get("search_language"):
-                payload["search_language"] = search_language
+            if search_lang := kwargs.get("search_lang"):
+                payload["search_lang"] = search_lang
 
             # Fallback to deprecated n_results parameter if no count is provided
             count = kwargs.get("count")
