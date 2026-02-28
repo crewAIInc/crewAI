@@ -18,7 +18,13 @@ from openai.types.responses import Response
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.auth.openai_auth import OpenAIAuthError, resolve_openai_bearer_token
+from crewai.llms.auth.openai_auth import (
+    OpenAIAuthError,
+    ResolvedOpenAIAuth,
+    resolve_codex_oauth_access_token,
+    resolve_openai_bearer_token,
+    resolve_platform_api_key_from_local_codex,
+)
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -187,6 +193,9 @@ class OpenAICompletion(BaseLLM):
     CODEX_CHATGPT_DEFAULT_BASE_URL: ClassVar[str] = (
         "https://chatgpt.com/backend-api/codex"
     )
+    PLATFORM_DEFAULT_BASE_URL: ClassVar[str] = "https://api.openai.com/v1"
+    PLATFORM_ONLY_MODEL: ClassVar[str] = "gpt-5.2-pro"
+    CODEX_CHATGPT_MODEL: ClassVar[str] = "gpt-5.2-codex"
     CODEX_CHATGPT_BASE_URL_ENV: ClassVar[str] = "CREWAI_CODEX_CHATGPT_BASE_URL"
     CHATGPT_BACKEND_DEFAULT_INSTRUCTIONS: ClassVar[str] = (
         "You are a helpful assistant."
@@ -212,10 +221,6 @@ class OpenAICompletion(BaseLLM):
         "include",
         "store",
     )
-    CHATGPT_BACKEND_MODEL_ALIASES: ClassVar[dict[str, str]] = {
-        "gpt-5.2-pro": "gpt-5.2",
-        "gpt-5-pro": "gpt-5",
-    }
 
     def __init__(
         self,
@@ -367,20 +372,49 @@ class OpenAICompletion(BaseLLM):
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""
+        model_name = self.model.strip()
+        auth_mode = os.getenv("CREWAI_OPENAI_AUTH_MODE", "").strip().lower()
 
-        if not self.api_key:
-            try:
-                resolved_auth = resolve_openai_bearer_token()
-            except OpenAIAuthError as exc:
-                raise ValueError(str(exc)) from exc
+        if model_name == self.PLATFORM_ONLY_MODEL:
+            self.api = "responses"
+            self._use_codex_chatgpt_backend = False
+            self._resolved_openai_auth = self._resolve_platform_model_auth()
+            self.api_key = self._resolved_openai_auth.token
+            resolved_base_url = self.PLATFORM_DEFAULT_BASE_URL
+        else:
+            if model_name == self.CODEX_CHATGPT_MODEL and auth_mode == "oauth_codex":
+                self.api = "responses"
+                try:
+                    resolved_auth = resolve_codex_oauth_access_token()
+                except OpenAIAuthError as exc:
+                    raise ValueError(str(exc)) from exc
+                self.api_key = resolved_auth.token
+                self._resolved_openai_auth = resolved_auth
+                self._use_codex_chatgpt_backend = True
+            elif not self.api_key:
+                try:
+                    resolved_auth = resolve_openai_bearer_token()
+                except OpenAIAuthError as exc:
+                    raise ValueError(str(exc)) from exc
 
-            self.api_key = resolved_auth.token
-            self._resolved_openai_auth = resolved_auth
-            self._use_codex_chatgpt_backend = self._should_use_codex_chatgpt_backend(
-                resolved_auth
-            )
+                self.api_key = resolved_auth.token
+                self._resolved_openai_auth = resolved_auth
+                self._use_codex_chatgpt_backend = self._should_use_codex_chatgpt_backend(
+                    model_name=model_name, resolved_auth=resolved_auth
+                )
+            else:
+                self._use_codex_chatgpt_backend = False
 
-            if resolved_auth.account_id and not self._use_codex_chatgpt_backend:
+            if self._resolved_openai_auth:
+                self._use_codex_chatgpt_backend = self._should_use_codex_chatgpt_backend(
+                    model_name=model_name, resolved_auth=self._resolved_openai_auth
+                )
+
+            if (
+                self._resolved_openai_auth
+                and self._resolved_openai_auth.account_id
+                and not self._use_codex_chatgpt_backend
+            ):
                 account_header = (
                     os.getenv("CREWAI_OPENAI_ACCOUNT_HEADER", "OpenAI-Account")
                     .strip()
@@ -391,21 +425,21 @@ class OpenAICompletion(BaseLLM):
                         header.lower() == account_header.lower()
                         for header in existing_headers
                     ):
-                        existing_headers[account_header] = resolved_auth.account_id
+                        existing_headers[account_header] = (
+                            self._resolved_openai_auth.account_id
+                        )
                         self.default_headers = existing_headers
 
-        if self._resolved_openai_auth:
-            self._use_codex_chatgpt_backend = self._should_use_codex_chatgpt_backend(
-                self._resolved_openai_auth
-            )
-        else:
-            self._use_codex_chatgpt_backend = False
-
-        resolved_base_url = self.base_url or self.api_base
-        if self._use_codex_chatgpt_backend:
-            resolved_base_url = resolved_base_url or self._resolve_codex_chatgpt_base_url()
-        else:
-            resolved_base_url = resolved_base_url or os.getenv("OPENAI_BASE_URL") or None
+            resolved_base_url = self.base_url or self.api_base
+            if self._use_codex_chatgpt_backend:
+                self.api = "responses"
+                resolved_base_url = (
+                    resolved_base_url or self._resolve_codex_chatgpt_base_url()
+                )
+            else:
+                resolved_base_url = (
+                    resolved_base_url or os.getenv("OPENAI_BASE_URL") or None
+                )
 
         base_params = {
             "api_key": self.api_key,
@@ -426,9 +460,11 @@ class OpenAICompletion(BaseLLM):
         return client_params
 
     def _should_use_codex_chatgpt_backend(
-        self, resolved_auth: Any | None
+        self, *, model_name: str, resolved_auth: Any | None
     ) -> bool:
         """Determine whether to route OAuth Codex auth through ChatGPT backend."""
+        if model_name != self.CODEX_CHATGPT_MODEL:
+            return False
         if resolved_auth is None:
             return False
         if not getattr(resolved_auth, "is_oauth", False):
@@ -441,7 +477,30 @@ class OpenAICompletion(BaseLLM):
         if os.getenv("OPENAI_API_KEY"):
             return False
         auth_mode = os.getenv("CREWAI_OPENAI_AUTH_MODE", "").strip().lower()
-        return auth_mode in {"", "oauth_codex"}
+        return auth_mode == "oauth_codex"
+
+    def _resolve_platform_model_auth(self) -> ResolvedOpenAIAuth:
+        """Resolve credentials for Platform-only model routes."""
+        if self.api_key and self._looks_like_jwt_token(self.api_key):
+            raise ValueError(
+                "gpt-5.2-pro requires Platform Responses API credential; codex OAuth "
+                "access_token is not sufficient"
+            )
+
+        try:
+            resolved = resolve_platform_api_key_from_local_codex(
+                explicit_api_key=self.api_key
+            )
+        except OpenAIAuthError as exc:
+            raise ValueError(str(exc)) from exc
+
+        if resolved.is_oauth or self._looks_like_jwt_token(resolved.token):
+            raise ValueError(
+                "gpt-5.2-pro requires Platform Responses API credential; codex OAuth "
+                "access_token is not sufficient"
+            )
+
+        return resolved
 
     def _resolve_codex_chatgpt_base_url(self) -> str:
         """Resolve ChatGPT backend base URL for Codex OAuth mode."""
@@ -452,6 +511,12 @@ class OpenAICompletion(BaseLLM):
         if base_url.endswith("/v1"):
             base_url = base_url[:-3].rstrip("/")
         return base_url
+
+    def _looks_like_jwt_token(self, token: str | None) -> bool:
+        if not token:
+            return False
+        parts = token.strip().split(".")
+        return len(parts) == 3 and all(parts)
 
     def call(
         self,
@@ -842,18 +907,6 @@ class OpenAICompletion(BaseLLM):
     ) -> dict[str, Any]:
         """Adjust Responses payload for ChatGPT subscription backend compatibility."""
         adjusted = dict(params)
-        requested_model = adjusted.get("model")
-        if isinstance(requested_model, str):
-            alias_model = self.CHATGPT_BACKEND_MODEL_ALIASES.get(
-                requested_model, requested_model
-            )
-            if alias_model != requested_model:
-                adjusted["model"] = alias_model
-                logging.info(
-                    "Mapped ChatGPT backend model alias %s -> %s for oauth_codex.",
-                    requested_model,
-                    alias_model,
-                )
 
         if not adjusted.get("instructions"):
             adjusted["instructions"] = self.CHATGPT_BACKEND_DEFAULT_INSTRUCTIONS

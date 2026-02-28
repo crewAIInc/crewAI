@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from contextlib import contextmanager
 import hashlib
 import json
 import logging
 import os
 from pathlib import Path
+import uuid
 from typing import Any, Literal, Mapping
 
 import httpx
@@ -19,6 +21,10 @@ LOGGER = logging.getLogger(__name__)
 
 OPENAI_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"
 OPENAI_OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
+OPENAI_OAUTH_TOKEN_EXCHANGE_GRANT_TYPE = (
+    "urn:ietf:params:oauth:grant-type:token-exchange"
+)
+OPENAI_OAUTH_SUBJECT_TOKEN_TYPE_ID_TOKEN = "urn:ietf:params:oauth:token-type:id_token"
 CODEX_KEYRING_SERVICE = "Codex Auth"
 DEFAULT_CODEX_HOME = "~/.codex"
 
@@ -54,6 +60,7 @@ class ResolvedOpenAIAuth:
         "codex_auth_json_oauth",
         "codex_keyring_api_key",
         "codex_keyring_oauth",
+        "codex_token_exchange_api_key",
     ]
     account_id: str | None = None
     is_oauth: bool = False
@@ -145,6 +152,197 @@ def resolve_openai_bearer_token(
     )
 
 
+def resolve_codex_oauth_access_token(
+    *,
+    codex_home: str | Path | None = None,
+    env: Mapping[str, str] | None = None,
+    http_client: httpx.Client | None = None,
+) -> ResolvedOpenAIAuth:
+    """Resolve OAuth access token directly from local Codex credentials."""
+    credentials = load_codex_credentials(codex_home=codex_home, env=env)
+    if not credentials:
+        raise OpenAIAuthError(
+            "Local Codex credentials not found. Run `codex login` to use oauth_codex."
+        )
+
+    tokens = _ensure_tokens_object(credentials.payload)
+    access_token = _normalize_secret(_get_ci(tokens, "access_token"))
+    refresh_token = _normalize_secret(_get_ci(tokens, "refresh_token"))
+    account_id = _normalize_secret(_get_ci(tokens, "account_id"))
+    last_refresh = _normalize_secret(_get_ci(credentials.payload, "last_refresh"))
+
+    if token_expiry_check(access_token, last_refresh=last_refresh):
+        if not refresh_token:
+            raise OpenAIAuthError(
+                "Codex access_token is expired and refresh_token is unavailable. "
+                "Run `codex login` again."
+            )
+        refreshed_tokens = _refresh_codex_tokens_with_recovery(
+            credentials,
+            refresh_token=refresh_token,
+            http_client=http_client,
+        )
+        persist_updated_tokens(credentials, refreshed_tokens)
+        access_token = _normalize_secret(_get_ci(refreshed_tokens, "access_token"))
+        account_id = _normalize_secret(_get_ci(refreshed_tokens, "account_id")) or account_id
+
+    if not access_token:
+        raise OpenAIAuthError(
+            "Codex OAuth access_token is unavailable after refresh. Run `codex login` again."
+        )
+
+    return ResolvedOpenAIAuth(
+        token=access_token,
+        source=(
+            "codex_auth_json_oauth"
+            if credentials.source == "auth_json"
+            else "codex_keyring_oauth"
+        ),
+        account_id=account_id,
+        is_oauth=True,
+    )
+
+
+def resolve_platform_api_key_from_local_codex(
+    explicit_api_key: str | None = None,
+    *,
+    codex_home: str | Path | None = None,
+    env: Mapping[str, str] | None = None,
+    http_client: httpx.Client | None = None,
+    persist_to_codex_auth: bool = True,
+) -> ResolvedOpenAIAuth:
+    """Resolve a Platform API key using local Codex auth sources."""
+    env_map = env if env is not None else os.environ
+
+    explicit = _normalize_secret(explicit_api_key)
+    if explicit:
+        return ResolvedOpenAIAuth(
+            token=explicit, source="explicit_api_key", is_oauth=False
+        )
+
+    env_api_key = _normalize_secret(env_map.get("OPENAI_API_KEY"))
+    if env_api_key:
+        return ResolvedOpenAIAuth(
+            token=env_api_key, source="env_openai_api_key", is_oauth=False
+        )
+
+    credentials = load_codex_credentials(codex_home=codex_home, env=env_map)
+    if not credentials:
+        raise OpenAIAuthError(
+            "No local Codex credentials were found. Run `codex login` or set OPENAI_API_KEY."
+        )
+
+    codex_api_key = _normalize_secret(_get_ci(credentials.payload, "OPENAI_API_KEY"))
+    if codex_api_key:
+        return ResolvedOpenAIAuth(
+            token=codex_api_key,
+            source=(
+                "codex_auth_json_api_key"
+                if credentials.source == "auth_json"
+                else "codex_keyring_api_key"
+            ),
+            is_oauth=False,
+        )
+
+    tokens = _ensure_tokens_object(credentials.payload)
+    id_token = _normalize_secret(_get_ci(tokens, "id_token"))
+    refresh_token = _normalize_secret(_get_ci(tokens, "refresh_token"))
+    last_refresh = _normalize_secret(_get_ci(credentials.payload, "last_refresh"))
+
+    if token_expiry_check(id_token, last_refresh=last_refresh):
+        if not refresh_token:
+            raise OpenAIAuthError(
+                "Cannot derive Platform API key: id_token is expired and refresh_token is unavailable."
+            )
+        refreshed_tokens = _refresh_codex_tokens_with_recovery(
+            credentials,
+            refresh_token=refresh_token,
+            http_client=http_client,
+        )
+        persist_updated_tokens(credentials, refreshed_tokens)
+        id_token = _normalize_secret(_get_ci(refreshed_tokens, "id_token")) or id_token
+
+    if not id_token:
+        raise OpenAIAuthError(
+            "Cannot derive Platform API key: id_token is missing from local Codex credentials."
+        )
+
+    exchanged_api_key = exchange_codex_id_token_for_openai_api_key(
+        id_token=id_token,
+        client_id=_resolve_codex_client_id(
+            credentials.payload, id_token=id_token, env=env_map
+        ),
+        http_client=http_client,
+    )
+
+    if persist_to_codex_auth and exchanged_api_key:
+        _set_ci(credentials.payload, "OPENAI_API_KEY", exchanged_api_key)
+        persist_updated_tokens(credentials, {"id_token": id_token})
+
+    return ResolvedOpenAIAuth(
+        token=exchanged_api_key,
+        source="codex_token_exchange_api_key",
+        is_oauth=False,
+    )
+
+
+def exchange_codex_id_token_for_openai_api_key(
+    *,
+    id_token: str,
+    client_id: str,
+    http_client: httpx.Client | None = None,
+    timeout: float = 15.0,
+) -> str:
+    """Exchange a Codex id_token for a Platform API key."""
+    normalized_id_token = _normalize_secret(id_token)
+    normalized_client_id = _normalize_secret(client_id)
+    if not normalized_id_token or not normalized_client_id:
+        raise OpenAIAuthError("id_token and client_id are required for token exchange.")
+
+    payload = {
+        "grant_type": OPENAI_OAUTH_TOKEN_EXCHANGE_GRANT_TYPE,
+        "client_id": normalized_client_id,
+        "requested_token": "openai-api-key",
+        "subject_token": normalized_id_token,
+        "subject_token_type": OPENAI_OAUTH_SUBJECT_TOKEN_TYPE_ID_TOKEN,
+        "name": f"CrewAI token exchange {uuid.uuid4().hex[:8]}",
+    }
+
+    owns_client = http_client is None
+    client = http_client or httpx.Client(timeout=timeout)
+    try:
+        response = client.post(
+            OPENAI_OAUTH_TOKEN_URL,
+            data=payload,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+    except httpx.HTTPError as exc:
+        raise OpenAIAuthError("Token exchange failed due to network error.") from exc
+    finally:
+        if owns_client:
+            client.close()
+
+    if not response.is_success:
+        detail = _extract_error_detail(response)
+        raise OpenAIAuthError(
+            "Token exchange failed while deriving Platform API key "
+            f"(status={response.status_code}, detail={detail})."
+        )
+
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise OpenAIAuthError("Token exchange response was not valid JSON.") from exc
+
+    if not isinstance(body, dict):
+        raise OpenAIAuthError("Token exchange response must be a JSON object.")
+
+    access_token = _normalize_secret(_get_ci(body, "access_token"))
+    if not access_token:
+        raise OpenAIAuthError("Token exchange succeeded but access_token was missing.")
+    return access_token
+
+
 def load_codex_credentials(
     *,
     codex_home: str | Path | None = None,
@@ -212,6 +410,11 @@ def refresh_codex_access_token(
             client.close()
 
     if response.status_code == 401:
+        detail = _extract_error_detail(response)
+        if "already been used" in detail.lower() or "reused" in detail.lower():
+            raise OpenAIAuthError(
+                "Codex refresh_token was already used; reloading local auth state may be required."
+            )
         raise OpenAIAuthError(
             "Codex refresh_token is invalid or expired. Please run `codex login` again."
         )
@@ -286,7 +489,31 @@ def persist_updated_tokens(
     _set_ci(payload, "last_refresh", refresh_timestamp)
 
     if credentials.source == "auth_json":
-        _write_auth_json_securely(credentials.auth_json_path, payload)
+        with _auth_json_lock(credentials.auth_json_path):
+            latest_payload = payload
+            if credentials.auth_json_path.exists():
+                try:
+                    loaded_payload = json.loads(
+                        credentials.auth_json_path.read_text(encoding="utf-8")
+                    )
+                    if isinstance(loaded_payload, dict):
+                        latest_payload = loaded_payload
+                except Exception:  # noqa: BLE001
+                    latest_payload = payload
+
+            latest_tokens = _ensure_tokens_object(latest_payload)
+            for token_key in ("access_token", "refresh_token", "id_token", "account_id"):
+                token_value = _normalize_secret(_get_ci(tokens, token_key))
+                if token_value:
+                    _set_ci(latest_tokens, token_key, token_value)
+
+            openai_api_key = _normalize_secret(_get_ci(payload, "OPENAI_API_KEY"))
+            if openai_api_key:
+                _set_ci(latest_payload, "OPENAI_API_KEY", openai_api_key)
+
+            _set_ci(latest_payload, "last_refresh", refresh_timestamp)
+            _write_auth_json_securely(credentials.auth_json_path, latest_payload)
+            credentials.payload = latest_payload
         return
 
     _persist_codex_credentials_to_keyring(credentials, payload)
@@ -317,8 +544,10 @@ def _resolve_from_codex_credentials(
 
     should_refresh = token_expiry_check(access_token, last_refresh=last_refresh)
     if should_refresh and refresh_token:
-        refreshed_tokens = refresh_codex_access_token(
-            refresh_token, http_client=http_client
+        refreshed_tokens = _refresh_codex_tokens_with_recovery(
+            credentials,
+            refresh_token=refresh_token,
+            http_client=http_client,
         )
         if account_id and not _normalize_secret(_get_ci(refreshed_tokens, "account_id")):
             refreshed_tokens = dict(refreshed_tokens)
@@ -331,8 +560,10 @@ def _resolve_from_codex_credentials(
 
     if not access_token:
         if refresh_token:
-            refreshed_tokens = refresh_codex_access_token(
-                refresh_token, http_client=http_client
+            refreshed_tokens = _refresh_codex_tokens_with_recovery(
+                credentials,
+                refresh_token=refresh_token,
+                http_client=http_client,
             )
             persist_updated_tokens(credentials, refreshed_tokens)
             access_token = _normalize_secret(_get_ci(refreshed_tokens, "access_token"))
@@ -386,6 +617,84 @@ def _resolve_codex_home(
         env_map = env if env is not None else os.environ
         value = env_map.get("CODEX_HOME", DEFAULT_CODEX_HOME)
     return Path(value).expanduser().resolve()
+
+
+def _refresh_codex_tokens_with_recovery(
+    credentials: CodexCredentials,
+    *,
+    refresh_token: str,
+    http_client: httpx.Client | None = None,
+) -> dict[str, Any]:
+    """Refresh token with one retry after re-reading latest auth.json token."""
+    normalized_refresh_token = _normalize_secret(refresh_token)
+    if not normalized_refresh_token:
+        raise OpenAIAuthError("refresh_token is required to refresh Codex OAuth tokens.")
+
+    try:
+        return refresh_codex_access_token(
+            normalized_refresh_token, http_client=http_client
+        )
+    except OpenAIAuthError as exc:
+        message = str(exc).lower()
+        should_retry = "already used" in message or "reused" in message
+        if not should_retry or credentials.source != "auth_json":
+            raise
+
+    latest_refresh_token = _reload_latest_refresh_token(credentials.auth_json_path)
+    if not latest_refresh_token:
+        raise OpenAIAuthError(
+            "Codex refresh token rotation detected, but no latest refresh_token was found."
+        )
+    if latest_refresh_token == normalized_refresh_token:
+        raise OpenAIAuthError(
+            "Codex refresh_token was reused and local auth cache does not have a newer token."
+        )
+
+    return refresh_codex_access_token(latest_refresh_token, http_client=http_client)
+
+
+def _reload_latest_refresh_token(auth_json_path: Path) -> str | None:
+    if not auth_json_path.exists():
+        return None
+    try:
+        payload = json.loads(auth_json_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+    if not isinstance(payload, dict):
+        return None
+    tokens = _get_ci(payload, "tokens")
+    if not isinstance(tokens, dict):
+        return None
+    return _normalize_secret(_get_ci(tokens, "refresh_token"))
+
+
+def _resolve_codex_client_id(
+    payload: Mapping[str, Any],
+    *,
+    id_token: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> str:
+    env_map = env if env is not None else os.environ
+    env_client_id = _normalize_secret(env_map.get("CODEX_CLIENT_ID"))
+    if env_client_id:
+        return env_client_id
+
+    candidate_id_token = _normalize_secret(id_token)
+    if candidate_id_token is None:
+        tokens = _get_ci(payload, "tokens")
+        if isinstance(tokens, dict):
+            candidate_id_token = _normalize_secret(_get_ci(tokens, "id_token"))
+
+    jwt_payload = _decode_jwt_payload(candidate_id_token)
+    aud = jwt_payload.get("aud") if isinstance(jwt_payload, dict) else None
+    if isinstance(aud, str) and aud.strip():
+        return aud
+    if isinstance(aud, list):
+        for value in aud:
+            if isinstance(value, str) and value.strip():
+                return value
+
+    return OPENAI_OAUTH_CLIENT_ID
 
 
 def _load_codex_credentials_from_keyring(
@@ -460,6 +769,25 @@ def _write_auth_json_securely(path: Path, payload: Mapping[str, Any]) -> None:
     os.chmod(path, 0o600)
 
 
+@contextmanager
+def _auth_json_lock(path: Path):
+    """Cross-process lock used when updating auth.json."""
+    lock_path = path.with_suffix(f"{path.suffix}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock_path, "a+", encoding="utf-8") as lock_file:
+        if os.name != "nt":
+            import fcntl
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if os.name != "nt":
+                import fcntl
+
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
 def _extract_jwt_exp(token: str) -> int | None:
     try:
         payload = jwt.decode(
@@ -481,6 +809,29 @@ def _extract_jwt_exp(token: str) -> int | None:
         return exp
     if isinstance(exp, float):
         return int(exp)
+    return None
+
+
+def _decode_jwt_payload(token: str | None) -> dict[str, Any] | None:
+    normalized = _normalize_secret(token)
+    if not normalized:
+        return None
+    try:
+        payload = jwt.decode(
+            normalized,
+            options={
+                "verify_signature": False,
+                "verify_exp": False,
+                "verify_nbf": False,
+                "verify_aud": False,
+                "verify_iss": False,
+            },
+            algorithms=["HS256", "RS256", "ES256"],
+        )
+    except Exception:  # noqa: BLE001
+        return None
+    if isinstance(payload, dict):
+        return payload
     return None
 
 
@@ -506,6 +857,29 @@ def _import_keyring() -> Any | None:
         return keyring
     except Exception:  # noqa: BLE001
         return None
+
+
+def _extract_error_detail(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except Exception:  # noqa: BLE001
+        payload = None
+
+    if isinstance(payload, dict):
+        err = payload.get("error")
+        if isinstance(err, dict):
+            message = err.get("message")
+            code = err.get("code")
+            if isinstance(message, str) and message.strip():
+                if isinstance(code, str) and code.strip():
+                    return f"{code}: {message.strip()}"
+                return message.strip()
+        detail = payload.get("detail")
+        if isinstance(detail, str) and detail.strip():
+            return detail.strip()
+
+    raw = (response.text or "").strip()
+    return raw[:240] if raw else "no response body"
 
 
 def _get_ci(mapping: Mapping[str, Any], key: str) -> Any:

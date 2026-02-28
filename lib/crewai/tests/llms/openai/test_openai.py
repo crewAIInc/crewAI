@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+import json
 from typing import Any
 from unittest.mock import patch, MagicMock
 import openai
@@ -493,51 +494,83 @@ def test_openai_get_client_params_no_base_url(monkeypatch):
 
 
 def test_openai_get_client_params_resolves_oauth_token(monkeypatch):
-    """Test OAuth token resolver integration for OpenAI native provider."""
+    """Test OAuth env token resolver integration for OpenAI native provider."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_OAUTH_ACCESS_TOKEN", "oauth-token")
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_token")
+
+    llm = OpenAICompletion(model="gpt-4o")
+    params = llm._get_client_params()
+    assert params["api_key"] == "oauth-token"
+    assert "default_headers" not in params or "OpenAI-Account" not in params.get(
+        "default_headers", {}
+    )
+
+
+def test_openai_get_client_params_routes_codex_model_to_chatgpt_backend(
+    monkeypatch, tmp_path
+):
+    """gpt-5.2-codex + oauth_codex should route to ChatGPT backend."""
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_text(
+        json.dumps(
+            {
+                "auth_mode": "chatgpt",
+                "tokens": {
+                    "access_token": "oauth-token",
+                    "refresh_token": "refresh-token",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_OAUTH_ACCESS_TOKEN", raising=False)
-    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "api_key")
-
-    with patch(
-        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
-        return_value=ResolvedOpenAIAuth(
-            token="oauth-token",
-            source="codex_auth_json_oauth",
-            account_id="acct_123",
-            is_oauth=True,
-        ),
-    ) as mock_resolve:
-        llm = OpenAICompletion(model="gpt-4o")
-        params = llm._get_client_params()
-        assert params["api_key"] == "oauth-token"
-        assert params["default_headers"]["OpenAI-Account"] == "acct_123"
-        assert mock_resolve.call_count >= 1
-
-
-def test_openai_get_client_params_routes_codex_oauth_to_chatgpt_backend(monkeypatch):
-    """Codex OAuth should route to ChatGPT backend by default."""
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
     monkeypatch.setenv(
         "CREWAI_CODEX_CHATGPT_BASE_URL", "https://chatgpt.com/backend-api/codex"
     )
 
-    with patch(
-        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
-        return_value=ResolvedOpenAIAuth(
-            token="oauth-token",
-            source="codex_auth_json_oauth",
-            account_id="acct_123",
-            is_oauth=True,
-        ),
-    ):
-        llm = OpenAICompletion(model="gpt-5.2-pro", api="responses")
-        params = llm._get_client_params()
+    llm = OpenAICompletion(model="gpt-5.2-codex", api="completions")
+    params = llm._get_client_params()
 
     assert params["base_url"] == "https://chatgpt.com/backend-api/codex"
+    assert params["api_key"] == "oauth-token"
+    assert llm.api == "responses"
     assert "default_headers" not in params or "OpenAI-Account" not in params.get(
         "default_headers", {}
     )
+
+
+def test_openai_get_client_params_routes_pro_model_to_platform(monkeypatch):
+    """gpt-5.2-pro must use Platform route and Platform credential."""
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-platform-key")
+
+    llm = OpenAICompletion(model="gpt-5.2-pro", api="completions")
+    params = llm._get_client_params()
+
+    assert params["base_url"] == "https://api.openai.com/v1"
+    assert params["api_key"] == "sk-platform-key"
+    assert llm.api == "responses"
+
+
+def test_openai_get_client_params_pro_model_rejects_oauth_jwt():
+    """gpt-5.2-pro must fail fast when credential is raw oauth JWT."""
+    with pytest.raises(
+        ValueError,
+        match=(
+            "gpt-5.2-pro requires Platform Responses API credential; "
+            "codex OAuth access_token is not sufficient"
+        ),
+    ):
+        OpenAICompletion(
+            model="gpt-5.2-pro",
+            api="responses",
+            api_key="eyJhbGciOiJub25lIn0.eyJzdWIiOiIxMjM0In0.signature",
+        )
 
 
 def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch):
@@ -546,7 +579,7 @@ def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch
     monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
 
     with patch(
-        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
         return_value=ResolvedOpenAIAuth(
             token="oauth-token",
             source="codex_auth_json_oauth",
@@ -554,7 +587,7 @@ def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch
         ),
     ):
         llm = OpenAICompletion(
-            model="gpt-5.2-pro",
+            model="gpt-5.2-codex",
             api="responses",
             max_tokens=128,
             metadata={"trace_id": "abc"},
@@ -567,7 +600,7 @@ def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch
     assert params["instructions"] == "You are a helpful assistant."
     assert "max_output_tokens" not in params
     assert "metadata" not in params
-    assert params["model"] == "gpt-5.2"
+    assert params["model"] == "gpt-5.2-codex"
     assert params["store"] is False
     assert params["stream"] is True
 
@@ -578,14 +611,14 @@ def test_call_responses_uses_stream_handler_when_chatgpt_backend_sets_stream(mon
     monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
 
     with patch(
-        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
         return_value=ResolvedOpenAIAuth(
             token="oauth-token",
             source="codex_auth_json_oauth",
             is_oauth=True,
         ),
     ):
-        llm = OpenAICompletion(model="gpt-5.2-pro", api="responses")
+        llm = OpenAICompletion(model="gpt-5.2-codex", api="responses")
 
     with patch.object(
         llm, "_prepare_responses_params", return_value={"stream": True}
@@ -605,14 +638,14 @@ def test_chatgpt_backend_retries_by_stripping_bad_request_param(monkeypatch):
     monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
 
     with patch(
-        "crewai.llms.providers.openai.completion.resolve_openai_bearer_token",
+        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
         return_value=ResolvedOpenAIAuth(
             token="oauth-token",
             source="codex_auth_json_oauth",
             is_oauth=True,
         ),
     ):
-        llm = OpenAICompletion(model="gpt-5.2-pro", api="responses")
+        llm = OpenAICompletion(model="gpt-5.2-codex", api="responses")
 
     class _BadRequest(Exception):
         status_code = 400
@@ -627,7 +660,7 @@ def test_chatgpt_backend_retries_by_stripping_bad_request_param(monkeypatch):
 
     llm.client.responses.create = MagicMock(side_effect=[_BadRequest(), response])
     params = {
-        "model": "gpt-5.2-pro",
+        "model": "gpt-5.2-codex",
         "input": [{"role": "user", "content": "ok"}],
         "instructions": "You are a helpful assistant.",
         "metadata": {"trace_id": "abc"},

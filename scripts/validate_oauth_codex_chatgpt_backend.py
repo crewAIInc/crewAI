@@ -185,9 +185,7 @@ def run_sdk_checks(token: str, base_url: str) -> bool:
 
     all_passed = True
     for requested_model, prompt in requested_cases:
-        backend_model = OpenAICompletion.CHATGPT_BACKEND_MODEL_ALIASES.get(
-            requested_model, requested_model
-        )
+        backend_model = requested_model
         label = f"sdk.responses.{requested_model}"
 
         def _call() -> Any:

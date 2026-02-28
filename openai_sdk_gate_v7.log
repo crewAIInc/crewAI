@@ -1,0 +1,9 @@
+== ENV ==
+OPENAI_API_KEY=unset
+CREWAI_OPENAI_AUTH_MODE=<unset>
+== SDK ==
+PASS case=sdk.responses.gpt-5.2-codex requested_model=gpt-5.2-codex effective_model=gpt-5.2-codex api=responses base_url=https://chatgpt.com/backend-api/codex credential_source=codex_auth_json_oauth status_code=200 error.type=None error.code=None message=```python
+print("OK")
+```
+FAIL case=sdk.responses.gpt-5.2-pro requested_model=gpt-5.2-pro effective_model=gpt-5.2-pro api=responses base_url=None credential_source=unknown status_code=None error.type=None error.code=None message=Codex refresh_token was reused and local auth cache does not have a newer token.
+RESULT FAIL
