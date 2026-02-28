@@ -444,7 +444,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
                     raise e
-                if is_context_length_exceeded(e):
+                if is_context_length_exceeded(e, messages=self.messages, llm=self.llm):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
