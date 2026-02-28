@@ -1025,9 +1025,9 @@ class Crew(FlowTrackable, BaseModel):
                 pending_tasks.append((task, async_task, task_index))
             else:
                 if pending_tasks:
-                    task_outputs = await self._aprocess_async_tasks(
+                    task_outputs.extend(await self._aprocess_async_tasks(
                         pending_tasks, was_replayed
-                    )
+                    ))
                     pending_tasks.clear()
 
                 context = self._get_context(task, task_outputs)
@@ -1041,7 +1041,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
         if pending_tasks:
-            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            task_outputs.extend(await self._aprocess_async_tasks(pending_tasks, was_replayed))
 
         return self._create_crew_output(task_outputs)
 
@@ -1055,7 +1055,7 @@ class Crew(FlowTrackable, BaseModel):
     ) -> TaskOutput | None:
         """Handle conditional task evaluation using native async."""
         if pending_tasks:
-            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            task_outputs.extend(await self._aprocess_async_tasks(pending_tasks, was_replayed))
             pending_tasks.clear()
 
         return check_conditional_skip(
@@ -1226,7 +1226,7 @@ class Crew(FlowTrackable, BaseModel):
                 futures.append((task, future, task_index))
             else:
                 if futures:
-                    task_outputs = self._process_async_tasks(futures, was_replayed)
+                    task_outputs.extend(self._process_async_tasks(futures, was_replayed))
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
@@ -1240,7 +1240,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
         if futures:
-            task_outputs = self._process_async_tasks(futures, was_replayed)
+            task_outputs.extend(self._process_async_tasks(futures, was_replayed))
 
         return self._create_crew_output(task_outputs)
 
@@ -1253,7 +1253,7 @@ class Crew(FlowTrackable, BaseModel):
         was_replayed: bool,
     ) -> TaskOutput | None:
         if futures:
-            task_outputs = self._process_async_tasks(futures, was_replayed)
+            task_outputs.extend(self._process_async_tasks(futures, was_replayed))
             futures.clear()
 
         return check_conditional_skip(
