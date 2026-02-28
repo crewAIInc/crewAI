@@ -1,12 +1,12 @@
-# TavilyExtractorTool
+# TavilyExtractTool
 
 ## Description
 
-The `TavilyExtractorTool` allows CrewAI agents to extract structured content from web pages using the Tavily API. It can process single URLs or lists of URLs and provides options for controlling the extraction depth and including images.
+The `TavilyExtractTool` allows CrewAI agents to extract structured content from web pages using the Tavily API. It can process single URLs or lists of URLs and provides options for controlling the extraction depth and including images.
 
 ## Installation
 
-To use the `TavilyExtractorTool`, you need to install the `tavily-python` library:
+To use the `TavilyExtractTool`, you need to install the `tavily-python` library:
 
 ```shell
 pip install 'crewai[tools]' tavily-python
@@ -20,18 +20,18 @@ export TAVILY_API_KEY='your-tavily-api-key'
 
 ## Example
 
-Here's how to initialize and use the `TavilyExtractorTool` within a CrewAI agent:
+Here's how to initialize and use the `TavilyExtractTool` within a CrewAI agent:
 
 ```python
 import os
 from crewai import Agent, Task, Crew
-from crewai_tools import TavilyExtractorTool
+from crewai_tools import TavilyExtractTool
 
 # Ensure TAVILY_API_KEY is set in your environment
 # os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
 
 # Initialize the tool
-tavily_tool = TavilyExtractorTool()
+tavily_tool = TavilyExtractTool()
 
 # Create an agent that uses the tool
 extractor_agent = Agent(
@@ -82,17 +82,32 @@ print(result_multiple)
 
 ## Arguments
 
-The `TavilyExtractorTool` accepts the following arguments during initialization or when running the tool:
+The `TavilyExtractTool` accepts the following arguments during initialization or when running the tool:
 
 - `api_key` (Optional[str]): Your Tavily API key. If not provided during initialization, it defaults to the `TAVILY_API_KEY` environment variable.
 - `proxies` (Optional[dict[str, str]]): Proxies to use for the API requests. Defaults to `None`.
+- `extra_kwargs` (dict[str, Any]): Additional keyword arguments passed directly to tavily-python's `extract()` method. Use this for new tavily-python parameters not yet explicitly supported.
 
-When running the tool (`_run` or `_arun` methods, or via agent execution), it uses the `TavilyExtractorToolSchema` and expects the following inputs:
+When running the tool (`_run` or `_arun` methods, or via agent execution), it uses the `TavilyExtractToolSchema` and expects the following inputs:
 
 - `urls` (Union[List[str], str]): **Required**. A single URL string or a list of URL strings to extract data from.
 - `include_images` (Optional[bool]): Whether to include images in the extraction results. Defaults to `False`.
 - `extract_depth` (Literal["basic", "advanced"]): The depth of extraction. Use `"basic"` for faster, surface-level extraction or `"advanced"` for more comprehensive extraction. Defaults to `"basic"`.
 - `timeout` (int): The maximum time in seconds to wait for the extraction request to complete. Defaults to `60`.
+
+## Using New tavily-python Parameters
+
+When tavily-python adds new parameters that aren't yet explicitly supported, you can use `extra_kwargs` to pass them through:
+
+```python
+# Use new tavily-python parameters via extra_kwargs
+tavily_tool = TavilyExtractTool(
+    extra_kwargs={
+        "some_new_param": "value",
+        "another_param": True
+    }
+)
+```
 
 ## Response Format
 
