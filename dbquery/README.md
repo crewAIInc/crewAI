@@ -50,6 +50,38 @@ This example, unmodified, will run the create a `report.md` file with the output
 
 The dbquery Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
 
+# 🤖 CrewAI: Secure Database Analysis Crew
+
+This feature introduces a robust, production-ready **Database Querying Crew**. It bridges the gap between natural language and SQL databases while implementing two critical production guardrails: **Read-Only Security Enforcement** and **Context-Aware Token Management**.
+
+---
+
+## 🌟 Key Features
+
+### 1. Safe NL2SQL Tooling (`SafeNL2SQLTool`)
+Prevents accidental or malicious database modification by wrapping the standard NL2SQLTool.
+
+- **Command Filtering:** Automatically blocks `DROP`, `DELETE`, `TRUNCATE`, `UPDATE`, `INSERT`, `ALTER`, and `GRANT`.
+- **Select-Only Policy:** Only permits queries starting with `SELECT`.
+- **Error Reporting:** Returns a `"Read Only Access"` error message directly to the agent to allow for self-correction.
+
+### 2. The Token Gatekeeper (tiktoken Integration)
+A specialized agent and task callback that prevents "Context Overflow" errors.
+
+- **Live Token Counting:** Uses `tiktoken` (specifically for `gpt-4o-mini` encoding) to measure the exact size of database results.
+- **Smart Truncation:** If data exceeds `MAX_TOKEN_LIMIT`, it truncates the payload and injects a **System Notice** header so the subsequent Analyst knows they are working with a partial dataset.
+
+### 3. Structured Intelligence (`DatabaseResponse`)
+The crew doesn't just return text; it returns a validated **Pydantic object**:
+
+- `summary`: A human-readable breakdown.
+- `sql_query_used`: The exact SQL code generated.
+- `row_count`: Total rows processed.
+- `data`: The raw data list.
+- `recommendation`: AI-driven business advice.
+
+---
+
 ## Support
 
 For support, questions, or feedback regarding the Dbquery Crew or crewAI.
