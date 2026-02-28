@@ -87,7 +87,12 @@ class MCPToolResolver:
         return all_tools
 
     def cleanup(self) -> None:
-        """Disconnect all MCP client connections."""
+        """Disconnect all MCP client connections.
+
+        Submits the disconnect coroutines to the persistent MCP event loop
+        so that transport context managers are exited on the same loop they
+        were entered on.
+        """
         if not self._clients:
             return
 
@@ -97,7 +102,11 @@ class MCPToolResolver:
                     await client.disconnect()
 
         try:
-            asyncio.run(_disconnect_all())
+            from crewai.tools.mcp_native_tool import _get_mcp_event_loop
+
+            loop = _get_mcp_event_loop()
+            future = asyncio.run_coroutine_threadsafe(_disconnect_all(), loop)
+            future.result(timeout=30)
         except Exception as e:
             self._logger.log("error", f"Error during MCP client cleanup: {e}")
         finally:
@@ -330,30 +339,27 @@ class MCPToolResolver:
                 ) from e
 
         try:
-            try:
-                asyncio.get_running_loop()
-                import concurrent.futures
+            from crewai.tools.mcp_native_tool import _get_mcp_event_loop
 
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run, _setup_client_and_list_tools()
-                    )
-                    tools_list = future.result()
-            except RuntimeError:
-                try:
-                    tools_list = asyncio.run(_setup_client_and_list_tools())
-                except RuntimeError as e:
-                    error_msg = str(e).lower()
-                    if "cancel scope" in error_msg or "task" in error_msg:
-                        raise ConnectionError(
-                            "MCP connection failed due to event loop cleanup issues. "
-                            "This may be due to authentication errors or server unavailability."
-                        ) from e
-                except asyncio.CancelledError as e:
+            loop = _get_mcp_event_loop()
+            future = asyncio.run_coroutine_threadsafe(
+                _setup_client_and_list_tools(), loop
+            )
+            try:
+                tools_list = future.result(timeout=60)
+            except RuntimeError as e:
+                error_msg = str(e).lower()
+                if "cancel scope" in error_msg or "task" in error_msg:
                     raise ConnectionError(
-                        "MCP connection was cancelled. This may indicate an authentication "
-                        "error or server unavailability."
+                        "MCP connection failed due to event loop cleanup issues. "
+                        "This may be due to authentication errors or server unavailability."
                     ) from e
+                raise
+            except asyncio.CancelledError as e:
+                raise ConnectionError(
+                    "MCP connection was cancelled. This may indicate an authentication "
+                    "error or server unavailability."
+                ) from e
 
             if mcp_config.tool_filter:
                 filtered_tools = []
@@ -410,7 +416,13 @@ class MCPToolResolver:
             return cast(list[BaseTool], tools), client
         except Exception as e:
             if client.connected:
-                asyncio.run(client.disconnect())
+                try:
+                    fut = asyncio.run_coroutine_threadsafe(
+                        client.disconnect(), loop
+                    )
+                    fut.result(timeout=10)
+                except Exception:
+                    self._logger.log("debug", "Suppressed error during MCP client disconnect on cleanup")
 
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
 

@@ -5,9 +5,35 @@ for better performance and connection management.
 """
 
 import asyncio
+import threading
 from typing import Any
 
 from crewai.tools import BaseTool
+
+
+_mcp_loop: asyncio.AbstractEventLoop | None = None
+_mcp_loop_thread: threading.Thread | None = None
+_mcp_loop_lock = threading.Lock()
+
+
+def _get_mcp_event_loop() -> asyncio.AbstractEventLoop:
+    """Return (and lazily start) a persistent event loop for MCP operations.
+
+    All MCP SDK transports use anyio task groups whose cancel scopes must be
+    entered and exited on the same event loop / task.  By funnelling every
+    MCP call through one long-lived loop we avoid the "exit cancel scope in
+    a different task" errors that happen when asyncio.run() creates a
+    throwaway loop per call.
+    """
+    global _mcp_loop, _mcp_loop_thread
+    with _mcp_loop_lock:
+        if _mcp_loop is None or _mcp_loop.is_closed():
+            _mcp_loop = asyncio.new_event_loop()
+            _mcp_loop_thread = threading.Thread(
+                target=_mcp_loop.run_forever, daemon=True, name="mcp-event-loop"
+            )
+            _mcp_loop_thread.start()
+    return _mcp_loop
 
 
 class MCPNativeTool(BaseTool):
@@ -38,13 +64,10 @@ class MCPNativeTool(BaseTool):
             server_name: Name of the MCP server for prefixing.
             original_tool_name: Original name of the tool on the MCP server.
         """
-        # Create tool name with server prefix to avoid conflicts
         prefixed_name = f"{server_name}_{tool_name}"
 
-        # Handle args_schema properly - BaseTool expects a BaseModel subclass
         args_schema = tool_schema.get("args_schema")
 
-        # Only pass args_schema if it's provided
         kwargs = {
             "name": prefixed_name,
             "description": tool_schema.get(
@@ -57,11 +80,9 @@ class MCPNativeTool(BaseTool):
 
         super().__init__(**kwargs)
 
-        # Set instance attributes after super().__init__
         self._mcp_client = mcp_client
         self._original_tool_name = original_tool_name or tool_name
         self._server_name = server_name
-        # self._logger = logging.getLogger(__name__)
 
     @property
     def mcp_client(self) -> Any:
@@ -81,25 +102,21 @@ class MCPNativeTool(BaseTool):
     def _run(self, **kwargs) -> str:
         """Execute tool using the MCP client session.
 
+        Submits work to a persistent background event loop so that all MCP
+        transport context managers (which rely on anyio cancel scopes) stay
+        on the same loop and task throughout their lifecycle.
+
         Args:
             **kwargs: Arguments to pass to the MCP tool.
 
         Returns:
             Result from the MCP tool execution.
         """
+        loop = _get_mcp_event_loop()
+        timeout = self._mcp_client.connect_timeout + self._mcp_client.execution_timeout
         try:
-            try:
-                asyncio.get_running_loop()
-
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    coro = self._run_async(**kwargs)
-                    future = executor.submit(asyncio.run, coro)
-                    return future.result()
-            except RuntimeError:
-                return asyncio.run(self._run_async(**kwargs))
-
+            future = asyncio.run_coroutine_threadsafe(self._run_async(**kwargs), loop)
+            return future.result(timeout=timeout)
         except Exception as e:
             raise RuntimeError(
                 f"Error executing MCP tool {self.original_tool_name}: {e!s}"
@@ -114,18 +131,11 @@ class MCPNativeTool(BaseTool):
         Returns:
             Result from the MCP tool execution.
         """
-        # Note: Since we use asyncio.run() which creates a new event loop each time,
-        # Always reconnect on-demand because asyncio.run() creates new event loops per call
-        # All MCP transport context managers (stdio, streamablehttp_client, sse_client)
-        # use anyio.create_task_group() which can't span different event loops
-        if self._mcp_client.connected:
-            await self._mcp_client.disconnect()
-
-        await self._mcp_client.connect()
+        if not self._mcp_client.connected:
+            await self._mcp_client.connect()
 
         try:
             result = await self._mcp_client.call_tool(self.original_tool_name, kwargs)
-
         except Exception as e:
             error_str = str(e).lower()
             if (
@@ -135,24 +145,15 @@ class MCPNativeTool(BaseTool):
             ):
                 await self._mcp_client.disconnect()
                 await self._mcp_client.connect()
-                # Retry the call
                 result = await self._mcp_client.call_tool(
                     self.original_tool_name, kwargs
                 )
             else:
                 raise
 
-        finally:
-            # Always disconnect after tool call to ensure clean context manager lifecycle
-            # This prevents "exit cancel scope in different task" errors
-            # All transport context managers must be exited in the same event loop they were entered
-            await self._mcp_client.disconnect()
-
-        # Extract result content
         if isinstance(result, str):
             return result
 
-        # Handle various result formats
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:
                 content_item = result.content[0]

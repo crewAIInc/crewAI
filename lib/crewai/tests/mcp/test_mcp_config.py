@@ -148,6 +148,8 @@ def test_mcp_tool_execution_in_sync_context(mock_tool_definitions):
         mock_client.connect = AsyncMock()
         mock_client.disconnect = AsyncMock()
         mock_client.call_tool = AsyncMock(return_value="test result")
+        mock_client.connect_timeout = 30
+        mock_client.execution_timeout = 30
         mock_client_class.return_value = mock_client
 
         agent = Agent(
@@ -180,6 +182,8 @@ async def test_mcp_tool_execution_in_async_context(mock_tool_definitions):
         mock_client.connect = AsyncMock()
         mock_client.disconnect = AsyncMock()
         mock_client.call_tool = AsyncMock(return_value="test result")
+        mock_client.connect_timeout = 30
+        mock_client.execution_timeout = 30
         mock_client_class.return_value = mock_client
 
         agent = Agent(
