@@ -602,6 +602,10 @@ class BaseLLM(ABC):
             Messages with files formatted into content blocks.
         """
         if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            # Strip files from messages to prevent JSON serialization errors
+            # when File objects are passed to providers that don't support them
+            for msg in messages:
+                msg.pop("files", None)
             return messages
 
         provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
