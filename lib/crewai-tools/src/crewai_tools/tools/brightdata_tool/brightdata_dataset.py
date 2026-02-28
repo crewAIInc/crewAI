@@ -591,10 +591,10 @@ class BrightDataDatasetTool(BaseTool):
                 )
             )
         except TimeoutError as e:
-            return f"Timeout Exception occured in method : get_dataset_data_async. Details - {e!s}"
+            return f"Timeout Exception occurred in method : get_dataset_data_async. Details - {e!s}"
         except BrightDataDatasetToolException as e:
             return (
-                f"Exception occured in method : get_dataset_data_async. Details - {e!s}"
+                f"Exception occurred in method : get_dataset_data_async. Details - {e!s}"
             )
         except Exception as e:
             return f"Bright Data API error: {e!s}"
