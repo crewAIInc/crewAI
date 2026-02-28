@@ -1156,11 +1156,15 @@ class Agent(BaseAgent):
         # Process platform apps and MCP tools
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
-            if platform_tools and self.tools is not None:
+            if platform_tools:
+                if self.tools is None:
+                    self.tools = []
                 self.tools.extend(platform_tools)
         if self.mcps:
             mcps = self.get_mcp_tools(self.mcps)
-            if mcps and self.tools is not None:
+            if mcps:
+                if self.tools is None:
+                    self.tools = []
                 self.tools.extend(mcps)
 
         # Prepare tools
