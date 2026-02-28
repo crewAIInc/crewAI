@@ -100,6 +100,70 @@ class TestStreamChunk:
         assert chunk.tool_call.tool_name == "search"
 
 
+class TestCreateStreamChunk:
+    """Tests for _create_stream_chunk function."""
+
+    def test_create_stream_chunk_extracts_task_metadata_from_event(self) -> None:
+        """Test that task_name and task_id are extracted from the event."""
+        from crewai.utilities.streaming import _create_stream_chunk, TaskInfo
+
+        # Create an event with task metadata (simulating what happens when
+        # from_task is passed to LLMStreamChunkEvent)
+        event = LLMStreamChunkEvent(
+            type="llm_stream_chunk",
+            chunk="test chunk",
+            call_id="test-call-id",
+            task_id="task-123",
+            task_name="Research Task",
+            agent_id="agent-456",
+            agent_role="Researcher",
+        )
+
+        # Empty current_task_info to ensure we're getting values from event
+        current_task_info: TaskInfo = {
+            "index": 0,
+            "name": "",
+            "id": "",
+            "agent_role": "",
+            "agent_id": "",
+        }
+
+        chunk = _create_stream_chunk(event, current_task_info)
+
+        assert chunk.task_id == "task-123"
+        assert chunk.task_name == "Research Task"
+        assert chunk.agent_id == "agent-456"
+        assert chunk.agent_role == "Researcher"
+
+    def test_create_stream_chunk_falls_back_to_current_task_info(self) -> None:
+        """Test fallback to current_task_info when event has no task metadata."""
+        from crewai.utilities.streaming import _create_stream_chunk, TaskInfo
+
+        # Create an event without task metadata
+        event = LLMStreamChunkEvent(
+            type="llm_stream_chunk",
+            chunk="test chunk",
+            call_id="test-call-id",
+        )
+
+        current_task_info: TaskInfo = {
+            "index": 1,
+            "name": "Fallback Task",
+            "id": "fallback-id",
+            "agent_role": "Fallback Role",
+            "agent_id": "fallback-agent",
+        }
+
+        chunk = _create_stream_chunk(event, current_task_info)
+
+        # Should fall back to current_task_info values
+        assert chunk.task_id == "fallback-id"
+        assert chunk.task_name == "Fallback Task"
+        assert chunk.agent_id == "fallback-agent"
+        assert chunk.agent_role == "Fallback Role"
+        assert chunk.task_index == 1
+
+
 class TestCrewStreamingOutput:
     """Tests for CrewStreamingOutput functionality."""
 
