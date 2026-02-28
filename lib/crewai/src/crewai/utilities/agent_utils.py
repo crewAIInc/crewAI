@@ -484,7 +484,6 @@ def process_llm_response(
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
-    messages: list[LLMMessage] | None = None,
     step_callback: Callable | None = None,  # type: ignore[type-arg]
     show_logs: Callable | None = None,  # type: ignore[type-arg]
 ) -> AgentAction | AgentFinish:
@@ -500,8 +499,6 @@ def handle_agent_action_core(
     Returns:
         Either an AgentAction or AgentFinish
 
-    Notes:
-        - TODO: Remove messages parameter and its usage.
     """
     if step_callback:
         cb_result = step_callback(tool_result)
