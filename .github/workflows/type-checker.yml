@@ -20,27 +20,15 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for proper diff
 
-      - name: Restore global uv cache
-        id: cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-main-py${{ matrix.python-version }}-
-
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.4"
           python-version: ${{ matrix.python-version }}
-          enable-cache: false
+          enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --all-groups --all-extras
+        run: uv sync --all-groups --all-extras --frozen
 
       - name: Get changed Python files
         id: changed-files
@@ -74,16 +62,6 @@ jobs:
         if: steps.changed-files.outputs.has_changes == 'false'
         run: echo "No Python files in src/ were modified - skipping type checks"
 
-      - name: Save uv caches
-        if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
-
   # Summary job to provide single status for branch protection
   type-checker:
     name: type-checker
@@ -94,8 +72,8 @@ jobs:
       - name: Check matrix results
         run: |
           if [ "${{ needs.type-checker-matrix.result }}" == "success" ] || [ "${{ needs.type-checker-matrix.result }}" == "skipped" ]; then
-            echo "✅ All type checks passed"
+            echo "All type checks passed"
           else
-            echo "❌ Type checks failed"
+            echo "Type checks failed"
             exit 1
           fi
