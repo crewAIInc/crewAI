@@ -306,12 +306,15 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
     """
     try:
         return parse(answer)
-    except Exception:
-        return AgentFinish(
-            thought="Failed to parse LLM response",
-            output=answer,
-            text=answer,
-        )
+    except Exception as e:
+        # I see that you always return an AgentFinish here, but this can lead to silent failures (this fails will be treated as a final answer) and it pass to (OutputParserError as e:  # noqa: PERF203). Then it will be handled to call the LLM again.
+        # return AgentFinish(
+        #     thought="Failed to parse LLM response",
+        #     output=answer,
+        #     text=answer,
+        # )
+        raise e
+
 
 
 def enforce_rpm_limit(
