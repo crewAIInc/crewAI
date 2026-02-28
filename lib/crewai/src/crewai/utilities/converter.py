@@ -21,7 +21,29 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_MARKDOWN_FENCE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL
+)
 _I18N = get_i18n()
+
+
+def _strip_markdown_fences(text: str) -> str:
+    """Remove surrounding markdown code fences from *text* if present.
+
+    LLMs frequently wrap JSON responses in a markdown code block such as::
+
+        ```json
+        {"key": "value"}
+        ```
+
+    Pydantic's ``model_validate_json`` only accepts raw JSON, so the fences
+    must be stripped before validation is attempted.
+    """
+    stripped = text.strip()
+    match = _MARKDOWN_FENCE_PATTERN.match(stripped)
+    if match:
+        return match.group(1).strip()
+    return stripped
 
 
 class ConverterError(Exception):
@@ -65,7 +87,9 @@ class Converter(OutputConverter):
                 if isinstance(response, BaseModel):
                     result = response
                 else:
-                    result = self.model.model_validate_json(response)
+                    result = self.model.model_validate_json(
+                        _strip_markdown_fences(response)
+                    )
             else:
                 response = self.llm.call(
                     [
@@ -74,8 +98,12 @@ class Converter(OutputConverter):
                     ]
                 )
                 try:
-                    # Try to directly validate the response JSON
-                    result = self.model.model_validate_json(response)
+                    # Strip markdown fences before validation — LLMs often wrap
+                    # JSON in ```json ... ``` blocks, which model_validate_json
+                    # cannot parse directly.
+                    result = self.model.model_validate_json(
+                        _strip_markdown_fences(response)
+                    )
                 except ValidationError:
                     # If direct validation fails, attempt to extract valid JSON
                     result = handle_partial_json(  # type: ignore[assignment]
@@ -90,7 +118,9 @@ class Converter(OutputConverter):
                             result = self.model.model_validate(result)
                         elif isinstance(result, str):
                             try:
-                                result = self.model.model_validate_json(result)
+                                result = self.model.model_validate_json(
+                                    _strip_markdown_fences(result)
+                                )
                             except Exception as parse_err:
                                 raise ConverterError(
                                     f"Failed to convert partial JSON result into Pydantic: {parse_err}"
@@ -222,14 +252,15 @@ def validate_model(
     """Validate and convert a JSON string to a Pydantic model or dict.
 
     Args:
-        result: The JSON string to validate and convert.
+        result: The JSON string to validate and convert.  Markdown fences
+            (e.g. triple-backtick json blocks) are stripped automatically.
         model: The Pydantic model class to convert to.
         is_json_output: Whether to return a dict (True) or Pydantic model (False).
 
     Returns:
         The converted result as a dict or BaseModel.
     """
-    exported_result = model.model_validate_json(result)
+    exported_result = model.model_validate_json(_strip_markdown_fences(result))
     if is_json_output:
         return exported_result.model_dump()
     return exported_result
