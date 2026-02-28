@@ -512,6 +512,52 @@ class AnthropicCompletion(BaseLLM):
             return redacted_block
         return None
 
+    def _filter_empty_content_messages(
+        self, messages: list[LLMMessage]
+    ) -> list[LLMMessage]:
+        """Filter out messages with empty content to prevent Anthropic API errors.
+        
+        Anthropic API requires all messages to have non-empty content except for
+        the optional final assistant message. This method removes messages with
+        empty content while preserving the conversation flow.
+        
+        Args:
+            messages: List of formatted messages
+            
+        Returns:
+            Filtered list of messages without empty content
+        """
+        if not messages:
+            return messages
+            
+        filtered_messages: list[LLMMessage] = []
+        
+        for i, message in enumerate(messages):
+            role = message.get("role", "")
+            content = message.get("content", "")
+            
+            # Skip messages with empty content, except for final assistant messages
+            # which are allowed to be empty according to Anthropic API rules
+            is_empty_content = (
+                not content or 
+                (isinstance(content, str) and content.strip() == "") or
+                (isinstance(content, list) and len(content) == 0)
+            )
+            
+            if is_empty_content:
+                # Only allow empty content for the final assistant message
+                is_final_message = i == len(messages) - 1
+                is_assistant_message = role == "assistant"
+                
+                if not (is_final_message and is_assistant_message):
+                    # Skip this message as it has empty content and doesn't qualify
+                    # for the "optional final assistant message" exception
+                    continue
+            
+            filtered_messages.append(message)
+        
+        return filtered_messages
+
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | None]:
@@ -631,7 +677,18 @@ class AnthropicCompletion(BaseLLM):
             # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
-        return formatted_messages, system_message
+        # Filter out messages with empty content to prevent API errors
+        filtered_messages = self._filter_empty_content_messages(formatted_messages)
+        
+        # After filtering, ensure we still have valid messages
+        if not filtered_messages:
+            # If all messages were filtered out, add a default user message
+            filtered_messages.append({"role": "user", "content": "Hello"})
+        elif filtered_messages[0]["role"] != "user":
+            # If first message is not from user after filtering, insert a user message
+            filtered_messages.insert(0, {"role": "user", "content": "Hello"})
+
+        return filtered_messages, system_message
 
     def _handle_completion(
         self,
