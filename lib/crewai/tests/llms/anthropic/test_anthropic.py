@@ -1121,3 +1121,95 @@ def test_anthropic_cached_prompt_tokens_with_tools():
     assert usage.successful_requests == 2
     # The second call should have cached prompt tokens
     assert usage.cached_prompt_tokens > 0
+
+
+def test_anthropic_filters_empty_user_messages():
+    """
+    Test that empty user messages are filtered out before sending to Anthropic API.
+
+    Anthropic requires all messages to have non-empty content except for the
+    optional final assistant message. This test verifies that messages with
+    empty string content are removed during formatting.
+
+    Fixes: https://github.com/crewAIInc/crewAI/issues/4427
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "user", "content": ""},
+        {"role": "user", "content": "How are you?"},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    # Empty message should be filtered out
+    for msg in formatted_messages:
+        if msg["role"] == "user" and isinstance(msg.get("content"), str):
+            assert msg["content"].strip() != "", (
+                "Empty user message should have been filtered out"
+            )
+
+
+def test_anthropic_filters_whitespace_only_user_messages():
+    """
+    Test that whitespace-only user messages are filtered out.
+
+    Fixes: https://github.com/crewAIInc/crewAI/issues/4427
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "user", "content": "   "},
+        {"role": "user", "content": "How are you?"},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    for msg in formatted_messages:
+        if msg["role"] == "user" and isinstance(msg.get("content"), str):
+            assert msg["content"].strip() != "", (
+                "Whitespace-only user message should have been filtered out"
+            )
+
+
+def test_anthropic_preserves_assistant_empty_content():
+    """
+    Test that assistant messages with empty content are preserved.
+
+    Anthropic allows the final assistant message to have empty content,
+    so we should not filter those out.
+
+    Fixes: https://github.com/crewAIInc/crewAI/issues/4427
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": ""},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    assistant_messages = [m for m in formatted_messages if m["role"] == "assistant"]
+    assert len(assistant_messages) == 1, (
+        "Empty assistant message should be preserved"
+    )
+
+
+def test_anthropic_all_empty_user_messages_raises_error():
+    """
+    Test that when all user messages are empty, a ValueError is raised
+    instead of sending a meaningless request to the Anthropic API.
+
+    Fixes: https://github.com/crewAIInc/crewAI/issues/4427
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": ""},
+    ]
+
+    with pytest.raises(ValueError, match="All messages have empty content"):
+        llm._format_messages_for_anthropic(messages)

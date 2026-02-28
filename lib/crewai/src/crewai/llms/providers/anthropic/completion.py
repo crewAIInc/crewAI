@@ -623,6 +623,36 @@ class AnthropicCompletion(BaseLLM):
         if pending_tool_results:
             formatted_messages.append({"role": "user", "content": pending_tool_results})
 
+        # Filter out non-assistant messages with empty content.
+        # Anthropic requires all messages to have non-empty content
+        # except for the optional final assistant message.
+        original_count = len(formatted_messages)
+        formatted_messages = [
+            msg
+            for msg in formatted_messages
+            if msg.get("role") == "assistant"
+            or (
+                isinstance(msg.get("content"), str)
+                and msg["content"].strip()
+            )
+            or (
+                isinstance(msg.get("content"), list)
+                and len(msg["content"]) > 0
+            )
+        ]
+        filtered_count = original_count - len(formatted_messages)
+        if filtered_count > 0:
+            if not formatted_messages:
+                raise ValueError(
+                    "All messages have empty content. Anthropic requires "
+                    "at least one message with non-empty content."
+                )
+            logging.warning(
+                f"Filtered {filtered_count} message(s) with empty content. "
+                "Anthropic requires all non-assistant messages to have "
+                "non-empty content."
+            )
+
         # Ensure first message is from user (Anthropic requirement)
         if not formatted_messages:
             # If no messages, add a default user message
