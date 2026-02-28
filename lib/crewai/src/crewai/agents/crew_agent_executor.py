@@ -160,16 +160,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.after_llm_call_hooks: list[Callable[..., Any]] = []
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
+        # Store the LLM's original stop words so we can restore them after execution.
+        # We must NOT mutate the shared LLM object's stop attribute because it persists
+        # across executor lifecycles and causes output truncation in subsequent calls
+        # (see https://github.com/crewAIInc/crewAI/issues/4603).
+        self._original_llm_stop: list[str] | None = None
         if self.llm:
-            # This may be mutating the shared llm object and needs further evaluation
-            existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
-                set(
-                    existing_stop + self.stop
-                    if isinstance(existing_stop, list)
-                    else self.stop
-                )
-            )
+            self._original_llm_stop = list(getattr(self.llm, "stop", []) or [])
 
     @property
     def use_stop_words(self) -> bool:
@@ -205,6 +202,30 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
 
+    def _set_llm_stop_words(self) -> None:
+        """Temporarily set stop words on the LLM for this execution.
+
+        Merges the executor's stop words with the LLM's original stop words
+        for the duration of the execution. Must be paired with
+        _restore_llm_stop_words to avoid polluting the shared LLM object.
+        """
+        if self.llm and self.stop:
+            existing_stop = getattr(self.llm, "stop", []) or []
+            if isinstance(existing_stop, list):
+                merged = list(set(existing_stop + self.stop))
+            else:
+                merged = list(set(self.stop))
+            self.llm.stop = merged
+
+    def _restore_llm_stop_words(self) -> None:
+        """Restore the LLM's original stop words after execution.
+
+        This ensures the shared LLM object is not polluted with executor-specific
+        stop words that would cause output truncation in subsequent calls.
+        """
+        if self.llm and self._original_llm_stop is not None:
+            self.llm.stop = list(self._original_llm_stop)
+
     def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent with given inputs.
 
@@ -222,6 +243,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
+        self._set_llm_stop_words()
         try:
             formatted_answer = self._invoke_loop()
         except AssertionError:
@@ -234,6 +256,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         except Exception as e:
             handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
+        finally:
+            self._restore_llm_stop_words()
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -1119,6 +1143,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
+        self._set_llm_stop_words()
         try:
             formatted_answer = await self._ainvoke_loop()
         except AssertionError:
@@ -1131,6 +1156,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         except Exception as e:
             handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
+        finally:
+            self._restore_llm_stop_words()
 
         if self.ask_for_human_input:
             formatted_answer = await self._ahandle_human_feedback(formatted_answer)
