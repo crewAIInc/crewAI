@@ -460,7 +460,7 @@ class LLM(BaseLLM):
         if provider == "openai":
             return any(
                 model_lower.startswith(prefix)
-                for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
+                for prefix in ["gpt-", "gpt5", "o1", "o3", "o4", "whisper-"]
             )
 
         if provider == "anthropic" or provider == "claude":
@@ -480,7 +480,7 @@ class LLM(BaseLLM):
         if provider == "azure":
             return any(
                 model_lower.startswith(prefix)
-                for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
+                for prefix in ["gpt-", "gpt5", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
 
         return False

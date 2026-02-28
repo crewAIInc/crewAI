@@ -457,6 +457,30 @@ def test_azure_model_capabilities():
     assert llm_gpt35.supports_function_calling() == True
 
 
+def test_azure_gpt5_non_hyphenated_model_detection():
+    """
+    Test that GPT-5 models without hyphens (e.g. gpt5nano, gpt5) are correctly
+    detected as OpenAI models. Regression test for #4478.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    gpt5_non_hyphenated = [
+        "azure/gpt5",
+        "azure/gpt5nano",
+        "azure/gpt5mini",
+    ]
+
+    for model_name in gpt5_non_hyphenated:
+        llm = LLM(model=model_name)
+        assert isinstance(llm, AzureCompletion), f"Failed for model: {model_name}"
+        assert (
+            llm.is_openai_model == True
+        ), f"Expected {model_name} to be detected as OpenAI model"
+        assert (
+            llm.supports_function_calling() == True
+        ), f"Expected {model_name} to support function calling"
+
+
 def test_azure_completion_params_preparation():
     """
     Test that completion parameters are properly prepared
@@ -539,6 +563,24 @@ def test_azure_gpt5_models_do_not_support_stop_words():
     for model_name in gpt5_models:
         llm = LLM(model=model_name)
         assert llm.supports_stop_words() == False, f"Expected {model_name} to NOT support stop words"
+
+
+def test_azure_gpt5_non_hyphenated_models_do_not_support_stop_words():
+    """
+    Test that non-hyphenated GPT-5 model names (e.g. gpt5nano) also do not
+    support stop words. Regression test for #4478.
+    """
+    gpt5_non_hyphenated = [
+        "azure/gpt5",
+        "azure/gpt5nano",
+        "azure/gpt5mini",
+    ]
+
+    for model_name in gpt5_non_hyphenated:
+        llm = LLM(model=model_name)
+        assert (
+            llm.supports_stop_words() == False
+        ), f"Expected {model_name} to NOT support stop words"
 
 
 def test_azure_o_series_models_do_not_support_stop_words():
