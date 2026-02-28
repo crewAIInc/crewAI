@@ -650,10 +650,12 @@ class Task(BaseModel):
 
             if self.output_file:
                 content = (
-                    json_output
-                    if json_output
+                    task_output.json_dict
+                    if task_output.json_dict
                     else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                        task_output.pydantic.model_dump_json()
+                        if task_output.pydantic
+                        else task_output.raw
                     )
                 )
                 self._save_file(content)
@@ -765,10 +767,12 @@ class Task(BaseModel):
 
             if self.output_file:
                 content = (
-                    json_output
-                    if json_output
+                    task_output.json_dict
+                    if task_output.json_dict
                     else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                        task_output.pydantic.model_dump_json()
+                        if task_output.pydantic
+                        else task_output.raw
                     )
                 )
                 self._save_file(content)
