@@ -438,6 +438,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     log_error_after=self.log_error_after,
                     printer=self._printer,
                     verbose=self.agent.verbose,
+                    raw_output=answer_str,
+                    agent_name=self.agent.role if self.agent else None,
                 )
 
             except Exception as e:
@@ -1270,6 +1272,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     log_error_after=self.log_error_after,
                     printer=self._printer,
                     verbose=self.agent.verbose,
+                    raw_output=answer_str,
+                    agent_name=self.agent.role if self.agent else None,
                 )
 
             except Exception as e:
