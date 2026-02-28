@@ -80,6 +80,18 @@ class SandboxPython:
         "vars",
         "help",
         "dir",
+        "getattr",
+        "setattr",
+        "delattr",
+        "breakpoint",
+    }
+
+    RESTRICTED_ATTRS: ClassVar[set[str]] = {
+        "__class__",
+        "__bases__",
+        "__subclasses__",
+        "__mro__",
+        "__qualname__",
     }
 
     @staticmethod
@@ -127,6 +139,22 @@ class SandboxPython:
         return safe_builtins
 
     @staticmethod
+    def _check_restricted_attrs(code: str) -> None:
+        """Checks if the code contains any restricted attribute access patterns.
+
+        Args:
+            code: The Python code to check.
+
+        Raises:
+            RuntimeError: If the code contains restricted attribute names.
+        """
+        for attr in SandboxPython.RESTRICTED_ATTRS:
+            if attr in code:
+                raise RuntimeError(
+                    f"Access to '{attr}' is not allowed in the sandbox."
+                )
+
+    @staticmethod
     def exec(code: str, locals_: dict[str, Any]) -> None:
         """Executes Python code in a restricted environment.
 
@@ -134,6 +162,7 @@ class SandboxPython:
             code: The Python code to execute as a string.
             locals_: A dictionary that will be used for local variable storage.
         """
+        SandboxPython._check_restricted_attrs(code)
         exec(code, {"__builtins__": SandboxPython.safe_builtins()}, locals_)  # noqa: S102
 
 
@@ -380,7 +409,10 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            os.system(f"pip install {library}")  # noqa: S605
+            subprocess.run(
+                ["pip", "install", library],  # noqa: S607
+                check=True,
+            )
 
         # Execute the code
         try:
