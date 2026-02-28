@@ -1,0 +1,190 @@
+---
+title: Security Scanning
+description: Detect security vulnerabilities in your CrewAI agent code using Inkog, an AI agent security scanner.
+icon: shield-halved
+mode: "wide"
+---
+
+## Overview
+
+As AI agents become more autonomous, they introduce a new class of security risks that traditional application security tools were not designed to catch. [Inkog](https://github.com/inkog-io/inkog) is an open-source security scanner purpose-built for AI agent code. It analyzes your CrewAI projects for behavioral vulnerabilities and maps findings to compliance frameworks like the EU AI Act, NIST AI RMF, and OWASP LLM Top 10.
+
+Inkog understands CrewAI's multi-agent architecture natively. It parses agent definitions, task delegation patterns, tool usage, and crew orchestration to detect issues that generic linters miss.
+
+### What It Detects
+
+| Category | Examples |
+|:---------|:---------|
+| **Prompt Injection** | Unsanitized user input flowing into system prompts or LLM calls |
+| **Infinite Loops** | Agent loops without termination conditions or max-iteration guards |
+| **Token Bombing** | Unbounded context accumulation that can exhaust token limits or budgets |
+| **Missing Guardrails** | Agents executing tools (file writes, API calls, shell commands) without human approval steps |
+| **Delegation Vulnerabilities** | Unrestricted inter-agent delegation in multi-agent crews that could allow privilege escalation |
+| **SQL Injection via LLM** | Tainted LLM output used in database queries without parameterization |
+| **Unsafe Code Execution** | Unvalidated `exec()` or `eval()` calls with LLM-generated content |
+
+## Quick Start
+
+### CLI Scan
+
+The fastest way to scan your CrewAI project is with the CLI. No installation required:
+
+```bash
+npx -y @inkog-io/cli scan .
+```
+
+This uploads your code for analysis (secrets are automatically redacted client-side before upload) and returns a prioritized list of findings with severity, confidence scores, and remediation guidance.
+
+#### Output Formats
+
+```bash
+# Human-readable table (default)
+npx -y @inkog-io/cli scan .
+
+# JSON for programmatic use
+npx -y @inkog-io/cli scan . --output json
+
+# SARIF for GitHub Security tab integration
+npx -y @inkog-io/cli scan . --output sarif
+
+# Filter by policy preset
+npx -y @inkog-io/cli scan . --policy balanced       # Default: actionable findings
+npx -y @inkog-io/cli scan . --policy comprehensive  # Full audit
+npx -y @inkog-io/cli scan . --policy eu-ai-act      # EU AI Act compliance report
+```
+
+### MCP Server for IDE Integration
+
+Inkog provides an MCP server that integrates directly into Claude Desktop, Cursor, and other MCP-compatible tools. This lets you scan your CrewAI code as you develop without leaving your editor.
+
+#### Claude Desktop
+
+Add to your Claude Desktop configuration (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "inkog": {
+      "command": "npx",
+      "args": ["-y", "@inkog-io/mcp"]
+    }
+  }
+}
+```
+
+#### Cursor
+
+Add to your Cursor MCP settings (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "inkog": {
+      "command": "npx",
+      "args": ["-y", "@inkog-io/mcp"]
+    }
+  }
+}
+```
+
+Once configured, you can ask your coding assistant to scan your project for security issues, and it will use the Inkog MCP tools to analyze your CrewAI code and report findings inline.
+
+## CI/CD Integration
+
+### GitHub Actions
+
+Add Inkog to your CI pipeline to catch security issues before they reach production. The action posts findings as annotations on pull requests and can optionally upload SARIF results to the GitHub Security tab.
+
+```yaml
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  inkog-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Inkog Security Scan
+        uses: inkog-io/inkog@v1
+        with:
+          path: "."
+          policy: "balanced"
+```
+
+<Tip>
+Set the `INKOG_API_KEY` as a repository secret for authenticated scans with higher rate limits. You can get a free API key at [app.inkog.io](https://app.inkog.io).
+</Tip>
+
+## Example: Scanning a CrewAI Project
+
+Consider a typical CrewAI crew with multiple agents:
+
+```python
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find information about the target company",
+    backstory="Expert researcher with web access",
+    tools=[search_tool, scrape_tool],
+    allow_delegation=True  # Can delegate to other agents
+)
+
+writer = Agent(
+    role="Report Writer",
+    goal="Write a comprehensive report",
+    backstory="Experienced technical writer",
+    tools=[file_write_tool],
+    allow_delegation=True
+)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+```
+
+Running `npx -y @inkog-io/cli scan .` on this code might produce findings such as:
+
+- **Missing Guardrails** (HIGH) -- `file_write_tool` can write to the filesystem without human approval
+- **Delegation Vulnerability** (MEDIUM) -- Both agents have unrestricted `allow_delegation=True`, enabling the researcher to delegate tasks to the writer (and vice versa) without oversight
+
+Each finding includes the file location, a description of the risk, and a suggested remediation.
+
+## Compliance Mapping
+
+Inkog maps every finding to relevant compliance frameworks:
+
+| Framework | Coverage |
+|:----------|:---------|
+| **EU AI Act** | Articles 9 (Risk Management), 14 (Human Oversight), 15 (Accuracy & Robustness) |
+| **NIST AI RMF** | GOVERN, MAP, MEASURE, MANAGE functions |
+| **OWASP LLM Top 10** | LLM01 (Prompt Injection), LLM02 (Insecure Output), LLM04 (Denial of Service), and others |
+
+Use the `--policy eu-ai-act` or `--policy governance` flags to generate compliance-focused reports.
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card
+    title="GitHub Repository"
+    icon="github"
+    href="https://github.com/inkog-io/inkog"
+    target="_blank"
+  >
+    Source code, issue tracker, and documentation for the Inkog CLI.
+  </Card>
+  <Card
+    title="MCP Server (npm)"
+    icon="npm"
+    href="https://www.npmjs.com/package/@inkog-io/mcp"
+    target="_blank"
+  >
+    MCP server package for Claude Desktop and Cursor integration.
+  </Card>
+</CardGroup>
