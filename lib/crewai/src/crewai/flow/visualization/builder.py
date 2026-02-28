@@ -129,7 +129,7 @@ def _create_edges_from_condition(
     edges: list[StructureEdge] = []
 
     if isinstance(condition, str):
-        if condition in nodes:
+        if condition in nodes and condition != target:
             edges.append(
                 StructureEdge(
                     source=condition,
@@ -140,7 +140,7 @@ def _create_edges_from_condition(
             )
     elif callable(condition) and hasattr(condition, "__name__"):
         method_name = condition.__name__
-        if method_name in nodes:
+        if method_name in nodes and method_name != target:
             edges.append(
                 StructureEdge(
                     source=method_name,
@@ -163,7 +163,7 @@ def _create_edges_from_condition(
                     is_router_path=False,
                 )
                 for trigger in triggers
-                if trigger in nodes
+                if trigger in nodes and trigger != target
             )
         else:
             for sub_cond in conditions_list:
@@ -196,9 +196,34 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
             node_metadata["type"] = "start"
             start_methods.append(method_name)
 
+        if (
+            hasattr(method, "__human_feedback_config__")
+            and method.__human_feedback_config__
+        ):
+            config = method.__human_feedback_config__
+            node_metadata["is_human_feedback"] = True
+            node_metadata["human_feedback_message"] = config.message
+
+            if config.emit:
+                node_metadata["human_feedback_emit"] = list(config.emit)
+
+            if config.llm:
+                llm_str = (
+                    config.llm
+                    if isinstance(config.llm, str)
+                    else str(type(config.llm).__name__)
+                )
+                node_metadata["human_feedback_llm"] = llm_str
+
+            if config.default_outcome:
+                node_metadata["human_feedback_default_outcome"] = config.default_outcome
+
         if hasattr(method, "__is_router__") and method.__is_router__:
             node_metadata["is_router"] = True
-            node_metadata["type"] = "router"
+            if "is_human_feedback" not in node_metadata:
+                node_metadata["type"] = "router"
+            else:
+                node_metadata["type"] = "human_feedback"
             router_methods.append(method_name)
 
             if method_name in flow._router_paths:
@@ -317,7 +342,7 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
                     is_router_path=False,
                 )
                 for trigger_method in methods
-                if str(trigger_method) in nodes
+                if str(trigger_method) in nodes and str(trigger_method) != listener_name
             )
         elif is_flow_condition_dict(condition_data):
             edges.extend(

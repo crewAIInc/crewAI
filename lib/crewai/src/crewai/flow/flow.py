@@ -705,11 +705,17 @@ class FlowMeta(type):
                         and attr_value.__is_router__
                     ):
                         routers.add(attr_name)
-                        possible_returns = get_possible_return_constants(attr_value)
-                        if possible_returns:
-                            router_paths[attr_name] = possible_returns
+                        if (
+                            hasattr(attr_value, "__router_paths__")
+                            and attr_value.__router_paths__
+                        ):
+                            router_paths[attr_name] = attr_value.__router_paths__
                         else:
-                            router_paths[attr_name] = []
+                            possible_returns = get_possible_return_constants(attr_value)
+                            if possible_returns:
+                                router_paths[attr_name] = possible_returns
+                            else:
+                                router_paths[attr_name] = []
 
                 # Handle start methods that are also routers (e.g., @human_feedback with emit)
                 if (
