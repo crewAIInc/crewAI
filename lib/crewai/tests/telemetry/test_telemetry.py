@@ -121,3 +121,45 @@ def test_telemetry_singleton_pattern():
         thread.join()
 
     assert all(instance is telemetry1 for instance in instances)
+
+
+@patch("crewai.telemetry.telemetry.TracerProvider")
+def test_no_noisy_output_when_initialized_from_non_main_thread(mock_provider, capsys):
+    """Test that initializing Telemetry from a non-main thread does not produce
+    noisy ValueError tracebacks for signal handler registration.
+
+    This is important for frameworks like Streamlit, Flask, Django, Jupyter, etc.
+    that may initialize CrewAI from threads other than the main thread.
+
+    Regression test for: https://github.com/crewAIInc/crewAI/issues/4289
+    """
+    import threading
+    import signal
+
+    exception_raised = []
+    telemetry_instance = []
+
+    def create_telemetry():
+        try:
+            # This should NOT raise ValueError or print tracebacks
+            instance = Telemetry()
+            telemetry_instance.append(instance)
+        except Exception as e:
+            exception_raised.append(e)
+
+    thread = threading.Thread(target=create_telemetry)
+    thread.start()
+    thread.join()
+
+    # No exception should be raised
+    assert not exception_raised, f"Exception raised: {exception_raised}"
+
+    # Telemetry instance should be created
+    assert len(telemetry_instance) == 1
+
+    # Capture stdout/stderr - should NOT contain ValueError tracebacks
+    captured = capsys.readouterr()
+    assert "ValueError" not in captured.out
+    assert "ValueError" not in captured.err
+    assert "signal only works in main thread" not in captured.out
+    assert "signal only works in main thread" not in captured.err
