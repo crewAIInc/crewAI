@@ -1,0 +1,20 @@
+extraction_task:
+  description: >
+    The user wants to know: {user_question}. 
+    Search the database schema, write a SQL query, and execute it to find the relevant information.
+  expected_output: >
+    A raw list of rows or data points retrieved from the database.
+
+token_validation_task:
+  description: >
+    Review the data retrieved from the database. Ensure it is concise 
+    and safe for the analyst to process within token limits.
+  expected_output: >
+    A verified and potentially cleaned version of the database data.
+
+analysis_task:
+  description: >
+    Review the data found in the extraction task and validated by the gatekeeper. 
+    Provide a final, clear answer to the user's question: {user_question}.
+  expected_output: >
+    A concise and professional summary of the findings formatted as a structured response.
