@@ -10,7 +10,7 @@ authors = [
 dev = [
     "ruff==0.14.7",
     "mypy==1.19.0",
-    "pre-commit==4.5.0",
+    "pre-commit==4.5.1",
     "bandit==1.9.2",
     "pytest==8.4.2",
     "pytest-asyncio==1.3.0",
