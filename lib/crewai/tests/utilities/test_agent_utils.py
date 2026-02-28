@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,6 +17,7 @@ from crewai.utilities.agent_utils import (
     _format_messages_for_summary,
     _split_messages_into_chunks,
     convert_tools_to_openai_schema,
+    parse_tool_call_args,
     summarize_messages,
 )
 
@@ -233,6 +234,79 @@ def _make_mock_i18n() -> MagicMock:
         "summary": "<summary>\n{merged_summary}\n</summary>\nContinue the task.",
     }.get(key, "")
     return mock_i18n
+
+class MCPStyleInput(BaseModel):
+    """Input schema mimicking an MCP tool with optional fields."""
+
+    query: str = Field(description="Search query")
+    filter_type: Optional[Literal["internal", "user"]] = Field(
+        default=None, description="Filter type"
+    )
+    page_id: Optional[str] = Field(
+        default=None, description="Page UUID"
+    )
+
+
+class MCPStyleTool(BaseTool):
+    """A tool mimicking MCP tool schemas with optional fields."""
+
+    name: str = "mcp_search"
+    description: str = "Search with optional filters"
+    args_schema: type[BaseModel] = MCPStyleInput
+
+    def _run(self, **kwargs: Any) -> str:
+        return "result"
+
+
+class TestOptionalFieldsPreserveNull:
+    """Tests that optional tool fields preserve null in the schema."""
+
+    def test_optional_string_allows_null(self) -> None:
+        """Optional[str] fields should include null in the schema so the LLM
+        can send null instead of being forced to guess a value."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        page_id_prop = params["properties"]["page_id"]
+
+        assert "anyOf" in page_id_prop
+        type_options = [opt.get("type") for opt in page_id_prop["anyOf"]]
+        assert "string" in type_options
+        assert "null" in type_options
+
+    def test_optional_literal_allows_null(self) -> None:
+        """Optional[Literal[...]] fields should include null."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        filter_prop = params["properties"]["filter_type"]
+
+        assert "anyOf" in filter_prop
+        has_null = any(opt.get("type") == "null" for opt in filter_prop["anyOf"])
+        assert has_null
+
+    def test_required_field_stays_non_null(self) -> None:
+        """Required fields without Optional should NOT have null."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        query_prop = params["properties"]["query"]
+
+        assert query_prop.get("type") == "string"
+        assert "anyOf" not in query_prop
+
+    def test_all_fields_in_required_for_strict_mode(self) -> None:
+        """All fields (including optional) must be in required for strict mode."""
+        tools = [MCPStyleTool()]
+        schemas, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        assert "query" in params["required"]
+        assert "filter_type" in params["required"]
+        assert "page_id" in params["required"]
 
 
 class TestSummarizeMessages:
@@ -922,3 +996,56 @@ class TestParallelSummarizationVCR:
         assert summary_msg["role"] == "user"
         assert "files" in summary_msg
         assert "report.pdf" in summary_msg["files"]
+
+
+class TestParseToolCallArgs:
+    """Unit tests for parse_tool_call_args."""
+
+    def test_valid_json_string_returns_dict(self) -> None:
+        args_dict, error = parse_tool_call_args('{"code": "print(1)"}', "run_code", "call_1")
+        assert error is None
+        assert args_dict == {"code": "print(1)"}
+
+    def test_malformed_json_returns_error_dict(self) -> None:
+        args_dict, error = parse_tool_call_args('{"code": "print("hi")"}', "run_code", "call_1")
+        assert args_dict is None
+        assert error is not None
+        assert error["call_id"] == "call_1"
+        assert error["func_name"] == "run_code"
+        assert error["from_cache"] is False
+        assert "Failed to parse tool arguments as JSON" in error["result"]
+        assert "run_code" in error["result"]
+
+    def test_malformed_json_preserves_original_tool(self) -> None:
+        mock_tool = object()
+        _, error = parse_tool_call_args("{bad}", "my_tool", "call_2", original_tool=mock_tool)
+        assert error is not None
+        assert error["original_tool"] is mock_tool
+
+    def test_malformed_json_original_tool_defaults_to_none(self) -> None:
+        _, error = parse_tool_call_args("{bad}", "my_tool", "call_3")
+        assert error is not None
+        assert error["original_tool"] is None
+
+    def test_dict_input_returned_directly(self) -> None:
+        func_args = {"code": "x = 42"}
+        args_dict, error = parse_tool_call_args(func_args, "run_code", "call_4")
+        assert error is None
+        assert args_dict == {"code": "x = 42"}
+
+    def test_empty_dict_input_returned_directly(self) -> None:
+        args_dict, error = parse_tool_call_args({}, "run_code", "call_5")
+        assert error is None
+        assert args_dict == {}
+
+    def test_valid_json_with_nested_values(self) -> None:
+        args_dict, error = parse_tool_call_args(
+            '{"query": "hello", "options": {"limit": 10}}', "search", "call_6"
+        )
+        assert error is None
+        assert args_dict == {"query": "hello", "options": {"limit": 10}}
+
+    def test_error_result_has_correct_keys(self) -> None:
+        _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
+        assert error is not None
+        assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}

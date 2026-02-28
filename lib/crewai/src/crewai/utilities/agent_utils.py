@@ -168,7 +168,9 @@ def convert_tools_to_openai_schema(
         parameters: dict[str, Any] = {}
         if hasattr(tool, "args_schema") and tool.args_schema is not None:
             try:
-                schema_output = generate_model_description(tool.args_schema)
+                schema_output = generate_model_description(
+                    tool.args_schema, strip_null_types=False
+                )
                 parameters = schema_output.get("json_schema", {}).get("schema", {})
                 # Remove title and description from schema root as they're redundant
                 parameters.pop("title", None)
@@ -1144,6 +1146,36 @@ def extract_tool_call_info(
         func_args = func_info.get("arguments") or tool_call.get("input") or {}
         return call_id, sanitize_tool_name(func_name), func_args
     return None
+
+
+def parse_tool_call_args(
+    func_args: dict[str, Any] | str,
+    func_name: str,
+    call_id: str,
+    original_tool: Any = None,
+) -> tuple[dict[str, Any], None] | tuple[None, dict[str, Any]]:
+    """Parse tool call arguments from a JSON string or dict.
+
+    Returns:
+        ``(args_dict, None)`` on success, or ``(None, error_result)`` on
+        JSON parse failure where ``error_result`` is a ready-to-return dict
+        with the same shape as ``_execute_single_native_tool_call`` return values.
+    """
+    if isinstance(func_args, str):
+        try:
+            return json.loads(func_args), None
+        except json.JSONDecodeError as e:
+            return None, {
+                "call_id": call_id,
+                "func_name": func_name,
+                "result": (
+                    f"Error: Failed to parse tool arguments as JSON: {e}. "
+                    f"Please provide valid JSON arguments for the '{func_name}' tool."
+                ),
+                "from_cache": False,
+                "original_tool": original_tool,
+            }
+    return func_args, None
 
 
 def _setup_before_llm_call_hooks(
