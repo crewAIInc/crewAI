@@ -6,8 +6,10 @@ from typing import Any
 
 from crewai.tools import BaseTool
 from crewai.utilities.pydantic_schema_utils import create_model_from_schema
-from pydantic import Field, create_model
+from crewai.utilities.string_utils import sanitize_tool_name
+from pydantic import Field, create_model, model_validator
 import requests
+from typing_extensions import Self
 
 from crewai_tools.tools.crewai_platform_tools.misc import (
     get_platform_api_base_url,
@@ -20,34 +22,27 @@ class CrewAIPlatformActionTool(BaseTool):
     action_schema: dict[str, Any] = Field(
         default_factory=dict, description="The schema of the action"
     )
+    integration_token: str | None = Field(
+        default_factory=get_platform_integration_token,
+    )
 
-    def __init__(
-        self,
-        description: str,
-        action_name: str,
-        action_schema: dict[str, Any],
-    ):
-        parameters = action_schema.get("function", {}).get("parameters", {})
-
+    @model_validator(mode="after")
+    def _build_args_schema(self) -> Self:
+        parameters = self.action_schema.get("function", {}).get("parameters", {})
         if parameters and parameters.get("properties"):
             try:
                 if "title" not in parameters:
-                    parameters = {**parameters, "title": f"{action_name}Schema"}
+                    parameters = {**parameters, "title": f"{self.action_name}Schema"}
                 if "type" not in parameters:
                     parameters = {**parameters, "type": "object"}
-                args_schema = create_model_from_schema(parameters)
+                self.args_schema = create_model_from_schema(parameters)
             except Exception:
-                args_schema = create_model(f"{action_name}Schema")
+                self.args_schema = create_model(f"{self.action_name}Schema")
         else:
-            args_schema = create_model(f"{action_name}Schema")
-
-        super().__init__(
-            name=action_name.lower().replace(" ", "_"),
-            description=description,
-            args_schema=args_schema,
-        )
-        self.action_name = action_name
-        self.action_schema = action_schema
+            self.args_schema = create_model(f"{self.action_name}Schema")
+        if not self.name:
+            self.name = sanitize_tool_name(self.action_name)
+        return self
 
     def _run(self, **kwargs: Any) -> str:
         try:
@@ -58,9 +53,8 @@ class CrewAIPlatformActionTool(BaseTool):
             api_url = (
                 f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
             )
-            token = get_platform_integration_token()
             headers = {
-                "Authorization": f"Bearer {token}",
+                "Authorization": f"Bearer {self.integration_token}",
                 "Content-Type": "application/json",
             }
             payload = {

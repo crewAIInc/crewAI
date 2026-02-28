@@ -27,9 +27,10 @@ class TestCrewAIPlatformActionToolVerify:
 
     def create_test_tool(self):
         return CrewAIPlatformActionTool(
+            name="test_action",
             description="Test action tool",
             action_name="test_action",
-            action_schema=self.action_schema
+            action_schema=self.action_schema,
         )
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"}, clear=True)
