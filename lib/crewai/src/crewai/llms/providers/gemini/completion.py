@@ -34,6 +34,8 @@ except ImportError:
     ) from None
 
 
+logger = logging.getLogger(__name__)
+
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
 
@@ -61,6 +63,7 @@ class GeminiCompletion(BaseLLM):
         interceptor: BaseInterceptor[Any, Any] | None = None,
         use_vertexai: bool | None = None,
         response_format: type[BaseModel] | None = None,
+        thinking_config: types.ThinkingConfig | dict[str, Any] | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
@@ -93,6 +96,14 @@ class GeminiCompletion(BaseLLM):
                          api_version="v1" is automatically configured.
             response_format: Pydantic model for structured output. Used as default when
                            response_model is not passed to call()/acall() methods.
+            thinking_config: Configuration for Gemini thinking models (e.g. gemini-2.5-pro).
+                           Can be a ThinkingConfig object or a dict with 'include_thoughts'
+                           and optionally 'thinking_budget' keys.
+                           When enabled, the model's reasoning/thought output is captured
+                           and logged. Example:
+                             thinking_config={"include_thoughts": True}
+                             thinking_config=ThinkingConfig(include_thoughts=True,
+                                                           thinking_budget=10000)
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -129,6 +140,17 @@ class GeminiCompletion(BaseLLM):
         self.stop_sequences = stop_sequences or []
         self.tools: list[dict[str, Any]] | None = None
         self.response_format = response_format
+
+        # Thinking config for Gemini thinking models (e.g. gemini-2.5-pro)
+        if isinstance(thinking_config, dict):
+            self.thinking_config: types.ThinkingConfig | None = types.ThinkingConfig(
+                **thinking_config
+            )
+        else:
+            self.thinking_config = thinking_config
+
+        # Store previous thought content for multi-turn conversations
+        self.previous_thoughts: list[str] = []
 
         # Model-specific settings
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
@@ -480,6 +502,10 @@ class GeminiCompletion(BaseLLM):
             config_params["max_output_tokens"] = self.max_output_tokens
         if self.stop_sequences:
             config_params["stop_sequences"] = self.stop_sequences
+
+        # Add thinking config for thinking models (e.g. gemini-2.5-pro)
+        if self.thinking_config is not None:
+            config_params["thinking_config"] = self.thinking_config
 
         if tools and self.supports_tools:
             gemini_tools = self._convert_tools_for_interference(tools)
@@ -916,6 +942,11 @@ class GeminiCompletion(BaseLLM):
     ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int]]:
         """Process a single streaming chunk.
 
+        Instead of using ``chunk.text`` (which triggers a warning when non-text
+        parts like ``function_call`` or ``thought_signature`` are present), this
+        method iterates over the candidate parts directly to extract text,
+        thought content, and function calls without side effects.
+
         Args:
             chunk: The streaming chunk response
             full_response: Accumulated response text
@@ -931,19 +962,31 @@ class GeminiCompletion(BaseLLM):
         if chunk.usage_metadata:
             usage_data = self._extract_token_usage(chunk)
 
-        if chunk.text:
-            full_response += chunk.text
-            self._emit_stream_chunk_event(
-                chunk=chunk.text,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_id=response_id,
-            )
-
+        # Iterate over parts directly to avoid the warning triggered by chunk.text
+        # when non-text parts (function_call, thought_signature) are present.
         if chunk.candidates:
             candidate = chunk.candidates[0]
             if candidate.content and candidate.content.parts:
                 for part in candidate.content.parts:
+                    # Handle thought parts from thinking models
+                    if getattr(part, "thought", False) and part.text:
+                        logger.debug(
+                            "Gemini thinking model thought: %s", part.text
+                        )
+                        self.previous_thoughts.append(part.text)
+                        continue
+
+                    # Handle regular text parts
+                    if hasattr(part, "text") and part.text and not part.function_call:
+                        full_response += part.text
+                        self._emit_stream_chunk_event(
+                            chunk=part.text,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_id=response_id,
+                        )
+
+                    # Handle function call parts
                     if part.function_call:
                         call_index = len(function_calls)
                         call_id = f"call_{call_index}"
@@ -1305,19 +1348,21 @@ class GeminiCompletion(BaseLLM):
             }
         return {"total_tokens": 0}
 
-    @staticmethod
-    def _extract_text_from_response(response: GenerateContentResponse) -> str:
+    def _extract_text_from_response(self, response: GenerateContentResponse) -> str:
         """Extract text content from Gemini response without triggering warnings.
 
         This method directly accesses the response parts to extract text content,
         avoiding the warning that occurs when using response.text on responses
         containing non-text parts (e.g., 'thought_signature' from thinking models).
 
+        Thought parts (where ``part.thought == True``) are separated from regular
+        text and stored in ``self.previous_thoughts`` for downstream access.
+
         Args:
             response: The Gemini API response
 
         Returns:
-            Concatenated text content from all text parts
+            Concatenated text content from all non-thought text parts
         """
         if not response.candidates:
             return ""
@@ -1326,11 +1371,13 @@ class GeminiCompletion(BaseLLM):
         if not candidate.content or not candidate.content.parts:
             return ""
 
-        text_parts = [
-            part.text
-            for part in candidate.content.parts
-            if hasattr(part, "text") and part.text
-        ]
+        text_parts: list[str] = []
+        for part in candidate.content.parts:
+            if getattr(part, "thought", False) and part.text:
+                logger.debug("Gemini thinking model thought: %s", part.text)
+                self.previous_thoughts.append(part.text)
+            elif hasattr(part, "text") and part.text:
+                text_parts.append(part.text)
 
         return "".join(text_parts)
 
