@@ -24,7 +24,9 @@ uv pip install psycopg2-binary
 ### Customizing
 
 **Add your `OPENAI_API_KEY` into the `.env` file**
+
 **Add your `MAX_TOKEN_LIMIT` into the `.env` file**
+
 **Add your `DATABASE_URL=postgresql://user:pass@localhost:5432/temp_db` into the `.env` file**
 
 - Modify `src/dbquery/config/agents.yaml` to define your agents
