@@ -266,7 +266,15 @@ def handle_max_iterations_exceeded(
             )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    formatted = format_answer(answer=answer)
+    try:
+        formatted = format_answer(answer=answer)
+    except OutputParserError:
+        # Last-resort fallback: do not crash or leak raw output after max iterations.
+        return AgentFinish(
+            thought="",
+            output="I'm sorry, I couldn't produce a valid final answer. Please try again.",
+            text=str(answer),
+        )
 
     # If format_answer returned an AgentAction, convert it to AgentFinish
     if isinstance(formatted, AgentFinish):
@@ -306,12 +314,16 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
     """
     try:
         return parse(answer)
-    except Exception:
-        return AgentFinish(
-            thought="Failed to parse LLM response",
-            output=answer,
-            text=answer,
-        )
+    except OutputParserError:
+        raise
+    except Exception as e:
+        # Fail closed: do not return raw model output as a final answer.
+        # Normalize unexpected parser failures into OutputParserError so the
+        # agent retry path can kick in without leaking internal text.
+        raise OutputParserError(
+            "Invalid Format: Unable to parse the LLM response. "
+            "Please follow the expected format strictly."
+        ) from e
 
 
 def enforce_rpm_limit(
