@@ -1,0 +1,50 @@
+name: Canary Crew Check
+
+on:
+  push:
+    branches:
+      - main
+      - Canary-Crew-Github-Action
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+jobs:
+  canary-run:
+    name: Run Canary Crew
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: "3.11"
+
+      - name: Install canary dependencies
+        working-directory: canary
+        run: uv sync
+
+      - name: Run canary crew
+        working-directory: canary
+        run: uv run crewai run
+
+      - name: Upload canary report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canary-report
+          path: canary/report.md
+          if-no-files-found: ignore
