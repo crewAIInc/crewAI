@@ -69,20 +69,34 @@ print(result)
 
 ## 구성 옵션
 
-`TavilySearchTool`은 초기화 시 또는 `run` 메서드를 호출할 때 다음과 같은 인자를 받습니다:
+### 에이전트 설정 가능 매개변수 (런타임)
+
+이 매개변수들은 에이전트가 런타임에 제공할 수 있습니다:
 
 - `query` (str): **필수**. 검색 쿼리 문자열입니다.
-- `search_depth` (Literal["basic", "advanced"], 선택): 검색의 심도입니다. 기본값은 `"basic"`입니다.
+- `search_depth` (Literal["basic", "advanced"], 선택): 검색의 심도 - 'basic'은 빠른 결과, 'advanced'는 종합적인 검색.
+- `time_range` (Literal["day", "week", "month", "year"], 선택): 검색 결과의 시간 범위입니다.
+
+### 사용자 설정 가능 매개변수 (초기화)
+
+이 매개변수들은 도구를 생성할 때 구성됩니다:
+
 - `topic` (Literal["general", "news", "finance"], 선택): 검색을 집중할 주제입니다. 기본값은 `"general"`입니다.
-- `time_range` (Literal["day", "week", "month", "year"], 선택): 검색을 위한 시간 범위입니다. 기본값은 `None`입니다.
-- `days` (int, 선택): 과거 며칠까지 검색할지 지정합니다. `time_range`가 설정되지 않은 경우에 해당합니다. 기본값은 `7`입니다.
+- `start_date` (str, 선택): 검색 결과의 시작 날짜 (형식: YYYY-MM-DD).
+- `end_date` (str, 선택): 검색 결과의 종료 날짜 (형식: YYYY-MM-DD).
+- `days` (int, 선택): 과거 며칠까지 검색할지 지정합니다. 기본값은 `7`입니다.
 - `max_results` (int, 선택): 반환할 최대 검색 결과 수입니다. 기본값은 `5`입니다.
-- `include_domains` (Sequence[str], 선택): 검색 시 우선순위를 둘 도메인 목록입니다. 기본값은 `None`입니다.
-- `exclude_domains` (Sequence[str], 선택): 검색에서 제외할 도메인 목록입니다. 기본값은 `None`입니다.
+- `include_domains` (Sequence[str], 선택): 검색 시 우선순위를 둘 도메인 목록입니다.
+- `exclude_domains` (Sequence[str], 선택): 검색에서 제외할 도메인 목록입니다.
 - `include_answer` (Union[bool, Literal["basic", "advanced"]], 선택): 검색 결과로부터 직접적으로 생성된 답변을 포함할지 여부입니다. 기본값은 `False`입니다.
-- `include_raw_content` (bool, 선택): 검색된 페이지의 원시 HTML 콘텐츠를 포함할지 여부입니다. 기본값은 `False`입니다.
+- `include_raw_content` (Union[bool, Literal["markdown", "text"]], 선택): 검색된 페이지의 원시 콘텐츠를 포함할지 여부입니다. 기본값은 `False`입니다.
 - `include_images` (bool, 선택): 이미지 결과를 포함할지 여부입니다. 기본값은 `False`입니다.
 - `timeout` (int, 선택): 요청의 타임아웃(초)입니다. 기본값은 `60`입니다.
+- `country` (str, 선택): 검색 결과를 필터링할 국가 코드.
+- `auto_parameters` (bool, 선택): 검색 매개변수를 자동으로 최적화할지 여부.
+- `include_favicon` (bool, 선택): 검색 결과에 파비콘 URL을 포함할지 여부.
+- `include_usage` (bool, 선택): 응답에 크레딧 사용 정보를 포함할지 여부.
+- `extra_kwargs` (dict, 선택): tavily-python에 전달할 추가 키워드 인자.
 
 ## 고급 사용법
 
@@ -91,12 +105,13 @@ print(result)
 ```python
 # Example: Initialize with specific parameters
 custom_tavily_tool = TavilySearchTool(
-    search_depth='advanced',
+    topic='news',
     max_results=10,
-    include_answer=True
+    include_answer=True,
+    include_domains=['reuters.com', 'bloomberg.com']
 )
 
-# The agent will use these defaults
+# The agent will use these defaults, but can override search_depth and time_range
 agent_with_custom_tool = Agent(
     role="Advanced Researcher",
     goal="Conduct detailed research with comprehensive results",
@@ -120,6 +135,8 @@ agent_with_custom_tool = Agent(
 - 제목, URL, 본문 요약이 포함된 검색 결과
 - 선택적으로 쿼리에 대한 직접 답변
 - 선택적으로 이미지 결과
-- 선택적으로 원시 HTML 콘텐츠(활성화된 경우)
+- 선택적으로 원시 콘텐츠(활성화된 경우)
 
 각 결과의 콘텐츠는 컨텍스트 윈도우 문제를 방지하면서 가장 관련성 높은 정보를 유지하도록 자동으로 잘립니다.
+
+응답 구조에 대한 자세한 내용은 [Tavily API 문서](https://docs.tavily.com/documentation/api-reference/endpoint/search)를 참조하세요.

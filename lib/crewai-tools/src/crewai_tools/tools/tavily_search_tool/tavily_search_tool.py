@@ -23,6 +23,14 @@ class TavilySearchToolSchema(BaseModel):
     """Input schema for TavilySearchTool."""
 
     query: str = Field(..., description="The search query string.")
+    search_depth: Literal["basic", "advanced"] | None = Field(
+        default=None,
+        description="The depth of the search - 'basic' for quick results, 'advanced' for comprehensive search.",
+    )
+    time_range: Literal["day", "week", "month", "year"] | None = Field(
+        default=None,
+        description="Time range for search results.",
+    )
 
 
 class TavilySearchTool(BaseTool):
@@ -48,6 +56,7 @@ class TavilySearchTool(BaseTool):
         include_images: Whether to include images in the search results.
         timeout: The timeout for the search request in seconds.
         max_content_length_per_result: Maximum length for the 'content' of each search result.
+        extra_kwargs: Additional kwargs passed directly to tavily-python's search() method.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -89,7 +98,7 @@ class TavilySearchTool(BaseTool):
     include_answer: bool | Literal["basic", "advanced"] = Field(
         default=False, description="Whether to include a direct answer to the query."
     )
-    include_raw_content: bool = Field(
+    include_raw_content: bool | Literal["markdown", "text"] = Field(
         default=False,
         description="Whether to include the raw content of the search results.",
     )
@@ -99,9 +108,38 @@ class TavilySearchTool(BaseTool):
     timeout: int = Field(
         default=60, description="The timeout for the search request in seconds."
     )
+    start_date: str | None = Field(
+        default=None,
+        description="Start date for the search results (format: YYYY-MM-DD).",
+    )
+    end_date: str | None = Field(
+        default=None,
+        description="End date for the search results (format: YYYY-MM-DD).",
+    )
+    country: str | None = Field(
+        default=None,
+        description="Country code to filter search results.",
+    )
+    auto_parameters: bool | None = Field(
+        default=None,
+        description="Whether to automatically optimize search parameters.",
+    )
+    include_favicon: bool | None = Field(
+        default=None,
+        description="Whether to include favicon URLs in the search results.",
+    )
+    include_usage: bool | None = Field(
+        default=None,
+        description="Whether to include credit usage information in the response.",
+    )
     max_content_length_per_result: int = Field(
         default=1000,
         description="Maximum length for the 'content' of each search result to avoid context window issues.",
+    )
+    extra_kwargs: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional keyword arguments to pass directly to tavily-python's search() method. "
+        "Use this for new tavily-python parameters not yet explicitly supported.",
     )
     package_dependencies: list[str] = Field(default_factory=lambda: ["tavily-python"])
     env_vars: list[EnvVar] = Field(
@@ -154,12 +192,16 @@ class TavilySearchTool(BaseTool):
     def _run(
         self,
         query: str,
+        search_depth: Literal["basic", "advanced"] | None = None,
+        time_range: Literal["day", "week", "month", "year"] | None = None,
     ) -> str:
         """Synchronously performs a search using the Tavily API.
         Content of each result is truncated to `max_content_length_per_result`.
 
         Args:
             query: The search query string.
+            search_depth: The depth of the search (overrides class default if provided).
+            time_range: Time range for results (overrides class default if provided).
 
         Returns:
             A JSON string containing the search results with truncated content.
@@ -171,9 +213,11 @@ class TavilySearchTool(BaseTool):
 
         raw_results = self.client.search(
             query=query,
-            search_depth=self.search_depth,
+            search_depth=search_depth if search_depth is not None else self.search_depth,
             topic=self.topic,
-            time_range=self.time_range,
+            time_range=time_range if time_range is not None else self.time_range,
+            start_date=self.start_date,
+            end_date=self.end_date,
             days=self.days,
             max_results=self.max_results,
             include_domains=self.include_domains,
@@ -182,6 +226,11 @@ class TavilySearchTool(BaseTool):
             include_raw_content=self.include_raw_content,
             include_images=self.include_images,
             timeout=self.timeout,
+            country=self.country,
+            auto_parameters=self.auto_parameters,
+            include_favicon=self.include_favicon,
+            include_usage=self.include_usage,
+            **self.extra_kwargs,
         )
 
         if (
@@ -206,12 +255,16 @@ class TavilySearchTool(BaseTool):
     async def _arun(
         self,
         query: str,
+        search_depth: Literal["basic", "advanced"] | None = None,
+        time_range: Literal["day", "week", "month", "year"] | None = None,
     ) -> str:
         """Asynchronously performs a search using the Tavily API.
         Content of each result is truncated to `max_content_length_per_result`.
 
         Args:
             query: The search query string.
+            search_depth: The depth of the search (overrides class default if provided).
+            time_range: Time range for results (overrides class default if provided).
 
         Returns:
             A JSON string containing the search results with truncated content.
@@ -223,9 +276,11 @@ class TavilySearchTool(BaseTool):
 
         raw_results = await self.async_client.search(
             query=query,
-            search_depth=self.search_depth,
+            search_depth=search_depth if search_depth is not None else self.search_depth,
             topic=self.topic,
-            time_range=self.time_range,
+            time_range=time_range if time_range is not None else self.time_range,
+            start_date=self.start_date,
+            end_date=self.end_date,
             days=self.days,
             max_results=self.max_results,
             include_domains=self.include_domains,
@@ -234,6 +289,11 @@ class TavilySearchTool(BaseTool):
             include_raw_content=self.include_raw_content,
             include_images=self.include_images,
             timeout=self.timeout,
+            country=self.country,
+            auto_parameters=self.auto_parameters,
+            include_favicon=self.include_favicon,
+            include_usage=self.include_usage,
+            **self.extra_kwargs,
         )
 
         if (
