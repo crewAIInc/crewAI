@@ -487,8 +487,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             # No tools available, fall back to simple LLM call
             return self._invoke_loop_native_no_tools()
 
-        openai_tools, available_functions = convert_tools_to_openai_schema(
-            self.original_tools
+        openai_tools, available_functions, self._tool_name_mapping = (
+            convert_tools_to_openai_schema(self.original_tools)
         )
 
         while True:
@@ -700,9 +700,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if not parsed_calls:
             return None
 
-        original_tools_by_name: dict[str, Any] = {}
-        for tool in self.original_tools or []:
-            original_tools_by_name[sanitize_tool_name(tool.name)] = tool
+        original_tools_by_name: dict[str, Any] = dict(self._tool_name_mapping)
 
         if len(parsed_calls) > 1:
             has_result_as_answer_in_batch = any(
@@ -949,10 +947,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         track_delegation_if_needed(func_name, args_dict, self.task)
 
         structured_tool: CrewStructuredTool | None = None
-        for structured in self.tools or []:
-            if sanitize_tool_name(structured.name) == func_name:
-                structured_tool = structured
-                break
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
 
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
@@ -1312,8 +1316,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if not self.original_tools:
             return await self._ainvoke_loop_native_no_tools()
 
-        openai_tools, available_functions = convert_tools_to_openai_schema(
-            self.original_tools
+        openai_tools, available_functions, self._tool_name_mapping = (
+            convert_tools_to_openai_schema(self.original_tools)
         )
 
         while True:

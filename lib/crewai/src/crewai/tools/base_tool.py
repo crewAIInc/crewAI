@@ -23,7 +23,7 @@ from pydantic import (
 )
 from typing_extensions import TypeIs
 
-from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.structured_tool import CrewStructuredTool, build_schema_hint
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -167,8 +167,9 @@ class BaseTool(BaseModel, ABC):
                 validated = self.args_schema.model_validate(kwargs)
                 return validated.model_dump()
             except Exception as e:
+                hint = build_schema_hint(self.args_schema)
                 raise ValueError(
-                    f"Tool '{self.name}' arguments validation failed: {e}"
+                    f"Tool '{self.name}' arguments validation failed: {e}{hint}"
                 ) from e
         return kwargs
 
