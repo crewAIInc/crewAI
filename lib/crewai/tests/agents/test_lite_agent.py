@@ -1439,7 +1439,7 @@ def test_lite_agent_native_parallel_tool_calls_with_after_llm_hook():
     )
     agent._after_llm_call_hooks.append(after_hook)
 
-    result = agent.kickoff("What is 2+3 and 4+5?")
+    agent.kickoff("What is 2+3 and 4+5?")
 
     assert hook_called["count"] >= 1
     assert len(agent.tools_results) == 2
