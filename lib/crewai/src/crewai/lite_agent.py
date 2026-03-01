@@ -69,7 +69,9 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
+    convert_tools_to_openai_schema,
     enforce_rpm_limit,
+    extract_tool_call_info,
     format_message_for_llm,
     get_llm_response,
     get_tool_names,
@@ -80,6 +82,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    parse_tool_call_args,
     parse_tools,
     process_llm_response,
     render_text_description_and_args,
@@ -88,6 +91,7 @@ from crewai.utilities.converter import (
     Converter,
     ConverterError,
 )
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N, get_i18n
@@ -274,6 +278,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _printer: Printer = PrivateAttr(default_factory=Printer)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
+    _use_native_tools: bool = PrivateAttr(default=False)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
     _before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
         PrivateAttr(default_factory=get_before_llm_call_hooks)
@@ -516,6 +521,16 @@ class LiteAgent(FlowTrackable, BaseModel):
             # Reset state for this run
             self._iterations = 0
             self.tools_results = []
+
+            # Determine execution mode before building the system prompt so
+            # native mode gets a clean prompt without ReAct format instructions.
+            llm = cast(LLM, self.llm)
+            self._use_native_tools = bool(
+                hasattr(llm, "supports_function_calling")
+                and callable(getattr(llm, "supports_function_calling", None))
+                and llm.supports_function_calling()
+                and self._parsed_tools
+            )
 
             # Format messages for the LLM
             self._messages = self._format_messages(
@@ -793,9 +808,18 @@ class LiteAgent(FlowTrackable, BaseModel):
             response_format: Optional response format to use instead of self.response_format
         """
         base_prompt = ""
-        if self._parsed_tools:
-            # Use the prompt template for agents with tools
-            base_prompt = self.i18n.slice("lite_agent_system_prompt_with_tools").format(
+        if self._parsed_tools and self._use_native_tools:
+            base_prompt = self.i18n.slice(
+                "lite_agent_system_prompt_native_tools"
+            ).format(
+                role=self.role,
+                backstory=self.backstory,
+                goal=self.goal,
+            )
+        elif self._parsed_tools:
+            base_prompt = self.i18n.slice(
+                "lite_agent_system_prompt_with_tools"
+            ).format(
                 role=self.role,
                 backstory=self.backstory,
                 goal=self.goal,
@@ -803,7 +827,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                 tool_names=get_tool_names(self._parsed_tools),
             )
         else:
-            # Use the prompt template for agents without tools
             base_prompt = self.i18n.slice(
                 "lite_agent_system_prompt_without_tools"
             ).format(
@@ -860,8 +883,10 @@ class LiteAgent(FlowTrackable, BaseModel):
     def _invoke_loop(
         self, response_model: type[BaseModel] | None = None
     ) -> AgentFinish:
-        """
-        Run the agent's thought process until it reaches a conclusion or max iterations.
+        """Run the agent's thought process until it reaches a conclusion or max iterations.
+
+        Checks if the LLM supports native function calling and uses that
+        approach if available, otherwise falls back to the ReAct text pattern.
 
         Args:
             response_model: Optional Pydantic model for native structured output.
@@ -869,7 +894,504 @@ class LiteAgent(FlowTrackable, BaseModel):
         Returns:
             AgentFinish: The final result of the agent execution.
         """
-        # Execute the agent loop
+        if self._use_native_tools:
+            return self._invoke_loop_native_tools(response_model=response_model)
+
+        return self._invoke_loop_react(response_model=response_model)
+
+    def _invoke_loop_native_tools(
+        self, response_model: type[BaseModel] | None = None
+    ) -> AgentFinish:
+        """Execute agent loop using native function calling.
+
+        Uses the LLM's native tool/function calling capability instead of the
+        text-based ReAct pattern. The LLM directly returns structured tool
+        calls which are executed and results fed back.
+
+        Args:
+            response_model: Optional Pydantic model for native structured output.
+
+        Returns:
+            AgentFinish: The final result of the agent execution.
+        """
+        openai_tools, available_functions = convert_tools_to_openai_schema(
+            self.tools
+        )
+
+        original_tools_by_name: dict[str, BaseTool] = {
+            sanitize_tool_name(t.name): t for t in self.tools
+        }
+
+        while True:
+            try:
+                if has_reached_max_iterations(self._iterations, self.max_iterations):
+                    formatted_answer = handle_max_iterations_exceeded(
+                        None,
+                        printer=self._printer,
+                        i18n=self.i18n,
+                        messages=self._messages,
+                        llm=cast(LLM, self.llm),
+                        callbacks=self._callbacks,
+                        verbose=self.verbose,
+                    )
+                    self._show_logs(formatted_answer)
+                    return formatted_answer
+
+                enforce_rpm_limit(self.request_within_rpm_limit)
+
+                answer = get_llm_response(
+                    llm=cast(LLM, self.llm),
+                    messages=self._messages,
+                    callbacks=self._callbacks,
+                    printer=self._printer,
+                    tools=openai_tools,
+                    available_functions=None,
+                    from_agent=self,
+                    executor_context=self,
+                    response_model=response_model,
+                    verbose=self.verbose,
+                )
+
+                if (
+                    isinstance(answer, list)
+                    and answer
+                    and self._is_tool_call_list(answer)
+                ):
+                    tool_finish = self._handle_native_tool_calls(
+                        answer, available_functions, original_tools_by_name
+                    )
+                    if tool_finish is not None:
+                        return tool_finish
+                    continue
+
+                if isinstance(answer, BaseModel):
+                    output_json = answer.model_dump_json()
+                    formatted_answer = AgentFinish(
+                        thought="", output=answer, text=output_json
+                    )
+                    self._append_message(output_json)
+                    self._show_logs(formatted_answer)
+                    return formatted_answer
+
+                answer_str = str(answer) if not isinstance(answer, str) else answer
+                formatted_answer = AgentFinish(
+                    thought="", output=answer_str, text=answer_str
+                )
+                self._append_message(answer_str)
+                self._show_logs(formatted_answer)
+                return formatted_answer
+
+            except Exception as e:
+                if e.__class__.__module__.startswith("litellm"):
+                    raise e
+                if is_context_length_exceeded(e):
+                    handle_context_length(
+                        respect_context_window=self.respect_context_window,
+                        printer=self._printer,
+                        messages=self._messages,
+                        llm=cast(LLM, self.llm),
+                        callbacks=self._callbacks,
+                        i18n=self.i18n,
+                        verbose=self.verbose,
+                    )
+                    continue
+                handle_unknown_error(self._printer, e, verbose=self.verbose)
+                raise e
+            finally:
+                self._iterations += 1
+
+    @staticmethod
+    def _is_tool_call_list(response: list[Any]) -> bool:
+        """Check if a response is a list of native tool calls.
+
+        Supports OpenAI, Anthropic, Bedrock, and Gemini formats.
+        """
+        if not response:
+            return False
+        first_item = response[0]
+        if hasattr(first_item, "function") or (
+            isinstance(first_item, dict) and "function" in first_item
+        ):
+            return True
+        if (
+            hasattr(first_item, "type")
+            and getattr(first_item, "type", None) == "tool_use"
+        ):
+            return True
+        if hasattr(first_item, "name") and hasattr(first_item, "input"):
+            return True
+        if (
+            isinstance(first_item, dict)
+            and "name" in first_item
+            and "input" in first_item
+        ):
+            return True
+        if hasattr(first_item, "function_call") and first_item.function_call:
+            return True
+        return False
+
+    def _handle_native_tool_calls(
+        self,
+        tool_calls: list[Any],
+        available_functions: dict[str, Callable[..., Any]],
+        original_tools_by_name: dict[str, BaseTool],
+    ) -> AgentFinish | None:
+        """Execute native tool calls and feed results back into message history.
+
+        Uses parallel execution via ``ThreadPoolExecutor`` when safe (no
+        ``result_as_answer`` or ``max_usage_count`` tools in the batch).
+        Falls back to sequential execution otherwise.
+
+        Args:
+            tool_calls: Tool call objects from the LLM response.
+            available_functions: Mapping of sanitized tool names to callables.
+            original_tools_by_name: Mapping of sanitized tool names to original
+                BaseTool instances.
+
+        Returns:
+            AgentFinish if a tool with result_as_answer=True was called,
+            None otherwise (loop continues).
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        parsed_calls = [
+            parsed
+            for tc in tool_calls
+            if (parsed := extract_tool_call_info(tc)) is not None
+        ]
+        if not parsed_calls:
+            return None
+
+        # Single assistant message with all tool calls (matches OpenAI API spec)
+        self._messages.append({
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {
+                        "name": func_name,
+                        "arguments": func_args
+                        if isinstance(func_args, str)
+                        else json.dumps(func_args),
+                    },
+                }
+                for call_id, func_name, func_args in parsed_calls
+            ],
+        })
+
+        # Determine if parallel execution is safe for this batch.
+        # Usage counters are not thread-safe, and result_as_answer requires
+        # immediate return, so both force sequential execution.
+        can_parallelize = len(parsed_calls) > 1 and not any(
+            (
+                original_tools_by_name.get(fn)
+                and (
+                    getattr(original_tools_by_name.get(fn), "result_as_answer", False)
+                    or getattr(original_tools_by_name.get(fn), "max_usage_count", None)
+                    is not None
+                )
+            )
+            for _, fn, _ in parsed_calls
+        )
+
+        if can_parallelize:
+            execution_plan = [
+                (cid, fn, fa, original_tools_by_name.get(fn))
+                for cid, fn, fa in parsed_calls
+            ]
+            max_workers = min(8, len(execution_plan))
+            ordered_results: list[dict[str, Any] | None] = [None] * len(
+                execution_plan
+            )
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {
+                    pool.submit(
+                        self._execute_native_tool_call,
+                        call_id=cid,
+                        func_name=fn,
+                        func_args=fa,
+                        available_functions=available_functions,
+                        original_tool=ot,
+                    ): idx
+                    for idx, (cid, fn, fa, ot) in enumerate(execution_plan)
+                }
+                for future in as_completed(futures):
+                    ordered_results[futures[future]] = future.result()
+
+            for exec_result in ordered_results:
+                if exec_result is None:
+                    continue
+                self._messages.append({
+                    "role": "tool",
+                    "tool_call_id": exec_result["call_id"],
+                    "name": exec_result["func_name"],
+                    "content": exec_result["result"],
+                })
+                if self.verbose:
+                    cache_tag = " (from cache)" if exec_result["from_cache"] else ""
+                    self._printer.print(
+                        content=f"Tool {exec_result['func_name']} executed{cache_tag}: {exec_result['result'][:200]}",
+                        color="green",
+                    )
+                orig = original_tools_by_name.get(exec_result["func_name"])
+                if orig and getattr(orig, "result_as_answer", False):
+                    finished = AgentFinish(
+                        thought="", output=exec_result["result"], text=exec_result["result"]
+                    )
+                    self._show_logs(finished)
+                    return finished
+        else:
+            # Sequential execution: process each call one at a time.
+            for call_id, func_name, func_args in parsed_calls:
+                exec_result = self._execute_native_tool_call(
+                    call_id=call_id,
+                    func_name=func_name,
+                    func_args=func_args,
+                    available_functions=available_functions,
+                    original_tool=original_tools_by_name.get(func_name),
+                )
+
+                self._messages.append({
+                    "role": "tool",
+                    "tool_call_id": exec_result["call_id"],
+                    "name": exec_result["func_name"],
+                    "content": exec_result["result"],
+                })
+                if self.verbose:
+                    cache_tag = " (from cache)" if exec_result["from_cache"] else ""
+                    self._printer.print(
+                        content=f"Tool {exec_result['func_name']} executed{cache_tag}: {exec_result['result'][:200]}",
+                        color="green",
+                    )
+
+                original_tool = original_tools_by_name.get(func_name)
+                if original_tool and getattr(original_tool, "result_as_answer", False):
+                    finished = AgentFinish(
+                        thought="", output=exec_result["result"], text=exec_result["result"]
+                    )
+                    self._show_logs(finished)
+                    return finished
+
+        reasoning_prompt = self.i18n.slice("post_tool_reasoning")
+        self._messages.append({"role": "user", "content": reasoning_prompt})
+        return None
+
+    def _execute_native_tool_call(
+        self,
+        *,
+        call_id: str,
+        func_name: str,
+        func_args: str | dict[str, Any],
+        available_functions: dict[str, Callable[..., Any]],
+        original_tool: BaseTool | None = None,
+    ) -> dict[str, Any]:
+        """Execute a single native tool call.
+
+        Handles argument parsing, usage-limit checks, caching, and hook
+        invocation.
+
+        Args:
+            call_id: The tool call ID from the LLM.
+            func_name: Sanitized tool function name.
+            func_args: Raw arguments (JSON string or dict).
+            available_functions: Mapping of tool names to callables.
+            original_tool: The original BaseTool instance, if available.
+
+        Returns:
+            Dict with keys ``call_id``, ``func_name``, ``result``,
+            ``from_cache``, and ``original_tool``.
+        """
+        from datetime import datetime
+
+        from crewai.events.types.tool_usage_events import (
+            ToolUsageErrorEvent,
+            ToolUsageFinishedEvent,
+            ToolUsageStartedEvent,
+        )
+        from crewai.hooks.tool_hooks import (
+            ToolCallHookContext,
+            get_after_tool_call_hooks,
+            get_before_tool_call_hooks,
+        )
+
+        args_dict, parse_error = parse_tool_call_args(
+            func_args, func_name, call_id, original_tool
+        )
+        if parse_error is not None:
+            return {
+                "call_id": call_id,
+                "func_name": func_name,
+                "result": cast(str, parse_error["result"]),
+                "from_cache": False,
+                "original_tool": original_tool,
+            }
+
+        if (
+            original_tool
+            and getattr(original_tool, "max_usage_count", None) is not None
+            and getattr(original_tool, "current_usage_count", 0)
+            >= original_tool.max_usage_count
+        ):
+            return {
+                "call_id": call_id,
+                "func_name": func_name,
+                "result": (
+                    f"Tool '{func_name}' has reached its usage limit of "
+                    f"{original_tool.max_usage_count} times and cannot be used anymore."
+                ),
+                "from_cache": False,
+                "original_tool": original_tool,
+            }
+
+        from_cache = False
+        result: str = f"Tool '{func_name}' not found"
+        input_str = json.dumps(args_dict) if args_dict else ""
+
+        if self._cache_handler:
+            cached = self._cache_handler.read(tool=func_name, input=input_str)
+            if cached is not None:
+                result = str(cached) if not isinstance(cached, str) else cached
+                from_cache = True
+
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self,
+                agent_key=self.key,
+            ),
+        )
+
+        structured_tool: CrewStructuredTool | None = next(
+            (t for t in self._parsed_tools if sanitize_tool_name(t.name) == func_name),
+            None,
+        )
+
+        hook_blocked = False
+        before_ctx = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self,
+            task=None,
+            crew=None,
+        )
+        try:
+            for hook in get_before_tool_call_hooks():
+                if hook(before_ctx) is False:
+                    hook_blocked = True
+                    break
+        except Exception as hook_err:
+            if self.verbose:
+                self._printer.print(
+                    content=f"Error in before_tool_call hook: {hook_err}",
+                    color="red",
+                )
+
+        error_event_emitted = False
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+        elif not from_cache and func_name in available_functions:
+            try:
+                raw_result = available_functions[func_name](**(args_dict or {}))
+                result = str(raw_result) if not isinstance(raw_result, str) else raw_result
+
+                if self._cache_handler:
+                    should_cache = True
+                    if (
+                        original_tool
+                        and hasattr(original_tool, "cache_function")
+                        and callable(original_tool.cache_function)
+                    ):
+                        should_cache = original_tool.cache_function(args_dict, raw_result)
+                    if should_cache:
+                        self._cache_handler.add(
+                            tool=func_name, input=input_str, output=raw_result
+                        )
+            except Exception as e:
+                result = f"Error executing tool '{func_name}': {e}"
+                error_event_emitted = True
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self,
+                        agent_key=self.key,
+                        error=e,
+                    ),
+                )
+
+        after_ctx = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self,
+            task=None,
+            crew=None,
+            tool_result=result,
+        )
+        try:
+            for after_hook in get_after_tool_call_hooks():
+                after_result = after_hook(after_ctx)
+                if after_result is not None:
+                    result = after_result
+                    after_ctx.tool_result = result
+        except Exception as hook_err:
+            if self.verbose:
+                self._printer.print(
+                    content=f"Error in after_tool_call hook: {hook_err}",
+                    color="red",
+                )
+
+        if original_tool:
+            original_tool.current_usage_count += 1
+
+        if not error_event_emitted:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageFinishedEvent(
+                    output=result,
+                    tool_name=func_name,
+                    tool_args=args_dict,
+                    from_agent=self,
+                    agent_key=self.key,
+                    started_at=started_at,
+                    finished_at=datetime.now(),
+                ),
+            )
+
+        self.tools_results.append({
+            "result": result,
+            "tool_name": func_name,
+            "tool_args": args_dict,
+        })
+
+        return {
+            "call_id": call_id,
+            "func_name": func_name,
+            "result": result,
+            "from_cache": from_cache,
+            "original_tool": original_tool,
+        }
+
+    def _invoke_loop_react(
+        self, response_model: type[BaseModel] | None = None
+    ) -> AgentFinish:
+        """Execute agent loop using the ReAct text-based pattern.
+
+        This is the fallback when the LLM does not support native function calling.
+
+        Args:
+            response_model: Optional Pydantic model for native structured output.
+
+        Returns:
+            AgentFinish: The final result of the agent execution.
+        """
         formatted_answer: AgentAction | AgentFinish | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
@@ -949,7 +1471,6 @@ class LiteAgent(FlowTrackable, BaseModel):
 
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
-                    # Do not retry on litellm errors
                     raise e
                 if is_context_length_exceeded(e):
                     handle_context_length(

@@ -1160,3 +1160,186 @@ def test_lite_agent_memory_instance_recall_and_save_called():
     mock_memory.remember_many.assert_called_once_with(
         ["Fact one.", "Fact two."], agent_role="Test"
     )
+
+
+# ---------------------------------------------------------------------------
+# Native tool calling tests
+# ---------------------------------------------------------------------------
+
+
+class _NativeToolCallLLM(BaseLLM):
+    """Fake LLM that supports native function calling and returns tool calls."""
+
+    def __init__(self, tool_calls=None, final_answer="42"):
+        super().__init__(model="fake-native-fc-model")
+        self._tool_calls = tool_calls or []
+        self._final_answer = final_answer
+        self._call_index = 0
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ):
+        idx = self._call_index
+        self._call_index += 1
+        if idx < len(self._tool_calls):
+            return self._tool_calls[idx]
+        return self._final_answer
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 8192
+
+
+class _ReactOnlyLLM(BaseLLM):
+    """Fake LLM that does NOT support function calling."""
+
+    def __init__(self, response="Thought: done\nFinal Answer: hello"):
+        super().__init__(model="fake-react-only-model")
+        self._response = response
+
+    def call(self, messages, **kwargs):
+        return self._response
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return True
+
+    def get_context_window_size(self) -> int:
+        return 8192
+
+
+def test_lite_agent_native_mode_detection_with_fc_llm():
+    """LiteAgent should set _use_native_tools=True when LLM supports function calling and tools exist."""
+    llm = _NativeToolCallLLM(final_answer="done")
+    agent = LiteAgent(
+        role="Tester", goal="Test", backstory="Test agent",
+        llm=llm, tools=[SecretLookupTool()],
+    )
+    agent.kickoff("test")
+    assert agent._use_native_tools is True
+
+
+def test_lite_agent_native_mode_detection_without_fc_llm():
+    """LiteAgent should set _use_native_tools=False when LLM does not support function calling."""
+    llm = _ReactOnlyLLM()
+    agent = LiteAgent(
+        role="Tester", goal="Test", backstory="Test agent",
+        llm=llm, tools=[SecretLookupTool()],
+    )
+    agent.kickoff("test")
+    assert agent._use_native_tools is False
+
+
+def test_lite_agent_native_mode_detection_no_tools():
+    """LiteAgent should set _use_native_tools=False when there are no tools."""
+    llm = _NativeToolCallLLM(final_answer="no tools needed")
+    agent = LiteAgent(
+        role="Tester", goal="Test", backstory="Test agent",
+        llm=llm, tools=[],
+    )
+    agent.kickoff("test")
+    assert agent._use_native_tools is False
+
+
+def test_lite_agent_native_mode_system_prompt_has_no_react_instructions():
+    """In native mode the system prompt should NOT contain ReAct Action/Action Input instructions."""
+    llm = _NativeToolCallLLM(final_answer="result")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute things", backstory="A math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent.kickoff("What is 1+1?")
+
+    system_msg = agent._messages[0]
+    assert system_msg["role"] == "system"
+    content = system_msg["content"]
+    assert "Action:" not in content
+    assert "Action Input:" not in content
+    assert "Observation:" not in content
+    assert "Calculator" in content
+    assert "Compute things" in content
+
+
+def test_lite_agent_react_mode_system_prompt_has_react_instructions():
+    """In ReAct mode the system prompt SHOULD contain Action/Action Input instructions."""
+    llm = _ReactOnlyLLM()
+    agent = LiteAgent(
+        role="Calculator", goal="Compute things", backstory="A math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent.kickoff("What is 1+1?")
+
+    system_msg = agent._messages[0]
+    content = system_msg["content"]
+    assert "Action:" in content
+    assert "Action Input:" in content
+
+
+def _make_openai_tool_call(call_id, name, arguments):
+    """Helper to create an OpenAI-style tool call object."""
+    tc = Mock()
+    tc.id = call_id
+    func = Mock()
+    func.name = name
+    func.arguments = arguments
+    tc.function = func
+    return tc
+
+
+def test_lite_agent_native_tool_execution():
+    """Verify LiteAgent executes native tool calls and feeds results back to the LLM."""
+    tool_call = [_make_openai_tool_call("call_1", "calculate", '{"expression": "6*7"}')]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="The answer is 42")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    result = agent.kickoff("What is 6 * 7?")
+
+    assert "42" in result.raw
+    assert len(agent.tools_results) == 1
+    assert agent.tools_results[0]["tool_name"] == "calculate"
+
+
+def test_lite_agent_native_parallel_tool_calls():
+    """When LLM returns multiple tool calls, they should all be executed."""
+    tool_calls = [
+        _make_openai_tool_call("call_1", "calculate", '{"expression": "2+3"}'),
+        _make_openai_tool_call("call_2", "calculate", '{"expression": "4+5"}'),
+    ]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_calls], final_answer="5 and 9")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    result = agent.kickoff("What is 2+3 and 4+5?")
+
+    assert len(agent.tools_results) == 2
+    tool_names = [r["tool_name"] for r in agent.tools_results]
+    assert tool_names == ["calculate", "calculate"]
+
+    tool_messages = [m for m in agent._messages if m.get("role") == "tool"]
+    assert len(tool_messages) == 2
+
+    assistant_tc_messages = [
+        m for m in agent._messages
+        if m.get("role") == "assistant" and m.get("tool_calls")
+    ]
+    assert len(assistant_tc_messages) == 1
+    assert len(assistant_tc_messages[0]["tool_calls"]) == 2
