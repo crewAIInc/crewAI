@@ -2288,25 +2288,22 @@ def test_conditional_task_uses_last_output(researcher, writer):
             )  # Third task used first task's output
 
 
-def test_equal_priority_tasks_preserve_declared_order(researcher):
-    """Equal-priority tasks should execute in the order they are declared."""
+def test_sequential_tasks_preserve_declared_order(researcher):
+    """Sequential execution should preserve the order tasks are declared."""
     first_task = Task(
-        description="Task B",
+        description="Task 2",
         expected_output="Output B",
         agent=researcher,
-        config={"priority": 1},
     )
     second_task = Task(
-        description="Task A",
+        description="Task 10",
         expected_output="Output A",
         agent=researcher,
-        config={"priority": 1},
     )
     third_task = Task(
-        description="Task C",
+        description="Task 1",
         expected_output="Output C",
         agent=researcher,
-        config={"priority": 1},
     )
 
     declared_order = [first_task.description, second_task.description, third_task.description]
