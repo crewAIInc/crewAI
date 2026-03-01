@@ -146,9 +146,13 @@ python_functions = "test_*"
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
+# fastembed 0.7.x and docling 2.63 cap pillow<12; the removed APIs don't affect them.
+# langchain-core 0.3.76 has a template-injection vuln (GHSA); force >=0.3.80.
 override-dependencies = [
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
+    "pillow>=12.1.1",
+    "langchain-core>=0.3.80,<1",
 ]
 
 [tool.uv.workspace]
