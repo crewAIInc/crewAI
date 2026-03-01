@@ -2288,6 +2288,48 @@ def test_conditional_task_uses_last_output(researcher, writer):
             )  # Third task used first task's output
 
 
+def test_equal_priority_tasks_preserve_declared_order(researcher):
+    """Equal-priority tasks should execute in the order they are declared."""
+    first_task = Task(
+        description="Task B",
+        expected_output="Output B",
+        agent=researcher,
+        config={"priority": 1},
+    )
+    second_task = Task(
+        description="Task A",
+        expected_output="Output A",
+        agent=researcher,
+        config={"priority": 1},
+    )
+    third_task = Task(
+        description="Task C",
+        expected_output="Output C",
+        agent=researcher,
+        config={"priority": 1},
+    )
+
+    declared_order = [first_task.description, second_task.description, third_task.description]
+    observed_order: list[str] = []
+
+    def capture_execution_order(task: Task, context=None, tools=None):
+        observed_order.append(task.description)
+        return f"result:{task.description}"
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[first_task, second_task, third_task],
+        process=Process.sequential,
+    )
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = capture_execution_order
+        result = crew.kickoff()
+
+    assert observed_order == declared_order
+    assert [task_output.description for task_output in result.tasks_output] == declared_order
+
+
 @pytest.mark.vcr()
 def test_conditional_tasks_result_collection(researcher, writer):
     """Test that task outputs are properly collected based on execution status."""
