@@ -173,8 +173,6 @@ class Telemetry:
 
         self._original_handlers: dict[int, Any] = {}
 
-        # Signal handlers can only be registered from the main thread.
-        # Skip silently when running in non-main threads (Streamlit, Flask, Django, etc.)
         if threading.current_thread() is not threading.main_thread():
             logger.debug(
                 "Skipping signal handler registration: not running in main thread"

@@ -123,25 +123,24 @@ def test_telemetry_singleton_pattern():
     assert all(instance is telemetry1 for instance in instances)
 
 
-def test_no_signal_handler_traceback_in_non_main_thread(capsys):
+def test_no_signal_handler_traceback_in_non_main_thread():
     """Signal handler registration should be silently skipped in non-main threads.
 
     Regression test for https://github.com/crewAIInc/crewAI/issues/4289
     """
     errors: list[Exception] = []
 
-    def init_in_thread():
-        try:
-            t = Telemetry()
-            t._register_shutdown_handlers()
-        except Exception as exc:
-            errors.append(exc)
+    with patch("signal.signal") as mock_signal:
 
-    thread = threading.Thread(target=init_in_thread)
-    thread.start()
-    thread.join()
+        def init_in_thread():
+            try:
+                Telemetry()
+            except Exception as exc:
+                errors.append(exc)
+
+        thread = threading.Thread(target=init_in_thread)
+        thread.start()
+        thread.join()
 
     assert not errors, f"Unexpected error: {errors}"
-    captured = capsys.readouterr()
-    assert "ValueError" not in captured.err
-    assert "signal only works in main thread" not in captured.err
+    mock_signal.assert_not_called()
