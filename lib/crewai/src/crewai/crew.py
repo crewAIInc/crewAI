@@ -999,7 +999,10 @@ class Crew(FlowTrackable, BaseModel):
         **Ordering contract**: tasks are dispatched in the exact order they
         appear in *tasks* (i.e. their insertion / list order).  Each task
         carries an ``_execution_index`` stamped at crew-construction time
-        that locks this order deterministically.
+        that locks this order deterministically.  As a defensive measure
+        the task list is sorted by ``_execution_index`` before iteration
+        so ordering is enforced even if the list is mutated after
+        construction.
 
         Args:
             tasks: List of tasks to execute (preserves insertion order).
@@ -1009,6 +1012,10 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew.
         """
+        tasks = sorted(
+            tasks,
+            key=lambda t: t._execution_index if t._execution_index is not None else 0,
+        )
         task_outputs: list[TaskOutput] = []
         pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
@@ -1203,7 +1210,10 @@ class Crew(FlowTrackable, BaseModel):
         **Ordering contract**: tasks are dispatched in the exact order they
         appear in *tasks* (i.e. their insertion / list order).  Each task
         carries an ``_execution_index`` stamped at crew-construction time
-        that locks this order deterministically.
+        that locks this order deterministically.  As a defensive measure
+        the task list is sorted by ``_execution_index`` before iteration
+        so ordering is enforced even if the list is mutated after
+        construction.
 
         Args:
             tasks: List of tasks to execute (preserves insertion order).
@@ -1213,6 +1223,10 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew.
         """
+        tasks = sorted(
+            tasks,
+            key=lambda t: t._execution_index if t._execution_index is not None else 0,
+        )
         custom_start = self._get_execution_start_index(tasks)
         if custom_start is not None:
             start_index = custom_start

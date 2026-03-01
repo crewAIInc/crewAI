@@ -9,7 +9,6 @@ See: https://github.com/crewAIInc/crewAI/issues/4664
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import patch
 
 import pytest
@@ -129,7 +128,6 @@ class TestDeterministicSyncOrder:
 
         for _ in range(ITERATIONS):
             dispatch_order: list[str] = []
-            original_execute_sync = Task.execute_sync
 
             def tracking_execute_sync(self_task, *args, **kwargs):
                 dispatch_order.append(self_task.description)
