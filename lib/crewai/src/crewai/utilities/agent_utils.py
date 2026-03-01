@@ -139,7 +139,11 @@ def render_text_description_and_args(
 
 def convert_tools_to_openai_schema(
     tools: Sequence[BaseTool | CrewStructuredTool],
-) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
+) -> tuple[
+    list[dict[str, Any]],
+    dict[str, Callable[..., Any]],
+    dict[str, BaseTool | CrewStructuredTool],
+]:
     """Convert CrewAI tools to OpenAI function calling format.
 
     This function converts CrewAI BaseTool and CrewStructuredTool objects
@@ -152,16 +156,12 @@ def convert_tools_to_openai_schema(
     Returns:
         Tuple containing:
         - List of OpenAI-format tool schema dictionaries
-        - Dict mapping tool names to their callable run() methods
-
-    Example:
-        >>> tools = [CalculatorTool(), SearchTool()]
-        >>> schemas, functions = convert_tools_to_openai_schema(tools)
-        >>> # schemas can be passed to llm.call(tools=schemas)
-        >>> # functions can be passed to llm.call(available_functions=functions)
+        - Dict mapping sanitized tool names to their callable run() methods
+        - Dict mapping sanitized tool names to their original tool objects
     """
     openai_tools: list[dict[str, Any]] = []
     available_functions: dict[str, Callable[..., Any]] = {}
+    tool_name_mapping: dict[str, BaseTool | CrewStructuredTool] = {}
 
     for tool in tools:
         # Get the JSON schema for tool parameters
@@ -186,6 +186,14 @@ def convert_tools_to_openai_schema(
 
         sanitized_name = sanitize_tool_name(tool.name)
 
+        if sanitized_name in available_functions:
+            counter = 2
+            candidate = sanitize_tool_name(f"{sanitized_name}_{counter}")
+            while candidate in available_functions:
+                counter += 1
+                candidate = sanitize_tool_name(f"{sanitized_name}_{counter}")
+            sanitized_name = candidate
+
         schema: dict[str, Any] = {
             "type": "function",
             "function": {
@@ -197,8 +205,9 @@ def convert_tools_to_openai_schema(
         }
         openai_tools.append(schema)
         available_functions[sanitized_name] = tool.run  # type: ignore[union-attr]
+        tool_name_mapping[sanitized_name] = tool
 
-    return openai_tools, available_functions
+    return openai_tools, available_functions, tool_name_mapping
 
 
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
