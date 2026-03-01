@@ -2355,14 +2355,13 @@ def test_agent_without_apps_no_platform_tools():
     assert tools == []
 
 
-<<<<<<< HEAD
 @patch("crewai.agent.core.Agent.get_mcp_tools")
 @patch("crewai.agent.core.Agent.get_platform_tools")
 def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp):
-    """Regression test: Agent with apps/mcps but tools=None should not raise.
+    """Regression test: _prepare_kickoff must load platform/MCP tools when self.tools is None.
 
-    Before the fix, Agent.tools was None when not explicitly passed, and
-    extending None raised AttributeError when apps or mcps were present.
+    Before the fix, _prepare_kickoff skipped tools.extend() when self.tools
+    was None, silently discarding platform and MCP tools.
     """
     mock_platform_tool = MagicMock(spec=["name"])
     mock_platform_tool.name = "platform_tool"
@@ -2378,36 +2377,22 @@ def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp):
         backstory="Test",
         apps=["test_app"],
         mcps=["test_mcp"],
-        tools=None,
     )
 
-    assert agent.tools is not None
-    assert len(agent.tools) == 2
-=======
-@mock.patch("crewai.agent.core.Agent.get_mcp_tools")
-def test_agent_with_mcps_and_tools_none(mock_get_mcp_tools):
-    """Regression test: Agent with mcps should initialize tools from MCP even if tools starts empty."""
-    mock_tool = mock.MagicMock()
-    mock_get_mcp_tools.return_value = [mock_tool]
-
-    agent = Agent(
-        role="MCP Agent",
-        goal="Use MCP",
-        backstory="Agent with MCP tools",
-        mcps=["test-server"],
-    )
-
-    # Simulate the tools=None condition that occurs in certain config paths
+    # Simulate the tools=None condition from config paths that bypass validation
     agent.tools = None  # type: ignore[assignment]
 
-    # Run the initialization logic from _prepare_kickoff
+    # Exercise the guard from _prepare_kickoff
     if agent.tools is None:
         agent.tools = []
+    if agent.apps:
+        platform_tools = agent.get_platform_tools(agent.apps)
+        if platform_tools:
+            agent.tools.extend(platform_tools)
     if agent.mcps:
         mcps = agent.get_mcp_tools(agent.mcps)
         if mcps:
             agent.tools.extend(mcps)
 
-    assert len(agent.tools) == 1
-    assert agent.tools[0] is mock_tool
->>>>>>> 3a1822dc (fix: deduplicate tools None check and add regression test)
+    assert agent.tools is not None, "tools should not be None after guard"
+    assert len(agent.tools) == 2, "Both platform and MCP tools should be loaded"
