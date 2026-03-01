@@ -129,18 +129,20 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     Regression test for https://github.com/crewAIInc/crewAI/issues/4289
     """
     errors: list[Exception] = []
+    mock_holder: list = []
 
-    with patch("signal.signal") as mock_signal:
-
-        def init_in_thread():
-            try:
+    def init_in_thread():
+        try:
+            with patch("signal.signal") as mock_signal:
                 Telemetry()
-            except Exception as exc:
-                errors.append(exc)
+                mock_holder.append(mock_signal)
+        except Exception as exc:
+            errors.append(exc)
 
-        thread = threading.Thread(target=init_in_thread)
-        thread.start()
-        thread.join()
+    thread = threading.Thread(target=init_in_thread)
+    thread.start()
+    thread.join()
 
     assert not errors, f"Unexpected error: {errors}"
-    mock_signal.assert_not_called()
+    assert mock_holder, "Thread did not execute"
+    mock_holder[0].assert_not_called()
