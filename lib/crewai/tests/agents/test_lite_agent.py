@@ -1467,7 +1467,7 @@ def test_lite_agent_native_duplicate_tool_names_resolved():
         role="Calculator", goal="Compute", backstory="Math agent",
         llm=llm, tools=[tool_a, tool_b],
     )
-    result = agent.kickoff("What is 9+1?")
+    agent.kickoff("What is 9+1?")
 
     assert len(agent.tools_results) == 1
     assert agent.tools_results[0]["tool_name"] == "calculate_2"
