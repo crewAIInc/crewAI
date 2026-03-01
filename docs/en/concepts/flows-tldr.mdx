@@ -1,0 +1,102 @@
+---
+title: Flows (TL;DR)
+description: Event-driven workflows with state management — quick reference
+icon: arrow-progress
+---
+
+## What is a Flow?
+
+A Flow is the control plane of your CrewAI application. It chains tasks together with state, conditional logic, and event-driven triggers. Crews run *inside* Flow steps when you need autonomous agent intelligence.
+
+## Key Decorators
+
+| Decorator | Purpose |
+| :--- | :--- |
+| `@start()` | Entry point — runs when `flow.kickoff()` is called |
+| `@listen(method)` | Runs after the specified method completes, receives its output |
+| `@router(method)` | Routes execution to different branches based on return value |
+| `@and_(a, b)` | Runs only after **both** `a` and `b` complete |
+| `@or_(a, b)` | Runs when **either** `a` or `b` completes |
+
+## Minimal Flow + Crew Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.flow.flow import Flow, start, listen
+
+class ResearchFlow(Flow):
+    # State is a dict accessible as self.state throughout the flow
+    model = "gpt-4o-mini"
+
+    @start()
+    def get_topic(self):
+        # Set initial state
+        self.state["topic"] = "AI agent frameworks"
+        return self.state["topic"]
+
+    @listen(get_topic)
+    def run_research_crew(self, topic):
+        # Spin up a Crew inside a Flow step
+        researcher = Agent(
+            role="Research Analyst",
+            goal=f"Research {topic} thoroughly",
+            backstory="Expert at finding and synthesizing information.",
+        )
+        task = Task(
+            description=f"Research the latest developments in {topic}.",
+            expected_output="A 3-bullet summary of key findings.",
+            agent=researcher,
+        )
+        crew = Crew(agents=[researcher], tasks=[task], verbose=False)
+        result = crew.kickoff()
+        self.state["research"] = str(result)
+        return str(result)
+
+    @listen(run_research_crew)
+    def save_result(self, research):
+        # Flow step: save to file (plain Python, no agent needed)
+        with open("research_output.txt", "w") as f:
+            f.write(research)
+        print("Saved!")
+        return research
+
+
+flow = ResearchFlow()
+result = flow.kickoff()
+```
+
+## Routing Example
+
+```python
+from crewai.flow.flow import Flow, start, listen, router
+
+class BranchingFlow(Flow):
+    @start()
+    def check_input(self):
+        return "short"  # or "long"
+
+    @router(check_input)
+    def route_by_length(self, result):
+        if result == "short":
+            return "handle_short"
+        return "handle_long"
+
+    @listen("handle_short")
+    def short_path(self):
+        return "Quick answer"
+
+    @listen("handle_long")
+    def long_path(self):
+        return "Detailed analysis"
+```
+
+## State Management
+
+- `self.state` is a dict persisted across all steps in the flow
+- Every flow instance gets a unique UUID at `self.state["id"]`
+- State is accessible in every `@start`, `@listen`, and `@router` method
+
+## Full Reference
+
+- Complete Flows docs: [concepts/flows.mdx](/en/concepts/flows)
+- Step-by-step tutorial: [guides/flows/first-flow.mdx](/en/guides/flows/first-flow)

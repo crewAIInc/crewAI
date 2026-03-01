@@ -1,0 +1,99 @@
+---
+title: Tools, Memory & Knowledge (TL;DR)
+description: Giving agents capabilities, persistence, and domain knowledge — quick reference
+icon: screwdriver-wrench
+---
+
+## Tools: Built-In Options
+
+Install: `pip install 'crewai[tools]'`
+
+Key built-in tools from `crewai_tools`:
+
+| Tool | What it does |
+| :--- | :--- |
+| `SerperDevTool` | Web search via Serper.dev API |
+| `WebsiteSearchTool` | RAG search over a website |
+| `ScrapeWebsiteTool` | Scrape full web page content |
+| `FileReadTool` | Read local files (any format) |
+| `DirectoryReadTool` | Read a directory structure |
+| `CodeInterpreterTool` | Execute Python code |
+| `PDFSearchTool` | RAG search within PDF documents |
+| `CSVSearchTool` | RAG search within CSV files |
+| `GithubSearchTool` | RAG search within GitHub repositories |
+| `CodeDocsSearchTool` | RAG search over code documentation |
+
+## Creating a Custom Tool
+
+```python
+from crewai.tools import tool
+
+@tool("Search Internal Database")
+def search_db(query: str) -> str:
+    """Search our internal database for relevant records. Use this when
+    the user asks about internal company data."""
+    # Your logic here
+    return f"Results for: {query}"
+
+# Attach to an agent
+agent = Agent(
+    role="Data Analyst",
+    goal="Answer questions from internal data",
+    backstory="Expert at querying internal systems.",
+    tools=[search_db],
+)
+```
+
+## Memory: Persistent Agent Knowledge
+
+CrewAI uses a unified `Memory` class. Enable it on a Crew with `memory=True`:
+
+```python
+from crewai import Crew, Memory
+
+# Simple: use defaults
+crew = Crew(agents=[...], tasks=[...], memory=True)
+
+# Custom: tune recency vs. semantic importance
+memory = Memory(recency_weight=0.4, recency_half_life_days=14)
+crew = Crew(agents=[...], tasks=[...], memory=memory)
+```
+
+Memory types (handled internally by the unified Memory class):
+- **Short-term** — within a single crew run (context window)
+- **Long-term** — persisted across runs (vector DB)
+- **Entity** — structured facts about people, places, things
+- **User** — per-user preferences and history
+
+## Knowledge Sources: RAG for Your Crew
+
+Knowledge gives agents access to external documents (PDFs, text, URLs) via RAG.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
+
+# Text knowledge
+text_source = StringKnowledgeSource(
+    content="Our refund policy: full refund within 30 days of purchase."
+)
+
+# PDF knowledge (place files in ./knowledge/ directory)
+pdf_source = PDFKnowledgeSource(file_paths=["company_handbook.pdf"])
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    process=Process.sequential,
+    knowledge_sources=[text_source, pdf_source],  # attach here
+)
+```
+
+Supported source types: `StringKnowledgeSource`, `PDFKnowledgeSource`, `CSVKnowledgeSource`, `CrewDoclingSource` (URLs + HTML).
+
+## Full Reference
+
+- Tools: [concepts/tools.mdx](/en/concepts/tools)
+- Memory: [concepts/memory.mdx](/en/concepts/memory)
+- Knowledge/RAG: [concepts/knowledge.mdx](/en/concepts/knowledge)

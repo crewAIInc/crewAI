@@ -1,0 +1,353 @@
+kcp_version: "0.3"
+id: crewai
+description: "Framework for orchestrating role-playing, autonomous AI agents using Flows (control) and Crews (intelligence)"
+entry_points:
+  primary: docs/en/introduction.mdx
+  architecture: docs/en/introduction.mdx
+
+units:
+  # ── Eager: load immediately ──────────────────────────────────────────────────
+
+  - id: overview
+    path: docs/en/introduction.mdx
+    kind: architecture
+    intent: "Understand what CrewAI is, how Flows and Crews work together, and when to use each"
+    scope: overview
+    audience: [beginner, developer]
+    triggers:
+      - what is crewai
+      - flows vs crews
+      - when to use flows
+      - when to use crews
+      - crewai architecture
+      - overview
+    hints:
+      token_estimate: 1200
+      load_strategy: eager
+      priority: high
+
+  - id: getting-started-tldr
+    path: docs/en/getting-started-tldr.mdx
+    kind: tutorial
+    intent: "Get up and running with CrewAI — installation, first crew, and architecture summary"
+    scope: overview
+    audience: [beginner, developer]
+    triggers:
+      - what is crewai
+      - getting started
+      - install crewai
+      - pip install crewai
+      - first agent
+      - first crew
+      - hello world
+      - quickstart
+      - how to start
+      - minimal example
+    hints:
+      token_estimate: 600
+      load_strategy: eager
+      priority: high
+      summary_of: quickstart
+
+  # ── Core concepts: lazy ───────────────────────────────────────────────────────
+
+  - id: quickstart
+    path: docs/en/quickstart.mdx
+    kind: tutorial
+    intent: "Full step-by-step quickstart guide for creating your first CrewAI project"
+    scope: comprehensive
+    audience: [beginner, developer]
+    triggers:
+      - quickstart guide
+      - full quickstart
+      - step by step first crew
+    hints:
+      token_estimate: 4000
+      load_strategy: lazy
+      priority: medium
+      summary_available: true
+      summary_unit: getting-started-tldr
+
+  - id: agents-tasks-tldr
+    path: docs/en/concepts/agents-tasks-tldr.mdx
+    kind: reference
+    intent: "Quick reference for agent attributes (role/goal/backstory/tools/llm) and task structure"
+    scope: focused
+    audience: [developer]
+    triggers:
+      - create an agent
+      - agent role goal backstory
+      - agent attributes
+      - create a task
+      - task description
+      - expected output
+      - assign task to agent
+      - how to define an agent
+      - how to define a task
+      - sequential process
+      - hierarchical process
+    hints:
+      token_estimate: 700
+      load_strategy: lazy
+      priority: high
+      summary_of: agents
+
+  - id: agents
+    path: docs/en/concepts/agents.mdx
+    kind: reference
+    intent: "Complete agent attribute reference, YAML configuration, and advanced agent patterns"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - full agent reference
+      - all agent attributes
+      - agent yaml configuration
+      - agent delegation
+      - agent memory
+      - agent reasoning
+      - agent code execution
+    hints:
+      token_estimate: 8000
+      load_strategy: lazy
+      priority: medium
+      summary_available: true
+      summary_unit: agents-tasks-tldr
+
+  - id: tasks
+    path: docs/en/concepts/tasks.mdx
+    kind: reference
+    intent: "Complete task attribute reference, context chaining, async execution, and output options"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - full task reference
+      - all task attributes
+      - task context
+      - task chaining
+      - async task
+      - task output file
+      - human input task
+    hints:
+      token_estimate: 11000
+      load_strategy: lazy
+      priority: medium
+
+  - id: crews
+    path: docs/en/concepts/crews.mdx
+    kind: reference
+    intent: "Crew configuration, process types, delegation, callbacks, and orchestration patterns"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - crew configuration
+      - how to assemble a crew
+      - crew attributes
+      - crew kickoff
+      - manager agent
+      - crew callbacks
+      - hierarchical crew
+      - delegation
+    hints:
+      token_estimate: 6000
+      load_strategy: lazy
+      priority: medium
+
+  - id: flows-tldr
+    path: docs/en/concepts/flows-tldr.mdx
+    kind: reference
+    intent: "Quick reference for Flow decorators (@start, @listen, @router) and state management"
+    scope: focused
+    audience: [developer]
+    triggers:
+      - flow decorators
+      - listen start router
+      - state management flow
+      - event driven workflow
+      - how to create a flow
+      - flow anatomy
+      - and_ or_ decorators
+      - flow state
+    hints:
+      token_estimate: 700
+      load_strategy: lazy
+      priority: high
+      summary_of: flows
+
+  - id: flows
+    path: docs/en/concepts/flows.mdx
+    kind: reference
+    intent: "Complete Flows reference: decorators, state, routing, async, flow-crew integration"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - full flows reference
+      - all flow decorators
+      - flow state management deep dive
+      - flow async
+      - flow persistence
+      - flow visualization
+      - flow plot
+    hints:
+      token_estimate: 10000
+      load_strategy: lazy
+      priority: medium
+      summary_available: true
+      summary_unit: flows-tldr
+
+  - id: tools-memory-tldr
+    path: docs/en/concepts/tools-memory-tldr.mdx
+    kind: reference
+    intent: "Quick reference for built-in tools, custom @tool decorator, memory types, and knowledge/RAG"
+    scope: focused
+    audience: [developer]
+    triggers:
+      - custom tool
+      - tool decorator
+      - built-in tools
+      - web search tool
+      - available tools list
+      - memory
+      - short term memory
+      - long term memory
+      - entity memory
+      - user memory
+      - knowledge source
+      - rag crew
+      - pdf knowledge
+      - add documents to crew
+    hints:
+      token_estimate: 700
+      load_strategy: lazy
+      priority: high
+      summary_of: tools
+
+  - id: tools
+    path: docs/en/concepts/tools.mdx
+    kind: reference
+    intent: "Complete tools reference: all built-in tools, custom tool creation, caching, async tools"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - full tools reference
+      - all crewai tools
+      - custom tool class
+      - BaseTool
+      - tool caching
+      - async tool
+      - langchain tool
+    hints:
+      token_estimate: 3500
+      load_strategy: lazy
+      priority: medium
+      summary_available: true
+      summary_unit: tools-memory-tldr
+
+  - id: memory
+    path: docs/en/concepts/memory.mdx
+    kind: reference
+    intent: "Memory system: unified Memory class, usage with Crews/Agents/Flows, storage backends"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - full memory reference
+      - memory class
+      - memory storage
+      - memory backends
+      - standalone memory
+      - memory in flow
+      - memory reset
+      - memory recall
+    hints:
+      token_estimate: 8000
+      load_strategy: lazy
+      priority: medium
+
+  - id: llms
+    path: docs/en/concepts/llms.mdx
+    kind: reference
+    intent: "LLM provider configuration for all 60+ supported models (OpenAI, Anthropic, Ollama, Azure, etc.)"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - which llm
+      - llm providers
+      - openai
+      - anthropic claude
+      - ollama local model
+      - azure openai
+      - model configuration
+      - llm setup
+      - supported models
+      - change model
+      - groq
+      - gemini
+      - bedrock
+    hints:
+      token_estimate: 17000
+      load_strategy: lazy
+      priority: medium
+
+  - id: first-crew-guide
+    path: docs/en/guides/crews/first-crew.mdx
+    kind: tutorial
+    intent: "End-to-end tutorial: create a research crew with YAML config, agents, tasks, and crew setup"
+    scope: comprehensive
+    audience: [beginner, developer]
+    triggers:
+      - build first crew tutorial
+      - crew tutorial step by step
+      - research crew example
+      - crewai create crew cli
+    hints:
+      token_estimate: 4000
+      load_strategy: lazy
+      priority: medium
+
+  - id: first-flow-guide
+    path: docs/en/guides/flows/first-flow.mdx
+    kind: tutorial
+    intent: "End-to-end tutorial for building your first Flow with state, listeners, and crew integration"
+    scope: comprehensive
+    audience: [beginner, developer]
+    triggers:
+      - build first flow tutorial
+      - flow tutorial step by step
+      - flow with crew example
+      - how to build a flow
+    hints:
+      token_estimate: 6000
+      load_strategy: lazy
+      priority: medium
+
+  - id: mcp
+    path: docs/en/mcp/overview.mdx
+    kind: guide
+    intent: "Model Context Protocol (MCP) integration: connect MCP servers as tool sources for agents"
+    scope: comprehensive
+    audience: [developer, advanced]
+    triggers:
+      - mcp
+      - model context protocol
+      - mcp server
+      - mcp tools
+      - mcp integration
+      - connect external tools via mcp
+    hints:
+      token_estimate: 6000
+      load_strategy: lazy
+      priority: low
+
+relationships:
+  # agents-tasks-tldr is the declared summary for agents (summary_of: agents).
+  # It also covers tasks conceptually; link via context so agents discover it
+  # when starting from the tasks unit.
+  - from: agents-tasks-tldr
+    to: tasks
+    type: context
+
+  # tools-memory-tldr is the declared summary for tools (summary_of: tools).
+  # It also covers memory conceptually; link via context so agents discover it
+  # when starting from the memory unit.
+  - from: tools-memory-tldr
+    to: memory
+    type: context
