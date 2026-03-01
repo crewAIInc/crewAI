@@ -24,7 +24,7 @@
 
 ## Methodology
 
-Each query was run twice against the CrewAI repository (`/src/totto/crewAI`):
+Each query was run twice against a local clone of the CrewAI repository:
 
 1. **Baseline**: The agent was told the repository path and instructed to explore it freely using `read_file`, `glob_files`, and `grep_content` tools to find the answer.
 2. **KCP**: The agent was instructed to first read `knowledge.yaml`, match the query against unit triggers, and read only the files pointed to by matching units — preferring TL;DR summary files when available.
