@@ -914,13 +914,9 @@ class LiteAgent(FlowTrackable, BaseModel):
         Returns:
             AgentFinish: The final result of the agent execution.
         """
-        openai_tools, available_functions, _ = convert_tools_to_openai_schema(
-            self.tools
+        openai_tools, available_functions, original_tools_by_name = (
+            convert_tools_to_openai_schema(self.tools)
         )
-
-        original_tools_by_name: dict[str, BaseTool] = {
-            sanitize_tool_name(t.name): t for t in self.tools
-        }
 
         while True:
             try:
@@ -1347,9 +1343,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                     content=f"Error in after_tool_call hook: {hook_err}",
                     color="red",
                 )
-
-        if original_tool:
-            original_tool.current_usage_count += 1
 
         if not error_event_emitted:
             crewai_event_bus.emit(

@@ -1343,3 +1343,132 @@ def test_lite_agent_native_parallel_tool_calls():
     ]
     assert len(assistant_tc_messages) == 1
     assert len(assistant_tc_messages[0]["tool_calls"]) == 2
+
+
+def test_lite_agent_native_tool_usage_count_no_double_increment():
+    """current_usage_count must increment exactly once per native tool call.
+
+    BaseTool.run() already increments the counter internally, so the native
+    tool call handler must not add a second increment.
+    """
+    tool_call = [_make_openai_tool_call("call_1", "calculate", '{"expression": "1+1"}')]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="2")
+    calc_tool = CalculatorTool()
+    assert calc_tool.current_usage_count == 0
+
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[calc_tool],
+    )
+    agent.kickoff("What is 1+1?")
+
+    assert calc_tool.current_usage_count == 1
+
+
+def test_lite_agent_native_tool_max_usage_count_respected():
+    """A tool with max_usage_count=1 should be usable exactly once, not blocked after 1 call."""
+    call_round_1 = [_make_openai_tool_call("c1", "calculate", '{"expression": "1+1"}')]
+    call_round_2 = [_make_openai_tool_call("c2", "calculate", '{"expression": "2+2"}')]
+
+    llm = _NativeToolCallLLM(
+        tool_calls=[call_round_1, call_round_2], final_answer="done"
+    )
+    calc_tool = CalculatorTool()
+    calc_tool.max_usage_count = 2
+
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[calc_tool],
+    )
+    agent.kickoff("Compute 1+1 then 2+2")
+
+    executed = [r for r in agent.tools_results if "usage limit" not in r["result"]]
+    assert len(executed) == 2
+    assert calc_tool.current_usage_count == 2
+
+
+def test_lite_agent_native_tool_calls_with_after_llm_hook():
+    """Native tool calls must be processed even when after_llm_call hooks are active.
+
+    Regression test: _setup_after_llm_call_hooks was converting the list of
+    tool calls to a string via str(), causing isinstance(answer, list) to fail
+    in _invoke_loop_native_tools and silently returning the stringified list as
+    the agent's final answer.
+    """
+    hook_called = {"count": 0}
+
+    def after_hook(context):
+        hook_called["count"] += 1
+        return None
+
+    tool_call = [_make_openai_tool_call("call_1", "calculate", '{"expression": "6*7"}')]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="The answer is 42")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent._after_llm_call_hooks.append(after_hook)
+
+    result = agent.kickoff("What is 6 * 7?")
+
+    assert hook_called["count"] >= 1
+    assert len(agent.tools_results) == 1
+    assert agent.tools_results[0]["tool_name"] == "calculate"
+    assert "42" in result.raw
+
+
+def test_lite_agent_native_parallel_tool_calls_with_after_llm_hook():
+    """Multiple native tool calls in a single response must work with hooks active."""
+    hook_called = {"count": 0}
+
+    def after_hook(context):
+        hook_called["count"] += 1
+        return None
+
+    tool_calls = [
+        _make_openai_tool_call("call_1", "calculate", '{"expression": "2+3"}'),
+        _make_openai_tool_call("call_2", "calculate", '{"expression": "4+5"}'),
+    ]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_calls], final_answer="5 and 9")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent._after_llm_call_hooks.append(after_hook)
+
+    result = agent.kickoff("What is 2+3 and 4+5?")
+
+    assert hook_called["count"] >= 1
+    assert len(agent.tools_results) == 2
+    tool_names = [r["tool_name"] for r in agent.tools_results]
+    assert tool_names == ["calculate", "calculate"]
+
+
+def test_lite_agent_native_duplicate_tool_names_resolved():
+    """Two tools with the same sanitized name should both be usable via dedup suffixes.
+
+    convert_tools_to_openai_schema renames duplicates (e.g. calculate -> calculate_2).
+    The original_tools_by_name mapping must honour these deduplicated names so
+    result_as_answer, max_usage_count, and usage tracking work for every tool.
+    """
+    tool_a = CalculatorTool()
+    tool_a.result_as_answer = True
+
+    tool_b = CalculatorTool()
+
+    tool_call = [
+        _make_openai_tool_call("c1", "calculate_2", '{"expression": "9+1"}'),
+    ]
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="fallback")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[tool_a, tool_b],
+    )
+    result = agent.kickoff("What is 9+1?")
+
+    assert len(agent.tools_results) == 1
+    assert agent.tools_results[0]["tool_name"] == "calculate_2"
+    assert "10" in agent.tools_results[0]["result"]
