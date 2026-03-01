@@ -914,7 +914,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         Returns:
             AgentFinish: The final result of the agent execution.
         """
-        openai_tools, available_functions = convert_tools_to_openai_schema(
+        openai_tools, available_functions, _ = convert_tools_to_openai_schema(
             self.tools
         )
 
