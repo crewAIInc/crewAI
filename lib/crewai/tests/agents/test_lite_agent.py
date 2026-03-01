@@ -1160,3 +1160,315 @@ def test_lite_agent_memory_instance_recall_and_save_called():
     mock_memory.remember_many.assert_called_once_with(
         ["Fact one.", "Fact two."], agent_role="Test"
     )
+
+
+# ---------------------------------------------------------------------------
+# Native tool calling tests
+# ---------------------------------------------------------------------------
+
+
+class _NativeToolCallLLM(BaseLLM):
+    """Fake LLM that supports native function calling and returns tool calls."""
+
+    def __init__(self, tool_calls=None, final_answer="42"):
+        super().__init__(model="fake-native-fc-model")
+        self._tool_calls = tool_calls or []
+        self._final_answer = final_answer
+        self._call_index = 0
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ):
+        idx = self._call_index
+        self._call_index += 1
+        if idx < len(self._tool_calls):
+            return self._tool_calls[idx]
+        return self._final_answer
+
+    def supports_function_calling(self) -> bool:
+        return True
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 8192
+
+
+class _ReactOnlyLLM(BaseLLM):
+    """Fake LLM that does NOT support function calling."""
+
+    def __init__(self, response="Thought: done\nFinal Answer: hello"):
+        super().__init__(model="fake-react-only-model")
+        self._response = response
+
+    def call(self, messages, **kwargs):
+        return self._response
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return True
+
+    def get_context_window_size(self) -> int:
+        return 8192
+
+
+def test_lite_agent_native_mode_detection_with_fc_llm():
+    """LiteAgent should set _use_native_tools=True when LLM supports function calling and tools exist."""
+    llm = _NativeToolCallLLM(final_answer="done")
+    agent = LiteAgent(
+        role="Tester", goal="Test", backstory="Test agent",
+        llm=llm, tools=[SecretLookupTool()],
+    )
+    agent.kickoff("test")
+    assert agent._use_native_tools is True
+
+
+def test_lite_agent_native_mode_detection_without_fc_llm():
+    """LiteAgent should set _use_native_tools=False when LLM does not support function calling."""
+    llm = _ReactOnlyLLM()
+    agent = LiteAgent(
+        role="Tester", goal="Test", backstory="Test agent",
+        llm=llm, tools=[SecretLookupTool()],
+    )
+    agent.kickoff("test")
+    assert agent._use_native_tools is False
+
+
+def test_lite_agent_native_mode_detection_no_tools():
+    """LiteAgent should set _use_native_tools=False when there are no tools."""
+    llm = _NativeToolCallLLM(final_answer="no tools needed")
+    agent = LiteAgent(
+        role="Tester", goal="Test", backstory="Test agent",
+        llm=llm, tools=[],
+    )
+    agent.kickoff("test")
+    assert agent._use_native_tools is False
+
+
+def test_lite_agent_native_mode_system_prompt_has_no_react_instructions():
+    """In native mode the system prompt should NOT contain ReAct Action/Action Input instructions."""
+    llm = _NativeToolCallLLM(final_answer="result")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute things", backstory="A math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent.kickoff("What is 1+1?")
+
+    system_msg = agent._messages[0]
+    assert system_msg["role"] == "system"
+    content = system_msg["content"]
+    assert "Action:" not in content
+    assert "Action Input:" not in content
+    assert "Observation:" not in content
+    assert "Calculator" in content
+    assert "Compute things" in content
+
+
+def test_lite_agent_react_mode_system_prompt_has_react_instructions():
+    """In ReAct mode the system prompt SHOULD contain Action/Action Input instructions."""
+    llm = _ReactOnlyLLM()
+    agent = LiteAgent(
+        role="Calculator", goal="Compute things", backstory="A math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent.kickoff("What is 1+1?")
+
+    system_msg = agent._messages[0]
+    content = system_msg["content"]
+    assert "Action:" in content
+    assert "Action Input:" in content
+
+
+def _make_openai_tool_call(call_id, name, arguments):
+    """Helper to create an OpenAI-style tool call object."""
+    tc = Mock()
+    tc.id = call_id
+    func = Mock()
+    func.name = name
+    func.arguments = arguments
+    tc.function = func
+    return tc
+
+
+def test_lite_agent_native_tool_execution():
+    """Verify LiteAgent executes native tool calls and feeds results back to the LLM."""
+    tool_call = [_make_openai_tool_call("call_1", "calculate", '{"expression": "6*7"}')]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="The answer is 42")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    result = agent.kickoff("What is 6 * 7?")
+
+    assert "42" in result.raw
+    assert len(agent.tools_results) == 1
+    assert agent.tools_results[0]["tool_name"] == "calculate"
+
+
+def test_lite_agent_native_parallel_tool_calls():
+    """When LLM returns multiple tool calls, they should all be executed."""
+    tool_calls = [
+        _make_openai_tool_call("call_1", "calculate", '{"expression": "2+3"}'),
+        _make_openai_tool_call("call_2", "calculate", '{"expression": "4+5"}'),
+    ]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_calls], final_answer="5 and 9")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    result = agent.kickoff("What is 2+3 and 4+5?")
+
+    assert len(agent.tools_results) == 2
+    tool_names = [r["tool_name"] for r in agent.tools_results]
+    assert tool_names == ["calculate", "calculate"]
+
+    tool_messages = [m for m in agent._messages if m.get("role") == "tool"]
+    assert len(tool_messages) == 2
+
+    assistant_tc_messages = [
+        m for m in agent._messages
+        if m.get("role") == "assistant" and m.get("tool_calls")
+    ]
+    assert len(assistant_tc_messages) == 1
+    assert len(assistant_tc_messages[0]["tool_calls"]) == 2
+
+
+def test_lite_agent_native_tool_usage_count_no_double_increment():
+    """current_usage_count must increment exactly once per native tool call.
+
+    BaseTool.run() already increments the counter internally, so the native
+    tool call handler must not add a second increment.
+    """
+    tool_call = [_make_openai_tool_call("call_1", "calculate", '{"expression": "1+1"}')]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="2")
+    calc_tool = CalculatorTool()
+    assert calc_tool.current_usage_count == 0
+
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[calc_tool],
+    )
+    agent.kickoff("What is 1+1?")
+
+    assert calc_tool.current_usage_count == 1
+
+
+def test_lite_agent_native_tool_max_usage_count_respected():
+    """A tool with max_usage_count=1 should be usable exactly once, not blocked after 1 call."""
+    call_round_1 = [_make_openai_tool_call("c1", "calculate", '{"expression": "1+1"}')]
+    call_round_2 = [_make_openai_tool_call("c2", "calculate", '{"expression": "2+2"}')]
+
+    llm = _NativeToolCallLLM(
+        tool_calls=[call_round_1, call_round_2], final_answer="done"
+    )
+    calc_tool = CalculatorTool()
+    calc_tool.max_usage_count = 2
+
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[calc_tool],
+    )
+    agent.kickoff("Compute 1+1 then 2+2")
+
+    executed = [r for r in agent.tools_results if "usage limit" not in r["result"]]
+    assert len(executed) == 2
+    assert calc_tool.current_usage_count == 2
+
+
+def test_lite_agent_native_tool_calls_with_after_llm_hook():
+    """Native tool calls must be processed even when after_llm_call hooks are active.
+
+    Regression test: _setup_after_llm_call_hooks was converting the list of
+    tool calls to a string via str(), causing isinstance(answer, list) to fail
+    in _invoke_loop_native_tools and silently returning the stringified list as
+    the agent's final answer.
+    """
+    hook_called = {"count": 0}
+
+    def after_hook(context):
+        hook_called["count"] += 1
+        return None
+
+    tool_call = [_make_openai_tool_call("call_1", "calculate", '{"expression": "6*7"}')]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="The answer is 42")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent._after_llm_call_hooks.append(after_hook)
+
+    result = agent.kickoff("What is 6 * 7?")
+
+    assert hook_called["count"] >= 1
+    assert len(agent.tools_results) == 1
+    assert agent.tools_results[0]["tool_name"] == "calculate"
+    assert "42" in result.raw
+
+
+def test_lite_agent_native_parallel_tool_calls_with_after_llm_hook():
+    """Multiple native tool calls in a single response must work with hooks active."""
+    hook_called = {"count": 0}
+
+    def after_hook(context):
+        hook_called["count"] += 1
+        return None
+
+    tool_calls = [
+        _make_openai_tool_call("call_1", "calculate", '{"expression": "2+3"}'),
+        _make_openai_tool_call("call_2", "calculate", '{"expression": "4+5"}'),
+    ]
+
+    llm = _NativeToolCallLLM(tool_calls=[tool_calls], final_answer="5 and 9")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[CalculatorTool()],
+    )
+    agent._after_llm_call_hooks.append(after_hook)
+
+    result = agent.kickoff("What is 2+3 and 4+5?")
+
+    assert hook_called["count"] >= 1
+    assert len(agent.tools_results) == 2
+    tool_names = [r["tool_name"] for r in agent.tools_results]
+    assert tool_names == ["calculate", "calculate"]
+
+
+def test_lite_agent_native_duplicate_tool_names_resolved():
+    """Two tools with the same sanitized name should both be usable via dedup suffixes.
+
+    convert_tools_to_openai_schema renames duplicates (e.g. calculate -> calculate_2).
+    The original_tools_by_name mapping must honour these deduplicated names so
+    result_as_answer, max_usage_count, and usage tracking work for every tool.
+    """
+    tool_a = CalculatorTool()
+    tool_a.result_as_answer = True
+
+    tool_b = CalculatorTool()
+
+    tool_call = [
+        _make_openai_tool_call("c1", "calculate_2", '{"expression": "9+1"}'),
+    ]
+    llm = _NativeToolCallLLM(tool_calls=[tool_call], final_answer="fallback")
+    agent = LiteAgent(
+        role="Calculator", goal="Compute", backstory="Math agent",
+        llm=llm, tools=[tool_a, tool_b],
+    )
+    result = agent.kickoff("What is 9+1?")
+
+    assert len(agent.tools_results) == 1
+    assert agent.tools_results[0]["tool_name"] == "calculate_2"
+    assert "10" in agent.tools_results[0]["result"]

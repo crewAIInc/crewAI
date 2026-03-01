@@ -1245,25 +1245,33 @@ def _setup_before_llm_call_hooks(
 
 def _setup_after_llm_call_hooks(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
-    answer: str | BaseModel,
+    answer: str | BaseModel | list[Any],
     printer: Printer,
     verbose: bool = True,
-) -> str | BaseModel:
+) -> str | BaseModel | list[Any]:
     """Setup and invoke after_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
-        answer: The LLM response (string or Pydantic model).
+        answer: The LLM response (string, Pydantic model, or list of native
+            tool calls).
         printer: Printer instance for error logging.
         verbose: Whether to print output.
 
     Returns:
-        The potentially modified response (string or Pydantic model).
+        The potentially modified response. List-type answers (native tool
+        calls) are always returned unchanged so that callers can rely on
+        ``isinstance(answer, list)`` checks.
     """
     if executor_context and executor_context.after_llm_call_hooks:
         from crewai.hooks.llm_hooks import LLMCallHookContext
 
         original_messages = executor_context.messages
+
+        # Native tool-call lists must survive hooks unchanged.  We provide a
+        # stringified representation to hook context for observability but
+        # always return the original list so callers can detect tool calls.
+        is_tool_call_list = isinstance(answer, list)
 
         # For Pydantic models, serialize to JSON for hooks
         if isinstance(answer, BaseModel):
@@ -1302,6 +1310,9 @@ def _setup_after_llm_call_hooks(
                 executor_context.messages = original_messages
             else:
                 executor_context.messages = []
+
+        if is_tool_call_list:
+            return answer
 
         # If hooks modified the response, update answer accordingly
         if pydantic_answer is not None:
