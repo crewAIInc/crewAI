@@ -92,6 +92,8 @@ class SandboxPython:
         "__subclasses__",
         "__mro__",
         "__qualname__",
+        "__getattribute__",
+        "__getattr__",
     }
 
     @staticmethod
@@ -409,10 +411,13 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            subprocess.run(
-                ["pip", "install", library],  # noqa: S607
-                check=True,
-            )
+            try:
+                subprocess.run(
+                    ["pip", "install", library],  # noqa: S607
+                    check=True,
+                )
+            except subprocess.CalledProcessError as e:
+                return f"Failed to install library '{library}': {e}"
 
         # Execute the code
         try:
