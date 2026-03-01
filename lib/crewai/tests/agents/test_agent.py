@@ -2353,3 +2353,32 @@ def test_agent_without_apps_no_platform_tools():
 
     tools = crew._prepare_tools(agent, task, [])
     assert tools == []
+
+
+@patch("crewai.agent.core.Agent.get_mcp_tools")
+@patch("crewai.agent.core.Agent.get_platform_tools")
+def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp):
+    """Regression test: Agent with apps/mcps but tools=None should not raise.
+
+    Before the fix, Agent.tools was None when not explicitly passed, and
+    extending None raised AttributeError when apps or mcps were present.
+    """
+    mock_platform_tool = MagicMock(spec=["name"])
+    mock_platform_tool.name = "platform_tool"
+    mock_get_platform.return_value = [mock_platform_tool]
+
+    mock_mcp_tool = MagicMock(spec=["name"])
+    mock_mcp_tool.name = "mcp_tool"
+    mock_get_mcp.return_value = [mock_mcp_tool]
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        apps=["test_app"],
+        mcps=["test_mcp"],
+        tools=None,
+    )
+
+    assert agent.tools is not None
+    assert len(agent.tools) == 2
