@@ -1154,7 +1154,7 @@ class Agent(BaseAgent):
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
         # Process platform apps and MCP tools
-        if (self.apps or self.mcps) and self.tools is None:
+        if self.tools is None:
             self.tools = []
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)

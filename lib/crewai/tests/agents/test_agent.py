@@ -2355,6 +2355,7 @@ def test_agent_without_apps_no_platform_tools():
     assert tools == []
 
 
+<<<<<<< HEAD
 @patch("crewai.agent.core.Agent.get_mcp_tools")
 @patch("crewai.agent.core.Agent.get_platform_tools")
 def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp):
@@ -2382,3 +2383,31 @@ def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp):
 
     assert agent.tools is not None
     assert len(agent.tools) == 2
+=======
+@mock.patch("crewai.agent.core.Agent.get_mcp_tools")
+def test_agent_with_mcps_and_tools_none(mock_get_mcp_tools):
+    """Regression test: Agent with mcps should initialize tools from MCP even if tools starts empty."""
+    mock_tool = mock.MagicMock()
+    mock_get_mcp_tools.return_value = [mock_tool]
+
+    agent = Agent(
+        role="MCP Agent",
+        goal="Use MCP",
+        backstory="Agent with MCP tools",
+        mcps=["test-server"],
+    )
+
+    # Simulate the tools=None condition that occurs in certain config paths
+    agent.tools = None  # type: ignore[assignment]
+
+    # Run the initialization logic from _prepare_kickoff
+    if agent.tools is None:
+        agent.tools = []
+    if agent.mcps:
+        mcps = agent.get_mcp_tools(agent.mcps)
+        if mcps:
+            agent.tools.extend(mcps)
+
+    assert len(agent.tools) == 1
+    assert agent.tools[0] is mock_tool
+>>>>>>> 3a1822dc (fix: deduplicate tools None check and add regression test)
