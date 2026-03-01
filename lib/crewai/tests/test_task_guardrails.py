@@ -780,9 +780,9 @@ def test_guardrail_pydantic_output_available_on_first_attempt():
     class MyOutput(PydanticBaseModel):
         message: str
 
-    pydantic_values: list = []
+    pydantic_values: list[MyOutput | None] = []
 
-    def guardrail(result: TaskOutput):
+    def guardrail(result: TaskOutput) -> tuple[bool, TaskOutput]:
         pydantic_values.append(result.pydantic)
         return (True, result)
 

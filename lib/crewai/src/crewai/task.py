@@ -599,7 +599,10 @@ class Task(BaseModel):
                     json_output = None
             else:
                 raw = result
-                pydantic_output, json_output = self._export_output(result)
+                try:
+                    pydantic_output, json_output = self._export_output(result)
+                except Exception:
+                    pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
@@ -710,7 +713,10 @@ class Task(BaseModel):
                     json_output = None
             else:
                 raw = result
-                pydantic_output, json_output = self._export_output(result)
+                try:
+                    pydantic_output, json_output = self._export_output(result)
+                except Exception:
+                    pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
