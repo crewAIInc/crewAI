@@ -131,8 +131,6 @@ units:
       token_estimate: 11000
       load_strategy: lazy
       priority: medium
-      summary_available: true
-      summary_unit: agents-tasks-tldr
 
   - id: crews
     path: docs/en/concepts/crews.mdx
@@ -263,8 +261,6 @@ units:
       token_estimate: 8000
       load_strategy: lazy
       priority: medium
-      summary_available: true
-      summary_unit: tools-memory-tldr
 
   - id: llms
     path: docs/en/concepts/llms.mdx
@@ -340,3 +336,18 @@ units:
       token_estimate: 6000
       load_strategy: lazy
       priority: low
+
+relationships:
+  # agents-tasks-tldr is the declared summary for agents (summary_of: agents).
+  # It also covers tasks conceptually; link via context so agents discover it
+  # when starting from the tasks unit.
+  - from: agents-tasks-tldr
+    to: tasks
+    type: context
+
+  # tools-memory-tldr is the declared summary for tools (summary_of: tools).
+  # It also covers memory conceptually; link via context so agents discover it
+  # when starting from the memory unit.
+  - from: tools-memory-tldr
+    to: memory
+    type: context
