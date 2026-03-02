@@ -17,6 +17,27 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
+def build_schema_hint(args_schema: type[BaseModel]) -> str:
+    """Build a human-readable hint from a Pydantic model's JSON schema.
+
+    Args:
+        args_schema: The Pydantic model class to extract schema from.
+
+    Returns:
+        A formatted string with expected arguments and required fields,
+        or empty string if schema extraction fails.
+    """
+    try:
+        schema = args_schema.model_json_schema()
+        return (
+            f"\nExpected arguments: "
+            f"{json.dumps(schema.get('properties', {}))}"
+            f"\nRequired: {json.dumps(schema.get('required', []))}"
+        )
+    except Exception:
+        return ""
+
+
 class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
@@ -208,7 +229,8 @@ class CrewStructuredTool:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
         except Exception as e:
-            raise ValueError(f"Arguments validation failed: {e}") from e
+            hint = build_schema_hint(self.args_schema)
+            raise ValueError(f"Arguments validation failed: {e}{hint}") from e
 
     async def ainvoke(
         self,
