@@ -26,6 +26,7 @@ from crewai.events.types.llm_events import (
     LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
+    LLMThinkingChunkEvent,
 )
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
@@ -460,6 +461,35 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 call_type=call_type,
+                response_id=response_id,
+                call_id=get_current_call_id(),
+            ),
+        )
+
+    def _emit_thinking_chunk_event(
+        self,
+        chunk: str,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        """Emit thinking/reasoning chunk event from a thinking model.
+
+        Args:
+            chunk: The thinking text content.
+            from_task: The task that initiated the call.
+            from_agent: The agent that initiated the call.
+            response_id: Unique ID for a particular LLM response.
+        """
+        if not hasattr(crewai_event_bus, "emit"):
+            raise ValueError("crewai_event_bus does not have an emit method") from None
+
+        crewai_event_bus.emit(
+            self,
+            event=LLMThinkingChunkEvent(
+                chunk=chunk,
+                from_task=from_task,
+                from_agent=from_agent,
                 response_id=response_id,
                 call_id=get_current_call_id(),
             ),
