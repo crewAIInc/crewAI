@@ -67,7 +67,7 @@ class TraceBatchManager:
                 api_key=get_auth_token(),
             )
         except AuthError:
-            self.plus_api = PlusAPI(api_key="")
+            self.plus_api = PlusAPI()
         self.ephemeral_trace_url = None
 
     def initialize_batch(

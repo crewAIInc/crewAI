@@ -22,14 +22,15 @@ class PlusAPI:
     EPHEMERAL_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
     INTEGRATIONS_RESOURCE = "/crewai_plus/api/v1/integrations"
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key
         self.headers = {
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "User-Agent": f"CrewAI-CLI/{get_crewai_version()}",
             "X-Crewai-Version": get_crewai_version(),
         }
+        if api_key:
+            self.headers["Authorization"] = f"Bearer {api_key}"
         settings = Settings()
         if settings.org_uuid:
             self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
