@@ -1,0 +1,333 @@
+---
+title: Governance Middleware
+description: Enforce structural authority separation for autonomous agent execution using CrewAI's hooks system.
+icon: shield-check
+mode: "wide"
+---
+
+## The Problem: Authority Collapse in Multi-Agent Systems
+
+When a CrewAI crew runs autonomously, every tool call follows the same authority path: the agent proposes an action, the agent decides whether to take it, and the agent executes it. There is no structural boundary between intent, authorization, and execution.
+
+This is distinct from prompt engineering or content filtering. Those address *what* an agent says. Governance addresses *who authorizes* each action. Today the answer is: the same entity that proposed it.
+
+### Why This Matters for Crews
+
+1. **Delegation has no authorization boundary.** When an orchestrator agent delegates work via `DelegateWorkTool`, the receiving agent inherits full tool access with no policy check at the handoff.
+2. **Scope creep is invisible.** An agent tasked with "research competitors" might call a web scraping tool, write files outside the project directory, or invoke APIs the user didn't intend. None of these are malicious, but each exceeds the intended authorization scope.
+3. **Behavioral guardrails don't address architecture.** Blocklists and output classifiers catch dangerous content. They don't catch legitimate tool calls that exceed the user's intended scope.
+
+## Solution: PROPOSE / DECIDE / PROMOTE
+
+The core idea is simple: **the entity that proposes an action must not be the same entity that authorizes it.**
+
+CrewAI's `before_tool_call` hook is the exact interposition point. It fires before every tool execution, has full context (tool name, input, agent, task, crew), can modify inputs in-place, and can block execution by returning `False`.
+
+```python
+from crewai.hooks import before_tool_call, ToolCallHookContext
+```
+
+The governance middleware implements three phases:
+
+| Phase | What Happens | Who Decides |
+|-------|-------------|-------------|
+| **PROPOSE** | Convert tool call into a structured intent with SHA-256 hash | Automatic |
+| **DECIDE** | Evaluate intent against deterministic policy rules | Policy (not the agent) |
+| **PROMOTE** | Execute if approved, block if denied, escalate if uncertain | Verdict |
+
+## Complete Implementation
+
+### Step 1: Define Policies
+
+Policies are plain Python dicts (or load from YAML/JSON). Each rule specifies which agents can use which tools, with optional argument constraints.
+
+```python
+GOVERNANCE_POLICY = {
+    "default": "escalate",  # What to do when no rule matches
+    "rules": [
+        {
+            "agent_roles": ["Researcher"],
+            "allowed_tools": ["search", "web_scrape", "read_file"],
+            "denied_tools": ["write_file", "execute_code", "delegate_work"],
+        },
+        {
+            "agent_roles": ["Writer"],
+            "allowed_tools": ["read_file", "write_file"],
+            "denied_tools": ["execute_code", "web_scrape"],
+            "constraints": {
+                "write_file": {
+                    "path_prefix": "./output/",  # Can only write to output/
+                }
+            },
+        },
+        {
+            "agent_roles": ["Developer"],
+            "allowed_tools": ["read_file", "write_file", "execute_code"],
+            "denied_tools": [],
+            "constraints": {
+                "execute_code": {
+                    "blocked_patterns": ["rm -rf", "sudo", "curl | sh"],
+                }
+            },
+        },
+    ],
+}
+```
+
+### Step 2: Build the Governance Hook
+
+```python
+import hashlib
+import json
+import time
+from pathlib import Path
+from crewai.hooks import before_tool_call, after_tool_call
+from crewai.hooks.tool_hooks import ToolCallHookContext
+
+
+# --- Witness Log ---
+
+class WitnessLog:
+    """Append-only, hash-chained audit trail."""
+
+    def __init__(self, log_dir: str = "./governance_logs"):
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_file = self.log_dir / "witness.jsonl"
+        self.prev_hash = "0" * 64  # Genesis hash
+
+    def record(self, entry: dict) -> str:
+        entry["prev_hash"] = self.prev_hash
+        entry["timestamp"] = time.time()
+        payload = json.dumps(entry, sort_keys=True)
+        entry_hash = hashlib.sha256(payload.encode()).hexdigest()
+        entry["hash"] = entry_hash
+        with open(self.log_file, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+        self.prev_hash = entry_hash
+        return entry_hash
+
+
+WITNESS = WitnessLog()
+
+
+# --- PROPOSE Phase ---
+
+def propose(context: ToolCallHookContext) -> dict:
+    """Convert a tool call into a structured, hashable intent."""
+    intent = {
+        "tool": context.tool_name,
+        "input": dict(context.tool_input),  # Snapshot (don't alias the mutable dict)
+        "agent_role": getattr(context.agent, "role", "unknown"),
+        "task": str(getattr(context.task, "description", ""))[:200],
+    }
+    intent_bytes = json.dumps(intent, sort_keys=True).encode()
+    intent["content_hash"] = hashlib.sha256(intent_bytes).hexdigest()
+    return intent
+
+
+# --- DECIDE Phase ---
+
+def decide(intent: dict, policy: dict) -> str:
+    """Pure function: (intent, policy) → 'approve' | 'deny' | 'escalate'.
+
+    No LLM involvement. No interpretation ambiguity.
+    """
+    agent_role = intent["agent_role"]
+    tool_name = intent["tool"]
+
+    for rule in policy["rules"]:
+        if agent_role not in rule["agent_roles"]:
+            continue
+
+        # Explicit deny takes priority
+        if tool_name in rule.get("denied_tools", []):
+            return "deny"
+
+        # Check if tool is in allowed list
+        if tool_name in rule.get("allowed_tools", []):
+            # Check argument constraints
+            constraints = rule.get("constraints", {}).get(tool_name, {})
+            if not _check_constraints(intent["input"], constraints):
+                return "deny"
+            return "approve"
+
+        # Tool not in either list for this role
+        return policy.get("default", "escalate")
+
+    # No matching rule for this agent role
+    return policy.get("default", "escalate")
+
+
+def _check_constraints(tool_input: dict, constraints: dict) -> bool:
+    """Evaluate argument-level constraints. Returns False if any constraint violated."""
+    if not constraints:
+        return True
+
+    # Path prefix constraint
+    if "path_prefix" in constraints:
+        path = tool_input.get("path", tool_input.get("file_path", ""))
+        if not str(path).startswith(constraints["path_prefix"]):
+            return False
+
+    # Blocked pattern constraint
+    if "blocked_patterns" in constraints:
+        input_str = json.dumps(tool_input).lower()
+        for pattern in constraints["blocked_patterns"]:
+            if pattern.lower() in input_str:
+                return False
+
+    return True
+
+
+# --- PROMOTE Phase (the hook) ---
+
+@before_tool_call()
+def governance_gate(context: ToolCallHookContext) -> bool | None:
+    """Governance middleware: PROPOSE → DECIDE → PROMOTE.
+
+    Returns False to block execution, None to allow.
+    """
+    # PROPOSE
+    intent = propose(context)
+
+    # DECIDE
+    verdict = decide(intent, GOVERNANCE_POLICY)
+
+    # PROMOTE
+    if verdict == "approve":
+        WITNESS.record({
+            "phase": "promote",
+            "verdict": "approved",
+            "intent_hash": intent["content_hash"],
+            "tool": intent["tool"],
+            "agent": intent["agent_role"],
+        })
+        return None  # Allow execution
+
+    elif verdict == "deny":
+        WITNESS.record({
+            "phase": "promote",
+            "verdict": "denied",
+            "intent_hash": intent["content_hash"],
+            "tool": intent["tool"],
+            "agent": intent["agent_role"],
+        })
+        return False  # Block execution
+
+    else:  # escalate
+        response = context.request_human_input(
+            f"Agent '{intent['agent_role']}' wants to use '{intent['tool']}' "
+            f"with input: {json.dumps(intent['input'], indent=2)}\n"
+            f"Approve? (yes/no)"
+        )
+        approved = response.strip().lower() in ("yes", "y", "")
+        WITNESS.record({
+            "phase": "promote",
+            "verdict": "approved_by_human" if approved else "denied_by_human",
+            "intent_hash": intent["content_hash"],
+            "tool": intent["tool"],
+            "agent": intent["agent_role"],
+        })
+        return None if approved else False
+
+
+@after_tool_call()
+def governance_audit(context: ToolCallHookContext) -> str | None:
+    """Log tool results to witness trail. Does not modify output."""
+    WITNESS.record({
+        "phase": "audit",
+        "tool": context.tool_name,
+        "agent": getattr(context.agent, "role", "unknown"),
+        "result_hash": hashlib.sha256(
+            (context.tool_result or "").encode()
+        ).hexdigest(),
+    })
+    return None  # Don't modify the result
+```
+
+### Step 3: Use It in a Crew
+
+The hooks are global — they activate automatically once imported. Just import the governance module before running your crew.
+
+```python
+# governance_config.py — import this before crew.kickoff()
+import governance_middleware  # Registers hooks on import
+
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find information about competitors",
+    backstory="You are a thorough market researcher.",
+)
+
+writer = Agent(
+    role="Writer",
+    goal="Write a report based on research findings",
+    backstory="You are a professional report writer.",
+)
+
+research_task = Task(
+    description="Research the top 3 competitors in the AI agent space.",
+    agent=researcher,
+    expected_output="A summary of competitor features and positioning.",
+)
+
+report_task = Task(
+    description="Write a competitive analysis report.",
+    agent=writer,
+    expected_output="A formatted report with executive summary.",
+)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, report_task],
+)
+
+result = crew.kickoff()
+```
+
+With governance active:
+- The **Researcher** can search and scrape but cannot write files or execute code
+- The **Writer** can read and write files but only under `./output/`
+- Any unrecognized tool call escalates to the human operator
+- Every verdict is hash-chained in `governance_logs/witness.jsonl`
+
+## Verifying the Witness Log
+
+The hash chain makes tampering detectable. Each entry's `prev_hash` must match the preceding entry's `hash`:
+
+```python
+import json
+import hashlib
+
+def verify_witness_log(log_path: str) -> bool:
+    prev_hash = "0" * 64
+    with open(log_path) as f:
+        for i, line in enumerate(f):
+            entry = json.loads(line)
+            recorded_hash = entry.pop("hash")
+            if entry["prev_hash"] != prev_hash:
+                print(f"Chain broken at entry {i}")
+                return False
+            payload = json.dumps(entry, sort_keys=True)
+            computed = hashlib.sha256(payload.encode()).hexdigest()
+            if computed != recorded_hash:
+                print(f"Hash mismatch at entry {i}")
+                return False
+            prev_hash = recorded_hash
+    print(f"Witness log verified: {i + 1} entries, chain intact.")
+    return True
+```
+
+## Design Principles
+
+1. **Deterministic decisions.** The `decide()` function is a pure function — same intent and policy always produce the same verdict. No LLM in the authorization path.
+2. **Fail-closed.** When no rule matches, the default is `escalate`, not `approve`. Unknown actions require human authorization.
+3. **Separation of concerns.** The agent proposes, the policy decides, the hook promotes. No single entity holds all three authorities.
+4. **Audit everything.** The hash-chained witness log records every verdict. Chain integrity is independently verifiable.
+
+## Going Further
+
+For a more complete implementation with YAML policy files, multiple policy presets, adversarial test coverage, and framework-agnostic architecture, see [Governance-Guard](https://github.com/MetaCortex-Dynamics/governance-guard).
