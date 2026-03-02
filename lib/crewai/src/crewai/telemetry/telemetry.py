@@ -173,6 +173,16 @@ class Telemetry:
 
         self._original_handlers: dict[int, Any] = {}
 
+        # Signal handlers can only be registered from the main thread.
+        # Skip signal registration (but keep atexit handler) when not in main thread.
+        # This is common in frameworks like Streamlit, Flask, Django, Jupyter, etc.
+        if threading.current_thread() is not threading.main_thread():
+            logger.debug(
+                "Skipping signal handler registration (not running in main thread). "
+                "Telemetry will still be flushed via atexit handler."
+            )
+            return
+
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
         if hasattr(signal, "SIGHUP"):
@@ -212,13 +222,14 @@ class Telemetry:
                     raise SystemExit(0)
 
             signal.signal(sig, handler)
-        except ValueError as e:
-            logger.warning(
-                f"Cannot register {sig.name} handler: not running in main thread",
-                exc_info=e,
+        except ValueError:
+            # This can happen if we're not in the main thread (edge case not caught
+            # by the main thread check, e.g., in nested interpreters)
+            logger.debug(
+                f"Cannot register {sig.name} handler: not running in main thread"
             )
         except OSError as e:
-            logger.warning(f"Cannot register {sig.name} handler: {e}", exc_info=e)
+            logger.debug(f"Cannot register {sig.name} handler: {e}")
 
     def _shutdown(self) -> None:
         """Flush and shutdown the telemetry provider on process exit.
