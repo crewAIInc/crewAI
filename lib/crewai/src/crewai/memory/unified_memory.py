@@ -6,7 +6,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 import threading
 import time
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
@@ -21,7 +21,6 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
 from crewai.memory.recall_flow import RecallFlow
 from crewai.memory.storage.backend import StorageBackend
-from crewai.memory.storage.lancedb_storage import LanceDBStorage
 from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
@@ -30,13 +29,20 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_text,
 )
+from crewai.rag.embeddings.factory import build_embedder
+from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 
 
-def _default_embedder() -> Any:
+if TYPE_CHECKING:
+    from chromadb.utils.embedding_functions.openai_embedding_function import (
+        OpenAIEmbeddingFunction,
+    )
+
+
+def _default_embedder() -> OpenAIEmbeddingFunction:
     """Build default OpenAI embedder for memory."""
-    from crewai.rag.embeddings.factory import build_embedder
-
-    return build_embedder({"provider": "openai", "config": {}})
+    spec: OpenAIProviderSpec = {"provider": "openai", "config": {}}
+    return build_embedder(spec)
 
 
 class Memory:
@@ -88,6 +94,10 @@ class Memory:
         # Queries shorter than this skip LLM analysis (saving ~1-3s).
         # Longer queries (full task descriptions) benefit from LLM distillation.
         query_analysis_threshold: int = 200,
+        # When True, all write operations (remember, remember_many) are silently
+        # skipped. Useful for sharing a read-only view of memory across agents
+        # without any of them persisting new memories.
+        read_only: bool = False,
     ) -> None:
         """Initialize Memory.
 
@@ -107,7 +117,9 @@ class Memory:
             complex_query_threshold: For complex queries, explore deeper below this confidence.
             exploration_budget: Number of LLM-driven exploration rounds during deep recall.
             query_analysis_threshold: Queries shorter than this skip LLM analysis during deep recall.
+            read_only: If True, remember() and remember_many() are silent no-ops.
         """
+        self._read_only = read_only
         self._config = MemoryConfig(
             recency_weight=recency_weight,
             semantic_weight=semantic_weight,
@@ -130,14 +142,15 @@ class Memory:
         self._llm_instance: BaseLLM | None = None if isinstance(llm, str) else llm
         self._embedder_config: Any = embedder
         self._embedder_instance: Any = (
-            embedder if (embedder is not None and not isinstance(embedder, dict)) else None
+            embedder
+            if (embedder is not None and not isinstance(embedder, dict))
+            else None
         )
 
-        # Storage is initialized eagerly (local, no API key needed).
-        if storage == "lancedb":
-            self._storage = LanceDBStorage()
-        elif isinstance(storage, str):
-            self._storage = LanceDBStorage(path=storage)
+        if isinstance(storage, str):
+            from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+            self._storage = LanceDBStorage() if storage == "lancedb" else LanceDBStorage(path=storage)
         else:
             self._storage = storage
 
@@ -160,12 +173,17 @@ class Memory:
             from crewai.llm import LLM
 
             try:
-                self._llm_instance = LLM(model=self._llm_config)
+                model_name = (
+                    self._llm_config
+                    if isinstance(self._llm_config, str)
+                    else str(self._llm_config)
+                )
+                self._llm_instance = LLM(model=model_name)
             except Exception as e:
                 raise RuntimeError(
                     f"Memory requires an LLM for analysis but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    '  - Set OPENAI_API_KEY for the default model (gpt-4o-mini)\n'
+                    "  - Set OPENAI_API_KEY for the default model (gpt-4o-mini)\n"
                     '  - Pass a different model: Memory(llm="anthropic/claude-3-haiku-20240307")\n'
                     '  - Pass any LLM instance: Memory(llm=LLM(model="your-model"))\n'
                     "  - To skip LLM analysis, pass all fields explicitly to remember()\n"
@@ -180,8 +198,6 @@ class Memory:
         if self._embedder_instance is None:
             try:
                 if isinstance(self._embedder_config, dict):
-                    from crewai.rag.embeddings.factory import build_embedder
-
                     self._embedder_instance = build_embedder(self._embedder_config)
                 else:
                     self._embedder_instance = _default_embedder()
@@ -224,22 +240,30 @@ class Memory:
         return future
 
     def _on_save_done(self, future: Future[Any]) -> None:
-        """Remove a completed future from the pending list and emit failure event if needed."""
-        with self._pending_lock:
-            try:
-                self._pending_saves.remove(future)
-            except ValueError:
-                pass  # already removed
-        exc = future.exception()
-        if exc is not None:
-            crewai_event_bus.emit(
-                self,
-                MemorySaveFailedEvent(
-                    value="background save",
-                    error=str(exc),
-                    source_type="unified_memory",
-                ),
-            )
+        """Remove a completed future from the pending list and emit failure event if needed.
+
+        This callback must never raise -- it runs from the thread pool's
+        internal machinery during process shutdown when executors and the
+        event bus may already be closed.
+        """
+        try:
+            with self._pending_lock:
+                try:
+                    self._pending_saves.remove(future)
+                except ValueError:
+                    pass  # already removed
+            exc = future.exception()
+            if exc is not None:
+                crewai_event_bus.emit(
+                    self,
+                    MemorySaveFailedEvent(
+                        value="background save",
+                        error=str(exc),
+                        source_type="unified_memory",
+                    ),
+                )
+        except Exception:  # noqa: S110
+            pass  # swallow everything during shutdown
 
     def drain_writes(self) -> None:
         """Block until all pending background saves have completed.
@@ -309,7 +333,7 @@ class Memory:
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
-    ) -> MemoryRecord:
+    ) -> MemoryRecord | None:
         """Store a single item in memory (synchronous).
 
         Routes through the same serialized save pool as ``remember_many``
@@ -327,11 +351,13 @@ class Memory:
             agent_role: Optional agent role for event metadata.
 
         Returns:
-            The created MemoryRecord.
+            The created MemoryRecord, or None if this memory is read-only.
 
         Raises:
             Exception: On save failure (events emitted).
         """
+        if self._read_only:
+            return None
         _source_type = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -348,7 +374,13 @@ class Memory:
             # then immediately wait for the result.
             future = self._submit_save(
                 self._encode_batch,
-                [content], scope, categories, metadata, importance, source, private,
+                [content],
+                scope,
+                categories,
+                metadata,
+                importance,
+                source,
+                private,
             )
             records = future.result()
             record = records[0] if records else None
@@ -412,13 +444,19 @@ class Memory:
         Returns:
             Empty list (records are not available until the background save completes).
         """
-        if not contents:
+        if not contents or self._read_only:
             return []
 
         self._submit_save(
             self._background_encode_batch,
-            contents, scope, categories, metadata,
-            importance, source, private, agent_role,
+            contents,
+            scope,
+            categories,
+            metadata,
+            importance,
+            source,
+            private,
+            agent_role,
         )
         return []
 
@@ -437,30 +475,49 @@ class Memory:
 
         Both started and completed events are emitted here (in the background
         thread) so they pair correctly on the event bus scope stack.
+
+        All ``emit`` calls are wrapped in try/except to handle the case where
+        the event bus shuts down before the background save finishes (e.g.
+        during process exit).
         """
-        crewai_event_bus.emit(
-            self,
-            MemorySaveStartedEvent(
-                value=f"{len(contents)} memories (background)",
-                metadata=metadata,
-                source_type="unified_memory",
-            ),
-        )
-        start = time.perf_counter()
-        records = self._encode_batch(
-            contents, scope, categories, metadata, importance, source, private
-        )
-        elapsed_ms = (time.perf_counter() - start) * 1000
-        crewai_event_bus.emit(
-            self,
-            MemorySaveCompletedEvent(
-                value=f"{len(records)} memories saved",
-                metadata=metadata or {},
-                agent_role=agent_role,
-                save_time_ms=elapsed_ms,
-                source_type="unified_memory",
-            ),
-        )
+        try:
+            crewai_event_bus.emit(
+                self,
+                MemorySaveStartedEvent(
+                    value=f"{len(contents)} memories (background)",
+                    metadata=metadata,
+                    source_type="unified_memory",
+                ),
+            )
+        except RuntimeError:
+            pass  # event bus shut down during process exit
+
+        try:
+            start = time.perf_counter()
+            records = self._encode_batch(
+                contents, scope, categories, metadata, importance, source, private
+            )
+            elapsed_ms = (time.perf_counter() - start) * 1000
+        except RuntimeError:
+            # The encoding pipeline uses asyncio.run() -> to_thread() internally.
+            # If the process is shutting down, the default executor is closed and
+            # to_thread raises "cannot schedule new futures after shutdown".
+            # Silently abandon the save -- the process is exiting anyway.
+            return []
+
+        try:
+            crewai_event_bus.emit(
+                self,
+                MemorySaveCompletedEvent(
+                    value=f"{len(records)} memories saved",
+                    metadata=metadata or {},
+                    agent_role=agent_role,
+                    save_time_ms=elapsed_ms,
+                    source_type="unified_memory",
+                ),
+            )
+        except RuntimeError:
+            pass  # event bus shut down during process exit
         return records
 
     def extract_memories(self, content: str) -> list[str]:
@@ -539,14 +596,13 @@ class Memory:
                     # Privacy filter
                     if not include_private:
                         raw = [
-                            (r, s) for r, s in raw
+                            (r, s)
+                            for r, s in raw
                             if not r.private or r.source == source
                         ]
                     results = []
                     for r, s in raw:
-                        composite, reasons = compute_composite_score(
-                            r, s, self._config
-                        )
+                        composite, reasons = compute_composite_score(r, s, self._config)
                         results.append(
                             MemoryMatch(
                                 record=r,
@@ -712,7 +768,9 @@ class Memory:
             limit: Maximum number of records to return.
             offset: Number of records to skip (for pagination).
         """
-        return self._storage.list_records(scope_prefix=scope, limit=limit, offset=offset)
+        return self._storage.list_records(
+            scope_prefix=scope, limit=limit, offset=offset
+        )
 
     def info(self, path: str = "/") -> ScopeInfo:
         """Return scope info for path."""
@@ -754,7 +812,7 @@ class Memory:
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
-    ) -> MemoryRecord:
+    ) -> MemoryRecord | None:
         """Async remember: delegates to sync for now."""
         return self.remember(
             content,

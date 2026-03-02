@@ -386,6 +386,109 @@ def fetch_crews(module_attr: Any) -> list[Crew]:
     return crew_instances
 
 
+def get_flow_instance(module_attr: Any) -> Flow | None:
+    """Check if a module attribute is a user-defined Flow subclass and return an instance.
+
+    Args:
+        module_attr: An attribute from a loaded module.
+
+    Returns:
+        A Flow instance if the attribute is a valid user-defined Flow subclass,
+        None otherwise.
+    """
+    if (
+        isinstance(module_attr, type)
+        and issubclass(module_attr, Flow)
+        and module_attr is not Flow
+    ):
+        try:
+            return module_attr()
+        except Exception:
+            return None
+    return None
+
+
+_SKIP_DIRS = frozenset(
+    {".venv", "venv", ".git", "__pycache__", "node_modules", ".tox", ".nox"}
+)
+
+
+def get_flows(flow_path: str = "main.py") -> list[Flow]:
+    """Get the flow instances from project files.
+
+    Walks the project directory looking for files matching ``flow_path``
+    (default ``main.py``), loads each module, and extracts Flow subclass
+    instances.  Directories that are clearly not user source code (virtual
+    environments, ``.git``, etc.) are pruned to avoid noisy import errors.
+
+    Args:
+        flow_path: Filename to search for (default ``main.py``).
+
+    Returns:
+        A list of discovered Flow instances.
+    """
+    flow_instances: list[Flow] = []
+    try:
+        current_dir = os.getcwd()
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+
+        src_dir = os.path.join(current_dir, "src")
+        if os.path.isdir(src_dir) and src_dir not in sys.path:
+            sys.path.insert(0, src_dir)
+
+        search_paths = [".", "src"] if os.path.isdir("src") else ["."]
+
+        for search_path in search_paths:
+            for root, dirs, files in os.walk(search_path):
+                dirs[:] = [
+                    d
+                    for d in dirs
+                    if d not in _SKIP_DIRS and not d.startswith(".")
+                ]
+                if flow_path in files and "cli/templates" not in root:
+                    file_os_path = os.path.join(root, flow_path)
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            "flow_module", file_os_path
+                        )
+                        if not spec or not spec.loader:
+                            continue
+
+                        module = importlib.util.module_from_spec(spec)
+                        sys.modules[spec.name] = module
+
+                        try:
+                            spec.loader.exec_module(module)
+
+                            for attr_name in dir(module):
+                                module_attr = getattr(module, attr_name)
+                                try:
+                                    if flow_instance := get_flow_instance(
+                                        module_attr
+                                    ):
+                                        flow_instances.append(flow_instance)
+                                except Exception:  # noqa: S112
+                                    continue
+
+                            if flow_instances:
+                                break
+
+                        except Exception:  # noqa: S112
+                            continue
+
+                    except (ImportError, AttributeError):
+                        continue
+
+            if flow_instances:
+                break
+
+    except Exception:  # noqa: S110
+        pass
+
+    return flow_instances
+
+
 def is_valid_tool(obj: Any) -> bool:
     from crewai.tools.base_tool import Tool
 

@@ -8,11 +8,9 @@ import time
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
     Literal,
     cast,
 )
-from urllib.parse import urlparse
 
 from pydantic import (
     BaseModel,
@@ -61,16 +59,8 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
-from crewai.mcp import (
-    MCPClient,
-    MCPServerConfig,
-    MCPServerHTTP,
-    MCPServerSSE,
-    MCPServerStdio,
-)
-from crewai.mcp.transports.http import HTTPTransport
-from crewai.mcp.transports.sse import SSETransport
-from crewai.mcp.transports.stdio import StdioTransport
+from crewai.mcp import MCPServerConfig
+from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -111,17 +101,7 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-# MCP Connection timeout constants (in seconds)
-MCP_CONNECTION_TIMEOUT: Final[int] = 10
-MCP_TOOL_EXECUTION_TIMEOUT: Final[int] = 30
-MCP_DISCOVERY_TIMEOUT: Final[int] = 15
-MCP_MAX_RETRIES: Final[int] = 3
-
 _passthrough_exceptions: tuple[type[Exception], ...] = ()
-
-# Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
-_mcp_schema_cache: dict[str, Any] = {}
-_cache_ttl: Final[int] = 300  # 5 minutes
 
 
 class Agent(BaseAgent):
@@ -154,7 +134,7 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
-    _mcp_clients: list[Any] = PrivateAttr(default_factory=list)
+    _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
@@ -384,10 +364,10 @@ class Agent(BaseAgent):
                 )
                 if unified_memory is not None:
                     query = task.description
-                    matches = unified_memory.recall(query, limit=10)
+                    matches = unified_memory.recall(query, limit=5)
                     if matches:
                         memory = "Relevant memories:\n" + "\n".join(
-                            f"- {m.record.content}" for m in matches
+                            m.format() for m in matches
                         )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
@@ -622,10 +602,10 @@ class Agent(BaseAgent):
                 )
                 if unified_memory is not None:
                     query = task.description
-                    matches = unified_memory.recall(query, limit=10)
+                    matches = unified_memory.recall(query, limit=5)
                     if matches:
                         memory = "Relevant memories:\n" + "\n".join(
-                            f"- {m.record.content}" for m in matches
+                            m.format() for m in matches
                         )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
@@ -864,7 +844,11 @@ class Agent(BaseAgent):
                 respect_context_window=self.respect_context_window,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
-                response_model=task.response_model if task else None,
+                response_model=(
+                    task.response_model or task.output_pydantic or task.output_json
+                )
+                if task
+                else None,
             )
 
     def _update_executor_parameters(
@@ -893,7 +877,11 @@ class Agent(BaseAgent):
         self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
-        self.agent_executor.response_model = task.response_model if task else None
+        self.agent_executor.response_model = (
+            (task.response_model or task.output_pydantic or task.output_json)
+            if task
+            else None
+        )
 
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
@@ -926,544 +914,17 @@ class Agent(BaseAgent):
     def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Convert MCP server references/configs to CrewAI tools.
 
-        Supports both string references (backwards compatible) and structured
-        configuration objects (MCPServerStdio, MCPServerHTTP, MCPServerSSE).
-
-        Args:
-            mcps: List of MCP server references (strings) or configurations.
-
-        Returns:
-            List of BaseTool instances from MCP servers.
+        Delegates to :class:`~crewai.mcp.tool_resolver.MCPToolResolver`.
         """
-        all_tools = []
-        clients = []
-
-        for mcp_config in mcps:
-            if isinstance(mcp_config, str):
-                tools = self._get_mcp_tools_from_string(mcp_config)
-            else:
-                tools, client = self._get_native_mcp_tools(mcp_config)
-                if client:
-                    clients.append(client)
-
-            all_tools.extend(tools)
-
-        # Store clients for cleanup
-        self._mcp_clients.extend(clients)
-        return all_tools
+        self._cleanup_mcp_clients()
+        self._mcp_resolver = MCPToolResolver(agent=self, logger=self._logger)
+        return self._mcp_resolver.resolve(mcps)
 
     def _cleanup_mcp_clients(self) -> None:
         """Cleanup MCP client connections after task execution."""
-        if not self._mcp_clients:
-            return
-
-        async def _disconnect_all() -> None:
-            for client in self._mcp_clients:
-                if client and hasattr(client, "connected") and client.connected:
-                    await client.disconnect()
-
-        try:
-            asyncio.run(_disconnect_all())
-        except Exception as e:
-            self._logger.log("error", f"Error during MCP client cleanup: {e}")
-        finally:
-            self._mcp_clients.clear()
-
-    def _get_mcp_tools_from_string(self, mcp_ref: str) -> list[BaseTool]:
-        """Get tools from legacy string-based MCP references.
-
-        This method maintains backwards compatibility with string-based
-        MCP references (https://... and crewai-amp:...).
-
-        Args:
-            mcp_ref: String reference to MCP server.
-
-        Returns:
-            List of BaseTool instances.
-        """
-        if mcp_ref.startswith("crewai-amp:"):
-            return self._get_amp_mcp_tools(mcp_ref)
-        if mcp_ref.startswith("https://"):
-            return self._get_external_mcp_tools(mcp_ref)
-        return []
-
-    def _get_external_mcp_tools(self, mcp_ref: str) -> list[BaseTool]:
-        """Get tools from external HTTPS MCP server with graceful error handling."""
-        from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
-
-        # Parse server URL and optional tool name
-        if "#" in mcp_ref:
-            server_url, specific_tool = mcp_ref.split("#", 1)
-        else:
-            server_url, specific_tool = mcp_ref, None
-
-        server_params = {"url": server_url}
-        server_name = self._extract_server_name(server_url)
-
-        try:
-            # Get tool schemas with timeout and error handling
-            tool_schemas = self._get_mcp_tool_schemas(server_params)
-
-            if not tool_schemas:
-                self._logger.log(
-                    "warning", f"No tools discovered from MCP server: {server_url}"
-                )
-                return []
-
-            tools = []
-            for tool_name, schema in tool_schemas.items():
-                # Skip if specific tool requested and this isn't it
-                if specific_tool and tool_name != specific_tool:
-                    continue
-
-                try:
-                    wrapper = MCPToolWrapper(
-                        mcp_server_params=server_params,
-                        tool_name=tool_name,
-                        tool_schema=schema,
-                        server_name=server_name,
-                    )
-                    tools.append(wrapper)
-                except Exception as e:
-                    self._logger.log(
-                        "warning",
-                        f"Failed to create MCP tool wrapper for {tool_name}: {e}",
-                    )
-                    continue
-
-            if specific_tool and not tools:
-                self._logger.log(
-                    "warning",
-                    f"Specific tool '{specific_tool}' not found on MCP server: {server_url}",
-                )
-
-            return cast(list[BaseTool], tools)
-
-        except Exception as e:
-            self._logger.log(
-                "warning", f"Failed to connect to MCP server {server_url}: {e}"
-            )
-            return []
-
-    def _get_native_mcp_tools(
-        self, mcp_config: MCPServerConfig
-    ) -> tuple[list[BaseTool], Any | None]:
-        """Get tools from MCP server using structured configuration.
-
-        This method creates an MCP client based on the configuration type,
-        connects to the server, discovers tools, applies filtering, and
-        returns wrapped tools along with the client instance for cleanup.
-
-        Args:
-            mcp_config: MCP server configuration (MCPServerStdio, MCPServerHTTP, or MCPServerSSE).
-
-        Returns:
-            Tuple of (list of BaseTool instances, MCPClient instance for cleanup).
-        """
-        from crewai.tools.base_tool import BaseTool
-        from crewai.tools.mcp_native_tool import MCPNativeTool
-
-        transport: StdioTransport | HTTPTransport | SSETransport
-        if isinstance(mcp_config, MCPServerStdio):
-            transport = StdioTransport(
-                command=mcp_config.command,
-                args=mcp_config.args,
-                env=mcp_config.env,
-            )
-            server_name = f"{mcp_config.command}_{'_'.join(mcp_config.args)}"
-        elif isinstance(mcp_config, MCPServerHTTP):
-            transport = HTTPTransport(
-                url=mcp_config.url,
-                headers=mcp_config.headers,
-                streamable=mcp_config.streamable,
-            )
-            server_name = self._extract_server_name(mcp_config.url)
-        elif isinstance(mcp_config, MCPServerSSE):
-            transport = SSETransport(
-                url=mcp_config.url,
-                headers=mcp_config.headers,
-            )
-            server_name = self._extract_server_name(mcp_config.url)
-        else:
-            raise ValueError(f"Unsupported MCP server config type: {type(mcp_config)}")
-
-        client = MCPClient(
-            transport=transport,
-            cache_tools_list=mcp_config.cache_tools_list,
-        )
-
-        async def _setup_client_and_list_tools() -> list[dict[str, Any]]:
-            """Async helper to connect and list tools in same event loop."""
-
-            try:
-                if not client.connected:
-                    await client.connect()
-
-                tools_list = await client.list_tools()
-
-                try:
-                    await client.disconnect()
-                    # Small delay to allow background tasks to finish cleanup
-                    # This helps prevent "cancel scope in different task" errors
-                    # when asyncio.run() closes the event loop
-                    await asyncio.sleep(0.1)
-                except Exception as e:
-                    self._logger.log("error", f"Error during disconnect: {e}")
-
-                return tools_list
-            except Exception as e:
-                if client.connected:
-                    await client.disconnect()
-                    await asyncio.sleep(0.1)
-                raise RuntimeError(
-                    f"Error during setup client and list tools: {e}"
-                ) from e
-
-        try:
-            try:
-                asyncio.get_running_loop()
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run, _setup_client_and_list_tools()
-                    )
-                    tools_list = future.result()
-            except RuntimeError:
-                try:
-                    tools_list = asyncio.run(_setup_client_and_list_tools())
-                except RuntimeError as e:
-                    error_msg = str(e).lower()
-                    if "cancel scope" in error_msg or "task" in error_msg:
-                        raise ConnectionError(
-                            "MCP connection failed due to event loop cleanup issues. "
-                            "This may be due to authentication errors or server unavailability."
-                        ) from e
-                except asyncio.CancelledError as e:
-                    raise ConnectionError(
-                        "MCP connection was cancelled. This may indicate an authentication "
-                        "error or server unavailability."
-                    ) from e
-
-            if mcp_config.tool_filter:
-                filtered_tools = []
-                for tool in tools_list:
-                    if callable(mcp_config.tool_filter):
-                        try:
-                            from crewai.mcp.filters import ToolFilterContext
-
-                            context = ToolFilterContext(
-                                agent=self,
-                                server_name=server_name,
-                                run_context=None,
-                            )
-                            if mcp_config.tool_filter(context, tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                        except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                    else:
-                        # Not callable - include tool
-                        filtered_tools.append(tool)
-                tools_list = filtered_tools
-
-            tools = []
-            for tool_def in tools_list:
-                tool_name = tool_def.get("name", "")
-                if not tool_name:
-                    continue
-
-                # Convert inputSchema to Pydantic model if present
-                args_schema = None
-                if tool_def.get("inputSchema"):
-                    args_schema = self._json_schema_to_pydantic(
-                        tool_name, tool_def["inputSchema"]
-                    )
-
-                tool_schema = {
-                    "description": tool_def.get("description", ""),
-                    "args_schema": args_schema,
-                }
-
-                try:
-                    native_tool = MCPNativeTool(
-                        mcp_client=client,
-                        tool_name=tool_name,
-                        tool_schema=tool_schema,
-                        server_name=server_name,
-                    )
-                    tools.append(native_tool)
-                except Exception as e:
-                    self._logger.log("error", f"Failed to create native MCP tool: {e}")
-                    continue
-
-            return cast(list[BaseTool], tools), client
-        except Exception as e:
-            if client.connected:
-                asyncio.run(client.disconnect())
-
-            raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
-
-    def _get_amp_mcp_tools(self, amp_ref: str) -> list[BaseTool]:
-        """Get tools from CrewAI AMP MCP marketplace."""
-        # Parse: "crewai-amp:mcp-name" or "crewai-amp:mcp-name#tool_name"
-        amp_part = amp_ref.replace("crewai-amp:", "")
-        if "#" in amp_part:
-            mcp_name, specific_tool = amp_part.split("#", 1)
-        else:
-            mcp_name, specific_tool = amp_part, None
-
-        # Call AMP API to get MCP server URLs
-        mcp_servers = self._fetch_amp_mcp_servers(mcp_name)
-
-        tools = []
-        for server_config in mcp_servers:
-            server_ref = server_config["url"]
-            if specific_tool:
-                server_ref += f"#{specific_tool}"
-            server_tools = self._get_external_mcp_tools(server_ref)
-            tools.extend(server_tools)
-
-        return tools
-
-    @staticmethod
-    def _extract_server_name(server_url: str) -> str:
-        """Extract clean server name from URL for tool prefixing."""
-
-        parsed = urlparse(server_url)
-        domain = parsed.netloc.replace(".", "_")
-        path = parsed.path.replace("/", "_").strip("_")
-        return f"{domain}_{path}" if path else domain
-
-    def _get_mcp_tool_schemas(
-        self, server_params: dict[str, Any]
-    ) -> dict[str, dict[str, Any]]:
-        """Get tool schemas from MCP server for wrapper creation with caching."""
-        server_url = server_params["url"]
-
-        # Check cache first
-        cache_key = server_url
-        current_time = time.time()
-
-        if cache_key in _mcp_schema_cache:
-            cached_data, cache_time = _mcp_schema_cache[cache_key]
-            if current_time - cache_time < _cache_ttl:
-                self._logger.log(
-                    "debug", f"Using cached MCP tool schemas for {server_url}"
-                )
-                return cached_data  # type: ignore[no-any-return]
-
-        try:
-            schemas = asyncio.run(self._get_mcp_tool_schemas_async(server_params))
-
-            # Cache successful results
-            _mcp_schema_cache[cache_key] = (schemas, current_time)
-
-            return schemas
-        except Exception as e:
-            # Log warning but don't raise - this allows graceful degradation
-            self._logger.log(
-                "warning", f"Failed to get MCP tool schemas from {server_url}: {e}"
-            )
-            return {}
-
-    async def _get_mcp_tool_schemas_async(
-        self, server_params: dict[str, Any]
-    ) -> dict[str, dict[str, Any]]:
-        """Async implementation of MCP tool schema retrieval with timeouts and retries."""
-        server_url = server_params["url"]
-        return await self._retry_mcp_discovery(
-            self._discover_mcp_tools_with_timeout, server_url
-        )
-
-    async def _retry_mcp_discovery(
-        self, operation_func: Any, server_url: str
-    ) -> dict[str, dict[str, Any]]:
-        """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
-        last_error = None
-
-        for attempt in range(MCP_MAX_RETRIES):
-            # Execute single attempt outside try-except loop structure
-            result, error, should_retry = await self._attempt_mcp_discovery(
-                operation_func, server_url
-            )
-
-            # Success case - return immediately
-            if result is not None:
-                return result
-
-            # Non-retryable error - raise immediately
-            if not should_retry:
-                raise RuntimeError(error)
-
-            # Retryable error - continue with backoff
-            last_error = error
-            if attempt < MCP_MAX_RETRIES - 1:
-                wait_time = 2**attempt  # Exponential backoff
-                await asyncio.sleep(wait_time)
-
-        raise RuntimeError(
-            f"Failed to discover MCP tools after {MCP_MAX_RETRIES} attempts: {last_error}"
-        )
-
-    @staticmethod
-    async def _attempt_mcp_discovery(
-        operation_func: Any, server_url: str
-    ) -> tuple[dict[str, dict[str, Any]] | None, str, bool]:
-        """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
-        try:
-            result = await operation_func(server_url)
-            return result, "", False
-
-        except ImportError:
-            return (
-                None,
-                "MCP library not available. Please install with: pip install mcp",
-                False,
-            )
-
-        except asyncio.TimeoutError:
-            return (
-                None,
-                f"MCP discovery timed out after {MCP_DISCOVERY_TIMEOUT} seconds",
-                True,
-            )
-
-        except Exception as e:
-            error_str = str(e).lower()
-
-            # Classify errors as retryable or non-retryable
-            if "authentication" in error_str or "unauthorized" in error_str:
-                return None, f"Authentication failed for MCP server: {e!s}", False
-            if "connection" in error_str or "network" in error_str:
-                return None, f"Network connection failed: {e!s}", True
-            if "json" in error_str or "parsing" in error_str:
-                return None, f"Server response parsing error: {e!s}", True
-            return None, f"MCP discovery error: {e!s}", False
-
-    async def _discover_mcp_tools_with_timeout(
-        self, server_url: str
-    ) -> dict[str, dict[str, Any]]:
-        """Discover MCP tools with timeout wrapper."""
-        return await asyncio.wait_for(
-            self._discover_mcp_tools(server_url), timeout=MCP_DISCOVERY_TIMEOUT
-        )
-
-    async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict[str, Any]]:
-        """Discover tools from MCP server with proper timeout handling."""
-        from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
-
-        async with streamablehttp_client(server_url) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                # Initialize the connection with timeout
-                await asyncio.wait_for(
-                    session.initialize(), timeout=MCP_CONNECTION_TIMEOUT
-                )
-
-                # List available tools with timeout
-                tools_result = await asyncio.wait_for(
-                    session.list_tools(),
-                    timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
-                )
-
-                schemas = {}
-                for tool in tools_result.tools:
-                    args_schema = None
-                    if hasattr(tool, "inputSchema") and tool.inputSchema:
-                        args_schema = self._json_schema_to_pydantic(
-                            sanitize_tool_name(tool.name), tool.inputSchema
-                        )
-
-                    schemas[sanitize_tool_name(tool.name)] = {
-                        "description": getattr(tool, "description", ""),
-                        "args_schema": args_schema,
-                    }
-                return schemas
-
-    def _json_schema_to_pydantic(
-        self, tool_name: str, json_schema: dict[str, Any]
-    ) -> type:
-        """Convert JSON Schema to Pydantic model for tool arguments.
-
-        Args:
-            tool_name: Name of the tool (used for model naming)
-            json_schema: JSON Schema dict with 'properties', 'required', etc.
-
-        Returns:
-            Pydantic BaseModel class
-        """
-        from pydantic import Field, create_model
-
-        properties = json_schema.get("properties", {})
-        required_fields = json_schema.get("required", [])
-
-        field_definitions: dict[str, Any] = {}
-
-        for field_name, field_schema in properties.items():
-            field_type = self._json_type_to_python(field_schema)
-            field_description = field_schema.get("description", "")
-
-            is_required = field_name in required_fields
-
-            if is_required:
-                field_definitions[field_name] = (
-                    field_type,
-                    Field(..., description=field_description),
-                )
-            else:
-                field_definitions[field_name] = (
-                    field_type | None,
-                    Field(default=None, description=field_description),
-                )
-
-        model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
-        return create_model(model_name, **field_definitions)  # type: ignore[no-any-return]
-
-    def _json_type_to_python(self, field_schema: dict[str, Any]) -> type:
-        """Convert JSON Schema type to Python type.
-
-        Args:
-            field_schema: JSON Schema field definition
-
-        Returns:
-            Python type
-        """
-
-        json_type = field_schema.get("type")
-
-        if "anyOf" in field_schema:
-            types: list[type] = []
-            for option in field_schema["anyOf"]:
-                if "const" in option:
-                    types.append(str)
-                else:
-                    types.append(self._json_type_to_python(option))
-            unique_types = list(set(types))
-            if len(unique_types) > 1:
-                result: Any = unique_types[0]
-                for t in unique_types[1:]:
-                    result = result | t
-                return result  # type: ignore[no-any-return]
-            return unique_types[0]
-
-        type_mapping: dict[str | None, type] = {
-            "string": str,
-            "number": float,
-            "integer": int,
-            "boolean": bool,
-            "array": list,
-            "object": dict,
-        }
-
-        return type_mapping.get(json_type, Any)
-
-    @staticmethod
-    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict[str, Any]]:
-        """Fetch MCP server configurations from CrewAI AMP API."""
-        # TODO: Implement AMP API call to "integrations/mcps" endpoint
-        # Should return list of server configs with URLs
-        return []
+        if self._mcp_resolver is not None:
+            self._mcp_resolver.cleanup()
+            self._mcp_resolver = None
 
     @staticmethod
     def get_multimodal_tools() -> Sequence[BaseTool]:
@@ -1712,7 +1173,8 @@ class Agent(BaseAgent):
 
             existing_names = {sanitize_tool_name(t.name) for t in raw_tools}
             raw_tools.extend(
-                mt for mt in create_memory_tools(agent_memory)
+                mt
+                for mt in create_memory_tools(agent_memory)
                 if sanitize_tool_name(mt.name) not in existing_names
             )
 
@@ -1802,11 +1264,11 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=10)
+                matches = agent_memory.recall(formatted_messages, limit=5)
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(
-                        f"- {m.record.content}" for m in matches
+                        m.format() for m in matches
                     )
                 if memory_block:
                     formatted_messages += "\n\n" + self.i18n.slice("memory").format(
@@ -1937,14 +1399,15 @@ class Agent(BaseAgent):
             if isinstance(messages, str):
                 input_str = messages
             else:
-                input_str = "\n".join(
-                    str(msg.get("content", "")) for msg in messages if msg.get("content")
-                ) or "User request"
-            raw = (
-                f"Input: {input_str}\n"
-                f"Agent: {self.role}\n"
-                f"Result: {output_text}"
-            )
+                input_str = (
+                    "\n".join(
+                        str(msg.get("content", ""))
+                        for msg in messages
+                        if msg.get("content")
+                    )
+                    or "User request"
+                )
+            raw = f"Input: {input_str}\nAgent: {self.role}\nResult: {output_text}"
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)

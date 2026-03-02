@@ -4,6 +4,106 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="27 fev 2026">
+  ## v1.10.1a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Implementar suporte a invocação assíncrona em métodos de callback de etapas
+  - Implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.0
+
+  ### Refatoração
+  - Refatorar métodos de callback de etapas para suportar invocação assíncrona
+  - Refatorar para implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Correções de Bugs
+  - Corrigir branch para notas de lançamento
+
+  ## Contribuidores
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="27 fev 2026">
+  ## v1.10.1a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## O que Mudou
+
+  ### Refatoração
+  - Refatorar métodos de callback de etapas para suportar invocação assíncrona
+  - Implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.0
+
+  ### Correções de Bugs
+  - Criar branch para notas de lançamento
+
+  ## Contribuidores
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="26 fev 2026">
+  ## v1.10.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.0)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar a resolução da ferramenta MCP e eventos relacionados
+  - Atualizar a versão do lancedb e adicionar pacotes lance-namespace
+  - Aprimorar a análise e validação de argumentos JSON no CrewAgentExecutor e BaseTool
+  - Migrar o cliente HTTP da CLI de requests para httpx
+  - Adicionar documentação versionada
+  - Adicionar detecção de versões removidas para notas de versão
+  - Implementar tratamento de entrada do usuário em Flows
+  - Aprimorar a funcionalidade de auto-loop HITL nos testes de integração de feedback humano
+  - Adicionar started_event_id e definir no eventbus
+  - Atualizar automaticamente tools.specs
+
+  ### Correções de Bugs
+  - Validar kwargs da ferramenta mesmo quando vazios para evitar TypeError crípticos
+  - Preservar tipos nulos nos esquemas de parâmetros da ferramenta para LLM
+  - Mapear output_pydantic/output_json para saída estruturada nativa
+  - Garantir que callbacks sejam executados/aguardados se forem promessas
+  - Capturar o nome do método no contexto da exceção
+  - Preservar tipo enum no resultado do roteador; melhorar tipos
+  - Corrigir fluxos cíclicos que quebram silenciosamente quando o ID de persistência é passado nas entradas
+  - Corrigir o formato da flag da CLI de --skip-provider para --skip_provider
+  - Garantir que o fluxo de chamada da ferramenta OpenAI seja finalizado
+  - Resolver ponteiros $ref de esquema complexos nas ferramentas MCP
+  - Impor additionalProperties=false nos esquemas
+  - Rejeitar nomes de scripts reservados para pastas de equipe
+  - Resolver condição de corrida no teste de emissão de eventos de guardrail
+
+  ### Documentação
+  - Adicionar nota de dependência litellm para provedores de LLM não nativos
+  - Esclarecer o modelo de segurança NL2SQL e orientações de fortalecimento
+  - Adicionar 96 ações ausentes em 9 integrações
+
+  ### Refatoração
+  - Refatorar crew para provider
+  - Extrair HITL para padrão de provider
+  - Melhorar tipagem e registro de hooks
+
+  ## Contribuidores
+
+  @dependabot[bot], @github-actions[bot], @github-code-quality[bot], @greysonlalonde, @heitorado, @hobostay, @joaomdmoura, @johnvan7, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha, @mplachta, @nicoferdi96, @theCyberTech, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="26 jan 2026">
   ## v1.9.0
 

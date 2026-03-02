@@ -380,22 +380,124 @@ A memória usa o LLM de três formas:
 Toda análise degrada graciosamente em caso de falha do LLM -- veja [Comportamento em Caso de Falha](#comportamento-em-caso-de-falha).
 
 
-## RecallFlow (Recall Profundo)
+## Consolidação de Memória
 
-`recall()` suporta três profundidades:
+Ao salvar novo conteúdo, o pipeline de codificação verifica automaticamente registros similares existentes no armazenamento. Se a similaridade estiver acima de `consolidation_threshold` (padrão 0.85), o LLM decide o que fazer:
 
-- **`depth="shallow"`** -- Busca vetorial direta com pontuação composta. Rápido; usado por padrão quando agentes carregam contexto.
-- **`depth="deep"` ou `depth="auto"`** -- Executa um RecallFlow em múltiplas etapas: análise da consulta, seleção de escopo, busca vetorial, roteamento baseado em confiança e exploração recursiva opcional quando a confiança é baixa.
+- **keep** -- O registro existente ainda é preciso e não é redundante.
+- **update** -- O registro existente deve ser atualizado com novas informações (o LLM fornece o conteúdo mesclado).
+- **delete** -- O registro existente está desatualizado, substituído ou contradito.
+- **insert_new** -- Se o novo conteúdo também deve ser inserido como um registro separado.
+
+Isso evita o acúmulo de duplicatas. Por exemplo, se você salvar "CrewAI garante operação confiável" três vezes, a consolidação reconhece as duplicatas e mantém apenas um registro.
+
+### Dedup Intra-batch
+
+Ao usar `remember_many()`, os itens dentro do mesmo batch são comparados entre si antes de atingir o armazenamento. Se dois itens tiverem similaridade de cosseno >= `batch_dedup_threshold` (padrão 0.98), o posterior é silenciosamente descartado. Isso captura duplicatas exatas ou quase exatas dentro de um único batch sem chamadas ao LLM (pura matemática vetorial).
 
 ```python
-# Caminho rápido (padrão para contexto de tarefa do agente)
+# Apenas 2 registros são armazenados (o terceiro é quase duplicata do primeiro)
+memory.remember_many([
+    "CrewAI supports complex workflows.",
+    "Python is a great language.",
+    "CrewAI supports complex workflows.",  # descartado pelo dedup intra-batch
+])
+```
+
+
+## Saves Não-Bloqueantes
+
+`remember_many()` é **não-bloqueante** -- ele envia o pipeline de codificação para uma thread em background e retorna imediatamente. Isso significa que o agente pode continuar para a próxima tarefa enquanto as memórias estão sendo salvas.
+
+```python
+# Retorna imediatamente -- save acontece em background
+memory.remember_many(["Fato A.", "Fato B.", "Fato C."])
+
+# recall() espera automaticamente saves pendentes antes de buscar
+matches = memory.recall("fatos")  # vê todos os 3 registros
+```
+
+### Barreira de Leitura
+
+Cada chamada `recall()` executa automaticamente `drain_writes()` antes de buscar, garantindo que a consulta sempre veja os registros mais recentes persistidos. Isso é transparente -- você nunca precisa pensar nisso.
+
+### Encerramento da Crew
+
+Quando uma crew termina, `kickoff()` drena todos os saves de memória pendentes em seu bloco `finally`, então nenhum save é perdido mesmo que a crew complete enquanto saves em background estão em andamento.
+
+### Uso Standalone
+
+Para scripts ou notebooks onde não há ciclo de vida de crew, chame `drain_writes()` ou `close()` explicitamente:
+
+```python
+memory = Memory()
+memory.remember_many(["Fato A.", "Fato B."])
+
+# Opção 1: Esperar saves pendentes
+memory.drain_writes()
+
+# Opção 2: Drenar e encerrar o pool de background
+memory.close()
+```
+
+
+## Origem e Privacidade
+
+Cada registro de memória pode carregar uma tag `source` para rastreamento de procedência e uma flag `private` para controle de acesso.
+
+### Rastreamento de Origem
+
+O parâmetro `source` identifica de onde uma memória veio:
+
+```python
+# Marcar memórias com sua origem
+memory.remember("Usuário prefere modo escuro", source="user:alice")
+memory.remember("Configuração do sistema atualizada", source="admin")
+memory.remember("Agente encontrou um bug", source="agent:debugger")
+
+# Recuperar apenas memórias de uma origem específica
+matches = memory.recall("preferências do usuário", source="user:alice")
+```
+
+### Memórias Privadas
+
+Memórias privadas só são visíveis no recall quando o `source` corresponde:
+
+```python
+# Armazenar uma memória privada
+memory.remember("A chave de API da Alice é sk-...", source="user:alice", private=True)
+
+# Este recall vê a memória privada (source corresponde)
+matches = memory.recall("chave de API", source="user:alice")
+
+# Este recall NÃO a vê (source diferente)
+matches = memory.recall("chave de API", source="user:bob")
+
+# Acesso admin: ver todos os registros privados independente do source
+matches = memory.recall("chave de API", include_private=True)
+```
+
+Isso é particularmente útil em implantações multi-usuário ou corporativas onde memórias de diferentes usuários devem ser isoladas.
+
+
+## RecallFlow (Recall Profundo)
+
+`recall()` suporta duas profundidades:
+
+- **`depth="shallow"`** -- Busca vetorial direta com pontuação composta. Rápido (~200ms), sem chamadas ao LLM.
+- **`depth="deep"` (padrão)** -- Executa um RecallFlow em múltiplas etapas: análise da consulta, seleção de escopo, busca vetorial paralela, roteamento baseado em confiança e exploração recursiva opcional quando a confiança é baixa.
+
+**Pulo inteligente do LLM**: Consultas com menos de `query_analysis_threshold` (padrão 200 caracteres) pulam a análise de consulta do LLM inteiramente, mesmo no modo deep. Consultas curtas como "Qual banco de dados usamos?" já são boas frases de busca -- a análise do LLM agrega pouco valor. Isso economiza ~1-3s por recall para consultas curtas típicas. Apenas consultas mais longas (ex.: descrições completas de tarefas) passam pela destilação do LLM em sub-consultas direcionadas.
+
+```python
+# Shallow: busca vetorial pura, sem LLM
 matches = memory.recall("O que decidimos?", limit=10, depth="shallow")
 
-# Caminho inteligente para perguntas complexas
+# Deep (padrão): recuperação inteligente com análise LLM para consultas longas
 matches = memory.recall(
     "Resuma todas as decisões de arquitetura deste trimestre",
     limit=10,
-    depth="auto",
+    depth="deep",
 )
 ```
 
@@ -406,6 +508,7 @@ memory = Memory(
     confidence_threshold_high=0.9,   # Só sintetizar quando muito confiante
     confidence_threshold_low=0.4,    # Explorar mais profundamente de forma mais agressiva
     exploration_budget=2,            # Permitir até 2 rodadas de exploração
+    query_analysis_threshold=200,    # Pular LLM para consultas menores que isso
 )
 ```
 
@@ -613,6 +716,45 @@ memory = Memory(embedder=my_embedder)
 | Custom | `custom` | -- | Requer `embedding_callable`. |
 
 
+## Configuração de LLM
+
+A memória usa um LLM para análise de save (inferência de escopo, categorias e importância), decisões de consolidação e análise de consulta no recall profundo. Você pode configurar qual modelo usar.
+
+```python
+from crewai import Memory, LLM
+
+# Padrão: gpt-4o-mini
+memory = Memory()
+
+# Usar um modelo OpenAI diferente
+memory = Memory(llm="gpt-4o")
+
+# Usar Anthropic
+memory = Memory(llm="anthropic/claude-3-haiku-20240307")
+
+# Usar Ollama para análise totalmente local/privada
+memory = Memory(llm="ollama/llama3.2")
+
+# Usar Google Gemini
+memory = Memory(llm="gemini/gemini-2.0-flash")
+
+# Passar uma instância LLM pré-configurada com configurações customizadas
+llm = LLM(model="gpt-4o", temperature=0)
+memory = Memory(llm=llm)
+```
+
+O LLM é inicializado **lazily** -- ele só é criado quando necessário pela primeira vez. Isso significa que `Memory()` nunca falha no momento da construção, mesmo que chaves de API não estejam definidas. Erros só aparecem quando o LLM é realmente chamado (ex.: ao salvar sem escopo/categorias explícitos, ou durante recall profundo).
+
+Para operação totalmente offline/privada, use um modelo local tanto para o LLM quanto para o embedder:
+
+```python
+memory = Memory(
+    llm="ollama/llama3.2",
+    embedder={"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}},
+)
+```
+
+
 ## Backend de Armazenamento
 
 - **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou `$CREWAI_STORAGE_DIR/memory` se a variável de ambiente estiver definida, ou o caminho que você passar como `storage="path/to/dir"`).
@@ -685,10 +827,17 @@ class MemoryMonitor(BaseEventListener):
 - Ao usar uma crew, confirme que `memory=True` ou `memory=Memory(...)` está definido.
 
 **Recall lento?**
-- Use `depth="shallow"` para contexto rotineiro do agente. Reserve `depth="auto"` ou `"deep"` para consultas complexas.
+- Use `depth="shallow"` para contexto rotineiro do agente. Reserve `depth="deep"` para consultas complexas.
+- Aumente `query_analysis_threshold` para pular a análise do LLM em mais consultas.
 
 **Erros de análise LLM nos logs?**
 - A memória ainda salva/recupera com padrões seguros. Verifique chaves de API, limites de taxa e disponibilidade do modelo se quiser análise LLM completa.
+
+**Erros de save em background nos logs?**
+- Os saves de memória rodam em uma thread em background. Erros são emitidos como `MemorySaveFailedEvent` mas não derrubam o agente. Verifique os logs para a causa raiz (geralmente problemas de conexão com LLM ou embedder).
+
+**Conflitos de escrita concorrente?**
+- As operações do LanceDB são serializadas com um lock compartilhado e reexecutadas automaticamente em caso de conflito. Isso lida com múltiplas instâncias `Memory` apontando para o mesmo banco de dados (ex.: memória do agente + memória da crew). Nenhuma ação necessária.
 
 **Navegar na memória pelo terminal:**
 ```bash
@@ -721,7 +870,9 @@ Toda a configuração é passada como argumentos nomeados para `Memory(...)`. Ca
 | `consolidation_threshold` | `0.85` | Similaridade acima da qual a consolidação é ativada no save. Defina `1.0` para desativar. |
 | `consolidation_limit` | `5` | Máx. de registros existentes para comparar durante consolidação. |
 | `default_importance` | `0.5` | Importância atribuída quando não fornecida e a análise LLM é pulada. |
+| `batch_dedup_threshold` | `0.98` | Similaridade de cosseno para descartar quase-duplicatas dentro de um batch `remember_many()`. |
 | `confidence_threshold_high` | `0.8` | Confiança de recall acima da qual resultados são retornados diretamente. |
 | `confidence_threshold_low` | `0.5` | Confiança de recall abaixo da qual exploração mais profunda é ativada. |
 | `complex_query_threshold` | `0.7` | Para consultas complexas, explorar mais profundamente abaixo desta confiança. |
 | `exploration_budget` | `1` | Número de rodadas de exploração por LLM durante recall profundo. |
+| `query_analysis_threshold` | `200` | Consultas menores que isso (em caracteres) pulam análise LLM durante recall profundo. |

@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "Pillow~=10.4.0",
-    "pypdf~=4.0.0",
+    "Pillow~=12.1.1",
+    "pypdf~=6.7.4",
     "python-magic>=0.4.27",
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",

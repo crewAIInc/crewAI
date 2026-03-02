@@ -380,22 +380,124 @@ Memory uses the LLM in three ways:
 All analysis degrades gracefully on LLM failure -- see [Failure Behavior](#failure-behavior).
 
 
-## RecallFlow (Deep Recall)
+## Memory Consolidation
 
-`recall()` supports three depths:
+When saving new content, the encoding pipeline automatically checks for similar existing records in storage. If the similarity is above `consolidation_threshold` (default 0.85), the LLM decides what to do:
 
-- **`depth="shallow"`** -- Direct vector search with composite scoring. Fast; used by default when agents load context.
-- **`depth="deep"` or `depth="auto"`** -- Runs a multi-step RecallFlow: query analysis, scope selection, vector search, confidence-based routing, and optional recursive exploration when confidence is low.
+- **keep** -- The existing record is still accurate and not redundant.
+- **update** -- The existing record should be updated with new information (LLM provides the merged content).
+- **delete** -- The existing record is outdated, superseded, or contradicted.
+- **insert_new** -- Whether the new content should also be inserted as a separate record.
+
+This prevents duplicates from accumulating. For example, if you save "CrewAI ensures reliable operation" three times, consolidation recognizes the duplicates and keeps only one record.
+
+### Intra-batch Dedup
+
+When using `remember_many()`, items within the same batch are compared against each other before hitting storage. If two items have cosine similarity >= `batch_dedup_threshold` (default 0.98), the later one is silently dropped. This catches exact or near-exact duplicates within a single batch without any LLM calls (pure vector math).
 
 ```python
-# Fast path (default for agent task context)
+# Only 2 records are stored (the third is a near-duplicate of the first)
+memory.remember_many([
+    "CrewAI supports complex workflows.",
+    "Python is a great language.",
+    "CrewAI supports complex workflows.",  # dropped by intra-batch dedup
+])
+```
+
+
+## Non-blocking Saves
+
+`remember_many()` is **non-blocking** -- it submits the encoding pipeline to a background thread and returns immediately. This means the agent can continue to the next task while memories are being saved.
+
+```python
+# Returns immediately -- save happens in background
+memory.remember_many(["Fact A.", "Fact B.", "Fact C."])
+
+# recall() automatically waits for pending saves before searching
+matches = memory.recall("facts")  # sees all 3 records
+```
+
+### Read Barrier
+
+Every `recall()` call automatically calls `drain_writes()` before searching, ensuring the query always sees the latest persisted records. This is transparent -- you never need to think about it.
+
+### Crew Shutdown
+
+When a crew finishes, `kickoff()` drains all pending memory saves in its `finally` block, so no saves are lost even if the crew completes while background saves are in flight.
+
+### Standalone Usage
+
+For scripts or notebooks where there's no crew lifecycle, call `drain_writes()` or `close()` explicitly:
+
+```python
+memory = Memory()
+memory.remember_many(["Fact A.", "Fact B."])
+
+# Option 1: Wait for pending saves
+memory.drain_writes()
+
+# Option 2: Drain and shut down the background pool
+memory.close()
+```
+
+
+## Source and Privacy
+
+Every memory record can carry a `source` tag for provenance tracking and a `private` flag for access control.
+
+### Source Tracking
+
+The `source` parameter identifies where a memory came from:
+
+```python
+# Tag memories with their origin
+memory.remember("User prefers dark mode", source="user:alice")
+memory.remember("System config updated", source="admin")
+memory.remember("Agent found a bug", source="agent:debugger")
+
+# Recall only memories from a specific source
+matches = memory.recall("user preferences", source="user:alice")
+```
+
+### Private Memories
+
+Private memories are only visible to recall when the `source` matches:
+
+```python
+# Store a private memory
+memory.remember("Alice's API key is sk-...", source="user:alice", private=True)
+
+# This recall sees the private memory (source matches)
+matches = memory.recall("API key", source="user:alice")
+
+# This recall does NOT see it (different source)
+matches = memory.recall("API key", source="user:bob")
+
+# Admin access: see all private records regardless of source
+matches = memory.recall("API key", include_private=True)
+```
+
+This is particularly useful in multi-user or enterprise deployments where different users' memories should be isolated.
+
+
+## RecallFlow (Deep Recall)
+
+`recall()` supports two depths:
+
+- **`depth="shallow"`** -- Direct vector search with composite scoring. Fast (~200ms), no LLM calls.
+- **`depth="deep"` (default)** -- Runs a multi-step RecallFlow: query analysis, scope selection, parallel vector search, confidence-based routing, and optional recursive exploration when confidence is low.
+
+**Smart LLM skip**: Queries shorter than `query_analysis_threshold` (default 200 characters) skip the LLM query analysis entirely, even in deep mode. Short queries like "What database do we use?" are already good search phrases -- the LLM analysis adds little value. This saves ~1-3s per recall for typical short queries. Only longer queries (e.g. full task descriptions) go through LLM distillation into targeted sub-queries.
+
+```python
+# Shallow: pure vector search, no LLM
 matches = memory.recall("What did we decide?", limit=10, depth="shallow")
 
-# Intelligent path for complex questions
+# Deep (default): intelligent retrieval with LLM analysis for long queries
 matches = memory.recall(
     "Summarize all architecture decisions from this quarter",
     limit=10,
-    depth="auto",
+    depth="deep",
 )
 ```
 
@@ -406,6 +508,7 @@ memory = Memory(
     confidence_threshold_high=0.9,   # Only synthesize when very confident
     confidence_threshold_low=0.4,    # Explore deeper more aggressively
     exploration_budget=2,            # Allow up to 2 exploration rounds
+    query_analysis_threshold=200,    # Skip LLM for queries shorter than this
 )
 ```
 
@@ -613,6 +716,45 @@ memory = Memory(embedder=my_embedder)
 | Custom | `custom` | -- | Requires `embedding_callable`. |
 
 
+## LLM Configuration
+
+Memory uses an LLM for save analysis (scope, categories, importance inference), consolidation decisions, and deep recall query analysis. You can configure which model to use.
+
+```python
+from crewai import Memory, LLM
+
+# Default: gpt-4o-mini
+memory = Memory()
+
+# Use a different OpenAI model
+memory = Memory(llm="gpt-4o")
+
+# Use Anthropic
+memory = Memory(llm="anthropic/claude-3-haiku-20240307")
+
+# Use Ollama for fully local/private analysis
+memory = Memory(llm="ollama/llama3.2")
+
+# Use Google Gemini
+memory = Memory(llm="gemini/gemini-2.0-flash")
+
+# Pass a pre-configured LLM instance with custom settings
+llm = LLM(model="gpt-4o", temperature=0)
+memory = Memory(llm=llm)
+```
+
+The LLM is initialized **lazily** -- it's only created when first needed. This means `Memory()` never fails at construction time, even if API keys aren't set. Errors only surface when the LLM is actually called (e.g. when saving without explicit scope/categories, or during deep recall).
+
+For fully offline/private operation, use a local model for both the LLM and embedder:
+
+```python
+memory = Memory(
+    llm="ollama/llama3.2",
+    embedder={"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}},
+)
+```
+
+
 ## Storage Backend
 
 - **Default**: LanceDB, stored under `./.crewai/memory` (or `$CREWAI_STORAGE_DIR/memory` if the env var is set, or the path you pass as `storage="path/to/dir"`).
@@ -685,10 +827,17 @@ class MemoryMonitor(BaseEventListener):
 - When using a crew, confirm `memory=True` or `memory=Memory(...)` is set.
 
 **Slow recall?**
-- Use `depth="shallow"` for routine agent context. Reserve `depth="auto"` or `"deep"` for complex queries.
+- Use `depth="shallow"` for routine agent context. Reserve `depth="deep"` for complex queries.
+- Increase `query_analysis_threshold` to skip LLM analysis for more queries.
 
 **LLM analysis errors in logs?**
 - Memory still saves/recalls with safe defaults. Check API keys, rate limits, and model availability if you want full LLM analysis.
+
+**Background save errors in logs?**
+- Memory saves run in a background thread. Errors are emitted as `MemorySaveFailedEvent` but don't crash the agent. Check logs for the root cause (usually LLM or embedder connection issues).
+
+**Concurrent write conflicts?**
+- LanceDB operations are serialized with a shared lock and retried automatically on conflict. This handles multiple `Memory` instances pointing at the same database (e.g. agent memory + crew memory). No action needed.
 
 **Browse memory from the terminal:**
 ```bash
@@ -721,7 +870,9 @@ All configuration is passed as keyword arguments to `Memory(...)`. Every paramet
 | `consolidation_threshold` | `0.85` | Similarity above which consolidation is triggered on save. Set to `1.0` to disable. |
 | `consolidation_limit` | `5` | Max existing records to compare during consolidation. |
 | `default_importance` | `0.5` | Importance assigned when not provided and LLM analysis is skipped. |
+| `batch_dedup_threshold` | `0.98` | Cosine similarity for dropping near-duplicates within a `remember_many()` batch. |
 | `confidence_threshold_high` | `0.8` | Recall confidence above which results are returned directly. |
 | `confidence_threshold_low` | `0.5` | Recall confidence below which deeper exploration is triggered. |
 | `complex_query_threshold` | `0.7` | For complex queries, explore deeper below this confidence. |
 | `exploration_budget` | `1` | Number of LLM-driven exploration rounds during deep recall. |
+| `query_analysis_threshold` | `200` | Queries shorter than this (in characters) skip LLM analysis during deep recall. |

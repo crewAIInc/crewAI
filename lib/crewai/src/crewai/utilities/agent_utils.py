@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Sequence
 import concurrent.futures
+import inspect
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -138,7 +139,11 @@ def render_text_description_and_args(
 
 def convert_tools_to_openai_schema(
     tools: Sequence[BaseTool | CrewStructuredTool],
-) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
+) -> tuple[
+    list[dict[str, Any]],
+    dict[str, Callable[..., Any]],
+    dict[str, BaseTool | CrewStructuredTool],
+]:
     """Convert CrewAI tools to OpenAI function calling format.
 
     This function converts CrewAI BaseTool and CrewStructuredTool objects
@@ -151,23 +156,21 @@ def convert_tools_to_openai_schema(
     Returns:
         Tuple containing:
         - List of OpenAI-format tool schema dictionaries
-        - Dict mapping tool names to their callable run() methods
-
-    Example:
-        >>> tools = [CalculatorTool(), SearchTool()]
-        >>> schemas, functions = convert_tools_to_openai_schema(tools)
-        >>> # schemas can be passed to llm.call(tools=schemas)
-        >>> # functions can be passed to llm.call(available_functions=functions)
+        - Dict mapping sanitized tool names to their callable run() methods
+        - Dict mapping sanitized tool names to their original tool objects
     """
     openai_tools: list[dict[str, Any]] = []
     available_functions: dict[str, Callable[..., Any]] = {}
+    tool_name_mapping: dict[str, BaseTool | CrewStructuredTool] = {}
 
     for tool in tools:
         # Get the JSON schema for tool parameters
         parameters: dict[str, Any] = {}
         if hasattr(tool, "args_schema") and tool.args_schema is not None:
             try:
-                schema_output = generate_model_description(tool.args_schema)
+                schema_output = generate_model_description(
+                    tool.args_schema, strip_null_types=False
+                )
                 parameters = schema_output.get("json_schema", {}).get("schema", {})
                 # Remove title and description from schema root as they're redundant
                 parameters.pop("title", None)
@@ -183,6 +186,14 @@ def convert_tools_to_openai_schema(
 
         sanitized_name = sanitize_tool_name(tool.name)
 
+        if sanitized_name in available_functions:
+            counter = 2
+            candidate = sanitize_tool_name(f"{sanitized_name}_{counter}")
+            while candidate in available_functions:
+                counter += 1
+                candidate = sanitize_tool_name(f"{sanitized_name}_{counter}")
+            sanitized_name = candidate
+
         schema: dict[str, Any] = {
             "type": "function",
             "function": {
@@ -194,8 +205,9 @@ def convert_tools_to_openai_schema(
         }
         openai_tools.append(schema)
         available_functions[sanitized_name] = tool.run  # type: ignore[union-attr]
+        tool_name_mapping[sanitized_name] = tool
 
-    return openai_tools, available_functions
+    return openai_tools, available_functions, tool_name_mapping
 
 
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
@@ -501,7 +513,9 @@ def handle_agent_action_core(
         - TODO: Remove messages parameter and its usage.
     """
     if step_callback:
-        step_callback(tool_result)
+        cb_result = step_callback(tool_result)
+        if inspect.iscoroutine(cb_result):
+            asyncio.run(cb_result)
 
     formatted_answer.text += f"\nObservation: {tool_result.result}"
     formatted_answer.result = tool_result.result
@@ -1141,6 +1155,36 @@ def extract_tool_call_info(
         func_args = func_info.get("arguments") or tool_call.get("input") or {}
         return call_id, sanitize_tool_name(func_name), func_args
     return None
+
+
+def parse_tool_call_args(
+    func_args: dict[str, Any] | str,
+    func_name: str,
+    call_id: str,
+    original_tool: Any = None,
+) -> tuple[dict[str, Any], None] | tuple[None, dict[str, Any]]:
+    """Parse tool call arguments from a JSON string or dict.
+
+    Returns:
+        ``(args_dict, None)`` on success, or ``(None, error_result)`` on
+        JSON parse failure where ``error_result`` is a ready-to-return dict
+        with the same shape as ``_execute_single_native_tool_call`` return values.
+    """
+    if isinstance(func_args, str):
+        try:
+            return json.loads(func_args), None
+        except json.JSONDecodeError as e:
+            return None, {
+                "call_id": call_id,
+                "func_name": func_name,
+                "result": (
+                    f"Error: Failed to parse tool arguments as JSON: {e}. "
+                    f"Please provide valid JSON arguments for the '{func_name}' tool."
+                ),
+                "from_cache": False,
+                "original_tool": original_tool,
+            }
+    return func_args, None
 
 
 def _setup_before_llm_call_hooks(

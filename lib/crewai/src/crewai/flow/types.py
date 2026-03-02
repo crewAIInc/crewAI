@@ -4,6 +4,7 @@ This module contains TypedDict definitions and type aliases used throughout
 the Flow system.
 """
 
+from datetime import datetime
 from typing import (
     Annotated,
     Any,
@@ -99,6 +100,30 @@ class FlowData(TypedDict):
 
     name: str
     flow_methods_attributes: list[FlowMethodData]
+
+
+class InputHistoryEntry(TypedDict):
+    """A single entry in the flow's input history from ``self.ask()``.
+
+    Each call to ``Flow.ask()`` appends one entry recording the question,
+    the user's response, which method asked, and any metadata exchanged
+    between the caller and the input provider.
+
+    Attributes:
+        message: The question or prompt that was displayed to the user.
+        response: The user's response, or None on timeout/error.
+        method_name: The flow method that called ``ask()``.
+        timestamp: When the input was received.
+        metadata: Metadata sent with the question (caller to provider).
+        response_metadata: Metadata received with the answer (provider to caller).
+    """
+
+    message: str
+    response: str | None
+    method_name: str
+    timestamp: datetime
+    metadata: dict[str, Any] | None
+    response_metadata: dict[str, Any] | None
 
 
 class FlowExecutionData(TypedDict):
