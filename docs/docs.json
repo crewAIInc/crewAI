@@ -1731,7 +1731,8 @@
                         "icon": "gear",
                         "pages": [
                           "v1.14.7/en/guides/advanced/customizing-prompts",
-                          "v1.14.7/en/guides/advanced/fingerprinting"
+                          "v1.14.7/en/guides/advanced/fingerprinting",
+                          "v1.14.7/en/guides/advanced/security-best-practices"
                         ]
                       },
                       {
