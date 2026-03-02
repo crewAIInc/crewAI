@@ -158,13 +158,10 @@ def execute_a2a_delegation(
 ) -> TaskStateResult:
     """Execute a task delegation to a remote A2A agent synchronously.
 
-    WARNING: This function blocks the entire thread by creating and running a new
-    event loop. Prefer using 'await aexecute_a2a_delegation()' in async contexts
-    for better performance and resource efficiency.
-
-    This is a synchronous wrapper around aexecute_a2a_delegation that creates a
-    new event loop to run the async implementation. It is provided for compatibility
-    with synchronous code paths only.
+    This is a synchronous wrapper around aexecute_a2a_delegation. When no event
+    loop is running it creates a new one; when called from within an existing
+    event loop (e.g. Jupyter notebooks) it transparently runs the coroutine in
+    a separate thread to avoid "cannot run nested event loop" errors.
 
     Args:
         endpoint: A2A agent endpoint URL (AgentCard URL).
@@ -194,51 +191,51 @@ def execute_a2a_delegation(
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
-
-    Raises:
-        RuntimeError: If called from an async context with a running event loop.
     """
+    coro = aexecute_a2a_delegation(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        task_description=task_description,
+        context=context,
+        context_id=context_id,
+        task_id=task_id,
+        reference_task_ids=reference_task_ids,
+        metadata=metadata,
+        extensions=extensions,
+        conversation_history=conversation_history,
+        agent_id=agent_id,
+        agent_role=agent_role,
+        agent_branch=agent_branch,
+        response_model=response_model,
+        turn_number=turn_number,
+        updates=updates,
+        from_task=from_task,
+        from_agent=from_agent,
+        skill_id=skill_id,
+        client_extensions=client_extensions,
+        transport=transport,
+        accepted_output_modes=accepted_output_modes,
+        input_files=input_files,
+    )
+
     try:
         asyncio.get_running_loop()
-        raise RuntimeError(
-            "execute_a2a_delegation() cannot be called from an async context. "
-            "Use 'await aexecute_a2a_delegation()' instead."
-        )
-    except RuntimeError as e:
-        if "no running event loop" not in str(e).lower():
-            raise
+        # Already inside an event loop (e.g. Jupyter notebook) - run the
+        # coroutine in a separate thread with its own event loop so we don't
+        # block or conflict with the running one.
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result()
+    except RuntimeError:
+        pass
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(
-            aexecute_a2a_delegation(
-                endpoint=endpoint,
-                auth=auth,
-                timeout=timeout,
-                task_description=task_description,
-                context=context,
-                context_id=context_id,
-                task_id=task_id,
-                reference_task_ids=reference_task_ids,
-                metadata=metadata,
-                extensions=extensions,
-                conversation_history=conversation_history,
-                agent_id=agent_id,
-                agent_role=agent_role,
-                agent_branch=agent_branch,
-                response_model=response_model,
-                turn_number=turn_number,
-                updates=updates,
-                from_task=from_task,
-                from_agent=from_agent,
-                skill_id=skill_id,
-                client_extensions=client_extensions,
-                transport=transport,
-                accepted_output_modes=accepted_output_modes,
-                input_files=input_files,
-            )
-        )
+        return loop.run_until_complete(coro)
     finally:
         try:
             loop.run_until_complete(loop.shutdown_asyncgens())

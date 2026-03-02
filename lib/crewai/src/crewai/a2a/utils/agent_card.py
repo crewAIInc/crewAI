@@ -138,12 +138,24 @@ def fetch_agent_card(
         ttl_hash = int(time.time() // cache_ttl)
         return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
 
+    coro = afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
+
+    try:
+        asyncio.get_running_loop()
+        # Already inside an event loop (e.g. Jupyter notebook) - run the
+        # coroutine in a separate thread with its own event loop.
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result()
+    except RuntimeError:
+        pass
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(
-            afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
-        )
+        return loop.run_until_complete(coro)
     finally:
         loop.close()
 
