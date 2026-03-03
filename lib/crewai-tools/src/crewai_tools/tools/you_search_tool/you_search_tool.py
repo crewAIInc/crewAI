@@ -34,7 +34,6 @@ Country = Literal[
     "CN",
     "PL",
     "PT",
-    "PT-BR",
     "PH",
     "RU",
     "SA",
