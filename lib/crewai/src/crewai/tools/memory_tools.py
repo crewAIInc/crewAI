@@ -49,7 +49,7 @@ class RecallMemoryTool(BaseTool):
         all_lines: list[str] = []
         seen_ids: set[str] = set()
         for query in queries:
-            matches = self.memory.recall(query)
+            matches = self.memory.recall(query, limit=20)
             for m in matches:
                 if m.record.id not in seen_ids:
                     seen_ids.add(m.record.id)
