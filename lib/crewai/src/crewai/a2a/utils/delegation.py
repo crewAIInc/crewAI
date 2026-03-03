@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 from collections.abc import AsyncIterator, Callable, MutableMapping
+import concurrent.futures
 from contextlib import asynccontextmanager
 import logging
 from typing import TYPE_CHECKING, Any, Final, Literal
@@ -194,56 +195,43 @@ def execute_a2a_delegation(
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
-
-    Raises:
-        RuntimeError: If called from an async context with a running event loop.
     """
+    coro = aexecute_a2a_delegation(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        task_description=task_description,
+        context=context,
+        context_id=context_id,
+        task_id=task_id,
+        reference_task_ids=reference_task_ids,
+        metadata=metadata,
+        extensions=extensions,
+        conversation_history=conversation_history,
+        agent_id=agent_id,
+        agent_role=agent_role,
+        agent_branch=agent_branch,
+        response_model=response_model,
+        turn_number=turn_number,
+        updates=updates,
+        from_task=from_task,
+        from_agent=from_agent,
+        skill_id=skill_id,
+        client_extensions=client_extensions,
+        transport=transport,
+        accepted_output_modes=accepted_output_modes,
+        input_files=input_files,
+    )
     try:
         asyncio.get_running_loop()
-        raise RuntimeError(
-            "execute_a2a_delegation() cannot be called from an async context. "
-            "Use 'await aexecute_a2a_delegation()' instead."
-        )
-    except RuntimeError as e:
-        if "no running event loop" not in str(e).lower():
-            raise
+        has_running_loop = True
+    except RuntimeError:
+        has_running_loop = False
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(
-            aexecute_a2a_delegation(
-                endpoint=endpoint,
-                auth=auth,
-                timeout=timeout,
-                task_description=task_description,
-                context=context,
-                context_id=context_id,
-                task_id=task_id,
-                reference_task_ids=reference_task_ids,
-                metadata=metadata,
-                extensions=extensions,
-                conversation_history=conversation_history,
-                agent_id=agent_id,
-                agent_role=agent_role,
-                agent_branch=agent_branch,
-                response_model=response_model,
-                turn_number=turn_number,
-                updates=updates,
-                from_task=from_task,
-                from_agent=from_agent,
-                skill_id=skill_id,
-                client_extensions=client_extensions,
-                transport=transport,
-                accepted_output_modes=accepted_output_modes,
-                input_files=input_files,
-            )
-        )
-    finally:
-        try:
-            loop.run_until_complete(loop.shutdown_asyncgens())
-        finally:
-            loop.close()
+    if has_running_loop:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, coro).result()
+    return asyncio.run(coro)
 
 
 async def aexecute_a2a_delegation(
