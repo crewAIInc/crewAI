@@ -416,6 +416,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             )
                         }
 
+                    # Capture tool info before _handle_agent_action may
+                    # convert the answer to AgentFinish (result_as_answer).
+                    _tool_name = formatted_answer.tool
+                    _tool_input = formatted_answer.tool_input
+
                     tool_result = execute_tool_and_check_finality(
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
@@ -435,7 +440,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                     # Check for repetitive loop patterns
                     loop_result = self._record_and_check_loop(
-                        formatted_answer.tool, formatted_answer.tool_input
+                        _tool_name, _tool_input
                     )
                     if loop_result is not None:
                         formatted_answer = loop_result
@@ -1274,6 +1279,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             )
                         }
 
+                    # Capture tool info before _handle_agent_action may
+                    # convert the answer to AgentFinish (result_as_answer).
+                    _tool_name = formatted_answer.tool
+                    _tool_input = formatted_answer.tool_input
+
                     tool_result = await aexecute_tool_and_check_finality(
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
@@ -1293,7 +1303,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                     # Check for repetitive loop patterns
                     loop_result = self._record_and_check_loop(
-                        formatted_answer.tool, formatted_answer.tool_input
+                        _tool_name, _tool_input
                     )
                     if loop_result is not None:
                         formatted_answer = loop_result
