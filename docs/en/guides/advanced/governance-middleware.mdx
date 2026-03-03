@@ -94,7 +94,19 @@ class WitnessLog:
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.log_file = self.log_dir / "witness.jsonl"
-        self.prev_hash = "0" * 64  # Genesis hash
+        self.prev_hash = self._read_last_hash()
+
+    def _read_last_hash(self) -> str:
+        """Resume chain from existing log, or start from genesis."""
+        if not self.log_file.exists():
+            return "0" * 64
+        last_line = ""
+        with open(self.log_file, "r") as f:
+            for last_line in f:
+                pass
+        if last_line.strip():
+            return json.loads(last_line)["hash"]
+        return "0" * 64
 
     def record(self, entry: dict) -> str:
         entry["prev_hash"] = self.prev_hash
@@ -164,10 +176,12 @@ def _check_constraints(tool_input: dict, constraints: dict) -> bool:
     if not constraints:
         return True
 
-    # Path prefix constraint
+    # Path prefix constraint (resolve to catch traversal attempts)
     if "path_prefix" in constraints:
-        path = tool_input.get("path", tool_input.get("file_path", ""))
-        if not str(path).startswith(constraints["path_prefix"]):
+        raw = tool_input.get("path", tool_input.get("file_path", ""))
+        resolved = str(Path(raw).resolve())
+        prefix_resolved = str(Path(constraints["path_prefix"]).resolve())
+        if not resolved.startswith(prefix_resolved):
             return False
 
     # Blocked pattern constraint
@@ -221,7 +235,7 @@ def governance_gate(context: ToolCallHookContext) -> bool | None:
             f"with input: {json.dumps(intent['input'], indent=2)}\n"
             f"Approve? (yes/no)"
         )
-        approved = response.strip().lower() in ("yes", "y", "")
+        approved = response.strip().lower() in ("yes", "y")
         WITNESS.record({
             "phase": "promote",
             "verdict": "approved_by_human" if approved else "denied_by_human",
@@ -304,20 +318,21 @@ import hashlib
 
 def verify_witness_log(log_path: str) -> bool:
     prev_hash = "0" * 64
+    count = 0
     with open(log_path) as f:
-        for i, line in enumerate(f):
+        for count, line in enumerate(f, 1):
             entry = json.loads(line)
             recorded_hash = entry.pop("hash")
             if entry["prev_hash"] != prev_hash:
-                print(f"Chain broken at entry {i}")
+                print(f"Chain broken at entry {count - 1}")
                 return False
             payload = json.dumps(entry, sort_keys=True)
             computed = hashlib.sha256(payload.encode()).hexdigest()
             if computed != recorded_hash:
-                print(f"Hash mismatch at entry {i}")
+                print(f"Hash mismatch at entry {count - 1}")
                 return False
             prev_hash = recorded_hash
-    print(f"Witness log verified: {i + 1} entries, chain intact.")
+    print(f"Witness log verified: {count} entries, chain intact.")
     return True
 ```
 
