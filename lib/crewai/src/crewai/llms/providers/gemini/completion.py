@@ -61,6 +61,7 @@ class GeminiCompletion(BaseLLM):
         interceptor: BaseInterceptor[Any, Any] | None = None,
         use_vertexai: bool | None = None,
         response_format: type[BaseModel] | None = None,
+        thinking_config: types.ThinkingConfig | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
@@ -93,6 +94,10 @@ class GeminiCompletion(BaseLLM):
                          api_version="v1" is automatically configured.
             response_format: Pydantic model for structured output. Used as default when
                            response_model is not passed to call()/acall() methods.
+            thinking_config: ThinkingConfig for thinking models (gemini-2.5+, gemini-3+).
+                           Controls thought output via include_thoughts, thinking_budget,
+                           and thinking_level. When None, thinking models automatically
+                           get include_thoughts=True so thought content is surfaced.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -138,6 +143,14 @@ class GeminiCompletion(BaseLLM):
         self.is_gemini_2_0 = bool(
             version_match and float(version_match.group(1)) >= 2.0
         )
+
+        self.thinking_config = thinking_config
+        if (
+            self.thinking_config is None
+            and version_match
+            and float(version_match.group(1)) >= 2.5
+        ):
+            self.thinking_config = types.ThinkingConfig(include_thoughts=True)
 
     @property
     def stop(self) -> list[str]:
@@ -519,6 +532,9 @@ class GeminiCompletion(BaseLLM):
 
         if self.safety_settings:
             config_params["safety_settings"] = self.safety_settings
+
+        if self.thinking_config is not None:
+            config_params["thinking_config"] = self.thinking_config
 
         return types.GenerateContentConfig(**config_params)
 
@@ -931,15 +947,6 @@ class GeminiCompletion(BaseLLM):
         if chunk.usage_metadata:
             usage_data = self._extract_token_usage(chunk)
 
-        if chunk.text:
-            full_response += chunk.text
-            self._emit_stream_chunk_event(
-                chunk=chunk.text,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_id=response_id,
-            )
-
         if chunk.candidates:
             candidate = chunk.candidates[0]
             if candidate.content and candidate.content.parts:
@@ -974,6 +981,21 @@ class GeminiCompletion(BaseLLM):
                                 "index": call_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id,
+                        )
+                    elif part.thought and part.text:
+                        self._emit_thinking_chunk_event(
+                            chunk=part.text,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_id=response_id,
+                        )
+                    elif part.text:
+                        full_response += part.text
+                        self._emit_stream_chunk_event(
+                            chunk=part.text,
+                            from_task=from_task,
+                            from_agent=from_agent,
                             response_id=response_id,
                         )
 
@@ -1329,7 +1351,7 @@ class GeminiCompletion(BaseLLM):
         text_parts = [
             part.text
             for part in candidate.content.parts
-            if hasattr(part, "text") and part.text
+            if part.text and not part.thought
         ]
 
         return "".join(text_parts)
