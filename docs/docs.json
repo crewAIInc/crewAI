@@ -584,6 +584,13 @@
                           "pt-BR/guides/advanced/customizing-prompts",
                           "pt-BR/guides/advanced/fingerprinting"
                         ]
+                      },
+                      {
+                        "group": "Migração",
+                        "icon": "shuffle",
+                        "pages": [
+                          "pt-BR/guides/migration/migrating-from-langgraph"
+                        ]
                       }
                     ]
                   },
@@ -1027,6 +1034,13 @@
                         "pages": [
                           "ko/guides/advanced/customizing-prompts",
                           "ko/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "마이그레이션",
+                        "icon": "shuffle",
+                        "pages": [
+                          "ko/guides/migration/migrating-from-langgraph"
                         ]
                       }
                     ]
