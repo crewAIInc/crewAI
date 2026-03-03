@@ -37,7 +37,6 @@ class RecallState(BaseModel):
     query: str = ""
     scope: str | None = None
     categories: list[str] | None = None
-    inferred_categories: list[str] = Field(default_factory=list)
     time_cutoff: datetime | None = None
     source: str | None = None
     include_private: bool = False
@@ -84,7 +83,7 @@ class RecallFlow(Flow[RecallState]):
     def _merged_categories(self) -> list[str] | None:
         """Merge caller-supplied and LLM-inferred categories."""
         merged = list(
-            set((self.state.categories or []) + self.state.inferred_categories)
+            set((self.state.categories or []))
         )
         return merged or None
 
@@ -211,10 +210,6 @@ class RecallFlow(Flow[RecallState]):
                 self._llm,
             )
             self.state.query_analysis = analysis
-
-            # Wire keywords -> category filter
-            if analysis.keywords:
-                self.state.inferred_categories = analysis.keywords
 
             # Parse time_filter into a datetime cutoff
             if analysis.time_filter:
