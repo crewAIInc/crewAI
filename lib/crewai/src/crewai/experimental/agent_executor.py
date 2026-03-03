@@ -2659,6 +2659,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self.state.last_replan_reason = None
             self.state.observations = {}
             self.state.execution_log = []
+            self._finalize_called = False
 
             self._kickoff_input = inputs.get("input", "")
 
@@ -2750,6 +2751,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self.state.last_replan_reason = None
             self.state.observations = {}
             self.state.execution_log = []
+            self._finalize_called = False
 
             self._kickoff_input = inputs.get("input", "")
 
