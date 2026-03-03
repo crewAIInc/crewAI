@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # Todo status type
@@ -234,6 +234,14 @@ class StepObservation(BaseModel):
             "Applied directly — no separate replan needed."
         ),
     )
+
+    @field_validator("suggested_refinements", mode="before")
+    @classmethod
+    def coerce_single_refinement_to_list(cls, v):
+        """Coerce a single dict refinement into a list to handle LLM returning a single object."""
+        if isinstance(v, dict):
+            return [v]
+        return v
     needs_full_replan: bool = Field(
         default=False,
         description="The remaining plan is fundamentally wrong and must be regenerated",

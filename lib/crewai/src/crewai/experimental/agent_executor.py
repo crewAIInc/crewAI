@@ -429,6 +429,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self._planner_observer = PlannerObserver(
                 agent=self.agent,
                 task=self.task,
+                kickoff_input=getattr(self, "_kickoff_input", ""),
             )
         return self._planner_observer
 
@@ -437,12 +438,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         Returns:
             The reasoning effort level: "low", "medium", or "high".
-            Defaults to "low" if no planning config is set.
+            Defaults to "medium" if no planning config is set so that
+            step failures reliably trigger replanning rather than being
+            silently ignored.
         """
         config = getattr(self.agent, "planning_config", None)
         if config is not None and hasattr(config, "reasoning_effort"):
             return config.reasoning_effort
-        return "low"
+        return "medium"
 
     def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:
         """Build an isolated execution context for a single todo.
@@ -554,15 +557,42 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     @router("step_observed_low")
     def handle_step_observed_low(
         self,
-    ) -> Literal["continue_plan"]:
+    ) -> Literal["continue_plan", "replan_now"]:
         """Low reasoning effort: mark step complete and continue linearly.
 
-        Skips the entire decide/replan/refine pipeline. The observation
-        still validates success, but execution proceeds regardless.
+        Skips the refine/goal-achieved pipeline but still gates on hard
+        failures: if the observer says the step failed AND a full replan is
+        needed, we route to ``replan_now`` rather than blindly continuing.
+        This prevents cascading failures where every subsequent step builds
+        on a broken foundation.
         """
         current_todo = self.state.todos.current_todo
         if not current_todo:
             return "continue_plan"
+
+        observation = self.state.observations.get(current_todo.step_number)
+
+        # Even at low effort, don't ignore a hard step failure.
+        # A hard failure is one where the step did not succeed AND a replan
+        # is explicitly required (e.g. required tool not found, permission
+        # denied, environment misconfiguration).
+        if (
+            observation
+            and not observation.step_completed_successfully
+            and observation.needs_full_replan
+        ):
+            if self.agent.verbose:
+                self._printer.print(
+                    content=(
+                        f"[Low] Step {current_todo.step_number} hard-failed "
+                        f"— triggering replan: {observation.replan_reason}"
+                    ),
+                    color="yellow",
+                )
+            self.state.last_replan_reason = (
+                observation.replan_reason or "Step did not complete successfully"
+            )
+            return "replan_now"
 
         self.state.todos.mark_completed(
             current_todo.step_number, result=current_todo.result
@@ -610,14 +640,37 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
             return "continue_plan"
 
-        # Step failed — trigger replan
+        # Step failed — only replan if observer explicitly requires it,
+        # otherwise mark done and continue (same gate as low-effort).
+        if observation.needs_full_replan:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=(
+                        f"[Medium] Step {current_todo.step_number} failed + replan required "
+                        f"— triggering replan: {observation.replan_reason}"
+                    ),
+                    color="yellow",
+                )
+            self.state.last_replan_reason = (
+                observation.replan_reason or "Step did not complete successfully"
+            )
+            return "replan_now"
+
+        # Step failed but observer does not require a full replan — continue
+        self.state.todos.mark_completed(
+            current_todo.step_number, result=current_todo.result
+        )
         if self.agent.verbose:
+            completed = self.state.todos.completed_count
+            total = len(self.state.todos.items)
             self._printer.print(
-                content=f"[Medium] Step {current_todo.step_number} failed — triggering replan",
+                content=(
+                    f"[Medium] Step {current_todo.step_number} failed but no replan needed "
+                    f"({completed}/{total}) — continuing"
+                ),
                 color="yellow",
             )
-        self.state.last_replan_reason = "Step did not complete successfully"
-        return "replan_now"
+        return "continue_plan"
 
     # -- High effort: full observation pipeline (existing behavior) --
 
@@ -793,9 +846,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Preserves completed todo results and replaces only pending steps.
         """
         max_replans = 3
-        self.state.replan_count += 1
 
-        if self.state.replan_count > max_replans:
+        if self.state.replan_count >= max_replans:
             if self.agent.verbose:
                 self._printer.print(
                     content=f"Max replans ({max_replans}) reached — finalizing with current results",
@@ -803,6 +855,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
             return "all_todos_complete"
 
+        self.state.replan_count += 1
         reason = self.state.last_replan_reason or "Dynamic replan triggered"
         completed = self.state.todos.get_completed_todos()
 
@@ -2405,19 +2458,36 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 output = planning_handler.handle_agent_reasoning()
                 self.task.description = original_description
             else:
-                planning_handler.description = enhanced_description
+                # description is a read-only property — recreate with enhanced text
+                input_text = getattr(self, "_kickoff_input", "")
+                planning_handler = AgentReasoning(
+                    agent=self.agent,
+                    description=enhanced_description or input_text or "Complete the requested task",
+                    expected_output="Complete the task successfully",
+                )
                 output = planning_handler.handle_agent_reasoning()
 
-            # Reset todos with new plan
+            # Update plan metadata and replace only pending todos,
+            # preserving completed history for context and synthesis.
             self.state.plan = output.plan.plan
             self.state.plan_ready = output.plan.ready
 
             if self.state.plan_ready and output.plan.steps:
-                self._create_todos_from_plan(output.plan.steps)
+                new_todos = [
+                    TodoItem(
+                        step_number=step.step_number,
+                        description=step.description,
+                        tool_to_use=step.tool_to_use,
+                        depends_on=step.depends_on,
+                        status="pending",
+                    )
+                    for step in output.plan.steps
+                ]
+                self.state.todos.replace_pending_todos(new_todos)
 
                 if self.agent.verbose:
                     self._printer.print(
-                        content=f"New plan created with {len(output.plan.steps)} steps",
+                        content=f"Replan: {len(new_todos)} new steps (completed history preserved)",
                         color="green",
                     )
 

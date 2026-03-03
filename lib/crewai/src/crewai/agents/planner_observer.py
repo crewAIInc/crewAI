@@ -53,9 +53,15 @@ class PlannerObserver:
         task: Optional task context (for description and expected output).
     """
 
-    def __init__(self, agent: Agent, task: Task | None = None) -> None:
+    def __init__(
+        self,
+        agent: Agent,
+        task: Task | None = None,
+        kickoff_input: str = "",
+    ) -> None:
         self.agent = agent
         self.task = task
+        self.kickoff_input = kickoff_input
         self.llm = self._resolve_llm()
         self._i18n: I18N = get_i18n()
 
@@ -183,13 +189,31 @@ class PlannerObserver:
                 ),
             )
 
+            # Don't force a full replan — the step may have succeeded even if the
+            # observer LLM failed to parse the result. Defaulting to "continue" is
+            # far less disruptive than wiping the entire plan on every observer error.
             return StepObservation(
-                step_completed_successfully=False,
+                step_completed_successfully=True,
                 key_information_learned="",
-                remaining_plan_still_valid=False,
-                needs_full_replan=True,
-                replan_reason="Observer failed to evaluate step result safely",
+                remaining_plan_still_valid=True,
+                needs_full_replan=False,
             )
+
+    def _extract_task_section(self, text: str) -> str:
+        """Extract the ## Task body from a structured enriched instruction.
+
+        Falls back to the full text (capped at 2000 chars) for plain inputs.
+        """
+        for marker in ("\n## Task\n", "\n## Task:", "## Task\n"):
+            idx = text.find(marker)
+            if idx >= 0:
+                start = idx + len(marker)
+                for end_marker in ("\n---\n", "\n## "):
+                    end = text.find(end_marker, start)
+                    if end > 0:
+                        return text[start:end].strip()
+                return text[start : start + 2000].strip()
+        return text[:2000] if len(text) > 2000 else text
 
     def apply_refinements(
         self,
@@ -235,6 +259,12 @@ class PlannerObserver:
         if self.task:
             task_desc = self.task.description or ""
             task_goal = self.task.expected_output or ""
+        elif self.kickoff_input:
+            # Standalone kickoff path — no Task object, but we have the raw input.
+            # Extract just the ## Task section so the observer sees the actual goal,
+            # not the full enriched instruction with env/tools/verification noise.
+            task_desc = self._extract_task_section(self.kickoff_input)
+            task_goal = "Complete the task successfully"
 
         system_prompt = self._i18n.retrieve("planning", "observation_system_prompt")
 

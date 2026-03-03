@@ -124,11 +124,12 @@ class StepExecutor:
     # ------------------------------------------------------------------
 
     def execute(self, todo: TodoItem, context: StepExecutionContext) -> StepResult:
-        """Execute a single todo item using direct-action execution.
+        """Execute a single todo item using a multi-turn action loop.
 
-        Enforces the RPM limit, builds a fresh message list, makes one LLM
-        call, executes any tool returned, and returns the result. Never
-        touches external state.
+        Enforces the RPM limit, builds a fresh message list, then iterates
+        LLM call → tool execution → observation until the LLM signals it is
+        done (text answer) or max_step_iterations is reached.  Never touches
+        external AgentExecutor state.
 
         Args:
             todo: The todo item to execute.
@@ -207,9 +208,51 @@ class StepExecutor:
             tools_section=tools_section,
         )
 
+    def _extract_task_section(self, task_description: str) -> str:
+        """Extract the most relevant portion of the task description.
+
+        For structured descriptions (e.g. harbor_agent-style with ## Task
+        and ## Instructions sections), extracts just the task body so the
+        executor sees the requirements without duplicating tool/verification
+        instructions that are already in the system prompt.
+
+        For plain descriptions, returns the full text (up to 2000 chars).
+        """
+        # Try to extract between "## Task" and the next "---" separator
+        # or next "##" heading — this isolates the task spec from env/tool noise.
+        for marker in ("\n## Task\n", "\n## Task:", "## Task\n"):
+            idx = task_description.find(marker)
+            if idx >= 0:
+                start = idx + len(marker)
+                # End at the first horizontal rule or next top-level ## section
+                for end_marker in ("\n---\n", "\n## "):
+                    end = task_description.find(end_marker, start)
+                    if end > 0:
+                        return task_description[start:end].strip()
+                # No end marker — take up to 2000 chars
+                return task_description[start : start + 2000].strip()
+
+        # No structured format — use the full description, reasonably truncated
+        if len(task_description) > 2000:
+            return task_description[:2000] + "\n... [truncated]"
+        return task_description
+
     def _build_user_prompt(self, todo: TodoItem, context: StepExecutionContext) -> str:
         """Build the user prompt for this specific step."""
         parts: list[str] = []
+
+        # Include overall task context so the executor knows the full goal and
+        # required output format/location — critical for knowing WHAT to produce.
+        # We extract only the task body (not tool instructions or verification
+        # sections) to avoid duplicating directives already in the system prompt.
+        if context.task_description:
+            task_section = self._extract_task_section(context.task_description)
+            if task_section:
+                parts.append(
+                    self._i18n.retrieve("planning", "step_executor_task_context").format(
+                        task_context=task_section,
+                    )
+                )
 
         parts.append(
             self._i18n.retrieve("planning", "step_executor_user_prompt").format(
@@ -241,43 +284,58 @@ class StepExecutor:
         return "\n".join(parts)
 
     # ------------------------------------------------------------------
-    # Internal: Direct-action execution (single LLM call)
+    # Internal: Multi-turn execution loop
     # ------------------------------------------------------------------
 
     def _execute_text_parsed(
         self,
         messages: list[LLMMessage],
         tool_calls_made: list[str],
+        max_step_iterations: int = 15,
     ) -> str:
-        """Execute step using text-parsed tool calling (single LLM call).
+        """Execute step using text-parsed tool calling with a multi-turn loop.
 
-        Calls the LLM once. If the response is a tool call, executes the tool
-        and returns its result. If a final answer, returns it directly.
-        No retry loop — the PlannerObserver handles recovery.
+        Iterates LLM call → tool execution → observation until the LLM
+        produces a Final Answer or max_step_iterations is reached.
+        This allows the agent to: run a command, see the output, adjust its
+        approach, and run another command — all within a single plan step.
         """
-        answer = self.llm.call(
-            messages,
-            callbacks=self.callbacks,
-            from_task=self.task,
-            from_agent=self.agent,
-        )
-
-        if not answer:
-            raise ValueError("Empty response from LLM")
-
-        answer_str = str(answer)
         use_stop_words = self.llm.supports_stop_words() if self.llm else False
-        formatted = process_llm_response(answer_str, use_stop_words)
+        last_tool_result = ""
 
-        if isinstance(formatted, AgentFinish):
-            return str(formatted.output)
+        for _ in range(max_step_iterations):
+            answer = self.llm.call(
+                messages,
+                callbacks=self.callbacks,
+                from_task=self.task,
+                from_agent=self.agent,
+            )
 
-        if isinstance(formatted, AgentAction):
-            tool_calls_made.append(formatted.tool)
-            return self._execute_text_tool_with_events(formatted)
+            if not answer:
+                raise ValueError("Empty response from LLM")
 
-        # Raw text response — treat as the step result
-        return answer_str
+            answer_str = str(answer)
+            formatted = process_llm_response(answer_str, use_stop_words)
+
+            if isinstance(formatted, AgentFinish):
+                return str(formatted.output)
+
+            if isinstance(formatted, AgentAction):
+                tool_calls_made.append(formatted.tool)
+                tool_result = self._execute_text_tool_with_events(formatted)
+                last_tool_result = tool_result
+                # Append the assistant's reasoning + action, then the observation.
+                # _build_observation_message handles vision sentinels so the LLM
+                # receives an image content block instead of raw base64 text.
+                messages.append({"role": "assistant", "content": answer_str})
+                messages.append(self._build_observation_message(tool_result))
+                continue
+
+            # Raw text response with no Final Answer marker — treat as done
+            return answer_str
+
+        # Max iterations reached — return the last tool result we accumulated
+        return last_tool_result
 
     def _execute_text_tool_with_events(self, formatted: AgentAction) -> str:
         """Execute text-parsed tool calls with tool usage events."""
@@ -365,6 +423,52 @@ class StepExecutor:
                 return {"input": stripped_input}
         return {"input": str(tool_input)}
 
+    # ------------------------------------------------------------------
+    # Internal: Vision support
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_vision_sentinel(raw: str) -> tuple[str, str] | None:
+        """Parse a VISION_IMAGE sentinel into (media_type, base64_data), or None."""
+        _PREFIX = "VISION_IMAGE:"
+        if not raw.startswith(_PREFIX):
+            return None
+        rest = raw[len(_PREFIX):]
+        sep = rest.find(":")
+        if sep <= 0:
+            return None
+        return rest[:sep], rest[sep + 1:]
+
+    @staticmethod
+    def _build_observation_message(tool_result: str) -> LLMMessage:
+        """Build an observation message, converting vision sentinels to image blocks.
+
+        When a tool returns a VISION_IMAGE sentinel (e.g. from read_image),
+        we build a multimodal content block so the LLM can actually *see*
+        the image rather than receiving a wall of base64 text.
+
+        Uses the standard image_url / data-URI format so each LLM provider's
+        SDK (OpenAI, LiteLLM, etc.) handles the provider-specific conversion.
+
+        Format: ``VISION_IMAGE:<media_type>:<base64_data>``
+        """
+        parsed = StepExecutor._parse_vision_sentinel(tool_result)
+        if parsed:
+            media_type, b64_data = parsed
+            return {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Observation: Here is the image:"},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{media_type};base64,{b64_data}",
+                        },
+                    },
+                ],
+            }
+        return {"role": "user", "content": f"Observation: {tool_result}"}
+
     def _validate_expected_tool_usage(
         self,
         todo: TodoItem,
@@ -393,31 +497,47 @@ class StepExecutor:
         self,
         messages: list[LLMMessage],
         tool_calls_made: list[str],
+        max_step_iterations: int = 15,
     ) -> str:
-        """Execute step using native function calling (single LLM call).
+        """Execute step using native function calling with a multi-turn loop.
 
-        Calls the LLM once with the tool schema. If tool calls are returned,
-        executes them and returns their results. If a text answer, returns it.
-        No retry loop — the PlannerObserver handles recovery.
+        Iterates LLM call → tool execution → appended results until the LLM
+        returns a text answer (no more tool calls) or max_step_iterations is
+        reached.  This lets the agent run a shell command, observe the output,
+        correct mistakes, and issue follow-up commands — all within one step.
         """
-        answer = self.llm.call(
-            messages,
-            tools=self._openai_tools,
-            callbacks=self.callbacks,
-            from_task=self.task,
-            from_agent=self.agent,
-        )
+        accumulated_results: list[str] = []
 
-        if not answer:
-            raise ValueError("Empty response from LLM")
+        for _ in range(max_step_iterations):
+            answer = self.llm.call(
+                messages,
+                tools=self._openai_tools,
+                callbacks=self.callbacks,
+                from_task=self.task,
+                from_agent=self.agent,
+            )
 
-        if isinstance(answer, list) and answer and is_tool_call_list(answer):
-            return self._execute_native_tool_calls(answer, messages, tool_calls_made)
+            if not answer:
+                raise ValueError("Empty response from LLM")
 
-        if isinstance(answer, BaseModel):
-            return answer.model_dump_json()
+            if isinstance(answer, BaseModel):
+                return answer.model_dump_json()
 
-        return str(answer)
+            if isinstance(answer, list) and answer and is_tool_call_list(answer):
+                # _execute_native_tool_calls appends assistant + tool messages
+                # to `messages` as a side-effect, so the next LLM call will
+                # see the full conversation history including tool outputs.
+                result = self._execute_native_tool_calls(
+                    answer, messages, tool_calls_made
+                )
+                accumulated_results.append(result)
+                continue
+
+            # Text answer → LLM decided the step is done
+            return str(answer)
+
+        # Max iterations reached — return everything we accumulated
+        return "\n".join(filter(None, accumulated_results))
 
     def _execute_native_tool_calls(
         self,
@@ -457,9 +577,32 @@ class StepExecutor:
                 return str(call_result.result)
 
             if call_result.tool_message:
-                messages.append(call_result.tool_message)
-                content = call_result.tool_message.get("content", "")
-                if content:
-                    tool_results.append(str(content))
+                raw_content = call_result.tool_message.get("content", "")
+                if isinstance(raw_content, str):
+                    parsed = self._parse_vision_sentinel(raw_content)
+                    if parsed:
+                        media_type, b64_data = parsed
+                        # Replace the sentinel with a standard image_url content block.
+                        # Each provider SDK (LiteLLM → Anthropic, OpenAI native, etc.)
+                        # converts the data-URI to its own wire format.
+                        modified = dict(call_result.tool_message)
+                        modified["content"] = [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{media_type};base64,{b64_data}",
+                                },
+                            }
+                        ]
+                        messages.append(modified)
+                        tool_results.append("[image]")
+                    else:
+                        messages.append(call_result.tool_message)
+                        if raw_content:
+                            tool_results.append(raw_content)
+                else:
+                    messages.append(call_result.tool_message)
+                    if raw_content:
+                        tool_results.append(str(raw_content))
 
         return "\n".join(tool_results) if tool_results else ""
