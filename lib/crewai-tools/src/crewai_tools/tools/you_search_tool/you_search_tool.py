@@ -62,7 +62,6 @@ Language = Literal[
     "NL",
     "EN",
     "EN-GB",
-    "EN-US",
     "ET",
     "FI",
     "FR",
