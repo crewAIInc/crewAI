@@ -369,9 +369,6 @@ class BaseLLM(ABC):
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
 
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -417,9 +414,6 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call failed event."""
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMCallFailedEvent(
@@ -450,9 +444,6 @@ class BaseLLM(ABC):
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
             response_id: Unique ID for a particular LLM response, chunks have same response_id.
         """
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMStreamChunkEvent(
@@ -481,9 +472,6 @@ class BaseLLM(ABC):
             from_agent: The agent that initiated the call.
             response_id: Unique ID for a particular LLM response.
         """
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMThinkingChunkEvent(
