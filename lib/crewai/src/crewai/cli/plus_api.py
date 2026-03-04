@@ -49,8 +49,13 @@ class PlusAPI:
         with httpx.Client(trust_env=False, verify=verify) as client:
             return client.request(method, url, headers=self.headers, **kwargs)
 
-    def login_to_tool_repository(self) -> httpx.Response:
-        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login")
+    def login_to_tool_repository(
+        self, user_identifier: str | None = None
+    ) -> httpx.Response:
+        payload = {}
+        if user_identifier:
+            payload["user_identifier"] = user_identifier
+        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
 
     def get_tool(self, handle: str) -> httpx.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
