@@ -137,6 +137,11 @@ class InternalInstructor(Generic[T]):
         if self.llm is None or isinstance(self.llm, str):
             return {}
 
+        # Only forward these kwargs for litellm-backed clients; non-litellm
+        # instructor clients (from_provider) don't accept them and would raise.
+        if not getattr(self.llm, "is_litellm", False):
+            return {}
+
         extra: dict[str, Any] = {}
         for attr in ("api_base", "base_url", "api_key"):
             value = getattr(self.llm, attr, None)

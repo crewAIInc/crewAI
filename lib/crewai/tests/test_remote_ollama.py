@@ -8,7 +8,6 @@ from unittest.mock import Mock, patch
 
 import httpx
 from pydantic import BaseModel
-import pytest
 
 from crewai.llm import LLM
 from crewai.utilities.internal_instructor import InternalInstructor
@@ -52,6 +51,7 @@ class TestInternalInstructorForwardsApiBase:
     def test_to_pydantic_forwards_api_base(self) -> None:
         """When LLM has api_base set, it should be forwarded to the create() call."""
         mock_llm = Mock()
+        mock_llm.is_litellm = True
         mock_llm.model = "ollama_chat/mistral-small3.2:24b"
         mock_llm.api_base = "http://remote-server:11434"
         mock_llm.base_url = None
@@ -76,6 +76,7 @@ class TestInternalInstructorForwardsApiBase:
     def test_to_pydantic_forwards_base_url(self) -> None:
         """When LLM has base_url set, it should be forwarded to the create() call."""
         mock_llm = Mock()
+        mock_llm.is_litellm = True
         mock_llm.model = "ollama/mistral-small3.2:24b"
         mock_llm.api_base = None
         mock_llm.base_url = "http://remote-server:11434"
@@ -96,6 +97,7 @@ class TestInternalInstructorForwardsApiBase:
     def test_to_pydantic_forwards_api_key(self) -> None:
         """When LLM has api_key set, it should be forwarded to the create() call."""
         mock_llm = Mock()
+        mock_llm.is_litellm = True
         mock_llm.model = "ollama/mistral-small3.2:24b"
         mock_llm.api_base = "http://remote-server:11434"
         mock_llm.base_url = None
@@ -107,7 +109,7 @@ class TestInternalInstructorForwardsApiBase:
         )
 
         inst = self._make_litellm_instructor(mock_llm, mock_client)
-        result = inst.to_pydantic()
+        inst.to_pydantic()
 
         call_kwargs = mock_client.chat.completions.create.call_args
         assert call_kwargs.kwargs.get("api_base") == "http://remote-server:11434"
@@ -133,6 +135,7 @@ class TestInternalInstructorForwardsApiBase:
     def test_to_pydantic_no_extra_kwargs_when_none(self) -> None:
         """When LLM has no api_base/base_url/api_key, no extra kwargs should be passed."""
         mock_llm = Mock()
+        mock_llm.is_litellm = True
         mock_llm.model = "gpt-4o"
         mock_llm.api_base = None
         mock_llm.base_url = None
@@ -163,8 +166,19 @@ class TestGetLlmExtraKwargs:
         inst = _make_instructor_bypass_init(llm="gpt-4o")
         assert inst._get_llm_extra_kwargs() == {}
 
+    def test_returns_empty_for_non_litellm(self) -> None:
+        mock_llm = Mock()
+        mock_llm.is_litellm = False
+        mock_llm.api_base = "http://remote:11434"
+        mock_llm.base_url = None
+        mock_llm.api_key = None
+
+        inst = _make_instructor_bypass_init(llm=mock_llm)
+        assert inst._get_llm_extra_kwargs() == {}
+
     def test_returns_api_base_when_set(self) -> None:
         mock_llm = Mock()
+        mock_llm.is_litellm = True
         mock_llm.api_base = "http://remote:11434"
         mock_llm.base_url = None
         mock_llm.api_key = None
@@ -175,6 +189,7 @@ class TestGetLlmExtraKwargs:
 
     def test_returns_multiple_attrs_when_set(self) -> None:
         mock_llm = Mock()
+        mock_llm.is_litellm = True
         mock_llm.api_base = "http://remote:11434"
         mock_llm.base_url = "http://remote:11434"
         mock_llm.api_key = "secret"
