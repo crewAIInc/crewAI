@@ -2353,3 +2353,49 @@ def test_agent_without_apps_no_platform_tools():
 
     tools = crew._prepare_tools(agent, task, [])
     assert tools == []
+
+
+@patch("crewai.agent.core.AgentExecutor")
+@patch("crewai.agent.core.Prompts")
+@patch("crewai.agent.core.parse_tools", return_value=[])
+@patch("crewai.agent.core.Agent.get_mcp_tools")
+@patch("crewai.agent.core.Agent.get_platform_tools")
+def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp, mock_parse, mock_prompts, mock_executor):
+    """Regression test: _prepare_kickoff must load platform/MCP tools when self.tools is None.
+
+    Before the fix, _prepare_kickoff skipped tools.extend() when self.tools
+    was None, silently discarding platform and MCP tools.
+    """
+    mock_platform_tool = MagicMock(spec=["name"])
+    mock_platform_tool.name = "platform_tool"
+    mock_get_platform.return_value = [mock_platform_tool]
+
+    mock_mcp_tool = MagicMock(spec=["name"])
+    mock_mcp_tool.name = "mcp_tool"
+    mock_get_mcp.return_value = [mock_mcp_tool]
+
+    # Prompts().task_execution() returns a dict with system/user prompts
+    mock_prompt_result = MagicMock()
+    mock_prompt_result.system = "system"
+    mock_prompt_result.user = "user"
+    mock_prompts.return_value.task_execution.return_value = mock_prompt_result
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        apps=["test_app"],
+        mcps=["test_mcp"],
+    )
+
+    # Simulate the tools=None condition from config paths that bypass validation
+    agent.tools = None  # type: ignore[assignment]
+
+    # Exercise the real _prepare_kickoff code path
+    agent._prepare_kickoff(messages="test query")
+
+    assert agent.tools is not None, "tools should not be None after _prepare_kickoff"
+    assert len(agent.tools) == 2, "Both platform and MCP tools should be loaded"
+    tool_names = [t.name for t in agent.tools]
+    assert "platform_tool" in tool_names
+    assert "mcp_tool" in tool_names
