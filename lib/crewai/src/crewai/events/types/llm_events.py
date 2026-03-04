@@ -86,3 +86,11 @@ class LLMStreamChunkEvent(LLMEventBase):
     tool_call: ToolCall | None = None
     call_type: LLMCallType | None = None
     response_id: str | None = None
+
+
+class LLMThinkingChunkEvent(LLMEventBase):
+    """Event emitted when a thinking/reasoning chunk is received from a thinking model"""
+
+    type: str = "llm_thinking_chunk"
+    chunk: str
+    response_id: str | None = None
