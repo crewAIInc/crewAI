@@ -179,6 +179,7 @@ from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool impo
     YoutubeVideoSearchTool,
 )
 from crewai_tools.tools.you_contents_tool.you_contents_tool import YouContentsTool
+from crewai_tools.tools.you_research_tool.you_research_tool import YouResearchTool
 from crewai_tools.tools.you_search_tool.you_search_tool import YouSearchTool
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
 
@@ -271,6 +272,7 @@ __all__ = [
     "WebsiteSearchTool",
     "XMLSearchTool",
     "YouContentsTool",
+    "YouResearchTool",
     "YouSearchTool",
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
