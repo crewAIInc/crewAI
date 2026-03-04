@@ -968,7 +968,10 @@ class LLM(BaseLLM):
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             if not tool_calls or not available_functions:
-                if response_model and self.is_litellm:
+                # Only use InternalInstructor for structured output when there
+                # are no tools — otherwise tools would be silently discarded.
+                has_tools = bool(params.get("tools"))
+                if response_model and self.is_litellm and not has_tools:
                     instructor_instance = InternalInstructor(
                         content=full_response,
                         model=response_model,
@@ -1150,7 +1153,10 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Handle response_model with InternalInstructor for LiteLLM
-        if response_model and self.is_litellm:
+        # Skip InternalInstructor when tools are present so the LLM can
+        # see and call the agent's tools before returning structured output.
+        has_tools = bool(params.get("tools"))
+        if response_model and self.is_litellm and not has_tools:
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1290,7 +1296,10 @@ class LLM(BaseLLM):
         Returns:
             str: The response text
         """
-        if response_model and self.is_litellm:
+        # Skip InternalInstructor when tools are present so the LLM can
+        # see and call the agent's tools before returning structured output.
+        has_tools = bool(params.get("tools"))
+        if response_model and self.is_litellm and not has_tools:
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
