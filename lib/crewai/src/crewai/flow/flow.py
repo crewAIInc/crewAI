@@ -1830,6 +1830,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._method_outputs.clear()
                 self._pending_and_listeners.clear()
                 self._clear_or_listeners()
+                self._method_call_counts.clear()
             else:
                 # Only enter resumption mode if there are completed methods to
                 # replay.  When _completed_methods is empty (e.g. a pure
