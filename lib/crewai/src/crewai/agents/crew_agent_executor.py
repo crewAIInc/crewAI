@@ -895,7 +895,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
-        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id, original_tool)
+        args_dict, parse_error = parse_tool_call_args(
+            func_args, func_name, call_id, original_tool
+        )
         if parse_error is not None:
             return parse_error
 
