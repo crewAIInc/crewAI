@@ -2,7 +2,6 @@
 
 Implements adaptive-depth retrieval with:
 - LLM query distillation into targeted sub-queries
-- Keyword-driven category filtering
 - Time-based filtering from temporal hints
 - Parallel multi-query, multi-scope search
 - Confidence-based routing with iterative deepening (budget loop)
@@ -81,11 +80,8 @@ class RecallFlow(Flow[RecallState]):
     # ------------------------------------------------------------------
 
     def _merged_categories(self) -> list[str] | None:
-        """Merge caller-supplied and LLM-inferred categories."""
-        merged = list(
-            set((self.state.categories or []))
-        )
-        return merged or None
+        """Return caller-supplied categories, or None if empty."""
+        return self.state.categories or None
 
     def _do_search(self) -> list[dict[str, Any]]:
         """Run parallel search across (embeddings x scopes) with filters.
