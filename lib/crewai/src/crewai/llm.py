@@ -1189,7 +1189,11 @@ class LLM(BaseLLM):
             # and convert them to our own exception type for consistent handling
             # across the codebase. This allows CrewAgentExecutor to handle context
             # length issues appropriately.
-            if response_model:
+            # Only pass response_model to litellm when there are no tools.
+            # When tools are present, litellm's internal instructor would override
+            # the tools parameter, so we let the normal completion flow handle it
+            # and defer structured output conversion to the executor/converter.
+            if response_model and not has_tools:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
 
@@ -1327,7 +1331,11 @@ class LLM(BaseLLM):
             return structured_response
 
         try:
-            if response_model:
+            # Only pass response_model to litellm when there are no tools.
+            # When tools are present, litellm's internal instructor would override
+            # the tools parameter, so we let the normal completion flow handle it
+            # and defer structured output conversion to the executor/converter.
+            if response_model and not has_tools:
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 

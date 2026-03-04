@@ -1221,3 +1221,57 @@ async def test_async_non_streaming_response_model_without_tools_uses_instructor(
 
     MockInstructor.assert_called_once()
     assert '"Alice"' in result
+
+
+def test_non_streaming_response_model_not_passed_to_litellm_when_tools_present():
+    """Verify that response_model is NOT forwarded to litellm.completion when
+    tools are present, because litellm's internal instructor would override
+    the tools parameter."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    tool_call_resp = _make_tool_call_response()
+
+    with patch("litellm.completion", return_value=tool_call_resp) as mock_completion:
+        llm.call(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,
+            response_model=MyOutput,
+        )
+
+    mock_completion.assert_called_once()
+    call_kwargs = mock_completion.call_args[1]
+    # response_model must NOT be in the kwargs sent to litellm.completion
+    assert "response_model" not in call_kwargs, (
+        "response_model was passed to litellm.completion even though tools are present; "
+        "litellm's internal instructor would override the tools"
+    )
+    # tools MUST be present
+    assert "tools" in call_kwargs
+
+
+@pytest.mark.asyncio
+async def test_async_response_model_not_passed_to_litellm_when_tools_present():
+    """Async variant: response_model must not be forwarded to litellm.acompletion
+    when tools are present."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    tool_call_resp = _make_tool_call_response()
+
+    with patch("litellm.acompletion", return_value=tool_call_resp) as mock_acompletion:
+        await llm.acall(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,
+            response_model=MyOutput,
+        )
+
+    mock_acompletion.assert_called_once()
+    call_kwargs = mock_acompletion.call_args[1]
+    assert "response_model" not in call_kwargs, (
+        "response_model was passed to litellm.acompletion even though tools are present; "
+        "litellm's internal instructor would override the tools"
+    )
+    assert "tools" in call_kwargs
