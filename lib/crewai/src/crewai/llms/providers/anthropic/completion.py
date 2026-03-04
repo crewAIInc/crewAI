@@ -667,7 +667,7 @@ class AnthropicCompletion(BaseLLM):
 
                     # Handle both string and list content formats
                     if isinstance(prev_content, str) and isinstance(curr_content, str):
-                        merged = f"{prev_content}\n\n{curr_content}".strip()
+                        merged = f"{prev_content}\n\n{curr_content}"
                         fixed_messages[-1]["content"] = merged
                     elif isinstance(prev_content, list) and isinstance(curr_content, list):
                         fixed_messages[-1]["content"] = prev_content + curr_content
