@@ -1843,3 +1843,53 @@ def test_cyclic_flow_works_with_persist_and_id_input():
             f"'{method}' should fire 3 times, "
             f"got {len(events)}: {execution_order}"
         )
+
+
+@pytest.mark.timeout(5)
+def test_self_listening_method_does_not_loop():
+    """A method whose @listen label matches its own name must not loop forever.
+
+    Without the guard, 'process' re-triggers itself on every completion,
+    running indefinitely (timeout → FAIL).  The fix caps method calls
+    and raises RecursionError (PASS).
+    """
+
+    class SelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "process"
+
+        @router(begin)
+        def route(self):
+            return "process"
+
+        @listen("process")
+        def process(self):
+            pass
+
+    flow = SelfListenFlow()
+    with pytest.raises(RecursionError, match="infinite loop"):
+        flow.kickoff()
+
+
+def test_or_condition_self_listen_fires_once():
+    """or_() with a self-referencing label only fires once due to or_() guard."""
+    call_count = 0
+
+    class OrSelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "process"
+
+        @router(begin)
+        def route(self):
+            return "process"
+
+        @listen(or_("other_trigger", "process"))
+        def process(self):
+            nonlocal call_count
+            call_count += 1
+
+    flow = OrSelfListenFlow()
+    flow.kickoff()
+    assert call_count == 1

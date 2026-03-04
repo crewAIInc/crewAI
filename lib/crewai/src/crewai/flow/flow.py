@@ -692,6 +692,7 @@ class FlowMeta(type):
                     condition_type = getattr(
                         attr_value, "__condition_type__", OR_CONDITION
                     )
+
                     if (
                         hasattr(attr_value, "__trigger_condition__")
                         and attr_value.__trigger_condition__ is not None
@@ -792,6 +793,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._completed_methods: set[FlowMethodName] = (
             set()
         )  # Track completed methods for reload
+        self._method_call_counts: dict[FlowMethodName, int] = {}
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
@@ -2569,6 +2571,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
             - Skips execution if method was already completed (e.g., after reload)
             - Catches and logs any exceptions during execution, preventing individual listener failures from breaking the entire flow
         """
+        max_calls = 100
+        count = self._method_call_counts.get(listener_name, 0) + 1
+        if count > max_calls:
+            raise RecursionError(
+                f"Method '{listener_name}' has been called {max_calls} times in "
+                f"this flow execution, which indicates an infinite loop. "
+                f"This commonly happens when a @listen label matches the "
+                f"method's own name."
+            )
+        self._method_call_counts[listener_name] = count
+
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
