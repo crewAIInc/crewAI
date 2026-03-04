@@ -15,6 +15,7 @@ from crewai.cli.plus_api import PlusAPI
 from crewai.cli.version import get_crewai_version
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
+    get_user_id,
     is_tracing_enabled_in_context,
     should_auto_collect_first_time_traces,
 )
@@ -120,7 +121,6 @@ class TraceBatchManager:
             payload = {
                 "trace_id": self.current_batch.batch_id,
                 "execution_type": execution_metadata.get("execution_type", "crew"),
-                "user_identifier": execution_metadata.get("user_context", None),
                 "execution_context": {
                     "crew_fingerprint": execution_metadata.get("crew_fingerprint"),
                     "crew_name": execution_metadata.get("crew_name", None),
@@ -140,6 +140,7 @@ class TraceBatchManager:
             }
             if use_ephemeral:
                 payload["ephemeral_trace_id"] = self.current_batch.batch_id
+                payload["user_identifier"] = get_user_id()
 
             response = (
                 self.plus_api.initialize_ephemeral_trace_batch(payload)
