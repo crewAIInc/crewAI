@@ -1,0 +1,213 @@
+---
+title: Inicio Rápido
+description: Construye tu primer agente de IA con CrewAI en menos de 5 minutos.
+icon: rocket
+mode: "wide"
+---
+
+## Construye tu primer Agente con CrewAI
+
+Vamos a crear un crew simple que nos ayudará a `investigar` y `reportar` sobre los `últimos desarrollos en IA` para un tema dado.
+
+Antes de continuar, asegúrate de haber terminado de instalar CrewAI.
+Si aún no lo has instalado, puedes hacerlo siguiendo la [guía de instalación](/en/installation).
+
+¡Sigue los pasos a continuación para empezar! 🚣‍♂️
+
+<Steps>
+  <Step title="Crea tu crew">
+  Crea un nuevo proyecto de crew ejecutando el siguiente comando en tu terminal.
+  Esto creará un nuevo directorio llamado `latest-ai-development` con la estructura básica para tu crew.
+    <CodeGroup>
+      ```shell Terminal
+      crewai create crew latest-ai-development
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Navega a tu nuevo proyecto de crew">
+    <CodeGroup>
+      ```shell Terminal
+      cd latest_ai_development
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Modifica tu archivo `agents.yaml`">
+  <Tip>
+  También puedes modificar los agentes según sea necesario para tu caso de uso o copiar y pegar tal cual en tu proyecto.
+  Cualquier variable interpolada en tus archivos `agents.yaml` y `tasks.yaml` como `{topic}` será reemplazada por el valor de la variable en el archivo `main.py`.
+  </Tip>
+    ```yaml agents.yaml
+    # src/latest_ai_development/config/agents.yaml
+    researcher:
+      role: >
+        {topic} Investigador Senior de Datos
+      goal: >
+        Descubrir desarrollos de vanguardia en {topic}
+      backstory: >
+        Eres un investigador experimentado con habilidad para descubrir los
+        últimos desarrollos en {topic}. Conocido por tu capacidad de encontrar
+        la información más relevante y presentarla de manera clara y concisa.
+
+    reporting_analyst:
+      role: >
+        Analista de Reportes de {topic}
+      goal: >
+        Crear reportes detallados basados en el análisis de datos e investigación de {topic}
+      backstory: >
+        Eres un analista meticuloso con ojo agudo para los detalles. Eres conocido
+        por tu capacidad de convertir datos complejos en reportes claros y concisos,
+        facilitando que otros entiendan y actúen sobre la información que proporcionas.
+    ```
+
+  </Step>
+  <Step title="Modifica tu archivo `tasks.yaml`">
+    ```yaml tasks.yaml
+    # src/latest_ai_development/config/tasks.yaml
+    research_task:
+      description: >
+        Realiza una investigación exhaustiva sobre {topic}.
+        Asegúrate de encontrar información interesante y relevante dado
+        que el año actual es 2025.
+      expected_output: >
+        Una lista con 10 puntos de la información más relevante sobre {topic}
+      agent: researcher
+
+    reporting_task:
+      description: >
+        Revisa el contexto que obtuviste y expande cada tema en una sección completa para un reporte.
+        Asegúrate de que el reporte sea detallado y contenga toda la información relevante.
+      expected_output: >
+        Un reporte completo con los temas principales, cada uno con una sección completa de información.
+        Formateado como markdown sin '```'
+      agent: reporting_analyst
+      output_file: report.md
+    ```
+
+  </Step>
+  <Step title="Modifica tu archivo `crew.py`">
+    ```python crew.py
+    # src/latest_ai_development/crew.py
+    from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai_tools import SerperDevTool
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from typing import List
+
+    @CrewBase
+    class LatestAiDevelopmentCrew():
+      """Crew de LatestAiDevelopment"""
+
+      agents: List[BaseAgent]
+      tasks: List[Task]
+
+      @agent
+      def researcher(self) -> Agent:
+        return Agent(
+          config=self.agents_config['researcher'], # type: ignore[index]
+          verbose=True,
+          tools=[SerperDevTool()]
+        )
+
+      @agent
+      def reporting_analyst(self) -> Agent:
+        return Agent(
+          config=self.agents_config['reporting_analyst'], # type: ignore[index]
+          verbose=True
+        )
+
+      @task
+      def research_task(self) -> Task:
+        return Task(
+          config=self.tasks_config['research_task'], # type: ignore[index]
+        )
+
+      @task
+      def reporting_task(self) -> Task:
+        return Task(
+          config=self.tasks_config['reporting_task'], # type: ignore[index]
+          output_file='output/report.md'
+        )
+
+      @crew
+      def crew(self) -> Crew:
+        """Crea el crew de LatestAiDevelopment"""
+        return Crew(
+          agents=self.agents,
+          tasks=self.tasks,
+          process=Process.sequential,
+          verbose=True,
+        )
+    ```
+
+  </Step>
+  <Step title="Pasa entradas personalizadas a tu crew">
+    ```python main.py
+    #!/usr/bin/env python
+    # src/latest_ai_development/main.py
+    import sys
+    from latest_ai_development.crew import LatestAiDevelopmentCrew
+
+    def run():
+      """
+      Ejecuta el crew.
+      """
+      inputs = {
+        'topic': 'Agentes de IA'
+      }
+      LatestAiDevelopmentCrew().crew().kickoff(inputs=inputs)
+    ```
+
+  </Step>
+  <Step title="Configura tus variables de entorno">
+  Antes de ejecutar tu crew, asegúrate de tener las siguientes claves configuradas como variables de entorno en tu archivo `.env`:
+    - Una clave API de [Serper.dev](https://serper.dev/): `SERPER_API_KEY=TU_CLAVE_AQUI`
+    - La configuración para tu modelo elegido, como una clave API. Consulta la
+        [guía de configuración de LLM](/en/concepts/llms#setting-up-your-llm) para aprender cómo configurar modelos de cualquier proveedor.
+  </Step>
+  <Step title="Bloquea e instala las dependencias">
+      <CodeGroup>
+        ```shell Terminal
+        crewai install
+        ```
+      </CodeGroup>
+  </Step>
+  <Step title="Ejecuta tu crew">
+      <CodeGroup>
+        ```bash Terminal
+        crewai run
+        ```
+      </CodeGroup>
+  </Step>
+</Steps>
+
+<Check>
+¡Felicidades!
+
+¡Has configurado exitosamente tu proyecto de crew y estás listo para empezar a construir tus propios workflows con agentes!
+
+</Check>
+
+### Nota sobre Consistencia en Nombres
+
+Los nombres que uses en tus archivos YAML (`agents.yaml` y `tasks.yaml`) deben coincidir con los nombres de los métodos en tu código Python.
+Por ejemplo, puedes referenciar el agente para tareas específicas desde el archivo `tasks.yaml`.
+Esta consistencia en nombres permite a CrewAI vincular automáticamente tus configuraciones con tu código.
+
+## Desplegando Tu Crew
+
+La forma más fácil de desplegar tu crew en producción es a través de [CrewAI AMP](http://app.crewai.com).
+
+<CardGroup cols={2}>
+  <Card title="Despliega en Enterprise" icon="rocket" href="http://app.crewai.com">
+    Comienza con CrewAI AMP y despliega tu crew en un entorno de producción
+    con solo unos clics.
+  </Card>
+  <Card
+    title="Únete a la Comunidad"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    Únete a nuestra comunidad open source para discutir ideas, compartir tus proyectos
+    y conectar con otros desarrolladores de CrewAI.
+  </Card>
+</CardGroup>

@@ -1,0 +1,76 @@
+---
+title: "Documentación de CrewAI"
+description: "Construye agentes de IA colaborativos, crews y flujos — listos para producción desde el primer día."
+icon: "house"
+mode: "wide"
+---
+
+<div
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 20,
+    textAlign: 'center',
+    padding: '48px 24px',
+    borderRadius: 16,
+    background: 'linear-gradient(180deg, rgba(235,102,88,0.12) 0%, rgba(201,76,60,0.08) 100%)',
+    border: '1px solid rgba(235,102,88,0.18)'
+  }}
+>
+  <img src="/images/crew_only_logo.png" alt="CrewAI" width="250" height="100" />
+  <div style={{ maxWidth: 720 }}>
+    <h1 style={{ marginBottom: 12 }}>Despliega sistemas multi-agente con confianza</h1>
+    <p style={{ color: 'var(--mint-text-2)' }}>
+      Diseña agentes, orquesta crews y automatiza flujos con guardrails, memoria, conocimiento y observabilidad integrados.
+    </p>
+  </div>
+
+  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+    <a className="button button-primary" href="/es/quickstart">Comenzar</a>
+    <a className="button" href="/en/changelog">Ver changelog</a>
+    <a className="button" href="/en/api-reference/introduction">Referencia de API</a>
+  </div>
+
+</div>
+
+<div style={{ marginTop: 32 }} />
+
+## Primeros pasos
+
+<CardGroup cols={3}>
+  <Card title="Introducción" href="/es/introduction" icon="sparkles">
+    Descripción general de los conceptos, la arquitectura y lo que puedes construir con agentes, crews y flujos de CrewAI.
+  </Card>
+  <Card title="Instalación" href="/en/installation" icon="wrench">
+    Instala con `uv`, configura claves de API y prepara el CLI para desarrollo local.
+  </Card>
+  <Card title="Inicio rápido" href="/es/quickstart" icon="rocket">
+    Crea tu primer crew en minutos. Aprende el runtime principal, la estructura del proyecto y el ciclo de desarrollo.
+  </Card>
+</CardGroup>
+
+## Construye lo básico
+
+<CardGroup cols={3}>
+  <Card title="Agentes" href="/en/concepts/agents" icon="users">
+    Compone agentes con herramientas, memoria, conocimiento y salidas estructuradas usando Pydantic. Incluye plantillas y mejores prácticas.
+  </Card>
+  <Card title="Flujos" href="/en/concepts/flows" icon="arrow-progress">
+    Orquesta pasos start/listen/router, gestiona estado, persiste ejecuciones y reanuda workflows de larga duración.
+  </Card>
+  <Card title="Tareas y Procesos" href="/en/concepts/tasks" icon="check">
+    Define procesos secuenciales, jerárquicos o híbridos con guardrails, callbacks y triggers human-in-the-loop.
+  </Card>
+</CardGroup>
+
+## Mantente conectado
+
+<CardGroup cols={2}>
+  <Card title="Danos una estrella en GitHub" href="https://github.com/crewAIInc/crewAI" icon="star">
+    Si CrewAI te ayuda a desarrollar más rápido, danos una estrella y comparte tus proyectos con la comunidad.
+  </Card>
+  <Card title="Únete a la comunidad" href="https://community.crewai.com" icon="comments">
+    Haz preguntas, muestra tus workflows y solicita funcionalidades junto con otros desarrolladores.
+  </Card>
+</CardGroup>
