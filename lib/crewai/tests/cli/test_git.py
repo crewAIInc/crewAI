@@ -99,3 +99,35 @@ def test_origin_url(fp, repository):
         stdout="https://github.com/user/repo.git\n",
     )
     assert repository.origin_url() == "https://github.com/user/repo.git"
+
+
+def test_is_git_repo_caches_result(fp):
+    """Calling is_git_repo multiple times should only invoke subprocess once."""
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    repo = Repository(path=".")
+    # __init__ already called is_git_repo once via constructor
+    assert repo.is_git_repo() is True
+
+    # Second call should return cached value without a new subprocess.
+    # If caching were broken a second subprocess would be spawned, but
+    # only one "rev-parse" was registered so it would raise.
+    assert repo.is_git_repo() is True
+
+
+def test_is_git_repo_no_global_cache_leak(fp):
+    """Repository instances must be garbage-collectable (no global lru_cache holding refs)."""
+    import gc
+    import weakref
+
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    repo = Repository(path=".")
+    weak = weakref.ref(repo)
+    del repo
+    gc.collect()
+    assert weak() is None, "Repository instance was not garbage collected"
