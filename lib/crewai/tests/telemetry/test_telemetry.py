@@ -263,9 +263,12 @@ class TestCrewCreationTelemetryMemorySerialization:
             captured_attrs[key] = value
             original_add_attribute(span, key, value)
 
-        # Create a mock Memory object to avoid needing real storage/LLM
-        mock_memory = MagicMock()
-        mock_memory.__class__.__name__ = "Memory"
+        # Use a lightweight stub instead of MagicMock to avoid mutating
+        # MagicMock.__name__ globally (which would pollute other tests).
+        class _FakeMemory:
+            """Minimal stand-in for a real Memory instance."""
+
+        fake_memory = _FakeMemory()
 
         agent = Agent(
             role="researcher",
@@ -281,7 +284,7 @@ class TestCrewCreationTelemetryMemorySerialization:
         crew = Crew(
             agents=[agent],
             tasks=[task],
-            memory=mock_memory,
+            memory=fake_memory,
         )
 
         with patch.object(telemetry, "_add_attribute", side_effect=capture_add_attribute):
@@ -292,8 +295,8 @@ class TestCrewCreationTelemetryMemorySerialization:
                     mock_trace.get_tracer.return_value.start_span.return_value = mock_span
                     telemetry.crew_creation(crew, None)
 
-        # Should be the class name string, not the Memory object itself
-        assert captured_attrs.get("crew_memory") == "Memory"
+        # Should be the class name string, not the object itself
+        assert captured_attrs.get("crew_memory") == "_FakeMemory"
         assert isinstance(captured_attrs["crew_memory"], str)
 
     def test_crew_creation_telemetry_memory_value_is_otel_serializable(self):
@@ -311,8 +314,12 @@ class TestCrewCreationTelemetryMemorySerialization:
             captured_attrs[key] = value
             original_add_attribute(span, key, value)
 
-        mock_memory = MagicMock()
-        mock_memory.__class__.__name__ = "Memory"
+        # Use a lightweight stub instead of MagicMock to avoid mutating
+        # MagicMock.__name__ globally (which would pollute other tests).
+        class _FakeMemory:
+            """Minimal stand-in for a real Memory instance."""
+
+        fake_memory = _FakeMemory()
 
         agent = Agent(
             role="researcher",
@@ -328,7 +335,7 @@ class TestCrewCreationTelemetryMemorySerialization:
         crew = Crew(
             agents=[agent],
             tasks=[task],
-            memory=mock_memory,
+            memory=fake_memory,
         )
 
         with patch.object(telemetry, "_add_attribute", side_effect=capture_add_attribute):
