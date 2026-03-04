@@ -182,13 +182,14 @@ class TestReActFlowDoesNotPassResponseModel:
     def test_invoke_loop_routes_to_native_no_tools_when_fc_no_tools_with_response_model(
         self,
     ) -> None:
-        """When LLM supports FC, has no tools, but HAS a response_model,
-        route to _invoke_loop_native_no_tools (which correctly passes
-        response_model) instead of falling through to the ReAct path."""
+        """When LLM supports FC, has no tools (including internal tools),
+        but HAS a response_model, route to _invoke_loop_native_no_tools
+        (which correctly passes response_model for structured output)."""
         llm = _make_llm(supports_fc=True)
         executor = _make_executor(llm, response_model=PersonInfo)
-        # No tools
+        # No user-defined or internal tools
         executor.original_tools = []
+        executor.tools = []
 
         with patch.object(
             executor,
@@ -203,6 +204,31 @@ class TestReActFlowDoesNotPassResponseModel:
         mock_react.assert_not_called()
         mock_native.assert_not_called()
 
+    def test_invoke_loop_routes_to_react_when_fc_no_orig_tools_but_internal_tools(
+        self,
+    ) -> None:
+        """When LLM supports FC, has no original_tools but HAS internal tools
+        (e.g. delegation), fall through to ReAct even with response_model.
+        Internal tools need the ReAct loop for Action/Observation cycles."""
+        llm = _make_llm(supports_fc=True)
+        executor = _make_executor(llm, response_model=PersonInfo)
+        executor.original_tools = []
+        # Internal tools present (e.g. delegation tool)
+        executor.tools = [MagicMock()]
+
+        with patch.object(
+            executor,
+            "_invoke_loop_react",
+            return_value=AgentFinish(thought="done", output="test", text="Final Answer: test"),
+        ) as mock_react:
+            with patch.object(executor, "_invoke_loop_native_no_tools") as mock_native_no_tools:
+                with patch.object(executor, "_invoke_loop_native_tools") as mock_native:
+                    executor._invoke_loop()
+
+        mock_react.assert_called_once()
+        mock_native_no_tools.assert_not_called()
+        mock_native.assert_not_called()
+
     def test_invoke_loop_routes_to_react_when_fc_no_tools_no_response_model(
         self,
     ) -> None:
@@ -211,6 +237,7 @@ class TestReActFlowDoesNotPassResponseModel:
         llm = _make_llm(supports_fc=True)
         executor = _make_executor(llm, response_model=None)
         executor.original_tools = []
+        executor.tools = []
 
         with patch.object(
             executor,

@@ -320,10 +320,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if supports_fc and self.original_tools:
             return self._invoke_loop_native_tools()
 
-        # FC-capable LLM with no tools but with response_model: use simple
+        # FC-capable LLM with no user-defined tools but with response_model
+        # and no internal tools (delegation, human input, etc.): use simple
         # native call path which correctly passes response_model for structured
         # output instead of dropping it in the ReAct path.
-        if supports_fc and not self.original_tools and self.response_model:
+        if supports_fc and not self.tools and self.response_model:
             return self._invoke_loop_native_no_tools()
 
         # Fall back to ReAct text-based pattern
@@ -1146,10 +1147,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if supports_fc and self.original_tools:
             return await self._ainvoke_loop_native_tools()
 
-        # FC-capable LLM with no tools but with response_model: use simple
+        # FC-capable LLM with no user-defined tools but with response_model
+        # and no internal tools (delegation, human input, etc.): use simple
         # native call path which correctly passes response_model for structured
         # output instead of dropping it in the ReAct path.
-        if supports_fc and not self.original_tools and self.response_model:
+        if supports_fc and not self.tools and self.response_model:
             return await self._ainvoke_loop_native_no_tools()
 
         # Fall back to ReAct text-based pattern
