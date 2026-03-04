@@ -311,15 +311,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Final answer from the agent.
         """
         # Check if model supports native function calling
-        use_native_tools = (
+        supports_fc = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
             and self.llm.supports_function_calling()
-            and self.original_tools
         )
 
-        if use_native_tools:
+        if supports_fc and self.original_tools:
             return self._invoke_loop_native_tools()
+
+        # FC-capable LLM with no tools but with response_model: use simple
+        # native call path which correctly passes response_model for structured
+        # output instead of dropping it in the ReAct path.
+        if supports_fc and not self.original_tools and self.response_model:
+            return self._invoke_loop_native_no_tools()
 
         # Fall back to ReAct text-based pattern
         return self._invoke_loop_react()
@@ -1132,15 +1137,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Final answer from the agent.
         """
         # Check if model supports native function calling
-        use_native_tools = (
+        supports_fc = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
             and self.llm.supports_function_calling()
-            and self.original_tools
         )
 
-        if use_native_tools:
+        if supports_fc and self.original_tools:
             return await self._ainvoke_loop_native_tools()
+
+        # FC-capable LLM with no tools but with response_model: use simple
+        # native call path which correctly passes response_model for structured
+        # output instead of dropping it in the ReAct path.
+        if supports_fc and not self.original_tools and self.response_model:
+            return await self._ainvoke_loop_native_no_tools()
 
         # Fall back to ReAct text-based pattern
         return await self._ainvoke_loop_react()

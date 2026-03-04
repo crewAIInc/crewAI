@@ -13,7 +13,6 @@ conversion to pydantic/json should happen in task._export_output() after the ReA
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -179,6 +178,52 @@ class TestReActFlowDoesNotPassResponseModel:
 
         mock_native.assert_called_once()
         mock_react.assert_not_called()
+
+    def test_invoke_loop_routes_to_native_no_tools_when_fc_no_tools_with_response_model(
+        self,
+    ) -> None:
+        """When LLM supports FC, has no tools, but HAS a response_model,
+        route to _invoke_loop_native_no_tools (which correctly passes
+        response_model) instead of falling through to the ReAct path."""
+        llm = _make_llm(supports_fc=True)
+        executor = _make_executor(llm, response_model=PersonInfo)
+        # No tools
+        executor.original_tools = []
+
+        with patch.object(
+            executor,
+            "_invoke_loop_native_no_tools",
+            return_value=AgentFinish(thought="done", output="test", text="Final Answer: test"),
+        ) as mock_native_no_tools:
+            with patch.object(executor, "_invoke_loop_react") as mock_react:
+                with patch.object(executor, "_invoke_loop_native_tools") as mock_native:
+                    executor._invoke_loop()
+
+        mock_native_no_tools.assert_called_once()
+        mock_react.assert_not_called()
+        mock_native.assert_not_called()
+
+    def test_invoke_loop_routes_to_react_when_fc_no_tools_no_response_model(
+        self,
+    ) -> None:
+        """When LLM supports FC, has no tools, and NO response_model,
+        fall through to ReAct path (no structured output to preserve)."""
+        llm = _make_llm(supports_fc=True)
+        executor = _make_executor(llm, response_model=None)
+        executor.original_tools = []
+
+        with patch.object(
+            executor,
+            "_invoke_loop_react",
+            return_value=AgentFinish(thought="done", output="test", text="Final Answer: test"),
+        ) as mock_react:
+            with patch.object(executor, "_invoke_loop_native_no_tools") as mock_native_no_tools:
+                with patch.object(executor, "_invoke_loop_native_tools") as mock_native:
+                    executor._invoke_loop()
+
+        mock_react.assert_called_once()
+        mock_native_no_tools.assert_not_called()
+        mock_native.assert_not_called()
 
     def test_react_flow_still_works_with_tool_usage(self) -> None:
         """Verify the ReAct loop still processes Action/Observation cycles
