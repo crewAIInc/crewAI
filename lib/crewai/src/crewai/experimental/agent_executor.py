@@ -302,6 +302,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             super().__init__(
                 suppress_flow_events=True,
                 tracing=current_tracing if current_tracing else None,
+                max_method_calls=self.max_iter * 10,
             )
             self._flow_initialized = True
 

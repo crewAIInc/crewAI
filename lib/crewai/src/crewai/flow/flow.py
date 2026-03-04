@@ -770,6 +770,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         persistence: FlowPersistence | None = None,
         tracing: bool | None = None,
         suppress_flow_events: bool = False,
+        max_method_calls: int = 100,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -778,6 +779,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             persistence: Optional persistence backend for storing flow states
             tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
             suppress_flow_events: Whether to suppress flow event emissions (internal use)
+            max_method_calls: Maximum times a single method can be called per execution before raising RecursionError
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -794,6 +796,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             set()
         )  # Track completed methods for reload
         self._method_call_counts: dict[FlowMethodName, int] = {}
+        self._max_method_calls = max_method_calls
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
@@ -2572,11 +2575,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             - Skips execution if method was already completed (e.g., after reload)
             - Catches and logs any exceptions during execution, preventing individual listener failures from breaking the entire flow
         """
-        max_calls = 100
         count = self._method_call_counts.get(listener_name, 0) + 1
-        if count > max_calls:
+        if count > self._max_method_calls:
             raise RecursionError(
-                f"Method '{listener_name}' has been called {max_calls} times in "
+                f"Method '{listener_name}' has been called {self._max_method_calls} times in "
                 f"this flow execution, which indicates an infinite loop. "
                 f"This commonly happens when a @listen label matches the "
                 f"method's own name."
