@@ -967,6 +967,12 @@ class LLM(BaseLLM):
                 self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
+            # If there are tool calls but no available functions, return them
+            # so the caller (e.g., executor) can handle tool execution.
+            # This mirrors _handle_non_streaming_response's explicit path.
+            if tool_calls and not available_functions:
+                return tool_calls
+
             if not tool_calls or not available_functions:
                 # Only use InternalInstructor for structured output when there
                 # are no tools — otherwise tools would be silently discarded.
