@@ -634,9 +634,17 @@ class GeminiCompletion(BaseLLM):
                 function_response_part = types.Part.from_function_response(
                     name=tool_name, response=response_data
                 )
-                contents.append(
-                    types.Content(role="user", parts=[function_response_part])
-                )
+                if (
+                    contents
+                    and contents[-1].role == "user"
+                    and contents[-1].parts
+                    and contents[-1].parts[-1].function_response is not None
+                ):
+                    contents[-1].parts.append(function_response_part)
+                else:
+                    contents.append(
+                        types.Content(role="user", parts=[function_response_part])
+                    )
             elif role == "assistant" and message.get("tool_calls"):
                 raw_parts: list[Any] | None = message.get("raw_tool_call_parts")
                 if raw_parts and all(isinstance(p, types.Part) for p in raw_parts):
