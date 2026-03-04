@@ -1410,9 +1410,7 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
-    def _add_memory_tools(
-        self, tools: list[BaseTool], memory: Any
-    ) -> list[BaseTool]:
+    def _add_memory_tools(self, tools: list[BaseTool], memory: Any) -> list[BaseTool]:
         """Add recall and remember tools when memory is available.
 
         Args:
@@ -1677,6 +1675,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
+            "parent_flow",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
@@ -1709,6 +1708,7 @@ class Crew(FlowTrackable, BaseModel):
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
+        copied_data.pop("parent_flow", None)
 
         return Crew(
             **copied_data,
