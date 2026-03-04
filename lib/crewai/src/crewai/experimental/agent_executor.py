@@ -302,6 +302,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             super().__init__(
                 suppress_flow_events=True,
                 tracing=current_tracing if current_tracing else None,
+                max_method_calls=self.max_iter * 10,
             )
             self._flow_initialized = True
 
@@ -403,7 +404,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 self._setup_native_tools()
         return "initialized"
 
-    @listen("force_final_answer")
+    @listen("max_iterations_exceeded")
     def force_final_answer(self) -> Literal["agent_finished"]:
         """Force agent to provide final answer when max iterations exceeded."""
         formatted_answer = handle_max_iterations_exceeded(
@@ -655,11 +656,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             return "tool_result_is_final"
 
         reasoning_prompt = self._i18n.slice("post_tool_reasoning")
-        reasoning_message: LLMMessage = {
+        reasoning_message_post: LLMMessage = {
             "role": "user",
             "content": reasoning_prompt,
         }
-        self.state.messages.append(reasoning_message)
+        self.state.messages.append(reasoning_message_post)
 
         return "tool_completed"
 
@@ -886,9 +887,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         call_id, func_name, func_args = info
 
         # Parse arguments
-        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+        parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
         if parse_error is not None:
             return parse_error
+        args_dict: dict[str, Any] = parsed_args or {}
 
         # Get agent_key for event tracking
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -1107,11 +1109,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     def check_max_iterations(
         self,
     ) -> Literal[
-        "force_final_answer", "continue_reasoning", "continue_reasoning_native"
+        "max_iterations_exceeded", "continue_reasoning", "continue_reasoning_native"
     ]:
         """Check if max iterations reached before proceeding with reasoning."""
         if has_reached_max_iterations(self.state.iterations, self.max_iter):
-            return "force_final_answer"
+            return "max_iterations_exceeded"
         if self.state.use_native_tools:
             return "continue_reasoning_native"
         return "continue_reasoning"
