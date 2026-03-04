@@ -634,19 +634,11 @@ class GeminiCompletion(BaseLLM):
                 function_response_part = types.Part.from_function_response(
                     name=tool_name, response=response_data
                 )
-                # Gemini requires all parallel function responses in a single
-                # Content object.  When the previous Content already holds
-                # function_response parts, merge into it instead of creating
-                # a new Content.
                 if (
                     contents
                     and contents[-1].role == "user"
                     and contents[-1].parts
-                    and all(
-                        hasattr(p, "function_response")
-                        and p.function_response is not None
-                        for p in contents[-1].parts
-                    )
+                    and contents[-1].parts[-1].function_response is not None
                 ):
                     contents[-1].parts.append(function_response_part)
                 else:
