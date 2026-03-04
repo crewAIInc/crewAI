@@ -81,7 +81,7 @@ def test_create_llm_from_env_with_unaccepted_attributes() -> None:
             "OPENAI_API_KEY": "fake-key",
             "AWS_ACCESS_KEY_ID": "fake-access-key",
             "AWS_SECRET_ACCESS_KEY": "fake-secret-key",
-            "AWS_REGION_NAME": "us-west-2",
+            "AWS_DEFAULT_REGION": "us-west-2",
         },
     ):
         llm = create_llm(llm_value=None)
@@ -89,7 +89,7 @@ def test_create_llm_from_env_with_unaccepted_attributes() -> None:
         assert llm.model == "gpt-3.5-turbo"
         assert not hasattr(llm, "AWS_ACCESS_KEY_ID")
         assert not hasattr(llm, "AWS_SECRET_ACCESS_KEY")
-        assert not hasattr(llm, "AWS_REGION_NAME")
+        assert not hasattr(llm, "AWS_DEFAULT_REGION")
 
 
 def test_create_llm_with_partial_attributes() -> None:

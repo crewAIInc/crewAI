@@ -135,7 +135,7 @@ class TestAgentExecutor:
         executor.state.iterations = 10
 
         result = executor.check_max_iterations()
-        assert result == "force_final_answer"
+        assert result == "max_iterations_exceeded"
 
     def test_route_by_answer_type_action(self, mock_dependencies):
         """Test routing for AgentAction."""

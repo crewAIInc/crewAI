@@ -68,6 +68,7 @@ from crewai.events.types.logging_events import (
     AgentLogsStartedEvent,
 )
 from crewai.events.types.mcp_events import (
+    MCPConfigFetchFailedEvent,
     MCPConnectionCompletedEvent,
     MCPConnectionFailedEvent,
     MCPConnectionStartedEvent,
@@ -661,6 +662,16 @@ class EventListener(BaseEventListener):
                 event.server_name,
                 event.server_url,
                 event.transport_type,
+                event.error,
+                event.error_type,
+            )
+
+        @crewai_event_bus.on(MCPConfigFetchFailedEvent)
+        def on_mcp_config_fetch_failed(
+            _: Any, event: MCPConfigFetchFailedEvent
+        ) -> None:
+            self.formatter.handle_mcp_config_fetch_failed(
+                event.slug,
                 event.error,
                 event.error_type,
             )

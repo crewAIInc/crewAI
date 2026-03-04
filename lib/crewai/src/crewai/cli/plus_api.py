@@ -22,14 +22,15 @@ class PlusAPI:
     EPHEMERAL_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
     INTEGRATIONS_RESOURCE = "/crewai_plus/api/v1/integrations"
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key
         self.headers = {
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "User-Agent": f"CrewAI-CLI/{get_crewai_version()}",
             "X-Crewai-Version": get_crewai_version(),
         }
+        if api_key:
+            self.headers["Authorization"] = f"Bearer {api_key}"
         settings = Settings()
         if settings.org_uuid:
             self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
@@ -48,8 +49,13 @@ class PlusAPI:
         with httpx.Client(trust_env=False, verify=verify) as client:
             return client.request(method, url, headers=self.headers, **kwargs)
 
-    def login_to_tool_repository(self) -> httpx.Response:
-        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login")
+    def login_to_tool_repository(
+        self, user_identifier: str | None = None
+    ) -> httpx.Response:
+        payload = {}
+        if user_identifier:
+            payload["user_identifier"] = user_identifier
+        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
 
     def get_tool(self, handle: str) -> httpx.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
@@ -187,6 +193,15 @@ class PlusAPI:
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
             json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )
+
+    def get_mcp_configs(self, slugs: list[str]) -> httpx.Response:
+        """Get MCP server configurations for the given slugs."""
+        return self._make_request(
+            "GET",
+            f"{self.INTEGRATIONS_RESOURCE}/mcp_configs",
+            params={"slugs": ",".join(slugs)},
             timeout=30,
         )
 

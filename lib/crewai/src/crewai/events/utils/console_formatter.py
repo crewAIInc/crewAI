@@ -1512,6 +1512,34 @@ To enable tracing, do any one of these:
         self.print(panel)
         self.print()
 
+    def handle_mcp_config_fetch_failed(
+        self,
+        slug: str,
+        error: str = "",
+        error_type: str | None = None,
+    ) -> None:
+        """Handle MCP config fetch failed event (AMP resolution failures)."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("MCP Config Fetch Failed\n\n", style="red bold")
+        content.append("Server: ", style="white")
+        content.append(f"{slug}\n", style="red")
+
+        if error_type:
+            content.append("Error Type: ", style="white")
+            content.append(f"{error_type}\n", style="red")
+
+        if error:
+            content.append("\nError: ", style="white bold")
+            error_preview = error[:500] + "..." if len(error) > 500 else error
+            content.append(f"{error_preview}\n", style="red")
+
+        panel = self.create_panel(content, "❌ MCP Config Failed", "red")
+        self.print(panel)
+        self.print()
+
     def handle_mcp_tool_execution_started(
         self,
         server_name: str,
