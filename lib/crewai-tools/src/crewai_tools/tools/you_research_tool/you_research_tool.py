@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Literal
+from typing import Literal, Optional
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -15,8 +15,8 @@ class YouResearchToolSchema(BaseModel):
         description="The research question or complex query requiring in-depth investigation and multi-step reasoning.",
         max_length=40000,
     )
-    research_effort: Literal["lite", "standard", "deep", "exhaustive"] = Field(
-        default="standard",
+    research_effort: Optional[Literal["lite", "standard", "deep", "exhaustive"]] = Field(
+        default=None,
         description=(
             "Controls how much time and effort the Research API spends on your question. "
             "lite: fast answers, standard: balanced (default), deep: thorough, exhaustive: most comprehensive."
@@ -59,13 +59,13 @@ class YouResearchTool(BaseTool):
     def _run(
         self,
         input: str,
-        research_effort: Literal["lite", "standard", "deep", "exhaustive"] = "standard",
+        research_effort: Optional[Literal["lite", "standard", "deep", "exhaustive"]] = None,
     ) -> str:
         """Execute the research operation.
 
         Args:
             input: The research question or complex query.
-            research_effort: Effort level controlling depth vs. speed.
+            research_effort: Effort level controlling depth vs. speed. Falls back to instance-level config.
 
         Returns:
             JSON string containing the research answer and sources.
@@ -76,7 +76,7 @@ class YouResearchTool(BaseTool):
 
             payload = {
                 "input": input,
-                "research_effort": research_effort,
+                "research_effort": research_effort if research_effort is not None else self.research_effort,
             }
 
             headers = {

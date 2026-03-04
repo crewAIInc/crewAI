@@ -87,7 +87,35 @@ def test_you_research_tool_default_effort(mock_post):
 
     call_args = mock_post.call_args
     payload = call_args.kwargs["json"]
-    assert payload["research_effort"] == "standard"
+    assert payload["research_effort"] == "standard"  # falls back to self.research_effort
+
+
+@patch("requests.post")
+def test_you_research_tool_instance_effort_respected(mock_post):
+    """Instance-level research_effort is used when not overridden per-call."""
+    tool = YouResearchTool(research_effort="exhaustive")
+    mock_post.return_value.json.return_value = {"output": {"content": "", "content_type": "text", "sources": []}}
+    mock_post.return_value.status_code = 200
+
+    tool.run(input="test question")
+
+    call_args = mock_post.call_args
+    payload = call_args.kwargs["json"]
+    assert payload["research_effort"] == "exhaustive"
+
+
+@patch("requests.post")
+def test_you_research_tool_per_call_overrides_instance(mock_post):
+    """Per-call research_effort overrides the instance-level default."""
+    tool = YouResearchTool(research_effort="exhaustive")
+    mock_post.return_value.json.return_value = {"output": {"content": "", "content_type": "text", "sources": []}}
+    mock_post.return_value.status_code = 200
+
+    tool.run(input="test question", research_effort="lite")
+
+    call_args = mock_post.call_args
+    payload = call_args.kwargs["json"]
+    assert payload["research_effort"] == "lite"
 
 
 @patch("requests.post")
