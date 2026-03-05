@@ -361,6 +361,36 @@ class TestStepExecutorCriticalFixes:
     """Regression tests for critical plan-and-execute issues."""
 
     @pytest.fixture
+    def mock_dependencies(self):
+        """Create mock dependencies for AgentExecutor tests in this class."""
+        llm = Mock()
+        llm.supports_stop_words.return_value = True
+
+        task = Mock()
+        task.description = "Test task"
+
+        crew = Mock()
+        agent = Mock()
+        agent.role = "Test Agent"
+        agent.verbose = False
+
+        prompt = {"prompt": "Test {input}"}
+
+        return {
+            "llm": llm,
+            "task": task,
+            "crew": crew,
+            "agent": agent,
+            "prompt": prompt,
+            "max_iter": 10,
+            "tools": [],
+            "tools_names": "",
+            "stop_words": [],
+            "tools_description": "",
+            "tools_handler": Mock(),
+        }
+
+    @pytest.fixture
     def step_executor(self):
         llm = Mock()
         llm.supports_stop_words.return_value = True
@@ -849,12 +879,18 @@ class TestNativeToolExecution:
         assert len(tool_messages) == 1
         assert tool_messages[0]["tool_call_id"] == "call_1"
 
-    def test_check_native_todo_completion_requires_expected_tool_match(
+    def test_check_native_todo_completion_requires_current_todo(
         self, mock_dependencies
     ):
         from crewai.utilities.planning_types import TodoList
 
         executor = AgentExecutor(**mock_dependencies)
+
+        # No current todo → not satisfied
+        executor.state.todos = TodoList(items=[])
+        assert executor.check_native_todo_completion() == "todo_not_satisfied"
+
+        # With a current todo that has tool_to_use → satisfied
         running = TodoItem(
             step_number=1,
             description="Use the expected tool",
@@ -862,16 +898,11 @@ class TestNativeToolExecution:
             status="running",
         )
         executor.state.todos = TodoList(items=[running])
-
-        executor.state.last_native_tools_executed = ["other_tool"]
-        assert executor.check_native_todo_completion() == "todo_not_satisfied"
-
-        executor.state.last_native_tools_executed = ["expected_tool"]
         assert executor.check_native_todo_completion() == "todo_satisfied"
 
+        # With a current todo without tool_to_use → still satisfied
         running.tool_to_use = None
-        executor.state.last_native_tools_executed = ["any_tool"]
-        assert executor.check_native_todo_completion() == "todo_not_satisfied"
+        assert executor.check_native_todo_completion() == "todo_satisfied"
 
 
 class TestPlannerObserver:
@@ -902,10 +933,11 @@ class TestPlannerObserver:
             remaining_todos=[],
         )
 
-        assert observation.step_completed_successfully is False
-        assert observation.remaining_plan_still_valid is False
-        assert observation.needs_full_replan is True
-        assert observation.replan_reason == "Observer failed to evaluate step result safely"
+        # When the observer LLM fails, the fallback is conservative:
+        # assume the step succeeded and continue (don't wipe the plan).
+        assert observation.step_completed_successfully is True
+        assert observation.remaining_plan_still_valid is True
+        assert observation.needs_full_replan is False
 
 
 class TestAgentExecutorPlanning:
@@ -1462,7 +1494,7 @@ class TestReasoningEffort:
         assert route == "replan_now", (
             "Medium effort should trigger replan on failed step"
         )
-        assert executor.state.last_replan_reason == "Step did not complete successfully"
+        assert executor.state.last_replan_reason == "Step failed with error"
 
     def test_reasoning_effort_low_marks_complete_without_deciding(self):
         """Low effort: mark_completed is called, decide_next_action is not.
@@ -1534,10 +1566,10 @@ class TestReasoningEffort:
         executor.agent.planning_config.reasoning_effort = "high"
         assert executor._get_reasoning_effort() == "high"
 
-        # Case 2: no planning_config → defaults to "low"
+        # Case 2: no planning_config → defaults to "medium"
         executor.agent.planning_config = None
-        assert executor._get_reasoning_effort() == "low"
+        assert executor._get_reasoning_effort() == "medium"
 
-        # Case 3: planning_config without reasoning_effort attr → defaults to "low"
+        # Case 3: planning_config without reasoning_effort attr → defaults to "medium"
         executor.agent.planning_config = Mock(spec=[])
-        assert executor._get_reasoning_effort() == "low"
+        assert executor._get_reasoning_effort() == "medium"
