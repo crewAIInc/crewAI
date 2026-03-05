@@ -17,6 +17,7 @@ from a2a.types import Role, TaskState
 from pydantic import BaseModel, ValidationError
 
 from crewai.a2a.config import A2AClientConfig, A2AConfig
+from crewai.a2a.exceptions import A2AConversationMaxTurnsExceeded
 from crewai.a2a.extensions.base import (
     A2AExtension,
     ConversationState,
@@ -814,7 +815,7 @@ def _handle_max_turns_exceeded(
             agent_card=agent_card,
         ),
     )
-    raise Exception(f"A2A conversation exceeded maximum turns ({max_turns})")
+    raise A2AConversationMaxTurnsExceeded(max_turns)
 
 
 def _emit_delegation_failed(
