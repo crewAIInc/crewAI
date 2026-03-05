@@ -666,6 +666,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             and "input" in first_item
         ):
             return True
+        # OpenAI Responses-style normalized tool calls from provider adapters
+        if (
+            isinstance(first_item, dict)
+            and "name" in first_item
+            and "arguments" in first_item
+        ):
+            return True
         # Gemini-style
         if hasattr(first_item, "function_call") and first_item.function_call:
             return True
@@ -847,7 +854,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            func_args = (
+                func_info.get("arguments")
+                or tool_call.get("arguments")
+                or tool_call.get("input", {})
+                or "{}"
+            )
             return call_id, func_name, func_args
         return None
 
@@ -859,7 +871,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         assistant_message: LLMMessage = {
             "role": "assistant",
-            "content": None,
+            # Responses API rejects null content in input messages.
+            "content": "",
             "tool_calls": [
                 {
                     "id": call_id,

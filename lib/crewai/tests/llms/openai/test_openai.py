@@ -683,6 +683,45 @@ def test_call_responses_uses_stream_handler_when_chatgpt_backend_sets_stream(mon
     mock_streaming.assert_called_once()
 
 
+def test_prepare_responses_params_normalizes_tool_messages():
+    """Responses input should map tool call/outputs into item-based format."""
+    llm = OpenAICompletion(model="gpt-4o", api="responses", api_key="test-key")
+
+    params = llm._prepare_responses_params(
+        messages=[
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "run_repo_command", "arguments": "{}"},
+                    }
+                ],
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "call_1",
+                "name": "run_repo_command",
+                "content": "ok",
+            },
+        ]
+    )
+
+    assert params["input"][0] == {
+        "type": "function_call",
+        "call_id": "call_1",
+        "name": "run_repo_command",
+        "arguments": "{}",
+    }
+    assert params["input"][1] == {
+        "type": "function_call_output",
+        "call_id": "call_1",
+        "output": "ok",
+    }
+
+
 def test_chatgpt_backend_retries_by_stripping_bad_request_param(monkeypatch):
     """400 invalid_request should trigger adaptive stripping for ChatGPT backend."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -722,6 +761,74 @@ def test_chatgpt_backend_retries_by_stripping_bad_request_param(monkeypatch):
     assert llm.client.responses.create.call_count == 2
     _, second_kwargs = llm.client.responses.create.call_args
     assert "metadata" not in second_kwargs
+
+
+def test_chatgpt_backend_retry_never_strips_store(monkeypatch):
+    """`store=false` is required by ChatGPT backend and must not be stripped."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+
+    with patch(
+        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
+        return_value=ResolvedOpenAIAuth(
+            token="oauth-token",
+            source="codex_auth_json_oauth",
+            is_oauth=True,
+        ),
+    ):
+        llm = OpenAICompletion(model="gpt-5.3-codex", api="responses")
+
+    class _StoreRequired(Exception):
+        status_code = 400
+
+        def __str__(self) -> str:
+            return "Store must be set to false"
+
+    key = llm._pick_chatgpt_retry_strip_key(
+        params={"model": "gpt-5.3-codex", "store": False},
+        error=_StoreRequired(),
+    )
+    assert key is None
+
+
+def test_streaming_responses_returns_tool_calls_when_no_available_functions():
+    """Streaming responses should return tool calls when executor will handle them."""
+    llm = OpenAICompletion(model="gpt-4o", api="responses", api_key="test-key")
+
+    created_event = MagicMock()
+    created_event.type = "response.created"
+    created_event.response = MagicMock(id="resp_123")
+
+    output_item_done_event = MagicMock()
+    output_item_done_event.type = "response.output_item.done"
+    output_item_done_event.item = types.SimpleNamespace(
+        type="function_call",
+        call_id="call_1",
+        name="run_repo_command",
+        arguments='{"command":"pwd"}',
+    )
+
+    completed_event = MagicMock()
+    completed_event.type = "response.completed"
+    completed_event.response = MagicMock(id="resp_123", usage=None)
+
+    with patch.object(
+        llm,
+        "_responses_create_with_retry",
+        return_value=[created_event, output_item_done_event, completed_event],
+    ):
+        result = llm._handle_streaming_responses(
+            params={"input": [{"role": "user", "content": "Use tool"}]},
+            available_functions=None,
+        )
+
+    assert result == [
+        {
+            "id": "call_1",
+            "name": "run_repo_command",
+            "arguments": '{"command":"pwd"}',
+        }
+    ]
 
 
 def test_openai_streaming_with_response_model():

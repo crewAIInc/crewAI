@@ -81,6 +81,42 @@ def executor(
 class TestAsyncAgentExecutor:
     """Tests for async agent executor methods."""
 
+    def test_is_tool_call_list_accepts_name_arguments_dict(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """OpenAI Responses-style tool call dicts should be recognized."""
+        payload = [
+            {
+                "id": "call_1",
+                "name": "run_repo_command",
+                "arguments": '{"command":"pwd"}',
+            }
+        ]
+        assert executor._is_tool_call_list(payload)
+
+    def test_parse_native_tool_call_uses_arguments_field(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Parser should preserve arguments when provider omits nested function object."""
+        parsed = executor._parse_native_tool_call(
+            {
+                "id": "call_1",
+                "name": "run_repo_command",
+                "arguments": '{"command":"pwd"}',
+            }
+        )
+        assert parsed == ("call_1", "run_repo_command", '{"command":"pwd"}')
+
+    def test_append_assistant_tool_calls_message_uses_string_content(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Assistant tool-call message should avoid null content for Responses API."""
+        executor.messages = []
+        executor._append_assistant_tool_calls_message(
+            [("call_1", "run_repo_command", '{"command":"pwd"}')]
+        )
+        assert executor.messages[-1]["content"] == ""
+
     @pytest.mark.asyncio
     async def test_ainvoke_returns_output(self, executor: CrewAgentExecutor) -> None:
         """Test that ainvoke returns the expected output."""

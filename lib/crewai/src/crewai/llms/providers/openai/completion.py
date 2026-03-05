@@ -222,7 +222,6 @@ class OpenAICompletion(BaseLLM):
         "top_p",
         "seed",
         "include",
-        "store",
     )
 
     def __init__(
@@ -847,7 +846,11 @@ class OpenAICompletion(BaseLLM):
         final_input: list[Any] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
-        final_input.extend(input_messages if input_messages else messages)
+        final_input.extend(
+            self._normalize_messages_for_responses(
+                input_messages if input_messages else messages
+            )
+        )
 
         params: dict[str, Any] = {
             "model": self.model,
@@ -941,6 +944,73 @@ class OpenAICompletion(BaseLLM):
             return self._prepare_chatgpt_backend_responses_params(filtered_params)
         return filtered_params
 
+    def _normalize_messages_for_responses(
+        self, messages: list[LLMMessage]
+    ) -> list[Any]:
+        """Normalize Crew message history to Responses API-compatible input items."""
+        normalized: list[Any] = []
+        for message in messages:
+            role = message.get("role")
+
+            if role == "tool":
+                call_id = message.get("tool_call_id")
+                content = message.get("content", "")
+                output = content if isinstance(content, str) else str(content)
+                if call_id:
+                    normalized.append(
+                        {
+                            "type": "function_call_output",
+                            "call_id": call_id,
+                            "output": output,
+                        }
+                    )
+                else:
+                    normalized.append({"role": "user", "content": output})
+                continue
+
+            message_copy = dict(message)
+            tool_calls = message_copy.pop("tool_calls", None)
+            if tool_calls:
+                for call in tool_calls:
+                    if not isinstance(call, dict):
+                        continue
+                    call_id = call.get("id") or call.get("call_id")
+                    function_payload = call.get("function", {})
+                    if isinstance(function_payload, dict):
+                        name = function_payload.get("name") or call.get("name")
+                        arguments = function_payload.get("arguments") or call.get(
+                            "arguments", "{}"
+                        )
+                    else:
+                        name = call.get("name")
+                        arguments = call.get("arguments", "{}")
+                    if call_id and name:
+                        normalized.append(
+                            {
+                                "type": "function_call",
+                                "call_id": str(call_id),
+                                "name": str(name),
+                                "arguments": (
+                                    arguments
+                                    if isinstance(arguments, str)
+                                    else json.dumps(arguments)
+                                ),
+                            }
+                        )
+
+                content_value = message_copy.get("content")
+                if content_value:
+                    normalized.append(
+                        {"role": "assistant", "content": str(content_value)}
+                    )
+                continue
+
+            if message_copy.get("content") is None:
+                message_copy["content"] = ""
+            normalized.append(message_copy)
+
+        return normalized
+
     def _prepare_chatgpt_backend_responses_params(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
@@ -1007,6 +1077,10 @@ class OpenAICompletion(BaseLLM):
         self, params: dict[str, Any], error: Exception
     ) -> str | None:
         message = self._extract_openai_error_message(error).lower()
+
+        # ChatGPT backend requires store=false; never strip it.
+        if "store must be set to false" in message:
+            return None
 
         for key in self.CHATGPT_BACKEND_RETRY_STRIP_ORDER:
             if key in params and key in message:
@@ -1454,6 +1528,16 @@ class OpenAICompletion(BaseLLM):
 
             return parsed_result
 
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+            )
+            return function_calls
+
         if function_calls and available_functions:
             for call in function_calls:
                 function_name = call.get("name", "")
@@ -1577,6 +1661,16 @@ class OpenAICompletion(BaseLLM):
             )
 
             return parsed_result
+
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+            )
+            return function_calls
 
         if function_calls and available_functions:
             for call in function_calls:
