@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import contextvars
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import inspect
 import logging
@@ -755,6 +756,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 with ThreadPoolExecutor(max_workers=max_workers) as pool:
                     futures = {
                         pool.submit(
+                            contextvars.copy_context().run,
                             self._execute_single_native_tool_call,
                             call_id=call_id,
                             func_name=func_name,
