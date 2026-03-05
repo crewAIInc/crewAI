@@ -94,10 +94,30 @@ class MCPToolResolver:
         async def _disconnect_all() -> None:
             for client in self._clients:
                 if client and hasattr(client, "connected") and client.connected:
-                    await client.disconnect()
+                    try:
+                        await asyncio.wait_for(
+                            client.disconnect(), timeout=MCP_CONNECTION_TIMEOUT
+                        )
+                    except asyncio.TimeoutError:
+                        self._logger.log(
+                            "warning",
+                            "MCP client disconnect timed out, forcing cleanup",
+                        )
+                    except Exception as e:
+                        self._logger.log(
+                            "debug", f"Error disconnecting MCP client: {e}"
+                        )
 
         try:
-            asyncio.run(_disconnect_all())
+            try:
+                asyncio.get_running_loop()
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, _disconnect_all())
+                    future.result(timeout=MCP_CONNECTION_TIMEOUT * len(self._clients) + 5)
+            except RuntimeError:
+                asyncio.run(_disconnect_all())
         except Exception as e:
             self._logger.log("error", f"Error during MCP client cleanup: {e}")
         finally:
