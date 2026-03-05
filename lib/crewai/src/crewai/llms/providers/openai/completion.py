@@ -196,6 +196,9 @@ class OpenAICompletion(BaseLLM):
     PLATFORM_DEFAULT_BASE_URL: ClassVar[str] = "https://api.openai.com/v1"
     PLATFORM_ONLY_MODEL: ClassVar[str] = "gpt-5.2-pro"
     CODEX_CHATGPT_MODEL: ClassVar[str] = "gpt-5.2-codex"
+    OPENAI_PROVIDER_PREFIXES: ClassVar[frozenset[str]] = frozenset(
+        {"openai", "openai-codex"}
+    )
     CODEX_CHATGPT_BASE_URL_ENV: ClassVar[str] = "CREWAI_CODEX_CHATGPT_BASE_URL"
     CHATGPT_BACKEND_DEFAULT_INSTRUCTIONS: ClassVar[str] = (
         "You are a helpful assistant."
@@ -260,6 +263,7 @@ class OpenAICompletion(BaseLLM):
         **kwargs: Any,
     ) -> None:
         """Initialize OpenAI completion client."""
+        model_provider_prefix, normalized_model = self._normalize_openai_model(model)
 
         if provider is None:
             provider = kwargs.pop("provider", "openai")
@@ -277,13 +281,18 @@ class OpenAICompletion(BaseLLM):
         self.api_base = kwargs.pop("api_base", None)
 
         super().__init__(
-            model=model,
+            model=normalized_model,
             temperature=temperature,
             api_key=api_key,
             base_url=base_url,
             timeout=timeout,
             provider=provider,
             **kwargs,
+        )
+        self._model_provider_prefix = model_provider_prefix
+        self._uses_openai_codex_provider = (
+            provider.strip().lower() == "openai-codex"
+            or model_provider_prefix == "openai-codex"
         )
         self._resolved_openai_auth = None
         self._use_codex_chatgpt_backend = False
@@ -382,7 +391,9 @@ class OpenAICompletion(BaseLLM):
             self.api_key = self._resolved_openai_auth.token
             resolved_base_url = self.PLATFORM_DEFAULT_BASE_URL
         else:
-            if model_name == self.CODEX_CHATGPT_MODEL and auth_mode == "oauth_codex":
+            if self._should_force_codex_oauth_route(
+                model_name=model_name, auth_mode=auth_mode
+            ):
                 self.api = "responses"
                 try:
                     resolved_auth = resolve_codex_oauth_access_token()
@@ -463,7 +474,7 @@ class OpenAICompletion(BaseLLM):
         self, *, model_name: str, resolved_auth: Any | None
     ) -> bool:
         """Determine whether to route OAuth Codex auth through ChatGPT backend."""
-        if model_name != self.CODEX_CHATGPT_MODEL:
+        if not self._targets_codex_chatgpt_backend(model_name):
             return False
         if resolved_auth is None:
             return False
@@ -478,6 +489,34 @@ class OpenAICompletion(BaseLLM):
             return False
         auth_mode = os.getenv("CREWAI_OPENAI_AUTH_MODE", "").strip().lower()
         return auth_mode == "oauth_codex"
+
+    @classmethod
+    def _normalize_openai_model(cls, model: str) -> tuple[str | None, str]:
+        """Normalize openai-style provider/model strings to bare model names."""
+        normalized = model.strip()
+        if "/" not in normalized:
+            return None, normalized
+        provider_prefix, _, model_name = normalized.partition("/")
+        provider_prefix = provider_prefix.strip().lower()
+        model_name = model_name.strip()
+        if provider_prefix in cls.OPENAI_PROVIDER_PREFIXES and model_name:
+            return provider_prefix, model_name
+        return None, normalized
+
+    def _targets_codex_chatgpt_backend(self, model_name: str) -> bool:
+        """Return True for models that should use ChatGPT Codex backend rules."""
+        lowered = model_name.strip().lower()
+        if self._uses_openai_codex_provider:
+            return True
+        return lowered.endswith("-codex") or "-codex-" in lowered
+
+    def _should_force_codex_oauth_route(
+        self, *, model_name: str, auth_mode: str
+    ) -> bool:
+        """Return True when oauth_codex should force Codex OAuth token resolution."""
+        if auth_mode != "oauth_codex":
+            return False
+        return self._targets_codex_chatgpt_backend(model_name)
 
     def _resolve_platform_model_auth(self) -> ResolvedOpenAIAuth:
         """Resolve credentials for Platform-only model routes."""
