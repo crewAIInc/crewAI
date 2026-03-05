@@ -16,7 +16,7 @@ from collections.abc import Callable
 from datetime import datetime
 import json
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel
 
@@ -587,7 +587,7 @@ class StepExecutor:
                         # Replace the sentinel with a standard image_url content block.
                         # Each provider SDK (LiteLLM → Anthropic, OpenAI native, etc.)
                         # converts the data-URI to its own wire format.
-                        modified = dict(call_result.tool_message)
+                        modified: LLMMessage = cast(LLMMessage, dict(call_result.tool_message))
                         modified["content"] = [
                             {
                                 "type": "image_url",
