@@ -967,8 +967,17 @@ class LLM(BaseLLM):
                 self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
+            # When the LLM returns tool_calls but available_functions is None
+            # (executor handles tool execution), return the tool_calls directly
+            # so the executor can process them.
+            if tool_calls and not available_functions:
+                return tool_calls
+
             if not tool_calls or not available_functions:
-                if response_model and self.is_litellm:
+                # Skip InternalInstructor when tools are present so the LLM
+                # can invoke agent tools before returning structured output.
+                has_tools = bool(params.get("tools"))
+                if response_model and self.is_litellm and not has_tools:
                     instructor_instance = InternalInstructor(
                         content=full_response,
                         model=response_model,
@@ -1150,7 +1159,10 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Handle response_model with InternalInstructor for LiteLLM
-        if response_model and self.is_litellm:
+        # Skip InternalInstructor when tools are present so the LLM can see
+        # and invoke agent tools before returning structured output.
+        has_tools = bool(params.get("tools"))
+        if response_model and self.is_litellm and not has_tools:
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1183,7 +1195,9 @@ class LLM(BaseLLM):
             # and convert them to our own exception type for consistent handling
             # across the codebase. This allows CrewAgentExecutor to handle context
             # length issues appropriately.
-            if response_model:
+            # Don't pass response_model to litellm when tools are present,
+            # otherwise litellm's internal instructor overrides the tools.
+            if response_model and not has_tools:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
 
@@ -1290,7 +1304,10 @@ class LLM(BaseLLM):
         Returns:
             str: The response text
         """
-        if response_model and self.is_litellm:
+        # Skip InternalInstructor when tools are present so the LLM can see
+        # and invoke agent tools before returning structured output.
+        has_tools = bool(params.get("tools"))
+        if response_model and self.is_litellm and not has_tools:
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1318,7 +1335,9 @@ class LLM(BaseLLM):
             return structured_response
 
         try:
-            if response_model:
+            # Don't pass response_model to litellm when tools are present,
+            # otherwise litellm's internal instructor overrides the tools.
+            if response_model and not has_tools:
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
@@ -1513,7 +1532,7 @@ class LLM(BaseLLM):
             if usage_info:
                 self._track_token_usage_internal(usage_info)
 
-            if accumulated_tool_args and available_functions:
+            if accumulated_tool_args:
                 # Convert accumulated tool args to ChatCompletionDeltaToolCall objects
                 tool_calls_list: list[ChatCompletionDeltaToolCall] = [
                     ChatCompletionDeltaToolCall(
@@ -1528,6 +1547,12 @@ class LLM(BaseLLM):
                 ]
 
                 if tool_calls_list:
+                    # When available_functions is None (executor handles tool
+                    # execution), return tool_calls directly so the executor
+                    # can process them.
+                    if not available_functions:
+                        return tool_calls_list
+
                     result = self._handle_streaming_tool_calls(
                         tool_calls=tool_calls_list,
                         accumulated_tool_args=accumulated_tool_args,
