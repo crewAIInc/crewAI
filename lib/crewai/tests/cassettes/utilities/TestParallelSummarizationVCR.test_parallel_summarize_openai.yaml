@@ -1,0 +1,435 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a precise assistant that
+      creates structured summaries of agent conversations. You preserve critical context
+      needed for seamless task continuation."},{"role":"user","content":"Analyze the
+      following conversation and create a structured summary that preserves all information
+      needed to continue the task seamlessly.\n\n<conversation>\n[USER]: Explain the
+      Python package ecosystem. How does pip work, what is PyPI, and what are virtual
+      environments? Compare pip with conda and uv.\n\n[ASSISTANT]: PyPI (Python Package
+      Index) is the official repository hosting 400k+ packages. pip is the standard
+      package installer that downloads from PyPI. Virtual environments (venv) create
+      isolated Python installations to avoid dependency conflicts between projects.
+      conda is a cross-language package manager popular in data science that can manage
+      non-Python dependencies. uv is a new Rust-based tool that is 10-100x faster
+      than pip and aims to replace pip, pip-tools, and virtualenv with a single unified
+      tool.\n</conversation>\n\nCreate a summary with these sections:\n1. **Task Overview**:
+      What is the agent trying to accomplish?\n2. **Current State**: What has been
+      completed so far? What step is the agent on?\n3. **Important Discoveries**:
+      Key facts, data, tool results, or findings that must not be lost.\n4. **Next
+      Steps**: What should the agent do next based on the conversation?\n5. **Context
+      to Preserve**: Any specific values, names, URLs, code snippets, or details referenced
+      in the conversation.\n\nWrap your entire summary in <summary> tags.\n\n<summary>\n[Your
+      structured summary here]\n</summary>"}],"model":"gpt-4o-mini","temperature":0}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1687'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7S93xpUu9d5twM82uJOZpurQTD5u\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770668857,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"<summary>\\n1. **Task Overview**: The
+        user is seeking an explanation of the Python package ecosystem, specifically
+        focusing on how pip works, the role of PyPI, the concept of virtual environments,
+        and a comparison between pip, conda, and uv.\\n\\n2. **Current State**: The
+        assistant has provided a comprehensive overview of the Python package ecosystem,
+        including definitions and comparisons of pip, PyPI, virtual environments,
+        conda, and uv.\\n\\n3. **Important Discoveries**:\\n   - PyPI (Python Package
+        Index) is the official repository with over 400,000 packages.\\n   - pip is
+        the standard package installer that downloads packages from PyPI.\\n   - Virtual
+        environments (venv) allow for isolated Python installations to prevent dependency
+        conflicts.\\n   - conda is a cross-language package manager, particularly
+        popular in data science, that can manage non-Python dependencies.\\n   - uv
+        is a new Rust-based tool that is significantly faster than pip (10-100x) and
+        aims to unify the functionalities of pip, pip-tools, and virtualenv.\\n\\n4.
+        **Next Steps**: The agent should consider providing further details on how
+        to use pip, conda, and uv, including installation commands, examples of creating
+        virtual environments, and any specific use cases for each tool.\\n\\n5. **Context
+        to Preserve**: \\n   - PyPI: Python Package Index, hosting 400k+ packages.\\n
+        \  - pip: Standard package installer for Python.\\n   - Virtual environments
+        (venv): Isolated Python installations.\\n   - conda: Cross-language package
+        manager for data science.\\n   - uv: Rust-based tool, 10-100x faster than
+        pip, aims to replace pip, pip-tools, and virtualenv.\\n</summary>\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        333,\n    \"completion_tokens\": 354,\n    \"total_tokens\": 687,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 09 Feb 2026 20:27:42 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '4879'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a precise assistant that
+      creates structured summaries of agent conversations. You preserve critical context
+      needed for seamless task continuation."},{"role":"user","content":"Analyze the
+      following conversation and create a structured summary that preserves all information
+      needed to continue the task seamlessly.\n\n<conversation>\n[USER]: Tell me about
+      the history of the Python programming language. Who created it, when was it
+      first released, and what were the main design goals? Please provide a detailed
+      overview covering the major milestones from its inception through Python 3.\n\n[ASSISTANT]:
+      Python was created by Guido van Rossum and first released in 1991. The main
+      design goals were code readability and simplicity. Key milestones: Python 1.0
+      (1994) introduced functional programming tools like lambda and map. Python 2.0
+      (2000) added list comprehensions and garbage collection. Python 3.0 (2008) was
+      a major backward-incompatible release that fixed fundamental design flaws. Python
+      2 reached end-of-life in January 2020.\n</conversation>\n\nCreate a summary
+      with these sections:\n1. **Task Overview**: What is the agent trying to accomplish?\n2.
+      **Current State**: What has been completed so far? What step is the agent on?\n3.
+      **Important Discoveries**: Key facts, data, tool results, or findings that must
+      not be lost.\n4. **Next Steps**: What should the agent do next based on the
+      conversation?\n5. **Context to Preserve**: Any specific values, names, URLs,
+      code snippets, or details referenced in the conversation.\n\nWrap your entire
+      summary in <summary> tags.\n\n<summary>\n[Your structured summary here]\n</summary>"}],"model":"gpt-4o-mini","temperature":0}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1726'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7S93rBUMAtEdwdI6Y2ga0s50IFtv\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770668857,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"<summary>\\n1. **Task Overview**: The
+        user is seeking a detailed overview of the history of the Python programming
+        language, including its creator, initial release date, main design goals,
+        and major milestones up to Python 3.\\n\\n2. **Current State**: The assistant
+        has provided a comprehensive response detailing the history of Python, including
+        its creator (Guido van Rossum), first release (1991), main design goals (code
+        readability and simplicity), and key milestones (Python 1.0 in 1994, Python
+        2.0 in 2000, and Python 3.0 in 2008).\\n\\n3. **Important Discoveries**: \\n
+        \  - Python was created by Guido van Rossum.\\n   - First released in 1991.\\n
+        \  - Main design goals: code readability and simplicity.\\n   - Key milestones:\\n
+        \    - Python 1.0 (1994): Introduced functional programming tools like lambda
+        and map.\\n     - Python 2.0 (2000): Added list comprehensions and garbage
+        collection.\\n     - Python 3.0 (2008): Major backward-incompatible release
+        that fixed fundamental design flaws.\\n   - Python 2 reached end-of-life in
+        January 2020.\\n\\n4. **Next Steps**: The agent should be prepared to provide
+        additional details or answer follow-up questions regarding Python's features,
+        community, or specific use cases if the user requests more information.\\n\\n5.
+        **Context to Preserve**: \\n   - Creator: Guido van Rossum\\n   - Initial
+        release: 1991\\n   - Milestones: \\n     - Python 1.0 (1994)\\n     - Python
+        2.0 (2000)\\n     - Python 3.0 (2008)\\n   - End-of-life for Python 2: January
+        2020\\n</summary>\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 346,\n    \"completion_tokens\":
+        372,\n    \"total_tokens\": 718,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_7e4bf6ad56\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 09 Feb 2026 20:27:42 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '5097'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a precise assistant that
+      creates structured summaries of agent conversations. You preserve critical context
+      needed for seamless task continuation."},{"role":"user","content":"Analyze the
+      following conversation and create a structured summary that preserves all information
+      needed to continue the task seamlessly.\n\n<conversation>\n[USER]: What about
+      the async/await features? When were they introduced and how do they compare
+      to similar features in JavaScript and C#? Also explain the Global Interpreter
+      Lock and its implications.\n\n[ASSISTANT]: Async/await was introduced in Python
+      3.5 (PEP 492, 2015). Unlike JavaScript which is single-threaded by design, Python''s
+      asyncio is an opt-in framework. C# introduced async/await in 2012 (C# 5.0) and
+      was a major inspiration for Python''s implementation. The GIL (Global Interpreter
+      Lock) is a mutex that protects access to Python objects, preventing multiple
+      threads from executing Python bytecodes simultaneously. This means CPU-bound
+      multithreaded programs don''t benefit from multiple cores. PEP 703 proposes
+      making the GIL optional in CPython.\n</conversation>\n\nCreate a summary with
+      these sections:\n1. **Task Overview**: What is the agent trying to accomplish?\n2.
+      **Current State**: What has been completed so far? What step is the agent on?\n3.
+      **Important Discoveries**: Key facts, data, tool results, or findings that must
+      not be lost.\n4. **Next Steps**: What should the agent do next based on the
+      conversation?\n5. **Context to Preserve**: Any specific values, names, URLs,
+      code snippets, or details referenced in the conversation.\n\nWrap your entire
+      summary in <summary> tags.\n\n<summary>\n[Your structured summary here]\n</summary>"}],"model":"gpt-4o-mini","temperature":0}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1786'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7S94auQYOLDTKfRzdluGiWAomSqd\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770668858,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"<summary>\\n1. **Task Overview**: The
+        user is seeking information about the async/await features in Python, their
+        introduction timeline, comparisons with similar features in JavaScript and
+        C#, and an explanation of the Global Interpreter Lock (GIL) and its implications.\\n\\n2.
+        **Current State**: The assistant has provided information regarding the introduction
+        of async/await in Python (version 3.5, PEP 492 in 2015), comparisons with
+        JavaScript and C# (C# introduced async/await in 2012), and an explanation
+        of the GIL.\\n\\n3. **Important Discoveries**: \\n   - Async/await was introduced
+        in Python 3.5 (PEP 492, 2015).\\n   - JavaScript is single-threaded, while
+        Python's asyncio is an opt-in framework.\\n   - C# introduced async/await
+        in 2012 (C# 5.0) and influenced Python's implementation.\\n   - The GIL (Global
+        Interpreter Lock) is a mutex that prevents multiple threads from executing
+        Python bytecodes simultaneously, affecting CPU-bound multithreaded programs.\\n
+        \  - PEP 703 proposes making the GIL optional in CPython.\\n\\n4. **Next Steps**:
+        The agent should consider providing more detailed comparisons of async/await
+        features between Python, JavaScript, and C#, as well as further implications
+        of the GIL and PEP 703.\\n\\n5. **Context to Preserve**: \\n   - Python async/await
+        introduction: 3.5 (PEP 492, 2015)\\n   - C# async/await introduction: 2012
+        (C# 5.0)\\n   - GIL (Global Interpreter Lock) explanation and implications.\\n
+        \  - Reference to PEP 703 regarding the GIL.\\n</summary>\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        364,\n    \"completion_tokens\": 368,\n    \"total_tokens\": 732,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 09 Feb 2026 20:27:44 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '6339'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

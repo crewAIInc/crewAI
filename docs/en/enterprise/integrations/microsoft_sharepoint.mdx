@@ -78,6 +78,17 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
   </Accordion>
 
+  <Accordion title="microsoft_sharepoint/get_drives">
+    **Description:** List all document libraries (drives) in a SharePoint site. Use this to discover available libraries before using file operations.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `top` (integer, optional): Maximum number of drives to return per page (1-999). Default is 100
+    - `skip_token` (string, optional): Pagination token from a previous response to fetch the next page of results
+    - `select` (string, optional): Comma-separated list of properties to return (e.g., 'id,name,webUrl,driveType')
+
+  </Accordion>
+
   <Accordion title="microsoft_sharepoint/get_site_lists">
     **Description:** Get all lists in a SharePoint site.
 
@@ -159,20 +170,317 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
   </Accordion>
 
-  <Accordion title="microsoft_sharepoint/get_drive_items">
-    **Description:** Get files and folders from a SharePoint document library.
+  <Accordion title="microsoft_sharepoint/list_files">
+    **Description:** Retrieve files and folders from a SharePoint document library. By default lists the root folder, but you can navigate into subfolders by providing a folder_id.
 
     **Parameters:**
-    - `site_id` (string, required): The ID of the SharePoint site
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `folder_id` (string, optional): The ID of the folder to list contents from. Use 'root' for the root folder, or provide a folder ID from a previous list_files call. Default is 'root'
+    - `top` (integer, optional): Maximum number of items to return per page (1-1000). Default is 50
+    - `skip_token` (string, optional): Pagination token from a previous response to fetch the next page of results
+    - `orderby` (string, optional): Sort order for results (e.g., 'name asc', 'size desc', 'lastModifiedDateTime desc'). Default is 'name asc'
+    - `filter` (string, optional): OData filter to narrow results (e.g., 'file ne null' for files only, 'folder ne null' for folders only)
+    - `select` (string, optional): Comma-separated list of fields to return (e.g., 'id,name,size,folder,file,webUrl,lastModifiedDateTime')
 
   </Accordion>
 
-  <Accordion title="microsoft_sharepoint/delete_drive_item">
-    **Description:** Delete a file or folder from SharePoint document library.
+  <Accordion title="microsoft_sharepoint/delete_file">
+    **Description:** Delete a file or folder from a SharePoint document library. For folders, all contents are deleted recursively. Items are moved to the site recycle bin.
 
     **Parameters:**
-    - `site_id` (string, required): The ID of the SharePoint site
-    - `item_id` (string, required): The ID of the file or folder to delete
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the file or folder to delete. Obtain from list_files
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_files_by_path">
+    **Description:** List files and folders in a SharePoint document library folder by its path. More efficient than multiple list_files calls for deep navigation.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `folder_path` (string, required): The full path to the folder without leading/trailing slashes (e.g., 'Documents', 'Reports/2024/Q1')
+    - `top` (integer, optional): Maximum number of items to return per page (1-1000). Default is 50
+    - `skip_token` (string, optional): Pagination token from a previous response to fetch the next page of results
+    - `orderby` (string, optional): Sort order for results (e.g., 'name asc', 'size desc'). Default is 'name asc'
+    - `select` (string, optional): Comma-separated list of fields to return (e.g., 'id,name,size,folder,file,webUrl,lastModifiedDateTime')
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/download_file">
+    **Description:** Download raw file content from a SharePoint document library. Use only for plain text files (.txt, .csv, .json). For Excel files, use the Excel-specific actions. For Word files, use get_word_document_content.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the file to download. Obtain from list_files or list_files_by_path
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_file_info">
+    **Description:** Retrieve detailed metadata for a specific file or folder in a SharePoint document library, including name, size, created/modified dates, and author information.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the file or folder. Obtain from list_files or list_files_by_path
+    - `select` (string, optional): Comma-separated list of properties to return (e.g., 'id,name,size,createdDateTime,lastModifiedDateTime,webUrl,createdBy,lastModifiedBy')
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_folder">
+    **Description:** Create a new folder in a SharePoint document library. By default creates the folder in the root; use parent_id to create subfolders.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `folder_name` (string, required): Name for the new folder. Cannot contain: \ / : * ? " < > |
+    - `parent_id` (string, optional): The ID of the parent folder. Use 'root' for the document library root, or provide a folder ID from list_files. Default is 'root'
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/search_files">
+    **Description:** Search for files and folders in a SharePoint document library by keywords. Searches file names, folder names, and file contents for Office documents. Do not use wildcards or special characters.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `query` (string, required): Search keywords (e.g., 'report', 'budget 2024'). Wildcards like *.txt are not supported
+    - `top` (integer, optional): Maximum number of results to return per page (1-1000). Default is 50
+    - `skip_token` (string, optional): Pagination token from a previous response to fetch the next page of results
+    - `select` (string, optional): Comma-separated list of fields to return (e.g., 'id,name,size,folder,file,webUrl,lastModifiedDateTime')
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/copy_file">
+    **Description:** Copy a file or folder to a new location within SharePoint. The original item remains unchanged. The copy operation is asynchronous for large files.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the file or folder to copy. Obtain from list_files or search_files
+    - `destination_folder_id` (string, required): The ID of the destination folder. Use 'root' for the root folder, or a folder ID from list_files
+    - `new_name` (string, optional): New name for the copy. If not provided, the original name is used
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/move_file">
+    **Description:** Move a file or folder to a new location within SharePoint. The item is removed from its original location. For folders, all contents are moved as well.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the file or folder to move. Obtain from list_files or search_files
+    - `destination_folder_id` (string, required): The ID of the destination folder. Use 'root' for the root folder, or a folder ID from list_files
+    - `new_name` (string, optional): New name for the moved item. If not provided, the original name is kept
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_worksheets">
+    **Description:** List all worksheets (tabs) in an Excel workbook stored in a SharePoint document library. Use the returned worksheet name with other Excel actions.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `select` (string, optional): Comma-separated list of properties to return (e.g., 'id,name,position,visibility')
+    - `filter` (string, optional): OData filter expression (e.g., "visibility eq 'Visible'" to exclude hidden sheets)
+    - `top` (integer, optional): Maximum number of worksheets to return. Minimum: 1, Maximum: 999
+    - `orderby` (string, optional): Sort order (e.g., 'position asc' to return sheets in tab order)
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_excel_worksheet">
+    **Description:** Create a new worksheet (tab) in an Excel workbook stored in a SharePoint document library. The new sheet is added at the end of the tab list.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `name` (string, required): Name for the new worksheet. Maximum 31 characters. Cannot contain: \ / * ? : [ ]. Must be unique within the workbook
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_range_data">
+    **Description:** Retrieve cell values from a specific range in an Excel worksheet stored in SharePoint. For reading all data without knowing dimensions, use get_excel_used_range instead.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet (tab) to read from. Obtain from get_excel_worksheets. Case-sensitive
+    - `range` (string, required): Cell range in A1 notation (e.g., 'A1:C10', 'A:C', '1:5', 'A1')
+    - `select` (string, optional): Comma-separated list of properties to return (e.g., 'address,values,formulas,numberFormat,text')
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_excel_range_data">
+    **Description:** Write values to a specific range in an Excel worksheet stored in SharePoint. Overwrites existing cell contents. The values array dimensions must match the range dimensions exactly.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet (tab) to update. Obtain from get_excel_worksheets. Case-sensitive
+    - `range` (string, required): Cell range in A1 notation where values will be written (e.g., 'A1:C3' for a 3x3 block)
+    - `values` (array, required): 2D array of values (rows containing cells). Example for A1:B2: [["Header1", "Header2"], ["Value1", "Value2"]]. Use null to clear a cell
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_used_range_metadata">
+    **Description:** Return only the metadata (address and dimensions) of the used range in a worksheet, without the actual cell values. Ideal for large files to understand spreadsheet size before reading data in chunks.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet (tab) to read. Obtain from get_excel_worksheets. Case-sensitive
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_used_range">
+    **Description:** Retrieve all cells containing data in a worksheet stored in SharePoint. Do not use for files larger than 2MB. For large files, use get_excel_used_range_metadata first, then get_excel_range_data to read in smaller chunks.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet (tab) to read. Obtain from get_excel_worksheets. Case-sensitive
+    - `select` (string, optional): Comma-separated list of properties to return (e.g., 'address,values,formulas,numberFormat,text,rowCount,columnCount')
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_cell">
+    **Description:** Retrieve the value of a single cell by row and column index from an Excel file in SharePoint. Indices are 0-based (row 0 = Excel row 1, column 0 = column A).
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet (tab). Obtain from get_excel_worksheets. Case-sensitive
+    - `row` (integer, required): 0-based row index (row 0 = Excel row 1). Valid range: 0-1048575
+    - `column` (integer, required): 0-based column index (column 0 = A, column 1 = B). Valid range: 0-16383
+    - `select` (string, optional): Comma-separated list of properties to return (e.g., 'address,values,formulas,numberFormat,text')
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/add_excel_table">
+    **Description:** Convert a cell range into a formatted Excel table with filtering, sorting, and structured data capabilities. Tables enable add_excel_table_row for appending data.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet containing the data range. Obtain from get_excel_worksheets
+    - `range` (string, required): Cell range to convert into a table, including headers and data (e.g., 'A1:D10' where A1:D1 contains column headers)
+    - `has_headers` (boolean, optional): Set to true if the first row contains column headers. Default is true
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_tables">
+    **Description:** List all tables in a specific Excel worksheet stored in SharePoint. Returns table properties including id, name, showHeaders, and showTotals.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet to get tables from. Obtain from get_excel_worksheets
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/add_excel_table_row">
+    **Description:** Append a new row to the end of an Excel table in a SharePoint file. The values array must have the same number of elements as the table has columns.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet containing the table. Obtain from get_excel_worksheets
+    - `table_name` (string, required): Name of the table to add the row to (e.g., 'Table1'). Obtain from get_excel_tables. Case-sensitive
+    - `values` (array, required): Array of cell values for the new row, one per column in table order (e.g., ["John Doe", "john@example.com", 25])
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_table_data">
+    **Description:** Get all rows from an Excel table in a SharePoint file as a data range. Easier than get_excel_range_data when working with structured tables since you don't need to know the exact range.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet containing the table. Obtain from get_excel_worksheets
+    - `table_name` (string, required): Name of the table to get data from (e.g., 'Table1'). Obtain from get_excel_tables. Case-sensitive
+    - `select` (string, optional): Comma-separated list of properties to return (e.g., 'address,values,formulas,numberFormat,text')
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_excel_chart">
+    **Description:** Create a chart visualization in an Excel worksheet stored in SharePoint from a data range. The chart is embedded in the worksheet.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet where the chart will be created. Obtain from get_excel_worksheets
+    - `chart_type` (string, required): Chart type (e.g., 'ColumnClustered', 'ColumnStacked', 'Line', 'LineMarkers', 'Pie', 'Bar', 'BarClustered', 'Area', 'Scatter', 'Doughnut')
+    - `source_data` (string, required): Data range for the chart in A1 notation, including headers (e.g., 'A1:B10')
+    - `series_by` (string, optional): How data series are organized: 'Auto', 'Columns', or 'Rows'. Default is 'Auto'
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_excel_charts">
+    **Description:** List all charts embedded in an Excel worksheet stored in SharePoint. Returns chart properties including id, name, chartType, height, width, and position.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet to list charts from. Obtain from get_excel_worksheets
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_excel_worksheet">
+    **Description:** Permanently remove a worksheet (tab) and all its contents from an Excel workbook stored in SharePoint. Cannot be undone. A workbook must have at least one worksheet.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet to delete. Case-sensitive. All data, tables, and charts on this sheet will be permanently removed
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_excel_table">
+    **Description:** Remove a table from an Excel worksheet in SharePoint. This deletes the table structure (filtering, formatting, table features) but preserves the underlying cell data.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+    - `worksheet_name` (string, required): Name of the worksheet containing the table. Obtain from get_excel_worksheets
+    - `table_name` (string, required): Name of the table to delete (e.g., 'Table1'). Obtain from get_excel_tables. The data in the cells will remain after table deletion
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_excel_names">
+    **Description:** Retrieve all named ranges defined in an Excel workbook stored in SharePoint. Named ranges are user-defined labels for cell ranges (e.g., 'SalesData' for A1:D100).
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Excel file in SharePoint. Obtain from list_files or search_files
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_word_document_content">
+    **Description:** Download and extract text content from a Word document (.docx) stored in a SharePoint document library. This is the recommended way to read Word documents from SharePoint.
+
+    **Parameters:**
+    - `site_id` (string, required): The full SharePoint site identifier from get_sites
+    - `drive_id` (string, required): The ID of the document library. Call get_drives first to get valid drive IDs
+    - `item_id` (string, required): The unique identifier of the Word document (.docx) in SharePoint. Obtain from list_files or search_files
 
   </Accordion>
 </AccordionGroup>

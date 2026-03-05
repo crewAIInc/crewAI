@@ -1094,11 +1094,7 @@ class OpenAICompletion(BaseLLM):
                     if reasoning_items:
                         self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
-                    usage = {
-                        "prompt_tokens": event.response.usage.input_tokens,
-                        "completion_tokens": event.response.usage.output_tokens,
-                        "total_tokens": event.response.usage.total_tokens,
-                    }
+                    usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
         # If parse_tool_outputs is enabled, return structured result
@@ -1222,11 +1218,7 @@ class OpenAICompletion(BaseLLM):
                     if reasoning_items:
                         self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
-                    usage = {
-                        "prompt_tokens": event.response.usage.input_tokens,
-                        "completion_tokens": event.response.usage.output_tokens,
-                        "total_tokens": event.response.usage.total_tokens,
-                    }
+                    usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
         # If parse_tool_outputs is enabled, return structured result
@@ -1310,11 +1302,18 @@ class OpenAICompletion(BaseLLM):
     def _extract_responses_token_usage(self, response: Response) -> dict[str, Any]:
         """Extract token usage from Responses API response."""
         if response.usage:
-            return {
+            result = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
+            # Extract cached prompt tokens from input_tokens_details
+            input_details = getattr(response.usage, "input_tokens_details", None)
+            if input_details:
+                result["cached_prompt_tokens"] = (
+                    getattr(input_details, "cached_tokens", 0) or 0
+                )
+            return result
         return {"total_tokens": 0}
 
     def _extract_builtin_tool_outputs(self, response: Response) -> ResponsesAPIResult:
@@ -1696,6 +1695,99 @@ class OpenAICompletion(BaseLLM):
 
         return content
 
+    def _finalize_streaming_response(
+        self,
+        full_response: str,
+        tool_calls: dict[int, dict[str, Any]],
+        usage_data: dict[str, int],
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str | list[dict[str, Any]]:
+        """Finalize a streaming response with usage tracking, tool call handling, and events.
+
+        Args:
+            full_response: The accumulated text response from the stream.
+            tool_calls: Accumulated tool calls from the stream, keyed by index.
+            usage_data: Token usage data from the stream.
+            params: The completion parameters containing messages.
+            available_functions: Available functions for tool calling.
+            from_task: Task that initiated the call.
+            from_agent: Agent that initiated the call.
+
+        Returns:
+            Tool calls list when tools were invoked without available_functions,
+            tool execution result when available_functions is provided,
+            or the text response string.
+        """
+        self._track_token_usage_internal(usage_data)
+
+        if tool_calls and not available_functions:
+            tool_calls_list = [
+                {
+                    "id": call_data["id"],
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                    "index": call_data["index"],
+                }
+                for call_data in tool_calls.values()
+            ]
+            self._emit_call_completed_event(
+                response=tool_calls_list,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return tool_calls_list
+
+        if tool_calls and available_functions:
+            for call_data in tool_calls.values():
+                function_name = call_data["name"]
+                arguments = call_data["arguments"]
+
+                if not function_name or not arguments:
+                    continue
+
+                if function_name not in available_functions:
+                    logging.warning(
+                        f"Function '{function_name}' not found in available functions"
+                    )
+                    continue
+
+                try:
+                    function_args = json.loads(arguments)
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse streamed tool arguments: {e}")
+                    continue
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if result is not None:
+                    return result
+
+        full_response = self._apply_stop_words(full_response)
+
+        self._emit_call_completed_event(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
+        return full_response
+
     def _handle_streaming_completion(
         self,
         params: dict[str, Any],
@@ -1703,7 +1795,7 @@ class OpenAICompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | BaseModel:
+    ) -> str | list[dict[str, Any]] | BaseModel:
         """Handle streaming chat completion."""
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
@@ -1820,54 +1912,20 @@ class OpenAICompletion(BaseLLM):
                         response_id=response_id_stream,
                     )
 
-        self._track_token_usage_internal(usage_data)
-
-        if tool_calls and available_functions:
-            for call_data in tool_calls.values():
-                function_name = call_data["name"]
-                arguments = call_data["arguments"]
-
-                # Skip if function name is empty or arguments are empty
-                if not function_name or not arguments:
-                    continue
-
-                # Check if function exists in available functions
-                if function_name not in available_functions:
-                    logging.warning(
-                        f"Function '{function_name}' not found in available functions"
-                    )
-                    continue
-
-                try:
-                    function_args = json.loads(arguments)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse streamed tool arguments: {e}")
-                    continue
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
-
-        full_response = self._apply_stop_words(full_response)
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
+        result = self._finalize_streaming_response(
+            full_response=full_response,
+            tool_calls=tool_calls,
+            usage_data=usage_data,
+            params=params,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
-            messages=params["messages"],
         )
-
-        return self._invoke_after_llm_call_hooks(
-            params["messages"], full_response, from_agent
-        )
+        if isinstance(result, str):
+            return self._invoke_after_llm_call_hooks(
+                params["messages"], result, from_agent
+            )
+        return result
 
     async def _ahandle_completion(
         self,
@@ -2016,7 +2074,7 @@ class OpenAICompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | BaseModel:
+    ) -> str | list[dict[str, Any]] | BaseModel:
         """Handle async streaming chat completion."""
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
@@ -2142,50 +2200,15 @@ class OpenAICompletion(BaseLLM):
                         response_id=response_id_stream,
                     )
 
-        self._track_token_usage_internal(usage_data)
-
-        if tool_calls and available_functions:
-            for call_data in tool_calls.values():
-                function_name = call_data["name"]
-                arguments = call_data["arguments"]
-
-                if not function_name or not arguments:
-                    continue
-
-                if function_name not in available_functions:
-                    logging.warning(
-                        f"Function '{function_name}' not found in available functions"
-                    )
-                    continue
-
-                try:
-                    function_args = json.loads(arguments)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse streamed tool arguments: {e}")
-                    continue
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
-
-        full_response = self._apply_stop_words(full_response)
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
+        return self._finalize_streaming_response(
+            full_response=full_response,
+            tool_calls=tool_calls,
+            usage_data=usage_data,
+            params=params,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
-            messages=params["messages"],
         )
-
-        return full_response
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -2240,11 +2263,18 @@ class OpenAICompletion(BaseLLM):
         """Extract token usage from OpenAI ChatCompletion or ChatCompletionChunk response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            return {
+            result = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
+            # Extract cached prompt tokens from prompt_tokens_details
+            prompt_details = getattr(usage, "prompt_tokens_details", None)
+            if prompt_details:
+                result["cached_prompt_tokens"] = (
+                    getattr(prompt_details, "cached_tokens", 0) or 0
+                )
+            return result
         return {"total_tokens": 0}
 
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:

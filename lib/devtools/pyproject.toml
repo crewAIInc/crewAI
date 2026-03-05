@@ -15,7 +15,7 @@ dependencies = [
     "openai~=1.83.0",
     "python-dotenv~=1.1.1",
     "pygithub~=1.59.1",
-    "rich~=13.9.4",
+    "rich>=13.9.4",
 ]
 
 [project.scripts]

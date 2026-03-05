@@ -33,8 +33,11 @@ def test_brave_tool_search(mock_get, brave_tool):
     mock_get.return_value.json.return_value = mock_response
 
     result = brave_tool.run(query="test")
-    assert "Test Title" in result
-    assert "http://test.com" in result
+    data = json.loads(result)
+    assert isinstance(data, list)
+    assert len(data) >= 1
+    assert data[0]["title"] == "Test Title"
+    assert data[0]["url"] == "http://test.com"
 
 
 @patch("requests.get")

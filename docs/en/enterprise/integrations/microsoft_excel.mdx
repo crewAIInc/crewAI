@@ -169,6 +169,16 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
   </Accordion>
 
+  <Accordion title="microsoft_excel/get_table_data">
+    **Description:** Get data from a specific table in an Excel worksheet.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the Excel file
+    - `worksheet_name` (string, required): Name of the worksheet
+    - `table_name` (string, required): Name of the table
+
+  </Accordion>
+
   <Accordion title="microsoft_excel/create_chart">
     **Description:** Create a chart in an Excel worksheet.
 
@@ -194,6 +204,15 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
   <Accordion title="microsoft_excel/get_used_range">
     **Description:** Get the used range of an Excel worksheet (contains all data).
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the Excel file
+    - `worksheet_name` (string, required): Name of the worksheet
+
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_used_range_metadata">
+    **Description:** Get the used range metadata (dimensions only, no data) of an Excel worksheet.
 
     **Parameters:**
     - `file_id` (string, required): The ID of the Excel file

@@ -62,6 +62,22 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
   </Accordion>
 
+  <Accordion title="google_slides/get_presentation_metadata">
+    **Description:** Get lightweight metadata about a presentation (title, slide count, slide IDs). Use this first before fetching full content.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation to retrieve.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_presentation_text">
+    **Description:** Extract all text content from a presentation. Returns slide IDs and text from shapes and tables only (no formatting).
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+
+  </Accordion>
+
   <Accordion title="google_slides/get_presentation">
     **Description:** Retrieves a presentation by ID.
 
@@ -96,6 +112,15 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
   </Accordion>
 
+  <Accordion title="google_slides/get_slide_text">
+    **Description:** Extract text content from a single slide. Returns only text from shapes and tables (no formatting or styling).
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `pageObjectId` (string, required): The ID of the slide/page to get text from.
+
+  </Accordion>
+
   <Accordion title="google_slides/get_page">
     **Description:** Retrieves a specific page by its ID.
 
@@ -111,6 +136,120 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `presentationId` (string, required): The ID of the presentation.
     - `pageObjectId` (string, required): The ID of the page for thumbnail generation.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_slide">
+    **Description:** Add an additional blank slide to a presentation. New presentations already have one blank slide - check get_presentation_metadata first. For slides with title/body areas, use create_slide_with_layout instead.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `insertionIndex` (integer, optional): Where to insert the slide (0-based). If omitted, adds at the end.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_slide_with_layout">
+    **Description:** Create a slide with a predefined layout containing placeholder areas for title, body, etc. This is better than create_slide for structured content. After creating, use get_page to find placeholder IDs, then insert text into them.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `layout` (string, required): Layout type. One of: `BLANK`, `TITLE`, `TITLE_AND_BODY`, `TITLE_AND_TWO_COLUMNS`, `TITLE_ONLY`, `SECTION_HEADER`, `ONE_COLUMN_TEXT`, `MAIN_POINT`, `BIG_NUMBER`. TITLE_AND_BODY is best for title+description. TITLE for title-only slides. SECTION_HEADER for section dividers.
+    - `insertionIndex` (integer, optional): Where to insert (0-based). Omit to add at end.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_text_box">
+    **Description:** Create a text box on a slide with content. Use this for titles, descriptions, paragraphs - not tables. Optionally specify position (x, y) and size (width, height) in EMU units (914400 EMU = 1 inch).
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The ID of the slide to add the text box to.
+    - `text` (string, required): The text content for the text box.
+    - `x` (integer, optional): X position in EMU (914400 = 1 inch). Default: 914400 (1 inch from left).
+    - `y` (integer, optional): Y position in EMU (914400 = 1 inch). Default: 914400 (1 inch from top).
+    - `width` (integer, optional): Width in EMU. Default: 7315200 (~8 inches).
+    - `height` (integer, optional): Height in EMU. Default: 914400 (~1 inch).
+
+  </Accordion>
+
+  <Accordion title="google_slides/delete_slide">
+    **Description:** Remove a slide from the presentation. Use get_presentation first to find the slide ID.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The object ID of the slide to delete. Get from get_presentation.
+
+  </Accordion>
+
+  <Accordion title="google_slides/duplicate_slide">
+    **Description:** Create a copy of an existing slide. The duplicate is inserted immediately after the original.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The object ID of the slide to duplicate. Get from get_presentation.
+
+  </Accordion>
+
+  <Accordion title="google_slides/move_slides">
+    **Description:** Reorder slides by moving them to a new position. Slide IDs must be in their current presentation order (no duplicates).
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideIds` (array of strings, required): Array of slide IDs to move. Must be in current presentation order.
+    - `insertionIndex` (integer, required): Target position (0-based). 0 = beginning, slide count = end.
+
+  </Accordion>
+
+  <Accordion title="google_slides/insert_youtube_video">
+    **Description:** Embed a YouTube video on a slide. The video ID is the value after "v=" in YouTube URLs (e.g., for youtube.com/watch?v=abc123, use "abc123").
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The ID of the slide to add the video to. Get from get_presentation.
+    - `videoId` (string, required): The YouTube video ID (the value after v= in the URL).
+
+  </Accordion>
+
+  <Accordion title="google_slides/insert_drive_video">
+    **Description:** Embed a video from Google Drive on a slide. The file ID can be found in the Drive file URL.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The ID of the slide to add the video to. Get from get_presentation.
+    - `fileId` (string, required): The Google Drive file ID of the video.
+
+  </Accordion>
+
+  <Accordion title="google_slides/set_slide_background_image">
+    **Description:** Set a background image for a slide. The image URL must be publicly accessible.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The ID of the slide to set the background for. Get from get_presentation.
+    - `imageUrl` (string, required): Publicly accessible URL of the image to use as background.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_table">
+    **Description:** Create an empty table on a slide. To create a table with content, use create_table_with_content instead.
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The ID of the slide to add the table to. Get from get_presentation.
+    - `rows` (integer, required): Number of rows in the table.
+    - `columns` (integer, required): Number of columns in the table.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_table_with_content">
+    **Description:** Create a table with content in one action. Provide content as a 2D array where each inner array is a row. Example: [["Header1", "Header2"], ["Row1Col1", "Row1Col2"]].
+
+    **Parameters:**
+    - `presentationId` (string, required): The ID of the presentation.
+    - `slideId` (string, required): The ID of the slide to add the table to. Get from get_presentation.
+    - `rows` (integer, required): Number of rows in the table.
+    - `columns` (integer, required): Number of columns in the table.
+    - `content` (array, required): Table content as 2D array. Each inner array is a row. Example: [["Year", "Revenue"], ["2023", "$10M"]].
 
   </Accordion>
 

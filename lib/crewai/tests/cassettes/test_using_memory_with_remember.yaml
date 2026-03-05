@@ -1,0 +1,718 @@
+interactions:
+- request:
+    body: !!binary |
+      CuAMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStwwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKdCAoQe1SuF2c2xWX4juAv74oXphII/LGj/b5w49QqDENyZXcgQ3JlYXRlZDABOcCZ
+      B6F1rTUYQRhzEqF1rTUYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTE0LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi45Si4KCGNyZXdfa2V5EiIKIGM5N2I1ZmViNWQxYjY2YmI1OTAwNmFhYTAx
+      YTI5Y2Q2SjEKB2NyZXdfaWQSJgokMDU1YWZhNGQtNWU5MS00YWU1LTg4ZTQtMGQ3N2I2OTZiODJl
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGI3NzY4MjJlLTU4YzItNDg5Ni05NmVhLTlmNDQzNjc4NThjNko7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNC0xMlQxNzo1MjozMS4zOTkzMTdK
+      0QIKC2NyZXdfYWdlbnRzEsECCr4CW3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJk
+      NTNkZGE3IiwgImlkIjogIjI5MmZlMjI4LTNlYzEtNDE4Zi05NzQzLTFkNTI3ZGY5M2QwYyIsICJy
+      b2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJt
+      YXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRv
+      LW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRp
+      b24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8B
+      CgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5IjogIjYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIx
+      YzRmIiwgImlkIjogIjhlY2E1NTQzLTc3MDEtNDhjMy1hODM1LWI4YWE2YmE3YTMzZSIsICJhc3lu
+      Y19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUi
+      OiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiMDdkOTliNjMwNDExZDM1ZmQ5MDQ3YTUzMmQ1
+      M2RkYTciLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKABAoQmqGVrPp33uFfE2WlsNm/
+      phIIx0mZ95NGSyIqDFRhc2sgQ3JlYXRlZDABObBlHqF1rTUYQbi3HqF1rTUYSi4KCGNyZXdfa2V5
+      EiIKIGM5N2I1ZmViNWQxYjY2YmI1OTAwNmFhYTAxYTI5Y2Q2SjEKB2NyZXdfaWQSJgokMDU1YWZh
+      NGQtNWU5MS00YWU1LTg4ZTQtMGQ3N2I2OTZiODJlSi4KCHRhc2tfa2V5EiIKIDYzOTk2NTE3ZjNm
+      M2YxYzk0ZDZiYjYxN2FhMGIxYzRmSjEKB3Rhc2tfaWQSJgokOGVjYTU1NDMtNzcwMS00OGMzLWE4
+      MzUtYjhhYTZiYTdhMzNlSjoKEGNyZXdfZmluZ2VycHJpbnQSJgokYjc3NjgyMmUtNThjMi00ODk2
+      LTk2ZWEtOWY0NDM2Nzg1OGM2SjoKEHRhc2tfZmluZ2VycHJpbnQSJgokYTk5NjE4ZTYtODFhZC00
+      N2YyLWE4ZGEtOTc1NjkzN2YxYmIwSjsKG3Rhc2tfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoy
+      MDI1LTA0LTEyVDE3OjUyOjMxLjM5ODIxNEo7ChFhZ2VudF9maW5nZXJwcmludBImCiRlZjkxZGYx
+      NS0zNmNiLTQ0MDQtOWFkMi05MmM1OTQ1NGU2ZTZ6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1635'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 12 Apr 2025 20:52:35 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
+      an expert in research and you love to learn new things.\nYour personal goal
+      is: You research about math.\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Research a topic
+      to teach a kid aged 6 about math.\n\nThis is the expected criteria for your
+      final answer: A topic, explanation, angle, and examples.\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\n# Useful context:
+      \n<MagicMock name=''build_context_for_task()'' id=''13586043616''>\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1031'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BLc7zvaXoFAArOIDK9TrMtdq8kKY0\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1744491151,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"I now can give a great answer.  \\nFinal
+        Answer: \\n\\n**Topic: Introduction to Addition with Fun Objects**\\n\\n**Explanation:**
+        \ \\nAt its core, addition is all about combining two or more groups of things
+        to find out how many there are in total. We can think of addition as a way
+        to bring friends together! Imagine if you have some apples and your friend
+        brings some more apples; together, you want to find out how many apples there
+        are altogether. This is the foundation of addition, and it can be made fun
+        and engaging for a 6-year-old.\\n\\n**Angle:**  \\nTo make this relatable
+        and enjoyable, we can use everyday objects that kids love, such as toys, fruits,
+        or even drawings. We can create little stories or scenarios that involve addition,
+        turning it into a game where they get to count and add things together. By
+        using real items, children can see and feel what addition means, making it
+        easier to grasp the concept.\\n\\n**Examples:**  \\n1. **Using Fruits:**  \\n
+        \  Let's say you have 3 oranges. You can say, \\\"I have 3 oranges.\\\" Then,
+        if your friend brings you 2 more oranges, you can introduce the addition by
+        saying, \\\"Now, how many do we have all together?\\\"  \\n   - So you would
+        show it as: 3 (oranges you have) + 2 (oranges your friend brought) = ?  \\n
+        \  To find the answer, you can count all the oranges together: 1, 2, 3 (your
+        oranges) and 4, 5 (your friend's oranges).  \\n   - The answer is 5 oranges
+        in total!\\n\\n2. **Using Toys:**  \\n   If a child has 4 toy cars and finds
+        3 more under the couch, we can ask, \\\"How many cars do you have now?\\\"
+        \ \\n   - Write it down: 4 (toy cars) + 3 (found cars) = ?  \\n   Then, count
+        the toy cars together: 1, 2, 3, 4 (original cars), 5, 6, 7.  \\n   - The answer
+        is 7 toy cars!\\n\\n3. **Story Scenario:**  \\n   Create an engaging story:
+        \\\"Once upon a time, there were 2 friendly puppies. One day, 3 more puppies
+        came to play. How many puppies are playing now?\\\"  \\n   - Present it as:
+        2 (original puppies) + 3 (new puppies) = ?  \\n   Count the puppies: 1, 2
+        (the first two) and then 3, 4, 5 (the new ones).  \\n   - The answer is 5
+        puppies playing!\\n\\nBy presenting addition through fun scenarios and interactive
+        counting, a 6-year-old can learn and understand addition while enjoying the
+        process. They can even use crayons to draw the items or fruit to count in
+        a playful, hands-on approach. This makes math not just a subject, but also
+        a delightful adventure!\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 206,\n    \"completion_tokens\":
+        609,\n    \"total_tokens\": 815,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:52:44 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '12806'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - STS-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":["Research a topic to teach a kid aged 6 about math."],"model":"text-embedding-ada-002","encoding_format":"base64"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '124'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    body:
+      string: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+        \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+        \   }\n  ],\n  \"model\": \"text-embedding-ada-002-v2\",\n  \"usage\": {\n
+        \   \"prompt_tokens\": 13,\n    \"total_tokens\": 13\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Feb 2026 00:10:03 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-ada-002-v2
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '45'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      via:
+      - envoy-router-77dd989c4b-5z75k
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Researcher. You''re an
+      expert in research and you love to learn new things.\nYour personal goal is:
+      You research about math."},{"role":"user","content":"\nCurrent Task: Research
+      a topic to teach a kid aged 6 about math.\n\nThis is the expected criteria for
+      your final answer: A topic, explanation, angle, and examples.\nyou MUST return
+      the actual complete content as the final answer, not a summary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_memory","description":"Search
+      through the team''s shared memory for relevant information. Use this when you
+      need to find facts, decisions, preferences, or past results that may have been
+      stored previously. The query should describe what you''re looking for in natural
+      language.","strict":true,"parameters":{"properties":{"query":{"description":"What
+      to search for in memory","title":"Query","type":"string"},"scope":{"default":null,"description":"Optional
+      scope to narrow the search (e.g. /project/alpha)","title":"Scope","type":"string"},"depth":{"default":"shallow","description":"''shallow''
+      for fast vector search, ''deep'' for LLM-analyzed retrieval","title":"Depth","type":"string"}},"required":["query","scope","depth"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"save_to_memory","description":"Store
+      an important fact, decision, observation, or lesson in memory so it can be recalled
+      later by you or other agents. Use this when you encounter something worth remembering
+      beyond the current task -- a decision made, a preference discovered, a key finding,
+      or a correction.","strict":true,"parameters":{"properties":{"content":{"description":"The
+      fact, decision, or observation to remember","title":"Content","type":"string"}},"required":["content"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1891'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8EZPw7bRrD02IANpNYrViq89N26v\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770855003,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Topic: Counting and Simple Addition\\n\\nExplanation:\\nCounting
+        is the first step in understanding numbers and math. When we count, we are
+        saying the numbers in order and matching each number with a thing we want
+        to count. Simple addition is putting together two groups of things and finding
+        out how many there are in total.\\n\\nAngle:\\nLet's think about counting
+        and adding using toys or favorite snacks because kids understand and enjoy
+        things around them. By counting toys or snacks and then adding them together,
+        children start to see how numbers work in real life. This makes learning fun
+        and meaningful.\\n\\nExamples:\\n1. Counting Toys:\\n\u201CLook at your cars.
+        Let's count them together. One, two, three, four, five. You have five cars!\u201D\\n\\n2.
+        Adding Snacks:\\n\u201CYou have 2 cookies and I give you 3 more. Now let's
+        count all your cookies. One, two, three, four, five. So, 2 cookies plus 3
+        cookies make 5 cookies!\u201D\\n\\n3. Combining Friends:\\n\u201CImagine you
+        have 4 friends at your birthday party and 2 more friends come. Let's find
+        out how many friends are there now. Four friends plus two friends equals six
+        friends.\u201D\\n\\nThese activities use things the child already likes and
+        knows, helping them learn counting and addition naturally.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        318,\n    \"completion_tokens\": 257,\n    \"total_tokens\": 575,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Feb 2026 00:10:09 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '5453'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You analyze content to
+      be stored in a hierarchical memory system.\\nGiven the content and the existing
+      scopes and categories, output:\\n1. suggested_scope: The best matching existing
+      scope path, or a new path if none fit (use / for root).\\n2. categories: A list
+      of categories (reuse existing when relevant, add new ones if needed).\\n3. importance:
+      A number from 0.0 to 1.0 indicating how significant this memory is.\\n4. extracted_metadata:
+      A JSON object with any entities, dates, or topics you can extract.\"},{\"role\":\"user\",\"content\":\"Content
+      to store:\\nTask: Research a topic to teach a kid aged 6 about math.\\nAgent:
+      Researcher\\nExpected result: A topic, explanation, angle, and examples.\\nResult:
+      Topic: Counting and Simple Addition\\n\\nExplanation:\\nCounting is the first
+      step in understanding numbers and math. When we count, we are saying the numbers
+      in order and matching each number with a thing we want to count. Simple addition
+      is putting together two groups of things and finding out how many there are
+      in total.\\n\\nAngle:\\nLet's think about counting and adding using toys or
+      favorite snacks because kids understand and enjoy things around them. By counting
+      toys or snacks and then adding them together, children start to see how numbers
+      work in real life. This makes learning fun and meaningful.\\n\\nExamples:\\n1.
+      Counting Toys:\\n\u201CLook at your cars. Let's count them together. One, two,
+      three, four, five. You have five cars!\u201D\\n\\n2. Adding Snacks:\\n\u201CYou
+      have 2 cookies and I give you 3 more. Now let's count all your cookies. One,
+      two, three, four, five. So, 2 cookies plus 3 cookies make 5 cookies!\u201D\\n\\n3.
+      Combining Friends:\\n\u201CImagine you have 4 friends at your birthday party
+      and 2 more friends come. Let's find out how many friends are there now. Four
+      friends plus two friends equals six friends.\u201D\\n\\nThese activities use
+      things the child already likes and knows, helping them learn counting and addition
+      naturally.\\n\\nExisting scopes: ['/']\\nExisting categories: []\\n\\nReturn
+      the analysis as structured output.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"$defs\":{\"ExtractedMetadata\":{\"additionalProperties\":false,\"description\":\"Fixed
+      schema for LLM-extracted metadata (OpenAI requires additionalProperties: false).\",\"properties\":{\"entities\":{\"description\":\"Entities
+      (people, orgs, places) mentioned in the content.\",\"items\":{\"type\":\"string\"},\"title\":\"Entities\",\"type\":\"array\"},\"dates\":{\"description\":\"Dates
+      or time references in the content.\",\"items\":{\"type\":\"string\"},\"title\":\"Dates\",\"type\":\"array\"},\"topics\":{\"description\":\"Topics
+      or themes in the content.\",\"items\":{\"type\":\"string\"},\"title\":\"Topics\",\"type\":\"array\"}},\"title\":\"ExtractedMetadata\",\"type\":\"object\",\"required\":[\"entities\",\"dates\",\"topics\"]}},\"description\":\"LLM
+      output for analyzing content before saving to memory.\",\"properties\":{\"suggested_scope\":{\"description\":\"Best
+      matching existing scope or new path (e.g. /company/decisions).\",\"title\":\"Suggested
+      Scope\",\"type\":\"string\"},\"categories\":{\"description\":\"Categories for
+      the memory (prefer existing, add new if needed).\",\"items\":{\"type\":\"string\"},\"title\":\"Categories\",\"type\":\"array\"},\"importance\":{\"default\":0.5,\"description\":\"Importance
+      score from 0.0 to 1.0.\",\"maximum\":1.0,\"minimum\":0.0,\"title\":\"Importance\",\"type\":\"number\"},\"extracted_metadata\":{\"description\":\"Entities,
+      dates, topics extracted from the content.\",\"additionalProperties\":false,\"properties\":{\"entities\":{\"description\":\"Entities
+      (people, orgs, places) mentioned in the content.\",\"items\":{\"type\":\"string\"},\"title\":\"Entities\",\"type\":\"array\"},\"dates\":{\"description\":\"Dates
+      or time references in the content.\",\"items\":{\"type\":\"string\"},\"title\":\"Dates\",\"type\":\"array\"},\"topics\":{\"description\":\"Topics
+      or themes in the content.\",\"items\":{\"type\":\"string\"},\"title\":\"Topics\",\"type\":\"array\"}},\"title\":\"ExtractedMetadata\",\"type\":\"object\",\"required\":[\"entities\",\"dates\",\"topics\"]}},\"required\":[\"suggested_scope\",\"categories\",\"importance\",\"extracted_metadata\"],\"title\":\"MemoryAnalysis\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"MemoryAnalysis\",\"strict\":true}},\"stream\":false}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4168'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8EZW4GjJjgi9JUbdjaCRLFQlHr2K\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770855010,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"suggested_scope\\\":\\\"/education/math\\\",\\\"categories\\\":[\\\"education\\\",\\\"math\\\",\\\"children's
+        learning\\\",\\\"teaching strategies\\\"],\\\"importance\\\":0.9,\\\"extracted_metadata\\\":{\\\"entities\\\":[],\\\"dates\\\":[],\\\"topics\\\":[\\\"counting\\\",\\\"simple
+        addition\\\",\\\"children's education\\\",\\\"teaching math\\\"]}}\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        812,\n    \"completion_tokens\": 57,\n    \"total_tokens\": 869,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Feb 2026 00:10:11 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1813'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"input\":[\"Task: Research a topic to teach a kid aged 6 about math.\\nAgent:
+      Researcher\\nExpected result: A topic, explanation, angle, and examples.\\nResult:
+      Topic: Counting and Simple Addition\\n\\nExplanation:\\nCounting is the first
+      step in understanding numbers and math. When we count, we are saying the numbers
+      in order and matching each number with a thing we want to count. Simple addition
+      is putting together two groups of things and finding out how many there are
+      in total.\\n\\nAngle:\\nLet's think about counting and adding using toys or
+      favorite snacks because kids understand and enjoy things around them. By counting
+      toys or snacks and then adding them together, children start to see how numbers
+      work in real life. This makes learning fun and meaningful.\\n\\nExamples:\\n1.
+      Counting Toys:\\n\u201CLook at your cars. Let's count them together. One, two,
+      three, four, five. You have five cars!\u201D\\n\\n2. Adding Snacks:\\n\u201CYou
+      have 2 cookies and I give you 3 more. Now let's count all your cookies. One,
+      two, three, four, five. So, 2 cookies plus 3 cookies make 5 cookies!\u201D\\n\\n3.
+      Combining Friends:\\n\u201CImagine you have 4 friends at your birthday party
+      and 2 more friends come. Let's find out how many friends are there now. Four
+      friends plus two friends equals six friends.\u201D\\n\\nThese activities use
+      things the child already likes and knows, helping them learn counting and addition
+      naturally.\"],\"model\":\"text-embedding-ada-002\",\"encoding_format\":\"base64\"}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1460'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    body:
+      string: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+        \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+        \   }\n  ],\n  \"model\": \"text-embedding-ada-002-v2\",\n  \"usage\": {\n
+        \   \"prompt_tokens\": 300,\n    \"total_tokens\": 300\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Feb 2026 00:10:12 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-ada-002-v2
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '63'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      via:
+      - envoy-router-85f8bb687f-cn6zh
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

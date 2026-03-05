@@ -61,6 +61,22 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
   </Accordion>
 
+  <Accordion title="google_slides/get_presentation_metadata">
+    **Descrição:** Obter metadados leves de uma apresentação (título, número de slides, IDs dos slides). Use isso primeiro antes de recuperar o conteúdo completo.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação a ser recuperada.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_presentation_text">
+    **Descrição:** Extrair todo o conteúdo de texto de uma apresentação. Retorna IDs dos slides e texto de formas e tabelas apenas (sem formatação).
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+
+  </Accordion>
+
   <Accordion title="google_slides/get_presentation">
     **Descrição:** Recupera uma apresentação por ID.
 
@@ -80,6 +96,15 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
   </Accordion>
 
+  <Accordion title="google_slides/get_slide_text">
+    **Descrição:** Extrair conteúdo de texto de um único slide. Retorna apenas texto de formas e tabelas (sem formatação ou estilo).
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `pageObjectId` (string, obrigatório): O ID do slide/página para obter o texto.
+
+  </Accordion>
+
   <Accordion title="google_slides/get_page">
     **Descrição:** Recupera uma página específica por seu ID.
 
@@ -95,6 +120,120 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `presentationId` (string, obrigatório): O ID da apresentação.
     - `pageObjectId` (string, obrigatório): O ID da página para geração de miniatura.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_slide">
+    **Descrição:** Adicionar um slide em branco adicional a uma apresentação. Novas apresentações já possuem um slide em branco - verifique get_presentation_metadata primeiro. Para slides com áreas de título/corpo, use create_slide_with_layout.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `insertionIndex` (integer, opcional): Onde inserir o slide (baseado em 0). Se omitido, adiciona no final.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_slide_with_layout">
+    **Descrição:** Criar um slide com layout predefinido contendo áreas de espaço reservado para título, corpo, etc. Melhor que create_slide para conteúdo estruturado. Após criar, use get_page para encontrar os IDs de espaço reservado, depois insira texto neles.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `layout` (string, obrigatório): Tipo de layout. Um de: `BLANK`, `TITLE`, `TITLE_AND_BODY`, `TITLE_AND_TWO_COLUMNS`, `TITLE_ONLY`, `SECTION_HEADER`, `ONE_COLUMN_TEXT`, `MAIN_POINT`, `BIG_NUMBER`. TITLE_AND_BODY é melhor para título+descrição. TITLE para slides apenas com título. SECTION_HEADER para divisores de seção.
+    - `insertionIndex` (integer, opcional): Onde inserir (baseado em 0). Se omitido, adiciona no final.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_text_box">
+    **Descrição:** Criar uma caixa de texto em um slide com conteúdo. Use para títulos, descrições, parágrafos - não para tabelas. Opcionalmente especifique posição (x, y) e tamanho (width, height) em unidades EMU (914400 EMU = 1 polegada).
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do slide para adicionar a caixa de texto.
+    - `text` (string, obrigatório): O conteúdo de texto da caixa de texto.
+    - `x` (integer, opcional): Posição X em EMU (914400 = 1 polegada). Padrão: 914400 (1 polegada da esquerda).
+    - `y` (integer, opcional): Posição Y em EMU (914400 = 1 polegada). Padrão: 914400 (1 polegada do topo).
+    - `width` (integer, opcional): Largura em EMU. Padrão: 7315200 (~8 polegadas).
+    - `height` (integer, opcional): Altura em EMU. Padrão: 914400 (~1 polegada).
+
+  </Accordion>
+
+  <Accordion title="google_slides/delete_slide">
+    **Descrição:** Remover um slide de uma apresentação. Use get_presentation primeiro para encontrar o ID do slide.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do objeto do slide a excluir. Obtenha de get_presentation.
+
+  </Accordion>
+
+  <Accordion title="google_slides/duplicate_slide">
+    **Descrição:** Criar uma cópia de um slide existente. A duplicata é inserida imediatamente após o original.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do objeto do slide a duplicar. Obtenha de get_presentation.
+
+  </Accordion>
+
+  <Accordion title="google_slides/move_slides">
+    **Descrição:** Reordenar slides movendo-os para uma nova posição. Os IDs dos slides devem estar na ordem atual da apresentação (sem duplicatas).
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideIds` (array de strings, obrigatório): Array de IDs dos slides a mover. Obrigatoriamente na ordem atual da apresentação.
+    - `insertionIndex` (integer, obrigatório): Posição de destino (baseado em 0). 0 = início, número de slides = final.
+
+  </Accordion>
+
+  <Accordion title="google_slides/insert_youtube_video">
+    **Descrição:** Incorporar um vídeo do YouTube em um slide. O ID do vídeo é o valor após "v=" nas URLs do YouTube (ex: para youtube.com/watch?v=abc123, use "abc123").
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do slide para adicionar o vídeo. Obtenha de get_presentation.
+    - `videoId` (string, obrigatório): O ID do vídeo do YouTube (o valor após v= na URL).
+
+  </Accordion>
+
+  <Accordion title="google_slides/insert_drive_video">
+    **Descrição:** Incorporar um vídeo do Google Drive em um slide. O ID do arquivo pode ser encontrado na URL do arquivo no Drive.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do slide para adicionar o vídeo. Obtenha de get_presentation.
+    - `fileId` (string, obrigatório): O ID do arquivo do Google Drive do vídeo.
+
+  </Accordion>
+
+  <Accordion title="google_slides/set_slide_background_image">
+    **Descrição:** Definir uma imagem de fundo para um slide. A URL da imagem deve ser publicamente acessível.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do slide para definir o fundo. Obtenha de get_presentation.
+    - `imageUrl` (string, obrigatório): URL publicamente acessível da imagem a usar como fundo.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_table">
+    **Descrição:** Criar uma tabela vazia em um slide. Para criar uma tabela com conteúdo, use create_table_with_content.
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do slide para adicionar a tabela. Obtenha de get_presentation.
+    - `rows` (integer, obrigatório): Número de linhas na tabela.
+    - `columns` (integer, obrigatório): Número de colunas na tabela.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_table_with_content">
+    **Descrição:** Criar uma tabela com conteúdo em uma única ação. Forneça o conteúdo como uma matriz 2D onde cada array interno é uma linha. Exemplo: [["Cabeçalho1", "Cabeçalho2"], ["Linha1Col1", "Linha1Col2"]].
+
+    **Parâmetros:**
+    - `presentationId` (string, obrigatório): O ID da apresentação.
+    - `slideId` (string, obrigatório): O ID do slide para adicionar a tabela. Obtenha de get_presentation.
+    - `rows` (integer, obrigatório): Número de linhas na tabela.
+    - `columns` (integer, obrigatório): Número de colunas na tabela.
+    - `content` (array, obrigatório): Conteúdo da tabela como matriz 2D. Cada array interno é uma linha. Exemplo: [["Ano", "Receita"], ["2023", "$10M"]].
 
   </Accordion>
 
