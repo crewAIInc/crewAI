@@ -507,10 +507,18 @@ def test_openai_get_client_params_resolves_oauth_token(monkeypatch):
     )
 
 
+@pytest.mark.parametrize(
+    ("model", "expected_model"),
+    [
+        ("gpt-5.2-codex", "gpt-5.2-codex"),
+        ("gpt-5.3-codex", "gpt-5.3-codex"),
+        ("openai-codex/gpt-5.3-codex", "gpt-5.3-codex"),
+    ],
+)
 def test_openai_get_client_params_routes_codex_model_to_chatgpt_backend(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, model, expected_model
 ):
-    """gpt-5.2-codex + oauth_codex should route to ChatGPT backend."""
+    """Codex models + oauth_codex should route to ChatGPT backend."""
     auth_path = tmp_path / "auth.json"
     auth_path.write_text(
         json.dumps(
@@ -533,15 +541,48 @@ def test_openai_get_client_params_routes_codex_model_to_chatgpt_backend(
         "CREWAI_CODEX_CHATGPT_BASE_URL", "https://chatgpt.com/backend-api/codex"
     )
 
-    llm = OpenAICompletion(model="gpt-5.2-codex", api="completions")
+    llm = OpenAICompletion(model=model, api="completions")
     params = llm._get_client_params()
 
     assert params["base_url"] == "https://chatgpt.com/backend-api/codex"
     assert params["api_key"] == "oauth-token"
     assert llm.api == "responses"
+    assert llm.model == expected_model
     assert "default_headers" not in params or "OpenAI-Account" not in params.get(
         "default_headers", {}
     )
+
+
+def test_llm_openai_codex_provider_prefix_uses_native_openai_and_chatgpt_backend(
+    monkeypatch, tmp_path
+):
+    """openai-codex/<model> should resolve to native OpenAI provider and Codex backend."""
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_text(
+        json.dumps(
+            {
+                "auth_mode": "chatgpt",
+                "tokens": {
+                    "access_token": "oauth-token",
+                    "refresh_token": "refresh-token",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_OAUTH_ACCESS_TOKEN", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+
+    llm = LLM(model="openai-codex/gpt-5.3-codex", is_litellm=False)
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.model == "gpt-5.3-codex"
+
+    params = llm._get_client_params()
+    assert params["base_url"] == "https://chatgpt.com/backend-api/codex"
+    assert params["api_key"] == "oauth-token"
 
 
 def test_openai_get_client_params_routes_pro_model_to_platform(monkeypatch):
@@ -573,7 +614,17 @@ def test_openai_get_client_params_pro_model_rejects_oauth_jwt():
         )
 
 
-def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch):
+@pytest.mark.parametrize(
+    ("model", "expected_model"),
+    [
+        ("gpt-5.2-codex", "gpt-5.2-codex"),
+        ("gpt-5.3-codex", "gpt-5.3-codex"),
+        ("openai-codex/gpt-5.3-codex", "gpt-5.3-codex"),
+    ],
+)
+def test_prepare_responses_params_strips_chatgpt_incompatible_fields(
+    monkeypatch, model, expected_model
+):
     """ChatGPT backend should remove unsupported fields and enforce instructions."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
@@ -587,7 +638,7 @@ def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch
         ),
     ):
         llm = OpenAICompletion(
-            model="gpt-5.2-codex",
+            model=model,
             api="responses",
             max_tokens=128,
             metadata={"trace_id": "abc"},
@@ -600,7 +651,7 @@ def test_prepare_responses_params_strips_chatgpt_incompatible_fields(monkeypatch
     assert params["instructions"] == "You are a helpful assistant."
     assert "max_output_tokens" not in params
     assert "metadata" not in params
-    assert params["model"] == "gpt-5.2-codex"
+    assert params["model"] == expected_model
     assert params["store"] is False
     assert params["stream"] is True
 

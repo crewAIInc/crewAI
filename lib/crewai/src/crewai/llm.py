@@ -317,6 +317,7 @@ DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "openai",
+    "openai-codex",
     "anthropic",
     "claude",
     "azure",
@@ -376,6 +377,7 @@ class LLM(BaseLLM):
 
             provider_mapping = {
                 "openai": "openai",
+                "openai-codex": "openai",
                 "anthropic": "anthropic",
                 "claude": "anthropic",
                 "azure": "azure",
@@ -457,7 +459,7 @@ class LLM(BaseLLM):
         """
         model_lower = model.lower()
 
-        if provider == "openai":
+        if provider == "openai" or provider == "openai-codex":
             return any(
                 model_lower.startswith(prefix)
                 for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
@@ -500,7 +502,9 @@ class LLM(BaseLLM):
         Returns:
             True if the model exists in constants or matches provider patterns, False otherwise
         """
-        if provider == "openai" and model in OPENAI_MODELS:
+        if (
+            provider == "openai" or provider == "openai-codex"
+        ) and model in OPENAI_MODELS:
             return True
 
         if (
@@ -555,7 +559,7 @@ class LLM(BaseLLM):
     @classmethod
     def _get_native_provider(cls, provider: str) -> type | None:
         """Get native provider class if available."""
-        if provider == "openai":
+        if provider == "openai" or provider == "openai-codex":
             from crewai.llms.providers.openai.completion import OpenAICompletion
 
             return OpenAICompletion

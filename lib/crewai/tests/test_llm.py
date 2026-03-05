@@ -757,6 +757,13 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"
 
+    # Test openai-codex/ prefix with Codex model → Native OpenAI SDK
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm4 = LLM(model="openai-codex/gpt-5.3-codex", is_litellm=False)
+        assert llm4.is_litellm is False
+        assert llm4.provider == "openai"
+        assert llm4.model == "gpt-5.3-codex"
+
 
 def test_prefixed_models_with_invalid_constants_use_litellm():
     """Test that models with native provider prefixes use LiteLLM when model is NOT in constants and does NOT match patterns."""
@@ -838,6 +845,12 @@ def test_explicit_provider_kwarg_takes_priority():
         llm2 = LLM(model="gpt-4o", provider="openai", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "openai"
+
+    # Explicit codex provider alias should still resolve to native OpenAI provider
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm3 = LLM(model="gpt-5.3-codex", provider="openai-codex", is_litellm=False)
+        assert llm3.is_litellm is False
+        assert llm3.provider == "openai-codex"
 
 
 def test_validate_model_in_constants():
