@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
+import logging
 import math
 from typing import Any
 from uuid import uuid4
@@ -26,6 +27,9 @@ from crewai.memory.analyze import (
     analyze_for_save,
 )
 from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
+
+
+_logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +276,15 @@ class EncodingFlow(Flow[EncodingState]):
 
             # Collect field-resolution results
             for i, future in save_futures.items():
-                analysis = future.result()
+                try:
+                    analysis = future.result()
+                except Exception as e:
+                    _logger.warning("Field resolution failed for item %d, falling back to defaults: %s", i, e)
+                    self._apply_defaults(items[i])
+                    items[i].plan = ConsolidationPlan(actions=[], insert_new=True)
+                    # Skip consolidation for this item since field resolution failed
+                    consol_futures.pop(i, None)
+                    continue
                 item = items[i]
                 item.resolved_scope = item.scope or analysis.suggested_scope or "/"
                 item.resolved_categories = (
@@ -301,9 +313,13 @@ class EncodingFlow(Flow[EncodingState]):
 
             # Collect consolidation results
             for i, future in consol_futures.items():
-                items[i].plan = future.result()
+                try:
+                    items[i].plan = future.result()
+                except Exception as e:
+                    _logger.warning("Consolidation analysis failed for item %d, inserting as new: %s", i, e)
+                    items[i].plan = ConsolidationPlan(actions=[], insert_new=True)
         finally:
-            pool.shutdown(wait=False)
+            pool.shutdown(wait=True)
 
     def _apply_defaults(self, item: ItemState) -> None:
         """Apply caller values with config defaults (fast path)."""
