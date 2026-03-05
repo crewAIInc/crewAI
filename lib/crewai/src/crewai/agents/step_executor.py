@@ -432,10 +432,10 @@ class StepExecutor:
     @staticmethod
     def _parse_vision_sentinel(raw: str) -> tuple[str, str] | None:
         """Parse a VISION_IMAGE sentinel into (media_type, base64_data), or None."""
-        _PREFIX = "VISION_IMAGE:"
-        if not raw.startswith(_PREFIX):
+        prefix = "VISION_IMAGE:"
+        if not raw.startswith(prefix):
             return None
-        rest = raw[len(_PREFIX):]
+        rest = raw[len(prefix):]
         sep = rest.find(":")
         if sep <= 0:
             return None
