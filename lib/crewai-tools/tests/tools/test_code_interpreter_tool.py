@@ -1,4 +1,5 @@
-from unittest.mock import patch
+from types import ModuleType
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
     CodeInterpreterTool,
@@ -172,3 +173,64 @@ result = eval("5/1")
         "WARNING: Running code in unsafe mode", color="bold_magenta"
     )
     assert 5.0 == result
+
+
+def test_microvm_mode_dispatches_to_microvm_runner():
+    tool = CodeInterpreterTool(execution_mode="microvm")
+    code = "result = 21 * 2"
+    libraries_used = ["numpy"]
+
+    with patch.object(CodeInterpreterTool, "run_code_in_microvm", return_value="42") as microvm_mock:
+        result = tool.run(code=code, libraries_used=libraries_used)
+
+    microvm_mock.assert_called_once_with(code, libraries_used)
+    assert result == "42"
+
+
+def test_run_code_in_microvm(printer_mock):
+    tool = CodeInterpreterTool(execution_mode="microvm")
+    code = "print('Hello, microVM!')"
+    libraries_used = ["numpy"]
+
+    scheduler = AsyncMock()
+    scheduler.run = AsyncMock(
+        return_value=MagicMock(exit_code=0, stdout="Hello, microVM!\n", stderr="")
+    )
+    scheduler_context = MagicMock()
+    scheduler_context.__aenter__ = AsyncMock(return_value=scheduler)
+    scheduler_context.__aexit__ = AsyncMock(return_value=None)
+
+    scheduler_cls = MagicMock(return_value=scheduler_context)
+    exec_sandbox_module = ModuleType("exec_sandbox")
+    exec_sandbox_module.Scheduler = scheduler_cls  # type: ignore[attr-defined]
+
+    with patch.dict("sys.modules", {"exec_sandbox": exec_sandbox_module}):
+        result = tool.run_code_in_microvm(code, libraries_used)
+
+    assert result == "Hello, microVM!\n"
+    scheduler.run.assert_awaited_once_with(
+        code=code,
+        language="python",
+        packages=libraries_used,
+        timeout_seconds=60,
+    )
+    printer_mock.assert_called_with("Running code in microVM environment", color="bold_cyan")
+
+
+def test_run_code_in_microvm_without_dependency(printer_mock):
+    tool = CodeInterpreterTool(execution_mode="microvm")
+
+    original_import = __import__
+
+    def _mock_import(
+        name, globals_=None, locals_=None, fromlist=(), level=0
+    ):  # noqa: A002
+        if name == "exec_sandbox":
+            raise ModuleNotFoundError("No module named 'exec_sandbox'")
+        return original_import(name, globals_, locals_, fromlist, level)
+
+    with patch("builtins.__import__", side_effect=_mock_import):
+        result = tool.run_code_in_microvm("result = 1", [])
+
+    assert "exec-sandbox is not installed" in result
+    printer_mock.assert_called_with("Running code in microVM environment", color="bold_cyan")
