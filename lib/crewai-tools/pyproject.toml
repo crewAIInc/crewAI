@@ -111,6 +111,9 @@ github = [
     "gitpython==3.1.38",
     "PyGithub==1.59.1",
 ]
+igptai = [
+    "igptai>=1.1.0",
+]
 rag = [
     "python-docx>=1.1.0",
     "lxml>=5.3.0,<5.4.0",  # Pin to avoid etree import issues in 5.4.0
