@@ -387,7 +387,7 @@ class LanceDBStorage:
             return []
         query = self._table.search(query_embedding)
         if scope_prefix is not None and scope_prefix.strip("/"):
-            prefix = scope_prefix.rstrip("/")
+            prefix = scope_prefix.rstrip("/").replace("'", "''")
             like_val = prefix + "%"
             query = query.where(f"scope LIKE '{like_val}'")
         results = query.limit(limit * 3 if (categories or metadata_filter) else limit).to_list()
@@ -442,7 +442,7 @@ class LanceDBStorage:
                 return before - self._table.count_rows()
             conditions = []
             if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
+                prefix = scope_prefix.rstrip("/").replace("'", "''")
                 if not prefix.startswith("/"):
                     prefix = "/" + prefix
                 conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
@@ -479,7 +479,8 @@ class LanceDBStorage:
             return []
         q = self._table.search()
         if scope_prefix is not None and scope_prefix.strip("/"):
-            q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+            safe_prefix = scope_prefix.rstrip("/").replace("'", "''")
+            q = q.where(f"scope LIKE '{safe_prefix}%'")
         if columns is not None:
             q = q.select(columns)
         return q.limit(limit).to_list()
