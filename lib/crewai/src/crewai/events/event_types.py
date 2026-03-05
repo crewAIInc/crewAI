@@ -67,6 +67,7 @@ from crewai.events.types.llm_guardrail_events import (
     LLMGuardrailStartedEvent,
 )
 from crewai.events.types.mcp_events import (
+    MCPConfigFetchFailedEvent,
     MCPConnectionCompletedEvent,
     MCPConnectionFailedEvent,
     MCPConnectionStartedEvent,
@@ -181,4 +182,5 @@ EventTypes = (
     | MCPToolExecutionStartedEvent
     | MCPToolExecutionCompletedEvent
     | MCPToolExecutionFailedEvent
+    | MCPConfigFetchFailedEvent
 )

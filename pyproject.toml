@@ -8,9 +8,9 @@ authors = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.14.7",
-    "mypy==1.19.0",
-    "pre-commit==4.5.0",
+    "ruff==0.15.1",
+    "mypy==1.19.1",
+    "pre-commit==4.5.1",
     "bandit==1.9.2",
     "pytest==8.4.2",
     "pytest-asyncio==1.3.0",
@@ -23,9 +23,9 @@ dev = [
     "pytest-split==0.10.0",
     "types-requests~=2.31.0.6",
     "types-pyyaml==6.0.*",
-    "types-regex==2024.11.6.*",
+    "types-regex==2026.1.15.*",
     "types-appdirs==1.4.*",
-    "boto3-stubs[bedrock-runtime]==1.40.54",
+    "boto3-stubs[bedrock-runtime]==1.42.40",
     "types-psycopg2==2.9.21.20251012",
     "types-pymysql==1.1.0.20250916",
     "types-aiofiles~=25.1.0",
@@ -146,9 +146,14 @@ python_functions = "test_*"
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
+# fastembed 0.7.x and docling 2.63 cap pillow<12; the removed APIs don't affect them.
+# langchain-core 0.3.76 has a template-injection vuln (GHSA); force >=0.3.80.
 override-dependencies = [
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
+    "pillow>=12.1.1",
+    "langchain-core>=0.3.80,<1",
+    "urllib3>=2.6.3",
 ]
 
 [tool.uv.workspace]

@@ -50,6 +50,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    parse_tool_call_args,
     process_llm_response,
     track_delegation_if_needed,
 )
@@ -486,8 +487,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             # No tools available, fall back to simple LLM call
             return self._invoke_loop_native_no_tools()
 
-        openai_tools, available_functions = convert_tools_to_openai_schema(
-            self.original_tools
+        openai_tools, available_functions, self._tool_name_mapping = (
+            convert_tools_to_openai_schema(self.original_tools)
         )
 
         while True:
@@ -699,9 +700,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if not parsed_calls:
             return None
 
-        original_tools_by_name: dict[str, Any] = {}
-        for tool in self.original_tools or []:
-            original_tools_by_name[sanitize_tool_name(tool.name)] = tool
+        original_tools_by_name: dict[str, Any] = dict(self._tool_name_mapping)
 
         if len(parsed_calls) > 1:
             has_result_as_answer_in_batch = any(
@@ -894,13 +893,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
-        if isinstance(func_args, str):
-            try:
-                args_dict = json.loads(func_args)
-            except json.JSONDecodeError:
-                args_dict = {}
-        else:
-            args_dict = func_args
+        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id, original_tool)
+        if parse_error is not None:
+            return parse_error
 
         if original_tool is None:
             for tool in self.original_tools or []:
@@ -952,10 +947,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         track_delegation_if_needed(func_name, args_dict, self.task)
 
         structured_tool: CrewStructuredTool | None = None
-        for structured in self.tools or []:
-            if sanitize_tool_name(structured.name) == func_name:
-                structured_tool = structured
-                break
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
 
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
@@ -1262,7 +1263,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer, tool_result
                     )
 
-                self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
+                await self._ainvoke_step_callback(formatted_answer)  # type: ignore[arg-type]
                 self._append_message(formatted_answer.text)  # type: ignore[union-attr]
 
             except OutputParserError as e:
@@ -1315,8 +1316,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if not self.original_tools:
             return await self._ainvoke_loop_native_no_tools()
 
-        openai_tools, available_functions = convert_tools_to_openai_schema(
-            self.original_tools
+        openai_tools, available_functions, self._tool_name_mapping = (
+            convert_tools_to_openai_schema(self.original_tools)
         )
 
         while True:
@@ -1377,7 +1378,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         output=answer,
                         text=answer,
                     )
-                    self._invoke_step_callback(formatted_answer)
+                    await self._ainvoke_step_callback(formatted_answer)
                     self._append_message(answer)  # Save final answer to messages
                     self._show_logs(formatted_answer)
                     return formatted_answer
@@ -1389,7 +1390,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         output=answer,
                         text=output_json,
                     )
-                    self._invoke_step_callback(formatted_answer)
+                    await self._ainvoke_step_callback(formatted_answer)
                     self._append_message(output_json)
                     self._show_logs(formatted_answer)
                     return formatted_answer
@@ -1400,7 +1401,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     output=str(answer),
                     text=str(answer),
                 )
-                self._invoke_step_callback(formatted_answer)
+                await self._ainvoke_step_callback(formatted_answer)
                 self._append_message(str(answer))  # Save final answer to messages
                 self._show_logs(formatted_answer)
                 return formatted_answer
@@ -1494,7 +1495,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _invoke_step_callback(
         self, formatted_answer: AgentAction | AgentFinish
     ) -> None:
-        """Invoke step callback.
+        """Invoke step callback (sync context).
 
         Args:
             formatted_answer: Current agent response.
@@ -1503,6 +1504,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             cb_result = self.step_callback(formatted_answer)
             if inspect.iscoroutine(cb_result):
                 asyncio.run(cb_result)
+
+    async def _ainvoke_step_callback(
+        self, formatted_answer: AgentAction | AgentFinish
+    ) -> None:
+        """Invoke step callback (async context).
+
+        Args:
+            formatted_answer: Current agent response.
+        """
+        if self.step_callback:
+            cb_result = self.step_callback(formatted_answer)
+            if inspect.iscoroutine(cb_result):
+                await cb_result
 
     def _append_message(
         self, text: str, role: Literal["user", "assistant", "system"] = "assistant"

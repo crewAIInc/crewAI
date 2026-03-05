@@ -2,6 +2,7 @@
 # https://github.com/un33k/python-slugify
 # MIT License
 
+import hashlib
 import re
 from typing import Any, Final
 import unicodedata
@@ -40,7 +41,9 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = name.strip("_")
 
     if len(name) > max_length:
-        name = name[:max_length].rstrip("_")
+        name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]
+        suffix = f"_{name_hash}"
+        name = name[: max_length - len(suffix)].rstrip("_") + suffix
 
     return name
 
