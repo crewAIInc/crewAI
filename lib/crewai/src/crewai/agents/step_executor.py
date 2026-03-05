@@ -115,9 +115,11 @@ class StepExecutor:
         self._openai_tools: list[dict[str, Any]] = []
         self._available_functions: dict[str, Callable[..., Any]] = {}
         if self._use_native_tools and self.original_tools:
-            self._openai_tools, self._available_functions = setup_native_tools(
-                self.original_tools
-            )
+            (
+                self._openai_tools,
+                self._available_functions,
+                _,
+            ) = setup_native_tools(self.original_tools)
 
     # ------------------------------------------------------------------
     # Public API

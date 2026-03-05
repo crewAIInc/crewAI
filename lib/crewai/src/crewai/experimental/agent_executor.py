@@ -290,9 +290,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     def _setup_native_tools(self) -> None:
         """Convert tools to OpenAI schema format for native function calling."""
         if self.original_tools:
-            self._openai_tools, self._available_functions = setup_native_tools(
-                self.original_tools
-            )
+            (
+                self._openai_tools,
+                self._available_functions,
+                self._tool_name_mapping,
+            ) = setup_native_tools(self.original_tools)
 
     def _is_tool_call_list(self, response: list[Any]) -> bool:
         """Check if a response is a list of tool calls."""

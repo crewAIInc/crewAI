@@ -1253,14 +1253,18 @@ def check_native_tool_support(llm: Any, original_tools: list[BaseTool] | None) -
 
 def setup_native_tools(
     original_tools: list[BaseTool],
-) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
+) -> tuple[
+    list[dict[str, Any]],
+    dict[str, Callable[..., Any]],
+    dict[str, BaseTool | CrewStructuredTool],
+]:
     """Convert tools to OpenAI schema format for native function calling.
 
     Args:
         original_tools: Original BaseTool instances.
 
     Returns:
-        Tuple of (openai_tools_schema, available_functions_dict).
+        Tuple of (openai_tools_schema, available_functions_dict, tool_name_mapping).
     """
     return convert_tools_to_openai_schema(original_tools)
 
