@@ -4461,6 +4461,134 @@ def test_crew_copy_with_memory():
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
 
 
+def test_crew_copy_excludes_parent_flow():
+    """Regression test for #4555: crew.copy() must exclude parent_flow.
+
+    In older versions, FlowTrackable had a ``parent_flow`` Pydantic field
+    typed as ``InstanceOf[Flow[Any]]``.  ``Flow[Any]`` creates a dynamic
+    ``_FlowGeneric`` subclass via ``__class_getitem__``, so Pydantic's
+    ``isinstance`` check rejected concrete Flow subclasses during
+    ``crew.copy()``, breaking ``kickoff_for_each`` inside Flow methods.
+
+    The fix adds ``"parent_flow"`` to the exclude set and pops it from
+    copied_data in ``Crew.copy()`` so that even if the field is somehow
+    present, it is never round-tripped through the Crew constructor.
+    """
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Research {topic}.",
+        backstory="Expert on {topic}.",
+    )
+    task = Task(
+        description="Write about {topic}.",
+        expected_output="A short paragraph about {topic}.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    # Simulate the old FlowTrackable behaviour where parent_flow leaked
+    # through model_dump.
+    original_model_dump = crew.model_dump
+
+    def patched_model_dump(**kwargs):
+        data = original_model_dump(**kwargs)
+        exclude = kwargs.get("exclude")
+        # Only inject parent_flow when it's NOT excluded (simulates the
+        # old bug where it would leak through).
+        if not (isinstance(exclude, (set, frozenset)) and "parent_flow" in exclude):
+            data["parent_flow"] = MagicMock()
+        return data
+
+    with patch.object(type(crew), "model_dump", patched_model_dump):
+        # This would raise ValidationError without the fix
+        copied = crew.copy()
+
+    assert copied is not crew
+    assert len(copied.agents) == len(crew.agents)
+    assert len(copied.tasks) == len(crew.tasks)
+
+
+def test_crew_copy_inside_flow_context():
+    """Regression test for #4555: crew.copy() works inside a flow execution.
+
+    Ensures that ``Crew.copy()`` succeeds when called from within an active
+    flow execution context (i.e., when flow context variables are set).
+    """
+    from crewai.flow.flow_context import current_flow_id, current_flow_request_id
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Research {topic}.",
+        backstory="Expert on {topic}.",
+    )
+    task = Task(
+        description="Write about {topic}.",
+        expected_output="A short paragraph about {topic}.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    # Simulate being inside a flow execution
+    token_id = current_flow_id.set("test-flow-id")
+    token_req = current_flow_request_id.set("test-request-id")
+    try:
+        copied = crew.copy()
+        assert copied is not crew
+        assert len(copied.agents) == len(crew.agents)
+        assert len(copied.tasks) == len(crew.tasks)
+        # Agents and tasks should be independent copies
+        assert copied.agents[0] is not crew.agents[0]
+        assert copied.tasks[0] is not crew.tasks[0]
+    finally:
+        current_flow_id.reset(token_id)
+        current_flow_request_id.reset(token_req)
+
+
+def test_kickoff_for_each_creates_independent_copies():
+    """Regression test for #4555: kickoff_for_each creates one copy per input.
+
+    Verifies that ``kickoff_for_each`` calls ``copy()`` for each input and
+    that each copy is an independent Crew instance.
+    """
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Research {topic}.",
+        backstory="Expert on {topic}.",
+    )
+    task = Task(
+        description="Write about {topic}.",
+        expected_output="A short paragraph about {topic}.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+    inputs = [{"topic": "dogs"}, {"topic": "cats"}, {"topic": "birds"}]
+
+    copies_made: list[Crew] = []
+    original_copy = Crew.copy
+
+    def tracking_copy(self_crew):
+        c = original_copy(self_crew)
+        copies_made.append(c)
+        return c
+
+    mock_output = MagicMock(
+        raw="output",
+        to_dict=MagicMock(return_value={}),
+        json_dict=None,
+        pydantic=None,
+        token_usage={},
+    )
+
+    with patch.object(type(crew), "copy", tracking_copy):
+        with patch.object(Crew, "kickoff", return_value=mock_output):
+            results = crew.kickoff_for_each(inputs=inputs)
+
+    assert len(results) == 3
+    assert len(copies_made) == 3
+    # Each copy should be a distinct object
+    assert len(set(id(c) for c in copies_made)) == 3
+
+
 def test_sets_flow_context_when_using_crewbase_pattern_inside_flow():
     @CrewBase
     class TestCrew:

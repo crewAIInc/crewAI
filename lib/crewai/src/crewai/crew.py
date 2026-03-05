@@ -1677,6 +1677,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
+            "parent_flow",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
@@ -1709,6 +1710,7 @@ class Crew(FlowTrackable, BaseModel):
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
+        copied_data.pop("parent_flow", None)
 
         return Crew(
             **copied_data,
