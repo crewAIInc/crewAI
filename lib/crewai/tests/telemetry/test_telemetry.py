@@ -1,6 +1,6 @@
 import os
 import threading
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
@@ -159,3 +159,46 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
     )
+
+
+@pytest.mark.parametrize(
+    "memory_input,expected_value",
+    [
+        (True, True),
+        (False, False),
+        pytest.param(
+            type("FakeMemory", (), {})(),
+            "FakeMemory",
+            id="custom_memory_instance",
+        ),
+    ],
+)
+def test_crew_creation_serializes_memory_for_telemetry(memory_input, expected_value):
+    """crew_memory span attribute must be OTel-serializable for any memory value.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4703
+    """
+    telemetry = Telemetry()
+    telemetry.ready = True
+
+    captured: dict[str, object] = {}
+    original = telemetry._add_attribute
+
+    def spy(span, key, value):
+        captured[key] = value
+        original(span, key, value)
+
+    agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+    task = Task(description="d", expected_output="e", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task], memory=memory_input)
+
+    with (
+        patch.object(telemetry, "_add_attribute", side_effect=spy),
+        patch.object(telemetry, "_safe_telemetry_operation", side_effect=lambda op: op()),
+        patch("crewai.telemetry.telemetry.trace") as mock_trace,
+    ):
+        mock_trace.get_tracer.return_value.start_span.return_value = MagicMock()
+        telemetry.crew_creation(crew, None)
+
+    assert captured["crew_memory"] == expected_value
+    assert isinstance(captured["crew_memory"], (bool, str, bytes, int, float))
