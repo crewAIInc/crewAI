@@ -77,12 +77,12 @@ class BraveSearchTool(BaseTool):
 
         # Construct and send the request
         try:
-            # Maintain both "search_query" and "query" for backwards compatibility
-            query = kwargs.get("search_query") or kwargs.get("query")
+            # Fallback to "query" or "search_query" for backwards compatibility
+            query = kwargs.get("q") or kwargs.get("query") or kwargs.get("search_query")
             if not query:
                 raise ValueError("Query is required")
 
-            payload = {"q": query}
+            payload = { "q": query }
 
             if country := kwargs.get("country"):
                 payload["country"] = country
