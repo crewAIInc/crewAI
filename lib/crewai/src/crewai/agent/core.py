@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
+from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -26,6 +27,7 @@ from typing_extensions import Self
 
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
+    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
@@ -74,6 +76,8 @@ from crewai.mcp.transports.stdio import StdioTransport
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -310,6 +314,36 @@ class Agent(BaseAgent):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 
+    def set_skills(self) -> None:
+        """Resolve skill paths into loaded Skill objects.
+
+        Path entries trigger discovery and activation. Skill entries pass through.
+        Crew-level skill paths are merged in.
+        """
+        crew_skills: list[Path] | None = (
+            self.crew.skills
+            if self.crew and isinstance(self.crew.skills, list)
+            else None
+        )
+
+        if not self.skills and not crew_skills:
+            return
+
+        resolved: list[Path | SkillModel] = []
+        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+
+        if crew_skills:
+            items.extend(crew_skills)
+
+        for item in items:
+            if isinstance(item, Path):
+                discovered = discover_skills(item, source=self)
+                resolved.extend(activate_skill(s, source=self) for s in discovered)
+            elif isinstance(item, SkillModel):
+                resolved.append(item)
+
+        self.skills = resolved if resolved else None
+
     def _is_any_available_memory(self) -> bool:
         """Check if any memory is available."""
         if not self.crew:
@@ -431,6 +465,8 @@ class Agent(BaseAgent):
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
             self.crew.query_knowledge if self.crew else lambda *a, **k: None,
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)
@@ -665,6 +701,8 @@ class Agent(BaseAgent):
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)

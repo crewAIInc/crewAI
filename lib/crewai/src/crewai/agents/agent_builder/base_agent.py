@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
+from pathlib import Path
 from typing import Any, Literal
 import uuid
 
@@ -28,6 +29,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -198,6 +200,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     mcps: list[str | MCPServerConfig] | None = Field(
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
+    )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Agent Skills. Accepts Paths for discovery or pre-loaded Skill objects.",
     )
 
     @model_validator(mode="before")
@@ -468,4 +474,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self._rpm_controller = rpm_controller
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
+        pass
+
+    def set_skills(self) -> None:
         pass

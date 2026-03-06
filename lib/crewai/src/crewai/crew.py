@@ -6,6 +6,7 @@ from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
+from pathlib import Path
 import re
 from typing import (
     TYPE_CHECKING,
@@ -310,6 +311,10 @@ class Crew(FlowTrackable, BaseModel):
     knowledge: Knowledge | None = Field(
         default=None,
         description="Knowledge for the crew.",
+    )
+    skills: list[Path] | None = Field(
+        default=None,
+        description="Skill search paths applied to all agents in the crew.",
     )
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
