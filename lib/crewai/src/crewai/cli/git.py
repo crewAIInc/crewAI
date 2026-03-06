@@ -57,7 +57,7 @@ class Repository:
             self._is_git_repo_cache = True
         except subprocess.CalledProcessError:
             self._is_git_repo_cache = False
-        return self._is_git_repo_cache or False
+        return self._is_git_repo_cache
 
     def has_uncommitted_changes(self) -> bool:
         """Check if the repository has uncommitted changes."""
