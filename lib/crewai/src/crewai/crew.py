@@ -292,10 +292,19 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
-    skills: list[Path] | None = Field(
+    skills: list[str | Path] | None = Field(
         default=None,
         description="Skill search paths applied to all agents in the crew.",
     )
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path] | None:
+        """Coerce string entries to Path objects."""
+        if not v:
+            return v
+        return [Path(item) if isinstance(item, str) else item for item in v]
+
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",

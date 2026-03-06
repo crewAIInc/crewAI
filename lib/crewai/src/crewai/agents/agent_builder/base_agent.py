@@ -215,10 +215,18 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "If not set, falls back to crew memory."
         ),
     )
-    skills: list[Path | Skill] | None = Field(
+    skills: list[str | Path | Skill] | None = Field(
         default=None,
-        description="Agent Skills. Accepts Paths for discovery or pre-loaded Skill objects.",
+        description="Agent Skills. Accepts paths (str or Path) for discovery or pre-loaded Skill objects.",
     )
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path | Skill] | None:
+        """Coerce string entries to Path objects."""
+        if not v:
+            return v
+        return [Path(item) if isinstance(item, str) else item for item in v]
 
     @model_validator(mode="before")
     @classmethod
