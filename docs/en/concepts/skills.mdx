@@ -1,0 +1,116 @@
+---
+title: Skills
+description: Filesystem-based skill packages that inject context into agent prompts.
+icon: bolt
+mode: "wide"
+---
+
+## Overview
+
+Skills are self-contained directories that provide agents with domain-specific instructions, references, and assets. Each skill is defined by a `SKILL.md` file with YAML frontmatter and a markdown body.
+
+Skills use **progressive disclosure** — metadata is loaded first, full instructions only when activated, and resource catalogs only when needed.
+
+## Directory Structure
+
+```
+my-skill/
+├── SKILL.md            # Required — frontmatter + instructions
+├── scripts/            # Optional — executable scripts
+├── references/         # Optional — reference documents
+└── assets/             # Optional — static files (configs, data)
+```
+
+The directory name must match the `name` field in `SKILL.md`.
+
+## SKILL.md Format
+
+```markdown
+---
+name: my-skill
+description: Short description of what this skill does and when to use it.
+license: Apache-2.0                    # optional
+compatibility: crewai>=0.1.0          # optional
+metadata:                              # optional
+  author: your-name
+  version: "1.0"
+allowed-tools: web-search file-read   # optional, space-delimited
+---
+
+Instructions for the agent go here. This markdown body is injected
+into the agent's prompt when the skill is activated.
+```
+
+### Frontmatter Fields
+
+| Field           | Required | Constraints                                                              |
+| :-------------- | :------- | :----------------------------------------------------------------------- |
+| `name`          | Yes      | 1–64 chars. Lowercase alphanumeric and hyphens. No leading/trailing/consecutive hyphens. Must match directory name. |
+| `description`   | Yes      | 1–1024 chars. Describes what the skill does and when to use it.          |
+| `license`       | No       | License name or reference to a bundled license file.                     |
+| `compatibility` | No       | Max 500 chars. Environment requirements (products, packages, network).   |
+| `metadata`      | No       | Arbitrary string key-value mapping.                                      |
+| `allowed-tools` | No       | Space-delimited list of pre-approved tools. Experimental.                |
+
+## Usage
+
+### Agent-level Skills
+
+Pass skill directory paths to an agent:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant information",
+    backstory="An expert researcher.",
+    skills=["./skills"],  # discovers all skills in this directory
+)
+```
+
+### Crew-level Skills
+
+Skill paths on a crew are merged into every agent:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    skills=["./skills"],
+)
+```
+
+### Pre-loaded Skills
+
+You can also pass `Skill` objects directly:
+
+```python
+from pathlib import Path
+from crewai.skills import discover_skills, activate_skill
+
+skills = discover_skills(Path("./skills"))
+activated = [activate_skill(s) for s in skills]
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant information",
+    backstory="An expert researcher.",
+    skills=activated,
+)
+```
+
+## Disclosure Levels
+
+Skills load progressively through three levels:
+
+| Level            | What's loaded                                     | When               |
+| :--------------- | :------------------------------------------------ | :----------------- |
+| `METADATA`       | Name, description, frontmatter fields             | `discover_skills()` |
+| `INSTRUCTIONS`   | Full SKILL.md body text                           | `activate_skill()` |
+| `RESOURCES`      | File listings from scripts/, references/, assets/ | `load_resources()` |
+
+During normal agent execution, skills are automatically discovered and activated (promoted to `INSTRUCTIONS`). Use `load_resources()` only when you need to inspect available files programmatically.
+

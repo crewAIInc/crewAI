@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
+from pathlib import Path
 import re
 from typing import Any, Final, Literal
 import uuid
@@ -29,6 +30,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -213,6 +215,19 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "If not set, falls back to crew memory."
         ),
     )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
+        min_length=1,
+    )
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path | Skill] | None:
+        """Coerce string entries to Path objects."""
+        if not v:
+            return v
+        return [Path(item) if isinstance(item, str) else item for item in v]
 
     @model_validator(mode="before")
     @classmethod
@@ -495,4 +510,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self._rpm_controller = rpm_controller
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
+        pass
+
+    def set_skills(self) -> None:
         pass

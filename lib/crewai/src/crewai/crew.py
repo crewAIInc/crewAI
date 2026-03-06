@@ -6,6 +6,7 @@ from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
+from pathlib import Path
 import re
 from typing import (
     TYPE_CHECKING,
@@ -291,6 +292,19 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
+    skills: list[str | Path] | None = Field(
+        default=None,
+        description="Skill search paths applied to all agents in the crew.",
+    )
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path] | None:
+        """Coerce string entries to Path objects."""
+        if not v:
+            return v
+        return [Path(item) if isinstance(item, str) else item for item in v]
+
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
@@ -362,7 +376,7 @@ class Crew(FlowTrackable, BaseModel):
             if self.embedder is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
-                embedder = build_embedder(self.embedder)
+                embedder = build_embedder(cast(dict[str, Any], self.embedder))
             self._memory = Memory(embedder=embedder)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
@@ -1410,9 +1424,7 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
-    def _add_memory_tools(
-        self, tools: list[BaseTool], memory: Any
-    ) -> list[BaseTool]:
+    def _add_memory_tools(self, tools: list[BaseTool], memory: Any) -> list[BaseTool]:
         """Add recall and remember tools when memory is available.
 
         Args:

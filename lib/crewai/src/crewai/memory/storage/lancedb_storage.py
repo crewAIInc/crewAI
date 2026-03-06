@@ -90,6 +90,7 @@ class LanceDBStorage:
         # Raise it proactively so scans on large tables never hit OS error 24.
         try:
             import resource
+
             soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
             if soft < 4096:
                 resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, 4096), hard))
@@ -110,7 +111,9 @@ class LanceDBStorage:
         # If no table exists yet, defer creation until the first save so the
         # dimension can be auto-detected from the embedder's actual output.
         try:
-            self._table: lancedb.table.Table | None = self._db.open_table(self._table_name)
+            self._table: lancedb.table.Table | None = self._db.open_table(
+                self._table_name
+            )
             self._vector_dim: int = self._infer_dim_from_table(self._table)
             # Best-effort: create the scope index if it doesn't exist yet.
             self._ensure_scope_index()
@@ -171,7 +174,10 @@ class LanceDBStorage:
                     raise
                 _logger.debug(
                     "LanceDB commit conflict on %s (attempt %d/%d), retrying in %.1fs",
-                    op, attempt + 1, _MAX_RETRIES, delay,
+                    op,
+                    attempt + 1,
+                    _MAX_RETRIES,
+                    delay,
                 )
                 # Refresh table to pick up the latest version before retrying.
                 # The next getattr(self._table, op) will use the fresh table.
@@ -280,7 +286,9 @@ class LanceDBStorage:
             "last_accessed": record.last_accessed.isoformat(),
             "source": record.source or "",
             "private": record.private,
-            "vector": record.embedding if record.embedding else [0.0] * self._vector_dim,
+            "vector": record.embedding
+            if record.embedding
+            else [0.0] * self._vector_dim,
         }
 
     def _row_to_record(self, row: dict[str, Any]) -> MemoryRecord:
@@ -296,7 +304,9 @@ class LanceDBStorage:
             id=str(row["id"]),
             content=str(row["content"]),
             scope=str(row["scope"]),
-            categories=json.loads(row["categories_str"]) if row.get("categories_str") else [],
+            categories=json.loads(row["categories_str"])
+            if row.get("categories_str")
+            else [],
             metadata=json.loads(row["metadata_str"]) if row.get("metadata_str") else {},
             importance=float(row.get("importance", 0.5)),
             created_at=_parse_dt(row.get("created_at")),
@@ -390,13 +400,17 @@ class LanceDBStorage:
             prefix = scope_prefix.rstrip("/")
             like_val = prefix + "%"
             query = query.where(f"scope LIKE '{like_val}'")
-        results = query.limit(limit * 3 if (categories or metadata_filter) else limit).to_list()
+        results = query.limit(
+            limit * 3 if (categories or metadata_filter) else limit
+        ).to_list()
         out: list[tuple[MemoryRecord, float]] = []
         for row in results:
             record = self._row_to_record(row)
             if categories and not any(c in record.categories for c in categories):
                 continue
-            if metadata_filter and not all(record.metadata.get(k) == v for k, v in metadata_filter.items()):
+            if metadata_filter and not all(
+                record.metadata.get(k) == v for k, v in metadata_filter.items()
+            ):
                 continue
             distance = row.get("_distance", 0.0)
             score = 1.0 / (1.0 + float(distance)) if distance is not None else 1.0
@@ -427,9 +441,13 @@ class LanceDBStorage:
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)
-                    if categories and not any(c in record.categories for c in categories):
+                    if categories and not any(
+                        c in record.categories for c in categories
+                    ):
                         continue
-                    if metadata_filter and not all(record.metadata.get(k) == v for k, v in metadata_filter.items()):
+                    if metadata_filter and not all(
+                        record.metadata.get(k) == v for k, v in metadata_filter.items()
+                    ):
                         continue
                     if older_than and record.created_at >= older_than:
                         continue
@@ -528,7 +546,7 @@ class LanceDBStorage:
         for row in rows:
             sc = str(row.get("scope", ""))
             if child_prefix and sc.startswith(child_prefix):
-                rest = sc[len(child_prefix):]
+                rest = sc[len(child_prefix) :]
                 first_component = rest.split("/", 1)[0]
                 if first_component:
                     children.add(child_prefix + first_component)
@@ -539,7 +557,11 @@ class LanceDBStorage:
                 pass
             created = row.get("created_at")
             if created:
-                dt = datetime.fromisoformat(str(created).replace("Z", "+00:00")) if isinstance(created, str) else created
+                dt = (
+                    datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+                    if isinstance(created, str)
+                    else created
+                )
                 if isinstance(dt, datetime):
                     if oldest is None or dt < oldest:
                         oldest = dt
@@ -562,7 +584,7 @@ class LanceDBStorage:
         for row in rows:
             sc = str(row.get("scope", ""))
             if sc.startswith(prefix) and sc != (prefix.rstrip("/") or "/"):
-                rest = sc[len(prefix):]
+                rest = sc[len(prefix) :]
                 first_component = rest.split("/", 1)[0]
                 if first_component:
                     children.add(prefix + first_component)
@@ -600,7 +622,7 @@ class LanceDBStorage:
             return
         prefix = scope_prefix.rstrip("/")
         if prefix:
-            self._table.delete(f"scope >= '{prefix}' AND scope < '{prefix}/\uFFFF'")
+            self._table.delete(f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'")
 
     def optimize(self) -> None:
         """Compact the table synchronously and refresh the scope index.

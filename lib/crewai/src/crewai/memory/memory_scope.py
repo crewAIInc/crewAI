@@ -249,9 +249,17 @@ class MemorySlice:
             total_records += inf.record_count
             all_categories.update(inf.categories)
             if inf.oldest_record:
-                oldest = inf.oldest_record if oldest is None else min(oldest, inf.oldest_record)
+                oldest = (
+                    inf.oldest_record
+                    if oldest is None
+                    else min(oldest, inf.oldest_record)
+                )
             if inf.newest_record:
-                newest = inf.newest_record if newest is None else max(newest, inf.newest_record)
+                newest = (
+                    inf.newest_record
+                    if newest is None
+                    else max(newest, inf.newest_record)
+                )
             children.extend(inf.child_scopes)
         return ScopeInfo(
             path=path,
