@@ -312,15 +312,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Final answer from the agent.
         """
         # Check if model supports native function calling
-        use_native_tools = (
+        supports_fc = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
             and self.llm.supports_function_calling()
-            and self.original_tools
         )
 
-        if use_native_tools:
+        if supports_fc and self.original_tools:
             return self._invoke_loop_native_tools()
+
+        # FC-capable LLM with no user-defined tools but with response_model
+        # and no internal tools (delegation, human input, etc.): use simple
+        # native call path which correctly passes response_model for structured
+        # output instead of dropping it in the ReAct path.
+        if supports_fc and not self.tools and self.response_model:
+            return self._invoke_loop_native_no_tools()
 
         # Fall back to ReAct text-based pattern
         return self._invoke_loop_react()
@@ -352,6 +358,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # In the ReAct flow, do NOT pass response_model to the LLM call.
+                # When the LLM doesn't support function calling, passing response_model
+                # forces structured output (via instructor/tools mode) before the agent
+                # can reason through the Action/Observation loop. The output schema is
+                # already embedded in the prompt text for guidance, and the final
+                # conversion to pydantic/json happens in task._export_output().
+                # See: https://github.com/crewAIInc/crewAI/issues/4695
                 answer = get_llm_response(
                     llm=self.llm,
                     messages=self.messages,
@@ -359,43 +372,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
-                # breakpoint()
-                if self.response_model is not None:
-                    try:
-                        if isinstance(answer, BaseModel):
-                            output_json = answer.model_dump_json()
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=output_json,
-                            )
-                        else:
-                            self.response_model.model_validate_json(answer)
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=answer,
-                            )
-                    except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
-                        answer_str = (
-                            answer.model_dump_json()
-                            if isinstance(answer, BaseModel)
-                            else str(answer)
-                        )
-                        formatted_answer = process_llm_response(
-                            answer_str, self.use_stop_words
-                        )  # type: ignore[assignment]
-                else:
-                    # When no response_model, answer should be a string
-                    answer_str = str(answer) if not isinstance(answer, str) else answer
-                    formatted_answer = process_llm_response(
-                        answer_str, self.use_stop_words
-                    )  # type: ignore[assignment]
+
+                # When no response_model is passed, answer should be a string
+                answer_str = str(answer) if not isinstance(answer, str) else answer
+                formatted_answer = process_llm_response(
+                    answer_str, self.use_stop_words
+                )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
@@ -1154,15 +1140,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Final answer from the agent.
         """
         # Check if model supports native function calling
-        use_native_tools = (
+        supports_fc = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
             and self.llm.supports_function_calling()
-            and self.original_tools
         )
 
-        if use_native_tools:
+        if supports_fc and self.original_tools:
             return await self._ainvoke_loop_native_tools()
+
+        # FC-capable LLM with no user-defined tools but with response_model
+        # and no internal tools (delegation, human input, etc.): use simple
+        # native call path which correctly passes response_model for structured
+        # output instead of dropping it in the ReAct path.
+        if supports_fc and not self.tools and self.response_model:
+            return await self._ainvoke_loop_native_no_tools()
 
         # Fall back to ReAct text-based pattern
         return await self._ainvoke_loop_react()
@@ -1190,6 +1182,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # In the ReAct flow, do NOT pass response_model to the LLM call.
+                # When the LLM doesn't support function calling, passing response_model
+                # forces structured output (via instructor/tools mode) before the agent
+                # can reason through the Action/Observation loop. The output schema is
+                # already embedded in the prompt text for guidance, and the final
+                # conversion to pydantic/json happens in task._export_output().
+                # See: https://github.com/crewAIInc/crewAI/issues/4695
                 answer = await aget_llm_response(
                     llm=self.llm,
                     messages=self.messages,
@@ -1197,43 +1196,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
 
-                if self.response_model is not None:
-                    try:
-                        if isinstance(answer, BaseModel):
-                            output_json = answer.model_dump_json()
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=output_json,
-                            )
-                        else:
-                            self.response_model.model_validate_json(answer)
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=answer,
-                            )
-                    except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
-                        answer_str = (
-                            answer.model_dump_json()
-                            if isinstance(answer, BaseModel)
-                            else str(answer)
-                        )
-                        formatted_answer = process_llm_response(
-                            answer_str, self.use_stop_words
-                        )  # type: ignore[assignment]
-                else:
-                    # When no response_model, answer should be a string
-                    answer_str = str(answer) if not isinstance(answer, str) else answer
-                    formatted_answer = process_llm_response(
-                        answer_str, self.use_stop_words
-                    )  # type: ignore[assignment]
+                # When no response_model is passed, answer should be a string
+                answer_str = str(answer) if not isinstance(answer, str) else answer
+                formatted_answer = process_llm_response(
+                    answer_str, self.use_stop_words
+                )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     fingerprint_context = {}
