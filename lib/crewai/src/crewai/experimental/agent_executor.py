@@ -193,6 +193,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         # Error context storage for recovery
         self._last_parser_error: OutputParserError | None = None
+        self._last_raw_output: str | None = None
         self._last_context_error: Exception | None = None
 
         # Execution guard to prevent concurrent/duplicate executions
@@ -478,6 +479,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self._last_parser_error = e or OutputParserError(
                 error="Unknown parser error"
             )
+            self._last_raw_output = answer
             return "parser_error"
 
         except Exception as e:
@@ -1167,6 +1169,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             log_error_after=self.log_error_after,
             printer=self._printer,
             verbose=self.agent.verbose,
+            raw_output=self._last_raw_output,
+            agent_name=self.agent.role,
         )
 
         if formatted_answer:
