@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from crewai.skills.loader import (
     activate_skill,
     discover_skills,
@@ -54,8 +56,8 @@ class TestDiscoverSkills:
         assert skills == []
 
     def test_nonexistent_path(self, tmp_path: Path) -> None:
-        skills = discover_skills(tmp_path / "nonexistent")
-        assert skills == []
+        with pytest.raises(FileNotFoundError):
+            discover_skills(tmp_path / "nonexistent")
 
     def test_sorted_by_name(self, tmp_path: Path) -> None:
         _create_skill_dir(tmp_path, "zebra")

@@ -308,6 +308,7 @@ class Agent(BaseAgent):
         if not self.skills and not crew_skills:
             return
 
+        seen: set[str] = set()
         resolved: list[Path | SkillModel] = []
         items: list[Path | SkillModel] = list(self.skills) if self.skills else []
 
@@ -317,9 +318,14 @@ class Agent(BaseAgent):
         for item in items:
             if isinstance(item, Path):
                 discovered = discover_skills(item, source=self)
-                resolved.extend(activate_skill(s, source=self) for s in discovered)
+                for skill in discovered:
+                    if skill.name not in seen:
+                        seen.add(skill.name)
+                        resolved.append(activate_skill(skill, source=self))
             elif isinstance(item, SkillModel):
-                resolved.append(item)
+                if item.name not in seen:
+                    seen.add(item.name)
+                    resolved.append(item)
 
         self.skills = resolved if resolved else None
 
