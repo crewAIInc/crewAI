@@ -1,0 +1,115 @@
+---
+title: 스킬
+description: 에이전트 프롬프트에 컨텍스트를 주입하는 파일 시스템 기반 스킬 패키지.
+icon: bolt
+mode: "wide"
+---
+
+## 개요
+
+스킬은 에이전트에게 도메인별 지침, 참조 자료, 에셋을 제공하는 자체 포함 디렉터리입니다. 각 스킬은 YAML 프론트매터와 마크다운 본문이 포함된 `SKILL.md` 파일로 정의됩니다.
+
+스킬은 **점진적 공개**를 사용합니다 — 메타데이터가 먼저 로드되고, 활성화 시에만 전체 지침이 로드되며, 필요할 때만 리소스 카탈로그가 로드됩니다.
+
+## 디렉터리 구조
+
+```
+my-skill/
+├── SKILL.md            # 필수 — 프론트매터 + 지침
+├── scripts/            # 선택 — 실행 가능한 스크립트
+├── references/         # 선택 — 참조 문서
+└── assets/             # 선택 — 정적 파일 (설정, 데이터)
+```
+
+디렉터리 이름은 `SKILL.md`의 `name` 필드와 일치해야 합니다.
+
+## SKILL.md 형식
+
+```markdown
+---
+name: my-skill
+description: 이 스킬이 무엇을 하고 언제 사용하는지에 대한 간단한 설명.
+license: Apache-2.0                    # 선택
+compatibility: crewai>=0.1.0          # 선택
+metadata:                              # 선택
+  author: your-name
+  version: "1.0"
+allowed-tools: web-search file-read   # 선택, 공백으로 구분
+---
+
+에이전트를 위한 지침이 여기에 들어갑니다. 이 마크다운 본문은
+스킬이 활성화되면 에이전트의 프롬프트에 주입됩니다.
+```
+
+### 프론트매터 필드
+
+| 필드             | 필수   | 제약 조건                                                                |
+| :-------------- | :----- | :----------------------------------------------------------------------- |
+| `name`          | 예     | 1–64자. 소문자 영숫자와 하이픈. 선행/후행/연속 하이픈 불가. 디렉터리 이름과 일치 필수. |
+| `description`   | 예     | 1–1024자. 스킬이 무엇을 하고 언제 사용하는지 설명.                          |
+| `license`       | 아니오  | 라이선스 이름 또는 번들된 라이선스 파일 참조.                                |
+| `compatibility` | 아니오  | 최대 500자. 환경 요구 사항 (제품, 패키지, 네트워크).                         |
+| `metadata`      | 아니오  | 임의의 문자열 키-값 매핑.                                                  |
+| `allowed-tools` | 아니오  | 공백으로 구분된 사전 승인 도구 목록. 실험적.                                 |
+
+## 사용법
+
+### 에이전트 레벨 스킬
+
+에이전트에 스킬 디렉터리 경로를 전달합니다:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant information",
+    backstory="An expert researcher.",
+    skills=["./skills"],  # 이 디렉터리의 모든 스킬을 검색
+)
+```
+
+### 크루 레벨 스킬
+
+크루의 스킬 경로는 모든 에이전트에 병합됩니다:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    skills=["./skills"],
+)
+```
+
+### 사전 로드된 스킬
+
+`Skill` 객체를 직접 전달할 수도 있습니다:
+
+```python
+from pathlib import Path
+from crewai.skills import discover_skills, activate_skill
+
+skills = discover_skills(Path("./skills"))
+activated = [activate_skill(s) for s in skills]
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant information",
+    backstory="An expert researcher.",
+    skills=activated,
+)
+```
+
+## 공개 레벨
+
+스킬은 세 단계를 통해 점진적으로 로드됩니다:
+
+| 레벨              | 로드되는 내용                                      | 시점                |
+| :--------------- | :------------------------------------------------ | :----------------- |
+| `METADATA`       | 이름, 설명, 프론트매터 필드                          | `discover_skills()` |
+| `INSTRUCTIONS`   | 전체 SKILL.md 본문 텍스트                           | `activate_skill()` |
+| `RESOURCES`      | scripts/, references/, assets/의 파일 목록          | `load_resources()` |
+
+일반적인 에이전트 실행 중에 스킬은 자동으로 검색되고 활성화됩니다 (`INSTRUCTIONS`로 승격). 프로그래밍 방식으로 사용 가능한 파일을 검사해야 하는 경우에만 `load_resources()`를 사용하세요.
