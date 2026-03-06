@@ -992,6 +992,7 @@ def test_anthropic_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.explanation, "Explanation should not be empty"
 
 
+
 @pytest.mark.vcr()
 def test_anthropic_cached_prompt_tokens():
     """
@@ -1121,3 +1122,189 @@ def test_anthropic_cached_prompt_tokens_with_tools():
     assert usage.successful_requests == 2
     # The second call should have cached prompt tokens
     assert usage.cached_prompt_tokens > 0
+
+
+def test_anthropic_empty_message_content_filtered():
+    """
+    Test that messages with empty content are filtered out to prevent API errors.
+    
+    Anthropic API requires all messages to have non-empty content except for
+    the optional final assistant message. This test verifies that empty user
+    messages are properly filtered out.
+    
+    Regression test for issue #4427.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    # Test with empty user message content
+    messages = [{"role": "user", "content": ""}]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    # Empty user message should be filtered out, but a default "Hello" should be added
+    # because the message list would be empty after filtering
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "Hello"
+
+
+def test_anthropic_empty_string_message_filtered():
+    """
+    Test that whitespace-only messages are also filtered out.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    # Test with whitespace-only content
+    messages = [
+        {"role": "user", "content": "   "},
+        {"role": "user", "content": "Hello, how are you?"},
+    ]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    # Whitespace-only message should be filtered, leaving only the valid message
+    assert len(formatted) == 1
+    assert formatted[0]["content"] == "Hello, how are you?"
+
+
+def test_anthropic_mixed_empty_and_valid_messages():
+    """
+    Test that valid messages are preserved when mixed with empty messages,
+    and consecutive same-role messages are merged to maintain alternation.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    messages = [
+        {"role": "user", "content": "First message"},
+        {"role": "assistant", "content": ""},  # Empty assistant - should be filtered (not last)
+        {"role": "user", "content": ""},  # Empty user - should be filtered
+        {"role": "user", "content": "Second message"},
+    ]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    # After filtering, we have two consecutive user messages.
+    # Role alternation fix merges them into a single message.
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "First message\n\nSecond message"
+
+
+def test_anthropic_final_assistant_empty_allowed():
+    """
+    Test that empty content is allowed for the final assistant message.
+    
+    Anthropic API allows the optional final assistant message to have empty content.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": ""},  # Empty final assistant - should be kept
+    ]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    # Final assistant message with empty content should be preserved
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "user"
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[1]["content"] == ""
+
+
+def test_anthropic_final_assistant_trailing_whitespace_stripped():
+    """
+    Test that trailing whitespace is stripped from the final assistant message.
+    
+    Anthropic API rejects requests where the final assistant message ends with
+    trailing whitespace with error: "final assistant content cannot end with
+    trailing whitespace". This test verifies the fix for issue #4413.
+    
+    See: https://github.com/crewAIInc/crewAI/issues/4413
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    # Test case from the issue: assistant message with trailing space
+    messages = [
+        {"role": "user", "content": "Hello. Say world"},
+        {"role": "assistant", "content": "Say: "},  # trailing space triggers the error
+    ]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    # Trailing whitespace should be stripped from the final assistant message
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "user"
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[1]["content"] == "Say:"  # No trailing whitespace
+    assert not formatted[1]["content"].endswith(" ")
+
+
+def test_anthropic_final_assistant_multiple_trailing_whitespace_stripped():
+    """
+    Test that multiple trailing whitespace characters are stripped.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    # Test with multiple trailing whitespace characters (spaces, tabs, newlines)
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Response  \t\n"},  # Multiple trailing whitespace
+    ]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    assert formatted[1]["content"] == "Response"
+    assert not formatted[1]["content"][-1].isspace()
+
+
+def test_anthropic_non_final_assistant_whitespace_preserved():
+    """
+    Test that whitespace in non-final assistant messages is preserved.
+    
+    Only the final assistant message needs trailing whitespace stripped.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "First response "},  # Non-final: whitespace kept
+        {"role": "user", "content": "Thanks"},
+        {"role": "assistant", "content": "Second response "},  # Final: whitespace stripped
+    ]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    assert len(formatted) == 4
+    # Non-final assistant message - whitespace preserved
+    assert formatted[1]["content"] == "First response "
+    # Final assistant message - whitespace stripped
+    assert formatted[3]["content"] == "Second response"
+
+
+def test_anthropic_user_final_message_whitespace_preserved():
+    """
+    Test that trailing whitespace in a final user message is preserved.
+    
+    The stripping only applies to final assistant messages, not user messages.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", api_key="test-key")
+
+    messages = [
+        {"role": "user", "content": "Hello with trailing space "},
+    ]
+    formatted, system = llm._format_messages_for_anthropic(messages)
+
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    # User message whitespace should be preserved
+    assert formatted[0]["content"] == "Hello with trailing space "
