@@ -166,6 +166,17 @@ class Agent(BaseAgent):
     allow_code_execution: bool | None = Field(
         default=False, description="Enable code execution for the agent."
     )
+    allow_unsafe_code_execution: bool = Field(
+        default=False,
+        description="Explicit policy opt-in required to allow unsafe code execution mode.",
+    )
+    unsafe_code_execution_confirmation: Any | None = Field(
+        default=None,
+        description=(
+            "Callable confirmation gate executed before unsafe code tools are enabled. "
+            "Must return True to allow execution."
+        ),
+    )
     respect_context_window: bool = Field(
         default=True,
         description="Keep messages under the context window size by summarizing content.",
