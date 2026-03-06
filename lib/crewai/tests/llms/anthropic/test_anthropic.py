@@ -1121,3 +1121,62 @@ def test_anthropic_cached_prompt_tokens_with_tools():
     assert usage.successful_requests == 2
     # The second call should have cached prompt tokens
     assert usage.cached_prompt_tokens > 0
+
+
+def test_anthropic_completion_handles_empty_message_content():
+    """
+    Test that AnthropicCompletion properly handles empty message content
+    without causing BadRequestError from the Anthropic API.
+    
+    This test addresses issue #4427 where empty user message content
+    would cause API failures.
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", max_tokens=100, max_retries=0)
+    assert isinstance(llm, AnthropicCompletion)
+    
+    # Test the internal message filtering method directly
+    empty_messages = [
+        {"role": "user", "content": ""},  # Empty string
+        {"role": "user", "content": "   "},  # Whitespace only
+        {"role": "user", "content": []},  # Empty list
+        {"role": "user", "content": "Hello"},  # Valid message
+        {"role": "assistant", "content": "Hi there"},  # Valid assistant message
+        {"role": "user", "content": ""},  # Another empty message
+    ]
+    
+    filtered = llm._filter_empty_content_messages(empty_messages)
+    
+    # Should filter out empty content messages
+    assert len(filtered) == 2  # Only "Hello" user message and "Hi there" assistant message
+    assert filtered[0]["content"] == "Hello"
+    assert filtered[1]["content"] == "Hi there"
+    
+    # Test that empty final assistant messages are preserved (Anthropic API allows this)
+    messages_with_empty_final_assistant = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": ""},  # Final empty assistant message should be kept
+    ]
+    
+    filtered_final = llm._filter_empty_content_messages(messages_with_empty_final_assistant)
+    assert len(filtered_final) == 2
+    assert filtered_final[0]["content"] == "Hello"
+    assert filtered_final[1]["content"] == ""  # Empty final assistant message preserved
+    
+    # Mock the Anthropic API call to verify the fix prevents API errors
+    with patch.object(llm.client.messages, 'create') as mock_create:
+        mock_create.return_value = MagicMock()
+        mock_create.return_value.content = [MagicMock(text="Test response")]
+        mock_create.return_value.usage = MagicMock(input_tokens=10, output_tokens=5)
+        
+        # This should not raise a BadRequestError anymore
+        result = llm.call([{"role": "user", "content": ""}])
+        
+        # Verify the API was called with valid (non-empty) messages
+        args, kwargs = mock_create.call_args
+        messages_sent = kwargs.get('messages', [])
+        
+        # Should have been filtered/replaced with a valid message
+        assert len(messages_sent) > 0
+        assert all(msg.get('content') for msg in messages_sent if msg.get('role') != 'assistant' or messages_sent.index(msg) != len(messages_sent) - 1)
