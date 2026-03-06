@@ -37,6 +37,7 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
 )
 from crewai_tools.tools.csv_search_tool.csv_search_tool import CSVSearchTool
 from crewai_tools.tools.dalle_tool.dalle_tool import DallETool
+from crewai_tools.tools.modelslab_tool.modelslab_tool import ModelsLabImageGenerationTool
 from crewai_tools.tools.databricks_query_tool.databricks_query_tool import (
     DatabricksQueryTool,
 )
@@ -202,6 +203,7 @@ __all__ = [
     "CrewaiPlatformTools",
     "DOCXSearchTool",
     "DallETool",
+    "ModelsLabImageGenerationTool",
     "DatabricksQueryTool",
     "DirectoryReadTool",
     "DirectorySearchTool",
