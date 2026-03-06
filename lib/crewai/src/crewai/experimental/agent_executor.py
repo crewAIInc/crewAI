@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import contextvars
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 from datetime import datetime
 import inspect
 import json
@@ -1492,16 +1492,19 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         # Initialize or retrieve agent's training data
         agent_training_data = training_data.get(agent_id, {})
 
+        # Use string key for JSON compatibility (JSON converts int keys to strings)
+        train_key = str(train_iteration)
+
         if human_feedback is not None:
             # Save initial output and human feedback
-            agent_training_data[train_iteration] = {
+            agent_training_data[train_key] = {
                 "initial_output": result.output,
                 "human_feedback": human_feedback,
             }
         else:
             # Save improved output
-            if train_iteration in agent_training_data:
-                agent_training_data[train_iteration]["improved_output"] = result.output
+            if train_key in agent_training_data:
+                agent_training_data[train_key]["improved_output"] = result.output
             else:
                 train_error = Text()
                 train_error.append("❌ ", style="red bold")

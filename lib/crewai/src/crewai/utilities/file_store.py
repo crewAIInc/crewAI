@@ -20,9 +20,12 @@ _file_store: Cache | None = None
 
 try:
     from aiocache import Cache
-    from aiocache.serializers import JsonSerializer
+    from aiocache.serializers import PickleSerializer
 
-    _file_store = Cache(Cache.MEMORY, serializer=JsonSerializer())
+    # PickleSerializer is safe here: this is an in-memory cache only.
+    # Data never leaves the process, so there is no untrusted deserialization risk.
+    # JsonSerializer would break FileInput objects (Pydantic models with IO streams).
+    _file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
 except ImportError:
     logger.debug(
         "aiocache is not installed. File store features will be disabled. "
