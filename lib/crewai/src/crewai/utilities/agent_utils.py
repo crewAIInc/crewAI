@@ -315,7 +315,7 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
     """
     try:
         return parse(answer)
-    except Exception:
+    except OutputParserError:
         return AgentFinish(
             thought="Failed to parse LLM response",
             output=answer,
