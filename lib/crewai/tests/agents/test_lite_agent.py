@@ -694,6 +694,54 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     mock_get_mcp_tools.assert_called_once_with(["https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research"])
 
 
+
+def test_agent_mcp_tools_loaded_when_tools_is_none():
+    """Test that MCP tools are loaded even when the agent's tools attribute is None.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4568
+    When tools is None (e.g. set after init or via a subclass), MCP tools
+    should still be appended instead of being silently dropped.
+    """
+
+    class MockMCPTool(BaseTool):
+        name: str = "mcp_tool"
+        description: str = "A mock MCP tool"
+
+        def _run(self, query: str) -> str:
+            return "result"
+
+    mock_mcp_tool = MockMCPTool()
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=LLM(model="gpt-4o-mini"),
+        mcps=["https://example.com/mcp"],
+    )
+
+    # Force tools to None to simulate the reported scenario where
+    # self.tools ends up as None at kickoff time.
+    agent.__dict__["tools"] = None
+    assert agent.tools is None
+
+    # Patch get_mcp_tools at the class level to return our mock tool
+    with patch.object(Agent, "get_mcp_tools", return_value=[mock_mcp_tool]) as mock_get:
+        # Call the internal method that processes MCP tools.
+        # It may fail downstream (LLM setup, etc.), but the MCP tool
+        # loading happens at the top of the method.
+        try:
+            agent._prepare_kickoff("test query")
+        except Exception:
+            pass
+
+        mock_get.assert_called_once_with(["https://example.com/mcp"])
+
+    # The key assertion: tools should no longer be None and should contain the MCP tool
+    assert agent.tools is not None
+    assert mock_mcp_tool in agent.tools
+
+
 # ============================================================================
 # Tests for LiteAgent inside Flow (magic auto-async pattern)
 # ============================================================================
