@@ -4,6 +4,7 @@ import urllib.request
 import warnings
 
 from crewai.agent.core import Agent
+from crewai.agents.loop_detector import LoopDetector
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
@@ -99,6 +100,7 @@ __all__ = [
     "Flow",
     "Knowledge",
     "LLMGuardrail",
+    "LoopDetector",
     "Memory",
     "Process",
     "Task",

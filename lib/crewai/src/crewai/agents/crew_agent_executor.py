@@ -18,6 +18,7 @@ from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
 from pydantic_core import CoreSchema, core_schema
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.loop_detector import LoopDetector
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -157,6 +158,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
+        self.loop_detector: LoopDetector | None = (
+            agent.loop_detector if agent and hasattr(agent, "loop_detector") else None
+        )
+        if self.loop_detector:
+            self.loop_detector.reset()
         self.before_llm_call_hooks: list[Callable[..., Any]] = []
         self.after_llm_call_hooks: list[Callable[..., Any]] = []
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
@@ -411,6 +417,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             )
                         }
 
+                    # Capture tool info before _handle_agent_action may
+                    # convert the answer to AgentFinish (result_as_answer).
+                    _tool_name = formatted_answer.tool
+                    _tool_input = formatted_answer.tool_input
+
                     tool_result = execute_tool_and_check_finality(
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
@@ -427,6 +438,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
                     )
+
+                    # Check for repetitive loop patterns
+                    loop_result = self._record_and_check_loop(
+                        _tool_name, _tool_input
+                    )
+                    if loop_result is not None:
+                        formatted_answer = loop_result
+                        break
 
                 self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
                 self._append_message(formatted_answer.text)  # type: ignore[union-attr]
@@ -785,6 +804,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     if tool_finish:
                         return tool_finish
 
+                    # Check for loop after each parallel tool result
+                    loop_result = self._record_and_check_loop(
+                        execution_result["func_name"],
+                        execution_result.get("tool_args", ""),
+                    )
+                    if loop_result is not None:
+                        return loop_result
+
                 reasoning_prompt = self._i18n.slice("post_tool_reasoning")
                 reasoning_message: LLMMessage = {
                     "role": "user",
@@ -808,6 +835,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         tool_finish = self._append_tool_result_and_check_finality(execution_result)
         if tool_finish:
             return tool_finish
+
+        # Check for loop after sequential tool execution
+        loop_result = self._record_and_check_loop(func_name, func_args)
+        if loop_result is not None:
+            return loop_result
 
         reasoning_prompt = self._i18n.slice("post_tool_reasoning")
         reasoning_message = {
@@ -1070,6 +1102,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "tool_args": func_args,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1248,6 +1281,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             )
                         }
 
+                    # Capture tool info before _handle_agent_action may
+                    # convert the answer to AgentFinish (result_as_answer).
+                    _tool_name = formatted_answer.tool
+                    _tool_input = formatted_answer.tool_input
+
                     tool_result = await aexecute_tool_and_check_finality(
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
@@ -1264,6 +1302,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
                     )
+
+                    # Check for repetitive loop patterns
+                    loop_result = self._record_and_check_loop(
+                        _tool_name, _tool_input
+                    )
+                    if loop_result is not None:
+                        formatted_answer = loop_result
+                        break
 
                 await self._ainvoke_step_callback(formatted_answer)  # type: ignore[arg-type]
                 self._append_message(formatted_answer.text)  # type: ignore[union-attr]
@@ -1463,6 +1509,94 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
         self._show_logs(formatted_answer)
         return formatted_answer
+
+    def _record_and_check_loop(
+        self, tool_name: str, tool_args: str | dict[str, Any]
+    ) -> AgentFinish | None:
+        """Record a tool call and check for repetitive loop patterns.
+
+        If a loop is detected, takes the configured action:
+        - ``inject_reflection``: injects a reflection prompt into messages.
+        - ``stop``: forces the agent to produce a final answer.
+        - callable: calls the user's callback and injects the returned message.
+
+        Args:
+            tool_name: Name of the tool that was called.
+            tool_args: Arguments passed to the tool.
+
+        Returns:
+            ``AgentFinish`` if the loop action is ``stop``,
+            ``None`` otherwise (including when reflection is injected).
+        """
+        if not self.loop_detector:
+            return None
+
+        self.loop_detector.record_tool_call(tool_name, tool_args)
+
+        if not self.loop_detector.is_loop_detected():
+            return None
+
+        repeated_tool = self.loop_detector.get_repeated_tool_info() or tool_name
+        action_taken = (
+            self.loop_detector.on_loop
+            if isinstance(self.loop_detector.on_loop, str)
+            else "callback"
+        )
+
+        # Emit loop detected event
+        from crewai.events.types.loop_events import LoopDetectedEvent
+
+        crewai_event_bus.emit(
+            self.agent,
+            LoopDetectedEvent(
+                agent_role=self.agent.role if self.agent else "unknown",
+                agent_id=str(self.agent.id) if self.agent else None,
+                task_id=str(self.task.id) if self.task else None,
+                repeated_tool=repeated_tool,
+                action_taken=action_taken,
+                iteration=self.iterations,
+                agent=self.agent,
+            ),
+        )
+
+        if self.agent and self.agent.verbose:
+            self._printer.print(
+                content=f"Loop detected: {repeated_tool} called repeatedly. Action: {action_taken}",
+                color="bold_yellow",
+            )
+
+        if self.loop_detector.on_loop == "stop":
+            return handle_max_iterations_exceeded(
+                None,
+                printer=self._printer,
+                i18n=self._i18n,
+                messages=self.messages,
+                llm=self.llm,
+                callbacks=self.callbacks,
+                verbose=self.agent.verbose if self.agent else False,
+            )
+
+        # inject_reflection or callable
+        if callable(self.loop_detector.on_loop) and not isinstance(
+            self.loop_detector.on_loop, str
+        ):
+            message_text = self.loop_detector.get_loop_message()
+        else:
+            # Use i18n reflection prompt
+            count = self.loop_detector.repetition_threshold
+            message_text = self._i18n.slice("loop_detected").format(
+                repeated_tool=repeated_tool, count=count
+            )
+
+        loop_message: LLMMessage = {
+            "role": "user",
+            "content": message_text,
+        }
+        self.messages.append(loop_message)
+
+        # Reset detector after intervention to give the agent a fresh window
+        self.loop_detector.reset()
+        return None
 
     def _handle_agent_action(
         self, formatted_answer: AgentAction, tool_result: ToolResult
