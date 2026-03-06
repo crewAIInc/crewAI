@@ -2361,10 +2361,10 @@ def test_agent_without_apps_no_platform_tools():
 @patch("crewai.agent.core.Agent.get_mcp_tools")
 @patch("crewai.agent.core.Agent.get_platform_tools")
 def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp, mock_parse, mock_prompts, mock_executor):
-    """Regression test: _prepare_kickoff must load platform/MCP tools when self.tools is None.
+    """Regression: tools=None must not raise AttributeError when extending with platform/MCP tools.
 
-    Before the fix, _prepare_kickoff skipped tools.extend() when self.tools
-    was None, silently discarding platform and MCP tools.
+    Before the fix, calling _prepare_kickoff with self.tools=None raised
+    AttributeError: 'NoneType' object has no attribute 'extend'.
     """
     mock_platform_tool = MagicMock(spec=["name"])
     mock_platform_tool.name = "platform_tool"
@@ -2374,7 +2374,6 @@ def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp, mock_par
     mock_mcp_tool.name = "mcp_tool"
     mock_get_mcp.return_value = [mock_mcp_tool]
 
-    # Prompts().task_execution() returns a dict with system/user prompts
     mock_prompt_result = MagicMock()
     mock_prompt_result.system = "system"
     mock_prompt_result.user = "user"
@@ -2391,7 +2390,7 @@ def test_tools_none_with_apps_and_mcps(mock_get_platform, mock_get_mcp, mock_par
     # Simulate the tools=None condition from config paths that bypass validation
     agent.tools = None  # type: ignore[assignment]
 
-    # Exercise the real _prepare_kickoff code path
+    # Must not raise AttributeError: 'NoneType' object has no attribute 'extend'
     agent._prepare_kickoff(messages="test query")
 
     assert agent.tools is not None, "tools should not be None after _prepare_kickoff"
