@@ -451,6 +451,45 @@ def test_anthropic_message_formatting_edge_cases(anthropic_llm):
         anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
+
+def test_anthropic_strips_trailing_whitespace_from_final_assistant_message():
+    """Test that trailing whitespace in the final assistant message is stripped for Anthropic models.
+
+    Anthropic API rejects requests where the final assistant message content ends with
+    trailing whitespace with a 400 BadRequestError. See: https://github.com/crewAIInc/crewAI/issues/4413
+    """
+    # Test via AnthropicCompletion._format_messages_for_anthropic (direct SDK path)
+    anthropic_llm = AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)
+
+    messages_with_trailing = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Say: "},
+    ]
+    formatted, _ = anthropic_llm._format_messages_for_anthropic(messages_with_trailing)
+    last_assistant = [m for m in formatted if m["role"] == "assistant"][-1]
+    assert last_assistant["content"] == "Say:", (
+        "Trailing whitespace should be stripped from final assistant message"
+    )
+
+    # No trailing whitespace should be left unchanged
+    messages_clean = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Say:"},
+    ]
+    formatted_clean, _ = anthropic_llm._format_messages_for_anthropic(messages_clean)
+    last_clean = [m for m in formatted_clean if m["role"] == "assistant"][-1]
+    assert last_clean["content"] == "Say:"
+
+    # Multiple trailing whitespace types (spaces, tabs, newlines)
+    messages_multi = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Response:\t \n"},
+    ]
+    formatted_multi, _ = anthropic_llm._format_messages_for_anthropic(messages_multi)
+    last_multi = [m for m in formatted_multi if m["role"] == "assistant"][-1]
+    assert last_multi["content"] == last_multi["content"].rstrip()
+
+
 def test_anthropic_model_detection():
     """Test Anthropic model detection with various formats."""
     models = [
