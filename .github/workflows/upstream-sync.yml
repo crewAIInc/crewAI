@@ -78,6 +78,7 @@ jobs:
           echo "upstream_sha=$(git rev-parse --short upstream/main)" >> "$GITHUB_OUTPUT"
 
       - name: Create or update sync pull request
+        id: pr
         if: steps.rebuild.outputs.no_changes != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -111,10 +112,25 @@ jobs:
               --title "chore: sync upstream (${UPSTREAM_SHA})" \
               --body "$PR_BODY"
           else
-            gh pr create \
+            PR_NUMBER="$(gh pr create \
               --repo wangguanran/crewAI \
               --base main \
               --head "$SYNC_BRANCH" \
               --title "chore: sync upstream (${UPSTREAM_SHA})" \
-              --body "$PR_BODY"
+              --body "$PR_BODY" \
+              --json number \
+              --jq '.number')"
           fi
+
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge for sync pull request
+        if: steps.rebuild.outputs.no_changes != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          gh pr merge "${{ steps.pr.outputs.pr_number }}" \
+            --repo wangguanran/crewAI \
+            --auto \
+            --merge
