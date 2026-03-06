@@ -1,0 +1,80 @@
+---
+title: Agents & Tasks (TL;DR)
+description: The 5 key agent attributes and how to define tasks — quick reference
+icon: robot
+---
+
+## Agent: The 5 Key Attributes
+
+An `Agent` is an autonomous unit with a role, a goal, and the tools to get things done.
+
+| Attribute | Parameter | What it does |
+| :--- | :--- | :--- |
+| **Role** | `role` | Defines the agent's function and expertise |
+| **Goal** | `goal` | The individual objective guiding decisions |
+| **Backstory** | `backstory` | Context and personality enriching interactions |
+| **Tools** | `tools` | List of capabilities the agent can use (default: `[]`) |
+| **LLM** | `llm` | The language model powering the agent (default: `gpt-4o`) |
+
+### Minimal Agent Example
+
+```python
+from crewai import Agent
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find accurate, up-to-date information on any topic",
+    backstory="An expert at gathering data from multiple sources and identifying key insights.",
+    tools=[],      # add tools here, e.g. SerperDevTool()
+    verbose=True,  # enable logs for debugging
+)
+```
+
+## Task: Description + Expected Output + Agent
+
+A `Task` is a specific assignment given to an agent. Two fields are required; agent assignment is strongly recommended.
+
+| Attribute | Parameter | What it does |
+| :--- | :--- | :--- |
+| **Description** | `description` | What the agent must do |
+| **Expected Output** | `expected_output` | What a successful completion looks like |
+| **Agent** | `agent` | Which agent handles this task |
+| **Context** | `context` | Other tasks whose outputs feed into this one |
+| **Output File** | `output_file` | Save output to a file path |
+
+### Minimal Task Example
+
+```python
+from crewai import Task
+
+research_task = Task(
+    description="Research the top 5 AI frameworks released in 2025 and summarize their key features.",
+    expected_output="A markdown list of 5 frameworks with name, key feature, and one-sentence summary.",
+    agent=researcher,
+)
+```
+
+## Process Types: How Tasks Are Executed
+
+```python
+from crewai import Crew, Process
+
+# Sequential (default): tasks run in order, output feeds into the next
+crew = Crew(agents=[...], tasks=[...], process=Process.sequential)
+
+# Hierarchical: a manager LLM assigns tasks based on agent capabilities
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.hierarchical,
+    manager_llm="gpt-4o",   # required for hierarchical
+)
+```
+
+**Sequential** — use when tasks have a clear order and each builds on the previous.
+**Hierarchical** — use when tasks should be dynamically assigned by a manager agent.
+
+## Full Reference
+
+- All agent attributes: [concepts/agents.mdx](/en/concepts/agents)
+- All task attributes: [concepts/tasks.mdx](/en/concepts/tasks)
