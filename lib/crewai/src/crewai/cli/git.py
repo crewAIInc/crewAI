@@ -54,10 +54,11 @@ class Repository:
                 cwd=self.path,
                 encoding="utf-8",
             )
-            self._is_git_repo_cache = True
+            result = True
         except subprocess.CalledProcessError:
-            self._is_git_repo_cache = False
-        return self._is_git_repo_cache
+            result = False
+        self._is_git_repo_cache = result
+        return result
 
     def has_uncommitted_changes(self) -> bool:
         """Check if the repository has uncommitted changes."""
