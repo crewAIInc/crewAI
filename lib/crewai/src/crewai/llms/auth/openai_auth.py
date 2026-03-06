@@ -20,12 +20,14 @@ import jwt
 LOGGER = logging.getLogger(__name__)
 UTC = timezone.utc
 
-OPENAI_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"
+OPENAI_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"  # noqa: S105
 OPENAI_OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 OPENAI_OAUTH_TOKEN_EXCHANGE_GRANT_TYPE = (
-    "urn:ietf:params:oauth:grant-type:token-exchange"
+    "urn:ietf:params:oauth:grant-type:token-exchange"  # noqa: S105
 )
-OPENAI_OAUTH_SUBJECT_TOKEN_TYPE_ID_TOKEN = "urn:ietf:params:oauth:token-type:id_token"
+OPENAI_OAUTH_SUBJECT_TOKEN_TYPE_ID_TOKEN = (  # noqa: S105
+    "urn:ietf:params:oauth:token-type:id_token"
+)
 CODEX_KEYRING_SERVICE = "Codex Auth"
 DEFAULT_CODEX_HOME = "~/.codex"
 
