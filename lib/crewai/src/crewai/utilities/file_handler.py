@@ -1,10 +1,13 @@
 from datetime import datetime
 import json
+import logging
 import os
-import pickle
 from typing import Any, TypedDict
 
 from typing_extensions import Unpack
+
+
+logger = logging.getLogger(__name__)
 
 
 class LogEntry(TypedDict, total=False):
@@ -123,52 +126,96 @@ class FileHandler:
 
 
 class PickleHandler:
-    """Handler for saving and loading data using pickle.
+    """Handler for saving and loading data using JSON serialization.
+
+    Note: Despite the class name (kept for backward compatibility), this handler
+    uses JSON serialization instead of pickle to prevent insecure deserialization
+    vulnerabilities (CWE-502).
 
     Attributes:
-        file_path: The path to the pickle file.
+        file_path: The path to the JSON data file.
     """
 
     def __init__(self, file_name: str) -> None:
         """Initialize the PickleHandler with the name of the file where data will be stored.
 
-        The file will be saved in the current directory.
+        The file will be saved in the current directory. Files use JSON format
+        for safe serialization. Legacy .pkl files are automatically migrated.
 
         Args:
             file_name: The name of the file for saving and loading data.
         """
-        if not file_name.endswith(".pkl"):
-            file_name += ".pkl"
+        # Strip old .pkl extension if present and use .json
+        if file_name.endswith(".pkl"):
+            file_name = file_name[:-4]
+        if not file_name.endswith(".json"):
+            file_name += ".json"
 
         self.file_path = os.path.join(os.getcwd(), file_name)
+
+        # Derive legacy .pkl path for migration
+        self._legacy_pkl_path = self.file_path.rsplit(".json", 1)[0] + ".pkl"
+
+    def _migrate_legacy_pkl(self) -> dict[str, Any] | None:
+        """Attempt to migrate data from a legacy .pkl file to JSON format.
+
+        Returns:
+            The migrated data if successful, None otherwise.
+        """
+        if not os.path.exists(self._legacy_pkl_path):
+            return None
+
+        try:
+            import pickle
+
+            with open(self._legacy_pkl_path, "rb") as f:
+                data = pickle.load(f)  # noqa: S301
+
+            # Save as JSON
+            self.save(data)
+
+            # Remove the old pkl file after successful migration
+            os.remove(self._legacy_pkl_path)
+            logger.info(
+                f"Migrated legacy pickle file to JSON: {self._legacy_pkl_path} -> {self.file_path}"
+            )
+            return data  # type: ignore[no-any-return]
+        except Exception as e:
+            logger.warning(f"Failed to migrate legacy pickle file {self._legacy_pkl_path}: {e}")
+            return None
 
     def initialize_file(self) -> None:
         """Initialize the file with an empty dictionary and overwrite any existing data."""
         self.save({})
 
     def save(self, data: Any) -> None:
-        """
-        Save the data to the specified file using pickle.
+        """Save the data to the specified file using JSON.
 
         Args:
           data: The data to be saved to the file.
         """
-        with open(self.file_path, "wb") as f:
-            pickle.dump(obj=data, file=f)
+        with open(self.file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, default=str)
 
     def load(self) -> Any:
-        """Load the data from the specified file using pickle.
+        """Load the data from the specified file using JSON.
+
+        Falls back to migrating legacy .pkl files if the JSON file doesn't exist.
 
         Returns:
             The data loaded from the file.
         """
         if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
-            return {}  # Return an empty dictionary if the file does not exist or is empty
+            # Try to migrate from legacy pkl file
+            migrated = self._migrate_legacy_pkl()
+            if migrated is not None:
+                return migrated
+            return {}  # Return an empty dictionary if no file exists
 
         with open(self.file_path, "rb") as file:
             try:
-                return pickle.load(file)  # noqa: S301
-            except EOFError:
-                return {}  # Return an empty dictionary if the file is empty or corrupted
+                return json.loads(file.read().decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                return {}  # Return an empty dictionary if the file is corrupted
             except Exception:
                 raise  # Raise any other exceptions that occur during loading

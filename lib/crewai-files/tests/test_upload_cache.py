@@ -3,7 +3,11 @@
 from datetime import datetime, timedelta, timezone
 
 from crewai_files import FileBytes, ImageFile
-from crewai_files.cache.upload_cache import CachedUpload, UploadCache
+from crewai_files.cache.upload_cache import (
+    CachedUpload,
+    UploadCache,
+    _CachedUploadSerializer,
+)
 
 
 # Minimal valid PNG
@@ -208,3 +212,103 @@ class TestUploadCache:
 
         assert len(gemini_uploads) == 2
         assert len(anthropic_uploads) == 1
+
+
+class TestCachedUploadSerializer:
+    """Tests for the JSON-based CachedUpload serializer (security fix)."""
+
+    def test_serializer_uses_json_not_pickle(self):
+        """Test that the serializer produces JSON output, not pickle bytes."""
+        serializer = _CachedUploadSerializer()
+        now = datetime.now(timezone.utc)
+        cached = CachedUpload(
+            file_id="file-123",
+            provider="gemini",
+            file_uri="files/file-123",
+            content_type="image/png",
+            uploaded_at=now,
+            expires_at=now + timedelta(hours=48),
+        )
+
+        dumped = serializer.dumps(cached)
+
+        # Should be a JSON string, not pickle bytes
+        assert isinstance(dumped, str)
+        import json
+
+        data = json.loads(dumped)
+        assert data["file_id"] == "file-123"
+        assert data["provider"] == "gemini"
+        assert data["__cached_upload__"] is True
+
+    def test_serializer_roundtrip(self):
+        """Test that CachedUpload survives serialization/deserialization."""
+        serializer = _CachedUploadSerializer()
+        now = datetime.now(timezone.utc)
+        original = CachedUpload(
+            file_id="file-456",
+            provider="anthropic",
+            file_uri=None,
+            content_type="application/pdf",
+            uploaded_at=now,
+            expires_at=now + timedelta(hours=24),
+        )
+
+        dumped = serializer.dumps(original)
+        loaded = serializer.loads(dumped)
+
+        assert isinstance(loaded, CachedUpload)
+        assert loaded.file_id == original.file_id
+        assert loaded.provider == original.provider
+        assert loaded.file_uri == original.file_uri
+        assert loaded.content_type == original.content_type
+
+    def test_serializer_handles_none_expiry(self):
+        """Test serializer handles CachedUpload with no expiry."""
+        serializer = _CachedUploadSerializer()
+        now = datetime.now(timezone.utc)
+        cached = CachedUpload(
+            file_id="file-789",
+            provider="gemini",
+            file_uri=None,
+            content_type="image/jpeg",
+            uploaded_at=now,
+            expires_at=None,
+        )
+
+        dumped = serializer.dumps(cached)
+        loaded = serializer.loads(dumped)
+
+        assert isinstance(loaded, CachedUpload)
+        assert loaded.expires_at is None
+
+    def test_serializer_rejects_invalid_data(self):
+        """Test serializer returns None for invalid/corrupted data."""
+        serializer = _CachedUploadSerializer()
+
+        assert serializer.loads(None) is None
+        assert serializer.loads("not valid json {{{") is None
+        assert serializer.loads(b"binary garbage \x80\x04") is None
+
+    def test_cache_set_get_roundtrip_uses_json_serializer(self):
+        """Test that the cache properly round-trips CachedUpload through JSON."""
+        cache = UploadCache()
+        file = ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test.png"))
+
+        now = datetime.now(timezone.utc)
+        future = now + timedelta(hours=24)
+
+        cache.set(
+            file=file,
+            provider="gemini",
+            file_id="file-sec-test",
+            file_uri="files/file-sec-test",
+            expires_at=future,
+        )
+
+        result = cache.get(file, "gemini")
+
+        assert result is not None
+        assert isinstance(result, CachedUpload)
+        assert result.file_id == "file-sec-test"
+        assert result.file_uri == "files/file-sec-test"
