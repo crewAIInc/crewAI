@@ -35,7 +35,7 @@ SafeSearch = Literal["off", "moderate", "strict"]
 class BraveSearchTool(BaseTool):
     """A tool that performs web searches using the Brave Search API."""
 
-    name: str = "Brave Web Search"
+    name: str = "Brave Search"
     description: str = (
         "A tool that performs web searches using the Brave Search API. "
         "Results are returned as structured JSON data."
