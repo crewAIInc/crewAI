@@ -601,12 +601,15 @@ class Task(BaseModel):
                 raw = result
                 pydantic_output = None
                 json_output = None
-                try:
+                if self._guardrails or self._guardrail:
+                    try:
+                        pydantic_output, json_output = self._export_output(result)
+                    except Exception:
+                        self.logger.debug(
+                            "Pre-guardrail output export failed, continuing with raw output"
+                        )
+                else:
                     pydantic_output, json_output = self._export_output(result)
-                except Exception:
-                    self.logger.debug(
-                        "Pre-guardrail output export failed, continuing with raw output"
-                    )
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
@@ -718,12 +721,15 @@ class Task(BaseModel):
                 raw = result
                 pydantic_output = None
                 json_output = None
-                try:
+                if self._guardrails or self._guardrail:
+                    try:
+                        pydantic_output, json_output = self._export_output(result)
+                    except Exception:
+                        self.logger.debug(
+                            "Pre-guardrail output export failed, continuing with raw output"
+                        )
+                else:
                     pydantic_output, json_output = self._export_output(result)
-                except Exception:
-                    self.logger.debug(
-                        "Pre-guardrail output export failed, continuing with raw output"
-                    )
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
