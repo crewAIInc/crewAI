@@ -29,6 +29,8 @@ jobs:
       - self-hosted
       - macOS
     timeout-minutes: 20
+    env:
+      LOCAL_BOOTSTRAP_BIN: /Users/wangguanran/Codes/crewAI/.venv-codex-oauth-check/bin
 
     steps:
       - name: Reset runner workspace
@@ -40,17 +42,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: "0.8.4"
-          python-version: "3.12"
-          enable-cache: true
+      - name: Bootstrap local Python and uv
+        run: |
+          set -euxo pipefail
+          test -x "${LOCAL_BOOTSTRAP_BIN}/python"
+          test -x "${LOCAL_BOOTSTRAP_BIN}/uv"
+          echo "${LOCAL_BOOTSTRAP_BIN}" >> "$GITHUB_PATH"
+          "${LOCAL_BOOTSTRAP_BIN}/python" --version
+          "${LOCAL_BOOTSTRAP_BIN}/uv" --version
 
       - name: Install project dependencies
         run: uv sync --all-groups --all-extras
