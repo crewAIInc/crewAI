@@ -4,6 +4,88 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="04 mar 2026">
+  ## v1.10.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Atualizar Gemini GenAI
+
+  ### Correções de Bugs
+  - Ajustar o valor do listener do executor para evitar recursão
+  - Agrupar partes da resposta da função paralela em um único objeto Content no Gemini
+  - Exibir a saída de pensamento dos modelos de pensamento no Gemini
+  - Carregar ferramentas MCP e da plataforma quando as ferramentas do agente forem None
+  - Suportar ambientes Jupyter com loops de eventos em A2A
+  - Usar ID anônimo para rastreamentos efêmeros
+  - Passar condicionalmente o cabeçalho plus
+  - Ignorar o registro do manipulador de sinal em threads não principais para telemetria
+  - Injetar erros de ferramentas como observações e resolver colisões de nomes
+  - Atualizar pypdf de 4.x para 6.7.4 para resolver alertas do Dependabot
+  - Resolver alertas de segurança críticos e altos do Dependabot
+
+  ### Documentação
+  - Sincronizar a documentação da ferramenta Composio entre locais
+
+  ## Contribuidores
+
+  @giulio-leone, @greysonlalonde, @haxzie, @joaomdmoura, @lorenzejay, @mattatcha, @mplachta, @nicoferdi96
+
+</Update>
+
+<Update label="27 fev 2026">
+  ## v1.10.1a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Implementar suporte a invocação assíncrona em métodos de callback de etapas
+  - Implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.0
+
+  ### Refatoração
+  - Refatorar métodos de callback de etapas para suportar invocação assíncrona
+  - Refatorar para implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Correções de Bugs
+  - Corrigir branch para notas de lançamento
+
+  ## Contribuidores
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="27 fev 2026">
+  ## v1.10.1a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## O que Mudou
+
+  ### Refatoração
+  - Refatorar métodos de callback de etapas para suportar invocação assíncrona
+  - Implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.0
+
+  ### Correções de Bugs
+  - Criar branch para notas de lançamento
+
+  ## Contribuidores
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
 <Update label="26 fev 2026">
   ## v1.10.0
 

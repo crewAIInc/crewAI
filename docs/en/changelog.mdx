@@ -4,6 +4,88 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Mar 04, 2026">
+  ## v1.10.1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## What's Changed
+
+  ### Features
+  - Upgrade Gemini GenAI
+
+  ### Bug Fixes
+  - Adjust executor listener value to avoid recursion
+  - Group parallel function response parts in a single Content object in Gemini
+  - Surface thought output from thinking models in Gemini
+  - Load MCP and platform tools when agent tools are None
+  - Support Jupyter environments with running event loops in A2A
+  - Use anonymous ID for ephemeral traces
+  - Conditionally pass plus header
+  - Skip signal handler registration in non-main threads for telemetry
+  - Inject tool errors as observations and resolve name collisions
+  - Upgrade pypdf from 4.x to 6.7.4 to resolve Dependabot alerts
+  - Resolve critical and high Dependabot security alerts
+
+  ### Documentation
+  - Sync Composio tool documentation across locales
+
+  ## Contributors
+
+  @giulio-leone, @greysonlalonde, @haxzie, @joaomdmoura, @lorenzejay, @mattatcha, @mplachta, @nicoferdi96
+
+</Update>
+
+<Update label="Feb 27, 2026">
+  ## v1.10.1a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## What's Changed
+
+  ### Features
+  - Implement asynchronous invocation support in step callback methods
+  - Implement lazy loading for heavy dependencies in Memory module
+
+  ### Documentation
+  - Update changelog and version for v1.10.0
+
+  ### Refactoring
+  - Refactor step callback methods to support asynchronous invocation
+  - Refactor to implement lazy loading for heavy dependencies in Memory module
+
+  ### Bug Fixes
+  - Fix branch for release notes
+
+  ## Contributors
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="Feb 27, 2026">
+  ## v1.10.1a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## What's Changed
+
+  ### Refactoring
+  - Refactor step callback methods to support asynchronous invocation
+  - Implement lazy loading for heavy dependencies in Memory module
+
+  ### Documentation
+  - Update changelog and version for v1.10.0
+
+  ### Bug Fixes
+  - Make branch for release notes
+
+  ## Contributors
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
 <Update label="Feb 26, 2026">
   ## v1.10.0
 
