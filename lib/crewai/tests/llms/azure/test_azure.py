@@ -957,6 +957,34 @@ def test_azure_endpoint_detection_flags():
         assert llm_other.is_azure_openai_endpoint == False
 
 
+def test_azure_endpoint_detection_ignores_spoofed_urls():
+    """
+    Test that endpoint detection does not trust spoofed host/path substrings
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": (
+            "https://evil.example.com/?redirect="
+            "https://test.openai.azure.com/openai/deployments/gpt-4"
+        ),
+    }):
+        llm_query_spoof = LLM(model="azure/gpt-4")
+        assert llm_query_spoof.is_azure_openai_endpoint == False
+        assert "model" in llm_query_spoof._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com.evil/openai/deployments/gpt-4",
+    }):
+        llm_host_spoof = LLM(model="azure/gpt-4")
+        assert llm_host_spoof.is_azure_openai_endpoint == False
+        assert "model" in llm_host_spoof._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+
+
 def test_azure_improved_error_messages():
     """
     Test that improved error messages are provided for common HTTP errors
