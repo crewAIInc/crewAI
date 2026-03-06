@@ -170,16 +170,16 @@ To enable tracing, do any one of these:
         """Create standardized status content with consistent formatting."""
         content = Text()
         content.append(f"{title}\n", style=f"{status_style} bold")
-        content.append("Name: \n", style="white")
+        content.append("Name: ", style="white")
         content.append(f"{name}\n", style=status_style)
 
         for label, value in fields.items():
-            content.append(f"{label}: \n", style="white")
+            content.append(f"{label}: ", style="white")
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
         if tool_args:
-            content.append("Tool Args: \n", style="white")
+            content.append("Tool Args: ", style="white")
             content.append(f"{tool_args}\n", style=status_style)
 
         return content
@@ -737,6 +737,27 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, title, style)
 
+    @staticmethod
+    def _simplify_tools_field(fields: dict[str, Any]) -> dict[str, Any]:
+        """Simplify the tools field to show only tool names instead of full definitions.
+
+        Args:
+            fields: Dictionary of fields that may contain a 'tools' key with
+                    full tool objects.
+
+        Returns:
+            The fields dictionary with 'tools' replaced by a comma-separated
+            string of tool names.
+        """
+        if "tools" in fields:
+            tools = fields["tools"]
+            if tools:
+                tool_names = [getattr(t, "name", str(t)) for t in tools]
+                fields["tools"] = ", ".join(tool_names) if tool_names else "None"
+            else:
+                fields["tools"] = "None"
+        return fields
+
     def handle_lite_agent_execution(
         self,
         lite_agent_role: str,
@@ -747,6 +768,8 @@ To enable tracing, do any one of these:
         """Handle lite agent execution events with panel display."""
         if not self.verbose:
             return
+
+        fields = self._simplify_tools_field(fields)
 
         if status == "started":
             self.create_lite_agent_branch(lite_agent_role)
@@ -1486,6 +1509,34 @@ To enable tracing, do any one of these:
             content.append(f"{error_preview}\n", style="red")
 
         panel = self.create_panel(content, "❌ MCP Connection Failed", "red")
+        self.print(panel)
+        self.print()
+
+    def handle_mcp_config_fetch_failed(
+        self,
+        slug: str,
+        error: str = "",
+        error_type: str | None = None,
+    ) -> None:
+        """Handle MCP config fetch failed event (AMP resolution failures)."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("MCP Config Fetch Failed\n\n", style="red bold")
+        content.append("Server: ", style="white")
+        content.append(f"{slug}\n", style="red")
+
+        if error_type:
+            content.append("Error Type: ", style="white")
+            content.append(f"{error_type}\n", style="red")
+
+        if error:
+            content.append("\nError: ", style="white bold")
+            error_preview = error[:500] + "..." if len(error) > 500 else error
+            content.append(f"{error_preview}\n", style="red")
+
+        panel = self.create_panel(content, "❌ MCP Config Failed", "red")
         self.print(panel)
         self.print()
 

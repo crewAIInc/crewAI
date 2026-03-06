@@ -6,7 +6,7 @@ from contextlib import AsyncExitStack
 from datetime import datetime
 import logging
 import time
-from typing import Any
+from typing import Any, NamedTuple
 
 from typing_extensions import Self
 
@@ -32,6 +32,13 @@ from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
 from crewai.utilities.string_utils import sanitize_tool_name
+
+
+class _MCPToolResult(NamedTuple):
+    """Internal result from an MCP tool call, carrying the ``isError`` flag."""
+
+    content: str
+    is_error: bool
 
 
 # MCP Connection timeout constants (in seconds)
@@ -420,6 +427,7 @@ class MCPClient:
         return [
             {
                 "name": sanitize_tool_name(tool.name),
+                "original_name": tool.name,
                 "description": getattr(tool, "description", ""),
                 "inputSchema": getattr(tool, "inputSchema", {}),
             }
@@ -461,29 +469,46 @@ class MCPClient:
         )
 
         try:
-            result = await self._retry_operation(
+            tool_result: _MCPToolResult = await self._retry_operation(
                 lambda: self._call_tool_impl(tool_name, cleaned_arguments),
                 timeout=self.execution_timeout,
             )
 
-            completed_at = datetime.now()
-            execution_duration_ms = (completed_at - started_at).total_seconds() * 1000
-            crewai_event_bus.emit(
-                self,
-                MCPToolExecutionCompletedEvent(
-                    server_name=server_name,
-                    server_url=server_url,
-                    transport_type=transport_type,
-                    tool_name=tool_name,
-                    tool_args=cleaned_arguments,
-                    result=result,
-                    started_at=started_at,
-                    completed_at=completed_at,
-                    execution_duration_ms=execution_duration_ms,
-                ),
-            )
+            finished_at = datetime.now()
+            execution_duration_ms = (finished_at - started_at).total_seconds() * 1000
 
-            return result
+            if tool_result.is_error:
+                crewai_event_bus.emit(
+                    self,
+                    MCPToolExecutionFailedEvent(
+                        server_name=server_name,
+                        server_url=server_url,
+                        transport_type=transport_type,
+                        tool_name=tool_name,
+                        tool_args=cleaned_arguments,
+                        error=tool_result.content,
+                        error_type="tool_error",
+                        started_at=started_at,
+                        failed_at=finished_at,
+                    ),
+                )
+            else:
+                crewai_event_bus.emit(
+                    self,
+                    MCPToolExecutionCompletedEvent(
+                        server_name=server_name,
+                        server_url=server_url,
+                        transport_type=transport_type,
+                        tool_name=tool_name,
+                        tool_args=cleaned_arguments,
+                        result=tool_result.content,
+                        started_at=started_at,
+                        completed_at=finished_at,
+                        execution_duration_ms=execution_duration_ms,
+                    ),
+                )
+
+            return tool_result.content
         except Exception as e:
             failed_at = datetime.now()
             error_type = (
@@ -564,23 +589,27 @@ class MCPClient:
 
         return cleaned
 
-    async def _call_tool_impl(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def _call_tool_impl(
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> _MCPToolResult:
         """Internal implementation of call_tool."""
         result = await asyncio.wait_for(
             self.session.call_tool(tool_name, arguments),
             timeout=self.execution_timeout,
         )
 
+        is_error = getattr(result, "isError", False) or False
+
         # Extract result content
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:
                 content_item = result.content[0]
                 if hasattr(content_item, "text"):
-                    return str(content_item.text)
-                return str(content_item)
-            return str(result.content)
+                    return _MCPToolResult(str(content_item.text), is_error)
+                return _MCPToolResult(str(content_item), is_error)
+            return _MCPToolResult(str(result.content), is_error)
 
-        return str(result)
+        return _MCPToolResult(str(result), is_error)
 
     async def list_prompts(self) -> list[dict[str, Any]]:
         """List available prompts from MCP server.

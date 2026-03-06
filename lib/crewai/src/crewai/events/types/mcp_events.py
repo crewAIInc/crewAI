@@ -83,3 +83,16 @@ class MCPToolExecutionFailedEvent(MCPEvent):
     error_type: str | None = None  # "timeout", "validation", "server_error", etc.
     started_at: datetime | None = None
     failed_at: datetime | None = None
+
+
+class MCPConfigFetchFailedEvent(BaseEvent):
+    """Event emitted when fetching an AMP MCP server config fails.
+
+    This covers cases where the slug is not connected, the API call
+    failed, or native MCP resolution failed after config was fetched.
+    """
+
+    type: str = "mcp_config_fetch_failed"
+    slug: str
+    error: str
+    error_type: str | None = None  # "not_connected", "api_error", "connection_failed"

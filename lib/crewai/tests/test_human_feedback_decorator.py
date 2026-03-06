@@ -24,13 +24,13 @@ class TestHumanFeedbackValidation:
     """Tests for decorator parameter validation."""
 
     def test_emit_requires_llm(self):
-        """Test that specifying emit without llm raises ValueError."""
+        """Test that specifying emit with llm=None raises ValueError."""
         with pytest.raises(ValueError) as exc_info:
 
             @human_feedback(
                 message="Review this:",
                 emit=["approve", "reject"],
-                # llm not provided
+                llm=None,  # explicitly None
             )
             def test_method(self):
                 return "output"
@@ -399,3 +399,156 @@ class TestCollapseToOutcome:
             )
 
         assert result == "approved"  # First in list
+
+
+# -- HITL Learning tests --
+
+
+class TestHumanFeedbackLearn:
+    """Tests for the learn=True HITL learning feature."""
+
+    def test_learn_false_does_not_interact_with_memory(self):
+        """When learn=False (default), memory is never touched."""
+
+        class LearnOffFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", learn=False)
+            def produce(self):
+                return "output"
+
+        flow = LearnOffFlow()
+        flow.memory = MagicMock()
+
+        with patch.object(
+            flow, "_request_human_feedback", return_value="looks good"
+        ):
+            flow.produce()
+
+        # memory.recall and memory.remember_many should NOT be called
+        flow.memory.recall.assert_not_called()
+        flow.memory.remember_many.assert_not_called()
+
+    def test_learn_true_stores_distilled_lessons(self):
+        """When learn=True and feedback has substance, lessons are distilled and stored."""
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def produce(self):
+                return "draft article"
+
+        flow = LearnFlow()
+        flow.memory = MagicMock()
+        flow.memory.recall.return_value = []  # no prior lessons
+
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="Always add citations"
+            ),
+            patch("crewai.llm.LLM") as MockLLM,
+        ):
+            from crewai.flow.human_feedback import DistilledLessons
+
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            # Distillation call -> returns structured lessons
+            mock_llm.call.return_value = DistilledLessons(
+                lessons=["Always include source citations when making factual claims"]
+            )
+            MockLLM.return_value = mock_llm
+
+            flow.produce()
+
+        # remember_many should be called with the distilled lesson
+        flow.memory.remember_many.assert_called_once()
+        lessons = flow.memory.remember_many.call_args.args[0]
+        assert len(lessons) == 1
+        assert "citations" in lessons[0].lower()
+        # source should be "hitl"
+        assert flow.memory.remember_many.call_args.kwargs.get("source") == "hitl"
+
+    def test_learn_true_pre_reviews_with_past_lessons(self):
+        """When learn=True and past lessons exist, output is pre-reviewed before human sees it."""
+        from crewai.memory.types import MemoryMatch, MemoryRecord
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def produce(self):
+                return "draft without citations"
+
+        flow = LearnFlow()
+        # Mock memory with a past lesson
+        flow.memory = MagicMock()
+        flow.memory.recall.return_value = [
+            MemoryMatch(
+                record=MemoryRecord(
+                    content="Always include source citations when making factual claims",
+                    embedding=[],
+                ),
+                score=0.9,
+                match_reasons=["semantic"],
+            )
+        ]
+
+        captured_output = {}
+
+        def capture_feedback(message, output, metadata=None, emit=None):
+            captured_output["shown_to_human"] = output
+            return "approved"
+
+        with (
+            patch.object(flow, "_request_human_feedback", side_effect=capture_feedback),
+            patch("crewai.llm.LLM") as MockLLM,
+        ):
+            from crewai.flow.human_feedback import DistilledLessons, PreReviewResult
+
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            # Pre-review returns structured improved output, distillation returns empty lessons
+            mock_llm.call.side_effect = [
+                PreReviewResult(improved_output="draft with citations added"),
+                DistilledLessons(lessons=[]),  # "approved" has no new lessons
+            ]
+            MockLLM.return_value = mock_llm
+
+            flow.produce()
+
+        # The human should have seen the pre-reviewed output, not the raw output
+        assert captured_output["shown_to_human"] == "draft with citations added"
+        # recall was called to find past lessons
+        flow.memory.recall.assert_called_once()
+
+    def test_learn_true_empty_feedback_does_not_store(self):
+        """When learn=True but feedback is empty, no lessons are stored."""
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def produce(self):
+                return "output"
+
+        flow = LearnFlow()
+        flow.memory = MagicMock()
+        flow.memory.recall.return_value = []
+
+        with patch.object(
+            flow, "_request_human_feedback", return_value=""
+        ):
+            flow.produce()
+
+        # Empty feedback -> no distillation, no storage
+        flow.memory.remember_many.assert_not_called()
+
+    def test_learn_true_uses_default_llm(self):
+        """When learn=True and llm is not explicitly set, the default gpt-4o-mini is used."""
+
+        @human_feedback(message="Review:", learn=True)
+        def test_method(self):
+            return "output"
+
+        config = test_method.__human_feedback_config__
+        assert config is not None
+        assert config.learn is True
+        # llm defaults to "gpt-4o-mini" at the function level
+        assert config.llm == "gpt-4o-mini"

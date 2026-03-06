@@ -86,10 +86,21 @@ class I18N(BaseModel):
         """
         return self.retrieve("tools", tool)
 
+    def memory(self, key: str) -> str:
+        """Retrieve a memory prompt by key.
+
+        Args:
+            key: The key of the memory prompt to retrieve.
+
+        Returns:
+            The memory prompt as a string.
+        """
+        return self.retrieve("memory", key)
+
     def retrieve(
         self,
         kind: Literal[
-            "slices", "errors", "tools", "reasoning", "hierarchical_manager_agent"
+            "slices", "errors", "tools", "reasoning", "hierarchical_manager_agent", "memory"
         ],
         key: str,
     ) -> str:
