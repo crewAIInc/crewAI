@@ -1,0 +1,85 @@
+name: Self-Hosted Codex Smoke
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-codex-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codex-smoke:
+    name: codex-smoke
+    runs-on:
+      - self-hosted
+      - macOS
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install project dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Show runner and Codex environment
+        run: |
+          set -euxo pipefail
+          whoami
+          pwd
+          python --version
+          uv --version
+          codex --version
+
+      - name: Require local Codex login
+        run: |
+          set -euxo pipefail
+          codex login status
+
+      - name: Verify Codex model access on self-hosted runner
+        run: |
+          set -euxo pipefail
+          uv run python - <<'PY'
+          import os
+          from crewai.llm import LLM
+
+          os.environ["CREWAI_OPENAI_AUTH_MODE"] = "oauth_codex"
+          os.environ.pop("OPENAI_API_KEY", None)
+          os.environ.pop("OPENAI_ACCESS_TOKEN", None)
+          os.environ.pop("OPENAI_OAUTH_ACCESS_TOKEN", None)
+
+          for api_name in ("responses", "chat"):
+              llm = LLM(model="gpt-5.3-codex", api=api_name, is_litellm=False)
+              result = llm.call("Reply with exactly: OK")
+              text = str(result).strip()
+              print(f"{api_name}={text!r}")
+              if "OK" not in text:
+                  raise SystemExit(f"{api_name} did not return expected content: {text!r}")
+          PY
+
+      - name: Verify default OAuth demo path
+        env:
+          OPENAI_API_KEY: ""
+          OPENAI_ACCESS_TOKEN: ""
+          OPENAI_OAUTH_ACCESS_TOKEN: ""
+        run: |
+          set -euxo pipefail
+          uv run python scripts/demo_openai_codex_hi.py
