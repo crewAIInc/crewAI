@@ -140,6 +140,10 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+tzafon = [
+    "playwright>=1.56.0",
+    "tzafon>=2.8.1",
+]
 
 
 [build-system]

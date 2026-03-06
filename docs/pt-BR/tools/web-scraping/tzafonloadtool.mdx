@@ -1,0 +1,57 @@
+---
+title: Carregador Web Tzafon
+description: Tzafon é uma plataforma para controle programático de navegadores e desktops.
+icon: browser
+mode: "wide"
+---
+
+# `TzafonLoadTool`
+
+## Descrição
+
+O `TzafonLoadTool` permite web scraping e automação usando [Tzafon](https://tzafon.ai), uma plataforma para controle programático de navegadores e desktops. Esta ferramenta permite que agentes naveguem em sites, interajam com conteúdo e extraiam dados usando as capacidades de velocidade e discrição (stealth) do Tzafon.
+
+Principais Recursos:
+- **Full Stealth**: Contorne medidas anti-bot com recursos de stealth integrados.
+- **Relâmpago Rápido**: Otimizado para velocidade e desempenho.
+- **Controle Multi-Aba**: Gerencie múltiplas abas do navegador programaticamente.
+- **Page Context API**: Acesse contexto detalhado sobre a estrutura e conteúdo da página.
+
+## Instalação
+
+Para usar esta ferramenta, você precisa instalar o SDK do Tzafon juntamente com o pacote `crewai[tools]`:
+
+<CodeGroup>
+```bash pip
+pip install tzafon playwright 'crewai[tools]'
+```
+```bash uv
+uv add tzafon playwright 'crewai[tools]'
+```
+</CodeGroup>
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e usá-la para carregar um site:
+
+```python Code
+from crewai_tools import TzafonLoadTool
+
+# Inicialize a ferramenta
+# A chave de API pode ser passada diretamente ou definida como a variável de ambiente TZAFON_API_KEY
+tool = TzafonLoadTool()
+``` 
+
+## Argumentos
+
+O `TzafonLoadTool` aceita os seguintes parâmetros:
+
+| Argumento    | Tipo     | Descrição                                                                 |
+|:------------|:---------|:----------------------------------------------------------------------------|
+| **url** | `string` | _Obrigatório_. URL do site a ser carregado.                                         |
+| **api_key** | `string` | _Opcional_. Chave de API do Tzafon. Padrão é a variável de ambiente `TZAFON_API_KEY`.       |
+| **text_content** | `bool` | _Opcional_. Recuperar apenas conteúdo de texto. O padrão é `True`.       |
+
+## Formato de Retorno
+
+A ferramenta retorna o conteúdo da página carregada, tipicamente em formato texto ou html, adequado para processamento por LLM.
