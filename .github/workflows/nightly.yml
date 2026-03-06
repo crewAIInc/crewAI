@@ -31,7 +31,7 @@ jobs:
   build:
     name: Build nightly packages
     needs: check
-    if: needs.check.outputs.has_changes == 'true'
+    if: needs.check.outputs.has_changes == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,6 +62,11 @@ jobs:
             sed -i "s/__version__ = .*/__version__ = \"${NIGHTLY}\"/" "$init_file"
             echo "$init_file: $CURRENT -> $NIGHTLY"
           done
+
+          # Update cross-package dependency pins to nightly versions
+          sed -i "s/\"crewai-tools==[^\"]*\"/\"crewai-tools==${NIGHTLY}\"/" lib/crewai/pyproject.toml
+          sed -i "s/\"crewai==[^\"]*\"/\"crewai==${NIGHTLY}\"/" lib/crewai-tools/pyproject.toml
+          echo "Updated cross-package dependency pins to ${NIGHTLY}"
 
       - name: Build packages
         run: |
