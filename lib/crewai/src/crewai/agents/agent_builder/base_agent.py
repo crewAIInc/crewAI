@@ -215,9 +215,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "If not set, falls back to crew memory."
         ),
     )
-    skills: list[str | Path | Skill] | None = Field(
+    skills: list[Path | Skill] | None = Field(
         default=None,
-        description="Agent Skills. Accepts paths (str or Path) for discovery or pre-loaded Skill objects.",
+        description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
+        min_length=1,
     )
 
     @field_validator("skills", mode="before")

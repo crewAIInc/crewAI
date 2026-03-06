@@ -41,16 +41,17 @@ def discover_skills(
     Returns:
         List of Skill instances at METADATA level.
     """
-    skills: list[Skill] = []
-
     if not search_path.is_dir():
-        return skills
+        msg = f"Skill search path does not exist or is not a directory: {search_path}"
+        raise FileNotFoundError(msg)
+
+    skills: list[Skill] = []
 
     if source is not None:
         crewai_event_bus.emit(
             source,
             event=SkillDiscoveryStartedEvent(
-                search_path=str(search_path),
+                search_path=search_path,
             ),
         )
 
@@ -68,7 +69,7 @@ def discover_skills(
                     source,
                     event=SkillLoadedEvent(
                         skill_name=skill.name,
-                        skill_path=str(skill.path),
+                        skill_path=skill.path,
                         disclosure_level=skill.disclosure_level.value,
                     ),
                 )
@@ -78,7 +79,7 @@ def discover_skills(
                     source,
                     event=SkillLoadFailedEvent(
                         skill_name=child.name,
-                        skill_path=str(child),
+                        skill_path=child,
                         error=str(e),
                     ),
                 )
@@ -87,7 +88,7 @@ def discover_skills(
         crewai_event_bus.emit(
             source,
             event=SkillDiscoveryCompletedEvent(
-                search_path=str(search_path),
+                search_path=search_path,
                 skills_found=len(skills),
                 skill_names=[s.name for s in skills],
             ),
@@ -121,7 +122,7 @@ def activate_skill(
             source,
             event=SkillActivatedEvent(
                 skill_name=activated.name,
-                skill_path=str(activated.path),
+                skill_path=activated.path,
                 disclosure_level=activated.disclosure_level.value,
             ),
         )

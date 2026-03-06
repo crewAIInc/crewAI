@@ -5,6 +5,7 @@ Events emitted during skill discovery, loading, and activation.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from crewai.events.base_events import BaseEvent
@@ -14,7 +15,7 @@ class SkillEvent(BaseEvent):
     """Base event for skill operations."""
 
     skill_name: str = ""
-    skill_path: str | None = None
+    skill_path: Path | None = None
     from_agent: Any | None = None
     from_task: Any | None = None
 
@@ -28,13 +29,14 @@ class SkillDiscoveryStartedEvent(SkillEvent):
     """Event emitted when skill discovery begins."""
 
     type: str = "skill_discovery_started"
-    search_path: str
+    search_path: Path
 
 
 class SkillDiscoveryCompletedEvent(SkillEvent):
     """Event emitted when skill discovery completes."""
 
     type: str = "skill_discovery_completed"
+    search_path: Path
     skills_found: int
     skill_names: list[str]
 
