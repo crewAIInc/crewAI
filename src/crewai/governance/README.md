@@ -1,6 +1,6 @@
 # Agent-OS Governance for CrewAI
 
-Kernel-level policy enforcement for CrewAI workflows using [Agent-OS](https://github.com/imran-siddique/agent-os).
+Kernel-level policy enforcement for CrewAI workflows using [Agent-OS](https://github.com/microsoft/agent-governance-toolkit).
 
 ## Features
 
@@ -153,5 +153,5 @@ result = await kernel.execute(run_crew, {"topic": "AI safety"})
 
 ## Links
 
-- [Agent-OS GitHub](https://github.com/imran-siddique/agent-os)
+- [Agent-OS GitHub](https://github.com/microsoft/agent-governance-toolkit)
 - [CrewAI Documentation](https://docs.crewai.com)
