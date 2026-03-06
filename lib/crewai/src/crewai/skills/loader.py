@@ -7,7 +7,11 @@ for agent use, and format skill context for prompt injection.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.skill_events import (
@@ -28,7 +32,7 @@ from crewai.skills.parser import (
 
 def discover_skills(
     search_path: Path,
-    source: Any | None = None,
+    source: BaseAgent | None = None,
 ) -> list[Skill]:
     """Scan a directory for skill directories containing SKILL.md.
 
@@ -51,6 +55,7 @@ def discover_skills(
         crewai_event_bus.emit(
             source,
             event=SkillDiscoveryStartedEvent(
+                from_agent=source,
                 search_path=search_path,
             ),
         )
@@ -68,6 +73,7 @@ def discover_skills(
                 crewai_event_bus.emit(
                     source,
                     event=SkillLoadedEvent(
+                        from_agent=source,
                         skill_name=skill.name,
                         skill_path=skill.path,
                         disclosure_level=skill.disclosure_level.value,
@@ -78,6 +84,7 @@ def discover_skills(
                 crewai_event_bus.emit(
                     source,
                     event=SkillLoadFailedEvent(
+                        from_agent=source,
                         skill_name=child.name,
                         skill_path=child,
                         error=str(e),
@@ -88,6 +95,7 @@ def discover_skills(
         crewai_event_bus.emit(
             source,
             event=SkillDiscoveryCompletedEvent(
+                from_agent=source,
                 search_path=search_path,
                 skills_found=len(skills),
                 skill_names=[s.name for s in skills],
@@ -99,7 +107,7 @@ def discover_skills(
 
 def activate_skill(
     skill: Skill,
-    source: Any | None = None,
+    source: BaseAgent | None = None,
 ) -> Skill:
     """Promote a skill to INSTRUCTIONS disclosure level.
 
@@ -121,6 +129,7 @@ def activate_skill(
         crewai_event_bus.emit(
             source,
             event=SkillActivatedEvent(
+                from_agent=source,
                 skill_name=activated.name,
                 skill_path=activated.path,
                 disclosure_level=activated.disclosure_level.value,

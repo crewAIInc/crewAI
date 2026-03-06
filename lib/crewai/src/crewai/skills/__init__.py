@@ -9,12 +9,18 @@ from crewai.skills.loader import (
     format_skill_context,
     load_resources,
 )
-from crewai.skills.models import DisclosureLevel, Skill, SkillFrontmatter
+from crewai.skills.models import (
+    DisclosureLevel,
+    ResourceDirName,
+    Skill,
+    SkillFrontmatter,
+)
 from crewai.skills.parser import SkillParseError, parse_skill_md
 
 
 __all__ = [
     "DisclosureLevel",
+    "ResourceDirName",
     "Skill",
     "SkillFrontmatter",
     "SkillParseError",

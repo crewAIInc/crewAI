@@ -268,6 +268,8 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        self.set_skills()
+
         return self
 
     def _setup_agent_executor(self) -> None:

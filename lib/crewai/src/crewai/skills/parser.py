@@ -12,7 +12,12 @@ from typing import Any
 
 import yaml
 
-from crewai.skills.models import DisclosureLevel, Skill, SkillFrontmatter
+from crewai.skills.models import (
+    DisclosureLevel,
+    ResourceDirName,
+    Skill,
+    SkillFrontmatter,
+)
 from crewai.skills.validation import validate_directory_name
 
 
@@ -145,12 +150,13 @@ def load_skill_resources(skill: Skill) -> Skill:
     if skill.disclosure_level < DisclosureLevel.INSTRUCTIONS:
         skill = load_skill_instructions(skill)
 
-    resource_files: dict[str, list[str]] = {}
-    for dir_name, resource_dir in (
+    resource_dirs: list[tuple[ResourceDirName, Path]] = [
         ("scripts", skill.scripts_dir),
         ("references", skill.references_dir),
         ("assets", skill.assets_dir),
-    ):
+    ]
+    resource_files: dict[ResourceDirName, list[str]] = {}
+    for dir_name, resource_dir in resource_dirs:
         if resource_dir.is_dir():
             resource_files[dir_name] = sorted(
                 str(f.relative_to(resource_dir))

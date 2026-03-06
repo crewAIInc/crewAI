@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -20,6 +20,7 @@ from crewai.skills.validation import (
 
 
 MAX_DESCRIPTION_LENGTH: int = 1024
+ResourceDirName = Literal["scripts", "references", "assets"]
 
 
 class DisclosureLevel(IntEnum):
@@ -88,7 +89,7 @@ class Skill(BaseModel):
     instructions: str | None = None
     path: Path
     disclosure_level: DisclosureLevel = Field(default=DisclosureLevel.METADATA)
-    resource_files: dict[str, list[str]] | None = None
+    resource_files: dict[ResourceDirName, list[str]] | None = None
 
     @property
     def name(self) -> str:
@@ -119,7 +120,7 @@ class Skill(BaseModel):
         self,
         level: DisclosureLevel,
         instructions: str | None = None,
-        resource_files: dict[str, list[str]] | None = None,
+        resource_files: dict[ResourceDirName, list[str]] | None = None,
     ) -> Skill:
         """Create a new Skill at a different disclosure level.
 
