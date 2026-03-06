@@ -150,7 +150,11 @@ class Memory:
         if isinstance(storage, str):
             from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
-            self._storage = LanceDBStorage() if storage == "lancedb" else LanceDBStorage(path=storage)
+            self._storage = (
+                LanceDBStorage()
+                if storage == "lancedb"
+                else LanceDBStorage(path=storage)
+            )
         else:
             self._storage = storage
 

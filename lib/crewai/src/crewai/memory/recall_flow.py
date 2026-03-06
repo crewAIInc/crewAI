@@ -103,13 +103,12 @@ class RecallFlow(Flow[RecallState]):
             )
             # Post-filter by time cutoff
             if self.state.time_cutoff and raw:
-                raw = [
-                    (r, s) for r, s in raw if r.created_at >= self.state.time_cutoff
-                ]
+                raw = [(r, s) for r, s in raw if r.created_at >= self.state.time_cutoff]
             # Privacy filter
             if not self.state.include_private and raw:
                 raw = [
-                    (r, s) for r, s in raw
+                    (r, s)
+                    for r, s in raw
                     if not r.private or r.source == self.state.source
                 ]
             return scope, raw
@@ -130,16 +129,17 @@ class RecallFlow(Flow[RecallState]):
                     top_composite, _ = compute_composite_score(
                         results[0][0], results[0][1], self._config
                     )
-                    findings.append({
-                        "scope": scope,
-                        "results": results,
-                        "top_score": top_composite,
-                    })
+                    findings.append(
+                        {
+                            "scope": scope,
+                            "results": results,
+                            "top_score": top_composite,
+                        }
+                    )
         else:
             with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as pool:
                 futures = {
-                    pool.submit(_search_one, emb, sc): (emb, sc)
-                    for emb, sc in tasks
+                    pool.submit(_search_one, emb, sc): (emb, sc) for emb, sc in tasks
                 }
                 for future in as_completed(futures):
                     scope, results = future.result()
@@ -147,16 +147,16 @@ class RecallFlow(Flow[RecallState]):
                         top_composite, _ = compute_composite_score(
                             results[0][0], results[0][1], self._config
                         )
-                        findings.append({
-                            "scope": scope,
-                            "results": results,
-                            "top_score": top_composite,
-                        })
+                        findings.append(
+                            {
+                                "scope": scope,
+                                "results": results,
+                                "top_score": top_composite,
+                            }
+                        )
 
         self.state.chunk_findings = findings
-        self.state.confidence = max(
-            (f["top_score"] for f in findings), default=0.0
-        )
+        self.state.confidence = max((f["top_score"] for f in findings), default=0.0)
         return findings
 
     # ------------------------------------------------------------------
@@ -210,12 +210,16 @@ class RecallFlow(Flow[RecallState]):
             # Parse time_filter into a datetime cutoff
             if analysis.time_filter:
                 try:
-                    self.state.time_cutoff = datetime.fromisoformat(analysis.time_filter)
+                    self.state.time_cutoff = datetime.fromisoformat(
+                        analysis.time_filter
+                    )
                 except ValueError:
                     pass
 
         # Batch-embed all sub-queries in ONE call
-        queries = analysis.recall_queries if analysis.recall_queries else [self.state.query]
+        queries = (
+            analysis.recall_queries if analysis.recall_queries else [self.state.query]
+        )
         queries = queries[:3]
         embeddings = embed_texts(self._embedder, queries)
         pairs: list[tuple[str, list[float]]] = [
@@ -296,17 +300,21 @@ class RecallFlow(Flow[RecallState]):
                 response = self._llm.call([{"role": "user", "content": prompt}])
                 if isinstance(response, str) and "missing" in response.lower():
                     self.state.evidence_gaps.append(response[:200])
-                enhanced.append({
-                    "scope": finding["scope"],
-                    "extraction": response,
-                    "results": finding["results"],
-                })
+                enhanced.append(
+                    {
+                        "scope": finding["scope"],
+                        "extraction": response,
+                        "results": finding["results"],
+                    }
+                )
             except Exception:
-                enhanced.append({
-                    "scope": finding["scope"],
-                    "extraction": "",
-                    "results": finding["results"],
-                })
+                enhanced.append(
+                    {
+                        "scope": finding["scope"],
+                        "extraction": "",
+                        "results": finding["results"],
+                    }
+                )
         self.state.chunk_findings = enhanced
         return enhanced
 
