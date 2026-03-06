@@ -86,6 +86,15 @@ class BaseTool(BaseModel, ABC):
         default=False,
         description="Flag to check if the tool should be the final agent answer.",
     )
+    unsafe: bool = Field(
+        default=False,
+        description=(
+            "Mark this tool as unsafe/high-impact. Unsafe tools are denied by default "
+            "(fail-closed) unless a before_tool_call hook explicitly returns True to "
+            "allow execution. This ensures that high-impact tools cannot run without "
+            "an explicit safety policy."
+        ),
+    )
     max_usage_count: int | None = Field(
         default=None,
         description="Maximum number of times this tool can be used. None means unlimited usage.",
@@ -252,6 +261,7 @@ class BaseTool(BaseModel, ABC):
             args_schema=self.args_schema,
             func=self._run,
             result_as_answer=self.result_as_answer,
+            unsafe=self.unsafe,
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
         )
@@ -493,6 +503,7 @@ def tool(
     /,
     *,
     result_as_answer: bool = ...,
+    unsafe: bool = ...,
     max_usage_count: int | None = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
@@ -501,6 +512,7 @@ def tool(
 def tool(
     *,
     result_as_answer: bool = ...,
+    unsafe: bool = ...,
     max_usage_count: int | None = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
@@ -508,6 +520,7 @@ def tool(
 def tool(
     *args: Callable[P2, R2] | str,
     result_as_answer: bool = False,
+    unsafe: bool = False,
     max_usage_count: int | None = None,
 ) -> Tool[P2, R2] | Callable[[Callable[P2, R2]], Tool[P2, R2]]:
     """Decorator to create a Tool from a function.
@@ -520,6 +533,8 @@ def tool(
     Args:
         *args: Either the function to decorate or a custom tool name.
         result_as_answer: If True, the tool result becomes the final agent answer.
+        unsafe: If True, marks this tool as unsafe/high-impact. Unsafe tools are
+            denied by default unless a before_tool_call hook explicitly returns True.
         max_usage_count: Maximum times this tool can be used. None means unlimited.
 
     Returns:
@@ -568,6 +583,7 @@ def tool(
                 func=f,
                 args_schema=args_schema,
                 result_as_answer=result_as_answer,
+                unsafe=unsafe,
                 max_usage_count=max_usage_count,
                 current_usage_count=0,
             )

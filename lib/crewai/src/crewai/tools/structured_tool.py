@@ -56,6 +56,7 @@ class CrewStructuredTool:
         args_schema: type[BaseModel],
         func: Callable[..., Any],
         result_as_answer: bool = False,
+        unsafe: bool = False,
         max_usage_count: int | None = None,
         current_usage_count: int = 0,
     ) -> None:
@@ -67,6 +68,8 @@ class CrewStructuredTool:
             args_schema: The pydantic model for the tool's arguments
             func: The function to run when the tool is called
             result_as_answer: Whether to return the output directly
+            unsafe: Whether this tool is unsafe/high-impact and requires explicit
+                hook approval to execute (fail-closed behavior).
             max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
             current_usage_count: Current number of times this tool has been used.
         """
@@ -76,6 +79,7 @@ class CrewStructuredTool:
         self.func = func
         self._logger = Logger()
         self.result_as_answer = result_as_answer
+        self.unsafe = unsafe
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
         self._original_tool: BaseTool | None = None
