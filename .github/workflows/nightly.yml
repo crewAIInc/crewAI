@@ -9,6 +9,8 @@ jobs:
   check:
     name: Check for new commits
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       has_changes: ${{ steps.check.outputs.has_changes }}
     steps:
@@ -54,7 +56,7 @@ jobs:
             CURRENT=$(python -c "
           import re
           text = open('$init_file').read()
-          print(re.search(r'__version__\s*=\s*[\"'\''](.*?)[\"'\'']\s*$', text, re.MULTILINE).group(1))
+          print(re.search(r'__version__\s*=\s*\"(.*?)\"\s*$', text, re.MULTILINE).group(1))
           ")
             NIGHTLY="${CURRENT}.dev${DATE}"
             sed -i "s/__version__ = .*/__version__ = \"${NIGHTLY}\"/" "$init_file"
