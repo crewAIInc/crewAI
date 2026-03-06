@@ -172,3 +172,135 @@ result = eval("5/1")
         "WARNING: Running code in unsafe mode", color="bold_magenta"
     )
     assert 5.0 == result
+
+
+# --- Security fix tests ---
+
+
+class TestCommandInjectionFix:
+    """Tests that library names cannot be used for command injection."""
+
+    def test_unsafe_mode_uses_subprocess_not_os_system(self, printer_mock):
+        """Verify that run_code_unsafe uses subprocess.run with list args,
+        not os.system with string interpolation."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        code = "result = 1 + 1"
+        malicious_library = "numpy; echo pwned"
+
+        with patch(
+            "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+        ) as subprocess_mock:
+            tool.run_code_unsafe(code, [malicious_library])
+
+            # subprocess.run should be called with a list, not a shell string
+            subprocess_mock.assert_called_once_with(
+                ["pip", "install", malicious_library],
+                check=True,
+            )
+
+    def test_unsafe_mode_no_os_system_call(self, printer_mock):
+        """Verify os.system is never called during library installation."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        code = "result = 1 + 1"
+
+        with patch(
+            "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.os.system"
+        ) as os_system_mock, patch(
+            "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+        ):
+            tool.run_code_unsafe(code, ["numpy"])
+            os_system_mock.assert_not_called()
+
+    def test_unsafe_mode_installs_multiple_libraries_safely(self, printer_mock):
+        """Verify each library is installed as a separate subprocess call."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        code = "result = 1 + 1"
+        libraries = ["numpy", "pandas", "requests"]
+
+        with patch(
+            "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+        ) as subprocess_mock:
+            tool.run_code_unsafe(code, libraries)
+
+            assert subprocess_mock.call_count == 3
+            for lib in libraries:
+                subprocess_mock.assert_any_call(
+                    ["pip", "install", lib],
+                    check=True,
+                )
+
+
+class TestSandboxEscapeFix:
+    """Tests that sandbox escape via __subclasses__ introspection is blocked."""
+
+    def test_subclasses_introspection_blocked(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """The classic sandbox escape via __subclasses__() must be blocked."""
+        tool = CodeInterpreterTool()
+        code = """
+for c in ().__class__.__bases__[0].__subclasses__():
+    if c.__name__ == 'BuiltinImporter':
+        result = c.load_module('os').system('id')
+        break
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "not allowed in the sandbox" in result
+
+    def test_class_attr_blocked(self, printer_mock, docker_unavailable_mock):
+        """Direct __class__ access must be blocked."""
+        tool = CodeInterpreterTool()
+        code = 'result = "".__class__'
+        result = tool.run(code=code, libraries_used=[])
+        assert "not allowed in the sandbox" in result
+
+    def test_bases_attr_blocked(self, printer_mock, docker_unavailable_mock):
+        """Direct __bases__ access must be blocked."""
+        tool = CodeInterpreterTool()
+        code = "result = str.__bases__"
+        result = tool.run(code=code, libraries_used=[])
+        assert "not allowed in the sandbox" in result
+
+    def test_mro_attr_blocked(self, printer_mock, docker_unavailable_mock):
+        """Direct __mro__ access must be blocked."""
+        tool = CodeInterpreterTool()
+        code = "result = str.__mro__"
+        result = tool.run(code=code, libraries_used=[])
+        assert "not allowed in the sandbox" in result
+
+    def test_subclasses_attr_blocked(self, printer_mock, docker_unavailable_mock):
+        """Direct __subclasses__ access must be blocked."""
+        tool = CodeInterpreterTool()
+        code = "result = object.__subclasses__()"
+        result = tool.run(code=code, libraries_used=[])
+        assert "not allowed in the sandbox" in result
+
+    def test_getattr_blocked_in_sandbox(self, printer_mock, docker_unavailable_mock):
+        """getattr() must be blocked to prevent attribute access bypass."""
+        tool = CodeInterpreterTool()
+        code = """
+result = getattr(str, "__bases__")
+"""
+        result = tool.run(code=code, libraries_used=[])
+        # Should be blocked by either the restricted attrs check or the builtins removal
+        assert "not allowed" in result or "not defined" in result
+
+    def test_safe_code_still_works(self, printer_mock, docker_unavailable_mock):
+        """Normal code without introspection must still execute correctly."""
+        tool = CodeInterpreterTool()
+        code = """
+x = [1, 2, 3]
+result = sum(x) * 2
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert result == 12
+
+    def test_restricted_attrs_check_method(self):
+        """Test _check_restricted_attrs directly."""
+        # Safe code should pass
+        SandboxPython._check_restricted_attrs("result = 2 + 2")
+
+        # Each restricted attr should raise
+        for attr in SandboxPython.RESTRICTED_ATTRS:
+            with pytest.raises(RuntimeError, match="not allowed in the sandbox"):
+                SandboxPython._check_restricted_attrs(f"x = obj.{attr}")
