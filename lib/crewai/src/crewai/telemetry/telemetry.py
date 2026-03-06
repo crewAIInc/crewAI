@@ -366,6 +366,7 @@ class Telemetry:
                             {
                                 "key": task.key,
                                 "id": str(task.id),
+                                "run_id": task.run_id,
                                 "description": task.description,
                                 "expected_output": task.expected_output,
                                 "async_execution?": task.async_execution,
@@ -450,6 +451,7 @@ class Telemetry:
                             {
                                 "key": task.key,
                                 "id": str(task.id),
+                                "run_id": task.run_id,
                                 "async_execution?": task.async_execution,
                                 "human_input?": task.human_input,
                                 "agent_role": (
@@ -858,6 +860,7 @@ class Telemetry:
                     [
                         {
                             "id": str(task.id),
+                            "run_id": task.run_id,
                             "description": task.description,
                             "expected_output": task.expected_output,
                             "async_execution?": task.async_execution,
@@ -908,6 +911,7 @@ class Telemetry:
                     [
                         {
                             "id": str(task.id),
+                            "run_id": task.run_id,
                             "description": task.description,
                             "output": task.output.raw if task.output else "",
                         }

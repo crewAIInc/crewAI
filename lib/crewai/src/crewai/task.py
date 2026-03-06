@@ -511,6 +511,21 @@ class Task(BaseModel):
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     @property
+    def run_id(self) -> str:
+        """Generate a collision-resistant run ID for this task execution.
+
+        Combines the deterministic task key with the unique instance UUID
+        to produce an identifier that is unique per task instance while
+        still being tied to the task's structural identity.
+
+        Returns:
+            str: A collision-resistant hexadecimal run ID.
+        """
+        return md5(
+            f"{self.key}|{self.id}".encode(), usedforsecurity=False
+        ).hexdigest()
+
+    @property
     def execution_duration(self) -> float | None:
         if not self.start_time or not self.end_time:
             return None
