@@ -13,7 +13,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from aiocache import Cache  # type: ignore[import-untyped]
-from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
+from aiocache.serializers import JsonSerializer  # type: ignore[import-untyped]
 
 from crewai_files.core.constants import DEFAULT_MAX_CACHE_ENTRIES, DEFAULT_TTL_SECONDS
 from crewai_files.uploaders.factory import ProviderType
@@ -23,6 +23,62 @@ if TYPE_CHECKING:
     from crewai_files.core.types import FileInput
 
 logger = logging.getLogger(__name__)
+
+
+class _CachedUploadSerializer(JsonSerializer):  # type: ignore[misc]
+    """JSON-based serializer that safely handles CachedUpload dataclass.
+
+    Uses JSON instead of pickle to prevent insecure deserialization
+    vulnerabilities (CWE-502).
+    """
+
+    def dumps(self, value: Any) -> str:  # type: ignore[override]
+        """Serialize value to JSON string, converting CachedUpload to dict."""
+        import json
+
+        if isinstance(value, CachedUpload):
+            data = {
+                "__cached_upload__": True,
+                "file_id": value.file_id,
+                "provider": value.provider,
+                "file_uri": value.file_uri,
+                "content_type": value.content_type,
+                "uploaded_at": value.uploaded_at.isoformat(),
+                "expires_at": value.expires_at.isoformat() if value.expires_at else None,
+            }
+            return json.dumps(data)
+        return json.dumps(value)
+
+    def loads(self, value: str | bytes | None) -> Any:  # type: ignore[override]
+        """Deserialize JSON string, reconstructing CachedUpload if applicable."""
+        import json
+
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            try:
+                value = value.decode("utf-8")
+            except UnicodeDecodeError:
+                return None
+        try:
+            data = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+        if isinstance(data, dict) and data.get("__cached_upload__"):
+            return CachedUpload(
+                file_id=data["file_id"],
+                provider=data["provider"],
+                file_uri=data.get("file_uri"),
+                content_type=data["content_type"],
+                uploaded_at=datetime.fromisoformat(data["uploaded_at"]),
+                expires_at=(
+                    datetime.fromisoformat(data["expires_at"])
+                    if data.get("expires_at")
+                    else None
+                ),
+            )
+        return data
 
 
 @dataclass
@@ -123,13 +179,13 @@ class UploadCache:
         if cache_type == "redis":
             self._cache = Cache(
                 Cache.REDIS,
-                serializer=PickleSerializer(),
+                serializer=_CachedUploadSerializer(),
                 namespace=namespace,
                 **cache_kwargs,
             )
         else:
             self._cache = Cache(
-                serializer=PickleSerializer(),
+                serializer=_CachedUploadSerializer(),
                 namespace=namespace,
             )
 

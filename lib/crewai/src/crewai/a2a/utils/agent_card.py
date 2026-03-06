@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from a2a.client.errors import A2AClientHTTPError
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 from aiocache import cached  # type: ignore[import-untyped]
-from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
+from aiocache.serializers import JsonSerializer  # type: ignore[import-untyped]
 import httpx
 
 from crewai.a2a.auth.client_schemes import APIKeyAuth, HTTPDigestAuth
@@ -220,7 +220,7 @@ def _fetch_agent_card_cached(
     return asyncio.run(coro)
 
 
-@cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]
+@cached(ttl=300, serializer=JsonSerializer())  # type: ignore[untyped-decorator]
 async def _afetch_agent_card_cached(
     endpoint: str,
     auth_hash: str,

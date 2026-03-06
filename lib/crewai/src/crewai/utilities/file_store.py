@@ -20,9 +20,9 @@ _file_store: Cache | None = None
 
 try:
     from aiocache import Cache
-    from aiocache.serializers import PickleSerializer
+    from aiocache.serializers import JsonSerializer
 
-    _file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
+    _file_store = Cache(Cache.MEMORY, serializer=JsonSerializer())
 except ImportError:
     logger.debug(
         "aiocache is not installed. File store features will be disabled. "
