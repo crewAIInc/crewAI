@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -16,6 +19,12 @@ concurrency:
 jobs:
   codex-smoke:
     name: codex-smoke
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        startsWith(github.head_ref, 'sync/')
+      )
     runs-on:
       - self-hosted
       - macOS
@@ -83,3 +92,13 @@ jobs:
         run: |
           set -euxo pipefail
           uv run python scripts/demo_openai_codex_hi.py
+
+      - name: Ask Codex to fix the sync PR when smoke fails
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo wangguanran/crewAI \
+            --body "@codex The self-hosted codex smoke check failed for this sync PR. Please investigate, update this branch, and submit a patch that gets the PR merge-ready."

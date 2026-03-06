@@ -98,3 +98,18 @@ jobs:
             ~/.local/share/uv
             .venv
           key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+
+  tests-summary:
+    name: tests
+    runs-on: ubuntu-latest
+    needs: tests
+    if: always()
+    steps:
+      - name: Check matrix results
+        run: |
+          if [ "${{ needs.tests.result }}" = "success" ] || [ "${{ needs.tests.result }}" = "skipped" ]; then
+            echo "All test jobs passed"
+          else
+            echo "One or more test jobs failed"
+            exit 1
+          fi

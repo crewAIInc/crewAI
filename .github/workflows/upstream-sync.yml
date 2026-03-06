@@ -125,7 +125,9 @@ jobs:
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Enable auto-merge for sync pull request
+        id: auto_merge
         if: steps.rebuild.outputs.no_changes != 'true'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -134,3 +136,13 @@ jobs:
             --repo wangguanran/crewAI \
             --auto \
             --merge
+
+      - name: Ask Codex to handle merge issues
+        if: steps.rebuild.outputs.no_changes != 'true' && steps.auto_merge.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          gh pr comment "${{ steps.pr.outputs.pr_number }}" \
+            --repo wangguanran/crewAI \
+            --body "@codex This automated upstream sync PR could not be set to auto-merge cleanly. Please resolve the merge issues, update the branch, and submit a patch."
