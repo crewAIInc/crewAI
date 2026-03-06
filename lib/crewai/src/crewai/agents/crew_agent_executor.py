@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-import contextvars
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Literal, cast

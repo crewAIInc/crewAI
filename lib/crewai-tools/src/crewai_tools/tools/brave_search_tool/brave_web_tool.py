@@ -27,14 +27,19 @@ class BraveWebSearchTool(BraveSearchToolBase):
         return params
 
     def _refine_response(self, response: dict[str, Any]) -> dict[str, Any]:
-        # Make the response more concise, and easier to consume
         results = response.get("web", {}).get("results", [])
-        return [
-            {
-                "url": result.get("url"),
-                "title": result.get("title"),
-                "description": result.get("extra_snippets")
-                or result.get("description"),
-            }
-            for result in results
-        ]
+        refined = []
+        for result in results:
+            snippets = result.get("extra_snippets") or []
+            if not snippets:
+                desc = result.get("description")
+                if desc:
+                    snippets = [desc]
+            refined.append(
+                {
+                    "url": result.get("url"),
+                    "title": result.get("title"),
+                    "snippets": snippets,
+                }
+            )
+        return refined
