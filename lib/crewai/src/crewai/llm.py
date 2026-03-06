@@ -665,7 +665,6 @@ class LLM(BaseLLM):
         else:
             self.stop = stop
 
-        self.set_callbacks(callbacks or [])
         self.set_env_callbacks()
 
     @staticmethod
@@ -1725,18 +1724,23 @@ class LLM(BaseLLM):
             if not self._invoke_before_llm_call_hooks(messages, from_agent):
                 raise ValueError("LLM call blocked by before_llm_call hook")
 
+            effective_callbacks = callbacks if callbacks is not None else self.callbacks
+
             # --- 5) Set up callbacks if provided
             with suppress_warnings():
-                if callbacks and len(callbacks) > 0:
-                    self.set_callbacks(callbacks)
                 try:
                     # --- 6) Prepare parameters for the completion call
                     params = self._prepare_completion_params(messages, tools)
+                    if effective_callbacks and len(effective_callbacks) > 0:
+                        # Avoid mutating LiteLLM global callback lists. Pass callbacks per request
+                        # so concurrent LLM instances don't race on shared global state.
+                        params["callbacks"] = effective_callbacks
+
                     # --- 7) Make the completion call and handle response
                     if self.stream:
                         result = self._handle_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -1745,7 +1749,7 @@ class LLM(BaseLLM):
                     else:
                         result = self._handle_non_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -1871,18 +1875,22 @@ class LLM(BaseLLM):
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
 
+            effective_callbacks = callbacks if callbacks is not None else self.callbacks
+
             with suppress_warnings():
-                if callbacks and len(callbacks) > 0:
-                    self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(
                         messages, tools, skip_file_processing=True
                     )
+                    if effective_callbacks and len(effective_callbacks) > 0:
+                        # Avoid mutating LiteLLM global callback lists. Pass callbacks per request
+                        # so concurrent LLM instances don't race on shared global state.
+                        params["callbacks"] = effective_callbacks
 
                     if self.stream:
                         return await self._ahandle_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -1891,7 +1899,7 @@ class LLM(BaseLLM):
 
                     return await self._ahandle_non_streaming_response(
                         params=params,
-                        callbacks=callbacks,
+                        callbacks=effective_callbacks,
                         available_functions=available_functions,
                         from_task=from_task,
                         from_agent=from_agent,
@@ -1929,6 +1937,18 @@ class LLM(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             response_model=response_model,
+                        )
+
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallFailedEvent(
+                            error=str(e),
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            call_id=get_current_call_id(),
+                        ),
+                    )
+                    raise
                         )
 
                     crewai_event_bus.emit(
