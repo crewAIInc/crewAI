@@ -1,0 +1,120 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync-main
+  cancel-in-progress: true
+
+jobs:
+  sync-upstream:
+    name: sync-upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch origin and upstream
+        run: |
+          set -euxo pipefail
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream https://github.com/crewAIInc/crewAI.git
+          else
+            git remote add upstream https://github.com/crewAIInc/crewAI.git
+          fi
+          git fetch --no-tags origin main
+          git fetch --no-tags upstream main
+
+      - name: Rebuild sync branch from latest upstream
+        id: rebuild
+        run: |
+          set -euxo pipefail
+          SYNC_BRANCH="sync/upstream-main"
+          PATCH_COMMITS_FILE="$(mktemp)"
+
+          git checkout -B "$SYNC_BRANCH" upstream/main
+
+          git rev-list --reverse --no-merges upstream/main..origin/main > "$PATCH_COMMITS_FILE"
+
+          if [ ! -s "$PATCH_COMMITS_FILE" ]; then
+            echo "No custom commits found on origin/main."
+          else
+            printf 'Applying %s custom commits\n' "$(wc -l < "$PATCH_COMMITS_FILE")"
+            cat "$PATCH_COMMITS_FILE"
+            while IFS= read -r sha; do
+              git cherry-pick "$sha" || {
+                git cherry-pick --abort
+                echo "conflict=true" >> "$GITHUB_OUTPUT"
+                echo "conflict_commit=$sha" >> "$GITHUB_OUTPUT"
+                exit 1
+              }
+            done < "$PATCH_COMMITS_FILE"
+          fi
+
+          if git diff --quiet origin/main HEAD; then
+            echo "No upstream delta to sync."
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git push --force-with-lease origin "$SYNC_BRANCH"
+          echo "sync_branch=$SYNC_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "upstream_sha=$(git rev-parse --short upstream/main)" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update sync pull request
+        if: steps.rebuild.outputs.no_changes != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          SYNC_BRANCH="${{ steps.rebuild.outputs.sync_branch }}"
+          UPSTREAM_SHA="${{ steps.rebuild.outputs.upstream_sha }}"
+
+          PR_NUMBER="$(gh pr list \
+            --repo wangguanran/crewAI \
+            --head "$SYNC_BRANCH" \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          PR_BODY=$(cat <<EOF
+          Automated upstream sync from \`crewAIInc/crewAI\`.
+
+          - Base: \`upstream/main\`
+          - Upstream SHA: \`${UPSTREAM_SHA}\`
+          - Strategy: rebuild from latest upstream, then cherry-pick all non-merge commits from \`origin/main\` that are not in \`upstream/main\`
+
+          Merge this PR into \`main\` to trigger the self-hosted Codex smoke validation workflow.
+          EOF
+          )
+
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr edit "$PR_NUMBER" \
+              --repo wangguanran/crewAI \
+              --title "chore: sync upstream (${UPSTREAM_SHA})" \
+              --body "$PR_BODY"
+          else
+            gh pr create \
+              --repo wangguanran/crewAI \
+              --base main \
+              --head "$SYNC_BRANCH" \
+              --title "chore: sync upstream (${UPSTREAM_SHA})" \
+              --body "$PR_BODY"
+          fi
