@@ -6,9 +6,7 @@ compatibility: crewai>=0.1.0
 metadata:
   author: test
   version: "1.0"
-allowed_tools:
-  - web-search
-  - file-read
+allowed-tools: web-search file-read
 ---
 
 ## Instructions

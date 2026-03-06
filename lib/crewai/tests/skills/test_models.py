@@ -73,27 +73,6 @@ class TestSkill:
         assert skill.references_dir == skill_dir / "references"
         assert skill.assets_dir == skill_dir / "assets"
 
-    def test_has_dirs_false(self, tmp_path: Path) -> None:
-        skill_dir = tmp_path / "test-skill"
-        skill_dir.mkdir()
-        fm = SkillFrontmatter(name="test-skill", description="desc")
-        skill = Skill(frontmatter=fm, path=skill_dir)
-        assert not skill.has_scripts()
-        assert not skill.has_references()
-        assert not skill.has_assets()
-
-    def test_has_dirs_true(self, tmp_path: Path) -> None:
-        skill_dir = tmp_path / "test-skill"
-        skill_dir.mkdir()
-        (skill_dir / "scripts").mkdir()
-        (skill_dir / "references").mkdir()
-        (skill_dir / "assets").mkdir()
-        fm = SkillFrontmatter(name="test-skill", description="desc")
-        skill = Skill(frontmatter=fm, path=skill_dir)
-        assert skill.has_scripts()
-        assert skill.has_references()
-        assert skill.has_assets()
-
     def test_with_disclosure_level(self, tmp_path: Path) -> None:
         fm = SkillFrontmatter(name="test-skill", description="desc")
         skill = Skill(frontmatter=fm, path=tmp_path)

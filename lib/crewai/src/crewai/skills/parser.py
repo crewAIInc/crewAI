@@ -146,8 +146,11 @@ def load_skill_resources(skill: Skill) -> Skill:
         skill = load_skill_instructions(skill)
 
     resource_files: dict[str, list[str]] = {}
-    for dir_name in ("scripts", "references", "assets"):
-        resource_dir = skill.path / dir_name
+    for dir_name, resource_dir in (
+        ("scripts", skill.scripts_dir),
+        ("references", skill.references_dir),
+        ("assets", skill.assets_dir),
+    ):
         if resource_dir.is_dir():
             resource_files[dir_name] = sorted(
                 str(f.relative_to(resource_dir))

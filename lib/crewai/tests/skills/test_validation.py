@@ -1,77 +1,81 @@
-"""Tests for skills/validation.py."""
+"""Tests for skills validation."""
 
 from pathlib import Path
 
 import pytest
 
+from crewai.skills.models import SkillFrontmatter
 from crewai.skills.validation import (
     MAX_SKILL_NAME_LENGTH,
     validate_directory_name,
-    validate_skill_name,
 )
 
 
-class TestValidateSkillName:
-    """Tests for validate_skill_name."""
+def _make(name: str) -> SkillFrontmatter:
+    """Create a SkillFrontmatter with the given name."""
+    return SkillFrontmatter(name=name, description="desc")
+
+
+class TestSkillNameValidation:
+    """Tests for skill name constraints via SkillFrontmatter."""
 
     def test_simple_name(self) -> None:
-        assert validate_skill_name("web-search") == "web-search"
+        assert _make("web-search").name == "web-search"
 
     def test_single_word(self) -> None:
-        assert validate_skill_name("search") == "search"
+        assert _make("search").name == "search"
 
     def test_numeric(self) -> None:
-        assert validate_skill_name("tool3") == "tool3"
+        assert _make("tool3").name == "tool3"
 
     def test_all_digits(self) -> None:
-        assert validate_skill_name("123") == "123"
+        assert _make("123").name == "123"
 
     def test_single_char(self) -> None:
-        assert validate_skill_name("a") == "a"
+        assert _make("a").name == "a"
 
     def test_max_length(self) -> None:
         name = "a" * MAX_SKILL_NAME_LENGTH
-        assert validate_skill_name(name) == name
+        assert _make(name).name == name
 
     def test_multi_hyphen_segments(self) -> None:
-        assert validate_skill_name("my-cool-skill") == "my-cool-skill"
+        assert _make("my-cool-skill").name == "my-cool-skill"
 
     def test_empty_raises(self) -> None:
-        with pytest.raises(ValueError, match="must not be empty"):
-            validate_skill_name("")
+        with pytest.raises(ValueError):
+            _make("")
 
     def test_too_long_raises(self) -> None:
-        name = "a" * (MAX_SKILL_NAME_LENGTH + 1)
-        with pytest.raises(ValueError, match="at most"):
-            validate_skill_name(name)
+        with pytest.raises(ValueError):
+            _make("a" * (MAX_SKILL_NAME_LENGTH + 1))
 
     def test_uppercase_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid skill name"):
-            validate_skill_name("MySkill")
+        with pytest.raises(ValueError):
+            _make("MySkill")
 
     def test_leading_hyphen_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid skill name"):
-            validate_skill_name("-skill")
+        with pytest.raises(ValueError):
+            _make("-skill")
 
     def test_trailing_hyphen_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid skill name"):
-            validate_skill_name("skill-")
+        with pytest.raises(ValueError):
+            _make("skill-")
 
     def test_consecutive_hyphens_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid skill name"):
-            validate_skill_name("my--skill")
+        with pytest.raises(ValueError):
+            _make("my--skill")
 
     def test_underscore_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid skill name"):
-            validate_skill_name("my_skill")
+        with pytest.raises(ValueError):
+            _make("my_skill")
 
     def test_space_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid skill name"):
-            validate_skill_name("my skill")
+        with pytest.raises(ValueError):
+            _make("my skill")
 
     def test_special_chars_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid skill name"):
-            validate_skill_name("skill@v1")
+        with pytest.raises(ValueError):
+            _make("skill@v1")
 
 
 class TestValidateDirectoryName:

@@ -28,26 +28,29 @@ The directory name must match the `name` field in `SKILL.md`.
 ```markdown
 ---
 name: my-skill
-description: Short description of what this skill does.
+description: Short description of what this skill does and when to use it.
 license: Apache-2.0                    # optional
 compatibility: crewai>=0.1.0          # optional
 metadata:                              # optional
   author: your-name
   version: "1.0"
-allowed_tools:                         # optional
-  - web-search
-  - file-read
+allowed-tools: web-search file-read   # optional, space-delimited
 ---
 
 Instructions for the agent go here. This markdown body is injected
 into the agent's prompt when the skill is activated.
 ```
 
-### Name Constraints
+### Frontmatter Fields
 
-- 1–64 characters
-- Lowercase alphanumeric and hyphens only
-- No leading, trailing, or consecutive hyphens
+| Field           | Required | Constraints                                                              |
+| :-------------- | :------- | :----------------------------------------------------------------------- |
+| `name`          | Yes      | 1–64 chars. Lowercase alphanumeric and hyphens. No leading/trailing/consecutive hyphens. Must match directory name. |
+| `description`   | Yes      | 1–1024 chars. Describes what the skill does and when to use it.          |
+| `license`       | No       | License name or reference to a bundled license file.                     |
+| `compatibility` | No       | Max 500 chars. Environment requirements (products, packages, network).   |
+| `metadata`      | No       | Arbitrary string key-value mapping.                                      |
+| `allowed-tools` | No       | Space-delimited list of pre-approved tools. Experimental.                |
 
 ## Usage
 
@@ -103,32 +106,11 @@ agent = Agent(
 
 Skills load progressively through three levels:
 
-| Level | What's loaded | When |
-|---|---|---|
-| `METADATA` | Name, description, frontmatter fields | `discover_skills()` |
-| `INSTRUCTIONS` | Full SKILL.md body text | `activate_skill()` |
-| `RESOURCES` | File listings from scripts/, references/, assets/ | `load_resources()` |
+| Level            | What's loaded                                     | When               |
+| :--------------- | :------------------------------------------------ | :----------------- |
+| `METADATA`       | Name, description, frontmatter fields             | `discover_skills()` |
+| `INSTRUCTIONS`   | Full SKILL.md body text                           | `activate_skill()` |
+| `RESOURCES`      | File listings from scripts/, references/, assets/ | `load_resources()` |
 
 During normal agent execution, skills are automatically discovered and activated (promoted to `INSTRUCTIONS`). Use `load_resources()` only when you need to inspect available files programmatically.
 
-## Events
-
-Skill operations emit events via the CrewAI event bus:
-
-| Event | When |
-|---|---|
-| `SkillDiscoveryStartedEvent` | Discovery scan begins |
-| `SkillDiscoveryCompletedEvent` | Discovery scan finishes |
-| `SkillLoadedEvent` | A skill is loaded at metadata level |
-| `SkillActivatedEvent` | A skill is promoted to instructions level |
-| `SkillLoadFailedEvent` | A skill fails to load |
-
-```python
-from crewai.events import BaseEventListener, SkillActivatedEvent
-
-class SkillLogger(BaseEventListener):
-    def setup_listeners(self, crewai_event_bus):
-        @crewai_event_bus.on(SkillActivatedEvent)
-        def on_activated(source, event):
-            print(f"Activated: {event.skill_name}")
-```

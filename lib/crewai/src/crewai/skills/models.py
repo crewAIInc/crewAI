@@ -8,10 +8,18 @@ from __future__ import annotations
 
 from enum import IntEnum
 from pathlib import Path
+from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
-from crewai.skills.validation import validate_skill_name
+from crewai.skills.validation import (
+    MAX_SKILL_NAME_LENGTH,
+    MIN_SKILL_NAME_LENGTH,
+    SKILL_NAME_PATTERN,
+)
+
+
+MAX_DESCRIPTION_LENGTH: int = 1024
 
 
 class DisclosureLevel(IntEnum):
@@ -28,30 +36,41 @@ class DisclosureLevel(IntEnum):
     RESOURCES = 3
 
 
-class SkillFrontmatter(BaseModel, frozen=True):
+class SkillFrontmatter(BaseModel):
     """YAML frontmatter from a SKILL.md file.
 
     Attributes:
         name: Unique skill identifier (1-64 chars, lowercase alphanumeric + hyphens).
-        description: Human-readable description of the skill.
-        license: Optional SPDX license identifier.
-        compatibility: Optional compatibility information.
+        description: Human-readable description (1-1024 chars).
+        license: Optional license name or reference.
+        compatibility: Optional compatibility information (max 500 chars).
         metadata: Optional additional metadata as string key-value pairs.
-        allowed_tools: Optional list of tools the skill may use.
+        allowed_tools: Optional space-delimited list of pre-approved tools.
     """
 
-    name: str
-    description: str
-    license: str | None = None
-    compatibility: str | None = None
-    metadata: dict[str, str] | None = None
-    allowed_tools: list[str] | None = None
+    model_config = {"frozen": True, "populate_by_name": True}
 
-    @field_validator("name")
+    name: str = Field(
+        min_length=MIN_SKILL_NAME_LENGTH,
+        max_length=MAX_SKILL_NAME_LENGTH,
+        pattern=SKILL_NAME_PATTERN,
+    )
+    description: str = Field(min_length=1, max_length=MAX_DESCRIPTION_LENGTH)
+    license: str | None = None
+    compatibility: str | None = Field(default=None, max_length=500)
+    metadata: dict[str, str] | None = None
+    allowed_tools: list[str] | None = Field(default=None, alias="allowed-tools")
+
+    @model_validator(mode="before")
     @classmethod
-    def check_name(cls, v: str) -> str:
-        """Validate skill name against spec constraints."""
-        return validate_skill_name(v)
+    def parse_allowed_tools(cls, values: dict[str, Any]) -> dict[str, Any]:
+        """Parse space-delimited allowed-tools string into a list."""
+        key = "allowed-tools"
+        alt_key = "allowed_tools"
+        raw = values.get(key) or values.get(alt_key)
+        if isinstance(raw, str):
+            values[key] = raw.split()
+        return values
 
 
 class Skill(BaseModel):
@@ -95,18 +114,6 @@ class Skill(BaseModel):
     def assets_dir(self) -> Path:
         """Path to the assets directory."""
         return self.path / "assets"
-
-    def has_scripts(self) -> bool:
-        """Check if the skill has a scripts directory."""
-        return self.scripts_dir.is_dir()
-
-    def has_references(self) -> bool:
-        """Check if the skill has a references directory."""
-        return self.references_dir.is_dir()
-
-    def has_assets(self) -> bool:
-        """Check if the skill has an assets directory."""
-        return self.assets_dir.is_dir()
 
     def with_disclosure_level(
         self,
