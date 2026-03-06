@@ -393,8 +393,44 @@ def test_azure_raises_error_when_api_key_missing():
 
     # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ValueError, match="Azure API key is required"):
+        with pytest.raises(ValueError, match="Azure credentials required"):
             AzureCompletion(model="gpt-4", endpoint="https://test.openai.azure.com")
+
+
+def test_azure_prefers_az_ad_token_over_env_api_key():
+    """
+    Ensure AZURE_AD_TOKEN takes precedence over AZURE_API_KEY env var when no explicit api_key param is provided
+    """
+    pytest.importorskip("azure.ai.inference")
+    from crewai.llms.providers.azure.completion import AzureCompletion
+    from azure.core.credentials import AzureKeyCredential
+
+    env = {
+        "AZURE_AD_TOKEN": "test-ad-token",
+        "AZURE_API_KEY": "env-test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com",
+    }
+    with patch.dict(os.environ, env, clear=True):
+        completion = AzureCompletion(model="gpt-4", endpoint=os.environ["AZURE_ENDPOINT"])
+        assert not isinstance(completion._credential, AzureKeyCredential)
+
+
+def test_explicit_api_key_precedence_over_az_ad_token():
+    """
+    Explicit `api_key` parameter should take precedence over AZURE_AD_TOKEN env var
+    """
+    pytest.importorskip("azure.ai.inference")
+    from crewai.llms.providers.azure.completion import AzureCompletion
+    from azure.core.credentials import AzureKeyCredential
+
+    env = {
+        "AZURE_AD_TOKEN": "test-ad-token",
+        "AZURE_API_KEY": "env-test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com",
+    }
+    with patch.dict(os.environ, env, clear=True):
+        completion = AzureCompletion(model="gpt-4", api_key="explicit-key", endpoint=os.environ["AZURE_ENDPOINT"])
+        assert isinstance(completion._credential, AzureKeyCredential)
 
 
 def test_azure_endpoint_configuration():
