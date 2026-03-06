@@ -777,6 +777,193 @@ def test_bedrock_tool_use_conversation_flow():
         assert mock_converse.call_count == 2
 
 
+def test_bedrock_parallel_tool_results_grouped_in_single_message():
+    """
+    Test that multiple consecutive tool result messages are grouped into
+    a single user message for Bedrock's Converse API.
+
+    Bedrock requires all toolResult blocks for a given assistant response
+    to appear in one user message. Without grouping, parallel tool calls
+    cause a ValidationException.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    # Simulate: user prompt -> assistant calls two tools -> two tool results
+    test_messages = [
+        {"role": "user", "content": "Calculate 25 + 17 AND 10 * 5"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_add",
+                    "function": {
+                        "name": "add_tool",
+                        "arguments": '{"a": 25, "b": 17}',
+                    },
+                },
+                {
+                    "id": "call_mul",
+                    "function": {
+                        "name": "multiply_tool",
+                        "arguments": '{"a": 10, "b": 5}',
+                    },
+                },
+            ],
+        },
+        {"role": "tool", "content": "42", "tool_call_id": "call_add"},
+        {"role": "tool", "content": "50", "tool_call_id": "call_mul"},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_converse(test_messages)
+
+    # Expected structure:
+    # Message 0: user (prompt)
+    # Message 1: assistant (toolUse A, toolUse B)
+    # Message 2: user (toolResult A, toolResult B) <- grouped!
+    assert len(formatted_messages) == 3, (
+        f"Expected 3 messages (user, assistant, user with grouped tool results), "
+        f"got {len(formatted_messages)}"
+    )
+
+    # Verify the tool results message
+    tool_results_msg = formatted_messages[2]
+    assert tool_results_msg["role"] == "user"
+    assert len(tool_results_msg["content"]) == 2, (
+        f"Expected 2 toolResult blocks in one message, "
+        f"got {len(tool_results_msg['content'])}"
+    )
+
+    # Verify both tool results are present
+    tool_result_ids = [
+        block["toolResult"]["toolUseId"]
+        for block in tool_results_msg["content"]
+    ]
+    assert "call_add" in tool_result_ids
+    assert "call_mul" in tool_result_ids
+
+
+def test_bedrock_three_parallel_tool_results_grouped():
+    """
+    Test that three or more consecutive tool results are all grouped
+    into a single user message.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    test_messages = [
+        {"role": "user", "content": "Do three things"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"id": "call_1", "function": {"name": "tool_a", "arguments": "{}"}},
+                {"id": "call_2", "function": {"name": "tool_b", "arguments": "{}"}},
+                {"id": "call_3", "function": {"name": "tool_c", "arguments": "{}"}},
+            ],
+        },
+        {"role": "tool", "content": "result_1", "tool_call_id": "call_1"},
+        {"role": "tool", "content": "result_2", "tool_call_id": "call_2"},
+        {"role": "tool", "content": "result_3", "tool_call_id": "call_3"},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_converse(test_messages)
+
+    assert len(formatted_messages) == 3
+    tool_results_msg = formatted_messages[2]
+    assert tool_results_msg["role"] == "user"
+    assert len(tool_results_msg["content"]) == 3, (
+        f"Expected 3 toolResult blocks grouped, got {len(tool_results_msg['content'])}"
+    )
+
+    for block in tool_results_msg["content"]:
+        assert "toolResult" in block
+
+
+def test_bedrock_single_tool_result_still_works():
+    """
+    Test that a single tool result still works correctly after the
+    grouping change (regression test).
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    test_messages = [
+        {"role": "user", "content": "What is the weather?"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_weather",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"location": "NYC"}',
+                    },
+                },
+            ],
+        },
+        {"role": "tool", "content": "Sunny, 75F", "tool_call_id": "call_weather"},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_converse(test_messages)
+
+    assert len(formatted_messages) == 3
+    tool_results_msg = formatted_messages[2]
+    assert tool_results_msg["role"] == "user"
+    assert len(tool_results_msg["content"]) == 1
+    assert tool_results_msg["content"][0]["toolResult"]["toolUseId"] == "call_weather"
+
+
+def test_bedrock_multi_turn_tool_results_not_merged_across_turns():
+    """
+    Test that tool results from different assistant turns are NOT merged.
+    Only consecutive tool results (from a single assistant response) should
+    be grouped together.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    test_messages = [
+        {"role": "user", "content": "First question"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"id": "call_1", "function": {"name": "tool_a", "arguments": "{}"}},
+            ],
+        },
+        {"role": "tool", "content": "result_1", "tool_call_id": "call_1"},
+        # Assistant responds with text, then user asks again
+        {"role": "assistant", "content": "Here is the first result."},
+        {"role": "user", "content": "Now do something else"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"id": "call_2", "function": {"name": "tool_b", "arguments": "{}"}},
+            ],
+        },
+        {"role": "tool", "content": "result_2", "tool_call_id": "call_2"},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_converse(test_messages)
+
+    # Tool results from different turns should be in separate messages
+    tool_result_messages = [
+        msg for msg in formatted_messages
+        if msg["role"] == "user"
+        and isinstance(msg.get("content"), list)
+        and msg["content"]
+        and isinstance(msg["content"][0], dict)
+        and "toolResult" in msg["content"][0]
+    ]
+    assert len(tool_result_messages) == 2, (
+        f"Expected 2 separate tool result messages (one per turn), "
+        f"got {len(tool_result_messages)}"
+    )
+    # Each should have exactly 1 tool result
+    for msg in tool_result_messages:
+        assert len(msg["content"]) == 1
+
+
 def test_bedrock_handles_cohere_conversation_requirements():
     """
     Test that Bedrock properly handles Cohere model's requirement for user message at end
