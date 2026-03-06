@@ -130,7 +130,8 @@ class BraveSearchTool(BaseTool):
             if country := kwargs.get("country"):
                 payload["country"] = country
 
-            if search_lang := kwargs.get("search_lang"):
+            # Fallback to "search_language" for backwards compatibility
+            if search_lang := kwargs.get("search_lang") or kwargs.get("search_language"):
                 payload["search_lang"] = search_lang
 
             # Fallback to deprecated n_results parameter if no count is provided
