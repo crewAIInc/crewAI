@@ -299,7 +299,8 @@ class Agent(BaseAgent):
         """Resolve skill paths into loaded Skill objects.
 
         Path entries trigger discovery and activation. Skill entries pass through.
-        Crew-level skill paths are merged in.
+        Crew-level skill paths are merged in. Skips work when all items are
+        already resolved and there are no crew-level paths to merge.
         """
         crew_skills: list[Path] | None = (
             self.crew.skills
@@ -308,6 +309,10 @@ class Agent(BaseAgent):
         )
 
         if not self.skills and not crew_skills:
+            return
+
+        has_unresolved = self.skills and any(isinstance(s, Path) for s in self.skills)
+        if not has_unresolved and not crew_skills:
             return
 
         seen: set[str] = set()
