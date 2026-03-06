@@ -35,6 +35,7 @@ jobs:
         run: |
           set -euxo pipefail
           rm -rf "${{ runner.workspace }}/${{ github.event.repository.name }}"
+          mkdir -p "${{ runner.workspace }}/${{ github.event.repository.name }}"
 
       - name: Checkout code
         uses: actions/checkout@v4
