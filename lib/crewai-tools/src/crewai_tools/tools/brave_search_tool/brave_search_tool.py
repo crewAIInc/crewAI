@@ -11,16 +11,10 @@ from pydantic.types import StringConstraints
 import requests
 
 from crewai_tools.tools.brave_search_tool.schemas import WebSearchParams
+from crewai_tools.tools.brave_search_tool.base import _save_results_to_file
 
 
 load_dotenv()
-
-
-def _save_results_to_file(content: str) -> None:
-    """Saves the search results to a file."""
-    filename = f"search_results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-    with open(filename, "w") as file:
-        file.write(content)
 
 
 FreshnessPreset = Literal["pd", "pw", "pm", "py"]
@@ -82,13 +76,15 @@ class BraveSearchTool(BaseTool):
             if not query:
                 raise ValueError("Query is required")
 
-            payload = { "q": query }
+            payload = {"q": query}
 
             if country := kwargs.get("country"):
                 payload["country"] = country
 
             # Fallback to "search_language" for backwards compatibility
-            if search_lang := kwargs.get("search_lang") or kwargs.get("search_language"):
+            if search_lang := kwargs.get("search_lang") or kwargs.get(
+                "search_language"
+            ):
                 payload["search_lang"] = search_lang
 
             # Fallback to deprecated n_results parameter if no count is provided
