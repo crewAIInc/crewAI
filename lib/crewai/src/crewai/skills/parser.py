@@ -7,6 +7,7 @@ and provides progressive loading functions for skill data.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 from typing import Any
 
 import yaml
@@ -16,6 +17,7 @@ from crewai.skills.validation import validate_directory_name
 
 
 SKILL_FILENAME: str = "SKILL.md"
+_CLOSING_DELIMITER: re.Pattern[str] = re.compile(r"\n---[ \t]*(?:\n|$)")
 
 
 class SkillParseError(ValueError):
@@ -38,13 +40,13 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
         msg = "SKILL.md must start with '---' frontmatter delimiter"
         raise SkillParseError(msg)
 
-    end_idx = content.find("---", 3)
-    if end_idx == -1:
+    match = _CLOSING_DELIMITER.search(content, pos=3)
+    if match is None:
         msg = "SKILL.md missing closing '---' frontmatter delimiter"
         raise SkillParseError(msg)
 
-    yaml_content = content[3:end_idx].strip()
-    body = content[end_idx + 3 :].strip()
+    yaml_content = content[3 : match.start()].strip()
+    body = content[match.end() :].strip()
 
     try:
         frontmatter = yaml.safe_load(yaml_content)

@@ -48,6 +48,12 @@ class TestParseFrontmatter:
         fm, body = parse_frontmatter(content)
         assert "---" in body
 
+    def test_inline_triple_dash_in_yaml_value(self) -> None:
+        content = '---\nname: test\ndescription: "Use---carefully"\n---\n\nBody.'
+        fm, body = parse_frontmatter(content)
+        assert fm["description"] == "Use---carefully"
+        assert body == "Body."
+
     def test_unicode_content(self) -> None:
         content = "---\nname: test\ndescription: Beschreibung\n---\n\nUnicode: \u00e4\u00f6\u00fc\u00df"
         fm, body = parse_frontmatter(content)
