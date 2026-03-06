@@ -763,7 +763,7 @@ memory = Memory(
 
 ## Community Memory Backends
 
-The CrewAI community has built alternative memory backends for specific use cases.
+The CrewAI community has built alternative memory backends. These are maintained independently and may have different APIs or storage patterns.
 
 ### crewai-soul (Markdown-Native Memory)
 
@@ -781,18 +781,14 @@ The CrewAI community has built alternative memory backends for specific use case
 pip install crewai-soul
 ```
 
-**Usage:**
+**Standalone usage:**
 
 ```python
-from crewai import Crew
 from crewai_soul import SoulMemory
 
-# Drop-in replacement for Memory
-crew = Crew(
-    agents=[researcher, writer],
-    tasks=[...],
-    memory=SoulMemory(),
-)
+memory = SoulMemory()
+memory.remember("We decided to use PostgreSQL.")
+matches = memory.recall("database decision")
 ```
 
 After running, check `MEMORY.md`:
@@ -800,8 +796,8 @@ After running, check `MEMORY.md`:
 ```markdown
 # Memory Log
 
-## 2026-03-06 18:30:15 UTC
-We decided to use PostgreSQL for the user database.
+## YYYY-MM-DD HH:MM:SS UTC
+We decided to use PostgreSQL.
 ```
 
 **Features:**
@@ -814,7 +810,6 @@ We decided to use PostgreSQL for the user database.
 **Links:**
 - [GitHub](https://github.com/menonpg/crewai-soul)
 - [PyPI](https://pypi.org/project/crewai-soul/)
-- [Comparison: crewai-soul vs CrewAI Memory](https://menonlab-blog-production.up.railway.app/blog/crewai-soul-vs-crewai-memory)
 
 
 ## Discovery
