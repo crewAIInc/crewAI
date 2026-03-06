@@ -2288,6 +2288,45 @@ def test_conditional_task_uses_last_output(researcher, writer):
             )  # Third task used first task's output
 
 
+def test_sequential_tasks_preserve_declared_order(researcher):
+    """Sequential execution should preserve the order tasks are declared."""
+    first_task = Task(
+        description="Task 2",
+        expected_output="Output B",
+        agent=researcher,
+    )
+    second_task = Task(
+        description="Task 10",
+        expected_output="Output A",
+        agent=researcher,
+    )
+    third_task = Task(
+        description="Task 1",
+        expected_output="Output C",
+        agent=researcher,
+    )
+
+    declared_order = [first_task.description, second_task.description, third_task.description]
+    observed_order: list[str] = []
+
+    def capture_execution_order(task: Task, context=None, tools=None):
+        observed_order.append(task.description)
+        return f"result:{task.description}"
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[first_task, second_task, third_task],
+        process=Process.sequential,
+    )
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = capture_execution_order
+        result = crew.kickoff()
+
+    assert observed_order == declared_order
+    assert [task_output.description for task_output in result.tasks_output] == declared_order
+
+
 @pytest.mark.vcr()
 def test_conditional_tasks_result_collection(researcher, writer):
     """Test that task outputs are properly collected based on execution status."""
