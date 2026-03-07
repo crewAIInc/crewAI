@@ -18,6 +18,16 @@ from crewai.memory.types import MemoryRecord, ScopeInfo
 
 _logger = logging.getLogger(__name__)
 
+
+def _safe_json_loads(value: str | None, default: Any) -> Any:
+    """Parse JSON string, returning default on failure."""
+    if not value:
+        return default
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return default
+
 # Default embedding vector dimensionality (matches OpenAI text-embedding-3-small).
 # Used when creating new tables and for zero-vector placeholder scans.
 # Callers can override via the ``vector_dim`` constructor parameter.
@@ -296,8 +306,8 @@ class LanceDBStorage:
             id=str(row["id"]),
             content=str(row["content"]),
             scope=str(row["scope"]),
-            categories=json.loads(row["categories_str"]) if row.get("categories_str") else [],
-            metadata=json.loads(row["metadata_str"]) if row.get("metadata_str") else {},
+            categories=_safe_json_loads(row.get("categories_str"), []),
+            metadata=_safe_json_loads(row.get("metadata_str"), {}),
             importance=float(row.get("importance", 0.5)),
             created_at=_parse_dt(row.get("created_at")),
             last_accessed=_parse_dt(row.get("last_accessed")),

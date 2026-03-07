@@ -65,7 +65,25 @@ class Converter(OutputConverter):
                 if isinstance(response, BaseModel):
                     result = response
                 else:
-                    result = self.model.model_validate_json(response)
+                    try:
+                        result = self.model.model_validate_json(response)
+                    except ValidationError:
+                        # LLM may return markdown-wrapped JSON even with function calling
+                        result = handle_partial_json(
+                            result=response,
+                            model=self.model,
+                            is_json_output=False,
+                            agent=None,
+                        )
+                        if not isinstance(result, BaseModel):
+                            if isinstance(result, dict):
+                                result = self.model.model_validate(result)
+                            elif isinstance(result, str):
+                                result = self.model.model_validate_json(result)
+                            else:
+                                raise ConverterError(
+                                    "handle_partial_json returned an unexpected type."
+                                ) from None
             else:
                 response = self.llm.call(
                     [
