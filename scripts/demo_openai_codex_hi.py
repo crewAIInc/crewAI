@@ -10,7 +10,7 @@ import os
 import sys
 
 from crewai.llm import LLM
-from _codex_auth import codex_auth_status
+from _codex_auth import codex_auth_status, local_openai_api_key
 
 
 def main() -> int:
@@ -29,6 +29,7 @@ def main() -> int:
 
     os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
     logged_in, login_message = codex_auth_status()
+    auth_json_api_key, auth_json_api_key_message = local_openai_api_key()
 
     if logged_in:
         # Default mode: prefer local Codex OAuth when signed in.
@@ -44,6 +45,9 @@ def main() -> int:
         os.environ.pop("CREWAI_OPENAI_AUTH_MODE", None)
         auth_mode = "api_key"
         auth_strategy = "api_key_fallback"
+        if not os.getenv("OPENAI_API_KEY") and auth_json_api_key:
+            os.environ["OPENAI_API_KEY"] = auth_json_api_key
+            login_message = auth_json_api_key_message
         if not os.getenv("OPENAI_API_KEY"):
             print("auth_strategy=api_key_fallback")
             print(f"codex_login_status={login_message}")

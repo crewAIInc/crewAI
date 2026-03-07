@@ -11,7 +11,7 @@ import sys
 
 import openai
 from crewai.llm import LLM
-from _codex_auth import codex_auth_status
+from _codex_auth import codex_auth_status, local_openai_api_key
 
 
 def _targets_codex_model(model: str) -> bool:
@@ -23,6 +23,7 @@ def _targets_codex_model(model: str) -> bool:
 def _configure_auth(model: str) -> tuple[str, str]:
     """Choose auth mode based on model family and local environment."""
     logged_in, login_message = codex_auth_status()
+    auth_json_api_key, auth_json_api_key_message = local_openai_api_key()
     if _targets_codex_model(model) and logged_in:
         os.environ["CREWAI_OPENAI_AUTH_MODE"] = "oauth_codex"
         os.environ.pop("OPENAI_API_KEY", None)
@@ -33,6 +34,9 @@ def _configure_auth(model: str) -> tuple[str, str]:
     os.environ.pop("CREWAI_OPENAI_AUTH_MODE", None)
     if os.getenv("OPENAI_API_KEY"):
         return "api_key", login_message
+    if auth_json_api_key:
+        os.environ["OPENAI_API_KEY"] = auth_json_api_key
+        return "api_key", auth_json_api_key_message
 
     if logged_in:
         return "codex_oauth_unusable_for_non_codex_model", login_message

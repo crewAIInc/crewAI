@@ -15,33 +15,54 @@ def _codex_home() -> Path:
     return Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser()
 
 
-def local_codex_auth_status() -> tuple[bool, str]:
-    """Return whether local auth.json contains usable Codex credentials."""
+def _read_local_auth_json() -> tuple[dict[str, object] | None, str]:
+    """Read local auth.json and return either the payload or a readable error."""
     auth_json_path = _codex_home() / "auth.json"
     if not auth_json_path.exists():
-        return False, f"codex auth.json not found at {auth_json_path}"
+        return None, f"codex auth.json not found at {auth_json_path}"
 
     try:
         payload = json.loads(auth_json_path.read_text(encoding="utf-8"))
     except OSError as exc:
-        return False, f"codex auth.json at {auth_json_path} is unreadable: {exc}"
+        return None, f"codex auth.json at {auth_json_path} is unreadable: {exc}"
     except UnicodeDecodeError as exc:
-        return False, f"codex auth.json at {auth_json_path} is not valid UTF-8: {exc}"
+        return None, f"codex auth.json at {auth_json_path} is not valid UTF-8: {exc}"
     except json.JSONDecodeError as exc:
-        return False, f"codex auth.json at {auth_json_path} is invalid: {exc.msg}"
+        return None, f"codex auth.json at {auth_json_path} is invalid: {exc.msg}"
 
     if not isinstance(payload, dict):
-        return False, f"codex auth.json at {auth_json_path} is not a JSON object"
+        return None, f"codex auth.json at {auth_json_path} is not a JSON object"
+
+    return payload, f"codex auth.json loaded from {auth_json_path}"
+
+
+def local_openai_api_key() -> tuple[str | None, str]:
+    """Return OPENAI_API_KEY stored in local auth.json when present."""
+    payload, message = _read_local_auth_json()
+    if payload is None:
+        return None, message
+
+    api_key = payload.get("OPENAI_API_KEY")
+    if isinstance(api_key, str) and api_key:
+        return api_key, message
+
+    auth_json_path = _codex_home() / "auth.json"
+    return None, f"codex auth.json at {auth_json_path} does not contain OPENAI_API_KEY"
+
+
+def local_codex_auth_status() -> tuple[bool, str]:
+    """Return whether local auth.json contains usable Codex OAuth credentials."""
+    payload, message = _read_local_auth_json()
+    if payload is None:
+        return False, message
 
     tokens = payload.get("tokens")
     if isinstance(tokens, dict) and (
         tokens.get("access_token") or tokens.get("refresh_token")
     ):
-        return True, f"codex auth.json loaded from {auth_json_path}"
+        return True, message
 
-    if payload.get("OPENAI_API_KEY"):
-        return True, f"codex auth.json contains OPENAI_API_KEY at {auth_json_path}"
-
+    auth_json_path = _codex_home() / "auth.json"
     return False, f"codex auth.json at {auth_json_path} does not contain usable credentials"
 
 
