@@ -1,0 +1,54 @@
+---
+title: Fía Signals Tools
+description: Add crypto market intelligence tools from fia-signals-tools to CrewAI agents
+icon: chart-line
+mode: "wide"
+---
+
+# `Fía Signals Tools`
+
+`fia-signals-tools` is a third-party package with LangChain-compatible crypto intelligence tools that work with CrewAI agents.
+
+## Installation
+
+```bash
+pip install fia-signals-tools
+```
+
+## Available Tools
+
+- `fia_market_regime()` for trending, ranging, and volatile market detection
+- `fia_crypto_signals(symbol)` for BUY/SELL/HOLD signals with RSI, MACD, and ADX
+- `fia_defi_yields()` for DeFi yield opportunities from Aave, Compound, Curve, and Lido
+
+## Usage with CrewAI
+
+```python
+from crewai import Agent, Task, Crew
+from fia_signals_tools import LANGCHAIN_TOOLS
+
+crypto_analyst = Agent(
+    role="Crypto Market Analyst",
+    goal="Analyze market conditions and provide trading recommendations",
+    backstory="Expert in technical analysis and DeFi",
+    tools=LANGCHAIN_TOOLS,
+    verbose=True,
+)
+
+task = Task(
+    description="Analyze current BTC market regime and identify DeFi yield opportunities",
+    agent=crypto_analyst,
+)
+
+crew = Crew(agents=[crypto_analyst], tasks=[task])
+result = crew.kickoff()
+```
+
+## Premium Capabilities
+
+Fía Signals also offers premium tools, including wallet risk analysis and smart contract auditing, available through x402 micropayments.
+
+## References
+
+- Source: [Odds7/fia-signals-mcp](https://github.com/Odds7/fia-signals-mcp)
+- Documentation: [fiasignals.com](https://fiasignals.com)
