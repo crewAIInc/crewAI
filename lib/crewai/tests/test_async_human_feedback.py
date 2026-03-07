@@ -897,7 +897,7 @@ class TestCollapseToOutcomeJsonParsing:
         """Test that JSON string response from LLM is correctly parsed."""
         flow = Flow()
 
-        with patch("crewai.llm.LLM") as MockLLM:
+        with patch("crewai.flow.flow.LLM") as MockLLM:
             mock_llm = MagicMock()
             # Simulate LLM returning JSON string (the bug we fixed)
             mock_llm.call.return_value = '{"outcome": "approved"}'
@@ -915,7 +915,7 @@ class TestCollapseToOutcomeJsonParsing:
         """Test that plain string response is correctly matched."""
         flow = Flow()
 
-        with patch("crewai.llm.LLM") as MockLLM:
+        with patch("crewai.flow.flow.LLM") as MockLLM:
             mock_llm = MagicMock()
             # Simulate LLM returning plain outcome string
             mock_llm.call.return_value = "rejected"
@@ -933,7 +933,7 @@ class TestCollapseToOutcomeJsonParsing:
         """Test that invalid JSON falls back to string matching."""
         flow = Flow()
 
-        with patch("crewai.llm.LLM") as MockLLM:
+        with patch("crewai.flow.flow.LLM") as MockLLM:
             mock_llm = MagicMock()
             # Invalid JSON that contains "approved"
             mock_llm.call.return_value = "{invalid json but says approved"
@@ -951,7 +951,7 @@ class TestCollapseToOutcomeJsonParsing:
         """Test that LLM exception triggers fallback to simple prompting."""
         flow = Flow()
 
-        with patch("crewai.llm.LLM") as MockLLM:
+        with patch("crewai.flow.flow.LLM") as MockLLM:
             mock_llm = MagicMock()
             # First call raises, second call succeeds (fallback)
             mock_llm.call.side_effect = [

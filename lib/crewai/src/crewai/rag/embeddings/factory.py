@@ -83,6 +83,7 @@ if TYPE_CHECKING:
         VoyageAIEmbeddingFunction,
     )
     from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
+    from crewai.rag.embeddings.types import EmbedderConfig
 
 T = TypeVar("T", bound=EmbeddingFunction[Any])
 
@@ -347,6 +348,10 @@ def build_embedder(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
 
 @overload
 def build_embedder(spec: dict[str, Any]) -> EmbeddingFunction[Any]: ...
+
+
+@overload
+def build_embedder(spec: EmbedderConfig) -> EmbeddingFunction[Any]: ...
 
 
 def build_embedder(spec):  # type: ignore[no-untyped-def]
