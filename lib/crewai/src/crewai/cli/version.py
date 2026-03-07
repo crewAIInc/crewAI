@@ -1,5 +1,6 @@
 """Version utilities for CrewAI CLI."""
 
+import ast
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -25,9 +26,42 @@ def _get_cache_file() -> Path:
     return cache_dir / "version_cache.json"
 
 
+@lru_cache(maxsize=1)
+def _get_source_version() -> str | None:
+    """Read the in-tree package version when crewai is imported from source."""
+    init_file = Path(__file__).resolve().parents[1] / "__init__.py"
+
+    try:
+        module = ast.parse(init_file.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return None
+
+    for node in module.body:
+        if not isinstance(node, ast.Assign):
+            continue
+
+        if not any(
+            isinstance(target, ast.Name) and target.id == "__version__"
+            for target in node.targets
+        ):
+            continue
+
+        try:
+            value = ast.literal_eval(node.value)
+        except (ValueError, SyntaxError):
+            return None
+
+        return value if isinstance(value, str) else None
+
+    return None
+
+
 def get_crewai_version() -> str:
     """Get the version number of CrewAI running the CLI."""
-    return importlib.metadata.version("crewai")
+    try:
+        return importlib.metadata.version("crewai")
+    except importlib.metadata.PackageNotFoundError:
+        return _get_source_version() or "unknown"
 
 
 def _is_cache_valid(cache_data: Mapping[str, Any]) -> bool:

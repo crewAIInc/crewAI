@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime, timedelta
+import importlib.metadata
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -37,6 +38,22 @@ class TestVersionChecking:
         version = get_crewai_version()
         assert isinstance(version, str)
         assert len(version) > 0
+
+    @patch("crewai.cli.version._get_source_version", return_value="9.9.9")
+    @patch("crewai.cli.version.importlib.metadata.version")
+    def test_get_crewai_version_falls_back_to_source_version(
+        self,
+        mock_metadata_version: MagicMock,
+        mock_source_version: MagicMock,
+    ) -> None:
+        """Test source fallback when package metadata is unavailable."""
+        mock_metadata_version.side_effect = importlib.metadata.PackageNotFoundError
+
+        version = get_crewai_version()
+
+        assert version == "9.9.9"
+        mock_metadata_version.assert_called_once_with("crewai")
+        mock_source_version.assert_called_once_with()
 
     def test_get_cache_file(self) -> None:
         """Test cache file path generation."""
