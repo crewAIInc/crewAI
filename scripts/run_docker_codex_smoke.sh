@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=/Users/wangguanran/Codes/crewAI/scripts/_codex_smoke_image.sh
+source "${SCRIPT_DIR}/_codex_smoke_image.sh"
+
 HOST_CODEX_HOME="${CODEX_HOME:-${HOME}/.codex}"
 HOST_AUTH_JSON="${HOST_CODEX_HOME%/}/auth.json"
 TEMP_CODEX_HOME="$(mktemp -d "${TMPDIR:-/tmp}/crewai-codex-home.XXXXXX")"
 TEMP_AUTH_JSON="${TEMP_CODEX_HOME}/auth.json"
-IMAGE_REPO="${IMAGE_REPO:-crewai-codex-smoke-base}"
-IMAGE_HASH="$(
-  cat .github/docker/codex-smoke.Dockerfile lib/crewai/pyproject.toml \
-    | shasum -a 256 \
-    | awk '{print substr($1, 1, 16)}'
-)"
-IMAGE_TAG="${IMAGE_TAG:-${IMAGE_REPO}:${IMAGE_HASH}}"
+IMAGE_TAG="${IMAGE_TAG:-$(codex_smoke_image_tag)}"
 
 cleanup() {
   if [[ -f "${TEMP_AUTH_JSON}" ]]; then
@@ -35,15 +34,7 @@ fi
 install -d -m 700 "${TEMP_CODEX_HOME}"
 install -m 600 "${HOST_AUTH_JSON}" "${TEMP_AUTH_JSON}"
 
-if docker image inspect "${IMAGE_TAG}" >/dev/null 2>&1; then
-  echo "docker_image_cache=hit"
-else
-  echo "docker_image_cache=miss"
-  DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" docker build \
-    --tag "${IMAGE_TAG}" \
-    --file .github/docker/codex-smoke.Dockerfile \
-    .
-fi
+ensure_codex_smoke_image "${IMAGE_TAG}"
 
 docker run --rm \
   -w /workspace \
