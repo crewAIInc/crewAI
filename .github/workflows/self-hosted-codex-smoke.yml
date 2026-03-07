@@ -69,22 +69,11 @@ jobs:
           PY
 
       - name: Run isolated Docker smoke
-        env:
-          IMAGE_TAG: crewai-codex-smoke:${{ github.run_id }}-${{ github.run_attempt }}
         working-directory: ${{ github.workspace }}
         run: |
           set -euxo pipefail
           chmod +x scripts/run_docker_codex_smoke.sh
           bash scripts/run_docker_codex_smoke.sh
-
-      - name: Remove smoke Docker image
-        if: always()
-        env:
-          IMAGE_TAG: crewai-codex-smoke:${{ github.run_id }}-${{ github.run_attempt }}
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euxo pipefail
-          docker image rm -f "${IMAGE_TAG}" || true
 
       - name: Ask Codex to fix the sync PR when smoke fails
         if: failure() && github.event_name == 'pull_request'

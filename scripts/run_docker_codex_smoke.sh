@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE_TAG="${IMAGE_TAG:-crewai-codex-smoke:local}"
 HOST_CODEX_HOME="${CODEX_HOME:-${HOME}/.codex}"
 HOST_AUTH_JSON="${HOST_CODEX_HOME%/}/auth.json"
 TEMP_CODEX_HOME="$(mktemp -d "${TMPDIR:-/tmp}/crewai-codex-home.XXXXXX")"
 TEMP_AUTH_JSON="${TEMP_CODEX_HOME}/auth.json"
+IMAGE_REPO="${IMAGE_REPO:-crewai-codex-smoke-base}"
+IMAGE_HASH="$(
+  cat .github/docker/codex-smoke.Dockerfile lib/crewai/pyproject.toml \
+    | shasum -a 256 \
+    | awk '{print substr($1, 1, 16)}'
+)"
+IMAGE_TAG="${IMAGE_TAG:-${IMAGE_REPO}:${IMAGE_HASH}}"
 
 cleanup() {
   if [[ -f "${TEMP_AUTH_JSON}" ]]; then
@@ -29,15 +35,23 @@ fi
 install -d -m 700 "${TEMP_CODEX_HOME}"
 install -m 600 "${HOST_AUTH_JSON}" "${TEMP_AUTH_JSON}"
 
-docker build \
-  --tag "${IMAGE_TAG}" \
-  --file .github/docker/codex-smoke.Dockerfile \
-  .
+if ! docker image inspect "${IMAGE_TAG}" >/dev/null 2>&1; then
+  DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" docker build \
+    --tag "${IMAGE_TAG}" \
+    --file .github/docker/codex-smoke.Dockerfile \
+    .
+fi
 
 docker run --rm \
+  -w /workspace \
   -e HOME=/root \
   -e CODEX_HOME=/root/.codex \
   -e CREWAI_TRACING_ENABLED=false \
+  -e CREWAI_DISABLE_TELEMETRY=true \
+  -e OTEL_SDK_DISABLED=true \
+  -e PYTHONPATH=/workspace/lib/crewai/src:/workspace/scripts \
+  -v "${PWD}/lib/crewai:/workspace/lib/crewai:ro" \
+  -v "${PWD}/scripts:/workspace/scripts:ro" \
   -v "${TEMP_CODEX_HOME}:/root/.codex" \
   "${IMAGE_TAG}" \
   sh -c '

@@ -5,19 +5,27 @@ ENV HOME=/root \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy
+    CREWAI_DISABLE_TELEMETRY=true \
+    OTEL_SDK_DISABLED=true
 
 WORKDIR /workspace
 
-COPY lib/crewai /workspace/lib/crewai
+COPY lib/crewai/pyproject.toml /tmp/crewai-pyproject.toml
 
-# Rebuild an isolated runtime from repository sources inside the container.
-RUN python -m venv /opt/venv \
- && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
- && /opt/venv/bin/pip install --no-cache-dir -e /workspace/lib/crewai
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m venv /opt/venv \
+ && /opt/venv/bin/pip install --upgrade pip \
+ && python - <<'PY' >/tmp/requirements.txt
+import pathlib
+import tomllib
 
-COPY scripts /workspace/scripts
+payload = tomllib.loads(pathlib.Path("/tmp/crewai-pyproject.toml").read_text())
+for requirement in payload["project"]["dependencies"]:
+    print(requirement)
+PY
+ && /opt/venv/bin/pip install -r /tmp/requirements.txt
 
-ENV PATH="/opt/venv/bin:${PATH}"
+ENV PATH="/opt/venv/bin:${PATH}" \
+    PYTHONPATH="/workspace/lib/crewai/src:/workspace/scripts"
 
 CMD ["sh"]
