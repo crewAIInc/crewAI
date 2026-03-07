@@ -38,16 +38,28 @@ jobs:
           rm -rf "${{ runner.workspace }}/${{ github.event.repository.name }}"
           mkdir -p "${{ runner.workspace }}/${{ github.event.repository.name }}"
 
-      - name: Download source archive
+      - name: Clone smoke sources
         env:
-          ARCHIVE_PATH: ${{ runner.temp }}/crewai-source.tar.gz
           TARGET_DIR: ${{ runner.workspace }}/${{ github.event.repository.name }}
         run: |
           set -euxo pipefail
-          curl -L --fail \
-            "https://codeload.github.com/${{ github.repository }}/tar.gz/${{ github.sha }}" \
-            -o "${ARCHIVE_PATH}"
-          tar -xzf "${ARCHIVE_PATH}" -C "${TARGET_DIR}" --strip-components=1
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            CLONE_REF="${{ github.head_ref }}"
+            EXPECTED_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            CLONE_REF="${{ github.ref_name }}"
+            EXPECTED_SHA="${{ github.sha }}"
+          fi
+          GIT_TERMINAL_PROMPT=0 git clone \
+            --depth=1 \
+            --filter=blob:none \
+            --sparse \
+            --branch "${CLONE_REF}" \
+            "https://github.com/${{ github.repository }}.git" \
+            "${TARGET_DIR}"
+          cd "${TARGET_DIR}"
+          git sparse-checkout set .dockerignore .github/docker lib/crewai scripts
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
 
       - name: Require local Codex auth.json
         working-directory: ${{ github.workspace }}
