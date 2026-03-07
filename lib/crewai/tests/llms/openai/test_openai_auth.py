@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import stat
@@ -16,6 +16,9 @@ from crewai.llms.auth.openai_auth import (
     resolve_openai_bearer_token,
     resolve_platform_api_key_from_local_codex,
 )
+
+
+UTC = timezone.utc
 
 
 def _make_jwt(expires_in_seconds: int) -> str:

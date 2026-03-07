@@ -15,6 +15,31 @@ from crewai.agent import Agent
 from crewai.task import Task
 from crewai.cli.constants import DEFAULT_LLM_MODEL
 
+
+def _make_chatgpt_backend_responses_llm(
+    model: str, **kwargs: Any
+) -> OpenAICompletion:
+    """Create a responses client already marked as ChatGPT/Codex routed.
+
+    These tests only exercise request shaping/retry logic. They should not rely on
+    local Codex OAuth credentials being present in CI.
+    """
+    with patch.dict(os.environ, {"CREWAI_OPENAI_AUTH_MODE": ""}, clear=False):
+        llm = OpenAICompletion(
+            model=model,
+            api="responses",
+            api_key="test-key",
+            **kwargs,
+        )
+    llm._resolved_openai_auth = ResolvedOpenAIAuth(
+        token="oauth-token",
+        source="codex_auth_json_oauth",
+        is_oauth=True,
+    )
+    llm._use_codex_chatgpt_backend = True
+    return llm
+
+
 def test_openai_completion_is_used_when_openai_provider():
     """
     Test that OpenAICompletion from completion.py is used when LLM uses provider 'openai'
@@ -623,26 +648,14 @@ def test_openai_get_client_params_pro_model_rejects_oauth_jwt():
     ],
 )
 def test_prepare_responses_params_strips_chatgpt_incompatible_fields(
-    monkeypatch, model, expected_model
+    model, expected_model
 ):
     """ChatGPT backend should remove unsupported fields and enforce instructions."""
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
-
-    with patch(
-        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
-        return_value=ResolvedOpenAIAuth(
-            token="oauth-token",
-            source="codex_auth_json_oauth",
-            is_oauth=True,
-        ),
-    ):
-        llm = OpenAICompletion(
-            model=model,
-            api="responses",
-            max_tokens=128,
-            metadata={"trace_id": "abc"},
-        )
+    llm = _make_chatgpt_backend_responses_llm(
+        model,
+        max_tokens=128,
+        metadata={"trace_id": "abc"},
+    )
 
     params = llm._prepare_responses_params(
         messages=[{"role": "user", "content": "Say OK"}]
@@ -656,20 +669,9 @@ def test_prepare_responses_params_strips_chatgpt_incompatible_fields(
     assert params["stream"] is True
 
 
-def test_call_responses_uses_stream_handler_when_chatgpt_backend_sets_stream(monkeypatch):
+def test_call_responses_uses_stream_handler_when_chatgpt_backend_sets_stream():
     """Forced stream flag from ChatGPT backend should route via streaming handler."""
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
-
-    with patch(
-        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
-        return_value=ResolvedOpenAIAuth(
-            token="oauth-token",
-            source="codex_auth_json_oauth",
-            is_oauth=True,
-        ),
-    ):
-        llm = OpenAICompletion(model="gpt-5.2-codex", api="responses")
+    llm = _make_chatgpt_backend_responses_llm("gpt-5.2-codex")
 
     with patch.object(
         llm, "_prepare_responses_params", return_value={"stream": True}
@@ -722,20 +724,9 @@ def test_prepare_responses_params_normalizes_tool_messages():
     }
 
 
-def test_chatgpt_backend_retries_by_stripping_bad_request_param(monkeypatch):
+def test_chatgpt_backend_retries_by_stripping_bad_request_param():
     """400 invalid_request should trigger adaptive stripping for ChatGPT backend."""
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
-
-    with patch(
-        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
-        return_value=ResolvedOpenAIAuth(
-            token="oauth-token",
-            source="codex_auth_json_oauth",
-            is_oauth=True,
-        ),
-    ):
-        llm = OpenAICompletion(model="gpt-5.2-codex", api="responses")
+    llm = _make_chatgpt_backend_responses_llm("gpt-5.2-codex")
 
     class _BadRequest(Exception):
         status_code = 400
@@ -763,20 +754,9 @@ def test_chatgpt_backend_retries_by_stripping_bad_request_param(monkeypatch):
     assert "metadata" not in second_kwargs
 
 
-def test_chatgpt_backend_retry_never_strips_store(monkeypatch):
+def test_chatgpt_backend_retry_never_strips_store():
     """`store=false` is required by ChatGPT backend and must not be stripped."""
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
-
-    with patch(
-        "crewai.llms.providers.openai.completion.resolve_codex_oauth_access_token",
-        return_value=ResolvedOpenAIAuth(
-            token="oauth-token",
-            source="codex_auth_json_oauth",
-            is_oauth=True,
-        ),
-    ):
-        llm = OpenAICompletion(model="gpt-5.3-codex", api="responses")
+    llm = _make_chatgpt_backend_responses_llm("gpt-5.3-codex")
 
     class _StoreRequired(Exception):
         status_code = 400
