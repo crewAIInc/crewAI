@@ -4,6 +4,19 @@ title: "[BUG]"
 labels: ["bug"]
 assignees: []
 body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Security Notice
+        If your report includes a potential security vulnerability, do **not** continue with this public issue form.
+        Please use private reporting instead: https://github.com/crewAIInc/crewAI/security/advisories/new or security@crewai.com.
+  - type: checkboxes
+    id: non-security-confirmation
+    attributes:
+      label: Public disclosure confirmation
+      options:
+        - label: I confirm this issue does not contain vulnerability details, exploit code, or other sensitive security information.
+          required: true
   - type: textarea
     id: description
     attributes:

@@ -15,7 +15,8 @@ Issues affecting clearly unaffiliated third-party services or user-generated con
 ### How to Report
 
 - **Please do not** disclose vulnerabilities via public GitHub issues, pull requests, or social media.
-- Email detailed reports to **security@crewai.com** with the subject line `Security Report`.
+- Submit a private advisory through GitHub Security Advisories: **https://github.com/crewAIInc/crewAI/security/advisories/new**.
+- You can also email detailed reports to **security@crewai.com** with the subject line `Security Report`.
 - If you need to share large files or sensitive artifacts, mention it in your email and we will coordinate a secure transfer method.
 
 ### What to Include
@@ -34,6 +35,14 @@ Providing comprehensive information enables us to validate the issue quickly:
 - **Communication:** We will keep you informed about triage results, remediation progress, and planned release timelines.
 - **Resolution:** Confirmed vulnerabilities will be prioritized based on severity and fixed as quickly as possible.
 - **Recognition:** We currently do not run a bug bounty program; any rewards or recognition are issued at CrewAI's discretion.
+
+### Escalation If You Do Not Hear Back
+
+If you do not receive an acknowledgement within two business days:
+
+- Reply to your original report and include `[FOLLOW-UP]` in the subject line.
+- If reported through GHSA, add a comment to the same private advisory thread.
+- If there is still no response after five business days, open a **public** GitHub issue that contains only the advisory identifier and a request for contact. Do **not** include exploit details or sensitive technical information.
 
 ### Coordinated Disclosure
 
