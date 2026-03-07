@@ -30,6 +30,9 @@ jobs:
       - self-hosted
       - macOS
     timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: ${{ runner.workspace }}/${{ github.event.repository.name }}
 
     steps:
       - name: Reset runner workspace
@@ -38,10 +41,16 @@ jobs:
           rm -rf "${{ runner.workspace }}/${{ github.event.repository.name }}"
           mkdir -p "${{ runner.workspace }}/${{ github.event.repository.name }}"
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+      - name: Download source archive
+        env:
+          ARCHIVE_PATH: ${{ runner.temp }}/crewai-source.tar.gz
+          TARGET_DIR: ${{ runner.workspace }}/${{ github.event.repository.name }}
+        run: |
+          set -euxo pipefail
+          curl -L --fail \
+            "https://codeload.github.com/${{ github.repository }}/tar.gz/${{ github.sha }}" \
+            -o "${ARCHIVE_PATH}"
+          tar -xzf "${ARCHIVE_PATH}" -C "${TARGET_DIR}" --strip-components=1
 
       - name: Require local Codex auth.json
         run: |
