@@ -38,11 +38,14 @@ jobs:
           rm -rf "${{ runner.workspace }}/${{ github.event.repository.name }}"
           mkdir -p "${{ runner.workspace }}/${{ github.event.repository.name }}"
 
-      - name: Clone smoke sources
+      - name: Prepare smoke sources
         env:
           TARGET_DIR: ${{ runner.workspace }}/${{ github.event.repository.name }}
         run: |
           set -euxo pipefail
+          CACHE_ROOT="${HOME}/.cache/crewai-codex-smoke"
+          REPO_URL="https://github.com/${{ github.repository }}.git"
+          CACHE_DIR="${CACHE_ROOT}/repos/${{ github.repository_owner }}-${{ github.event.repository.name }}.git"
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             CLONE_REF="${{ github.head_ref }}"
             EXPECTED_SHA="${{ github.event.pull_request.head.sha }}"
@@ -50,15 +53,37 @@ jobs:
             CLONE_REF="${{ github.ref_name }}"
             EXPECTED_SHA="${{ github.sha }}"
           fi
-          GIT_TERMINAL_PROMPT=0 git clone \
-            --depth=1 \
-            --filter=blob:none \
-            --sparse \
-            --branch "${CLONE_REF}" \
-            "https://github.com/${{ github.repository }}.git" \
-            "${TARGET_DIR}"
+          install -d "${CACHE_ROOT}/repos"
+          if [[ -d "${CACHE_DIR}" ]]; then
+            echo "source_cache=hit"
+            GIT_TERMINAL_PROMPT=0 git --git-dir="${CACHE_DIR}" fetch \
+              --depth=1 \
+              --filter=blob:none \
+              origin \
+              "refs/heads/${CLONE_REF}:refs/heads/${CLONE_REF}"
+          else
+            echo "source_cache=miss"
+            GIT_TERMINAL_PROMPT=0 git clone \
+              --bare \
+              --filter=blob:none \
+              --depth=1 \
+              --branch "${CLONE_REF}" \
+              "${REPO_URL}" \
+              "${CACHE_DIR}"
+          fi
+          if ! git --git-dir="${CACHE_DIR}" cat-file -e "${EXPECTED_SHA}^{commit}" 2>/dev/null; then
+            GIT_TERMINAL_PROMPT=0 git --git-dir="${CACHE_DIR}" fetch \
+              --depth=1 \
+              --filter=blob:none \
+              origin \
+              "${EXPECTED_SHA}"
+          fi
+          git --git-dir="${CACHE_DIR}" worktree prune
+          git --git-dir="${CACHE_DIR}" worktree add --force --detach --no-checkout "${TARGET_DIR}" "${EXPECTED_SHA}"
+          git -C "${TARGET_DIR}" sparse-checkout init --no-cone
+          git -C "${TARGET_DIR}" sparse-checkout set --no-cone .dockerignore .github/docker lib/crewai scripts
+          git -C "${TARGET_DIR}" checkout --detach "${EXPECTED_SHA}"
           cd "${TARGET_DIR}"
-          git sparse-checkout set --no-cone .dockerignore .github/docker lib/crewai scripts
           test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
 
       - name: Require local Codex auth.json

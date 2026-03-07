@@ -35,7 +35,10 @@ fi
 install -d -m 700 "${TEMP_CODEX_HOME}"
 install -m 600 "${HOST_AUTH_JSON}" "${TEMP_AUTH_JSON}"
 
-if ! docker image inspect "${IMAGE_TAG}" >/dev/null 2>&1; then
+if docker image inspect "${IMAGE_TAG}" >/dev/null 2>&1; then
+  echo "docker_image_cache=hit"
+else
+  echo "docker_image_cache=miss"
   DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" docker build \
     --tag "${IMAGE_TAG}" \
     --file .github/docker/codex-smoke.Dockerfile \
