@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -50,7 +51,7 @@ def test_task_without_guardrail():
 def test_task_with_successful_guardrail_func():
     """Test that successful guardrail validation passes transformed result."""
 
-    def guardrail(result: TaskOutput):
+    def guardrail(result: TaskOutput) -> tuple[bool, Any]:
         return (True, result.raw.upper())
 
     agent = Mock()
@@ -71,7 +72,7 @@ def test_task_with_successful_guardrail_func():
 def test_task_with_failing_guardrail():
     """Test that failing guardrail triggers retry with error context."""
 
-    def guardrail(result: TaskOutput):
+    def guardrail(result: TaskOutput) -> tuple[bool, Any]:
         return (False, "Invalid format")
 
     agent = Mock()
@@ -99,7 +100,7 @@ def test_task_with_failing_guardrail():
 def test_task_with_guardrail_retries():
     """Test that guardrail respects max_retries configuration."""
 
-    def guardrail(result: TaskOutput):
+    def guardrail(result: TaskOutput) -> tuple[bool, Any]:
         return (False, "Invalid format")
 
     agent = Mock()
@@ -126,7 +127,7 @@ def test_task_with_guardrail_retries():
 def test_guardrail_error_in_context():
     """Test that guardrail error is passed in context for retry."""
 
-    def guardrail(result: TaskOutput):
+    def guardrail(result: TaskOutput) -> tuple[bool, Any]:
         return (False, "Expected JSON, got string")
 
     agent = Mock()
@@ -768,3 +769,42 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_pydantic_output_available_on_first_attempt():
+    """Guardrail should receive pydantic output on the first invocation, not just retries.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4369
+    """
+    from pydantic import BaseModel as PydanticBaseModel
+
+    class MyOutput(PydanticBaseModel):
+        message: str
+
+    pydantic_values: list[MyOutput | None] = []
+
+    def guardrail(result: TaskOutput) -> tuple[bool, TaskOutput]:
+        pydantic_values.append(result.pydantic)
+        return (True, result)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = '{"message": "hello"}'
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        output_pydantic=MyOutput,
+        guardrail=guardrail,
+    )
+
+    task.execute_sync(agent=agent)
+
+    assert len(pydantic_values) == 1, "Guardrail should be called once"
+    assert pydantic_values[0] is not None, (
+        "pydantic should not be None on first guardrail attempt"
+    )
+    assert isinstance(pydantic_values[0], MyOutput)
+    assert pydantic_values[0].message == "hello"
