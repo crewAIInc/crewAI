@@ -1,5 +1,13 @@
 *
 !.dockerignore
+!pyproject.toml
+!uv.lock
 !lib/
 !lib/crewai/
 !lib/crewai/pyproject.toml
+!lib/crewai-tools/
+!lib/crewai-tools/pyproject.toml
+!lib/crewai-files/
+!lib/crewai-files/pyproject.toml
+!lib/devtools/
+!lib/devtools/pyproject.toml

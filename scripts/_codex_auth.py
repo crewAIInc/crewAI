@@ -23,6 +23,10 @@ def local_codex_auth_status() -> tuple[bool, str]:
 
     try:
         payload = json.loads(auth_json_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return False, f"codex auth.json at {auth_json_path} is unreadable: {exc}"
+    except UnicodeDecodeError as exc:
+        return False, f"codex auth.json at {auth_json_path} is not valid UTF-8: {exc}"
     except json.JSONDecodeError as exc:
         return False, f"codex auth.json at {auth_json_path} is invalid: {exc.msg}"
 

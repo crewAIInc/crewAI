@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 
 compute_codex_smoke_image_hash() {
-  cat .github/docker/codex-smoke.Dockerfile lib/crewai/pyproject.toml \
+  cat \
+    .github/docker/codex-smoke.Dockerfile \
+    pyproject.toml \
+    uv.lock \
+    lib/crewai/pyproject.toml \
+    lib/crewai-tools/pyproject.toml \
+    lib/crewai-files/pyproject.toml \
+    lib/devtools/pyproject.toml \
     | shasum -a 256 \
     | awk '{print substr($1, 1, 16)}'
 }

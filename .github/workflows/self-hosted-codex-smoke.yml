@@ -22,7 +22,13 @@ jobs:
     name: codex-smoke
     if: |
       github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      (
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (
+          startsWith(github.head_ref, 'sync/') ||
+          startsWith(github.head_ref, 'codex/')
+        )
+      )
     runs-on:
       - self-hosted
       - macOS
@@ -85,12 +91,15 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           set -euxo pipefail
-          test -f "${HOME}/.codex/auth.json"
-          python3 - <<'PY'
+          CODEX_HOME_PATH="${CODEX_HOME:-${HOME}/.codex}"
+          AUTH_JSON="${CODEX_HOME_PATH%/}/auth.json"
+          test -f "${AUTH_JSON}"
+          CODEX_AUTH_JSON="${AUTH_JSON}" python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
 
-          auth_json = Path.home() / ".codex" / "auth.json"
+          auth_json = Path(os.environ["CODEX_AUTH_JSON"])
           payload = json.loads(auth_json.read_text(encoding="utf-8"))
           tokens = payload.get("tokens") if isinstance(payload, dict) else None
           if not isinstance(tokens, dict):

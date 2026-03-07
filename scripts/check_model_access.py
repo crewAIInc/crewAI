@@ -126,7 +126,7 @@ def main() -> int:
         exit_codes.append(_run_single_check(args.model, api_name, args.prompt))
         print(f"check_end={api_name}")
 
-    if any(code == 0 for code in exit_codes):
+    if all(code == 0 for code in exit_codes):
         return 0
     return 1
 
