@@ -34,6 +34,7 @@ jobs:
           TARGET_DIR: ${{ runner.workspace }}/${{ github.event.repository.name }}
         run: |
           set -euxo pipefail
+          cd "${RUNNER_TEMP}"
           CACHE_ROOT="${HOME}/.cache/crewai-codex-smoke"
           REPO_URL="https://github.com/${{ github.repository }}.git"
           CACHE_DIR="${CACHE_ROOT}/repos/${{ github.repository_owner }}-${{ github.event.repository.name }}.git"
