@@ -22,10 +22,7 @@ jobs:
     name: codex-smoke
     if: |
       github.event_name != 'pull_request' ||
-      (
-        github.event.pull_request.head.repo.full_name == github.repository &&
-        startsWith(github.head_ref, 'sync/')
-      )
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on:
       - self-hosted
       - macOS
@@ -110,7 +107,7 @@ jobs:
           chmod +x scripts/run_docker_codex_smoke.sh
           bash scripts/run_docker_codex_smoke.sh
 
-      - name: Ask Codex to fix the sync PR when smoke fails
+      - name: Ask Codex to fix the PR when smoke fails
         if: failure() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -119,4 +116,4 @@ jobs:
           set -euxo pipefail
           gh pr comment "${{ github.event.pull_request.number }}" \
             --repo wangguanran/crewAI \
-            --body "@codex The self-hosted codex smoke check failed for this sync PR. Please investigate, update this branch, and submit a patch that gets the PR merge-ready."
+            --body "@codex The self-hosted codex smoke check failed for this PR. Please investigate, update this branch, and submit a patch that gets the PR merge-ready."
