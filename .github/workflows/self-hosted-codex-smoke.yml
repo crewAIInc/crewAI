@@ -30,9 +30,6 @@ jobs:
       - self-hosted
       - macOS
     timeout-minutes: 40
-    defaults:
-      run:
-        working-directory: ${{ runner.workspace }}/${{ github.event.repository.name }}
 
     steps:
       - name: Reset runner workspace
@@ -53,6 +50,7 @@ jobs:
           tar -xzf "${ARCHIVE_PATH}" -C "${TARGET_DIR}" --strip-components=1
 
       - name: Require local Codex auth.json
+        working-directory: ${{ github.workspace }}
         run: |
           set -euxo pipefail
           test -f "${HOME}/.codex/auth.json"
@@ -73,6 +71,7 @@ jobs:
       - name: Run isolated Docker smoke
         env:
           IMAGE_TAG: crewai-codex-smoke:${{ github.run_id }}-${{ github.run_attempt }}
+        working-directory: ${{ github.workspace }}
         run: |
           set -euxo pipefail
           chmod +x scripts/run_docker_codex_smoke.sh
@@ -82,6 +81,7 @@ jobs:
         if: always()
         env:
           IMAGE_TAG: crewai-codex-smoke:${{ github.run_id }}-${{ github.run_attempt }}
+        working-directory: ${{ github.workspace }}
         run: |
           set -euxo pipefail
           docker image rm -f "${IMAGE_TAG}" || true
@@ -90,6 +90,7 @@ jobs:
         if: failure() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ github.workspace }}
         run: |
           set -euxo pipefail
           gh pr comment "${{ github.event.pull_request.number }}" \
