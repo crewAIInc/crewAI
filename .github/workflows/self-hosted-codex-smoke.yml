@@ -54,7 +54,7 @@ jobs:
               --depth=1 \
               --filter=blob:none \
               origin \
-              "refs/heads/${CLONE_REF}:refs/heads/${CLONE_REF}"
+              "+refs/heads/${CLONE_REF}:refs/heads/${CLONE_REF}"
           else
             echo "source_cache=miss"
             GIT_TERMINAL_PROMPT=0 git clone \
