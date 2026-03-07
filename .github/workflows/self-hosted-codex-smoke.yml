@@ -58,7 +58,7 @@ jobs:
             "https://github.com/${{ github.repository }}.git" \
             "${TARGET_DIR}"
           cd "${TARGET_DIR}"
-          git sparse-checkout set .dockerignore .github/docker lib/crewai scripts
+          git sparse-checkout set --no-cone .dockerignore .github/docker lib/crewai scripts
           test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
 
       - name: Require local Codex auth.json
