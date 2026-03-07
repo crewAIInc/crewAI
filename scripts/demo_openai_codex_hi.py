@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Minimal demo: call openai-codex/gpt-5.3-codex with prompt 'Hi'."""
 
+# ruff: noqa: T201
+
 from __future__ import annotations
 
 import argparse

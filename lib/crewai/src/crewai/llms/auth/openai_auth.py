@@ -1,5 +1,7 @@
 """Centralized OpenAI credential resolution with Codex OAuth support."""
 
+# ruff: noqa: S105
+
 from __future__ import annotations
 
 from contextlib import contextmanager

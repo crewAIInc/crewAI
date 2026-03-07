@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Helpers for detecting reusable local Codex authentication state."""
 
+# ruff: noqa: S607
+
 from __future__ import annotations
 
 import json

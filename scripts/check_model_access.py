@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check whether a model is callable with current local credentials."""
 
+# ruff: noqa: T201
+
 from __future__ import annotations
 
 import argparse
