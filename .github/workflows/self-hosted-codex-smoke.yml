@@ -82,7 +82,16 @@ jobs:
           fi
           git --git-dir="${CACHE_DIR}" worktree add --force --detach --no-checkout "${TARGET_DIR}" "${EXPECTED_SHA}"
           git -C "${TARGET_DIR}" sparse-checkout init --no-cone
-          git -C "${TARGET_DIR}" sparse-checkout set --no-cone .dockerignore .github/docker lib/crewai scripts
+          git -C "${TARGET_DIR}" sparse-checkout set --no-cone \
+            .dockerignore \
+            .github/docker \
+            pyproject.toml \
+            uv.lock \
+            lib/crewai \
+            lib/crewai-tools/pyproject.toml \
+            lib/crewai-files/pyproject.toml \
+            lib/devtools/pyproject.toml \
+            scripts
           git -C "${TARGET_DIR}" checkout --detach "${EXPECTED_SHA}"
           cd "${TARGET_DIR}"
           test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
