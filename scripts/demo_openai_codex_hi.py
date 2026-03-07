@@ -5,30 +5,10 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
 import sys
 
 from crewai.llm import LLM
-
-
-def _codex_login_status() -> tuple[bool, str]:
-    """Return (logged_in, message) from `codex login status`."""
-    try:
-        proc = subprocess.run(
-            ["codex", "login", "status"],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=10,
-        )
-    except FileNotFoundError:
-        return False, "codex CLI not found in PATH"
-    except Exception as exc:  # noqa: BLE001
-        return False, f"codex login status failed: {exc}"
-
-    message = (proc.stdout or "").strip() or (proc.stderr or "").strip()
-    return proc.returncode == 0, (message or f"exit_code={proc.returncode}")
+from _codex_auth import codex_auth_status
 
 
 def main() -> int:
@@ -46,7 +26,7 @@ def main() -> int:
     args = parser.parse_args()
 
     os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
-    logged_in, login_message = _codex_login_status()
+    logged_in, login_message = codex_auth_status()
 
     if logged_in:
         # Default mode: prefer local Codex OAuth when signed in.

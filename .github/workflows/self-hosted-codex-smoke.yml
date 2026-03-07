@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: self-hosted-codex-smoke-${{ github.ref }}
@@ -28,9 +29,7 @@ jobs:
     runs-on:
       - self-hosted
       - macOS
-    timeout-minutes: 20
-    env:
-      LOCAL_BOOTSTRAP_BIN: /Users/wangguanran/Codes/crewAI/.venv-codex-oauth-check/bin
+    timeout-minutes: 40
 
     steps:
       - name: Reset runner workspace
@@ -41,62 +40,42 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Bootstrap local Python and uv
+      - name: Require local Codex auth.json
         run: |
           set -euxo pipefail
-          test -x "${LOCAL_BOOTSTRAP_BIN}/python"
-          test -x "${LOCAL_BOOTSTRAP_BIN}/uv"
-          echo "${LOCAL_BOOTSTRAP_BIN}" >> "$GITHUB_PATH"
-          "${LOCAL_BOOTSTRAP_BIN}/python" --version
-          "${LOCAL_BOOTSTRAP_BIN}/uv" --version
+          test -f "${HOME}/.codex/auth.json"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
 
-      - name: Install project dependencies
-        run: uv sync --all-groups --all-extras
-
-      - name: Show runner and Codex environment
-        run: |
-          set -euxo pipefail
-          whoami
-          pwd
-          python --version
-          uv --version
-          codex --version
-
-      - name: Require local Codex login
-        run: |
-          set -euxo pipefail
-          codex login status
-
-      - name: Verify Codex model access on self-hosted runner
-        run: |
-          set -euxo pipefail
-          uv run python - <<'PY'
-          import os
-          from crewai.llm import LLM
-
-          os.environ["CREWAI_OPENAI_AUTH_MODE"] = "oauth_codex"
-          os.environ.pop("OPENAI_API_KEY", None)
-          os.environ.pop("OPENAI_ACCESS_TOKEN", None)
-          os.environ.pop("OPENAI_OAUTH_ACCESS_TOKEN", None)
-
-          for api_name in ("responses", "chat"):
-              llm = LLM(model="gpt-5.3-codex", api=api_name, is_litellm=False)
-              result = llm.call("Reply with exactly: OK")
-              text = str(result).strip()
-              print(f"{api_name}={text!r}")
-              if "OK" not in text:
-                  raise SystemExit(f"{api_name} did not return expected content: {text!r}")
+          auth_json = Path.home() / ".codex" / "auth.json"
+          payload = json.loads(auth_json.read_text(encoding="utf-8"))
+          tokens = payload.get("tokens") if isinstance(payload, dict) else None
+          if not isinstance(tokens, dict):
+              raise SystemExit("Codex auth.json does not contain a tokens object.")
+          if not (tokens.get("access_token") or tokens.get("refresh_token")):
+              raise SystemExit("Codex auth.json does not contain reusable OAuth tokens.")
+          print(f"codex_auth_json={auth_json}")
           PY
 
-      - name: Verify default OAuth demo path
+      - name: Run isolated Docker smoke
         env:
-          OPENAI_API_KEY: ""
-          OPENAI_ACCESS_TOKEN: ""
-          OPENAI_OAUTH_ACCESS_TOKEN: ""
+          IMAGE_TAG: crewai-codex-smoke:${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euxo pipefail
-          uv run python scripts/demo_openai_codex_hi.py
+          chmod +x scripts/run_docker_codex_smoke.sh
+          bash scripts/run_docker_codex_smoke.sh
+
+      - name: Remove smoke Docker image
+        if: always()
+        env:
+          IMAGE_TAG: crewai-codex-smoke:${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euxo pipefail
+          docker image rm -f "${IMAGE_TAG}" || true
 
       - name: Ask Codex to fix the sync PR when smoke fails
         if: failure() && github.event_name == 'pull_request'

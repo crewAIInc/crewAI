@@ -1,0 +1,7 @@
+*
+!.dockerignore
+!lib/
+!lib/crewai/
+!lib/crewai/**
+!scripts/
+!scripts/**
