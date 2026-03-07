@@ -59,7 +59,7 @@ The Visual Agent Builder enables:
 | **Allow Code Execution** _(optional)_   | `allow_code_execution`   | `Optional[bool]`                      | Enable code execution for the agent. Default is False.                                                   |
 | **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                                 | Maximum number of retries when an error occurs. Default is 2.                                            |
 | **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                                | Keep messages under context window size by summarizing. Default is True.                                 |
-| **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                  |
+| **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "microvm", "unsafe"]` | Mode for code execution: 'safe' (Docker), 'microvm' (exec-sandbox), or 'unsafe' (direct). Default is 'safe'. |
 | **Multimodal** _(optional)_             | `multimodal`             | `bool`                                | Whether the agent supports multimodal capabilities. Default is False.                                    |
 | **Inject Date** _(optional)_            | `inject_date`            | `bool`                                | Whether to automatically inject the current date into tasks. Default is False.                           |
 | **Date Format** _(optional)_            | `date_format`            | `str`                                 | Format string for date when inject_date is enabled. Default is "%Y-%m-%d" (ISO format).                  |
@@ -169,7 +169,7 @@ agent = Agent(
     max_execution_time=None,  # Optional: Maximum execution time in seconds
     max_retry_limit=2,  # Default: 2 retries on error
     allow_code_execution=False,  # Default: False
-    code_execution_mode="safe",  # Default: "safe" (options: "safe", "unsafe")
+    code_execution_mode="safe",  # Default: "safe" (options: "safe", "microvm", "unsafe")
     respect_context_window=True,  # Default: True
     use_system_prompt=True,  # Default: True
     multimodal=False,  # Default: False
@@ -310,7 +310,8 @@ multimodal_agent = Agent(
 
 - `allow_code_execution`: Must be True to run code
 - `code_execution_mode`:
-  - `"safe"`: Uses Docker (recommended for production)
+  - `"safe"`: Uses Docker with restricted-sandbox fallback (recommended for production)
+  - `"microvm"`: Uses exec-sandbox (QEMU microVM isolation without Docker daemon)
   - `"unsafe"`: Direct execution (use only in trusted environments)
 
 <Note>
@@ -668,7 +669,7 @@ asyncio.run(main())
 ### Security and Code Execution
 
 - When using `allow_code_execution`, be cautious with user input and always validate it
-- Use `code_execution_mode: "safe"` (Docker) in production environments
+- Use `code_execution_mode: "safe"` (Docker) or `"microvm"` (exec-sandbox) in production environments
 - Consider setting appropriate `max_execution_time` limits to prevent infinite loops
 
 ### Performance Optimization
