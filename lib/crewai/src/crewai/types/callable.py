@@ -1,45 +1,35 @@
-"""Serializable callable type for Pydantic models."""
+"""Serializable callable type for Pydantic models.
+
+All callables (named functions, lambdas, closures, methods) are serialized
+via ``cloudpickle`` + base64.  On deserialization the base64 payload is
+decoded and unpickled back into a live callable.
+"""
 
 from __future__ import annotations
 
+import base64
 from collections.abc import Callable
-import importlib
 from typing import Annotated, Any
 
+import cloudpickle  # type: ignore[import-untyped]
 from pydantic import BeforeValidator, PlainSerializer, WithJsonSchema
 
 
 def _deserialize_callable(v: str | Callable[..., Any]) -> Callable[..., Any]:
-    """Deserialize a dotted import path to a callable, or pass through if already callable."""
+    """Deserialize a base64-encoded cloudpickle payload, or pass through if already callable."""
     if isinstance(v, str):
-        module_path, _, name = v.rpartition(".")
-        if not module_path:
-            raise ValueError(f"Invalid callable path: {v!r} (expected 'module.name')")
-        module = importlib.import_module(module_path)
-        obj: Callable[..., Any] = getattr(module, name)
+        obj = cloudpickle.loads(base64.b85decode(v))
         if not callable(obj):
-            raise ValueError(f"{v!r} resolved to {type(obj).__name__}, not a callable")
-        return obj
+            raise ValueError(
+                f"Deserialized object is {type(obj).__name__}, not a callable"
+            )
+        return obj  # type: ignore[no-any-return]
     return v
 
 
 def _serialize_callable(v: Callable[..., Any]) -> str:
-    """Serialize a callable to its dotted import path."""
-    module = getattr(v, "__module__", None)
-    qualname = getattr(v, "__qualname__", None)
-    name = getattr(v, "__name__", None)
-
-    if not module or not name:
-        raise ValueError(
-            f"Cannot serialize {v!r}: missing __module__ or __name__. "
-            "Only top-level named functions are serializable."
-        )
-    if qualname and "<" in qualname:
-        raise ValueError(
-            f"Cannot serialize {v!r}: lambdas and nested functions are not serializable. "
-            "Use a top-level named function instead."
-        )
-    return f"{module}.{qualname or name}"
+    """Serialize any callable to a base64-encoded cloudpickle payload."""
+    return base64.b85encode(cloudpickle.dumps(v)).decode("ascii")
 
 
 SerializableCallable = Annotated[

@@ -43,6 +43,7 @@ dependencies = [
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
     "lancedb>=0.29.2",
+    "cloudpickle~=3.1.2",
 ]
 
 [project.urls]
