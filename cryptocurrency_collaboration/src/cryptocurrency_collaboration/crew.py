@@ -10,6 +10,10 @@ class CryptocurrencyCollaboration():
     agents: list[BaseAgent]
     tasks: list[Task]
 
+    # 实例化工具对象
+    kline_tool = KlineTool()
+    sentiment_tool = SentimentTool()
+
     @llm
     def local_gemma_llm(self) -> LLM:
         return LLM(
@@ -30,7 +34,7 @@ class CryptocurrencyCollaboration():
     def kline_analyzer(self) -> Agent:
         return Agent(
             config=self.agents_config['kline_analyzer'], # type: ignore[index]
-            tools=[KlineTool()],
+            tools=[self.kline_tool],
             verbose=True
         )
 
@@ -38,7 +42,7 @@ class CryptocurrencyCollaboration():
     def news_sentiment_analyst(self) -> Agent:
         return Agent(
             config=self.agents_config['news_sentiment_analyst'], # type: ignore[index]
-            tools=[SentimentTool()],
+            tools=[self.sentiment_tool],
             verbose=True
         )
 

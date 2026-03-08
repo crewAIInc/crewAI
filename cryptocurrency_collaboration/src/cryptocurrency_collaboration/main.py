@@ -18,7 +18,7 @@ def run():
         "symbol": "ETHUSDT",
         "intervals": ["1m", "5m", "15m", "1d", "1w"],
         "time_range": "past_24h",
-        "current_year": str(datetime.now().year)
+        'current_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
     try:
@@ -32,7 +32,7 @@ def train():
         "symbol": "ETHUSDT",
         "intervals": ["1m", "5m", "15m", "1d", "1w"],
         "time_range": "past_24h",
-        "current_year": str(datetime.now().year)
+        'current_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
     try:
         CryptocurrencyCollaboration().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
@@ -55,7 +55,7 @@ def test():
         "symbol": "ETHUSDT",
         "intervals": ["1m", "5m", "15m", "1d", "1w"],
         "time_range": "past_24h",
-        "current_year": str(datetime.now().year)
+        'current_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
     try:
@@ -83,7 +83,7 @@ def run_with_trigger():
         "symbol": "",
         "intervals": [],
         "time_range": "",
-        "current_year": str(datetime.now().year)
+        'current_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
     try:
