@@ -37,7 +37,7 @@ class BraveSearchToolSchema(BaseModel):
         default=None,
         description="Country code for geo-targeting (e.g., 'US', 'BR').",
     )
-    search_language: str | None = Field(
+    search_lang: str | None = Field(
         default=None,
         description="Language code for the search results (e.g., 'en', 'es').",
     )
@@ -130,8 +130,9 @@ class BraveSearchTool(BaseTool):
             if country := kwargs.get("country"):
                 payload["country"] = country
 
-            if search_language := kwargs.get("search_language"):
-                payload["search_language"] = search_language
+            # Fallback to "search_language" for backwards compatibility
+            if search_lang := kwargs.get("search_lang") or kwargs.get("search_language"):
+                payload["search_lang"] = search_lang
 
             # Fallback to deprecated n_results parameter if no count is provided
             count = kwargs.get("count")

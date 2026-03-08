@@ -382,7 +382,7 @@
             "description": "Filter out explicit content. Options: off/moderate/strict",
             "title": "Safesearch"
           },
-          "search_language": {
+          "search_lang": {
             "anyOf": [
               {
                 "type": "string"
