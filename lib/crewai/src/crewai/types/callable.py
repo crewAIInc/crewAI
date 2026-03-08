@@ -18,13 +18,16 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Callable
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from typing import Annotated, Any
 
 from pydantic import BeforeValidator, PlainSerializer, WithJsonSchema
 
 
 _ALLOW_PICKLE: ContextVar[bool] = ContextVar("_ALLOW_PICKLE", default=False)
+_ALLOW_PICKLE_TOKEN: ContextVar[Token[bool] | None] = ContextVar(
+    "_ALLOW_PICKLE_TOKEN", default=None
+)
 
 
 def _import_cloudpickle() -> Any:
@@ -48,10 +51,12 @@ class _AllowPickleDeserialization:
     """
 
     def __enter__(self) -> None:
-        self._token = _ALLOW_PICKLE.set(True)
+        _ALLOW_PICKLE_TOKEN.set(_ALLOW_PICKLE.set(True))
 
     def __exit__(self, *_: object) -> None:
-        _ALLOW_PICKLE.reset(self._token)
+        token = _ALLOW_PICKLE_TOKEN.get()
+        if token is not None:
+            _ALLOW_PICKLE.reset(token)
 
 
 allow_pickle_deserialization = _AllowPickleDeserialization()
