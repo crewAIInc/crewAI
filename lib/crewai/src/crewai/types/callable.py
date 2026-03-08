@@ -7,7 +7,7 @@ decoded and unpickled back into a live callable.
 Deserialization is **opt-in** to prevent arbitrary code execution from
 untrusted payloads.  Callers must use :data:`allow_pickle_deserialization` to enable it::
 
-    with allow_pickle_deserialization:q
+    with allow_pickle_deserialization:
         task = Task.model_validate_json(untrusted_json)
 
 ``cloudpickle`` is an optional dependency.  Serialization and deserialization
@@ -86,6 +86,6 @@ def _serialize_callable(v: Callable[..., Any]) -> str:
 SerializableCallable = Annotated[
     Callable[..., Any],
     BeforeValidator(_deserialize_callable),
-    PlainSerializer(_serialize_callable, return_type=str),
+    PlainSerializer(_serialize_callable, return_type=str, when_used="json"),
     WithJsonSchema({"type": "string"}),
 ]
