@@ -8,12 +8,17 @@ Setup:
     # Edit .env with your real API keys
 """
 
+import logging
+
+from crewai import Agent, Crew, Task
 from dotenv import load_dotenv
+
+from crewai_tools import SeltzSearchTool
+
 
 load_dotenv()
 
-from crewai import Agent, Crew, Task
-from crewai_tools import SeltzSearchTool
+logger = logging.getLogger(__name__)
 
 # Initialize with defaults (reads SELTZ_API_KEY from environment)
 seltz_tool = SeltzSearchTool()
@@ -42,4 +47,4 @@ research_task = Task(
 
 crew = Crew(agents=[researcher], tasks=[research_task])
 result = crew.kickoff()
-print(result)
+logger.info(result)
