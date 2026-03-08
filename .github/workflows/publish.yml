@@ -1,8 +1,6 @@
 name: Publish to PyPI
 
 on:
-  repository_dispatch:
-    types: [deployment-tests-passed]
   workflow_dispatch:
     inputs:
       release_tag:
@@ -20,11 +18,8 @@ jobs:
       - name: Determine release tag
         id: release
         run: |
-          # Priority: workflow_dispatch input > repository_dispatch payload > default branch
           if [ -n "${{ inputs.release_tag }}" ]; then
             echo "tag=${{ inputs.release_tag }}" >> $GITHUB_OUTPUT
-          elif [ -n "${{ github.event.client_payload.release_tag }}" ]; then
-            echo "tag=${{ github.event.client_payload.release_tag }}" >> $GITHUB_OUTPUT
           else
             echo "tag=" >> $GITHUB_OUTPUT
           fi

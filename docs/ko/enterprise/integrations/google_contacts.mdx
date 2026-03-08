@@ -200,6 +200,25 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `clientData` (array, 선택사항): 클라이언트별 데이터. 각 항목은 `key` (string)와 `value` (string)가 있는 객체.
 
   </Accordion>
+
+  <Accordion title="google_contacts/update_contact_group">
+    **설명:** 연락처 그룹의 정보를 업데이트합니다.
+
+    **매개변수:**
+    - `resourceName` (string, 필수): 연락처 그룹의 리소스 이름 (예: 'contactGroups/myContactGroup').
+    - `name` (string, 필수): 연락처 그룹의 이름.
+    - `clientData` (array, 선택사항): 클라이언트별 데이터. 각 항목은 `key` (string)와 `value` (string)가 있는 객체.
+
+  </Accordion>
+
+  <Accordion title="google_contacts/delete_contact_group">
+    **설명:** 연락처 그룹을 삭제합니다.
+
+    **매개변수:**
+    - `resourceName` (string, 필수): 삭제할 연락처 그룹의 리소스 이름 (예: 'contactGroups/myContactGroup').
+    - `deleteContacts` (boolean, 선택사항): 그룹 내 연락처도 삭제할지 여부. 기본값: false
+
+  </Accordion>
 </AccordionGroup>
 
 ## 사용 예제

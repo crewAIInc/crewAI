@@ -40,7 +40,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.9.3"
+__version__ = "1.10.1"
 _telemetry_submitted = False
 
 
@@ -71,6 +71,25 @@ def _track_install_async() -> None:
 
 
 _track_install_async()
+
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "Memory": ("crewai.memory.unified_memory", "Memory"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily import heavy modules (e.g. Memory → lancedb) on first access."""
+    if name in _LAZY_IMPORTS:
+        module_path, attr = _LAZY_IMPORTS[name]
+        import importlib
+
+        mod = importlib.import_module(module_path)
+        val = getattr(mod, attr)
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module 'crewai' has no attribute {name!r}")
+
+
 __all__ = [
     "LLM",
     "Agent",
@@ -80,6 +99,7 @@ __all__ = [
     "Flow",
     "Knowledge",
     "LLMGuardrail",
+    "Memory",
     "Process",
     "Task",
     "TaskOutput",

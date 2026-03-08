@@ -1,0 +1,145 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a precise assistant that
+      creates structured summaries of agent conversations. You preserve critical context
+      needed for seamless task continuation."},{"role":"user","content":"Analyze the
+      following conversation and create a structured summary that preserves all information
+      needed to continue the task seamlessly.\n\n<conversation>\n[USER]: Research
+      the latest developments in large language models. Focus on architecture improvements
+      and training techniques.\n\n[ASSISTANT]: I''ll research the latest developments
+      in large language models. Based on my knowledge, recent advances include:\n1.
+      Mixture of Experts (MoE) architectures\n2. Improved attention mechanisms like
+      Flash Attention\n3. Better training data curation techniques\n4. Constitutional
+      AI and RLHF improvements\n\n[USER]: Can you go deeper on the MoE architectures?
+      What are the key papers?\n\n[ASSISTANT]: Key papers on Mixture of Experts:\n-
+      Switch Transformers (Google, 2021) - simplified MoE routing\n- GShard - scaling
+      to 600B parameters\n- Mixtral (Mistral AI) - open-source MoE model\nThe main
+      advantage is computational efficiency: only a subset of experts is activated
+      per token.\n</conversation>\n\nCreate a summary with these sections:\n1. **Task
+      Overview**: What is the agent trying to accomplish?\n2. **Current State**: What
+      has been completed so far? What step is the agent on?\n3. **Important Discoveries**:
+      Key facts, data, tool results, or findings that must not be lost.\n4. **Next
+      Steps**: What should the agent do next based on the conversation?\n5. **Context
+      to Preserve**: Any specific values, names, URLs, code snippets, or details referenced
+      in the conversation.\n\nWrap your entire summary in <summary> tags.\n\n<summary>\n[Your
+      structured summary here]\n</summary>"}],"model":"gpt-4o-mini","temperature":0}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1844'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7RxM4n36QoACHrC0QocV1pXIwvtD\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770668132,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"<summary>\\n1. **Task Overview**: The
+        user has requested research on the latest developments in large language models,
+        specifically focusing on architecture improvements and training techniques.\\n\\n2.
+        **Current State**: The assistant has identified several recent advances in
+        large language models, including Mixture of Experts (MoE) architectures, improved
+        attention mechanisms, better training data curation techniques, and advancements
+        in Constitutional AI and Reinforcement Learning from Human Feedback (RLHF).\\n\\n3.
+        **Important Discoveries**: \\n   - Key papers on Mixture of Experts (MoE)
+        architectures:\\n     - \\\"Switch Transformers\\\" (Google, 2021) - simplified
+        MoE routing.\\n     - \\\"GShard\\\" - scaling to 600B parameters.\\n     -
+        \\\"Mixtral\\\" (Mistral AI) - open-source MoE model.\\n   - The main advantage
+        of MoE architectures is computational efficiency, as only a subset of experts
+        is activated per token.\\n\\n4. **Next Steps**: The assistant should delve
+        deeper into the Mixture of Experts architectures, potentially summarizing
+        the findings from the key papers mentioned.\\n\\n5. **Context to Preserve**:
+        \\n   - Key papers: \\\"Switch Transformers,\\\" \\\"GShard,\\\" \\\"Mixtral.\\\"\\n
+        \  - Notable organizations: Google, Mistral AI.\\n   - Focus areas: MoE architectures,
+        computational efficiency.\\n</summary>\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 368,\n    \"completion_tokens\":
+        275,\n    \"total_tokens\": 643,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 09 Feb 2026 20:15:36 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '4188'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -150,6 +150,49 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `item_id` (string, 필수): 파일의 ID.
 
   </Accordion>
+
+  <Accordion title="microsoft_onedrive/list_files_by_path">
+    **설명:** 특정 OneDrive 경로의 파일과 폴더를 나열합니다.
+
+    **매개변수:**
+    - `folder_path` (string, 필수): 폴더 경로 (예: 'Documents/Reports').
+    - `top` (integer, 선택사항): 검색할 항목 수 (최대 1000). 기본값: 50.
+    - `orderby` (string, 선택사항): 필드별 정렬 (예: "name asc", "lastModifiedDateTime desc"). 기본값: "name asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_recent_files">
+    **설명:** OneDrive에서 최근에 액세스한 파일을 가져옵니다.
+
+    **매개변수:**
+    - `top` (integer, 선택사항): 검색할 항목 수 (최대 200). 기본값: 25.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_shared_with_me">
+    **설명:** 사용자와 공유된 파일과 폴더를 가져옵니다.
+
+    **매개변수:**
+    - `top` (integer, 선택사항): 검색할 항목 수 (최대 200). 기본값: 50.
+    - `orderby` (string, 선택사항): 필드별 정렬. 기본값: "name asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_file_by_path">
+    **설명:** 경로로 특정 파일 또는 폴더에 대한 정보를 가져옵니다.
+
+    **매개변수:**
+    - `file_path` (string, 필수): 파일 또는 폴더 경로 (예: 'Documents/report.docx').
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/download_file_by_path">
+    **설명:** 경로로 OneDrive에서 파일을 다운로드합니다.
+
+    **매개변수:**
+    - `file_path` (string, 필수): 파일 경로 (예: 'Documents/report.docx').
+
+  </Accordion>
 </AccordionGroup>
 
 ## 사용 예제
@@ -183,6 +226,62 @@ crew = Crew(
 crew.kickoff()
 ```
 
+### 파일 업로드 및 관리
+
+```python
+from crewai import Agent, Task, Crew
+
+# 파일 작업에 특화된 에이전트 생성
+file_operator = Agent(
+    role="파일 운영자",
+    goal="파일을 정확하게 업로드, 다운로드 및 관리",
+    backstory="파일 처리 및 콘텐츠 관리에 능숙한 AI 어시스턴트.",
+    apps=['microsoft_onedrive/upload_file', 'microsoft_onedrive/download_file', 'microsoft_onedrive/get_file_info']
+)
+
+# 파일 업로드 및 관리 작업
+file_management_task = Task(
+    description="'report.txt'라는 이름의 텍스트 파일을 'This is a sample report for the project.' 내용으로 업로드한 다음 업로드된 파일에 대한 정보를 가져오세요.",
+    agent=file_operator,
+    expected_output="파일이 성공적으로 업로드되고 파일 정보가 검색됨."
+)
+
+crew = Crew(
+    agents=[file_operator],
+    tasks=[file_management_task]
+)
+
+crew.kickoff()
+```
+
+### 파일 정리 및 공유
+
+```python
+from crewai import Agent, Task, Crew
+
+# 파일 정리 및 공유를 위한 에이전트 생성
+file_organizer = Agent(
+    role="파일 정리자",
+    goal="파일을 정리하고 협업을 위한 공유 링크 생성",
+    backstory="파일 정리 및 공유 권한 관리에 뛰어난 AI 어시스턴트.",
+    apps=['microsoft_onedrive/search_files', 'microsoft_onedrive/move_item', 'microsoft_onedrive/share_item', 'microsoft_onedrive/create_folder']
+)
+
+# 파일 정리 및 공유 작업
+organize_share_task = Task(
+    description="이름에 'presentation'이 포함된 파일을 검색하고, '프레젠테이션'이라는 폴더를 만든 다음, 찾은 파일을 이 폴더로 이동하고 폴더에 대한 읽기 전용 공유 링크를 생성하세요.",
+    agent=file_organizer,
+    expected_output="파일이 '프레젠테이션' 폴더로 정리되고 공유 링크가 생성됨."
+)
+
+crew = Crew(
+    agents=[file_organizer],
+    tasks=[organize_share_task]
+)
+
+crew.kickoff()
+```
+
 ## 문제 해결
 
 ### 일반적인 문제
@@ -196,6 +295,30 @@ crew.kickoff()
 
 - 파일 업로드 시 `file_name`과 `content`가 제공되는지 확인하세요.
 - 바이너리 파일의 경우 내용이 Base64로 인코딩되어야 합니다.
+- OneDrive에 대한 쓰기 권한이 있는지 확인하세요.
+
+**파일/폴더 ID 문제**
+
+- 특정 파일 또는 폴더에 액세스할 때 항목 ID가 올바른지 다시 확인하세요.
+- 항목 ID는 `list_files` 또는 `search_files`와 같은 다른 작업에서 반환됩니다.
+- 참조하는 항목이 존재하고 액세스 가능한지 확인하세요.
+
+**검색 및 필터 작업**
+
+- `search_files` 작업에 적절한 검색어를 사용하세요.
+- `filter` 매개변수의 경우 올바른 OData 문법을 사용하세요.
+
+**파일 작업 (복사/이동)**
+
+- `move_item`의 경우 `item_id`와 `parent_id`가 모두 제공되는지 확인하세요.
+- `copy_item`의 경우 `item_id`만 필요합니다. `parent_id`는 지정하지 않으면 루트로 기본 설정됩니다.
+- 대상 폴더가 존재하고 액세스 가능한지 확인하세요.
+
+**공유 링크 생성**
+
+- 공유 링크를 만들기 전에 항목이 존재하는지 확인하세요.
+- 공유 요구 사항에 따라 적절한 `type`과 `scope`를 선택하세요.
+- `anonymous` 범위는 로그인 없이 액세스를 허용합니다. `organization`은 조직 계정이 필요합니다.
 
 ### 도움 받기
 

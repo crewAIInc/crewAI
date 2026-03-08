@@ -6,12 +6,12 @@ from functools import lru_cache
 import importlib.metadata
 import json
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from urllib import request
 from urllib.error import URLError
 
 import appdirs
-from packaging.version import InvalidVersion, parse
+from packaging.version import InvalidVersion, Version, parse
 
 
 @lru_cache(maxsize=1)
@@ -42,21 +42,88 @@ def _is_cache_valid(cache_data: Mapping[str, Any]) -> bool:
         return False
 
 
+def _find_latest_non_yanked_version(
+    releases: Mapping[str, list[dict[str, Any]]],
+) -> str | None:
+    """Find the latest non-yanked version from PyPI releases data.
+
+    Args:
+        releases: PyPI releases dict mapping version strings to file info lists.
+
+    Returns:
+        The latest non-yanked version string, or None if all versions are yanked.
+    """
+    best_version: Version | None = None
+    best_version_str: str | None = None
+
+    for version_str, files in releases.items():
+        try:
+            v = parse(version_str)
+        except InvalidVersion:
+            continue
+
+        if v.is_prerelease or v.is_devrelease:
+            continue
+
+        if not files:
+            continue
+
+        all_yanked = all(f.get("yanked", False) for f in files)
+        if all_yanked:
+            continue
+
+        if best_version is None or v > best_version:
+            best_version = v
+            best_version_str = version_str
+
+    return best_version_str
+
+
+def _is_version_yanked(
+    version_str: str,
+    releases: Mapping[str, list[dict[str, Any]]],
+) -> tuple[bool, str]:
+    """Check if a specific version is yanked.
+
+    Args:
+        version_str: The version string to check.
+        releases: PyPI releases dict mapping version strings to file info lists.
+
+    Returns:
+        Tuple of (is_yanked, yanked_reason).
+    """
+    files = releases.get(version_str, [])
+    if not files:
+        return False, ""
+
+    all_yanked = all(f.get("yanked", False) for f in files)
+    if not all_yanked:
+        return False, ""
+
+    for f in files:
+        reason = f.get("yanked_reason", "")
+        if reason:
+            return True, str(reason)
+
+    return True, ""
+
+
 def get_latest_version_from_pypi(timeout: int = 2) -> str | None:
-    """Get the latest version of CrewAI from PyPI.
+    """Get the latest non-yanked version of CrewAI from PyPI.
 
     Args:
         timeout: Request timeout in seconds.
 
     Returns:
-        Latest version string or None if unable to fetch.
+        Latest non-yanked version string or None if unable to fetch.
     """
     cache_file = _get_cache_file()
     if cache_file.exists():
         try:
             cache_data = json.loads(cache_file.read_text())
-            if _is_cache_valid(cache_data):
-                return cast(str | None, cache_data.get("version"))
+            if _is_cache_valid(cache_data) and "current_version" in cache_data:
+                version: str | None = cache_data.get("version")
+                return version
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -65,17 +132,58 @@ def get_latest_version_from_pypi(timeout: int = 2) -> str | None:
             "https://pypi.org/pypi/crewai/json", timeout=timeout
         ) as response:
             data = json.loads(response.read())
-            latest_version = cast(str, data["info"]["version"])
+            releases: dict[str, list[dict[str, Any]]] = data["releases"]
+            latest_version = _find_latest_non_yanked_version(releases)
+
+            current_version = get_crewai_version()
+            is_yanked, yanked_reason = _is_version_yanked(current_version, releases)
 
             cache_data = {
                 "version": latest_version,
                 "timestamp": datetime.now().isoformat(),
+                "current_version": current_version,
+                "current_version_yanked": is_yanked,
+                "current_version_yanked_reason": yanked_reason,
             }
             cache_file.write_text(json.dumps(cache_data))
 
             return latest_version
     except (URLError, json.JSONDecodeError, KeyError, OSError):
         return None
+
+
+def is_current_version_yanked() -> tuple[bool, str]:
+    """Check if the currently installed version has been yanked on PyPI.
+
+    Reads from cache if available, otherwise triggers a fetch.
+
+    Returns:
+        Tuple of (is_yanked, yanked_reason).
+    """
+    cache_file = _get_cache_file()
+    if cache_file.exists():
+        try:
+            cache_data = json.loads(cache_file.read_text())
+            if _is_cache_valid(cache_data) and "current_version" in cache_data:
+                current = get_crewai_version()
+                if cache_data.get("current_version") == current:
+                    return (
+                        bool(cache_data.get("current_version_yanked", False)),
+                        str(cache_data.get("current_version_yanked_reason", "")),
+                    )
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    get_latest_version_from_pypi()
+
+    try:
+        cache_data = json.loads(cache_file.read_text())
+        return (
+            bool(cache_data.get("current_version_yanked", False)),
+            str(cache_data.get("current_version_yanked_reason", "")),
+        )
+    except (json.JSONDecodeError, OSError):
+        return False, ""
 
 
 def check_version() -> tuple[str, str | None]:

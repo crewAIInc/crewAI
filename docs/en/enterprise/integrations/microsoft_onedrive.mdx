@@ -151,6 +151,49 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `item_id` (string, required): The ID of the file.
 
   </Accordion>
+
+  <Accordion title="microsoft_onedrive/list_files_by_path">
+    **Description:** List files and folders in a specific OneDrive path.
+
+    **Parameters:**
+    - `folder_path` (string, required): The folder path (e.g., 'Documents/Reports').
+    - `top` (integer, optional): Number of items to retrieve (max 1000). Default is `50`.
+    - `orderby` (string, optional): Order by field (e.g., "name asc", "lastModifiedDateTime desc"). Default is "name asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_recent_files">
+    **Description:** Get recently accessed files from OneDrive.
+
+    **Parameters:**
+    - `top` (integer, optional): Number of items to retrieve (max 200). Default is `25`.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_shared_with_me">
+    **Description:** Get files and folders shared with the user.
+
+    **Parameters:**
+    - `top` (integer, optional): Number of items to retrieve (max 200). Default is `50`.
+    - `orderby` (string, optional): Order by field. Default is "name asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_file_by_path">
+    **Description:** Get information about a specific file or folder by path.
+
+    **Parameters:**
+    - `file_path` (string, required): The file or folder path (e.g., 'Documents/report.docx').
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/download_file_by_path">
+    **Description:** Download a file from OneDrive by its path.
+
+    **Parameters:**
+    - `file_path` (string, required): The file path (e.g., 'Documents/report.docx').
+
+  </Accordion>
 </AccordionGroup>
 
 ## Usage Examples

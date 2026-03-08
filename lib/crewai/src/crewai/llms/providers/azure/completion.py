@@ -425,8 +425,9 @@ class AzureCompletion(BaseLLM):
             "stream": self.stream,
         }
 
+        model_extras: dict[str, Any] = {}
         if self.stream:
-            params["model_extras"] = {"stream_options": {"include_usage": True}}
+            model_extras["stream_options"] = {"include_usage": True}
 
         if response_model and self.is_openai_model:
             model_description = generate_model_description(response_model)
@@ -463,6 +464,13 @@ class AzureCompletion(BaseLLM):
         if tools and self.is_openai_model:
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
+
+        prompt_cache_key = self.additional_params.get("prompt_cache_key")
+        if prompt_cache_key:
+            model_extras["prompt_cache_key"] = prompt_cache_key
+
+        if model_extras:
+            params["model_extras"] = model_extras
 
         additional_params = self.additional_params
         additional_drop_params = additional_params.get("additional_drop_params")
@@ -1063,10 +1071,15 @@ class AzureCompletion(BaseLLM):
         """Extract token usage from Azure response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
+            cached_tokens = 0
+            prompt_details = getattr(usage, "prompt_tokens_details", None)
+            if prompt_details:
+                cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
             return {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
+                "cached_prompt_tokens": cached_tokens,
             }
         return {"total_tokens": 0}
 

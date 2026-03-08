@@ -62,6 +62,8 @@ from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from pydantic import BaseModel, Field
+
 from crewai.flow.flow_wrappers import FlowMethod
 
 
@@ -132,10 +134,12 @@ class HumanFeedbackConfig:
 
     message: str
     emit: Sequence[str] | None = None
-    llm: str | BaseLLM | None = None
+    llm: str | BaseLLM | None = "gpt-4o-mini"
     default_outcome: str | None = None
     metadata: dict[str, Any] | None = None
     provider: HumanFeedbackProvider | None = None
+    learn: bool = False
+    learn_source: str = "hitl"
 
 
 class HumanFeedbackMethod(FlowMethod[Any, Any]):
@@ -155,13 +159,36 @@ class HumanFeedbackMethod(FlowMethod[Any, Any]):
     __human_feedback_config__: HumanFeedbackConfig | None = None
 
 
+class PreReviewResult(BaseModel):
+    """Structured output from the HITL pre-review LLM call."""
+
+    improved_output: str = Field(
+        description="The improved version of the output with past human feedback lessons applied.",
+    )
+
+
+class DistilledLessons(BaseModel):
+    """Structured output from the HITL lesson distillation LLM call."""
+
+    lessons: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Generalizable lessons extracted from the human feedback. "
+            "Each lesson should be a reusable rule or preference. "
+            "Return an empty list if the feedback contains no generalizable guidance."
+        ),
+    )
+
+
 def human_feedback(
     message: str,
     emit: Sequence[str] | None = None,
-    llm: str | BaseLLM | None = None,
+    llm: str | BaseLLM | None = "gpt-4o-mini",
     default_outcome: str | None = None,
     metadata: dict[str, Any] | None = None,
     provider: HumanFeedbackProvider | None = None,
+    learn: bool = False,
+    learn_source: str = "hitl"
 ) -> Callable[[F], F]:
     """Decorator for Flow methods that require human feedback.
 
@@ -256,7 +283,9 @@ def human_feedback(
         if not llm:
             raise ValueError(
                 "llm is required when emit is specified. "
-                "Provide an LLM model string (e.g., 'gpt-4o-mini') or a BaseLLM instance."
+                "Provide an LLM model string (e.g., 'gpt-4o-mini') or a BaseLLM instance. "
+                "See the CrewAI Human-in-the-Loop (HITL) documentation for more information: "
+                "https://docs.crewai.com/en/learn/human-feedback-in-flows"
             )
         if default_outcome is not None and default_outcome not in emit:
             raise ValueError(
@@ -268,6 +297,101 @@ def human_feedback(
 
     def decorator(func: F) -> F:
         """Inner decorator that wraps the function."""
+
+        # -- HITL learning helpers (only used when learn=True) --------
+
+        def _get_hitl_prompt(key: str) -> str:
+            """Read a HITL prompt from the i18n translations."""
+            from crewai.utilities.i18n import get_i18n
+
+            return get_i18n().slice(key)
+
+        def _resolve_llm_instance() -> Any:
+            """Resolve the ``llm`` parameter to a BaseLLM instance.
+
+            Uses the SAME model specified in the decorator so pre-review,
+            distillation, and outcome collapsing all share one model.
+            """
+            if llm is None:
+                from crewai.llm import LLM
+
+                return LLM(model="gpt-4o-mini")
+            if isinstance(llm, str):
+                from crewai.llm import LLM
+
+                return LLM(model=llm)
+            return llm  # already a BaseLLM instance
+
+        def _pre_review_with_lessons(
+            flow_instance: Flow[Any], method_output: Any
+        ) -> Any:
+            """Recall past HITL lessons and use LLM to pre-review the output."""
+            try:
+                query = f"human feedback lessons for {func.__name__}: {method_output!s}"
+                matches = flow_instance.memory.recall(
+                    query, source=learn_source
+                )
+                if not matches:
+                    return method_output
+
+                lessons = "\n".join(f"- {m.record.content}" for m in matches)
+                llm_inst = _resolve_llm_instance()
+                prompt = _get_hitl_prompt("hitl_pre_review_user").format(
+                    output=str(method_output),
+                    lessons=lessons,
+                )
+                messages = [
+                    {"role": "system", "content": _get_hitl_prompt("hitl_pre_review_system")},
+                    {"role": "user", "content": prompt},
+                ]
+                if getattr(llm_inst, "supports_function_calling", lambda: False)():
+                    response = llm_inst.call(messages, response_model=PreReviewResult)
+                    if isinstance(response, PreReviewResult):
+                        return response.improved_output
+                    return PreReviewResult.model_validate(response).improved_output
+                reviewed = llm_inst.call(messages)
+                return reviewed if isinstance(reviewed, str) else str(reviewed)
+            except Exception:
+                return method_output  # fallback to raw output on any failure
+
+        def _distill_and_store_lessons(
+            flow_instance: Flow[Any], method_output: Any, raw_feedback: str
+        ) -> None:
+            """Extract generalizable lessons from output + feedback, store in memory."""
+            try:
+                llm_inst = _resolve_llm_instance()
+                prompt = _get_hitl_prompt("hitl_distill_user").format(
+                    method_name=func.__name__,
+                    output=str(method_output),
+                    feedback=raw_feedback,
+                )
+                messages = [
+                    {"role": "system", "content": _get_hitl_prompt("hitl_distill_system")},
+                    {"role": "user", "content": prompt},
+                ]
+
+                lessons: list[str] = []
+                if getattr(llm_inst, "supports_function_calling", lambda: False)():
+                    response = llm_inst.call(messages, response_model=DistilledLessons)
+                    if isinstance(response, DistilledLessons):
+                        lessons = response.lessons
+                    else:
+                        lessons = DistilledLessons.model_validate(response).lessons
+                else:
+                    response = llm_inst.call(messages)
+                    if isinstance(response, str):
+                        lessons = [
+                            line.strip("- ").strip()
+                            for line in response.strip().split("\n")
+                            if line.strip() and line.strip() != "NONE"
+                        ]
+
+                if lessons:
+                    flow_instance.memory.remember_many(lessons, source=learn_source)
+            except Exception:  # noqa: S110
+                pass  # non-critical: don't fail the flow because lesson storage failed
+
+        # -- Core feedback helpers ------------------------------------
 
         def _request_feedback(flow_instance: Flow[Any], method_output: Any) -> str:
             """Request feedback using provider or default console."""
@@ -353,28 +477,40 @@ def human_feedback(
             # Async wrapper
             @wraps(func)
             async def async_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
-                # Execute the original method
                 method_output = await func(self, *args, **kwargs)
 
-                # Request human feedback (may raise HumanFeedbackPending)
-                raw_feedback = _request_feedback(self, method_output)
+                # Pre-review: apply past HITL lessons before human sees it
+                if learn and getattr(self, "memory", None) is not None:
+                    method_output = _pre_review_with_lessons(self, method_output)
 
-                # Process and return
-                return _process_feedback(self, method_output, raw_feedback)
+                raw_feedback = _request_feedback(self, method_output)
+                result = _process_feedback(self, method_output, raw_feedback)
+
+                # Distill: extract lessons from output + feedback, store in memory
+                if learn and getattr(self, "memory", None) is not None and raw_feedback.strip():
+                    _distill_and_store_lessons(self, method_output, raw_feedback)
+
+                return result
 
             wrapper: Any = async_wrapper
         else:
             # Sync wrapper
             @wraps(func)
             def sync_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
-                # Execute the original method
                 method_output = func(self, *args, **kwargs)
 
-                # Request human feedback (may raise HumanFeedbackPending)
-                raw_feedback = _request_feedback(self, method_output)
+                # Pre-review: apply past HITL lessons before human sees it
+                if learn and getattr(self, "memory", None) is not None:
+                    method_output = _pre_review_with_lessons(self, method_output)
 
-                # Process and return
-                return _process_feedback(self, method_output, raw_feedback)
+                raw_feedback = _request_feedback(self, method_output)
+                result = _process_feedback(self, method_output, raw_feedback)
+
+                # Distill: extract lessons from output + feedback, store in memory
+                if learn and getattr(self, "memory", None) is not None and raw_feedback.strip():
+                    _distill_and_store_lessons(self, method_output, raw_feedback)
+
+                return result
 
             wrapper = sync_wrapper
 
@@ -397,6 +533,8 @@ def human_feedback(
             default_outcome=default_outcome,
             metadata=metadata,
             provider=provider,
+            learn=learn,
+            learn_source=learn_source
         )
         wrapper.__is_flow_method__ = True
 

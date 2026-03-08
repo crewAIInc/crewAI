@@ -132,6 +132,74 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `companyName` (string, 선택사항): 연락처의 회사 이름.
 
   </Accordion>
+
+  <Accordion title="microsoft_outlook/get_message">
+    **설명:** ID로 특정 이메일 메시지를 가져옵니다.
+
+    **매개변수:**
+    - `message_id` (string, 필수): 메시지의 고유 식별자. get_messages 작업에서 얻을 수 있습니다.
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록. 예: "id,subject,body,from,receivedDateTime". 기본값: "id,subject,body,from,toRecipients,receivedDateTime".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/reply_to_email">
+    **설명:** 이메일 메시지에 회신합니다.
+
+    **매개변수:**
+    - `message_id` (string, 필수): 회신할 메시지의 고유 식별자. get_messages 작업에서 얻을 수 있습니다.
+    - `comment` (string, 필수): 회신 메시지 내용. 일반 텍스트 또는 HTML 가능. 원본 메시지가 이 내용 아래에 인용됩니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/forward_email">
+    **설명:** 이메일 메시지를 전달합니다.
+
+    **매개변수:**
+    - `message_id` (string, 필수): 전달할 메시지의 고유 식별자. get_messages 작업에서 얻을 수 있습니다.
+    - `to_recipients` (array, 필수): 전달할 받는 사람의 이메일 주소 배열. 예: ["john@example.com", "jane@example.com"].
+    - `comment` (string, 선택사항): 전달된 콘텐츠 위에 포함할 선택적 메시지. 일반 텍스트 또는 HTML 가능.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/mark_message_read">
+    **설명:** 메시지를 읽음 또는 읽지 않음으로 표시합니다.
+
+    **매개변수:**
+    - `message_id` (string, 필수): 메시지의 고유 식별자. get_messages 작업에서 얻을 수 있습니다.
+    - `is_read` (boolean, 필수): 읽음으로 표시하려면 true, 읽지 않음으로 표시하려면 false로 설정합니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_message">
+    **설명:** 이메일 메시지를 삭제합니다.
+
+    **매개변수:**
+    - `message_id` (string, 필수): 삭제할 메시지의 고유 식별자. get_messages 작업에서 얻을 수 있습니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/update_event">
+    **설명:** 기존 캘린더 이벤트를 업데이트합니다.
+
+    **매개변수:**
+    - `event_id` (string, 필수): 이벤트의 고유 식별자. get_calendar_events 작업에서 얻을 수 있습니다.
+    - `subject` (string, 선택사항): 이벤트의 새 제목/제목.
+    - `start_time` (string, 선택사항): ISO 8601 형식의 새 시작 시간 (예: "2024-01-20T10:00:00"). 필수: 이 필드 사용 시 start_timezone도 제공해야 합니다.
+    - `start_timezone` (string, 선택사항): 시작 시간의 시간대. start_time 업데이트 시 필수. 예: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `end_time` (string, 선택사항): ISO 8601 형식의 새 종료 시간. 필수: 이 필드 사용 시 end_timezone도 제공해야 합니다.
+    - `end_timezone` (string, 선택사항): 종료 시간의 시간대. end_time 업데이트 시 필수. 예: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `location` (string, 선택사항): 이벤트의 새 위치.
+    - `body` (string, 선택사항): 이벤트의 새 본문/설명. HTML 형식 지원.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_event">
+    **설명:** 캘린더 이벤트를 삭제합니다.
+
+    **매개변수:**
+    - `event_id` (string, 필수): 삭제할 이벤트의 고유 식별자. get_calendar_events 작업에서 얻을 수 있습니다.
+
+  </Accordion>
 </AccordionGroup>
 
 ## 사용 예제
@@ -165,6 +233,62 @@ crew = Crew(
 crew.kickoff()
 ```
 
+### 이메일 관리 및 검색
+
+```python
+from crewai import Agent, Task, Crew
+
+# 이메일 관리에 특화된 에이전트 생성
+email_manager = Agent(
+    role="이메일 관리자",
+    goal="이메일 메시지를 검색하고 가져와 정리",
+    backstory="이메일 정리 및 관리에 능숙한 AI 어시스턴트.",
+    apps=['microsoft_outlook/get_messages']
+)
+
+# 이메일 검색 및 가져오기 작업
+search_emails_task = Task(
+    description="최신 읽지 않은 이메일 20건을 가져와 가장 중요한 것들의 요약을 제공하세요.",
+    agent=email_manager,
+    expected_output="주요 읽지 않은 이메일의 요약과 핵심 세부 정보."
+)
+
+crew = Crew(
+    agents=[email_manager],
+    tasks=[search_emails_task]
+)
+
+crew.kickoff()
+```
+
+### 캘린더 및 연락처 관리
+
+```python
+from crewai import Agent, Task, Crew
+
+# 캘린더 및 연락처 관리를 위한 에이전트 생성
+scheduler = Agent(
+    role="캘린더 및 연락처 관리자",
+    goal="캘린더 이벤트를 관리하고 연락처 정보를 유지",
+    backstory="일정 관리 및 연락처 정리를 담당하는 AI 어시스턴트.",
+    apps=['microsoft_outlook/create_calendar_event', 'microsoft_outlook/get_calendar_events', 'microsoft_outlook/create_contact']
+)
+
+# 회의 생성 및 연락처 추가 작업
+schedule_task = Task(
+    description="내일 오후 2시 '팀 회의' 제목으로 '회의실 A' 장소의 캘린더 이벤트를 만들고, 'john.smith@example.com' 이메일과 '프로젝트 매니저' 직책으로 'John Smith'의 새 연락처를 추가하세요.",
+    agent=scheduler,
+    expected_output="캘린더 이벤트가 생성되고 새 연락처가 추가됨."
+)
+
+crew = Crew(
+    agents=[scheduler],
+    tasks=[schedule_task]
+)
+
+crew.kickoff()
+```
+
 ## 문제 해결
 
 ### 일반적인 문제
@@ -173,11 +297,29 @@ crew.kickoff()
 
 - Microsoft 계정이 이메일, 캘린더 및 연락처 액세스에 필요한 권한을 가지고 있는지 확인하세요.
 - 필요한 범위: `Mail.Read`, `Mail.Send`, `Calendars.Read`, `Calendars.ReadWrite`, `Contacts.Read`, `Contacts.ReadWrite`.
+- OAuth 연결에 필요한 모든 범위가 포함되어 있는지 확인하세요.
 
 **이메일 보내기 문제**
 
 - `send_email`에 `to_recipients`, `subject`, `body`가 제공되는지 확인하세요.
 - 이메일 주소가 올바르게 형식화되어 있는지 확인하세요.
+- 계정에 `Mail.Send` 권한이 있는지 확인하세요.
+
+**캘린더 이벤트 생성**
+
+- `subject`, `start_datetime`, `end_datetime`이 제공되는지 확인하세요.
+- 날짜/시간 필드에 적절한 ISO 8601 형식을 사용하세요 (예: '2024-01-20T10:00:00').
+- 이벤트가 잘못된 시간에 표시되는 경우 시간대 설정을 확인하세요.
+
+**연락처 관리**
+
+- `create_contact`의 경우 필수인 `displayName`이 제공되는지 확인하세요.
+- `emailAddresses`를 제공할 때 `address`와 `name` 속성이 있는 올바른 객체 형식을 사용하세요.
+
+**검색 및 필터 문제**
+
+- `filter` 매개변수에 올바른 OData 문법을 사용하세요.
+- 날짜 필터의 경우 ISO 8601 형식을 사용하세요 (예: "receivedDateTime ge '2024-01-01T00:00:00Z'").
 
 ### 도움 받기
 

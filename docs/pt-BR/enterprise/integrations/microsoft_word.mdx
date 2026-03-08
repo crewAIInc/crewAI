@@ -97,6 +97,26 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `file_id` (string, obrigatório): O ID do documento a excluir.
 
   </Accordion>
+
+  <Accordion title="microsoft_word/copy_document">
+    **Descrição:** Copiar um documento para um novo local no OneDrive.
+
+    **Parâmetros:**
+    - `file_id` (string, obrigatório): O ID do documento a copiar.
+    - `name` (string, opcional): Novo nome para o documento copiado.
+    - `parent_id` (string, opcional): O ID da pasta de destino (padrão: raiz).
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/move_document">
+    **Descrição:** Mover um documento para um novo local no OneDrive.
+
+    **Parâmetros:**
+    - `file_id` (string, obrigatório): O ID do documento a mover.
+    - `parent_id` (string, obrigatório): O ID da pasta de destino.
+    - `name` (string, opcional): Novo nome para o documento movido.
+
+  </Accordion>
 </AccordionGroup>
 
 ## Exemplos de Uso
