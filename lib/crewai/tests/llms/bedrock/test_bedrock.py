@@ -967,3 +967,146 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+def test_bedrock_parallel_tool_results_grouped():
+    """Regression test for issue #4749.
+
+    When an assistant message contains multiple parallel tool calls,
+    Bedrock requires all corresponding tool results to be grouped
+    in a single user message. Previously each tool result was emitted
+    as a separate user message, causing:
+        ValidationException: Expected toolResult blocks at messages.2.content
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    messages = [
+        {"role": "user", "content": "Calculate 25 + 17 AND 10 * 5"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_add",
+                    "type": "function",
+                    "function": {"name": "add_tool", "arguments": '{"a": 25, "b": 17}'},
+                },
+                {
+                    "id": "call_mul",
+                    "type": "function",
+                    "function": {"name": "multiply_tool", "arguments": '{"a": 10, "b": 5}'},
+                },
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_add", "content": "42"},
+        {"role": "tool", "tool_call_id": "call_mul", "content": "50"},
+    ]
+
+    converse_msgs, system_msg = llm._format_messages_for_converse(messages)
+
+    # Find the user message that contains toolResult blocks
+    tool_result_messages = [
+        m for m in converse_msgs
+        if m.get("role") == "user"
+        and any("toolResult" in b for b in m.get("content", []))
+    ]
+
+    # There must be exactly ONE user message with tool results (not two)
+    assert len(tool_result_messages) == 1, (
+        f"Expected 1 grouped tool-result message, got {len(tool_result_messages)}. "
+        "Bedrock requires all parallel tool results in a single user message."
+    )
+
+    # That single message must contain both tool results
+    tool_results = tool_result_messages[0]["content"]
+    assert len(tool_results) == 2, (
+        f"Expected 2 toolResult blocks in grouped message, got {len(tool_results)}"
+    )
+
+    # Verify the tool use IDs match
+    tool_use_ids = {
+        block["toolResult"]["toolUseId"] for block in tool_results
+    }
+    assert tool_use_ids == {"call_add", "call_mul"}
+
+
+def test_bedrock_single_tool_result_still_works():
+    """Ensure single tool call still produces a single-block user message."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    messages = [
+        {"role": "user", "content": "Add 1 + 2"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_single",
+                    "type": "function",
+                    "function": {"name": "add_tool", "arguments": '{"a": 1, "b": 2}'},
+                },
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_single", "content": "3"},
+    ]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    tool_result_messages = [
+        m for m in converse_msgs
+        if m.get("role") == "user"
+        and any("toolResult" in b for b in m.get("content", []))
+    ]
+    assert len(tool_result_messages) == 1
+    assert len(tool_result_messages[0]["content"]) == 1
+    assert tool_result_messages[0]["content"][0]["toolResult"]["toolUseId"] == "call_single"
+
+
+def test_bedrock_tool_results_not_merged_across_assistant_messages():
+    """Tool results from different assistant turns must NOT be merged."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    messages = [
+        {"role": "user", "content": "First task"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_a",
+                    "type": "function",
+                    "function": {"name": "tool_a", "arguments": "{}"},
+                },
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_a", "content": "result_a"},
+        {"role": "assistant", "content": "Now doing second task"},
+        {"role": "user", "content": "Second task"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_b",
+                    "type": "function",
+                    "function": {"name": "tool_b", "arguments": "{}"},
+                },
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_b", "content": "result_b"},
+    ]
+
+    converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+    tool_result_messages = [
+        m for m in converse_msgs
+        if m.get("role") == "user"
+        and any("toolResult" in b for b in m.get("content", []))
+    ]
+
+    # Two separate tool-result messages (one per assistant turn)
+    assert len(tool_result_messages) == 2, (
+        "Tool results from different assistant turns must remain separate"
+    )
+    assert tool_result_messages[0]["content"][0]["toolResult"]["toolUseId"] == "call_a"
+    assert tool_result_messages[1]["content"][0]["toolResult"]["toolUseId"] == "call_b"
