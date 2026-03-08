@@ -591,14 +591,14 @@ class AnthropicCompletion(BaseLLM):
                         list[dict[str, Any]],
                         [
                             *self.previous_thinking_blocks,
-                            {"type": "text", "text": content if content else ""},
+                            {"type": "text", "text": content if content else " "},
                         ],
                     )
                     formatted_messages.append(
                         LLMMessage(role="assistant", content=structured_content)
                     )
                 else:
-                    content_str = content if content is not None else ""
+                    content_str = content if content else " "
                     formatted_messages.append(
                         LLMMessage(role="assistant", content=content_str)
                     )
@@ -614,7 +614,7 @@ class AnthropicCompletion(BaseLLM):
                 if isinstance(content, list):
                     formatted_messages.append({"role": role_str, "content": content})
                 else:
-                    content_str = content if content is not None else ""
+                    content_str = content if content else " "
                     formatted_messages.append(
                         LLMMessage(role=role_str, content=content_str)
                     )
