@@ -121,3 +121,41 @@ def test_telemetry_singleton_pattern():
         thread.join()
 
     assert all(instance is telemetry1 for instance in instances)
+
+
+def test_no_signal_handler_traceback_in_non_main_thread():
+    """Signal handler registration should be silently skipped in non-main threads.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4289
+    """
+    errors: list[Exception] = []
+    mock_holder: dict = {}
+
+    def init_in_thread():
+        try:
+            Telemetry._instance = None
+            with (
+                patch.dict(
+                    os.environ,
+                    {"CREWAI_DISABLE_TELEMETRY": "false", "OTEL_SDK_DISABLED": "false"},
+                ),
+                patch("crewai.telemetry.telemetry.TracerProvider"),
+                patch("signal.signal") as mock_signal,
+                patch("crewai.telemetry.telemetry.logger") as mock_logger,
+            ):
+                Telemetry()
+                mock_holder["signal"] = mock_signal
+                mock_holder["logger"] = mock_logger
+        except Exception as exc:
+            errors.append(exc)
+
+    thread = threading.Thread(target=init_in_thread)
+    thread.start()
+    thread.join()
+
+    assert not errors, f"Unexpected error: {errors}"
+    assert mock_holder, "Thread did not execute"
+    mock_holder["signal"].assert_not_called()
+    mock_holder["logger"].debug.assert_any_call(
+        "Skipping signal handler registration: not running in main thread"
+    )
