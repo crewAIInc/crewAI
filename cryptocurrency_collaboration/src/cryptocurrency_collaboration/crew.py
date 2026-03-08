@@ -1,63 +1,77 @@
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai.project import CrewBase, agent, crew, task, llm
 from crewai.agents.agent_builder.base_agent import BaseAgent
-# If you want to run a snippet of code before or after the crew starts,
-# you can use the @before_kickoff and @after_kickoff decorators
-# https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+from cryptocurrency_collaboration.tools.kline_tool import KlineTool
+from cryptocurrency_collaboration.tools.sentiment_tool import SentimentTool
+from crewai.llm import LLM
 
 @CrewBase
 class CryptocurrencyCollaboration():
-    """CryptocurrencyCollaboration crew"""
-
     agents: list[BaseAgent]
     tasks: list[Task]
 
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    
-    # If you would like to add tools to your agents, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
+    @llm
+    def local_gemma_llm(self) -> LLM:
+        return LLM(
+            model="ollama/gemma3:4b",
+            api_base="http://localhost:11434",
+        )
+
+    @llm
+    def deepseek_llm(self) -> LLM:
+        return LLM(
+            model="deepseek/deepseek-chat",
+            api_base="https://api.deepseek.com/v1",
+            api_key="sk-d20b2a7a301a4d39b2ac2d85edf4d8b0",
+        )
+
     @agent
-    def researcher(self) -> Agent:
+    def kline_analyzer(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'], # type: ignore[index]
+            config=self.agents_config['kline_analyzer'], # type: ignore[index]
+            tools=[KlineTool()],
             verbose=True
         )
 
     @agent
-    def reporting_analyst(self) -> Agent:
+    def news_sentiment_analyst(self) -> Agent:
         return Agent(
-            config=self.agents_config['reporting_analyst'], # type: ignore[index]
+            config=self.agents_config['news_sentiment_analyst'], # type: ignore[index]
+            tools=[SentimentTool()],
             verbose=True
         )
 
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
-    @task
-    def research_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['research_task'], # type: ignore[index]
+    @agent
+    def chief_decision_maker(self) -> Agent:
+        return Agent(
+            config=self.agents_config['chief_decision_maker'], # type: ignore[index]
+            verbose=True
         )
 
     @task
-    def reporting_task(self) -> Task:
+    def research_kline(self) -> Task:
         return Task(
-            config=self.tasks_config['reporting_task'], # type: ignore[index]
+            config=self.tasks_config['research_kline'], # type: ignore[index]
+        )
+
+    @task
+    def sentiment_news(self) -> Task:
+        return Task(
+            config=self.tasks_config['sentiment_news'], # type: ignore[index]
+        )
+
+    @task
+    def decision_report(self) -> Task:
+        return Task(
+            config=self.tasks_config['decision_report'], # type: ignore[index]
             output_file='report.md'
         )
 
     @crew
     def crew(self) -> Crew:
-        """Creates the CryptocurrencyCollaboration crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
-
         return Crew(
-            agents=self.agents, # Automatically created by the @agent decorator
-            tasks=self.tasks, # Automatically created by the @task decorator
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
-            # process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
         )

@@ -1,17 +1,20 @@
-research_task:
+research_kline:
   description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is {current_year}.
+    获取 {symbol} 的 {intervals} 周期 OHLCV，并识别短线趋势与关键位
   expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
+    结构化短线倾向、关键位与形态识别，附置信度与风险说明
+  agent: kline_analyzer
 
-reporting_task:
+sentiment_news:
   description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
+    聚合过去 {time_range} 内的新闻与社媒，输出主题簇、极性、强度与来源可信度
   expected_output: >
-    A fully fledged report with the main topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
+    结构化情绪评估与关键事件列表，含风险标签与影响时窗
+  agent: news_sentiment_analyst
+
+decision_report:
+  description: >
+    融合短线与情绪，并结合日/周线趋势，给出当日涨跌与最高/最低点区间
+  expected_output: >
+    Markdown 报告与 JSON 决策输出，含驱动因素、风险与条件化判断
+  agent: chief_decision_maker
