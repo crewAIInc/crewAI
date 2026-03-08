@@ -1189,8 +1189,20 @@ def test_tool_search_regex_config():
         {
             "type": "function",
             "function": {
-                "name": "test_tool",
-                "description": "A test tool",
+                "name": "tool_a",
+                "description": "First tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_b",
+                "description": "Second tool",
                 "parameters": {
                     "type": "object",
                     "properties": {"q": {"type": "string"}},
@@ -1315,8 +1327,9 @@ def test_tool_search_passthrough_preserves_tool_search_type():
     assert "input_schema" in converted[1]
 
 
-def test_tool_search_tool_choice_excludes_search_tool():
-    """When tool_search is enabled with a single regular tool, tool_choice should still work."""
+def test_tool_search_single_tool_skips_search_and_forces_choice():
+    """With only 1 tool, tool_search is skipped (nothing to search) and the
+    normal forced tool_choice optimisation still applies."""
     llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
 
     crewai_tools = [
@@ -1344,9 +1357,17 @@ def test_tool_search_tool_choice_excludes_search_tool():
         available_functions={"test_tool": lambda q: "result"},
     )
 
-    # Should have tool_choice forcing the single regular tool
+    # Single tool — tool_search skipped, tool_choice forced as normal
     assert "tool_choice" in params
     assert params["tool_choice"]["name"] == "test_tool"
+
+    # No tool search tool should be injected
+    tool_types = [t.get("type", "") for t in params["tools"]]
+    for ts_type in ("tool_search_tool_bm25_20251119", "tool_search_tool_regex_20251119"):
+        assert ts_type not in tool_types
+
+    # No defer_loading on the single tool
+    assert "defer_loading" not in params["tools"][0]
 
 
 def test_tool_search_via_llm_class():

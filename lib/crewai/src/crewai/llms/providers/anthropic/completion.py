@@ -471,19 +471,20 @@ class AnthropicCompletion(BaseLLM):
         if tools and self.supports_tools:
             converted_tools = self._convert_tools_for_interference(tools)
 
-            # When tool_search is enabled, inject the tool search tool and
-            # mark all regular tools with defer_loading=True
-            if self.tool_search is not None:
-                converted_tools = self._apply_tool_search(converted_tools)
-
-            params["tools"] = converted_tools
-
-            # Count only regular tools (not tool search tools) for tool_choice
+            # When tool_search is enabled and there are 2+ regular tools,
+            # inject the search tool and mark regular tools with defer_loading.
+            # With only 1 tool there's nothing to search — skip tool search
+            # entirely so the normal forced tool_choice optimisation still works.
             regular_tools = [
                 t
                 for t in converted_tools
                 if t.get("type", "") not in TOOL_SEARCH_TOOL_TYPES
             ]
+            if self.tool_search is not None and len(regular_tools) >= 2:
+                converted_tools = self._apply_tool_search(converted_tools)
+
+            params["tools"] = converted_tools
+
             if available_functions and len(regular_tools) == 1:
                 tool_name = regular_tools[0].get("name")
                 if tool_name and tool_name in available_functions:
