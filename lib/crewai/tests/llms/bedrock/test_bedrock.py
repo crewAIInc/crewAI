@@ -967,3 +967,147 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+def test_bedrock_groups_consecutive_tool_results():
+    """
+    Test that consecutive tool result messages are grouped into a single
+    user message. Bedrock's Converse API requires all toolResult blocks
+    for a given assistant turn to appear in one user message.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4749
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    # Simulate: user prompt -> assistant makes 2 tool calls -> 2 tool results
+    test_messages = [
+        {"role": "user", "content": "Calculate 25 + 17 AND 10 * 5"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_add",
+                    "function": {
+                        "name": "add_tool",
+                        "arguments": '{"a": 25, "b": 17}',
+                    },
+                },
+                {
+                    "id": "call_mul",
+                    "function": {
+                        "name": "multiply_tool",
+                        "arguments": '{"a": 10, "b": 5}',
+                    },
+                },
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call_add",
+            "content": "42",
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call_mul",
+            "content": "50",
+        },
+    ]
+
+    formatted, system_msg = llm._format_messages_for_converse(test_messages)
+
+    # Should produce exactly 3 messages: user, assistant, user (with both results)
+    assert len(formatted) == 3, (
+        f"Expected 3 messages (user, assistant, user-with-results), got {len(formatted)}: "
+        + str([m['role'] for m in formatted])
+    )
+
+    assert formatted[0]["role"] == "user"
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[2]["role"] == "user"
+
+    # The user message must contain both toolResult blocks
+    tool_result_msg = formatted[2]
+    assert len(tool_result_msg["content"]) == 2, (
+        f"Expected 2 toolResult blocks in one message, got {len(tool_result_msg['content'])}"
+    )
+
+    # Verify both tool results are present with correct IDs
+    result_ids = {
+        block["toolResult"]["toolUseId"]
+        for block in tool_result_msg["content"]
+        if "toolResult" in block
+    }
+    assert result_ids == {"call_add", "call_mul"}, f"Unexpected tool result IDs: {result_ids}"
+
+
+def test_bedrock_single_tool_result_still_works():
+    """
+    Verify that a single tool result still produces a correct message.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    test_messages = [
+        {"role": "user", "content": "What is the weather?"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_weather",
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": '{"location": "NYC"}',
+                    },
+                },
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call_weather",
+            "content": "Sunny, 72F",
+        },
+    ]
+
+    formatted, _ = llm._format_messages_for_converse(test_messages)
+
+    assert len(formatted) == 3
+    assert formatted[2]["role"] == "user"
+    assert len(formatted[2]["content"]) == 1
+    assert "toolResult" in formatted[2]["content"][0]
+    assert formatted[2]["content"][0]["toolResult"]["toolUseId"] == "call_weather"
+
+
+def test_bedrock_groups_three_tool_results():
+    """
+    Verify that three consecutive tool results are grouped into one message.
+    """
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    test_messages = [
+        {"role": "user", "content": "Run all three tools"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"id": "c1", "function": {"name": "t1", "arguments": "{}"}},
+                {"id": "c2", "function": {"name": "t2", "arguments": "{}"}},
+                {"id": "c3", "function": {"name": "t3", "arguments": "{}"}},
+            ],
+        },
+        {"role": "tool", "tool_call_id": "c1", "content": "r1"},
+        {"role": "tool", "tool_call_id": "c2", "content": "r2"},
+        {"role": "tool", "tool_call_id": "c3", "content": "r3"},
+    ]
+
+    formatted, _ = llm._format_messages_for_converse(test_messages)
+
+    assert len(formatted) == 3
+    tool_result_msg = formatted[2]
+    assert tool_result_msg["role"] == "user"
+    assert len(tool_result_msg["content"]) == 3
+    result_ids = {
+        block["toolResult"]["toolUseId"]
+        for block in tool_result_msg["content"]
+    }
+    assert result_ids == {"c1", "c2", "c3"}
