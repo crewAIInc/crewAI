@@ -19,10 +19,11 @@ class CryptocurrencyCollaboration():
 
     @llm
     def deepseek_llm(self) -> LLM:
+        import os
         return LLM(
             model="deepseek/deepseek-chat",
             api_base="https://api.deepseek.com/v1",
-            api_key="sk-d20b2a7a301a4d39b2ac2d85edf4d8b0",
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
         )
 
     @agent

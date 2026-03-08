@@ -1,20 +1,23 @@
 research_kline:
   description: >
-    获取 {symbol} 的 {intervals} 周期 OHLCV，并识别短线趋势与关键位
+    使用工具实时获取 {symbol} 的 {intervals} 周期 OHLCV，计算最近高/低/收盘并识别关键位
   expected_output: >
-    结构化短线倾向、关键位与形态识别，附置信度与风险说明
+    仅以自然语言给出短线倾向与关键位的数值说明，不展示原始JSON
   agent: kline_analyzer
 
 sentiment_news:
   description: >
-    聚合过去 {time_range} 内的新闻与社媒，输出主题簇、极性、强度与来源可信度
+    使用工具实时抓取过去 {time_range} 内的加密新闻RSS并过滤，进行主题与情绪分析
   expected_output: >
-    结构化情绪评估与关键事件列表，含风险标签与影响时窗
+    仅以自然语言总结主要事件与情绪倾向，不展示原始JSON
   agent: news_sentiment_analyst
 
 decision_report:
   description: >
-    融合短线与情绪，并结合日/周线趋势，给出当日涨跌与最高/最低点区间
+    融合短线与情绪，并结合日/周线趋势，给出当日涨跌与明确价格区间
   expected_output: >
-    Markdown 报告与 JSON 决策输出，含驱动因素、风险与条件化判断
+    Markdown 报告，包含：
+    - 当日倾向（涨/跌/震荡）与置信度
+    - 数值区间：日内最高点/最低点（来自1d），周线关键位（1w），短线区间（来自1m/5m/15m）
+    - 驱动因素与风险，避免展示工具原始JSON
   agent: chief_decision_maker
