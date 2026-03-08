@@ -1,0 +1,120 @@
+---
+title: "Seltz Search Tool"
+description: "Fast, source-backed web knowledge for AI reasoning using the Seltz Web Knowledge API"
+icon: "bolt"
+mode: "wide"
+---
+
+The `SeltzSearchTool` provides an interface to the Seltz Web Knowledge API, enabling CrewAI agents to access fast, context-engineered web content with sources optimized for LLMs and AI agents.
+
+## Installation
+
+To use the `SeltzSearchTool`, you need to install the `seltz` library:
+
+```shell
+pip install 'crewai[tools]' seltz
+```
+
+## Environment Variables
+
+Ensure your Seltz API key is set as an environment variable:
+
+```bash
+export SELTZ_API_KEY='your_seltz_api_key'
+```
+
+## Example Usage
+
+Here's how to initialize and use the `SeltzSearchTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import SeltzSearchTool
+
+# Ensure the SELTZ_API_KEY environment variable is set
+# os.environ["SELTZ_API_KEY"] = "YOUR_SELTZ_API_KEY"
+
+# Initialize the tool
+seltz_tool = SeltzSearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Research Analyst',
+    goal='Find accurate, source-backed information on any topic',
+    backstory='An expert researcher who values well-sourced information.',
+    tools=[seltz_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Research the latest developments in AI agents.',
+    expected_output='A summary of recent AI agent developments with sources.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `SeltzSearchTool` accepts the following arguments during initialization:
+
+- `api_key` (str, optional): The Seltz API key. Defaults to the `SELTZ_API_KEY` environment variable.
+- `endpoint` (str, optional): Custom Seltz API endpoint. Defaults to `None`.
+- `insecure` (bool, optional): Whether to use an insecure connection. Defaults to `False`.
+- `max_documents` (int, optional): Maximum number of documents to return. Defaults to `5`.
+- `context` (str, optional): Background context to refine search results. Defaults to `None`.
+- `profile` (str, optional): Named search configuration profile. Defaults to `None`.
+- `max_content_length_per_result` (int, optional): Maximum content length per result to avoid context window issues. Defaults to `1000`.
+
+## Advanced Usage
+
+You can configure the tool with custom parameters:
+
+```python
+# Example: Initialize with specific parameters
+custom_seltz_tool = SeltzSearchTool(
+    max_documents=10,
+    context="Researching enterprise AI adoption trends",
+    profile="research"
+)
+
+# The agent will use these defaults
+agent_with_custom_tool = Agent(
+    role="Advanced Researcher",
+    goal="Conduct detailed research with comprehensive, sourced results",
+    tools=[custom_seltz_tool]
+)
+```
+
+## Features
+
+- **Context-Engineered Content**: Web content specifically optimized for AI reasoning
+- **Source-Backed Results**: Every result includes its source URL for verification
+- **Configurable Results**: Control the number of documents returned
+- **Search Profiles**: Use named profiles for different search configurations
+- **Contextual Refinement**: Provide background context to improve result relevance
+- **Content Truncation**: Automatic content truncation to prevent context window issues
+
+## Response Format
+
+The tool returns search results as a JSON array. Each element contains:
+- `url`: The source URL of the content
+- `content`: The context-engineered web content (truncated if needed)
+
+```json
+[
+  {"url": "https://example.com/page1", "content": "Relevant content from page 1..."},
+  {"url": "https://example.com/page2", "content": "Relevant content from page 2..."}
+]
+```

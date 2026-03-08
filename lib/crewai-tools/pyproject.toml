@@ -136,6 +136,9 @@ bedrock = [
     "playwright>=1.52.0",
     "nest-asyncio>=1.6.0",
 ]
+seltz = [
+    "seltz>=0.2.0",
+]
 contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
