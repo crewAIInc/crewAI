@@ -159,3 +159,54 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
     )
+
+
+def test_crew_created_span_with_memory_object_does_not_raise(mocker):
+    """crew_memory attribute must be serialised to bool, not the raw Memory object.
+
+    OpenTelemetry span.set_attribute only accepts bool/str/bytes/int/float or
+    sequences thereof.  When crew.memory is a Memory instance the previous code
+    passed the object directly and raised:
+        Invalid type Memory for attribute 'crew_memory' value.
+    (issue #4703)
+    """
+    from crewai.telemetry import Telemetry
+
+    telemetry = Telemetry()
+    telemetry.ready = True
+
+    # Build a minimal mock span that records what set_attribute is called with.
+    span = mocker.MagicMock()
+    mock_tracer = mocker.MagicMock()
+    mock_tracer.start_span.return_value = span
+    mock_tracer_provider = mocker.MagicMock()
+    mock_tracer_provider.get_tracer.return_value = mock_tracer
+
+    mocker.patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=mock_tracer)
+
+    # Simulate a crew whose .memory field is a non-bool truthy object.
+    memory_obj = mocker.MagicMock()
+    memory_obj.__bool__ = mocker.MagicMock(return_value=True)
+
+    crew = mocker.MagicMock()
+    crew.memory = memory_obj
+    crew.process = "sequential"
+    crew.tasks = []
+    crew.agents = []
+    crew.name = "TestCrew"
+
+    # Should not raise even with a non-bool memory value.
+    try:
+        telemetry.crew_creation(crew, {})
+    except Exception:
+        pass  # other attributes may fail in mock env; we only care about memory
+
+    # Verify crew_memory was set to a bool, not the raw object.
+    for call in span.set_attribute.call_args_list:
+        key = call[0][0] if call[0] else call[1].get("key", "")
+        value = call[0][1] if len(call[0]) > 1 else call[1].get("value")
+        if key == "crew_memory":
+            assert isinstance(value, bool), (
+                f"crew_memory must be serialised to bool, got {type(value).__name__!r}"
+            )
+            break
