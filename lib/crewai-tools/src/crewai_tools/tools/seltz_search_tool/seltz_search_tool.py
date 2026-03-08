@@ -89,12 +89,7 @@ class SeltzSearchTool(BaseTool):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         if SELTZ_AVAILABLE:
-            client_kwargs: dict[str, Any] = {"api_key": self.api_key}
-            if self.endpoint is not None:
-                client_kwargs["endpoint"] = self.endpoint
-            if self.insecure:
-                client_kwargs["insecure"] = self.insecure
-            self.client = Seltz(**client_kwargs)
+            self._init_client(Seltz)
         else:
             try:
                 import subprocess
@@ -111,9 +106,11 @@ class SeltzSearchTool(BaseTool):
             ):
                 try:
                     subprocess.run(["uv", "add", "seltz"], check=True)  # noqa: S607
-                    raise ImportError(
-                        "'seltz' has been installed. Please restart your Python application to use the SeltzSearchTool."
+                    from seltz import (
+                        Seltz as SeltzClient,  # type: ignore[import-untyped]
                     )
+
+                    self._init_client(SeltzClient)
                 except subprocess.CalledProcessError as e:
                     raise ImportError(
                         f"Attempted to install 'seltz' but failed: {e}. "
@@ -124,6 +121,14 @@ class SeltzSearchTool(BaseTool):
                     "The 'seltz' package is required to use the SeltzSearchTool. "
                     "Please install it with: uv add seltz"
                 )
+
+    def _init_client(self, seltz_cls: type) -> None:
+        client_kwargs: dict[str, Any] = {"api_key": self.api_key}
+        if self.endpoint is not None:
+            client_kwargs["endpoint"] = self.endpoint
+        if self.insecure:
+            client_kwargs["insecure"] = self.insecure
+        self.client = seltz_cls(**client_kwargs)
 
     def _run(
         self,
