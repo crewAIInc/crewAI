@@ -181,4 +181,6 @@ class SeltzSearchTool(BaseTool):
         Returns:
             A JSON string containing the search results with truncated content.
         """
-        return self._run(query=query)
+        import asyncio
+
+        return await asyncio.to_thread(self._run, query=query)
