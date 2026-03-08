@@ -555,7 +555,8 @@ class AnthropicCompletion(BaseLLM):
             Updated tools list with tool search tool prepended and
             regular tools marked as deferred.
         """
-        assert self.tool_search is not None # type
+        if self.tool_search is None:
+            return tools
 
         # Check if a tool search tool is already present (user passed one manually)
         has_search_tool = any(
