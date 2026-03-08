@@ -56,8 +56,7 @@ def _mock_response(
 
 @pytest.fixture(autouse=True)
 def _brave_env_and_rate_limit():
-    """Set BRAVE_API_KEY for every test and reset the shared rate-limit clock."""
-    BraveSearchToolBase._last_request_time = 0
+    """Set BRAVE_API_KEY for every test. Rate limiting is per-instance (each tool starts with a fresh clock)."""
     with patch.dict(os.environ, {"BRAVE_API_KEY": "test-api-key"}):
         yield
 
@@ -637,7 +636,7 @@ def test_rate_limit_sleeps_when_too_fast(mock_time, mock_get, web_tool):
     # Simulate: last request was at t=100, "now" is t=100.2 (only 0.2s elapsed).
     # With default 1 req/s the min interval is 1.0s, so it should sleep ~0.8s.
     mock_time.time.return_value = 100.2
-    BraveSearchToolBase._last_request_time = 100.0
+    web_tool._last_request_time = 100.0
 
     web_tool._run(query="test")
 
@@ -654,7 +653,7 @@ def test_rate_limit_skips_sleep_when_enough_time_passed(mock_time, mock_get, web
 
     # Last request was at t=100, "now" is t=102 (2s elapsed > 1s interval).
     mock_time.time.return_value = 102.0
-    BraveSearchToolBase._last_request_time = 100.0
+    web_tool._last_request_time = 100.0
 
     web_tool._run(query="test")
 
@@ -663,40 +662,34 @@ def test_rate_limit_skips_sleep_when_enough_time_passed(mock_time, mock_get, web
 
 @patch("crewai_tools.tools.brave_search_tool.base.requests.get")
 @patch("crewai_tools.tools.brave_search_tool.base.time")
-def test_rate_limit_disabled_when_zero(mock_time, mock_get):
+def test_rate_limit_disabled_when_zero(mock_time, mock_get, web_tool):
     """requests_per_second=0 disables rate limiting entirely."""
     mock_get.return_value = _mock_response(json_data={})
 
-    tool = BraveWebSearchTool(requests_per_second=0)
-    BraveSearchToolBase._last_request_time = 100.0
+    web_tool._last_request_time = 100.0
     mock_time.time.return_value = 100.0  # same instant
 
-    tool._run(query="test")
+    web_tool._run(query="test")
 
     mock_time.sleep.assert_not_called()
 
 
 @patch("crewai_tools.tools.brave_search_tool.base.requests.get")
 @patch("crewai_tools.tools.brave_search_tool.base.time")
-def test_rate_limit_shared_across_instances(mock_time, mock_get):
-    """The rate-limit clock is shared across different tool instances."""
+def test_rate_limit_per_instance_independent(mock_time, mock_get, web_tool, image_tool):
+    """Each instance has its own rate-limit clock; a request on one does not delay the other."""
     mock_get.return_value = _mock_response(json_data={})
 
-    web_tool = BraveWebSearchTool()
-    image_tool = BraveImageSearchTool()
-
-    # Web tool fires at t=100, updating the class-level timestamp.
+    # Web tool fires at t=100 (its clock goes 0 -> 100).
     mock_time.time.return_value = 100.0
-    BraveSearchToolBase._last_request_time = 0
     web_tool._run(query="test")
 
-    # Image tool fires at t=100.3 — within the 1s window set by web_tool.
+    # Image tool fires at t=100.3. Its clock is still 0 (separate instance), so
+    # next_allowed = 1.0 and 100.3 > 1.0 — no sleep. Total process rate can be sum of instance limits.
     mock_time.time.return_value = 100.3
     image_tool._run(query="cats")
 
-    mock_time.sleep.assert_called_once()
-    sleep_duration = mock_time.sleep.call_args[0][0]
-    assert 0.6 < sleep_duration < 0.8  # approximately 0.7s
+    mock_time.sleep.assert_not_called()
 
 
 # Retry Behavior

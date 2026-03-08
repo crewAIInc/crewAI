@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 import logging
 import os
+import threading
 import time
 from typing import Any, ClassVar
 
@@ -94,9 +95,6 @@ class BraveSearchToolBase(BaseTool, ABC):
     args_schema: type[BaseModel]
     header_schema: type[BaseModel]
 
-    # Rate limiting parameters
-    _last_request_time: ClassVar[float] = 0
-
     # Tool options (legacy parameters)
     country: str | None = None
     save_file: bool = False
@@ -134,6 +132,10 @@ class BraveSearchToolBase(BaseTool, ABC):
         self.save_file = bool(save_file)
         self._requests_per_second = float(requests_per_second)
         self._headers = self._build_and_validate_headers(headers or {})
+        # Per-instance rate limiting: each instance has its own clock and lock.
+        # Total process rate is the sum of limits of instances you create.
+        self._last_request_time: float = 0
+        self._rate_limit_lock = threading.Lock()
 
     @property
     def api_key(self) -> str:
@@ -161,14 +163,18 @@ class BraveSearchToolBase(BaseTool, ABC):
         return normalized
 
     def _rate_limit(self) -> None:
+        """Enforce minimum interval between requests for this instance. Thread-safe."""
         if self._requests_per_second <= 0:
             return
 
-        now = time.time()
         min_interval = 1.0 / self._requests_per_second
-        elapsed = now - BraveSearchToolBase._last_request_time
-        if elapsed < min_interval:
-            time.sleep(min_interval - elapsed)
+        with self._rate_limit_lock:
+            now = time.time()
+            next_allowed = self._last_request_time + min_interval
+            if now < next_allowed:
+                time.sleep(next_allowed - now)
+                now = time.time()
+            self._last_request_time = now
 
     def _make_request(
         self, params: dict[str, Any], *, _max_retries: int = 3
@@ -196,9 +202,6 @@ class BraveSearchToolBase(BaseTool, ABC):
                 raise RuntimeError(
                     f"Brave Search API request timed out after {self._timeout}s: {exc}"
                 ) from exc
-
-            # Update the last request time
-            BraveSearchToolBase._last_request_time = time.time()
 
             # Log the rate limit headers and request details
             logger.debug(
