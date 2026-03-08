@@ -2324,32 +2324,6 @@ class LLM(BaseLLM):
         return self.context_window_size
 
     @staticmethod
-    def set_callbacks(callbacks: list[Any]) -> None:
-        """
-        Attempt to keep a single set of callbacks in litellm by removing old
-        duplicates and adding new ones.
-
-        Note: This only affects the litellm fallback path. Native providers
-        don't use litellm callbacks - they emit events via base_llm.py.
-        """
-        if not LITELLM_AVAILABLE:
-            # When litellm is not available, callbacks are still stored
-            # but not registered with litellm globals
-            return
-
-        with suppress_warnings():
-            callback_types = [type(callback) for callback in callbacks]
-            for callback in litellm.success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm.success_callback.remove(callback)
-
-            for callback in litellm._async_success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm._async_success_callback.remove(callback)
-
-            litellm.callbacks = callbacks
-
-    @staticmethod
     def set_env_callbacks() -> None:
         """Sets the success and failure callbacks for the LiteLLM library from environment variables.
 
