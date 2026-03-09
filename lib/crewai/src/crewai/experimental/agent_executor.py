@@ -906,7 +906,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     @router("has_todos")
     def get_ready_todos_method(
         self,
-    ) -> Literal["single_todo_ready", "multiple_todos_ready", "all_todos_complete"]:
+    ) -> Literal["single_todo_ready", "multiple_todos_ready", "all_todos_complete", "needs_replan"]:
         """Find todos whose dependencies are satisfied.
 
         Determines if we can execute a single todo sequentially or multiple
@@ -927,7 +927,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
 
         if not ready:
-            return "all_todos_complete"
+            if self.state.todos.is_complete:
+                return "all_todos_complete"
+            # Stuck state: pending todos exist but none are ready (unsatisfied
+            # dependencies, e.g. a dependency was never completed). Trigger a
+            # replan so the planner can generate a new plan that unblocks
+            # execution rather than erroneously finalizing.
+            if self.agent.verbose:
+                self._printer.print(
+                    content="[DEBUG] No ready todos but plan not complete — stuck state, triggering replan",
+                    color="yellow",
+                )
+            self.state.last_replan_reason = (
+                "No todos are ready but plan is not complete — "
+                "likely a dependency deadlock or missing completion"
+            )
+            return "needs_replan"
 
         if len(ready) == 1:
             # Mark the single ready todo as running
@@ -2265,13 +2280,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     self._synthesize_final_answer_from_todos()
 
         if self.state.current_answer is None:
-            skip_text = Text()
-            skip_text.append("⚠️ ", style="yellow bold")
-            skip_text.append(
-                "Finalize called but no answer in state - skipping", style="yellow"
+            # Last resort: produce a fallback answer rather than leaving
+            # current_answer as None, which causes a RuntimeError upstream.
+            fallback_text = "Agent completed execution but produced no final output."
+            if self.state.todos.items:
+                partial = [
+                    f"Step {t.step_number}: {t.result or '(no result)'}"
+                    for t in self.state.todos.items
+                    if t.status == "completed"
+                ]
+                if partial:
+                    fallback_text = "\n\n".join(partial)
+            self.state.current_answer = AgentFinish(
+                thought="Finalize fallback — no explicit answer was set",
+                output=fallback_text,
+                text=fallback_text,
             )
-            self._console.print(skip_text)
-            return "skipped"
 
         if not isinstance(self.state.current_answer, AgentFinish):
             skip_text = Text()

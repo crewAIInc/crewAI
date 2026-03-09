@@ -512,6 +512,46 @@ class AnthropicCompletion(BaseLLM):
             return redacted_block
         return None
 
+    @staticmethod
+    def _convert_image_blocks(content: Any) -> Any:
+        """Convert OpenAI-style image_url blocks to Anthropic image blocks.
+
+        Upstream code (e.g. StepExecutor) uses the standard ``image_url``
+        format with a ``data:`` URI.  Anthropic rejects that — it requires
+        ``{"type": "image", "source": {"type": "base64", ...}}``.
+
+        Non-list content and blocks that are not ``image_url`` are passed
+        through unchanged.
+        """
+        if not isinstance(content, list):
+            return content
+
+        converted: list[dict[str, Any]] = []
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "image_url":
+                converted.append(block)
+                continue
+
+            image_info = block.get("image_url", {})
+            url = image_info.get("url", "") if isinstance(image_info, dict) else ""
+            if url.startswith("data:") and ";base64," in url:
+                # Parse  data:<media_type>;base64,<data>
+                header, b64_data = url.split(";base64,", 1)
+                media_type = header.split("data:", 1)[1] if "data:" in header else "image/png"
+                converted.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": b64_data,
+                    },
+                })
+            else:
+                # Non-data URI — pass through as-is (Anthropic supports url source)
+                converted.append(block)
+
+        return converted
+
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | None]:
@@ -550,10 +590,11 @@ class AnthropicCompletion(BaseLLM):
                 tool_call_id = message.get("tool_call_id", "")
                 if not tool_call_id:
                     raise ValueError("Tool message missing required tool_call_id")
+                tool_content = self._convert_image_blocks(content) if content else ""
                 tool_result = {
                     "type": "tool_result",
                     "tool_use_id": tool_call_id,
-                    "content": content if content else "",
+                    "content": tool_content,
                 }
                 pending_tool_results.append(tool_result)
             elif role == "assistant":
@@ -612,7 +653,7 @@ class AnthropicCompletion(BaseLLM):
 
                 role_str = role if role is not None else "user"
                 if isinstance(content, list):
-                    formatted_messages.append({"role": role_str, "content": content})
+                    formatted_messages.append({"role": role_str, "content": self._convert_image_blocks(content)})
                 else:
                     content_str = content if content is not None else ""
                     formatted_messages.append(

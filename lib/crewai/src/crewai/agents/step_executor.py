@@ -585,8 +585,8 @@ class StepExecutor:
                     if parsed:
                         media_type, b64_data = parsed
                         # Replace the sentinel with a standard image_url content block.
-                        # Each provider SDK (LiteLLM → Anthropic, OpenAI native, etc.)
-                        # converts the data-URI to its own wire format.
+                        # Each provider's _format_messages handles conversion to
+                        # its native format (e.g. Anthropic image blocks).
                         modified: LLMMessage = cast(LLMMessage, dict(call_result.tool_message))
                         modified["content"] = [
                             {
