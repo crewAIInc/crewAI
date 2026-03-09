@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any, Literal
 
-
-if TYPE_CHECKING:
-    from crewai.memory.unified_memory import Memory
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 from crewai.memory.types import (
     _RECALL_OVERSAMPLE_FACTOR,
@@ -15,22 +13,38 @@ from crewai.memory.types import (
     MemoryRecord,
     ScopeInfo,
 )
+from crewai.memory.unified_memory import Memory
 
 
-class MemoryScope:
+class MemoryScope(BaseModel):
     """View of Memory restricted to a root path. All operations are scoped under that path."""
 
-    def __init__(self, memory: Memory, root_path: str) -> None:
-        """Initialize scope.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        Args:
-            memory: The underlying Memory instance.
-            root_path: Root path for this scope (e.g. /agent/1).
-        """
-        self._memory = memory
-        self._root = root_path.rstrip("/") or ""
-        if self._root and not self._root.startswith("/"):
-            self._root = "/" + self._root
+    root_path: str = Field(default="/")
+
+    _memory: Memory = PrivateAttr()
+    _root: str = PrivateAttr()
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _accept_memory(cls, data: Any, handler: Any) -> MemoryScope:
+        """Extract memory dependency and normalize root path before validation."""
+        if isinstance(data, MemoryScope):
+            return data
+        memory = data.pop("memory")
+        instance: MemoryScope = handler(data)
+        instance._memory = memory
+        root = instance.root_path.rstrip("/") or ""
+        if root and not root.startswith("/"):
+            root = "/" + root
+        instance._root = root
+        return instance
+
+    @property
+    def read_only(self) -> bool:
+        """Whether the underlying memory is read-only."""
+        return self._memory.read_only
 
     def _scope_path(self, scope: str | None) -> str:
         if not scope or scope == "/":
@@ -52,7 +66,7 @@ class MemoryScope:
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
-    ) -> MemoryRecord:
+    ) -> MemoryRecord | None:
         """Remember content; scope is relative to this scope's root."""
         path = self._scope_path(scope)
         return self._memory.remember(
@@ -71,7 +85,7 @@ class MemoryScope:
         scope: str | None = None,
         categories: list[str] | None = None,
         limit: int = 10,
-        depth: str = "deep",
+        depth: Literal["shallow", "deep"] = "deep",
         source: str | None = None,
         include_private: bool = False,
     ) -> list[MemoryMatch]:
@@ -138,34 +152,34 @@ class MemoryScope:
         """Return a narrower scope under this scope."""
         child = path.strip("/")
         if not child:
-            return MemoryScope(self._memory, self._root or "/")
+            return MemoryScope(memory=self._memory, root_path=self._root or "/")
         base = self._root.rstrip("/") or ""
         new_root = f"{base}/{child}" if base else f"/{child}"
-        return MemoryScope(self._memory, new_root)
+        return MemoryScope(memory=self._memory, root_path=new_root)
 
 
-class MemorySlice:
+class MemorySlice(BaseModel):
     """View over multiple scopes: recall searches all, remember is a no-op when read_only."""
 
-    def __init__(
-        self,
-        memory: Memory,
-        scopes: list[str],
-        categories: list[str] | None = None,
-        read_only: bool = True,
-    ) -> None:
-        """Initialize slice.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        Args:
-            memory: The underlying Memory instance.
-            scopes: List of scope paths to include.
-            categories: Optional category filter for recall.
-            read_only: If True, remember() is a silent no-op.
-        """
-        self._memory = memory
-        self._scopes = [s.rstrip("/") or "/" for s in scopes]
-        self._categories = categories
-        self._read_only = read_only
+    scopes: list[str] = Field(default_factory=list)
+    categories: list[str] | None = Field(default=None)
+    read_only: bool = Field(default=True)
+
+    _memory: Memory = PrivateAttr()
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _accept_memory(cls, data: Any, handler: Any) -> MemorySlice:
+        """Extract memory dependency and normalize scopes before validation."""
+        if isinstance(data, MemorySlice):
+            return data
+        memory = data.pop("memory")
+        data["scopes"] = [s.rstrip("/") or "/" for s in data.get("scopes", [])]
+        instance: MemorySlice = handler(data)
+        instance._memory = memory
+        return instance
 
     def remember(
         self,
@@ -178,7 +192,7 @@ class MemorySlice:
         private: bool = False,
     ) -> MemoryRecord | None:
         """Remember into an explicit scope. No-op when read_only=True."""
-        if self._read_only:
+        if self.read_only:
             return None
         return self._memory.remember(
             content,
@@ -196,14 +210,14 @@ class MemorySlice:
         scope: str | None = None,
         categories: list[str] | None = None,
         limit: int = 10,
-        depth: str = "deep",
+        depth: Literal["shallow", "deep"] = "deep",
         source: str | None = None,
         include_private: bool = False,
     ) -> list[MemoryMatch]:
         """Recall across all slice scopes; results merged and re-ranked."""
-        cats = categories or self._categories
+        cats = categories or self.categories
         all_matches: list[MemoryMatch] = []
-        for sc in self._scopes:
+        for sc in self.scopes:
             matches = self._memory.recall(
                 query,
                 scope=sc,
@@ -231,7 +245,7 @@ class MemorySlice:
     def list_scopes(self, path: str = "/") -> list[str]:
         """List scopes across all slice roots."""
         out: list[str] = []
-        for sc in self._scopes:
+        for sc in self.scopes:
             full = f"{sc.rstrip('/')}{path}" if sc != "/" else path
             out.extend(self._memory.list_scopes(full))
         return sorted(set(out))
@@ -243,7 +257,7 @@ class MemorySlice:
         oldest: datetime | None = None
         newest: datetime | None = None
         children: list[str] = []
-        for sc in self._scopes:
+        for sc in self.scopes:
             full = f"{sc.rstrip('/')}{path}" if sc != "/" else path
             inf = self._memory.info(full)
             total_records += inf.record_count
@@ -273,7 +287,7 @@ class MemorySlice:
     def list_categories(self, path: str | None = None) -> dict[str, int]:
         """Categories and counts across slice scopes."""
         counts: dict[str, int] = {}
-        for sc in self._scopes:
+        for sc in self.scopes:
             full = (f"{sc.rstrip('/')}{path}" if sc != "/" else path) if path else sc
             for k, v in self._memory.list_categories(full).items():
                 counts[k] = counts.get(k, 0) + v
