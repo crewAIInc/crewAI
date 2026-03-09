@@ -89,6 +89,7 @@ from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -292,15 +293,15 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
-    skills: list[str | Path] | None = Field(
+    skills: list[Path | Skill] | None = Field(
         default=None,
-        description="Skill search paths applied to all agents in the crew.",
+        description="Skill search paths or pre-loaded Skill objects applied to all agents in the crew.",
     )
 
     @field_validator("skills", mode="before")
     @classmethod
-    def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path] | None:
-        """Coerce string entries to Path objects."""
+    def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path | Skill] | None:
+        """Coerce string entries to Path objects, pass through Skill instances."""
         if not v:
             return v
         return [Path(item) if isinstance(item, str) else item for item in v]
