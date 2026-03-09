@@ -399,21 +399,12 @@ class CodeInterpreterTool(BaseTool):
         Returns:
             The stdout output from the executed code, or an error message if execution failed.
 
-        Raises:
-            ImportError: If exec-sandbox package is not installed.
-
         Note:
             Requires `pip install exec-sandbox`. See https://github.com/dualeai/exec-sandbox
         """
-        try:
-            from crewai_tools.tools.code_interpreter_tool.exec_sandbox_executor import (
-                ExecSandboxExecutor,
-            )
-        except ImportError as e:
-            return (
-                f"exec-sandbox executor not available. "
-                f"Install with: pip install exec-sandbox. Error: {e!s}"
-            )
+        from crewai_tools.tools.code_interpreter_tool.exec_sandbox_executor import (
+            ExecSandboxExecutor,
+        )
 
         Printer.print("Running code in QEMU microVM (exec-sandbox)", color="bold_green")
 
@@ -430,6 +421,11 @@ class CodeInterpreterTool(BaseTool):
 
             return result["stdout"]
 
+        except ImportError as e:
+            return (
+                f"exec-sandbox package not installed. "
+                f"Install with: pip install exec-sandbox. Error: {e!s}"
+            )
         except Exception as e:
             return f"Execution error: {e!s}"
 

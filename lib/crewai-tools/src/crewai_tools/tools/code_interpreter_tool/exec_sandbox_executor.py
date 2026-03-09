@@ -14,26 +14,8 @@ Key benefits:
 """
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
-
-from pydantic import BaseModel, Field
-
-
-class ExecSandboxInput(BaseModel):
-    """Schema for exec-sandbox tool inputs."""
-
-    code: str = Field(
-        ...,
-        description="Python 3 code to execute in the isolated microVM environment",
-    )
-    packages: list[str] = Field(
-        default_factory=list,
-        description="pip packages to install before execution (e.g., ['pandas==2.2.0', 'numpy'])",
-    )
-    timeout_seconds: int = Field(
-        default=60,
-        description="Maximum execution time in seconds (default: 60)",
-    )
 
 
 class ExecSandboxExecutor:
@@ -42,9 +24,6 @@ class ExecSandboxExecutor:
     This class wraps the exec-sandbox library to provide code execution
     in hardware-isolated QEMU microVMs. Each execution gets a fresh VM
     that is destroyed after completion, ensuring no state leakage.
-
-    Attributes:
-        None - exec-sandbox manages its own state internally
 
     Example:
         ```python
@@ -61,15 +40,6 @@ class ExecSandboxExecutor:
         - exec-sandbox GitHub: https://github.com/dualeai/exec-sandbox
         - exec-sandbox PyPI: https://pypi.org/project/exec-sandbox/
     """
-
-    def __init__(self) -> None:
-        """Initialize the exec-sandbox executor.
-
-        Note:
-            exec-sandbox is imported lazily to avoid dependency errors
-            when the package is not installed.
-        """
-        self._scheduler = None
 
     async def execute(
         self,
@@ -145,5 +115,19 @@ class ExecSandboxExecutor:
         Raises:
             ImportError: If exec-sandbox package is not installed.
             RuntimeError: If execution fails.
+
+        Note:
+            If called from within an existing event loop, uses ThreadPoolExecutor
+            to avoid RuntimeError from asyncio.run().
         """
-        return asyncio.run(self.execute(code, packages, timeout_seconds))
+        try:
+            # Check if we're already in an event loop (e.g., called from async context)
+            asyncio.get_running_loop()
+            # If we get here, a loop is running - use executor instead
+            with ThreadPoolExecutor() as executor:
+                return executor.submit(
+                    asyncio.run, self.execute(code, packages, timeout_seconds)
+                ).result()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run()
+            return asyncio.run(self.execute(code, packages, timeout_seconds))
