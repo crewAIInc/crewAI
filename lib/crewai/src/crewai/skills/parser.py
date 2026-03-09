@@ -6,6 +6,7 @@ and provides progressive loading functions for skill data.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 import re
 from typing import Any
@@ -21,8 +22,12 @@ from crewai.skills.models import (
 from crewai.skills.validation import validate_directory_name
 
 
+_logger = logging.getLogger(__name__)
+
+
 SKILL_FILENAME: str = "SKILL.md"
 _CLOSING_DELIMITER: re.Pattern[str] = re.compile(r"\n---[ \t]*(?:\n|$)")
+_MAX_BODY_CHARS: int = 50_000
 
 
 class SkillParseError(ValueError):
@@ -127,6 +132,14 @@ def load_skill_instructions(skill: Skill) -> Skill:
 
     skill_md_path = skill.path / SKILL_FILENAME
     _, body = parse_skill_md(skill_md_path)
+    if len(body) > _MAX_BODY_CHARS:
+        _logger.warning(
+            "SKILL.md body for '%s' is %d chars (threshold: %d). "
+            "Large bodies may consume significant context window when injected into prompts.",
+            skill.name,
+            len(body),
+            _MAX_BODY_CHARS,
+        )
     return skill.with_disclosure_level(
         level=DisclosureLevel.INSTRUCTIONS,
         instructions=body,

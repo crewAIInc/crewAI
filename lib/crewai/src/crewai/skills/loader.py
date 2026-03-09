@@ -6,6 +6,7 @@ for agent use, and format skill context for prompt injection.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,9 @@ from crewai.skills.parser import (
     load_skill_metadata,
     load_skill_resources,
 )
+
+
+_logger = logging.getLogger(__name__)
 
 
 def discover_skills(
@@ -80,6 +84,7 @@ def discover_skills(
                     ),
                 )
         except Exception as e:
+            _logger.warning("Failed to load skill from %s: %s", child, e)
             if source is not None:
                 crewai_event_bus.emit(
                     source,
