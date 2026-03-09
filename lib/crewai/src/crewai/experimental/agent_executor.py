@@ -780,7 +780,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
             observer.apply_refinements(recent_observation, remaining)
 
-
             refinement_summaries = [
                 f"Step {r.step_number}: {r.new_description}"
                 for r in recent_observation.suggested_refinements
@@ -906,7 +905,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     @router("has_todos")
     def get_ready_todos_method(
         self,
-    ) -> Literal["single_todo_ready", "multiple_todos_ready", "all_todos_complete", "needs_replan"]:
+    ) -> Literal[
+        "single_todo_ready",
+        "multiple_todos_ready",
+        "all_todos_complete",
+        "needs_replan",
+    ]:
         """Find todos whose dependencies are satisfied.
 
         Determines if we can execute a single todo sequentially or multiple
@@ -2269,7 +2273,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             todos_with_results = [t for t in self.state.todos.items if t.result]
             if todos_with_results:
                 if self._can_use_last_todo_result_as_final_answer(todos_with_results):
-                    last_todo = max(todos_with_results, key=lambda todo: todo.step_number)
+                    last_todo = max(
+                        todos_with_results, key=lambda todo: todo.step_number
+                    )
                     final_text = str(last_todo.result or "")
                     self.state.current_answer = AgentFinish(
                         thought="Final answer returned directly from last completed todo",
@@ -2331,12 +2337,17 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             return False
 
         lowered_result = last_result.lower()
-        if lowered_result.startswith("error:") or "tool execution error" in lowered_result:
+        if (
+            lowered_result.startswith("error:")
+            or "tool execution error" in lowered_result
+        ):
             return False
 
         word_count = len(last_result.split())
         has_sentence_punctuation = any(ch in last_result for ch in ".!?")
-        return (len(last_result) >= 200 or word_count >= 30) and has_sentence_punctuation
+        return (
+            len(last_result) >= 200 or word_count >= 30
+        ) and has_sentence_punctuation
 
     def _synthesize_final_answer_from_todos(self) -> None:
         """Synthesize a coherent final answer from all todo results.
@@ -2535,7 +2546,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 input_text = getattr(self, "_kickoff_input", "")
                 planning_handler = AgentReasoning(
                     agent=self.agent,
-                    description=enhanced_description or input_text or "Complete the requested task",
+                    description=enhanced_description
+                    or input_text
+                    or "Complete the requested task",
                     expected_output="Complete the task successfully",
                 )
                 output = planning_handler.handle_agent_reasoning()

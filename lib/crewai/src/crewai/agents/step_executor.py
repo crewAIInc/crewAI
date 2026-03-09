@@ -111,7 +111,9 @@ class StepExecutor:
         self._printer: Printer = Printer()
 
         # Native tool support — set up once
-        self._use_native_tools = check_native_tool_support(self.llm, self.original_tools)
+        self._use_native_tools = check_native_tool_support(
+            self.llm, self.original_tools
+        )
         self._openai_tools: list[dict[str, Any]] = []
         self._available_functions: dict[str, Callable[..., Any]] = {}
         if self._use_native_tools and self.original_tools:
@@ -251,7 +253,9 @@ class StepExecutor:
             task_section = self._extract_task_section(context.task_description)
             if task_section:
                 parts.append(
-                    self._i18n.retrieve("planning", "step_executor_task_context").format(
+                    self._i18n.retrieve(
+                        "planning", "step_executor_task_context"
+                    ).format(
                         task_context=task_section,
                     )
                 )
@@ -435,11 +439,11 @@ class StepExecutor:
         prefix = "VISION_IMAGE:"
         if not raw.startswith(prefix):
             return None
-        rest = raw[len(prefix):]
+        rest = raw[len(prefix) :]
         sep = rest.find(":")
         if sep <= 0:
             return None
-        return rest[:sep], rest[sep + 1:]
+        return rest[:sep], rest[sep + 1 :]
 
     @staticmethod
     def _build_observation_message(tool_result: str) -> LLMMessage:
@@ -587,7 +591,9 @@ class StepExecutor:
                         # Replace the sentinel with a standard image_url content block.
                         # Each provider's _format_messages handles conversion to
                         # its native format (e.g. Anthropic image blocks).
-                        modified: LLMMessage = cast(LLMMessage, dict(call_result.tool_message))
+                        modified: LLMMessage = cast(
+                            LLMMessage, dict(call_result.tool_message)
+                        )
                         modified["content"] = [
                             {
                                 "type": "image_url",
