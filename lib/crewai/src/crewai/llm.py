@@ -967,14 +967,43 @@ class LLM(BaseLLM):
                 self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
-            # --- 8) If there are tool calls but no available functions, return the tool calls
-            # This allows the caller (e.g., executor) to handle tool execution.
-            # This must be checked before the text response fallback because some LLMs
-            # (e.g., Anthropic) return both text content and tool calls in the same response.
+            # --- 8) Check accumulated_tool_args from streaming deltas
+            # Streaming responses deliver tool calls via deltas accumulated in
+            # accumulated_tool_args, not via the final chunk's message. When
+            # available_functions is None (native tool handling), we must return
+            # the accumulated tool calls so the caller (e.g., executor) can
+            # handle them. When available_functions is provided, tool execution
+            # already happened during the chunk processing loop via
+            # _handle_streaming_tool_calls.
+            if accumulated_tool_args and not available_functions:
+                tool_calls_list: list[ChatCompletionDeltaToolCall] = [
+                    ChatCompletionDeltaToolCall(
+                        index=idx,
+                        function=Function(
+                            name=tool_arg.function.name,
+                            arguments=tool_arg.function.arguments,
+                        ),
+                    )
+                    for idx, tool_arg in accumulated_tool_args.items()
+                    if tool_arg.function.name
+                ]
+
+                if tool_calls_list:
+                    self._handle_emit_call_events(
+                        response=full_response,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return tool_calls_list
+
+            # --- 8b) If there are tool calls from last chunk but no available functions,
+            # return the tool calls
             if tool_calls and not available_functions:
                 return tool_calls
 
-            if not tool_calls:
+            if not tool_calls and not accumulated_tool_args:
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
                         content=full_response,
@@ -1001,7 +1030,7 @@ class LLM(BaseLLM):
                 )
                 return full_response
 
-            # --- 9) Handle tool calls if present (execute when available_functions provided)
+            # --- 9) Handle tool calls from last chunk if present (execute when available_functions provided)
             if tool_calls and available_functions:
                 tool_result = self._handle_tool_call(tool_calls, available_functions)
                 if tool_result is not None:
@@ -1246,7 +1275,9 @@ class LLM(BaseLLM):
         # This allows the caller (e.g., executor) to handle tool execution
         # This must be checked before the text response fallback because some LLMs
         # (e.g., Anthropic) return both text content and tool calls in the same response.
-        if tool_calls and not available_functions:
+        # The isinstance check ensures we have actual tool call data (list), not
+        # auto-generated attributes from mocks or unexpected types.
+        if isinstance(tool_calls, list) and tool_calls and not available_functions:
             return tool_calls
 
         # --- 6) If no tool calls or no available functions, return the text response directly as long as there is a text response
@@ -1261,7 +1292,7 @@ class LLM(BaseLLM):
             return text_response
 
         # --- 7) Handle tool calls if present (execute when available_functions provided)
-        if tool_calls and available_functions:
+        if isinstance(tool_calls, list) and tool_calls and available_functions:
             tool_result = self._handle_tool_call(
                 tool_calls, available_functions, from_task, from_agent
             )
@@ -1378,7 +1409,9 @@ class LLM(BaseLLM):
         # This allows the caller (e.g., executor) to handle tool execution
         # This must be checked before the text response fallback because some LLMs
         # (e.g., Anthropic) return both text content and tool calls in the same response.
-        if tool_calls and not available_functions:
+        # The isinstance check ensures we have actual tool call data (list), not
+        # auto-generated attributes from mocks or unexpected types.
+        if isinstance(tool_calls, list) and tool_calls and not available_functions:
             return tool_calls
 
         if not tool_calls and text_response:
@@ -1392,7 +1425,7 @@ class LLM(BaseLLM):
             return text_response
 
         # Handle tool calls if present (execute when available_functions provided)
-        if tool_calls and available_functions:
+        if isinstance(tool_calls, list) and tool_calls and available_functions:
             tool_result = self._handle_tool_call(
                 tool_calls, available_functions, from_task, from_agent
             )

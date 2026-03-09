@@ -614,6 +614,11 @@ def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_em
 def test_handle_streaming_tool_calls_no_available_functions(
     get_weather_tool_schema, mock_emit
 ):
+    """When tools are provided but available_functions is not (defaults to None),
+    the streaming handler should return the accumulated tool calls so the caller
+    (e.g., CrewAgentExecutor) can handle them. This is the fix for issue #4788
+    where tool calls were previously discarded and an empty string was returned.
+    """
     llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
         messages=[
@@ -621,7 +626,14 @@ def test_handle_streaming_tool_calls_no_available_functions(
         ],
         tools=[get_weather_tool_schema],
     )
-    assert response == ""
+    # With the fix for #4788, tool calls should be returned as a list
+    # instead of being discarded (previously returned "")
+    assert isinstance(response, list), (
+        f"Expected list of tool calls but got {type(response)}: {response}"
+    )
+    assert len(response) == 1
+    assert response[0].function.name == "get_weather"
+    assert response[0].function.arguments == '{"location":"New York, NY"}'
 
     assert_event_count(
         mock_emit=mock_emit,
