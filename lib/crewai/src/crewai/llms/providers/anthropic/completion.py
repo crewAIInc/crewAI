@@ -537,15 +537,19 @@ class AnthropicCompletion(BaseLLM):
             if url.startswith("data:") and ";base64," in url:
                 # Parse  data:<media_type>;base64,<data>
                 header, b64_data = url.split(";base64,", 1)
-                media_type = header.split("data:", 1)[1] if "data:" in header else "image/png"
-                converted.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": media_type,
-                        "data": b64_data,
-                    },
-                })
+                media_type = (
+                    header.split("data:", 1)[1] if "data:" in header else "image/png"
+                )
+                converted.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": b64_data,
+                        },
+                    }
+                )
             else:
                 # Non-data URI — pass through as-is (Anthropic supports url source)
                 converted.append(block)
@@ -653,7 +657,12 @@ class AnthropicCompletion(BaseLLM):
 
                 role_str = role if role is not None else "user"
                 if isinstance(content, list):
-                    formatted_messages.append({"role": role_str, "content": self._convert_image_blocks(content)})
+                    formatted_messages.append(
+                        {
+                            "role": role_str,
+                            "content": self._convert_image_blocks(content),
+                        }
+                    )
                 else:
                     content_str = content if content is not None else ""
                     formatted_messages.append(
