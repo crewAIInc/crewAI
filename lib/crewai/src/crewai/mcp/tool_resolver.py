@@ -22,6 +22,7 @@ from crewai.mcp.config import (
     MCPServerSSE,
     MCPServerStdio,
 )
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
@@ -170,8 +171,9 @@ class MCPToolResolver:
 
             slug_tools, _ = cached
             if specific_tool:
+                sanitized = sanitize_tool_name(specific_tool)
                 all_tools.extend(
-                    t for t in slug_tools if t.name.endswith(f"_{specific_tool}")
+                    t for t in slug_tools if t.name.endswith(f"_{sanitized}")
                 )
             else:
                 all_tools.extend(slug_tools)
@@ -198,7 +200,6 @@ class MCPToolResolver:
 
             plus_api = PlusAPI(api_key=get_platform_integration_token())
             response = plus_api.get_mcp_configs(slugs)
-
             if response.status_code == 200:
                 configs: dict[str, dict[str, Any]] = response.json().get("configs", {})
                 return configs
@@ -227,6 +228,7 @@ class MCPToolResolver:
 
         server_params = {"url": server_url}
         server_name = self._extract_server_name(server_url)
+        sanitized_specific_tool = sanitize_tool_name(specific_tool) if specific_tool else None
 
         try:
             tool_schemas = self._get_mcp_tool_schemas(server_params)
@@ -239,7 +241,7 @@ class MCPToolResolver:
 
             tools = []
             for tool_name, schema in tool_schemas.items():
-                if specific_tool and tool_name != specific_tool:
+                if sanitized_specific_tool and tool_name != sanitized_specific_tool:
                     continue
 
                 try:
