@@ -522,7 +522,7 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __radd__(self, other: list[T]) -> list[T]:
         return other + self._list
 
-    def __iadd__(self, other: Iterable[T]) -> "LockedListProxy[T]":
+    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:
         with self._lock:
             self._list += list(other)
         return self
@@ -533,7 +533,7 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __rmul__(self, n: SupportsIndex) -> list[T]:
         return self._list * n
 
-    def __imul__(self, n: SupportsIndex) -> "LockedListProxy[T]":
+    def __imul__(self, n: SupportsIndex) -> LockedListProxy[T]:
         with self._lock:
             self._list *= n
         return self
@@ -632,7 +632,7 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     def __ror__(self, other: dict[str, T]) -> dict[str, T]:
         return other | self._dict
 
-    def __ior__(self, other: dict[str, T]) -> "LockedDictProxy[T]":
+    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:
         with self._lock:
             self._dict |= other
         return self
