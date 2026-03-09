@@ -302,7 +302,7 @@ class Agent(BaseAgent):
         Crew-level skill paths are merged in. Skips work when all items are
         already resolved and there are no crew-level paths to merge.
         """
-        crew_skills: list[Path] | None = (
+        crew_skills: list[Path | SkillModel] | None = (
             self.crew.skills
             if self.crew and isinstance(self.crew.skills, list)
             else None
@@ -332,7 +332,7 @@ class Agent(BaseAgent):
             elif isinstance(item, SkillModel):
                 if item.name not in seen:
                     seen.add(item.name)
-                    resolved.append(item)
+                    resolved.append(activate_skill(item, source=self))
 
         self.skills = resolved if resolved else None
 
