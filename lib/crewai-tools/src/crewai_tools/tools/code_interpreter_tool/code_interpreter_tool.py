@@ -141,8 +141,14 @@ class CodeInterpreterTool(BaseTool):
     """A tool for executing Python code in isolated environments.
 
     This tool provides functionality to run Python code either in a Docker container
-    for safe isolation or directly in a restricted sandbox. It can handle installing
-    Python packages and executing arbitrary Python code.
+    for safe isolation, a QEMU microVM for hardware-level isolation, or directly in
+    a restricted sandbox. It can handle installing Python packages and executing
+    arbitrary Python code.
+
+    Code execution modes:
+        - "safe" (default): Uses Docker if available, falls back to restricted sandbox
+        - "microvm": Uses QEMU microVMs via exec-sandbox (requires `pip install exec-sandbox`)
+        - "unsafe": Executes directly on host (NOT recommended for untrusted code)
     """
 
     name: str = "Code Interpreter"
@@ -153,6 +159,7 @@ class CodeInterpreterTool(BaseTool):
     user_dockerfile_path: str | None = None
     user_docker_base_url: str | None = None
     unsafe_mode: bool = False
+    code_execution_mode: str = "safe"  # Options: "safe", "microvm", "unsafe"
 
     @staticmethod
     def _get_installed_package_path() -> str:
@@ -221,9 +228,17 @@ class CodeInterpreterTool(BaseTool):
         if not code:
             return "No code provided to execute."
 
+        # Legacy unsafe_mode support (deprecated, use code_execution_mode="unsafe")
         if self.unsafe_mode:
             return self.run_code_unsafe(code, libraries_used)
-        return self.run_code_safety(code, libraries_used)
+
+        # New code execution mode dispatch
+        if self.code_execution_mode == "microvm":
+            return self.run_code_in_microvm(code, libraries_used)
+        elif self.code_execution_mode == "unsafe":
+            return self.run_code_unsafe(code, libraries_used)
+        else:  # "safe" mode (default)
+            return self.run_code_safety(code, libraries_used)
 
     @staticmethod
     def _install_libraries(container: Container, libraries: list[str]) -> None:
@@ -361,6 +376,62 @@ class CodeInterpreterTool(BaseTool):
             return exec_locals.get("result", "No result variable found.")
         except Exception as e:
             return f"An error occurred: {e!s}"
+
+    @staticmethod
+    def run_code_in_microvm(code: str, libraries_used: list[str]) -> str:
+        """Runs Python code in a QEMU microVM using exec-sandbox.
+
+        This provides hardware-level isolation using QEMU/KVM or QEMU/HVF (macOS).
+        Each execution runs in a fresh microVM that is destroyed after completion,
+        ensuring no state leakage between executions.
+
+        Benefits over Docker:
+            - No Docker daemon required - works in CI/CD and restricted environments
+            - No Docker Desktop licensing costs for enterprises
+            - Stronger isolation (hardware VM vs container)
+            - No state leakage (fresh VM per execution)
+            - Fast warm starts (1-2ms from pre-booted pool)
+
+        Args:
+            code: The Python code to execute as a string.
+            libraries_used: A list of Python library names to install before execution.
+
+        Returns:
+            The stdout output from the executed code, or an error message if execution failed.
+
+        Raises:
+            ImportError: If exec-sandbox package is not installed.
+
+        Note:
+            Requires `pip install exec-sandbox`. See https://github.com/dualeai/exec-sandbox
+        """
+        try:
+            from crewai_tools.tools.code_interpreter_tool.exec_sandbox_executor import (
+                ExecSandboxExecutor,
+            )
+        except ImportError as e:
+            return (
+                f"exec-sandbox executor not available. "
+                f"Install with: pip install exec-sandbox. Error: {e!s}"
+            )
+
+        Printer.print("Running code in QEMU microVM (exec-sandbox)", color="bold_green")
+
+        executor = ExecSandboxExecutor()
+        try:
+            result = executor.execute_sync(
+                code=code,
+                packages=libraries_used,
+                timeout_seconds=60,
+            )
+
+            if result["exit_code"] != 0:
+                return f"Error (exit code {result['exit_code']}):\n{result['stderr']}"
+
+            return result["stdout"]
+
+        except Exception as e:
+            return f"Execution error: {e!s}"
 
     @staticmethod
     def run_code_unsafe(code: str, libraries_used: list[str]) -> str:
