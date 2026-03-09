@@ -1,10 +1,11 @@
+import subprocess
 from unittest.mock import patch
+
+import pytest
 
 from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
     CodeInterpreterTool,
-    SandboxPython,
 )
-import pytest
 
 
 @pytest.fixture
@@ -76,99 +77,91 @@ print("This is line 2")"""
     )
 
 
-def test_restricted_sandbox_basic_code_execution(printer_mock, docker_unavailable_mock):
-    """Test basic code execution."""
+def test_docker_unavailable_fails_safely(printer_mock, docker_unavailable_mock):
+    """Test that code execution fails when Docker is unavailable."""
     tool = CodeInterpreterTool()
     code = """
 result = 2 + 2
 print(result)
 """
-    result = tool.run(code=code, libraries_used=[])
-    printer_mock.assert_called_with(
-        "Running code in restricted sandbox", color="yellow"
-    )
-    assert result == 4
+    with pytest.raises(RuntimeError) as exc_info:
+        tool.run(code=code, libraries_used=[])
+
+    assert "Docker is required for safe code execution" in str(exc_info.value)
+    assert printer_mock.called
+    call_args = printer_mock.call_args
+    assert "SECURITY ERROR" in call_args[0][0]
+    assert call_args[1]["color"] == "bold_red"
 
 
-def test_restricted_sandbox_running_with_blocked_modules(
-    printer_mock, docker_unavailable_mock
-):
-    """Test that restricted modules cannot be imported."""
+def test_docker_unavailable_suggests_unsafe_mode(printer_mock, docker_unavailable_mock):
+    """Test that error message suggests unsafe_mode as alternative."""
     tool = CodeInterpreterTool()
-    restricted_modules = SandboxPython.BLOCKED_MODULES
+    code = "result = 1 + 1"
 
-    for module in restricted_modules:
-        code = f"""
-import {module}
-result = "Import succeeded"
-"""
-        result = tool.run(code=code, libraries_used=[])
-        printer_mock.assert_called_with(
-            "Running code in restricted sandbox", color="yellow"
-        )
+    with pytest.raises(RuntimeError) as exc_info:
+        tool.run(code=code, libraries_used=[])
 
-        assert f"An error occurred: Importing '{module}' is not allowed" in result
-
-
-def test_restricted_sandbox_running_with_blocked_builtins(
-    printer_mock, docker_unavailable_mock
-):
-    """Test that restricted builtins are not available."""
-    tool = CodeInterpreterTool()
-    restricted_builtins = SandboxPython.UNSAFE_BUILTINS
-
-    for builtin in restricted_builtins:
-        code = f"""
-{builtin}("test")
-result = "Builtin available"
-"""
-        result = tool.run(code=code, libraries_used=[])
-        printer_mock.assert_called_with(
-            "Running code in restricted sandbox", color="yellow"
-        )
-        assert f"An error occurred: name '{builtin}' is not defined" in result
-
-
-def test_restricted_sandbox_running_with_no_result_variable(
-    printer_mock, docker_unavailable_mock
-):
-    """Test behavior when no result variable is set."""
-    tool = CodeInterpreterTool()
-    code = """
-x = 10
-"""
-    result = tool.run(code=code, libraries_used=[])
-    printer_mock.assert_called_with(
-        "Running code in restricted sandbox", color="yellow"
-    )
-    assert result == "No result variable found."
+    error_output = printer_mock.call_args[0][0]
+    assert "unsafe_mode=True" in error_output
+    assert "NOT recommended" in error_output
+    assert "docs.crewai.com" in error_output
 
 
 def test_unsafe_mode_running_with_no_result_variable(
     printer_mock, docker_unavailable_mock
 ):
-    """Test behavior when no result variable is set."""
+    """Test behavior when no result variable is set in unsafe mode."""
     tool = CodeInterpreterTool(unsafe_mode=True)
     code = """
 x = 10
 """
     result = tool.run(code=code, libraries_used=[])
     printer_mock.assert_called_with(
-        "WARNING: Running code in unsafe mode", color="bold_magenta"
+        "⚠️  WARNING: Running code in UNSAFE mode - no security controls active!",
+        color="bold_red",
     )
     assert result == "No result variable found."
 
 
 def test_unsafe_mode_running_unsafe_code(printer_mock, docker_unavailable_mock):
-    """Test behavior when no result variable is set."""
+    """Test that unsafe mode allows unrestricted code execution."""
     tool = CodeInterpreterTool(unsafe_mode=True)
     code = """
 import os
-os.system("ls -la")
 result = eval("5/1")
 """
     result = tool.run(code=code, libraries_used=[])
     printer_mock.assert_called_with(
-        "WARNING: Running code in unsafe mode", color="bold_magenta"
+        "⚠️  WARNING: Running code in UNSAFE mode - no security controls active!",
+        color="bold_red",
     )
     assert 5.0 == result
+
+
+@patch("crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run")
+def test_unsafe_mode_library_installation(subprocess_mock, printer_mock, docker_unavailable_mock):
+    """Test that unsafe mode properly installs libraries using subprocess."""
+    tool = CodeInterpreterTool(unsafe_mode=True)
+    code = "result = 42"
+    libraries = ["numpy", "pandas"]
+
+    subprocess_mock.return_value = None
+
+    tool.run(code=code, libraries_used=libraries)
+
+    assert subprocess_mock.call_count == 2
+    subprocess_mock.assert_any_call(
+        ["pip", "install", "numpy"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=30,
+    )
+    subprocess_mock.assert_any_call(
+        ["pip", "install", "pandas"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=30,
+    )
