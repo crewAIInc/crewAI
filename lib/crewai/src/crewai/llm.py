@@ -967,7 +967,14 @@ class LLM(BaseLLM):
                 self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
-            if not tool_calls or not available_functions:
+            # --- 8) If there are tool calls but no available functions, return the tool calls
+            # This allows the caller (e.g., executor) to handle tool execution.
+            # This must be checked before the text response fallback because some LLMs
+            # (e.g., Anthropic) return both text content and tool calls in the same response.
+            if tool_calls and not available_functions:
+                return tool_calls
+
+            if not tool_calls:
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
                         content=full_response,
@@ -994,10 +1001,11 @@ class LLM(BaseLLM):
                 )
                 return full_response
 
-            # --- 9) Handle tool calls if present
-            tool_result = self._handle_tool_call(tool_calls, available_functions)
-            if tool_result is not None:
-                return tool_result
+            # --- 9) Handle tool calls if present (execute when available_functions provided)
+            if tool_calls and available_functions:
+                tool_result = self._handle_tool_call(tool_calls, available_functions)
+                if tool_result is not None:
+                    return tool_result
 
             # --- 10) Emit completion event and return response
             self._handle_emit_call_events(
@@ -1234,8 +1242,15 @@ class LLM(BaseLLM):
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
-        if (not tool_calls or not available_functions) and text_response:
+        # --- 5) If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        # This must be checked before the text response fallback because some LLMs
+        # (e.g., Anthropic) return both text content and tool calls in the same response.
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        # --- 6) If no tool calls or no available functions, return the text response directly as long as there is a text response
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1244,11 +1259,6 @@ class LLM(BaseLLM):
                 messages=params["messages"],
             )
             return text_response
-
-        # --- 6) If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # --- 7) Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
@@ -1364,7 +1374,14 @@ class LLM(BaseLLM):
 
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        if (not tool_calls or not available_functions) and text_response:
+        # If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        # This must be checked before the text response fallback because some LLMs
+        # (e.g., Anthropic) return both text content and tool calls in the same response.
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1373,11 +1390,6 @@ class LLM(BaseLLM):
                 messages=params["messages"],
             )
             return text_response
-
-        # If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
@@ -1513,7 +1525,7 @@ class LLM(BaseLLM):
             if usage_info:
                 self._track_token_usage_internal(usage_info)
 
-            if accumulated_tool_args and available_functions:
+            if accumulated_tool_args:
                 # Convert accumulated tool args to ChatCompletionDeltaToolCall objects
                 tool_calls_list: list[ChatCompletionDeltaToolCall] = [
                     ChatCompletionDeltaToolCall(
@@ -1527,7 +1539,14 @@ class LLM(BaseLLM):
                     if tool_arg.function.name
                 ]
 
-                if tool_calls_list:
+                # If there are tool calls but no available functions, return the tool calls
+                # This allows the caller (e.g., executor) to handle tool execution.
+                # This must be checked before the text response fallback because some LLMs
+                # (e.g., Anthropic) return both text content and tool calls in the same response.
+                if tool_calls_list and not available_functions:
+                    return tool_calls_list
+
+                if tool_calls_list and available_functions:
                     result = self._handle_streaming_tool_calls(
                         tool_calls=tool_calls_list,
                         accumulated_tool_args=accumulated_tool_args,

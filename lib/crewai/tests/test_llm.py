@@ -1022,3 +1022,166 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+def test_non_streaming_tool_calls_returned_when_no_available_functions():
+    """Test that tool calls are returned (not text) when available_functions is None.
+
+    This reproduces the bug from issue #4788 where LLMs like Anthropic return both
+    text content AND tool calls in the same response. When available_functions=None
+    (as used by the executor for native tool handling), tool calls should be returned
+    instead of the text content.
+    """
+    from litellm.types.utils import ChatCompletionMessageToolCall, Function
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    # Mock a response that has BOTH text content AND tool calls
+    mock_tool_call = ChatCompletionMessageToolCall(
+        id="call_123",
+        type="function",
+        function=Function(
+            name="code_search",
+            arguments='{"query": "test query"}',
+        ),
+    )
+    mock_message = MagicMock()
+    mock_message.content = "I will search for the given query."
+    mock_message.tool_calls = [mock_tool_call]
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+    mock_response.usage.prompt_tokens = 10
+    mock_response.usage.completion_tokens = 5
+    mock_response.usage.total_tokens = 15
+
+    with patch("litellm.completion", return_value=mock_response):
+        # Call WITHOUT available_functions (as the executor does for native tool handling)
+        result = llm.call(
+            messages=[{"role": "user", "content": "Search for something"}],
+            tools=[{"type": "function", "function": {"name": "code_search"}}],
+            available_functions=None,
+        )
+
+    # Result should be the tool calls list, NOT the text response
+    assert isinstance(result, list), (
+        f"Expected list of tool calls but got {type(result)}: {result}"
+    )
+    assert len(result) == 1
+    assert result[0].function.name == "code_search"
+
+
+def test_non_streaming_text_returned_when_no_tool_calls():
+    """Test that text response is still returned when there are no tool calls."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    mock_message = MagicMock()
+    mock_message.content = "The capital of France is Paris."
+    mock_message.tool_calls = None
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+    mock_response.usage.prompt_tokens = 10
+    mock_response.usage.completion_tokens = 5
+    mock_response.usage.total_tokens = 15
+
+    with patch("litellm.completion", return_value=mock_response):
+        result = llm.call(
+            messages=[{"role": "user", "content": "What is the capital of France?"}],
+        )
+
+    assert isinstance(result, str)
+    assert result == "The capital of France is Paris."
+
+
+@pytest.mark.asyncio
+async def test_async_non_streaming_tool_calls_returned_when_no_available_functions():
+    """Test async path: tool calls are returned (not text) when available_functions is None.
+
+    Same bug as #4788 but for the async non-streaming handler.
+    """
+    from litellm.types.utils import ChatCompletionMessageToolCall, Function
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+
+    mock_tool_call = ChatCompletionMessageToolCall(
+        id="call_456",
+        type="function",
+        function=Function(
+            name="web_search",
+            arguments='{"query": "test"}',
+        ),
+    )
+    mock_message = MagicMock()
+    mock_message.content = "I will search the web."
+    mock_message.tool_calls = [mock_tool_call]
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+    mock_response.usage.prompt_tokens = 10
+    mock_response.usage.completion_tokens = 5
+    mock_response.usage.total_tokens = 15
+
+    with patch("litellm.acompletion", return_value=mock_response):
+        result = await llm.acall(
+            messages=[{"role": "user", "content": "Search for something"}],
+            tools=[{"type": "function", "function": {"name": "web_search"}}],
+            available_functions=None,
+        )
+
+    assert isinstance(result, list), (
+        f"Expected list of tool calls but got {type(result)}: {result}"
+    )
+    assert len(result) == 1
+    assert result[0].function.name == "web_search"
+
+
+def test_non_streaming_tool_calls_executed_when_available_functions_provided():
+    """Test that tool calls are still executed when available_functions IS provided.
+
+    This ensures the fix doesn't break the normal tool execution path.
+    """
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function.name = "get_weather"
+    mock_tool_call.function.arguments = '{"location": "New York"}'
+
+    mock_message = MagicMock()
+    mock_message.content = "I will check the weather."
+    mock_message.tool_calls = [mock_tool_call]
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+    mock_response.usage.prompt_tokens = 10
+    mock_response.usage.completion_tokens = 5
+    mock_response.usage.total_tokens = 15
+
+    def get_weather(location: str) -> str:
+        return f"Sunny in {location}"
+
+    with patch("litellm.completion", return_value=mock_response):
+        result = llm.call(
+            messages=[{"role": "user", "content": "What's the weather?"}],
+            tools=[{"type": "function", "function": {"name": "get_weather"}}],
+            available_functions={"get_weather": get_weather},
+        )
+
+    # When available_functions is provided, the tool should be executed
+    assert result == "Sunny in New York"
