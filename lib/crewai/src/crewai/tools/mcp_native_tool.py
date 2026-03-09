@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 _mcp_loop_lock = threading.Lock()
 _mcp_shared_loop: asyncio.AbstractEventLoop | None = None
-_mcp_shared_loop_thread: threading.Thread | None = None
 
 
 class MCPNativeTool(BaseTool):
@@ -75,8 +74,6 @@ class MCPNativeTool(BaseTool):
         self._original_tool_name = original_tool_name or tool_name
         self._server_name = server_name
 
-
-
     @staticmethod
     def _ensure_loop() -> asyncio.AbstractEventLoop:
         """Return a dedicated event loop running in a background thread.
@@ -85,14 +82,14 @@ class MCPNativeTool(BaseTool):
         connections from the same process coexist on a single loop, which
         is both resource-efficient and avoids cross-loop cancel-scope issues.
         """
-        global _mcp_shared_loop, _mcp_shared_loop_thread
+        global _mcp_shared_loop
 
-        if _mcp_shared_loop is not None and _mcp_shared_loop.is_running():
+        if _mcp_shared_loop is not None:
             return _mcp_shared_loop
 
         with _mcp_loop_lock:
             # Double-check after acquiring the lock
-            if _mcp_shared_loop is not None and _mcp_shared_loop.is_running():
+            if _mcp_shared_loop is not None:
                 return _mcp_shared_loop
 
             loop = asyncio.new_event_loop()
@@ -103,7 +100,6 @@ class MCPNativeTool(BaseTool):
             )
             thread.start()
             _mcp_shared_loop = loop
-            _mcp_shared_loop_thread = thread
             return loop
 
     def _run_in_dedicated_loop(self, coro: Any) -> Any:
@@ -111,7 +107,6 @@ class MCPNativeTool(BaseTool):
         loop = self._ensure_loop()
         future = asyncio.run_coroutine_threadsafe(coro, loop)
         return future.result()
-
 
     @property
     def mcp_client(self) -> Any:
@@ -173,7 +168,9 @@ class MCPNativeTool(BaseTool):
                 try:
                     await self._mcp_client.disconnect()
                 except Exception:
-                    logger.debug("Failed to disconnect MCP client during retry", exc_info=True)
+                    logger.debug(
+                        "Failed to disconnect MCP client during retry", exc_info=True
+                    )
                 await self._mcp_client.connect()
                 result = await self._mcp_client.call_tool(
                     self.original_tool_name, kwargs
@@ -184,7 +181,9 @@ class MCPNativeTool(BaseTool):
             try:
                 await self._mcp_client.disconnect()
             except Exception:
-                logger.debug("Failed to disconnect MCP client during cleanup", exc_info=True)
+                logger.debug(
+                    "Failed to disconnect MCP client during cleanup", exc_info=True
+                )
 
         # Extract result content
         if isinstance(result, str):
