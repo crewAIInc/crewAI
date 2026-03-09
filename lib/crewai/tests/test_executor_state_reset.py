@@ -62,9 +62,13 @@ def test_invoke_resets_messages():
     populates executor state, a second run must still return the full
     output — proving stale messages/iterations were cleared.
     """
-    with patch.object(Task, "execute_sync") as mock_execute:
-        mock_execute.return_value = _make_task_output(LONG_OUTPUT)
+    task_output = _make_task_output(LONG_OUTPUT)
 
+    def _execute_sync_side_effect(self, agent=None, context=None, tools=None):
+        self.output = task_output
+        return task_output
+
+    with patch.object(Task, "execute_sync", _execute_sync_side_effect):
         agent = Agent(role="Tester", goal="Run", backstory="QA", llm="gpt-4o")
         task_obj = Task(description="Produce output", expected_output="text", agent=agent)
         crew = Crew(agents=[agent], tasks=[task_obj])
