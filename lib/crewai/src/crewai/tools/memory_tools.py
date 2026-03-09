@@ -121,7 +121,7 @@ def create_memory_tools(memory: Any) -> list[BaseTool]:
             description=i18n.tools("recall_memory"),
         ),
     ]
-    if not getattr(memory, "_read_only", False):
+    if not memory.read_only:
         tools.append(
             RememberTool(
                 memory=memory,
