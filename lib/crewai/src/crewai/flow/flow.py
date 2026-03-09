@@ -522,10 +522,10 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __radd__(self, other: list[T]) -> list[T]:
         return other + self._list
 
-    def __iadd__(self, other: Iterable[T]) -> list[T]:
+    def __iadd__(self, other: Iterable[T]) -> "LockedListProxy[T]":
         with self._lock:
             self._list += list(other)
-        return self._list
+        return self
 
     def __mul__(self, n: SupportsIndex) -> list[T]:
         return self._list * n
@@ -533,10 +533,10 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __rmul__(self, n: SupportsIndex) -> list[T]:
         return self._list * n
 
-    def __imul__(self, n: SupportsIndex) -> list[T]:
+    def __imul__(self, n: SupportsIndex) -> "LockedListProxy[T]":
         with self._lock:
             self._list *= n
-        return self._list
+        return self
 
     def __reversed__(self) -> Iterator[T]:
         return reversed(self._list)
@@ -632,10 +632,10 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     def __ror__(self, other: dict[str, T]) -> dict[str, T]:
         return other | self._dict
 
-    def __ior__(self, other: dict[str, T]) -> dict[str, T]:
+    def __ior__(self, other: dict[str, T]) -> "LockedDictProxy[T]":
         with self._lock:
             self._dict |= other
-        return self._dict
+        return self
 
     def __reversed__(self) -> Iterator[str]:
         return reversed(self._dict)
@@ -681,6 +681,10 @@ class StateProxy(Generic[T]):
         if name in ("_proxy_state", "_proxy_lock"):
             object.__setattr__(self, name, value)
         else:
+            if isinstance(value, LockedListProxy):
+                value = value._list
+            elif isinstance(value, LockedDictProxy):
+                value = value._dict
             with object.__getattribute__(self, "_proxy_lock"):
                 setattr(object.__getattribute__(self, "_proxy_state"), name, value)
 
