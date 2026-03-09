@@ -75,10 +75,9 @@ class MCPToolResolver:
             elif isinstance(mcp_config, str):
                 amp_refs.append(self._parse_amp_ref(mcp_config))
             else:
-                tools, client = self._resolve_native(mcp_config)
+                tools, clients = self._resolve_native(mcp_config)
                 all_tools.extend(tools)
-                if client:
-                    self._clients.append(client)
+                self._clients.extend(clients)
 
         if amp_refs:
             tools, clients = self._resolve_amp(amp_refs)
@@ -132,7 +131,7 @@ class MCPToolResolver:
         all_tools: list[BaseTool] = []
         all_clients: list[Any] = []
 
-        resolved_cache: dict[str, tuple[list[BaseTool], Any | None]] = {}
+        resolved_cache: dict[str, tuple[list[BaseTool], list[Any]]] = {}
 
         for slug in unique_slugs:
             config_dict = amp_configs_map.get(slug)
@@ -150,10 +149,9 @@ class MCPToolResolver:
             mcp_server_config = self._build_mcp_config_from_dict(config_dict)
 
             try:
-                tools, client = self._resolve_native(mcp_server_config)
-                resolved_cache[slug] = (tools, client)
-                if client:
-                    all_clients.append(client)
+                tools, clients = self._resolve_native(mcp_server_config)
+                resolved_cache[slug] = (tools, clients)
+                all_clients.extend(clients)
             except Exception as e:
                 crewai_event_bus.emit(
                     self,
@@ -273,14 +271,16 @@ class MCPToolResolver:
             )
             return []
 
-    def _resolve_native(
-        self, mcp_config: MCPServerConfig
-    ) -> tuple[list[BaseTool], Any | None]:
-        """Resolve an ``MCPServerConfig`` into tools, returning the client for cleanup."""
-        from crewai.tools.base_tool import BaseTool
-        from crewai.tools.mcp_native_tool import MCPNativeTool
+    @staticmethod
+    def _create_transport(
+        mcp_config: MCPServerConfig,
+    ) -> tuple[StdioTransport | HTTPTransport | SSETransport, str]:
+        """Create a fresh transport instance from an MCP server config.
 
-        transport: StdioTransport | HTTPTransport | SSETransport
+        Returns a ``(transport, server_name)`` tuple. Each call produces an
+        independent transport so that parallel tool executions never share
+        state.
+        """
         if isinstance(mcp_config, MCPServerStdio):
             transport = StdioTransport(
                 command=mcp_config.command,
@@ -294,38 +294,54 @@ class MCPToolResolver:
                 headers=mcp_config.headers,
                 streamable=mcp_config.streamable,
             )
-            server_name = self._extract_server_name(mcp_config.url)
+            server_name = MCPToolResolver._extract_server_name(mcp_config.url)
         elif isinstance(mcp_config, MCPServerSSE):
             transport = SSETransport(
                 url=mcp_config.url,
                 headers=mcp_config.headers,
             )
-            server_name = self._extract_server_name(mcp_config.url)
+            server_name = MCPToolResolver._extract_server_name(mcp_config.url)
         else:
             raise ValueError(f"Unsupported MCP server config type: {type(mcp_config)}")
+        return transport, server_name
 
-        client = MCPClient(
-            transport=transport,
+    def _resolve_native(
+        self, mcp_config: MCPServerConfig
+    ) -> tuple[list[BaseTool], list[Any]]:
+        """Resolve an ``MCPServerConfig`` into tools.
+
+        Returns ``(tools, clients)`` where *clients* is always empty for
+        native tools (clients are now created on-demand per invocation).
+        A ``client_factory`` closure is passed to each ``MCPNativeTool`` so
+        every call -- even concurrent calls to the *same* tool -- gets its
+        own ``MCPClient`` + transport with no shared mutable state.
+        """
+        from crewai.tools.base_tool import BaseTool
+        from crewai.tools.mcp_native_tool import MCPNativeTool
+
+        discovery_transport, server_name = self._create_transport(mcp_config)
+        discovery_client = MCPClient(
+            transport=discovery_transport,
             cache_tools_list=mcp_config.cache_tools_list,
         )
 
         async def _setup_client_and_list_tools() -> list[dict[str, Any]]:
             try:
-                if not client.connected:
-                    await client.connect()
+                if not discovery_client.connected:
+                    await discovery_client.connect()
 
-                tools_list = await client.list_tools()
+                tools_list = await discovery_client.list_tools()
 
                 try:
-                    await client.disconnect()
+                    await discovery_client.disconnect()
                     await asyncio.sleep(0.1)
                 except Exception as e:
                     self._logger.log("error", f"Error during disconnect: {e}")
 
                 return tools_list
             except Exception as e:
-                if client.connected:
-                    await client.disconnect()
+                if discovery_client.connected:
+                    await discovery_client.disconnect()
                     await asyncio.sleep(0.1)
                 raise RuntimeError(
                     f"Error during setup client and list tools: {e}"
@@ -378,6 +394,13 @@ class MCPToolResolver:
                         filtered_tools.append(tool)
                 tools_list = filtered_tools
 
+            def _client_factory() -> MCPClient:
+                transport, _ = self._create_transport(mcp_config)
+                return MCPClient(
+                    transport=transport,
+                    cache_tools_list=mcp_config.cache_tools_list,
+                )
+
             tools = []
             for tool_def in tools_list:
                 tool_name = tool_def.get("name", "")
@@ -398,7 +421,7 @@ class MCPToolResolver:
 
                 try:
                     native_tool = MCPNativeTool(
-                        mcp_client=client,
+                        client_factory=_client_factory,
                         tool_name=tool_name,
                         tool_schema=tool_schema,
                         server_name=server_name,
@@ -409,10 +432,10 @@ class MCPToolResolver:
                     self._logger.log("error", f"Failed to create native MCP tool: {e}")
                     continue
 
-            return cast(list[BaseTool], tools), client
+            return cast(list[BaseTool], tools), []
         except Exception as e:
-            if client.connected:
-                asyncio.run(client.disconnect())
+            if discovery_client.connected:
+                asyncio.run(discovery_client.disconnect())
 
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
 
