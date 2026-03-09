@@ -5,10 +5,14 @@ for better performance and connection management.
 """
 
 import asyncio
+import logging
 import threading
 from typing import Any
 
 from crewai.tools import BaseTool
+
+
+logger = logging.getLogger(__name__)
 
 
 _mcp_loop_lock = threading.Lock()
@@ -152,7 +156,7 @@ class MCPNativeTool(BaseTool):
             try:
                 await self._mcp_client.disconnect()
             except Exception:
-                pass  # best-effort; may already be stale
+                logger.debug("Failed to disconnect stale MCP client", exc_info=True)
 
         await self._mcp_client.connect()
 
@@ -169,7 +173,7 @@ class MCPNativeTool(BaseTool):
                 try:
                     await self._mcp_client.disconnect()
                 except Exception:
-                    pass  # best-effort cleanup
+                    logger.debug("Failed to disconnect MCP client during retry", exc_info=True)
                 await self._mcp_client.connect()
                 result = await self._mcp_client.call_tool(
                     self.original_tool_name, kwargs
@@ -180,7 +184,7 @@ class MCPNativeTool(BaseTool):
             try:
                 await self._mcp_client.disconnect()
             except Exception:
-                pass  # best-effort cleanup
+                logger.debug("Failed to disconnect MCP client during cleanup", exc_info=True)
 
         # Extract result content
         if isinstance(result, str):
