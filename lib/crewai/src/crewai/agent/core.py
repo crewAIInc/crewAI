@@ -1350,6 +1350,8 @@ class Agent(BaseAgent):
                     ),
                 )
 
+        formatted_messages = append_skill_context(self, formatted_messages)
+
         # Build the input dict for the executor
         inputs: dict[str, Any] = {
             "input": formatted_messages,
