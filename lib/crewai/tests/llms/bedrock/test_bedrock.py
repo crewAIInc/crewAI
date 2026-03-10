@@ -967,7 +967,41 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+  def test_bedrock_groups_three_tool_results():
+      """Three parallel tool calls must be grouped into one user message."""
+      llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
+      messages = [
+          {"role": "user", "content": "Run all three tools"},
+          {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                  {"id": "c1", "type": "function", "function": {"name": "t1", "arguments": "{}"}},
+                  {"id": "c2", "type": "function", "function": {"name": "t2", "arguments": "{}"}},
+                  {"id": "c3", "type": "function", "function": {"name": "t3", "arguments": "{}"}},
+              ],
+          },
+          {"role": "tool", "tool_call_id": "c1", "content": "r1"},
+          {"role": "tool", "tool_call_id": "c2", "content": "r2"},
+          {"role": "tool", "tool_call_id": "c3", "content": "r3"},
+      ]
+
+      converse_msgs, _ = llm._format_messages_for_converse(messages)
+
+      tool_result_messages = [
+          m for m in converse_msgs
+          if m.get("role") == "user"
+          and any("toolResult" in b for b in m.get("content", []))
+      ]
+
+      assert len(tool_result_messages) == 1
+      assert len(tool_result_messages[0]["content"]) == 3
+      tool_use_ids = {
+          block["toolResult"]["toolUseId"]
+          for block in tool_result_messages[0]["content"]
+      }
+      assert tool_use_ids == {"c1", "c2", "c3"}
 
 def test_bedrock_parallel_tool_results_grouped():
     """Regression test for issue #4749.
