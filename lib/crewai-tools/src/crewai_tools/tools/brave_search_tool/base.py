@@ -277,7 +277,7 @@ class BraveSearchToolBase(BaseTool, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _refine_response(self, response: dict[str, Any]) -> dict[str, Any]:
+    def _refine_response(self, response: dict[str, Any]) -> Any:
         """Subclass must implement: transform response dict into a more useful format."""
         raise NotImplementedError
 

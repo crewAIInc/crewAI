@@ -26,7 +26,7 @@ class BraveVideoSearchTool(BraveSearchToolBase):
     def _refine_request_payload(self, params: dict[str, Any]) -> dict[str, Any]:
         return params
 
-    def _refine_response(self, response: dict[str, Any]) -> dict[str, Any]:
+    def _refine_response(self, response: dict[str, Any]) -> list[dict[str, Any]]:
         # Make the response more concise, and easier to consume
         results = response.get("results", [])
         return [

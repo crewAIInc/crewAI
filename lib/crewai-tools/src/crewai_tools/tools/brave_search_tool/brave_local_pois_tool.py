@@ -65,7 +65,7 @@ class BraveLocalPOIsTool(BraveSearchToolBase):
     def _refine_request_payload(self, params: dict[str, Any]) -> dict[str, Any]:
         return params
 
-    def _refine_response(self, response: LocalPOIsResponse) -> dict[str, Any]:
+    def _refine_response(self, response: LocalPOIsResponse) -> list[dict[str, Any]]:
         results = response.get("results", [])
         return [
             {
@@ -97,7 +97,7 @@ class BraveLocalPOIsDescriptionTool(BraveSearchToolBase):
     def _refine_request_payload(self, params: dict[str, Any]) -> dict[str, Any]:
         return params
 
-    def _refine_response(self, response: LocalPOIsResponse) -> dict[str, Any]:
+    def _refine_response(self, response: LocalPOIsResponse) -> list[dict[str, Any]]:
         # Make the response more concise, and easier to consume
         results = response.get("results", [])
         return [

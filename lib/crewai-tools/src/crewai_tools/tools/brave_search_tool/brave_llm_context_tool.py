@@ -27,6 +27,6 @@ class BraveLLMContextTool(BraveSearchToolBase):
     def _refine_request_payload(self, params: dict[str, Any]) -> dict[str, Any]:
         return params
 
-    def _refine_response(self, response: LLMContext.Response) -> dict[str, Any]:
+    def _refine_response(self, response: LLMContext.Response) -> LLMContext.Response:
         """The LLM Context response schema is fairly simple. Return as is."""
         return response
