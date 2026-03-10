@@ -1815,21 +1815,33 @@ class BedrockCompletion(BaseLLM):
             elif role == "tool":
                 if not tool_call_id:
                     raise ValueError("Tool message missing required tool_call_id")
-                converse_messages.append(
-                    {
-                        "role": "user",
+                tool_result_block = {
+                    "toolResult": {
+                        "toolUseId": tool_call_id,
                         "content": [
-                            {
-                                "toolResult": {
-                                    "toolUseId": tool_call_id,
-                                    "content": [
-                                        {"text": str(content) if content else ""}
-                                    ],
-                                }
-                            }
+                            {"text": str(content) if content else ""}
                         ],
                     }
-                )
+                }
+                # Bedrock requires all toolResult blocks for a single assistant
+                # turn to be grouped in one user message.  If the previous
+                # converse message is already a user message containing
+                # toolResult blocks, append to it instead of creating a new one.
+                if (
+                    converse_messages
+                    and converse_messages[-1].get("role") == "user"
+                    and converse_messages[-1].get("content")
+                    and isinstance(converse_messages[-1]["content"], list)
+                    and any(
+                        "toolResult" in block
+                        for block in converse_messages[-1]["content"]
+                    )
+                ):
+                    converse_messages[-1]["content"].append(tool_result_block)
+                else:
+                    converse_messages.append(
+                        {"role": "user", "content": [tool_result_block]}
+                    )
             else:
                 # Convert to Converse API format with proper content structure
                 if isinstance(content, list):
