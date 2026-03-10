@@ -1234,8 +1234,11 @@ class LLM(BaseLLM):
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
-        if (not tool_calls or not available_functions) and text_response:
+        # --- 5) If no tool calls, return the text response directly as long as there is a text response
+        # Note: we must NOT return text here when tool_calls are present but available_functions=None,
+        # because the caller (e.g. crew_agent_executor) intentionally passes available_functions=None
+        # to receive tool calls as a list for external execution (step 6 below).
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1246,7 +1249,8 @@ class LLM(BaseLLM):
             return text_response
 
         # --- 6) If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
+        # This allows the caller (e.g., executor) to handle tool execution externally.
+        # When the LLM returns both a text response and tool calls, tool calls take priority.
         if tool_calls and not available_functions:
             return tool_calls
 
