@@ -91,10 +91,18 @@ class MemoryMatch(BaseModel):
         """Format this match as a human-readable string including metadata.
 
         Returns:
-            A multi-line string with score, content, categories, and non-empty
-            metadata fields.
+            A multi-line string with score, content, scope/date, categories,
+            and non-empty metadata fields.
         """
-        lines = [f"- (score={self.score:.2f}) {self.record.content}"]
+        # Extract date from scope (e.g. "/conversations/2023-05-29" -> "2023-05-29")
+        date_str = ""
+        if self.record.scope and self.record.scope != "/":
+            parts = self.record.scope.rstrip("/").rsplit("/", 1)
+            if len(parts) > 1 and len(parts[-1]) >= 10:
+                date_str = f" [date: {parts[-1]}]"
+        lines = [f"- (score={self.score:.2f}){date_str} {self.record.content}"]
+        if self.record.scope and self.record.scope != "/":
+            lines.append(f"  scope: {self.record.scope}")
         if self.record.categories:
             lines.append(f"  categories: {', '.join(self.record.categories)}")
         if self.record.metadata:
@@ -366,7 +374,13 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
+    now = datetime.utcnow()
+    created = record.created_at
+    # Strip timezone info to avoid "can't compare offset-naive and
+    # offset-aware datetimes" when records have mixed tz awareness.
+    if created.tzinfo is not None:
+        created = created.replace(tzinfo=None)
+    age_seconds = (now - created).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 

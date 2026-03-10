@@ -1,0 +1,68 @@
+name: Check EXPANDED_CLAUDE.md freshness
+
+on:
+  pull_request:
+    paths:
+      - "lib/crewai/src/crewai/crew.py"
+      - "lib/crewai/src/crewai/task.py"
+      - "lib/crewai/src/crewai/llm.py"
+      - "lib/crewai/src/crewai/lite_agent.py"
+      - "lib/crewai/src/crewai/agent/**"
+      - "lib/crewai/src/crewai/agents/**"
+      - "lib/crewai/src/crewai/flow/**"
+      - "lib/crewai/src/crewai/memory/**"
+      - "lib/crewai/src/crewai/tools/**"
+      - "lib/crewai/src/crewai/events/**"
+      - "lib/crewai/src/crewai/llms/**"
+      - "lib/crewai/src/crewai/knowledge/**"
+      - "lib/crewai/src/crewai/rag/**"
+      - "lib/crewai/src/crewai/security/**"
+      - "lib/crewai/src/crewai/a2a/**"
+      - "lib/crewai/src/crewai/cli/**"
+      - "lib/crewai/src/crewai/project/**"
+      - "lib/crewai/src/crewai/translations/**"
+      - "lib/crewai-tools/src/**"
+      - "lib/crewai-files/src/**"
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if EXPANDED_CLAUDE.md was updated
+        id: check
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^EXPANDED_CLAUDE.md$"; then
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on PR
+        if: steps.check.outputs.updated == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- docs-stale-check -->';
+            const body = `${marker}\n**Heads up:** This PR changes core source files but \`EXPANDED_CLAUDE.md\` wasn't updated. If the changes affect architecture (new modules, changed APIs, renamed classes), consider running \`/update-docs\` in Claude Code before merging.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+            if (!existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

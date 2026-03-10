@@ -1269,6 +1269,17 @@ class Agent(BaseAgent):
                 )
                 start_time = time.time()
                 matches = agent_memory.recall(formatted_messages, limit=20)
+                # Filter low-relevance memories to reduce noise while
+                # guaranteeing a minimum context floor.
+                if matches:
+                    _MIN_SCORE = 0.55
+                    _MIN_RESULTS = 5
+                    above = [m for m in matches if m.score >= _MIN_SCORE]
+                    if len(above) >= _MIN_RESULTS:
+                        matches = above
+                    else:
+                        # Keep at least top _MIN_RESULTS by score
+                        matches = matches[:max(_MIN_RESULTS, len(above))]
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(
