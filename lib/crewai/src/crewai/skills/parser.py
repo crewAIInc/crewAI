@@ -107,8 +107,16 @@ def load_skill_metadata(skill_dir: Path) -> Skill:
         ValueError: If directory name doesn't match skill name.
     """
     skill_md_path = skill_dir / SKILL_FILENAME
-    frontmatter, _body = parse_skill_md(skill_md_path)
+    frontmatter, body = parse_skill_md(skill_md_path)
     validate_directory_name(skill_dir, frontmatter.name)
+    if len(body) > _MAX_BODY_CHARS:
+        _logger.warning(
+            "SKILL.md body for '%s' is %d chars (threshold: %d). "
+            "Large bodies may consume significant context window when injected into prompts.",
+            frontmatter.name,
+            len(body),
+            _MAX_BODY_CHARS,
+        )
     return Skill(
         frontmatter=frontmatter,
         path=skill_dir,
