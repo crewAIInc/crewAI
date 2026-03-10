@@ -131,6 +131,8 @@ units:
       token_estimate: 11000
       load_strategy: lazy
       priority: medium
+      summary_available: true
+      summary_unit: agents-tasks-tldr
 
   - id: crews
     path: docs/en/concepts/crews.mdx
@@ -261,6 +263,8 @@ units:
       token_estimate: 8000
       load_strategy: lazy
       priority: medium
+      summary_available: true
+      summary_unit: tools-memory-tldr
 
   - id: llms
     path: docs/en/concepts/llms.mdx
