@@ -302,9 +302,11 @@ class Agent(BaseAgent):
         Crew-level skill paths are merged in. Skips work when all items are
         already resolved and there are no crew-level paths to merge.
         """
+        from crewai.crew import Crew
+
         crew_skills: list[Path | SkillModel] | None = (
             self.crew.skills
-            if self.crew and isinstance(self.crew.skills, list)
+            if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
             else None
         )
 
