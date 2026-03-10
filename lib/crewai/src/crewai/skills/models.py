@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from crewai.skills.validation import (
     MAX_SKILL_NAME_LENGTH,
@@ -19,7 +19,7 @@ from crewai.skills.validation import (
 )
 
 
-MAX_DESCRIPTION_LENGTH: int = 1024
+MAX_DESCRIPTION_LENGTH: Final[int] = 1024
 ResourceDirName = Literal["scripts", "references", "assets"]
 
 
@@ -49,7 +49,7 @@ class SkillFrontmatter(BaseModel):
         allowed_tools: Optional space-delimited list of pre-approved tools.
     """
 
-    model_config = {"frozen": True, "populate_by_name": True}
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
 
     name: str = Field(
         min_length=MIN_SKILL_NAME_LENGTH,
@@ -57,10 +57,24 @@ class SkillFrontmatter(BaseModel):
         pattern=SKILL_NAME_PATTERN,
     )
     description: str = Field(min_length=1, max_length=MAX_DESCRIPTION_LENGTH)
-    license: str | None = None
-    compatibility: str | None = Field(default=None, max_length=500)
-    metadata: dict[str, str] | None = None
-    allowed_tools: list[str] | None = Field(default=None, alias="allowed-tools")
+    license: str | None = Field(
+        default=None,
+        description="SPDX license identifier or free-text license reference, e.g. 'MIT', 'Apache-2.0'.",
+    )
+    compatibility: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Version or platform constraints for the skill, e.g. 'crewai >= 0.80'.",
+    )
+    metadata: dict[str, str] | None = Field(
+        default=None,
+        description="Arbitrary string key-value pairs for custom skill metadata.",
+    )
+    allowed_tools: list[str] | None = Field(
+        default=None,
+        alias="allowed-tools",
+        description="Pre-approved tool names the skill may use, parsed from a space-delimited string in frontmatter.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -85,11 +99,24 @@ class Skill(BaseModel):
         resource_files: Cataloged resource files (populated at RESOURCES level).
     """
 
-    frontmatter: SkillFrontmatter
-    instructions: str | None = None
-    path: Path
-    disclosure_level: DisclosureLevel = Field(default=DisclosureLevel.METADATA)
-    resource_files: dict[ResourceDirName, list[str]] | None = None
+    frontmatter: SkillFrontmatter = Field(
+        description="Parsed YAML frontmatter from SKILL.md.",
+    )
+    instructions: str | None = Field(
+        default=None,
+        description="Full SKILL.md body text, populated at INSTRUCTIONS level.",
+    )
+    path: Path = Field(
+        description="Filesystem path to the skill directory.",
+    )
+    disclosure_level: DisclosureLevel = Field(
+        default=DisclosureLevel.METADATA,
+        description="Current progressive disclosure level of the skill.",
+    )
+    resource_files: dict[ResourceDirName, list[str]] | None = Field(
+        default=None,
+        description="Cataloged resource files by directory, populated at RESOURCES level.",
+    )
 
     @property
     def name(self) -> str:
