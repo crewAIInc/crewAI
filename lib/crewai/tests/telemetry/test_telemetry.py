@@ -181,19 +181,21 @@ def test_crew_created_span_with_memory_object_does_not_raise(mocker):
     mock_tracer.start_span.return_value = span
     mocker.patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=mock_tracer)
 
-    # Simulate a crew whose .memory field is a non-bool truthy object.
+    # Build a minimal mock crew whose .memory field is a non-bool truthy object,
+    # simulating a real Memory instance (which is not a bool).
     memory_obj = mocker.MagicMock()
     memory_obj.__bool__ = mocker.MagicMock(return_value=True)
 
-    # Call _add_attribute directly with a non-bool Memory-like object, the same
-    # way crew_creation does on line 282.  This isolates the exact code path
-    # being fixed without depending on the rest of crew_creation succeeding in
-    # a mocked environment.
-    telemetry._add_attribute(
-        span,
-        "crew_memory",
-        memory_obj if isinstance(memory_obj, bool) else bool(memory_obj),
-    )
+    mock_crew = mocker.MagicMock()
+    mock_crew.memory = memory_obj
+    mock_crew.process = "sequential"
+    mock_crew.tasks = []
+    mock_crew.agents = []
+    mock_crew.fingerprint = None
+
+    # Exercise the actual production code path in crew_creation(), not _add_attribute
+    # directly, so that this test will catch any regression in crew_creation().
+    telemetry.crew_creation(mock_crew, inputs=None)
 
     # Verify span.set_attribute was called with a bool value for crew_memory.
     found_crew_memory = False
