@@ -30,12 +30,9 @@ class CrewAgentExecutorMixin:
         memory = getattr(self.agent, "memory", None) or (
             getattr(self.crew, "_memory", None) if self.crew else None
         )
-        if memory is None or not self.task:
+        if memory is None or not self.task or memory.read_only:
             return
-        if (
-            f"Action: {sanitize_tool_name('Delegate work to coworker')}"
-            in output.text
-        ):
+        if f"Action: {sanitize_tool_name('Delegate work to coworker')}" in output.text:
             return
         try:
             raw = (
@@ -48,6 +45,4 @@ class CrewAgentExecutorMixin:
             if extracted:
                 memory.remember_many(extracted, agent_role=self.agent.role)
         except Exception as e:
-            self.agent._logger.log(
-                "error", f"Failed to save to memory: {e}"
-            )
+            self.agent._logger.log("error", f"Failed to save to memory: {e}")

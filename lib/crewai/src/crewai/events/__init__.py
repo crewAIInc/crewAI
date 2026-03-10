@@ -63,6 +63,7 @@ from crewai.events.types.logging_events import (
     AgentLogsStartedEvent,
 )
 from crewai.events.types.mcp_events import (
+    MCPConfigFetchFailedEvent,
     MCPConnectionCompletedEvent,
     MCPConnectionFailedEvent,
     MCPConnectionStartedEvent,
@@ -165,6 +166,7 @@ __all__ = [
     "LiteAgentExecutionCompletedEvent",
     "LiteAgentExecutionErrorEvent",
     "LiteAgentExecutionStartedEvent",
+    "MCPConfigFetchFailedEvent",
     "MCPConnectionCompletedEvent",
     "MCPConnectionFailedEvent",
     "MCPConnectionStartedEvent",

@@ -1772,3 +1772,284 @@ def test_cyclic_flow_multiple_or_listeners_fire_every_iteration():
             f"'{method}' should fire every iteration, "
             f"got {len(events)} fires: {execution_order}"
         )
+
+
+def test_cyclic_flow_works_with_persist_and_id_input():
+    """Cyclic router flows must complete all iterations when persistence is
+    enabled and 'id' is passed in inputs.
+
+    Regression test: passing ``inputs={"id": ...}`` with a persistence backend
+    previously caused ``_is_execution_resuming`` to be set even though
+    ``_completed_methods`` was empty.  The flag was never cleared during
+    execution, so on the second cycle iteration the resumption path in
+    ``_execute_single_listener`` short-circuited the router with ``(None, None)``
+    and the flow silently terminated after a single iteration.
+    """
+    from uuid import uuid4
+
+    from crewai.flow.persistence import SQLiteFlowPersistence
+
+    execution_order: list[str] = []
+
+    class PersistCyclicFlow(Flow):
+        iteration: int = 0
+        max_iterations: int = 3
+
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(or_(begin, "capture"))
+        def classify(self):
+            self.iteration += 1
+            execution_order.append(f"classify_{self.iteration}")
+            if self.iteration <= self.max_iterations:
+                return "type_a"
+            return "exit"
+
+        @listen("type_a")
+        def handle(self):
+            execution_order.append(f"handle_{self.iteration}")
+
+        @listen(or_(handle,))
+        def send(self):
+            execution_order.append(f"send_{self.iteration}")
+
+        @listen("send")
+        def capture(self):
+            execution_order.append(f"capture_{self.iteration}")
+
+        @listen("exit")
+        def finish(self):
+            execution_order.append("finish")
+
+    persistence = SQLiteFlowPersistence()
+    flow = PersistCyclicFlow(persistence=persistence)
+    flow.kickoff(inputs={"id": str(uuid4())})
+
+    assert "finish" in execution_order, (
+        f"Flow should have reached 'finish', got: {execution_order}"
+    )
+    # The router fires max_iterations+1 times (3 cycles + the final "exit")
+    classify_events = [e for e in execution_order if e.startswith("classify_")]
+    assert len(classify_events) == 4, (
+        f"'classify' should fire 4 times (3 cycles + exit), "
+        f"got {len(classify_events)}: {execution_order}"
+    )
+    # The other methods fire once per "type_a" cycle
+    for method in ["handle", "send", "capture"]:
+        events = [e for e in execution_order if e.startswith(f"{method}_")]
+        assert len(events) == 3, (
+            f"'{method}' should fire 3 times, "
+            f"got {len(events)}: {execution_order}"
+        )
+
+
+@pytest.mark.timeout(5)
+def test_self_listening_method_does_not_loop():
+    """A method whose @listen label matches its own name must not loop forever.
+
+    Without the guard, 'process' re-triggers itself on every completion,
+    running indefinitely (timeout → FAIL).  The fix caps method calls
+    and raises RecursionError (PASS).
+    """
+
+    class SelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "process"
+
+        @router(begin)
+        def route(self):
+            return "process"
+
+        @listen("process")
+        def process(self):
+            pass
+
+    flow = SelfListenFlow()
+    with pytest.raises(RecursionError, match="infinite loop"):
+        flow.kickoff()
+
+
+def test_or_condition_self_listen_fires_once():
+    """or_() with a self-referencing label only fires once due to or_() guard."""
+    call_count = 0
+
+    class OrSelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "process"
+
+        @router(begin)
+        def route(self):
+            return "process"
+
+        @listen(or_("other_trigger", "process"))
+        def process(self):
+            nonlocal call_count
+            call_count += 1
+
+    flow = OrSelfListenFlow()
+    flow.kickoff()
+    assert call_count == 1
+
+class ListState(BaseModel):
+    items: list = []
+
+
+class DictState(BaseModel):
+    data: dict = {}
+
+
+class _ListFlow(Flow[ListState]):
+    @start()
+    def populate(self):
+        self.state.items = [3, 1, 4, 1, 5, 9, 2, 6]
+
+
+class _DictFlow(Flow[DictState]):
+    @start()
+    def populate(self):
+        self.state.data = {"a": 1, "b": 2, "c": 3}
+
+
+def _make_list_flow():
+    flow = _ListFlow()
+    flow.kickoff()
+    return flow
+
+
+def _make_dict_flow():
+    flow = _DictFlow()
+    flow.kickoff()
+    return flow
+
+
+def test_locked_list_proxy_index():
+    flow = _make_list_flow()
+    assert flow.state.items.index(4) == 2
+    assert flow.state.items.index(1, 2) == 3
+
+
+def test_locked_list_proxy_index_missing_raises():
+    flow = _make_list_flow()
+    with pytest.raises(ValueError):
+        flow.state.items.index(999)
+
+
+def test_locked_list_proxy_count():
+    flow = _make_list_flow()
+    assert flow.state.items.count(1) == 2
+    assert flow.state.items.count(999) == 0
+
+
+def test_locked_list_proxy_sort():
+    flow = _make_list_flow()
+    flow.state.items.sort()
+    assert list(flow.state.items) == [1, 1, 2, 3, 4, 5, 6, 9]
+
+
+def test_locked_list_proxy_sort_reverse():
+    flow = _make_list_flow()
+    flow.state.items.sort(reverse=True)
+    assert list(flow.state.items) == [9, 6, 5, 4, 3, 2, 1, 1]
+
+
+def test_locked_list_proxy_sort_key():
+    flow = _make_list_flow()
+    flow.state.items.sort(key=lambda x: -x)
+    assert list(flow.state.items) == [9, 6, 5, 4, 3, 2, 1, 1]
+
+
+def test_locked_list_proxy_reverse():
+    flow = _make_list_flow()
+    original = list(flow.state.items)
+    flow.state.items.reverse()
+    assert list(flow.state.items) == list(reversed(original))
+
+
+def test_locked_list_proxy_copy():
+    flow = _make_list_flow()
+    copied = flow.state.items.copy()
+    assert copied == [3, 1, 4, 1, 5, 9, 2, 6]
+    assert isinstance(copied, list)
+    copied.append(999)
+    assert 999 not in flow.state.items
+
+
+def test_locked_list_proxy_add():
+    flow = _make_list_flow()
+    result = flow.state.items + [10, 11]
+    assert result == [3, 1, 4, 1, 5, 9, 2, 6, 10, 11]
+    assert len(flow.state.items) == 8
+
+
+def test_locked_list_proxy_radd():
+    flow = _make_list_flow()
+    result = [0] + flow.state.items
+    assert result[0] == 0
+    assert len(result) == 9
+
+
+def test_locked_list_proxy_iadd():
+    flow = _make_list_flow()
+    flow.state.items += [10]
+    assert 10 in flow.state.items
+    # Verify no deadlock: mutations must still work after +=
+    flow.state.items.append(99)
+    assert 99 in flow.state.items
+
+
+def test_locked_list_proxy_mul():
+    flow = _make_list_flow()
+    result = flow.state.items * 2
+    assert len(result) == 16
+
+
+def test_locked_list_proxy_rmul():
+    flow = _make_list_flow()
+    result = 2 * flow.state.items
+    assert len(result) == 16
+
+
+def test_locked_list_proxy_reversed():
+    flow = _make_list_flow()
+    original = list(flow.state.items)
+    assert list(reversed(flow.state.items)) == list(reversed(original))
+
+
+def test_locked_dict_proxy_copy():
+    flow = _make_dict_flow()
+    copied = flow.state.data.copy()
+    assert copied == {"a": 1, "b": 2, "c": 3}
+    assert isinstance(copied, dict)
+    copied["z"] = 99
+    assert "z" not in flow.state.data
+
+
+def test_locked_dict_proxy_or():
+    flow = _make_dict_flow()
+    result = flow.state.data | {"d": 4}
+    assert result == {"a": 1, "b": 2, "c": 3, "d": 4}
+    assert "d" not in flow.state.data
+
+
+def test_locked_dict_proxy_ror():
+    flow = _make_dict_flow()
+    result = {"z": 0} | flow.state.data
+    assert result == {"z": 0, "a": 1, "b": 2, "c": 3}
+
+
+def test_locked_dict_proxy_ior():
+    flow = _make_dict_flow()
+    flow.state.data |= {"d": 4}
+    assert flow.state.data["d"] == 4
+    # Verify no deadlock: mutations must still work after |=
+    flow.state.data["e"] = 5
+    assert flow.state.data["e"] == 5
+
+
+def test_locked_dict_proxy_reversed():
+    flow = _make_dict_flow()
+    assert list(reversed(flow.state.data)) == ["c", "b", "a"]

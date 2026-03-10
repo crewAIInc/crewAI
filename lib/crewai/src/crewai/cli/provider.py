@@ -8,7 +8,7 @@ from typing import Any
 
 import certifi
 import click
-import requests
+import httpx
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
 
@@ -165,20 +165,20 @@ def fetch_provider_data(cache_file: Path) -> dict[str, Any] | None:
     ssl_config = os.environ["SSL_CERT_FILE"] = certifi.where()
 
     try:
-        response = requests.get(JSON_URL, stream=True, timeout=60, verify=ssl_config)
-        response.raise_for_status()
-        data = download_data(response)
-        with open(cache_file, "w") as f:
-            json.dump(data, f)
-        return data
-    except requests.RequestException as e:
+        with httpx.stream("GET", JSON_URL, timeout=60, verify=ssl_config) as response:
+            response.raise_for_status()
+            data = download_data(response)
+            with open(cache_file, "w") as f:
+                json.dump(data, f)
+            return data
+    except httpx.HTTPError as e:
         click.secho(f"Error fetching provider data: {e}", fg="red")
     except json.JSONDecodeError:
         click.secho("Error parsing provider data. Invalid JSON format.", fg="red")
     return None
 
 
-def download_data(response: requests.Response) -> dict[str, Any]:
+def download_data(response: httpx.Response) -> dict[str, Any]:
     """Downloads data from a given HTTP response and returns the JSON content.
 
     Args:
@@ -194,7 +194,7 @@ def download_data(response: requests.Response) -> dict[str, Any]:
     with click.progressbar(
         length=total_size, label="Downloading", show_pos=True
     ) as bar:
-        for chunk in response.iter_content(block_size):
+        for chunk in response.iter_bytes(block_size):
             if chunk:
                 data_chunks.append(chunk)
                 bar.update(len(chunk))

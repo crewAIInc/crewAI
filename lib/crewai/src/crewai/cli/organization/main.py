@@ -1,4 +1,4 @@
-from requests import HTTPError
+from httpx import HTTPStatusError
 from rich.console import Console
 from rich.table import Table
 
@@ -10,11 +10,11 @@ console = Console()
 
 
 class OrganizationCommand(BaseCommand, PlusAPIMixin):
-    def __init__(self):
+    def __init__(self) -> None:
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
-    def list(self):
+    def list(self) -> None:
         try:
             response = self.plus_api_client.get_organizations()
             response.raise_for_status()
@@ -33,7 +33,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
                 table.add_row(org["name"], org["uuid"])
 
             console.print(table)
-        except HTTPError as e:
+        except HTTPStatusError as e:
             if e.response.status_code == 401:
                 console.print(
                     "You are not logged in to any organization. Use 'crewai login' to login.",
@@ -50,7 +50,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             )
             raise SystemExit(1) from e
 
-    def switch(self, org_id):
+    def switch(self, org_id: str) -> None:
         try:
             response = self.plus_api_client.get_organizations()
             response.raise_for_status()
@@ -72,7 +72,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
                 f"Successfully switched to {org['name']} ({org['uuid']})",
                 style="bold green",
             )
-        except HTTPError as e:
+        except HTTPStatusError as e:
             if e.response.status_code == 401:
                 console.print(
                     "You are not logged in to any organization. Use 'crewai login' to login.",
@@ -87,7 +87,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             console.print(f"Failed to switch organization: {e!s}", style="bold red")
             raise SystemExit(1) from e
 
-    def current(self):
+    def current(self) -> None:
         settings = Settings()
         if settings.org_uuid:
             console.print(

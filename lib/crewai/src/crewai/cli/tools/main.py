@@ -23,6 +23,7 @@ from crewai.cli.utils import (
     tree_copy,
     tree_find_and_replace,
 )
+from crewai.events.listeners.tracing.utils import get_user_id
 
 
 console = Console()
@@ -169,7 +170,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         console.print(f"Successfully installed {handle}", style="bold green")
 
     def login(self) -> None:
-        login_response = self.plus_api_client.login_to_tool_repository()
+        login_response = self.plus_api_client.login_to_tool_repository(
+            user_identifier=get_user_id()
+        )
 
         if login_response.status_code != 200:
             console.print(

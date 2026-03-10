@@ -98,32 +98,42 @@ def handle_feedback(self, result):
 When you specify `emit`, the decorator becomes a router. The human's free-form feedback is interpreted by an LLM and collapsed into one of the specified outcomes:
 
 ```python Code
-@start()
-@human_feedback(
-    message="Do you approve this content for publication?",
-    emit=["approved", "rejected", "needs_revision"],
-    llm="gpt-4o-mini",
-    default_outcome="needs_revision",
-)
-def review_content(self):
-    return "Draft blog post content here..."
+from crewai.flow.flow import Flow, start, listen, or_
+from crewai.flow.human_feedback import human_feedback
 
-@listen("approved")
-def publish(self, result):
-    print(f"Publishing! User said: {result.feedback}")
+class ReviewFlow(Flow):
+    @start()
+    def generate_content(self):
+        return "Draft blog post content here..."
 
-@listen("rejected")
-def discard(self, result):
-    print(f"Discarding. Reason: {result.feedback}")
+    @human_feedback(
+        message="Do you approve this content for publication?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+    )
+    @listen(or_("generate_content", "needs_revision"))
+    def review_content(self):
+        return "Draft blog post content here..."
 
-@listen("needs_revision")
-def revise(self, result):
-    print(f"Revising based on: {result.feedback}")
+    @listen("approved")
+    def publish(self, result):
+        print(f"Publishing! User said: {result.feedback}")
+
+    @listen("rejected")
+    def discard(self, result):
+        print(f"Discarding. Reason: {result.feedback}")
 ```
+
+When the human says something like "needs more detail", the LLM collapses that to `"needs_revision"`, which triggers `review_content` again via `or_()` — creating a revision loop. The loop continues until the outcome is `"approved"` or `"rejected"`.
 
 <Tip>
 The LLM uses structured outputs (function calling) when available to guarantee the response is one of your specified outcomes. This makes routing reliable and predictable.
 </Tip>
+
+<Warning>
+A `@start()` method only runs once at the beginning of the flow. If you need a revision loop, separate the start method from the review method and use `@listen(or_("trigger", "revision_outcome"))` on the review method to enable the self-loop.
+</Warning>
 
 ## HumanFeedbackResult
 
@@ -188,127 +198,183 @@ Each `HumanFeedbackResult` is appended to `human_feedback_history`, so multiple 
 
 ## Complete Example: Content Approval Workflow
 
-Here's a full example implementing a content review and approval workflow:
+Here's a full example implementing a content review and approval workflow with a revision loop:
 
 <CodeGroup>
 
 ```python Code
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, start, listen, or_
 from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
 from pydantic import BaseModel
 
 
 class ContentState(BaseModel):
-    topic: str = ""
     draft: str = ""
-    final_content: str = ""
     revision_count: int = 0
+    status: str = "pending"
 
 
 class ContentApprovalFlow(Flow[ContentState]):
-    """A flow that generates content and gets human approval."""
+    """A flow that generates content and loops until the human approves."""
 
     @start()
-    def get_topic(self):
-        self.state.topic = input("What topic should I write about? ")
-        return self.state.topic
-
-    @listen(get_topic)
-    def generate_draft(self, topic):
-        # In real use, this would call an LLM
-        self.state.draft = f"# {topic}\n\nThis is a draft about {topic}..."
+    def generate_draft(self):
+        self.state.draft = "# AI Safety\n\nThis is a draft about AI Safety..."
         return self.state.draft
 
-    @listen(generate_draft)
     @human_feedback(
-        message="Please review this draft. Reply 'approved', 'rejected', or provide revision feedback:",
+        message="Please review this draft. Approve, reject, or describe what needs changing:",
         emit=["approved", "rejected", "needs_revision"],
         llm="gpt-4o-mini",
         default_outcome="needs_revision",
     )
-    def review_draft(self, draft):
-        return draft
+    @listen(or_("generate_draft", "needs_revision"))
+    def review_draft(self):
+        self.state.revision_count += 1
+        return f"{self.state.draft} (v{self.state.revision_count})"
 
     @listen("approved")
     def publish_content(self, result: HumanFeedbackResult):
-        self.state.final_content = result.output
-        print("\n✅ Content approved and published!")
-        print(f"Reviewer comment: {result.feedback}")
+        self.state.status = "published"
+        print(f"Content approved and published! Reviewer said: {result.feedback}")
         return "published"
 
     @listen("rejected")
     def handle_rejection(self, result: HumanFeedbackResult):
-        print("\n❌ Content rejected")
-        print(f"Reason: {result.feedback}")
+        self.state.status = "rejected"
+        print(f"Content rejected. Reason: {result.feedback}")
         return "rejected"
 
-    @listen("needs_revision")
-    def revise_content(self, result: HumanFeedbackResult):
-        self.state.revision_count += 1
-        print(f"\n📝 Revision #{self.state.revision_count} requested")
-        print(f"Feedback: {result.feedback}")
 
-        # In a real flow, you might loop back to generate_draft
-        # For this example, we just acknowledge
-        return "revision_requested"
-
-
-# Run the flow
 flow = ContentApprovalFlow()
 result = flow.kickoff()
-print(f"\nFlow completed. Revisions requested: {flow.state.revision_count}")
+print(f"\nFlow completed. Status: {flow.state.status}, Reviews: {flow.state.revision_count}")
 ```
 
 ```text Output
-What topic should I write about? AI Safety
+==================================================
+OUTPUT FOR REVIEW:
+==================================================
+# AI Safety
+
+This is a draft about AI Safety... (v1)
+==================================================
+
+Please review this draft. Approve, reject, or describe what needs changing:
+(Press Enter to skip, or type your feedback)
+
+Your feedback: Needs more detail on alignment research
 
 ==================================================
 OUTPUT FOR REVIEW:
 ==================================================
 # AI Safety
 
-This is a draft about AI Safety...
+This is a draft about AI Safety... (v2)
 ==================================================
 
-Please review this draft. Reply 'approved', 'rejected', or provide revision feedback:
+Please review this draft. Approve, reject, or describe what needs changing:
 (Press Enter to skip, or type your feedback)
 
 Your feedback: Looks good, approved!
 
-✅ Content approved and published!
-Reviewer comment: Looks good, approved!
+Content approved and published! Reviewer said: Looks good, approved!
 
-Flow completed. Revisions requested: 0
+Flow completed. Status: published, Reviews: 2
 ```
 
 </CodeGroup>
 
+The key pattern is `@listen(or_("generate_draft", "needs_revision"))` — the review method listens to both the initial trigger and its own revision outcome, creating a self-loop that repeats until the human approves or rejects.
+
 ## Combining with Other Decorators
 
-The `@human_feedback` decorator works with other flow decorators. Place it as the innermost decorator (closest to the function):
+The `@human_feedback` decorator works with `@start()`, `@listen()`, and `or_()`. Both decorator orderings work — the framework propagates attributes in both directions — but the recommended patterns are:
 
 ```python Code
-# Correct: @human_feedback is innermost (closest to the function)
+# One-shot review at the start of a flow (no self-loop)
 @start()
-@human_feedback(message="Review this:")
+@human_feedback(message="Review this:", emit=["approved", "rejected"], llm="gpt-4o-mini")
 def my_start_method(self):
     return "content"
 
+# Linear review on a listener (no self-loop)
 @listen(other_method)
-@human_feedback(message="Review this too:")
+@human_feedback(message="Review this too:", emit=["good", "bad"], llm="gpt-4o-mini")
 def my_listener(self, data):
     return f"processed: {data}"
+
+# Self-loop: review that can loop back for revisions
+@human_feedback(message="Approve or revise?", emit=["approved", "revise"], llm="gpt-4o-mini")
+@listen(or_("upstream_method", "revise"))
+def review_with_loop(self):
+    return "content for review"
 ```
 
-<Tip>
-Place `@human_feedback` as the innermost decorator (last/closest to the function) so it wraps the method directly and can capture the return value before passing to the flow system.
-</Tip>
+### Self-loop pattern
+
+To create a revision loop, the review method must listen to **both** an upstream trigger and its own revision outcome using `or_()`:
+
+```python Code
+@start()
+def generate(self):
+    return "initial draft"
+
+@human_feedback(
+    message="Approve or request changes?",
+    emit=["revise", "approved"],
+    llm="gpt-4o-mini",
+    default_outcome="approved",
+)
+@listen(or_("generate", "revise"))
+def review(self):
+    return "content"
+
+@listen("approved")
+def publish(self):
+    return "published"
+```
+
+When the outcome is `"revise"`, the flow routes back to `review` (because it listens to `"revise"` via `or_()`). When the outcome is `"approved"`, the flow continues to `publish`. This works because the flow engine exempts routers from the "fire once" rule, allowing them to re-execute on each loop iteration.
+
+### Chained routers
+
+A listener triggered by one router's outcome can itself be a router:
+
+```python Code
+@start()
+def generate(self):
+    return "draft content"
+
+@human_feedback(message="First review:", emit=["approved", "rejected"], llm="gpt-4o-mini")
+@listen("generate")
+def first_review(self):
+    return "draft content"
+
+@human_feedback(message="Final review:", emit=["publish", "hold"], llm="gpt-4o-mini")
+@listen("approved")
+def final_review(self, prev):
+    return "final content"
+
+@listen("publish")
+def on_publish(self, prev):
+    return "published"
+
+@listen("hold")
+def on_hold(self, prev):
+    return "held for later"
+```
+
+### Limitations
+
+- **`@start()` methods run once**: A `@start()` method cannot self-loop. If you need a revision cycle, use a separate `@start()` method as the entry point and put the `@human_feedback` on a `@listen()` method.
+- **No `@start()` + `@listen()` on the same method**: This is a Flow framework constraint. A method is either a start point or a listener, not both.
 
 ## Best Practices
 
 ### 1. Write Clear Request Messages
 
-The `request` parameter is what the human sees. Make it actionable:
+The `message` parameter is what the human sees. Make it actionable:
 
 ```python Code
 # ✅ Good - clear and actionable
@@ -516,9 +582,9 @@ class ContentPipeline(Flow):
     @start()
     @human_feedback(
         message="Approve this content for publication?",
-        emit=["approved", "rejected", "needs_revision"],
+        emit=["approved", "rejected"],
         llm="gpt-4o-mini",
-        default_outcome="needs_revision",
+        default_outcome="rejected",
         provider=SlackNotificationProvider("#content-reviews"),
     )
     def generate_content(self):
@@ -533,11 +599,6 @@ class ContentPipeline(Flow):
     def archive(self, result):
         print(f"Archived. Reason: {result.feedback}")
         return {"status": "archived"}
-
-    @listen("needs_revision")
-    def queue_revision(self, result):
-        print(f"Queued for revision: {result.feedback}")
-        return {"status": "revision_needed"}
 
 
 # Starting the flow (will pause and wait for Slack response)
@@ -594,22 +655,22 @@ Over time, the human sees progressively better pre-reviewed output because each 
 ```python Code
 class ArticleReviewFlow(Flow):
     @start()
+    def generate_article(self):
+        return self.crew.kickoff(inputs={"topic": "AI Safety"}).raw
+
     @human_feedback(
         message="Review this article draft:",
         emit=["approved", "needs_revision"],
         llm="gpt-4o-mini",
         learn=True,  # enable HITL learning
     )
-    def generate_article(self):
-        return self.crew.kickoff(inputs={"topic": "AI Safety"}).raw
+    @listen(or_("generate_article", "needs_revision"))
+    def review_article(self):
+        return self.last_human_feedback.output if self.last_human_feedback else "article draft"
 
     @listen("approved")
     def publish(self):
         print(f"Publishing: {self.last_human_feedback.output}")
-
-    @listen("needs_revision")
-    def revise(self):
-        print("Revising based on feedback...")
 ```
 
 **First run**: The human sees the raw output and says "Always include citations for factual claims." The lesson is distilled and stored in memory.

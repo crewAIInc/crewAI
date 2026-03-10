@@ -38,22 +38,21 @@ CrewAI Enterprise provides a comprehensive Human-in-the-Loop (HITL) management s
 Configure human review checkpoints within your Flows using the `@human_feedback` decorator. When execution reaches a review point, the system pauses, notifies the assignee via email, and waits for a response.
 
 ```python
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, start, listen, or_
 from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
 
 class ContentApprovalFlow(Flow):
     @start()
     def generate_content(self):
-        # AI generates content
         return "Generated marketing copy for Q1 campaign..."
 
-    @listen(generate_content)
     @human_feedback(
         message="Please review this content for brand compliance:",
         emit=["approved", "rejected", "needs_revision"],
     )
-    def review_content(self, content):
-        return content
+    @listen(or_("generate_content", "needs_revision"))
+    def review_content(self):
+        return "Marketing copy for review..."
 
     @listen("approved")
     def publish_content(self, result: HumanFeedbackResult):
@@ -62,10 +61,6 @@ class ContentApprovalFlow(Flow):
     @listen("rejected")
     def archive_content(self, result: HumanFeedbackResult):
         print(f"Content rejected. Reason: {result.feedback}")
-
-    @listen("needs_revision")
-    def revise_content(self, result: HumanFeedbackResult):
-        print(f"Revision requested: {result.feedback}")
 ```
 
 For complete implementation details, see the [Human Feedback in Flows](/en/learn/human-feedback-in-flows) guide.

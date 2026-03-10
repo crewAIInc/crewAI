@@ -172,8 +172,8 @@ def test_memory_scope_slice(tmp_path: Path, mock_embedder: MagicMock) -> None:
     sc = mem.scope("/agent/1")
     assert sc._root in ("/agent/1", "/agent/1/")
     sl = mem.slice(["/a", "/b"], read_only=True)
-    assert sl._read_only is True
-    assert "/a" in sl._scopes and "/b" in sl._scopes
+    assert sl.read_only is True
+    assert "/a" in sl.scopes and "/b" in sl.scopes
 
 
 def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -198,7 +198,7 @@ def test_memory_scope_remember_recall(tmp_path: Path, mock_embedder: MagicMock) 
     from crewai.memory.memory_scope import MemoryScope
 
     mem = Memory(storage=str(tmp_path / "db5"), llm=MagicMock(), embedder=mock_embedder)
-    scope = MemoryScope(mem, "/crew/1")
+    scope = MemoryScope(memory=mem, root_path="/crew/1")
     scope.remember("Scoped note", scope="/", categories=[], importance=0.5, metadata={})
     results = scope.recall("note", limit=5, depth="shallow")
     assert len(results) >= 1
@@ -213,19 +213,20 @@ def test_memory_slice_recall(tmp_path: Path, mock_embedder: MagicMock) -> None:
 
     mem = Memory(storage=str(tmp_path / "db6"), llm=MagicMock(), embedder=mock_embedder)
     mem.remember("In scope A", scope="/a", categories=[], importance=0.5, metadata={})
-    sl = MemorySlice(mem, ["/a"], read_only=True)
+    sl = MemorySlice(memory=mem, scopes=["/a"], read_only=True)
     matches = sl.recall("scope", limit=5, depth="shallow")
     assert isinstance(matches, list)
 
 
-def test_memory_slice_remember_raises_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
+def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
     from crewai.memory.memory_scope import MemorySlice
 
     mem = Memory(storage=str(tmp_path / "db7"), llm=MagicMock(), embedder=mock_embedder)
-    sl = MemorySlice(mem, ["/a"], read_only=True)
-    with pytest.raises(PermissionError):
-        sl.remember("x", scope="/a")
+    sl = MemorySlice(memory=mem, scopes=["/a"], read_only=True)
+    result = sl.remember("x", scope="/a")
+    assert result is None
+    assert mem.list_records() == []
 
 
 # --- Flow memory ---
@@ -318,6 +319,7 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     from crewai.agents.parser import AgentFinish
 
     mock_memory = MagicMock()
+    mock_memory.read_only = False
     mock_memory.extract_memories.return_value = ["Fact A.", "Fact B."]
 
     mock_agent = MagicMock()
@@ -358,6 +360,7 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
     from crewai.utilities.string_utils import sanitize_tool_name
 
     mock_memory = MagicMock()
+    mock_memory.read_only = False
     mock_agent = MagicMock()
     mock_agent.memory = mock_memory
     mock_agent._logger = MagicMock()
@@ -390,7 +393,7 @@ def test_memory_scope_extract_memories_delegates() -> None:
 
     mock_memory = MagicMock()
     mock_memory.extract_memories.return_value = ["Scoped fact."]
-    scope = MemoryScope(mock_memory, "/agent/1")
+    scope = MemoryScope(memory=mock_memory, root_path="/agent/1")
     result = scope.extract_memories("Some content")
     mock_memory.extract_memories.assert_called_once_with("Some content")
     assert result == ["Scoped fact."]
@@ -402,7 +405,7 @@ def test_memory_slice_extract_memories_delegates() -> None:
 
     mock_memory = MagicMock()
     mock_memory.extract_memories.return_value = ["Sliced fact."]
-    sl = MemorySlice(mock_memory, ["/a", "/b"], read_only=True)
+    sl = MemorySlice(memory=mock_memory, scopes=["/a", "/b"], read_only=True)
     result = sl.extract_memories("Some content")
     mock_memory.extract_memories.assert_called_once_with("Some content")
     assert result == ["Sliced fact."]
@@ -667,10 +670,10 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
         verbose=False,
     )
 
-    # Mock recall to verify it's called, but return real results
-    with patch.object(mem, "recall", wraps=mem.recall) as recall_mock, \
-         patch.object(mem, "extract_memories", return_value=["PostgreSQL is used."]) as extract_mock, \
-         patch.object(mem, "remember_many", wraps=mem.remember_many) as remember_many_mock:
+    # Patch on the class to avoid Pydantic BaseModel __delattr__ restriction
+    with patch.object(Memory, "recall", wraps=mem.recall) as recall_mock, \
+         patch.object(Memory, "extract_memories", return_value=["PostgreSQL is used."]) as extract_mock, \
+         patch.object(Memory, "remember_many", wraps=mem.remember_many) as remember_many_mock:
         result = agent.kickoff("What database do we use?")
 
     assert result is not None

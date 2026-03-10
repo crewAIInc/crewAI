@@ -23,7 +23,7 @@ from pydantic import (
 )
 from typing_extensions import TypeIs
 
-from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.structured_tool import CrewStructuredTool, build_schema_hint
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -150,14 +150,39 @@ class BaseTool(BaseModel, ABC):
 
         super().model_post_init(__context)
 
+    def _validate_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Validate keyword arguments against args_schema if present.
+
+        Args:
+            kwargs: The keyword arguments to validate.
+
+        Returns:
+            Validated (and possibly coerced) keyword arguments.
+
+        Raises:
+            ValueError: If validation against args_schema fails.
+        """
+        if self.args_schema is not None and self.args_schema.model_fields:
+            try:
+                validated = self.args_schema.model_validate(kwargs)
+                return validated.model_dump()
+            except Exception as e:
+                hint = build_schema_hint(self.args_schema)
+                raise ValueError(
+                    f"Tool '{self.name}' arguments validation failed: {e}{hint}"
+                ) from e
+        return kwargs
+
     def run(
         self,
         *args: Any,
         **kwargs: Any,
     ) -> Any:
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)
+
         result = self._run(*args, **kwargs)
 
-        # If _run is async, we safely run it
         if asyncio.iscoroutine(result):
             result = asyncio.run(result)
 
@@ -179,6 +204,8 @@ class BaseTool(BaseModel, ABC):
         Returns:
             The result of the tool execution.
         """
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)
         result = await self._arun(*args, **kwargs)
         self.current_usage_count += 1
         return result
@@ -331,6 +358,9 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
+
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
@@ -361,6 +391,8 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
+        if not args:
+            kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
         result = await self._arun(*args, **kwargs)
         self.current_usage_count += 1
         return result

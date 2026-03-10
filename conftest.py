@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import pytest
 from vcr.request import Request  # type: ignore[import-untyped]
 
+
 try:
     import vcr.stubs.httpx_stubs as httpx_stubs  # type: ignore[import-untyped]
 except ModuleNotFoundError:
