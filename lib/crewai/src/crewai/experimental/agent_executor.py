@@ -585,6 +585,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             and not observation.step_completed_successfully
             and observation.needs_full_replan
         ):
+            self.state.todos.mark_failed(
+                current_todo.step_number, result=current_todo.result
+            )
             if self.agent.verbose:
                 self._printer.print(
                     content=(
@@ -647,6 +650,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         # Step failed — only replan if observer explicitly requires it,
         # otherwise mark done and continue (same gate as low-effort).
         if observation.needs_full_replan:
+            self.state.todos.mark_failed(
+                current_todo.step_number, result=current_todo.result
+            )
             if self.agent.verbose:
                 self._printer.print(
                     content=(
@@ -717,6 +723,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         # Full replan needed
         if observation.needs_full_replan:
+            self.state.todos.mark_failed(
+                current_todo.step_number, result=current_todo.result
+            )
             if self.agent.verbose:
                 self._printer.print(
                     content=f"[Decide] Full replan needed: {observation.replan_reason}",
@@ -727,6 +736,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         # Step failed — also trigger replan
         if not observation.step_completed_successfully:
+            self.state.todos.mark_failed(
+                current_todo.step_number, result=current_todo.result
+            )
             if self.agent.verbose:
                 self._printer.print(
                     content="[Decide] Step failed — triggering replan",
@@ -2459,10 +2471,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         if self.state.replan_count >= max_replans:
             return False, "Max replan attempts reached"
 
-        # Check for failed todos
-        failed_todos = [
-            todo for todo in self.state.todos.items if todo.status == "failed"
-        ]
+        # Check for failed todos (now actually tracked via "failed" status)
+        failed_todos = self.state.todos.get_failed_todos()
         if len(failed_todos) >= 2:
             return True, f"Multiple todos failed ({len(failed_todos)} failures)"
 
@@ -2607,7 +2617,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         failed = [
             t
             for t in self.state.todos.items
-            if t.status == "failed" or (t.result and t.result.startswith("Error:"))
+            if t.status == "failed"
+            or (t.result and t.result.startswith("Error:"))
         ]
         if failed:
             context_parts.append("\nFailed or errored steps:")

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 # Todo status type
-TodoStatus = Literal["pending", "running", "completed"]
+TodoStatus = Literal["pending", "running", "completed", "failed"]
 
 
 class PlanStep(BaseModel):
@@ -66,9 +66,9 @@ class TodoList(BaseModel):
 
     @property
     def is_complete(self) -> bool:
-        """Check if all todos are completed."""
+        """Check if all todos are in a terminal state (completed or failed)."""
         return len(self.items) > 0 and all(
-            item.status == "completed" for item in self.items
+            item.status in ("completed", "failed") for item in self.items
         )
 
     @property
@@ -99,6 +99,14 @@ class TodoList(BaseModel):
         item = self.get_by_step_number(step_number)
         if item:
             item.status = "completed"
+            if result:
+                item.result = result
+
+    def mark_failed(self, step_number: int, result: str | None = None) -> None:
+        """Mark a todo as failed by step number."""
+        item = self.get_by_step_number(step_number)
+        if item:
+            item.status = "failed"
             if result:
                 item.result = result
 
@@ -153,6 +161,14 @@ class TodoList(BaseModel):
         """
         return [item for item in self.items if item.status == "completed"]
 
+    def get_failed_todos(self) -> list[TodoItem]:
+        """Get all failed todos.
+
+        Returns:
+            List of failed TodoItem objects.
+        """
+        return [item for item in self.items if item.status == "failed"]
+
     def get_pending_todos(self) -> list[TodoItem]:
         """Get all pending todos.
 
@@ -164,7 +180,7 @@ class TodoList(BaseModel):
     def replace_pending_todos(self, new_items: list[TodoItem]) -> None:
         """Replace all pending todos with new items.
 
-        Preserves completed and running todos, replaces only pending ones.
+        Preserves completed, failed, and running todos, replaces only pending ones.
         Used during replanning to swap in a new plan for remaining work.
 
         Args:
