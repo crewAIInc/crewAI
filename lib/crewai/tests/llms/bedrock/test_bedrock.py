@@ -967,3 +967,70 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+def test_bedrock_groups_three_tool_results():
+    """Consecutive tool results should be grouped into one Bedrock user message."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    test_messages = [
+        {"role": "user", "content": "Use all three tools, then continue."},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "tool-1",
+                    "type": "function",
+                    "function": {
+                        "name": "lookup_weather",
+                        "arguments": '{"location": "New York"}',
+                    },
+                },
+                {
+                    "id": "tool-2",
+                    "type": "function",
+                    "function": {
+                        "name": "lookup_news",
+                        "arguments": '{"topic": "AI"}',
+                    },
+                },
+                {
+                    "id": "tool-3",
+                    "type": "function",
+                    "function": {
+                        "name": "lookup_stock",
+                        "arguments": '{"ticker": "AMZN"}',
+                    },
+                },
+            ],
+        },
+        {"role": "tool", "tool_call_id": "tool-1", "content": "72F and sunny"},
+        {"role": "tool", "tool_call_id": "tool-2", "content": "AI news summary"},
+        {"role": "tool", "tool_call_id": "tool-3", "content": "AMZN up 1.2%"},
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_converse(
+        test_messages
+    )
+
+    assert system_message is None
+    assert [message["role"] for message in formatted_messages] == [
+        "user",
+        "assistant",
+        "user",
+    ]
+    assert len(formatted_messages[1]["content"]) == 3
+
+    tool_results = formatted_messages[2]["content"]
+    assert len(tool_results) == 3
+    assert [block["toolResult"]["toolUseId"] for block in tool_results] == [
+        "tool-1",
+        "tool-2",
+        "tool-3",
+    ]
+    assert [block["toolResult"]["content"][0]["text"] for block in tool_results] == [
+        "72F and sunny",
+        "AI news summary",
+        "AMZN up 1.2%",
+    ]
