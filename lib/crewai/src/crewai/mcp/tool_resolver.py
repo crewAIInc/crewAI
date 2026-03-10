@@ -217,6 +217,7 @@ class MCPToolResolver:
 
     def _resolve_external(self, mcp_ref: str) -> list[BaseTool]:
         """Resolve an HTTPS MCP server URL into tools."""
+        from crewai.tools.base_tool import BaseTool
         from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
 
         if "#" in mcp_ref:
