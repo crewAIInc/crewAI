@@ -90,7 +90,7 @@ units:
       token_estimate: 700
       load_strategy: lazy
       priority: high
-      summary_of: agents
+      summary_of: [agents, tasks]
 
   - id: agents
     path: docs/en/concepts/agents.mdx
@@ -219,7 +219,7 @@ units:
       token_estimate: 700
       load_strategy: lazy
       priority: high
-      summary_of: tools
+      summary_of: [tools, memory]
 
   - id: tools
     path: docs/en/concepts/tools.mdx
@@ -338,16 +338,14 @@ units:
       priority: low
 
 relationships:
-  # agents-tasks-tldr is the declared summary for agents (summary_of: agents).
-  # It also covers tasks conceptually; link via context so agents discover it
-  # when starting from the tasks unit.
+  # agents-tasks-tldr summarises both agents and tasks (summary_of: [agents, tasks]).
+  # Explicit context link ensures bidirectional discovery from the tasks unit.
   - from: agents-tasks-tldr
     to: tasks
     type: context
 
-  # tools-memory-tldr is the declared summary for tools (summary_of: tools).
-  # It also covers memory conceptually; link via context so agents discover it
-  # when starting from the memory unit.
+  # tools-memory-tldr summarises both tools and memory (summary_of: [tools, memory]).
+  # Explicit context link ensures bidirectional discovery from the memory unit.
   - from: tools-memory-tldr
     to: memory
     type: context
