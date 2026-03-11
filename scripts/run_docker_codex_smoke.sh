@@ -50,6 +50,6 @@ docker run --rm \
   "${IMAGE_TAG}" \
   sh -c '
     set -eu
-    python scripts/check_model_access.py --model gpt-5.3-codex --api both
-    python scripts/demo_openai_codex_hi.py --model openai-codex/gpt-5.3-codex --prompt Hi
+    python scripts/check_model_access.py --model gpt-5.3-codex --api both --timeout 60 --max-retries 4 --max-attempts 3
+    python scripts/demo_openai_codex_hi.py --model openai-codex/gpt-5.3-codex --prompt Hi --timeout 60 --max-retries 4
   '

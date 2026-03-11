@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 
 import openai
 from crewai.llm import LLM
@@ -63,37 +64,58 @@ def _run_single_check(
     api: str,
     prompt: str,
     reasoning_effort: str | None = None,
+    timeout: float = 60.0,
+    max_retries: int = 4,
+    max_attempts: int = 3,
 ) -> int:
     """Run one concrete model call check and print a normalized result."""
-    try:
-        llm = LLM(
-            model=model,
-            api=api,
-            is_litellm=False,
-            reasoning_effort=reasoning_effort,
-        )
-        client_params = llm._get_client_params()
-        auth_source = getattr(getattr(llm, "_resolved_openai_auth", None), "source", None)
+    for attempt in range(1, max_attempts + 1):
+        try:
+            llm = LLM(
+                model=model,
+                api=api,
+                is_litellm=False,
+                reasoning_effort=reasoning_effort,
+                timeout=timeout,
+                max_retries=max_retries,
+            )
+            client_params = llm._get_client_params()
+            auth_source = getattr(
+                getattr(llm, "_resolved_openai_auth", None), "source", None
+            )
 
-        print(f"api={api}")
-        print(f"resolved_provider={llm.provider}")
-        print(f"resolved_model={llm.model}")
-        print(f"reasoning_effort={llm.reasoning_effort}")
-        print(f"auth_source={auth_source}")
-        print(f"base_url={client_params.get('base_url')}")
+            print(f"api={api}")
+            print(f"attempt={attempt}")
+            print(f"resolved_provider={llm.provider}")
+            print(f"resolved_model={llm.model}")
+            print(f"reasoning_effort={llm.reasoning_effort}")
+            print(f"auth_source={auth_source}")
+            print(f"base_url={client_params.get('base_url')}")
+            print(f"timeout={timeout}")
+            print(f"max_retries={max_retries}")
 
-        result = llm.call(prompt)
-        print("access_status=ok")
-        print(f"response={str(result).strip()!r}")
-        return 0
-    except Exception as exc:  # noqa: BLE001
-        status, reason = _classify_exception(exc)
-        print(f"api={api}")
-        print(f"access_status={status}")
-        print(f"reason={reason}")
-        print(f"error_type={type(exc).__name__}")
-        print(f"error={exc}")
-        return 1
+            result = llm.call(prompt)
+            print("access_status=ok")
+            print(f"response={str(result).strip()!r}")
+            return 0
+        except Exception as exc:  # noqa: BLE001
+            status, reason = _classify_exception(exc)
+            print(f"api={api}")
+            print(f"attempt={attempt}")
+            print(f"access_status={status}")
+            print(f"reason={reason}")
+            print(f"error_type={type(exc).__name__}")
+            print(f"error={exc}")
+
+            if status == "network_error" and attempt < max_attempts:
+                retry_delay = attempt * 2
+                print(f"retrying_in_seconds={retry_delay}")
+                time.sleep(retry_delay)
+                continue
+
+            return 1
+
+    return 1
 
 
 def main() -> int:
@@ -118,6 +140,24 @@ def main() -> int:
         "--reasoning-effort",
         choices=["none", "minimal", "low", "medium", "high", "xhigh"],
         help="Optional reasoning effort override passed to CrewAI/OpenAI.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=60.0,
+        help="Per-request timeout in seconds.",
+    )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=4,
+        help="Provider HTTP retry count passed to CrewAI/OpenAI.",
+    )
+    parser.add_argument(
+        "--max-attempts",
+        type=int,
+        default=3,
+        help="How many end-to-end attempts to make for transient network errors.",
     )
     args = parser.parse_args()
 
@@ -150,6 +190,9 @@ def main() -> int:
                 api_name,
                 args.prompt,
                 reasoning_effort=args.reasoning_effort,
+                timeout=args.timeout,
+                max_retries=args.max_retries,
+                max_attempts=args.max_attempts,
             )
         )
         print(f"check_end={api_name}")

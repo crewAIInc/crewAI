@@ -30,6 +30,18 @@ def main() -> int:
         choices=["none", "minimal", "low", "medium", "high", "xhigh"],
         help="Optional reasoning effort override passed to CrewAI/OpenAI.",
     )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=60.0,
+        help="Per-request timeout in seconds.",
+    )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=4,
+        help="Provider HTTP retry count passed to CrewAI/OpenAI.",
+    )
     args = parser.parse_args()
 
     os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
@@ -65,6 +77,8 @@ def main() -> int:
         api="responses",
         is_litellm=False,
         reasoning_effort=args.reasoning_effort,
+        timeout=args.timeout,
+        max_retries=args.max_retries,
     )
     client_params = llm._get_client_params()
     auth_source = getattr(getattr(llm, "_resolved_openai_auth", None), "source", None)
@@ -75,6 +89,8 @@ def main() -> int:
     print(f"model={llm.model}")
     print(f"provider={llm.provider}")
     print(f"reasoning_effort={llm.reasoning_effort}")
+    print(f"timeout={args.timeout}")
+    print(f"max_retries={args.max_retries}")
     print(f"auth_source={auth_source}")
     print(f"base_url={client_params.get('base_url')}")
 
