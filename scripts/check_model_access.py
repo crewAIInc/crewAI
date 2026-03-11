@@ -66,19 +66,23 @@ def _attempt_single_check(
     reasoning_effort: str | None,
     timeout: float,
     max_retries: int,
-) -> tuple[LLM, dict[str, object], object]:
-    """Build the client, issue one call, and return execution details."""
-    llm = LLM(
-        model=model,
-        api=api,
-        is_litellm=False,
-        reasoning_effort=reasoning_effort,
-        timeout=timeout,
-        max_retries=max_retries,
-    )
-    client_params = llm._get_client_params()
-    result = llm.call(prompt)
-    return llm, client_params, result
+) -> tuple[bool, LLM | None, dict[str, object] | None, object | None, Exception | None]:
+    """Build the client, issue one call, and return success or captured exception."""
+    try:
+        llm = LLM(
+            model=model,
+            api=api,
+            is_litellm=False,
+            reasoning_effort=reasoning_effort,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+        client_params = llm._get_client_params()
+        result = llm.call(prompt)
+    except Exception as exc:  # noqa: BLE001
+        return False, None, None, None, exc
+
+    return True, llm, client_params, result, None
 
 
 def _run_single_check(
@@ -92,15 +96,15 @@ def _run_single_check(
 ) -> int:
     """Run one concrete model call check and print a normalized result."""
     for attempt in range(1, max_attempts + 1):
-        try:
-            llm, client_params, result = _attempt_single_check(
-                model=model,
-                api=api,
-                prompt=prompt,
-                reasoning_effort=reasoning_effort,
-                timeout=timeout,
-                max_retries=max_retries,
-            )
+        ok, llm, client_params, result, exc = _attempt_single_check(
+            model=model,
+            api=api,
+            prompt=prompt,
+            reasoning_effort=reasoning_effort,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+        if ok:
             auth_source = getattr(
                 getattr(llm, "_resolved_openai_auth", None), "source", None
             )
@@ -117,22 +121,22 @@ def _run_single_check(
             print("access_status=ok")
             print(f"response={str(result).strip()!r}")
             return 0
-        except Exception as exc:  # noqa: BLE001
-            status, reason = _classify_exception(exc)
-            print(f"api={api}")
-            print(f"attempt={attempt}")
-            print(f"access_status={status}")
-            print(f"reason={reason}")
-            print(f"error_type={type(exc).__name__}")
-            print(f"error={exc}")
 
-            if status == "network_error" and attempt < max_attempts:
-                retry_delay = attempt * 2
-                print(f"retrying_in_seconds={retry_delay}")
-                time.sleep(retry_delay)
-                continue
+        status, reason = _classify_exception(exc)
+        print(f"api={api}")
+        print(f"attempt={attempt}")
+        print(f"access_status={status}")
+        print(f"reason={reason}")
+        print(f"error_type={type(exc).__name__}")
+        print(f"error={exc}")
 
-            return 1
+        if status == "network_error" and attempt < max_attempts:
+            retry_delay = attempt * 2
+            print(f"retrying_in_seconds={retry_delay}")
+            time.sleep(retry_delay)
+            continue
+
+        return 1
 
     return 1
 
