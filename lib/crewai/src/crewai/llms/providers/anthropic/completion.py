@@ -22,7 +22,12 @@ if TYPE_CHECKING:
 
 try:
     from anthropic import Anthropic, AsyncAnthropic, transform_schema
-    from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
+    from anthropic.types import (
+        Message,
+        TextBlock,
+        ThinkingBlock,
+        ToolUseBlock,
+    )
     from anthropic.types.beta import BetaMessage, BetaTextBlock, BetaToolUseBlock
     import httpx
 except ImportError:
@@ -30,6 +35,11 @@ except ImportError:
         'Anthropic native provider not available, to install: uv add "crewai[anthropic]"'
     ) from None
 
+
+TOOL_SEARCH_TOOL_TYPES: Final[tuple[str, ...]] = (
+    "tool_search_tool_regex_20251119",
+    "tool_search_tool_bm25_20251119",
+)
 
 ANTHROPIC_FILES_API_BETA: Final = "files-api-2025-04-14"
 ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
@@ -117,6 +127,22 @@ class AnthropicThinkingConfig(BaseModel):
     budget_tokens: int | None = None
 
 
+class AnthropicToolSearchConfig(BaseModel):
+    """Configuration for Anthropic's server-side tool search.
+
+    When enabled, tools marked with defer_loading=True are not loaded into
+    context immediately. Instead, Claude uses the tool search tool to
+    dynamically discover and load relevant tools on-demand.
+
+    Attributes:
+        type: The tool search variant to use.
+            - "regex": Claude constructs regex patterns to search tool names/descriptions.
+            - "bm25": Claude uses natural language queries to search tools.
+    """
+
+    type: Literal["regex", "bm25"] = "bm25"
+
+
 class AnthropicCompletion(BaseLLM):
     """Anthropic native completion implementation.
 
@@ -140,6 +166,7 @@ class AnthropicCompletion(BaseLLM):
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         thinking: AnthropicThinkingConfig | None = None,
         response_format: type[BaseModel] | None = None,
+        tool_search: AnthropicToolSearchConfig | bool | None = None,
         **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
@@ -159,6 +186,10 @@ class AnthropicCompletion(BaseLLM):
             interceptor: HTTP interceptor for modifying requests/responses at transport level.
             response_format: Pydantic model for structured output. When provided, responses
                 will be validated against this model schema.
+            tool_search: Enable Anthropic's server-side tool search. When True, uses "bm25"
+                variant by default. Pass an AnthropicToolSearchConfig to choose "regex" or
+                "bm25". When enabled, tools are automatically marked with defer_loading=True
+                and a tool search tool is injected into the tools list.
             **kwargs: Additional parameters
         """
         super().__init__(
@@ -190,6 +221,13 @@ class AnthropicCompletion(BaseLLM):
         self.thinking = thinking
         self.previous_thinking_blocks: list[ThinkingBlock] = []
         self.response_format = response_format
+        # Tool search config
+        if tool_search is True:
+            self.tool_search = AnthropicToolSearchConfig()
+        elif isinstance(tool_search, AnthropicToolSearchConfig):
+            self.tool_search = tool_search
+        else:
+            self.tool_search = None
         # Model-specific settings
         self.is_claude_3 = "claude-3" in model.lower()
         self.supports_tools = True
@@ -432,10 +470,23 @@ class AnthropicCompletion(BaseLLM):
         # Handle tools for Claude 3+
         if tools and self.supports_tools:
             converted_tools = self._convert_tools_for_interference(tools)
+
+            # When tool_search is enabled and there are 2+ regular tools,
+            # inject the search tool and mark regular tools with defer_loading.
+            # With only 1 tool there's nothing to search — skip tool search
+            # entirely so the normal forced tool_choice optimisation still works.
+            regular_tools = [
+                t
+                for t in converted_tools
+                if t.get("type", "") not in TOOL_SEARCH_TOOL_TYPES
+            ]
+            if self.tool_search is not None and len(regular_tools) >= 2:
+                converted_tools = self._apply_tool_search(converted_tools)
+
             params["tools"] = converted_tools
 
-            if available_functions and len(converted_tools) == 1:
-                tool_name = converted_tools[0].get("name")
+            if available_functions and len(regular_tools) == 1:
+                tool_name = regular_tools[0].get("name")
                 if tool_name and tool_name in available_functions:
                     params["tool_choice"] = {"type": "tool", "name": tool_name}
 
@@ -454,6 +505,12 @@ class AnthropicCompletion(BaseLLM):
         anthropic_tools = []
 
         for tool in tools:
+            # Pass through tool search tool definitions unchanged
+            tool_type = tool.get("type", "")
+            if tool_type in TOOL_SEARCH_TOOL_TYPES:
+                anthropic_tools.append(tool)
+                continue
+
             if "input_schema" in tool and "name" in tool and "description" in tool:
                 anthropic_tools.append(tool)
                 continue
@@ -466,15 +523,15 @@ class AnthropicCompletion(BaseLLM):
                 logging.error(f"Error converting tool to Anthropic format: {e}")
                 raise e
 
-            anthropic_tool = {
+            anthropic_tool: dict[str, Any] = {
                 "name": name,
                 "description": description,
             }
 
             if parameters and isinstance(parameters, dict):
-                anthropic_tool["input_schema"] = parameters  # type: ignore[assignment]
+                anthropic_tool["input_schema"] = parameters
             else:
-                anthropic_tool["input_schema"] = {  # type: ignore[assignment]
+                anthropic_tool["input_schema"] = {
                     "type": "object",
                     "properties": {},
                     "required": [],
@@ -483,6 +540,55 @@ class AnthropicCompletion(BaseLLM):
             anthropic_tools.append(anthropic_tool)
 
         return anthropic_tools
+
+    def _apply_tool_search(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Inject tool search tool and mark regular tools with defer_loading.
+
+        When tool_search is enabled, this method:
+        1. Adds the appropriate tool search tool definition (regex or bm25)
+        2. Marks all regular tools with defer_loading=True so they are only
+           loaded when Claude discovers them via search
+
+        Args:
+            tools: Converted tool definitions in Anthropic format.
+
+        Returns:
+            Updated tools list with tool search tool prepended and
+            regular tools marked as deferred.
+        """
+        if self.tool_search is None:
+            return tools
+
+        # Check if a tool search tool is already present (user passed one manually)
+        has_search_tool = any(
+            t.get("type", "") in TOOL_SEARCH_TOOL_TYPES for t in tools
+        )
+
+        result: list[dict[str, Any]] = []
+
+        if not has_search_tool:
+            # Map config type to API type identifier
+            type_map = {
+                "regex": "tool_search_tool_regex_20251119",
+                "bm25": "tool_search_tool_bm25_20251119",
+            }
+            tool_type = type_map[self.tool_search.type]
+            # Tool search tool names follow the convention: tool_search_tool_{variant}
+            tool_name = f"tool_search_tool_{self.tool_search.type}"
+            result.append({"type": tool_type, "name": tool_name})
+
+        for tool in tools:
+            # Don't modify tool search tools
+            if tool.get("type", "") in TOOL_SEARCH_TOOL_TYPES:
+                result.append(tool)
+                continue
+
+            # Mark regular tools as deferred if not already set
+            if "defer_loading" not in tool:
+                tool = {**tool, "defer_loading": True}
+            result.append(tool)
+
+        return result
 
     def _extract_thinking_block(
         self, content_block: Any

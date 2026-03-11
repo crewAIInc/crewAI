@@ -1121,3 +1121,345 @@ def test_anthropic_cached_prompt_tokens_with_tools():
     assert usage.successful_requests == 2
     # The second call should have cached prompt tokens
     assert usage.cached_prompt_tokens > 0
+
+
+# ---- Tool Search Tool Tests ----
+
+
+def test_tool_search_true_injects_bm25_and_defer_loading():
+    """tool_search=True should inject bm25 tool search and defer all tools."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get weather for a location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"location": {"type": "string"}},
+                    "required": ["location"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "calculator",
+                "description": "Perform math calculations",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"expression": {"type": "string"}},
+                    "required": ["expression"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, crewai_tools
+    )
+
+    tools = params["tools"]
+    # Should have 3 tools: tool_search + 2 regular
+    assert len(tools) == 3
+
+    # First tool should be the bm25 tool search tool
+    assert tools[0]["type"] == "tool_search_tool_bm25_20251119"
+    assert tools[0]["name"] == "tool_search_tool_bm25"
+    assert "input_schema" not in tools[0]
+
+    # All regular tools should have defer_loading=True
+    for t in tools[1:]:
+        assert t.get("defer_loading") is True, f"Tool {t['name']} missing defer_loading"
+
+
+def test_tool_search_regex_config():
+    """tool_search with regex config should use regex variant."""
+    from crewai.llms.providers.anthropic.completion import AnthropicToolSearchConfig
+
+    config = AnthropicToolSearchConfig(type="regex")
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=config)
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_a",
+                "description": "First tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_b",
+                "description": "Second tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, crewai_tools
+    )
+
+    tools = params["tools"]
+    assert tools[0]["type"] == "tool_search_tool_regex_20251119"
+    assert tools[0]["name"] == "tool_search_tool_regex"
+
+
+def test_tool_search_disabled_by_default():
+    """tool_search=None (default) should NOT inject anything."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5")
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, crewai_tools
+    )
+
+    tools = params["tools"]
+    assert len(tools) == 1
+    for t in tools:
+        assert t.get("type", "") not in (
+            "tool_search_tool_bm25_20251119",
+            "tool_search_tool_regex_20251119",
+        )
+        assert "defer_loading" not in t
+
+
+def test_tool_search_no_duplicate_when_manually_provided():
+    """If user passes a tool search tool manually, don't inject a duplicate."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    # User manually includes a tool search tool
+    tools_with_search = [
+        {"type": "tool_search_tool_regex_20251119", "name": "tool_search_tool_regex"},
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, tools_with_search
+    )
+
+    tools = params["tools"]
+    search_tools = [
+        t for t in tools
+        if t.get("type", "").startswith("tool_search_tool")
+    ]
+    # Should only have 1 tool search tool (the user's manual one)
+    assert len(search_tools) == 1
+    assert search_tools[0]["type"] == "tool_search_tool_regex_20251119"
+
+
+def test_tool_search_passthrough_preserves_tool_search_type():
+    """_convert_tools_for_interference should pass through tool search tools unchanged."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5")
+
+    tools = [
+        {"type": "tool_search_tool_regex_20251119", "name": "tool_search_tool_regex"},
+        {
+            "name": "get_weather",
+            "description": "Get weather",
+            "input_schema": {
+                "type": "object",
+                "properties": {"location": {"type": "string"}},
+                "required": ["location"],
+            },
+        },
+    ]
+
+    converted = llm._convert_tools_for_interference(tools)
+    assert len(converted) == 2
+    # Tool search tool should be passed through exactly
+    assert converted[0] == {
+        "type": "tool_search_tool_regex_20251119",
+        "name": "tool_search_tool_regex",
+    }
+    # Regular tool should be preserved
+    assert converted[1]["name"] == "get_weather"
+    assert "input_schema" in converted[1]
+
+
+def test_tool_search_single_tool_skips_search_and_forces_choice():
+    """With only 1 tool, tool_search is skipped (nothing to search) and the
+    normal forced tool_choice optimisation still applies."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages,
+        system_message,
+        crewai_tools,
+        available_functions={"test_tool": lambda q: "result"},
+    )
+
+    # Single tool — tool_search skipped, tool_choice forced as normal
+    assert "tool_choice" in params
+    assert params["tool_choice"]["name"] == "test_tool"
+
+    # No tool search tool should be injected
+    tool_types = [t.get("type", "") for t in params["tools"]]
+    for ts_type in ("tool_search_tool_bm25_20251119", "tool_search_tool_regex_20251119"):
+        assert ts_type not in tool_types
+
+    # No defer_loading on the single tool
+    assert "defer_loading" not in params["tools"][0]
+
+
+def test_tool_search_via_llm_class():
+    """Verify tool_search param passes through LLM class correctly."""
+    from crewai.llms.providers.anthropic.completion import (
+        AnthropicCompletion,
+        AnthropicToolSearchConfig,
+    )
+
+    # Test with True
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.tool_search is not None
+    assert llm.tool_search.type == "bm25"
+
+    # Test with config
+    llm2 = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        tool_search=AnthropicToolSearchConfig(type="regex"),
+    )
+    assert llm2.tool_search is not None
+    assert llm2.tool_search.type == "regex"
+
+    # Test without (default)
+    llm3 = LLM(model="anthropic/claude-sonnet-4-5")
+    assert llm3.tool_search is None
+
+
+# Many tools shared by the VCR tests below
+_MANY_TOOLS = [
+    {
+        "name": name,
+        "description": desc,
+        "input_schema": {
+            "type": "object",
+            "properties": {"input": {"type": "string", "description": f"Input for {name}"}},
+            "required": ["input"],
+        },
+    }
+    for name, desc in [
+        ("get_weather", "Get current weather conditions for a specified location"),
+        ("search_files", "Search through files in the workspace by name or content"),
+        ("read_database", "Read records from a database table with optional filtering"),
+        ("write_database", "Write or update records in a database table"),
+        ("send_email", "Send an email message to one or more recipients"),
+        ("read_email", "Read emails from inbox with filtering options"),
+        ("create_ticket", "Create a new support ticket in the ticketing system"),
+        ("update_ticket", "Update an existing support ticket status or description"),
+        ("list_users", "List all users in the system with optional filters"),
+        ("get_user_profile", "Get detailed profile information for a specific user"),
+        ("deploy_service", "Deploy a service to the specified environment"),
+        ("rollback_service", "Rollback a service deployment to a previous version"),
+        ("get_service_logs", "Get service logs filtered by time range and severity"),
+        ("run_sql_query", "Run a read-only SQL query against the analytics database"),
+        ("create_dashboard", "Create a new monitoring dashboard with widgets"),
+    ]
+]
+
+
+@pytest.mark.vcr()
+def test_tool_search_discovers_and_calls_tool():
+    """Tool search should discover the right tool and return a tool_use block."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    result = llm.call(
+        "What is the weather in Tokyo?",
+        tools=_MANY_TOOLS,
+    )
+
+    # Should return tool_use blocks (list) since no available_functions provided
+    assert isinstance(result, list)
+    assert len(result) >= 1
+    # The discovered tool should be get_weather
+    tool_names = [getattr(block, "name", None) for block in result]
+    assert "get_weather" in tool_names
+
+
+@pytest.mark.vcr()
+def test_tool_search_saves_input_tokens():
+    """Tool search with deferred loading should use fewer input tokens than loading all tools."""
+    # Call WITHOUT tool search — all 15 tools loaded upfront
+    llm_no_search = LLM(model="anthropic/claude-sonnet-4-5")
+    llm_no_search.call("What is the weather in Tokyo?", tools=_MANY_TOOLS)
+    usage_no_search = llm_no_search.get_token_usage_summary()
+
+    # Call WITH tool search — tools deferred
+    llm_search = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+    llm_search.call("What is the weather in Tokyo?", tools=_MANY_TOOLS)
+    usage_search = llm_search.get_token_usage_summary()
+
+    # Tool search should use fewer input tokens
+    assert usage_search.prompt_tokens < usage_no_search.prompt_tokens, (
+        f"Expected tool_search ({usage_search.prompt_tokens}) to use fewer input tokens "
+        f"than no search ({usage_no_search.prompt_tokens})"
+    )
