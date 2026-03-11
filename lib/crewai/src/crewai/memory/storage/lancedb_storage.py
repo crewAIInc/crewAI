@@ -612,7 +612,7 @@ class LanceDBStorage:
         return info.record_count
 
     def reset(self, scope_prefix: str | None = None) -> None:
-        with self._file_lock():
+        with self._write_lock, self._file_lock():
             if scope_prefix is None or scope_prefix.strip("/") == "":
                 if self._table is not None:
                     self._db.drop_table(self._table_name)
@@ -636,7 +636,7 @@ class LanceDBStorage:
         """
         if self._table is None:
             return
-        with self._file_lock():
+        with self._write_lock, self._file_lock():
             self._table.optimize()
             self._ensure_scope_index()
 
