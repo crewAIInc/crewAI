@@ -207,8 +207,11 @@ class LanceDBStorage:
                 "vector": [0.0] * vector_dim,
             }
         ]
-        table = self._db.create_table(self._table_name, placeholder)
-        table.delete("id = '__schema_placeholder__'")
+        try:
+            table = self._db.create_table(self._table_name, placeholder)
+            table.delete("id = '__schema_placeholder__'")
+        except ValueError:
+            table = self._db.open_table(self._table_name)
         return table
 
     def _ensure_scope_index(self) -> None:

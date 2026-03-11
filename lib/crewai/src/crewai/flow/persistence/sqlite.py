@@ -72,7 +72,7 @@ class SQLiteFlowPersistence(FlowPersistence):
 
     def init_db(self) -> None:
         """Create the necessary tables if they don't exist."""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             # Main state table
             conn.execute(
@@ -137,7 +137,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
             )
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             conn.execute(
                 """
             INSERT INTO flow_states (
@@ -164,7 +164,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         Returns:
             The most recent state as a dictionary, or None if no state exists
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(
                 """
             SELECT state_json
@@ -214,7 +214,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         self.save_state(flow_uuid, context.method_name, state_data)
 
         # Save pending feedback context
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             # Use INSERT OR REPLACE to handle re-triggering feedback on same flow
             conn.execute(
                 """
@@ -249,7 +249,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         # Import here to avoid circular imports
         from crewai.flow.async_feedback.types import PendingFeedbackContext
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             cursor = conn.execute(
                 """
             SELECT state_json, context_json
@@ -273,7 +273,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         Args:
             flow_uuid: Unique identifier for the flow instance
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             conn.execute(
                 """
             DELETE FROM pending_feedback

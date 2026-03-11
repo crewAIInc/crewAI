@@ -38,7 +38,7 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If database initialization fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=30) as conn:
                 conn.execute("PRAGMA journal_mode=WAL")
                 cursor = conn.cursor()
                 cursor.execute(
@@ -83,7 +83,7 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         inputs = inputs or {}
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=30) as conn:
                 conn.execute("BEGIN TRANSACTION")
                 cursor = conn.cursor()
                 cursor.execute(
@@ -126,7 +126,7 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If updating the task output fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=30) as conn:
                 conn.execute("BEGIN TRANSACTION")
                 cursor = conn.cursor()
 
@@ -167,7 +167,7 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If loading task outputs fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=30) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
                 SELECT *
@@ -206,7 +206,7 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If deleting task outputs fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=30) as conn:
                 conn.execute("BEGIN TRANSACTION")
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM latest_kickoff_task_outputs")
