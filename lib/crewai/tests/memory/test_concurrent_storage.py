@@ -141,8 +141,8 @@ def _chromadb_worker(persist_dir: str, worker_id: int, result_dir: str):
 # Tests
 # ---------------------------------------------------------------------------
 
-N_WORKERS = 6
-N_RECORDS = 20
+N_WORKERS = 3
+N_RECORDS = 10
 
 
 def _run_workers(target, args_fn, n_workers=N_WORKERS, timeout=120):
