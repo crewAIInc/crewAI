@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from datetime import datetime
 import json
 import logging
@@ -12,9 +13,9 @@ import time
 from typing import Any, ClassVar
 
 import lancedb
-import portalocker
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.utilities.lock_store import lock as store_lock
 
 
 _logger = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ class LanceDBStorage:
         self._compact_every = compact_every
         self._save_count = 0
 
-        self._lockfile = str(self._path / ".lance_write.lock")
+        self._lock_name = f"lancedb:{self._path.resolve()}"
 
         resolved = str(self._path.resolve())
         with LanceDBStorage._path_locks_guard:
@@ -156,9 +157,9 @@ class LanceDBStorage:
                     break
         return DEFAULT_VECTOR_DIM
 
-    def _file_lock(self) -> portalocker.Lock:
-        """Return a cross-process file lock for serialising writes."""
-        return portalocker.Lock(self._lockfile, timeout=120)
+    def _file_lock(self) -> AbstractContextManager[None]:
+        """Return a cross-process lock for serialising writes."""
+        return store_lock(self._lock_name)
 
     def _do_write(self, op: str, *args: Any, **kwargs: Any) -> Any:
         """Execute a single table write with retry on commit conflicts.
@@ -625,7 +626,9 @@ class LanceDBStorage:
                 return
             prefix = scope_prefix.rstrip("/")
             if prefix:
-                self._do_write("delete", f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'")
+                self._do_write(
+                    "delete", f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'"
+                )
 
     def optimize(self) -> None:
         """Compact the table synchronously and refresh the scope index.

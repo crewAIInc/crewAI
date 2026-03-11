@@ -119,11 +119,10 @@ def _sqlite_flow_worker(db_path: str, worker_id: int, n_writes: int, result_dir:
 
 def _chromadb_worker(persist_dir: str, worker_id: int, result_dir: str):
     try:
-        from hashlib import md5
-
         from chromadb import PersistentClient
         from chromadb.config import Settings
-        import portalocker
+
+        from crewai.utilities.lock_store import lock
 
         settings = Settings(
             persist_directory=persist_dir,
@@ -131,10 +130,7 @@ def _chromadb_worker(persist_dir: str, worker_id: int, result_dir: str):
             is_persistent=True,
         )
 
-        # Test the actual locking path directly (same as factory.py)
-        lock_id = md5(persist_dir.encode(), usedforsecurity=False).hexdigest()
-        lockfile = os.path.join(persist_dir, f"chromadb-{lock_id}.lock")
-        with portalocker.Lock(lockfile, timeout=120):
+        with lock(f"chromadb:{persist_dir}"):
             PersistentClient(path=persist_dir, settings=settings)
 
         _write_result(result_dir, worker_id, True)
