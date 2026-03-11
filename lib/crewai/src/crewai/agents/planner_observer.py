@@ -134,14 +134,7 @@ class PlannerObserver:
                 from_agent=self.agent,
             )
 
-            if isinstance(response, StepObservation):
-                observation = response
-            else:
-                observation = StepObservation(
-                    step_completed_successfully=True,
-                    key_information_learned=str(response) if response else "",
-                    remaining_plan_still_valid=True,
-                )
+            observation = self._parse_observation_response(response)
 
             refinement_summaries = (
                 [
@@ -307,3 +300,58 @@ class PlannerObserver:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
+
+    @staticmethod
+    def _parse_observation_response(response: Any) -> StepObservation:
+        """Parse the LLM response into a StepObservation.
+
+        The LLM may return:
+        - A StepObservation instance directly (streaming + litellm path)
+        - A JSON string (non-streaming path serialises model_dump_json())
+        - A dict (some provider paths)
+        - Something else (unexpected)
+
+        We handle all cases to avoid silently falling back to a
+        hardcoded success default.
+        """
+        import json
+
+        if isinstance(response, StepObservation):
+            return response
+
+        # JSON string path — most common miss before this fix
+        if isinstance(response, str):
+            text = response.strip()
+            try:
+                return StepObservation.model_validate_json(text)
+            except Exception:
+                pass
+            # Some LLMs wrap the JSON in markdown fences
+            if text.startswith("```"):
+                lines = text.split("\n")
+                # Strip first and last lines (``` markers)
+                inner = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+                try:
+                    return StepObservation.model_validate_json(inner.strip())
+                except Exception:
+                    pass
+
+        # Dict path
+        if isinstance(response, dict):
+            try:
+                return StepObservation.model_validate(response)
+            except Exception:
+                pass
+
+        # Last resort — log what we got so it's diagnosable
+        logger.warning(
+            "Could not parse observation response (type=%s). "
+            "Falling back to default success observation. Preview: %.200s",
+            type(response).__name__,
+            str(response),
+        )
+        return StepObservation(
+            step_completed_successfully=True,
+            key_information_learned=str(response) if response else "",
+            remaining_plan_still_valid=True,
+        )

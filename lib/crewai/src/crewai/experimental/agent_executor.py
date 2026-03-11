@@ -1917,9 +1917,12 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                         ),
                     )
                     error_event_emitted = True
-        elif max_usage_reached and original_tool:
+        elif max_usage_reached:
             # Return error message when max usage limit is reached
-            result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+            if original_tool:
+                result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+            else:
+                result = f"Tool '{func_name}' has reached its maximum usage limit and cannot be used anymore."
 
         # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
         after_hook_context = ToolCallHookContext(
@@ -2040,11 +2043,11 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
     def check_max_iterations(
         self,
     ) -> Literal[
-        "max_iterations_exceeded", "continue_reasoning", "continue_reasoning_native"
+        "force_final_answer", "continue_reasoning", "continue_reasoning_native"
     ]:
         """Check if max iterations reached before proceeding with reasoning."""
         if has_reached_max_iterations(self.state.iterations, self.max_iter):
-            return "max_iterations_exceeded"
+            return "force_final_answer"
         if self.state.use_native_tools:
             return "continue_reasoning_native"
         return "continue_reasoning"
@@ -2753,6 +2756,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         try:
             # Reset state for fresh execution
+            self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
             self.state.current_answer = None
@@ -2844,6 +2848,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         try:
             # Reset state for fresh execution
+            self._finalize_called = False
             self.state.messages.clear()
             self.state.iterations = 0
             self.state.current_answer = None
