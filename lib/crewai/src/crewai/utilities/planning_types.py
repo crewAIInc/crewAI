@@ -99,7 +99,7 @@ class TodoList(BaseModel):
         item = self.get_by_step_number(step_number)
         if item:
             item.status = "completed"
-            if result:
+            if result is not None:
                 item.result = result
 
     def mark_failed(self, step_number: int, result: str | None = None) -> None:
@@ -107,21 +107,27 @@ class TodoList(BaseModel):
         item = self.get_by_step_number(step_number)
         if item:
             item.status = "failed"
-            if result:
+            if result is not None:
                 item.result = result
 
     def _dependencies_satisfied(self, item: TodoItem) -> bool:
-        """Check if all dependencies for a todo item are completed.
+        """Check if all dependencies for a todo item are in a terminal state.
+
+        A dependency is satisfied when it has finished executing — either
+        successfully (completed) or not (failed). This prevents downstream
+        todos from being permanently blocked when a dependency fails.
+        The executor/observer is responsible for deciding whether to skip,
+        replan, or continue when a dependency has failed.
 
         Args:
             item: The todo item to check dependencies for.
 
         Returns:
-            True if all dependencies are completed, False otherwise.
+            True if all dependencies are in a terminal state, False otherwise.
         """
         for dep_num in item.depends_on:
             dep = self.get_by_step_number(dep_num)
-            if dep is None or dep.status != "completed":
+            if dep is None or dep.status not in ("completed", "failed"):
                 return False
         return True
 

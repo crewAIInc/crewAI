@@ -374,10 +374,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             if self.state.plan_ready and output.plan.steps:
                 self._create_todos_from_plan(output.plan.steps)
 
-            # Backward compatibility: append plan to task description
-            # This can be removed in Phase 2 when plan execution is implemented
-            if self.task and self.state.plan:
-                self.task.description += f"\n\nPlanning:\n{self.state.plan}"
+            # Plan is stored in state.plan and used by the execution flow.
+            # Do NOT mutate task.description — it's a shared object that
+            # accumulates plan text on re-invoke.
 
         except Exception as e:
             if hasattr(self.agent, "_logger"):
@@ -667,17 +666,18 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             )
             return "replan_now"
 
-        # Step failed but observer does not require a full replan — continue
-        self.state.todos.mark_completed(
+        # Step failed but observer does not require a full replan — mark as
+        # failed (not completed) so get_failed_todos() tracks it correctly.
+        self.state.todos.mark_failed(
             current_todo.step_number, result=current_todo.result
         )
         if self.agent.verbose:
-            completed = self.state.todos.completed_count
+            failed = len(self.state.todos.get_failed_todos())
             total = len(self.state.todos.items)
             self._printer.print(
                 content=(
                     f"[Medium] Step {current_todo.step_number} failed but no replan needed "
-                    f"({completed}/{total}) — continuing"
+                    f"({failed} failed/{total} total) — continuing"
                 ),
                 color="yellow",
             )

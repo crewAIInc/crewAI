@@ -74,7 +74,7 @@ class PlanningConfig(BaseModel):
     """
 
     reasoning_effort: Literal["low", "medium", "high"] = Field(
-        default="low",
+        default="medium",
         description=(
             "Controls post-step observation and replanning behavior. "
             "'low' observes steps but skips replanning/refinement (fastest). "
