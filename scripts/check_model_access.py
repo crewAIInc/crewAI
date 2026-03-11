@@ -59,6 +59,28 @@ def _classify_exception(exc: Exception) -> tuple[str, str]:
     return "error", "Unhandled error."
 
 
+def _attempt_single_check(
+    model: str,
+    api: str,
+    prompt: str,
+    reasoning_effort: str | None,
+    timeout: float,
+    max_retries: int,
+) -> tuple[LLM, dict[str, object], object]:
+    """Build the client, issue one call, and return execution details."""
+    llm = LLM(
+        model=model,
+        api=api,
+        is_litellm=False,
+        reasoning_effort=reasoning_effort,
+        timeout=timeout,
+        max_retries=max_retries,
+    )
+    client_params = llm._get_client_params()
+    result = llm.call(prompt)
+    return llm, client_params, result
+
+
 def _run_single_check(
     model: str,
     api: str,
@@ -71,15 +93,14 @@ def _run_single_check(
     """Run one concrete model call check and print a normalized result."""
     for attempt in range(1, max_attempts + 1):
         try:
-            llm = LLM(
+            llm, client_params, result = _attempt_single_check(
                 model=model,
                 api=api,
-                is_litellm=False,
+                prompt=prompt,
                 reasoning_effort=reasoning_effort,
                 timeout=timeout,
                 max_retries=max_retries,
             )
-            client_params = llm._get_client_params()
             auth_source = getattr(
                 getattr(llm, "_resolved_openai_auth", None), "source", None
             )
@@ -93,8 +114,6 @@ def _run_single_check(
             print(f"base_url={client_params.get('base_url')}")
             print(f"timeout={timeout}")
             print(f"max_retries={max_retries}")
-
-            result = llm.call(prompt)
             print("access_status=ok")
             print(f"response={str(result).strip()!r}")
             return 0
