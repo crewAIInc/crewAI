@@ -1893,3 +1893,163 @@ def test_or_condition_self_listen_fires_once():
     flow = OrSelfListenFlow()
     flow.kickoff()
     assert call_count == 1
+
+class ListState(BaseModel):
+    items: list = []
+
+
+class DictState(BaseModel):
+    data: dict = {}
+
+
+class _ListFlow(Flow[ListState]):
+    @start()
+    def populate(self):
+        self.state.items = [3, 1, 4, 1, 5, 9, 2, 6]
+
+
+class _DictFlow(Flow[DictState]):
+    @start()
+    def populate(self):
+        self.state.data = {"a": 1, "b": 2, "c": 3}
+
+
+def _make_list_flow():
+    flow = _ListFlow()
+    flow.kickoff()
+    return flow
+
+
+def _make_dict_flow():
+    flow = _DictFlow()
+    flow.kickoff()
+    return flow
+
+
+def test_locked_list_proxy_index():
+    flow = _make_list_flow()
+    assert flow.state.items.index(4) == 2
+    assert flow.state.items.index(1, 2) == 3
+
+
+def test_locked_list_proxy_index_missing_raises():
+    flow = _make_list_flow()
+    with pytest.raises(ValueError):
+        flow.state.items.index(999)
+
+
+def test_locked_list_proxy_count():
+    flow = _make_list_flow()
+    assert flow.state.items.count(1) == 2
+    assert flow.state.items.count(999) == 0
+
+
+def test_locked_list_proxy_sort():
+    flow = _make_list_flow()
+    flow.state.items.sort()
+    assert list(flow.state.items) == [1, 1, 2, 3, 4, 5, 6, 9]
+
+
+def test_locked_list_proxy_sort_reverse():
+    flow = _make_list_flow()
+    flow.state.items.sort(reverse=True)
+    assert list(flow.state.items) == [9, 6, 5, 4, 3, 2, 1, 1]
+
+
+def test_locked_list_proxy_sort_key():
+    flow = _make_list_flow()
+    flow.state.items.sort(key=lambda x: -x)
+    assert list(flow.state.items) == [9, 6, 5, 4, 3, 2, 1, 1]
+
+
+def test_locked_list_proxy_reverse():
+    flow = _make_list_flow()
+    original = list(flow.state.items)
+    flow.state.items.reverse()
+    assert list(flow.state.items) == list(reversed(original))
+
+
+def test_locked_list_proxy_copy():
+    flow = _make_list_flow()
+    copied = flow.state.items.copy()
+    assert copied == [3, 1, 4, 1, 5, 9, 2, 6]
+    assert isinstance(copied, list)
+    copied.append(999)
+    assert 999 not in flow.state.items
+
+
+def test_locked_list_proxy_add():
+    flow = _make_list_flow()
+    result = flow.state.items + [10, 11]
+    assert result == [3, 1, 4, 1, 5, 9, 2, 6, 10, 11]
+    assert len(flow.state.items) == 8
+
+
+def test_locked_list_proxy_radd():
+    flow = _make_list_flow()
+    result = [0] + flow.state.items
+    assert result[0] == 0
+    assert len(result) == 9
+
+
+def test_locked_list_proxy_iadd():
+    flow = _make_list_flow()
+    flow.state.items += [10]
+    assert 10 in flow.state.items
+    # Verify no deadlock: mutations must still work after +=
+    flow.state.items.append(99)
+    assert 99 in flow.state.items
+
+
+def test_locked_list_proxy_mul():
+    flow = _make_list_flow()
+    result = flow.state.items * 2
+    assert len(result) == 16
+
+
+def test_locked_list_proxy_rmul():
+    flow = _make_list_flow()
+    result = 2 * flow.state.items
+    assert len(result) == 16
+
+
+def test_locked_list_proxy_reversed():
+    flow = _make_list_flow()
+    original = list(flow.state.items)
+    assert list(reversed(flow.state.items)) == list(reversed(original))
+
+
+def test_locked_dict_proxy_copy():
+    flow = _make_dict_flow()
+    copied = flow.state.data.copy()
+    assert copied == {"a": 1, "b": 2, "c": 3}
+    assert isinstance(copied, dict)
+    copied["z"] = 99
+    assert "z" not in flow.state.data
+
+
+def test_locked_dict_proxy_or():
+    flow = _make_dict_flow()
+    result = flow.state.data | {"d": 4}
+    assert result == {"a": 1, "b": 2, "c": 3, "d": 4}
+    assert "d" not in flow.state.data
+
+
+def test_locked_dict_proxy_ror():
+    flow = _make_dict_flow()
+    result = {"z": 0} | flow.state.data
+    assert result == {"z": 0, "a": 1, "b": 2, "c": 3}
+
+
+def test_locked_dict_proxy_ior():
+    flow = _make_dict_flow()
+    flow.state.data |= {"d": 4}
+    assert flow.state.data["d"] == 4
+    # Verify no deadlock: mutations must still work after |=
+    flow.state.data["e"] = 5
+    assert flow.state.data["e"] == 5
+
+
+def test_locked_dict_proxy_reversed():
+    flow = _make_dict_flow()
+    assert list(reversed(flow.state.data)) == ["c", "b", "a"]

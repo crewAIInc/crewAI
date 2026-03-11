@@ -497,6 +497,50 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._list)
 
+    def index(self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None) -> int:  # type: ignore[override]
+        if stop is None:
+            return self._list.index(value, start)
+        return self._list.index(value, start, stop)
+
+    def count(self, value: T) -> int:
+        return self._list.count(value)
+
+    def sort(self, *, key: Any = None, reverse: bool = False) -> None:
+        with self._lock:
+            self._list.sort(key=key, reverse=reverse)
+
+    def reverse(self) -> None:
+        with self._lock:
+            self._list.reverse()
+
+    def copy(self) -> list[T]:
+        return self._list.copy()
+
+    def __add__(self, other: list[T]) -> list[T]:
+        return self._list + other
+
+    def __radd__(self, other: list[T]) -> list[T]:
+        return other + self._list
+
+    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:
+        with self._lock:
+            self._list += list(other)
+        return self
+
+    def __mul__(self, n: SupportsIndex) -> list[T]:
+        return self._list * n
+
+    def __rmul__(self, n: SupportsIndex) -> list[T]:
+        return self._list * n
+
+    def __imul__(self, n: SupportsIndex) -> LockedListProxy[T]:
+        with self._lock:
+            self._list *= n
+        return self
+
+    def __reversed__(self) -> Iterator[T]:
+        return reversed(self._list)
+
     def __eq__(self, other: object) -> bool:
         """Compare based on the underlying list contents."""
         if isinstance(other, LockedListProxy):
@@ -579,6 +623,23 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._dict)
 
+    def copy(self) -> dict[str, T]:
+        return self._dict.copy()
+
+    def __or__(self, other: dict[str, T]) -> dict[str, T]:
+        return self._dict | other
+
+    def __ror__(self, other: dict[str, T]) -> dict[str, T]:
+        return other | self._dict
+
+    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:
+        with self._lock:
+            self._dict |= other
+        return self
+
+    def __reversed__(self) -> Iterator[str]:
+        return reversed(self._dict)
+
     def __eq__(self, other: object) -> bool:
         """Compare based on the underlying dict contents."""
         if isinstance(other, LockedDictProxy):
@@ -620,6 +681,10 @@ class StateProxy(Generic[T]):
         if name in ("_proxy_state", "_proxy_lock"):
             object.__setattr__(self, name, value)
         else:
+            if isinstance(value, LockedListProxy):
+                value = value._list
+            elif isinstance(value, LockedDictProxy):
+                value = value._dict
             with object.__getattribute__(self, "_proxy_lock"):
                 setattr(object.__getattribute__(self, "_proxy_state"), name, value)
 

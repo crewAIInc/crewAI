@@ -197,6 +197,1033 @@
       }
     },
     {
+      "description": "A tool that performs image searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Image Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs image searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/images/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "title": "BraveImageSearchTool",
+        "type": "object"
+      },
+      "name": "BraveImageSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Image Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 200,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Default is strict.",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "ImageSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves context for LLM usage from the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave LLM Context",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves context for LLM usage from the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/llm/context",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "title": "BraveLLMContextTool",
+        "type": "object"
+      },
+      "name": "BraveLLMContextTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave LLM Context endpoint.",
+        "properties": {
+          "context_threshold_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "disabled",
+                  "strict",
+                  "lenient",
+                  "balanced"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The mode to use for the context thresholding.",
+            "title": "Context Threshold Mode"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return. Actual number may be less.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "enable_local": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable local recall. Not setting this value means auto-detect and uses local recall if any of the localization headers are provided.",
+            "title": "Enable Local"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "maximum_number_of_snippets": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of different snippets to include in the context.",
+            "title": "Maximum Number Of Snippets"
+          },
+          "maximum_number_of_snippets_per_url": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of snippets to include per URL.",
+            "title": "Maximum Number Of Snippets Per Url"
+          },
+          "maximum_number_of_tokens": {
+            "anyOf": [
+              {
+                "maximum": 32768,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The approximate maximum number of tokens to include in the context.",
+            "title": "Maximum Number Of Tokens"
+          },
+          "maximum_number_of_tokens_per_url": {
+            "anyOf": [
+              {
+                "maximum": 8192,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of tokens to include for each URL in the context.",
+            "title": "Maximum Number Of Tokens Per Url"
+          },
+          "maximum_number_of_urls": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of URLs to include in the context.",
+            "title": "Maximum Number Of Urls"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "LLMContextParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves AI-generated descriptions for local POIs using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Local POI Descriptions",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves AI-generated descriptions for local POIs using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/local/descriptions",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "title": "BraveLocalPOIsDescriptionTool",
+        "type": "object"
+      },
+      "name": "BraveLocalPOIsDescriptionTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Local POI Descriptions endpoint.",
+        "properties": {
+          "ids": {
+            "description": "List of POI IDs to retrieve. Maximum of 20. IDs are valid for 8 hours.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "LocalPOIsDescriptionParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves local POIs using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Local POIs",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves local POIs using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/local/pois",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "title": "BraveLocalPOIsTool",
+        "type": "object"
+      },
+      "name": "BraveLocalPOIsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Local POIs endpoint.",
+        "properties": {
+          "ids": {
+            "description": "List of POI IDs to retrieve. Maximum of 20. IDs are valid for 8 hours.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "LocalPOIsParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs news searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave News Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs news searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/news/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "title": "BraveNewsSearchTool",
+        "type": "object"
+      },
+      "name": "BraveNewsSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave News Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "extra_snippets": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include up to 5 text snippets for each page if possible.",
+            "title": "Extra Snippets"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "NewsSearchParams",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that performs web searches using the Brave Search API. Results are returned as structured JSON data.",
       "env_vars": [
         {
@@ -269,11 +1296,13 @@
       "name": "BraveSearchTool",
       "package_dependencies": [],
       "run_params_schema": {
-        "description": "Input for BraveSearchTool",
+        "description": "Parameters for Brave Web Search endpoint.",
         "properties": {
           "count": {
             "anyOf": [
               {
+                "maximum": 20,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -287,6 +1316,7 @@
           "country": {
             "anyOf": [
               {
+                "pattern": "^[A-Z]{2}$",
                 "type": "string"
               },
               {
@@ -296,6 +1326,19 @@
             "default": null,
             "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
             "title": "Country"
+          },
+          "enable_rich_callback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable rich callbacks for the results. Requires Pro level subscription.",
+            "title": "Enable Rich Callback"
           },
           "extra_snippets": {
             "anyOf": [
@@ -333,9 +1376,43 @@
             "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
             "title": "Freshness"
           },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
           "offset": {
             "anyOf": [
               {
+                "maximum": 9,
+                "minimum": 0,
                 "type": "integer"
               },
               {
@@ -359,9 +1436,343 @@
             "description": "Whether to apply search operators (e.g., site:example.com).",
             "title": "Operators"
           },
-          "query": {
+          "q": {
             "description": "Search query to perform",
-            "title": "Query",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "result_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "discussions",
+                    "faq",
+                    "infobox",
+                    "news",
+                    "query",
+                    "summarizer",
+                    "videos",
+                    "web",
+                    "locations"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter the results by type. Options: discussions/faq/infobox/news/query/summarizer/videos/web/locations. Note: The `count` parameter is applied only to the `web` results.",
+            "title": "Result Filter"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to generate a summarizer ID for the results.",
+            "title": "Summary"
+          },
+          "text_decorations": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include markup to highlight search terms in the results.",
+            "title": "Text Decorations"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "WebSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs video searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Video Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs video searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/videos/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "title": "BraveVideoSearchTool",
+        "type": "object"
+      },
+      "name": "BraveVideoSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Video Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
             "type": "string"
           },
           "safesearch": {
@@ -382,9 +1793,10 @@
             "description": "Filter out explicit content. Options: off/moderate/strict",
             "title": "Safesearch"
           },
-          "search_language": {
+          "search_lang": {
             "anyOf": [
               {
+                "pattern": "^[a-z]{2}$",
                 "type": "string"
               },
               {
@@ -393,7 +1805,7 @@
             ],
             "default": null,
             "description": "Language code for the search results (e.g., 'en', 'es').",
-            "title": "Search Language"
+            "title": "Search Lang"
           },
           "spellcheck": {
             "anyOf": [
@@ -408,6 +1820,353 @@
             "description": "Attempt to correct spelling errors in the search query.",
             "title": "Spellcheck"
           },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "VideoSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs web searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Web Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs web searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/web/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "title": "BraveWebSearchTool",
+        "type": "object"
+      },
+      "name": "BraveWebSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Web Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 20,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return. Actual number may be less.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "enable_rich_callback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable rich callbacks for the results. Requires Pro level subscription.",
+            "title": "Enable Rich Callback"
+          },
+          "extra_snippets": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include up to 5 text snippets for each page if possible.",
+            "title": "Extra Snippets"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "result_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "discussions",
+                    "faq",
+                    "infobox",
+                    "news",
+                    "query",
+                    "summarizer",
+                    "videos",
+                    "web",
+                    "locations"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter the results by type. Options: discussions/faq/infobox/news/query/summarizer/videos/web/locations. Note: The `count` parameter is applied only to the `web` results.",
+            "title": "Result Filter"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to generate a summarizer ID for the results.",
+            "title": "Summary"
+          },
           "text_decorations": {
             "anyOf": [
               {
@@ -420,12 +2179,43 @@
             "default": null,
             "description": "Include markup to highlight search terms in the results.",
             "title": "Text Decorations"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
           }
         },
         "required": [
-          "query"
+          "q"
         ],
-        "title": "BraveSearchToolSchema",
+        "title": "WebSearchParams",
         "type": "object"
       }
     },

@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -755,6 +756,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 with ThreadPoolExecutor(max_workers=max_workers) as pool:
                     futures = {
                         pool.submit(
+                            contextvars.copy_context().run,
                             self._execute_single_native_tool_call,
                             call_id=call_id,
                             func_name=func_name,
