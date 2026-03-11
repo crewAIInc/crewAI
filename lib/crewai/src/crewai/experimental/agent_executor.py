@@ -1114,11 +1114,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         tasks = [self._execute_single_todo_async(todo) for todo in ready]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Store results and mark completed
+        # Store results and mark completed/failed
         for todo, result in zip(ready, results, strict=True):
             if isinstance(result, Exception):
                 error_msg = f"Error: {result!s}"
-                self.state.todos.mark_completed(todo.step_number, result=error_msg)
+                self.state.todos.mark_failed(todo.step_number, result=error_msg)
                 if self.agent.verbose:
                     self._printer.print(
                         content=f"Todo {todo.step_number} failed: {error_msg}",
@@ -2618,8 +2618,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         failed = [
             t
             for t in self.state.todos.items
-            if t.status == "failed"
-            or (t.result and t.result.startswith("Error:"))
+            if t.status == "failed" or (t.result and t.result.startswith("Error:"))
         ]
         if failed:
             context_parts.append("\nFailed or errored steps:")
@@ -2664,11 +2663,21 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Called when dynamic replanning is triggered. Regenerates the plan
         and routes back to todo-driven execution.
         """
+        max_replans = 3
+
+        if self.state.replan_count >= max_replans:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Max replans ({max_replans}) reached — finalizing with current results",
+                    color="yellow",
+                )
+            return "no_todos"
+
         self.state.replan_count += 1
         reason = self.state.last_replan_reason or "Dynamic replan triggered"
         self._trigger_replan(reason)
 
-        if self.state.todos.items:
+        if self.state.todos.get_pending_todos():
             return "has_todos"
         return "no_todos"
 
