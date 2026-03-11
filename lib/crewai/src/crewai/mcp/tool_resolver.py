@@ -15,6 +15,8 @@ import time
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
 
+from pydantic import ConfigDict
+
 from crewai.mcp.client import MCPClient
 from crewai.mcp.config import (
     MCPServerConfig,
@@ -585,8 +587,13 @@ class MCPToolResolver:
         from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
         model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
+        # Use extra="ignore" so that CrewAI-injected fields like `security_context`
+        # (added by tool_usage.py before validation) do not cause a Pydantic
+        # "Extra inputs are not permitted" ValidationError on MCP tools whose
+        # inputSchema was generated without that field.
         return create_model_from_schema(
             json_schema,
             model_name=model_name,
             enrich_descriptions=True,
+            __config__=ConfigDict(extra="ignore"),
         )
