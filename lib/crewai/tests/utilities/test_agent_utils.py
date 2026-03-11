@@ -80,7 +80,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_converts_single_tool(self) -> None:
         """Test converting a single tool to OpenAI schema."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert len(schemas) == 1
         assert len(functions) == 1
@@ -95,7 +95,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_converts_multiple_tools(self) -> None:
         """Test converting multiple tools to OpenAI schema."""
         tools = [CalculatorTool(), SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert len(schemas) == 2
         assert len(functions) == 2
@@ -113,7 +113,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_functions_dict_contains_callables(self) -> None:
         """Test that the functions dict maps names to callable run methods."""
         tools = [CalculatorTool(), SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert "calculator" in functions
         assert "web_search" in functions
@@ -123,14 +123,14 @@ class TestConvertToolsToOpenaiSchema:
     def test_function_can_be_called(self) -> None:
         """Test that the returned function can be called."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         result = functions["calculator"](expression="2 + 2")
         assert result == "4"
 
     def test_empty_tools_list(self) -> None:
         """Test with an empty tools list."""
-        schemas, functions = convert_tools_to_openai_schema([])
+        schemas, functions, _ = convert_tools_to_openai_schema([])
 
         assert schemas == []
         assert functions == {}
@@ -138,7 +138,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_schema_has_required_fields(self) -> None:
         """Test that the schema includes required fields information."""
         tools = [SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         schema = schemas[0]
         params = schema["function"]["parameters"]
@@ -158,7 +158,7 @@ class TestConvertToolsToOpenaiSchema:
                 return "done"
 
         tools = [MinimalTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert len(schemas) == 1
         schema = schemas[0]
@@ -169,7 +169,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_schema_structure_matches_openai_format(self) -> None:
         """Test that the schema structure matches OpenAI's expected format."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         schema = schemas[0]
 
@@ -194,7 +194,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_removes_redundant_schema_fields(self) -> None:
         """Test that redundant title and description are removed from parameters."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         # Title should be removed as it's redundant with function name
@@ -203,7 +203,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_preserves_field_descriptions(self) -> None:
         """Test that field descriptions are preserved in the schema."""
         tools = [SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         query_prop = params["properties"]["query"]
@@ -215,7 +215,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_preserves_default_values(self) -> None:
         """Test that default values are preserved in the schema."""
         tools = [SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         max_results_prop = params["properties"]["max_results"]
@@ -265,7 +265,7 @@ class TestOptionalFieldsPreserveNull:
         """Optional[str] fields should include null in the schema so the LLM
         can send null instead of being forced to guess a value."""
         tools = [MCPStyleTool()]
-        schemas, _ = convert_tools_to_openai_schema(tools)
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         page_id_prop = params["properties"]["page_id"]
@@ -278,7 +278,7 @@ class TestOptionalFieldsPreserveNull:
     def test_optional_literal_allows_null(self) -> None:
         """Optional[Literal[...]] fields should include null."""
         tools = [MCPStyleTool()]
-        schemas, _ = convert_tools_to_openai_schema(tools)
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         filter_prop = params["properties"]["filter_type"]
@@ -290,7 +290,7 @@ class TestOptionalFieldsPreserveNull:
     def test_required_field_stays_non_null(self) -> None:
         """Required fields without Optional should NOT have null."""
         tools = [MCPStyleTool()]
-        schemas, _ = convert_tools_to_openai_schema(tools)
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         query_prop = params["properties"]["query"]
@@ -301,7 +301,7 @@ class TestOptionalFieldsPreserveNull:
     def test_all_fields_in_required_for_strict_mode(self) -> None:
         """All fields (including optional) must be in required for strict mode."""
         tools = [MCPStyleTool()]
-        schemas, _ = convert_tools_to_openai_schema(tools)
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         assert "query" in params["required"]

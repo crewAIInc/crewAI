@@ -36,7 +36,7 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
-
+from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
 from crewai.task import Task
@@ -2618,9 +2618,9 @@ def test_memory_remember_called_after_task():
     )
 
     with patch.object(
-        crew._memory, "extract_memories", wraps=crew._memory.extract_memories
+        Memory, "extract_memories", wraps=crew._memory.extract_memories
     ) as extract_mock, patch.object(
-        crew._memory, "remember", wraps=crew._memory.remember
+        Memory, "remember", wraps=crew._memory.remember
     ) as remember_mock:
         crew.kickoff()
 
@@ -4773,13 +4773,13 @@ def test_memory_remember_receives_task_content():
         # Mock extract_memories to return fake memories and capture the raw input.
         # No wraps= needed -- the test only checks what args it receives, not the output.
         patch.object(
-            crew._memory, "extract_memories", return_value=["Fake memory."]
+            Memory, "extract_memories", return_value=["Fake memory."]
         ) as extract_mock,
         # Mock recall to avoid LLM calls for query analysis (not in cassette).
-        patch.object(crew._memory, "recall", return_value=[]),
+        patch.object(Memory, "recall", return_value=[]),
         # Mock remember_many to prevent the background save from triggering
         # LLM calls (field resolution) that aren't in the cassette.
-        patch.object(crew._memory, "remember_many", return_value=[]),
+        patch.object(Memory, "remember_many", return_value=[]),
     ):
         crew.kickoff()
 

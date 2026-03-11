@@ -26,6 +26,7 @@ from crewai.events.types.llm_events import (
     LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
+    LLMThinkingChunkEvent,
 )
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
@@ -368,9 +369,6 @@ class BaseLLM(ABC):
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
 
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -416,9 +414,6 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call failed event."""
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMCallFailedEvent(
@@ -449,9 +444,6 @@ class BaseLLM(ABC):
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
             response_id: Unique ID for a particular LLM response, chunks have same response_id.
         """
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMStreamChunkEvent(
@@ -460,6 +452,32 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 call_type=call_type,
+                response_id=response_id,
+                call_id=get_current_call_id(),
+            ),
+        )
+
+    def _emit_thinking_chunk_event(
+        self,
+        chunk: str,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        """Emit thinking/reasoning chunk event from a thinking model.
+
+        Args:
+            chunk: The thinking text content.
+            from_task: The task that initiated the call.
+            from_agent: The agent that initiated the call.
+            response_id: Unique ID for a particular LLM response.
+        """
+        crewai_event_bus.emit(
+            self,
+            event=LLMThinkingChunkEvent(
+                chunk=chunk,
+                from_task=from_task,
+                from_agent=from_agent,
                 response_id=response_id,
                 call_id=get_current_call_id(),
             ),
