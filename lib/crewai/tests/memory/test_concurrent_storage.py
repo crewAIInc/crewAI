@@ -150,16 +150,17 @@ def _chromadb_worker(sys_path: list, persist_dir: str, worker_id: int, result_di
 # Tests
 # ---------------------------------------------------------------------------
 
-N_WORKERS = 1
+N_WORKERS = 3
 N_RECORDS = 5
 
 
 def _run_workers(target, args_fn, n_workers=N_WORKERS, timeout=120):
     """Spawn n_workers processes and collect results via temp files."""
+    ctx = multiprocessing.get_context("fork")
     with tempfile.TemporaryDirectory() as result_dir:
         procs = []
         for wid in range(n_workers):
-            p = multiprocessing.Process(
+            p = ctx.Process(
                 target=target,
                 args=args_fn(wid, result_dir),
             )
