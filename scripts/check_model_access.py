@@ -58,16 +58,27 @@ def _classify_exception(exc: Exception) -> tuple[str, str]:
     return "error", "Unhandled error."
 
 
-def _run_single_check(model: str, api: str, prompt: str) -> int:
+def _run_single_check(
+    model: str,
+    api: str,
+    prompt: str,
+    reasoning_effort: str | None = None,
+) -> int:
     """Run one concrete model call check and print a normalized result."""
     try:
-        llm = LLM(model=model, api=api, is_litellm=False)
+        llm = LLM(
+            model=model,
+            api=api,
+            is_litellm=False,
+            reasoning_effort=reasoning_effort,
+        )
         client_params = llm._get_client_params()
         auth_source = getattr(getattr(llm, "_resolved_openai_auth", None), "source", None)
 
         print(f"api={api}")
         print(f"resolved_provider={llm.provider}")
         print(f"resolved_model={llm.model}")
+        print(f"reasoning_effort={llm.reasoning_effort}")
         print(f"auth_source={auth_source}")
         print(f"base_url={client_params.get('base_url')}")
 
@@ -103,6 +114,11 @@ def main() -> int:
         choices=["responses", "chat", "both"],
         help="OpenAI API mode used by CrewAI.",
     )
+    parser.add_argument(
+        "--reasoning-effort",
+        choices=["none", "minimal", "low", "medium", "high", "xhigh"],
+        help="Optional reasoning effort override passed to CrewAI/OpenAI.",
+    )
     args = parser.parse_args()
 
     os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
@@ -110,6 +126,7 @@ def main() -> int:
 
     print(f"requested_model={args.model}")
     print(f"api={args.api}")
+    print(f"requested_reasoning_effort={args.reasoning_effort}")
     print(f"auth_strategy={auth_strategy}")
     print(f"codex_login_status={login_message}")
 
@@ -127,7 +144,14 @@ def main() -> int:
     exit_codes: list[int] = []
     for api_name in apis:
         print(f"check_start={api_name}")
-        exit_codes.append(_run_single_check(args.model, api_name, args.prompt))
+        exit_codes.append(
+            _run_single_check(
+                args.model,
+                api_name,
+                args.prompt,
+                reasoning_effort=args.reasoning_effort,
+            )
+        )
         print(f"check_end={api_name}")
 
     if all(code == 0 for code in exit_codes):

@@ -614,6 +614,39 @@ def test_llm_openai_codex_provider_prefix_uses_native_openai_and_chatgpt_backend
     assert params["api_key"] == "oauth-token"
 
 
+def test_llm_openai_codex_provider_prefix_routes_non_codex_named_model_to_chatgpt_backend(
+    monkeypatch, tmp_path
+):
+    """openai-codex/gpt-5.4 should preserve provider prefix for Codex backend routing."""
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_text(
+        json.dumps(
+            {
+                "auth_mode": "chatgpt",
+                "tokens": {
+                    "access_token": "oauth-token",
+                    "refresh_token": "refresh-token",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_OAUTH_ACCESS_TOKEN", raising=False)
+    monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+
+    llm = LLM(model="openai-codex/gpt-5.4", is_litellm=False)
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.provider == "openai"
+    assert llm.model == "gpt-5.4"
+
+    params = llm._get_client_params()
+    assert params["base_url"] == "https://chatgpt.com/backend-api/codex"
+    assert params["api_key"] == "oauth-token"
+
+
 def test_openai_get_client_params_routes_pro_model_to_platform(monkeypatch):
     """gpt-5.2-pro must use Platform route and Platform credential."""
     monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
@@ -999,6 +1032,20 @@ def test_openai_responses_api_prepare_params():
     assert params["store"] is True
     assert params["temperature"] == 0.7
     assert params["input"] == [{"role": "user", "content": "Hello!"}]
+
+
+def test_openai_responses_api_prepare_params_with_reasoning_effort_xhigh():
+    """Test that Responses API forwards xhigh reasoning effort."""
+    llm = OpenAICompletion(
+        model="gpt-5.3-codex",
+        api="responses",
+        reasoning_effort="xhigh",
+        api_key="test-key",
+    )
+
+    params = llm._prepare_responses_params([{"role": "user", "content": "Hello!"}])
+
+    assert params["reasoning"] == {"effort": "xhigh"}
 
 
 def test_openai_responses_api_tool_format():

@@ -25,6 +25,11 @@ def main() -> int:
         default="Hi",
         help="Prompt text.",
     )
+    parser.add_argument(
+        "--reasoning-effort",
+        choices=["none", "minimal", "low", "medium", "high", "xhigh"],
+        help="Optional reasoning effort override passed to CrewAI/OpenAI.",
+    )
     args = parser.parse_args()
 
     os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")
@@ -55,7 +60,12 @@ def main() -> int:
             print("Set OPENAI_API_KEY, or run `codex login`, then retry.")
             return 2
 
-    llm = LLM(model=args.model, api="responses", is_litellm=False)
+    llm = LLM(
+        model=args.model,
+        api="responses",
+        is_litellm=False,
+        reasoning_effort=args.reasoning_effort,
+    )
     client_params = llm._get_client_params()
     auth_source = getattr(getattr(llm, "_resolved_openai_auth", None), "source", None)
 
@@ -64,6 +74,7 @@ def main() -> int:
     print(f"codex_login_status={login_message}")
     print(f"model={llm.model}")
     print(f"provider={llm.provider}")
+    print(f"reasoning_effort={llm.reasoning_effort}")
     print(f"auth_source={auth_source}")
     print(f"base_url={client_params.get('base_url')}")
 

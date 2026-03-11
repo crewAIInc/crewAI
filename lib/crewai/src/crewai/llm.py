@@ -395,7 +395,10 @@ class LLM(BaseLLM):
             ):
                 provider = canonical_provider
                 use_native = True
-                model_string = model_part
+                if prefix.lower() == "openai-codex":
+                    model_string = model
+                else:
+                    model_string = model_part
             else:
                 provider = prefix
                 use_native = False
@@ -610,7 +613,9 @@ class LLM(BaseLLM):
         api_version: str | None = None,
         api_key: str | None = None,
         callbacks: list[Any] | None = None,
-        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
+        reasoning_effort: Literal[
+            "none", "minimal", "low", "medium", "high", "xhigh"
+        ] | None = None,
         stream: bool = False,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
