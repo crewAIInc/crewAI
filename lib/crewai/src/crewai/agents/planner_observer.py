@@ -314,7 +314,6 @@ class PlannerObserver:
         We handle all cases to avoid silently falling back to a
         hardcoded success default.
         """
-        import json
 
         if isinstance(response, StepObservation):
             return response
@@ -324,7 +323,7 @@ class PlannerObserver:
             text = response.strip()
             try:
                 return StepObservation.model_validate_json(text)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
             # Some LLMs wrap the JSON in markdown fences
             if text.startswith("```"):
@@ -333,14 +332,14 @@ class PlannerObserver:
                 inner = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
                 try:
                     return StepObservation.model_validate_json(inner.strip())
-                except Exception:
+                except Exception:  # noqa: S110
                     pass
 
         # Dict path
         if isinstance(response, dict):
             try:
                 return StepObservation.model_validate(response)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
         # Last resort — log what we got so it's diagnosable
