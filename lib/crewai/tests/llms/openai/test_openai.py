@@ -618,6 +618,10 @@ def test_llm_openai_codex_provider_prefix_routes_non_codex_named_model_to_chatgp
     monkeypatch, tmp_path
 ):
     """openai-codex/gpt-5.4 should preserve provider prefix for Codex backend routing."""
+    from crewai.llms.providers.openai.completion import (
+        OpenAICompletion as CurrentOpenAICompletion,
+    )
+
     auth_path = tmp_path / "auth.json"
     auth_path.write_text(
         json.dumps(
@@ -638,7 +642,7 @@ def test_llm_openai_codex_provider_prefix_routes_non_codex_named_model_to_chatgp
     monkeypatch.setenv("CODEX_HOME", str(tmp_path))
 
     llm = LLM(model="openai-codex/gpt-5.4", is_litellm=False)
-    assert isinstance(llm, OpenAICompletion)
+    assert isinstance(llm, CurrentOpenAICompletion)
     assert llm.provider == "openai"
     assert llm.model == "gpt-5.4"
 
