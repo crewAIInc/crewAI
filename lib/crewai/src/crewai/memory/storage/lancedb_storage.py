@@ -210,9 +210,10 @@ class LanceDBStorage:
         ]
         try:
             table = self._db.create_table(self._table_name, placeholder)
-            table.delete("id = '__schema_placeholder__'")
         except ValueError:
             table = self._db.open_table(self._table_name)
+        else:
+            table.delete("id = '__schema_placeholder__'")
         return table
 
     def _ensure_scope_index(self) -> None:

@@ -13,7 +13,6 @@ import multiprocessing
 import os
 import sqlite3
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -166,6 +165,7 @@ def _run_workers(target, args_fn, n_workers=N_WORKERS, timeout=120):
     return successes, errors
 
 
+@pytest.mark.timeout(120)
 class TestConcurrentLanceDB:
     """Concurrent multi-process writes to LanceDB."""
 
