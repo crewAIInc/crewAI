@@ -28,7 +28,7 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
     lock_id = md5(persist_dir.encode(), usedforsecurity=False).hexdigest()
     lockfile = os.path.join(persist_dir, f"chromadb-{lock_id}.lock")
 
-    with portalocker.Lock(lockfile):
+    with portalocker.Lock(lockfile, timeout=120):
         client = PersistentClient(
             path=persist_dir,
             settings=config.settings,

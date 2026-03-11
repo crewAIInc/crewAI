@@ -39,6 +39,7 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
+                conn.execute("PRAGMA journal_mode=WAL")
                 cursor = conn.cursor()
                 cursor.execute(
                     """

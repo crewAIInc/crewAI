@@ -73,6 +73,7 @@ class SQLiteFlowPersistence(FlowPersistence):
     def init_db(self) -> None:
         """Create the necessary tables if they don't exist."""
         with sqlite3.connect(self.db_path) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
             # Main state table
             conn.execute(
                 """
