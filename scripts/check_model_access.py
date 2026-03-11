@@ -10,9 +10,9 @@ import os
 import sys
 import time
 
-import openai
-from crewai.llm import LLM
 from _codex_auth import codex_auth_status, local_openai_api_key
+from crewai.llm import LLM
+import openai
 
 
 def _targets_codex_model(model: str) -> bool:
@@ -79,7 +79,7 @@ def _attempt_single_check(
         )
         client_params = llm._get_client_params()
         result = llm.call(prompt)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return False, None, None, None, exc
 
     return True, llm, client_params, result, None
