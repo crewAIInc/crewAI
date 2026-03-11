@@ -12,9 +12,14 @@ import json
 import multiprocessing
 import os
 import sqlite3
+import sys
 import tempfile
 
 import pytest
+
+# Capture sys.path so child processes can resolve imports when pytest
+# uses --import-mode=importlib (e.g. under xdist).
+_PARENT_SYS_PATH = list(sys.path)
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +53,8 @@ def _collect_results(result_dir: str, n_workers: int):
 # Worker functions
 # ---------------------------------------------------------------------------
 
-def _lancedb_worker(path: str, worker_id: int, n_records: int, result_dir: str):
+def _lancedb_worker(sys_path: list, path: str, worker_id: int, n_records: int, result_dir: str):
+    sys.path[:] = sys_path
     try:
         from crewai.memory.storage.lancedb_storage import LanceDBStorage
         from crewai.memory.types import MemoryRecord
@@ -72,7 +78,8 @@ def _lancedb_worker(path: str, worker_id: int, n_records: int, result_dir: str):
         _write_result(result_dir, worker_id, False, f"{type(e).__name__}: {e}")
 
 
-def _sqlite_kickoff_worker(db_path: str, worker_id: int, n_writes: int, result_dir: str):
+def _sqlite_kickoff_worker(sys_path: list, db_path: str, worker_id: int, n_writes: int, result_dir: str):
+    sys.path[:] = sys_path
     try:
         from crewai.memory.storage.kickoff_task_outputs_storage import (
             KickoffTaskOutputsSQLiteStorage,
@@ -100,7 +107,8 @@ def _sqlite_kickoff_worker(db_path: str, worker_id: int, n_writes: int, result_d
         _write_result(result_dir, worker_id, False, f"{type(e).__name__}: {e}")
 
 
-def _sqlite_flow_worker(db_path: str, worker_id: int, n_writes: int, result_dir: str):
+def _sqlite_flow_worker(sys_path: list, db_path: str, worker_id: int, n_writes: int, result_dir: str):
+    sys.path[:] = sys_path
     try:
         from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
@@ -116,7 +124,8 @@ def _sqlite_flow_worker(db_path: str, worker_id: int, n_writes: int, result_dir:
         _write_result(result_dir, worker_id, False, f"{type(e).__name__}: {e}")
 
 
-def _chromadb_worker(persist_dir: str, worker_id: int, result_dir: str):
+def _chromadb_worker(sys_path: list, persist_dir: str, worker_id: int, result_dir: str):
+    sys.path[:] = sys_path
     try:
         from chromadb import PersistentClient
         from chromadb.config import Settings
@@ -174,7 +183,7 @@ class TestConcurrentLanceDB:
 
         successes, errors = _run_workers(
             _lancedb_worker,
-            lambda wid, rd: (db_path, wid, N_RECORDS, rd),
+            lambda wid, rd: (_PARENT_SYS_PATH, db_path, wid, N_RECORDS, rd),
         )
 
         assert not errors, f"Workers failed: {errors}"
@@ -185,7 +194,7 @@ class TestConcurrentLanceDB:
 
         successes, errors = _run_workers(
             _lancedb_worker,
-            lambda wid, rd: (db_path, wid, N_RECORDS, rd),
+            lambda wid, rd: (_PARENT_SYS_PATH, db_path, wid, N_RECORDS, rd),
         )
 
         assert not errors, f"Workers failed: {errors}"
@@ -212,7 +221,7 @@ class TestConcurrentSQLiteKickoff:
 
         successes, errors = _run_workers(
             _sqlite_kickoff_worker,
-            lambda wid, rd: (db_path, wid, N_RECORDS, rd),
+            lambda wid, rd: (_PARENT_SYS_PATH, db_path, wid, N_RECORDS, rd),
             timeout=60,
         )
 
@@ -235,7 +244,7 @@ class TestConcurrentSQLiteFlow:
 
         successes, errors = _run_workers(
             _sqlite_flow_worker,
-            lambda wid, rd: (db_path, wid, N_RECORDS, rd),
+            lambda wid, rd: (_PARENT_SYS_PATH, db_path, wid, N_RECORDS, rd),
             timeout=60,
         )
 
@@ -257,7 +266,7 @@ class TestConcurrentChromaDB:
 
         successes, errors = _run_workers(
             _chromadb_worker,
-            lambda wid, rd: (persist_dir, wid, rd),
+            lambda wid, rd: (_PARENT_SYS_PATH, persist_dir, wid, rd),
         )
 
         assert not errors, f"Workers failed: {errors}"
