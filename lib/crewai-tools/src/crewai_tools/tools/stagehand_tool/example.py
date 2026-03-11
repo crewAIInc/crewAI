@@ -17,11 +17,11 @@ Usage:
 
 import os
 
+from crewai import Agent, Crew, Process, Task
 from crewai.utilities.printer import Printer
 from dotenv import load_dotenv
 from stagehand.schemas import AvailableModel  # type: ignore[import-untyped]
 
-from crewai import Agent, Crew, Process, Task
 from crewai_tools import StagehandTool
 
 

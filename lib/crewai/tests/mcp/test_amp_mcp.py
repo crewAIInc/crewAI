@@ -270,6 +270,54 @@ class TestGetMCPToolsAmpIntegration:
 
     @patch("crewai.mcp.tool_resolver.MCPClient")
     @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
+    def test_tool_filter_with_hyphenated_hash_syntax(
+        self, mock_fetch, mock_client_class, agent
+    ):
+        """notion#get-page must match the tool whose sanitized name is get_page."""
+        mock_fetch.return_value = {
+            "notion": {
+                "type": "sse",
+                "url": "https://mcp.notion.so/sse",
+                "headers": {"Authorization": "Bearer token"},
+            },
+        }
+
+        hyphenated_tool_definitions = [
+            {
+                "name": "get_page",
+                "original_name": "get-page",
+                "description": "Get a page",
+                "inputSchema": {},
+            },
+            {
+                "name": "search",
+                "original_name": "search",
+                "description": "Search tool",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"}
+                    },
+                    "required": ["query"],
+                },
+            },
+        ]
+
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=hyphenated_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        tools = agent.get_mcp_tools(["notion#get-page"])
+
+        mock_fetch.assert_called_once_with(["notion"])
+        assert len(tools) == 1
+        assert tools[0].name.endswith("_get_page")
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
     def test_deduplicates_slugs(
         self, mock_fetch, mock_client_class, agent, mock_tool_definitions
     ):
@@ -371,3 +419,87 @@ class TestGetMCPToolsAmpIntegration:
         mock_external.assert_called_once_with("https://external.mcp.com/api")
         # 2 from notion + 1 from external + 2 from http_config
         assert len(tools) == 5
+
+
+class TestResolveExternalToolFilter:
+    """Tests for _resolve_external with #tool-name filtering."""
+
+    @pytest.fixture
+    def agent(self):
+        return Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+        )
+
+    @pytest.fixture
+    def resolver(self, agent):
+        return MCPToolResolver(agent=agent, logger=agent._logger)
+
+    @patch.object(MCPToolResolver, "_get_mcp_tool_schemas")
+    def test_filters_hyphenated_tool_name(self, mock_schemas, resolver):
+        """https://...#get-page must match the sanitized key get_page in schemas."""
+        mock_schemas.return_value = {
+            "get_page": {
+                "description": "Get a page",
+                "args_schema": None,
+            },
+            "search": {
+                "description": "Search tool",
+                "args_schema": None,
+            },
+        }
+
+        tools = resolver._resolve_external("https://mcp.example.com/api#get-page")
+
+        assert len(tools) == 1
+        assert "get_page" in tools[0].name
+
+    @patch.object(MCPToolResolver, "_get_mcp_tool_schemas")
+    def test_filters_underscored_tool_name(self, mock_schemas, resolver):
+        """https://...#get_page must also match the sanitized key get_page."""
+        mock_schemas.return_value = {
+            "get_page": {
+                "description": "Get a page",
+                "args_schema": None,
+            },
+            "search": {
+                "description": "Search tool",
+                "args_schema": None,
+            },
+        }
+
+        tools = resolver._resolve_external("https://mcp.example.com/api#get_page")
+
+        assert len(tools) == 1
+        assert "get_page" in tools[0].name
+
+    @patch.object(MCPToolResolver, "_get_mcp_tool_schemas")
+    def test_returns_all_tools_without_hash(self, mock_schemas, resolver):
+        mock_schemas.return_value = {
+            "get_page": {
+                "description": "Get a page",
+                "args_schema": None,
+            },
+            "search": {
+                "description": "Search tool",
+                "args_schema": None,
+            },
+        }
+
+        tools = resolver._resolve_external("https://mcp.example.com/api")
+
+        assert len(tools) == 2
+
+    @patch.object(MCPToolResolver, "_get_mcp_tool_schemas")
+    def test_returns_empty_for_nonexistent_tool(self, mock_schemas, resolver):
+        mock_schemas.return_value = {
+            "search": {
+                "description": "Search tool",
+                "args_schema": None,
+            },
+        }
+
+        tools = resolver._resolve_external("https://mcp.example.com/api#nonexistent")
+
+        assert len(tools) == 0
