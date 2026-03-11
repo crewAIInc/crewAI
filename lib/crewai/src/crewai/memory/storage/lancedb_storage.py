@@ -625,7 +625,7 @@ class LanceDBStorage:
                 return
             prefix = scope_prefix.rstrip("/")
             if prefix:
-                self._table.delete(f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'")
+                self._do_write("delete", f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'")
 
     def optimize(self) -> None:
         """Compact the table synchronously and refresh the scope index.
