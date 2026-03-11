@@ -106,11 +106,11 @@ if TYPE_CHECKING:
     from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
 
-class AgentReActState(BaseModel):
-    """Structured state for agent ReAct flow execution.
+class AgentExecutorState(BaseModel):
+    """Structured state for agent executor flow.
 
-    Replaces scattered instance variables with validated immutable state.
-    Maps to: self.messages, self.iterations, formatted_answer in current executor.
+    Holds both ReAct iteration state and Plan-and-Execute state
+    (todos, observations, replan tracking) in a single validated model.
     """
 
     messages: list[LLMMessage] = Field(default_factory=list)
@@ -143,11 +143,11 @@ class AgentReActState(BaseModel):
     )
 
 
-class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
+class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
     """Agent Executor for both standalone agents and crew-bound agents.
 
     Inherits from:
-    - Flow[AgentReActState]: Provides flow orchestration capabilities
+    - Flow[AgentExecutorState]: Provides flow orchestration capabilities
     - CrewAgentExecutorMixin: Provides memory methods (short/long/external term)
 
     This executor can operate in two modes:
@@ -258,7 +258,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     else self.stop
                 )
             )
-        self._state = AgentReActState()
+        self._state = AgentExecutorState()
 
         # Plan-and-Execute components (Phase 2)
         # Lazy-imported to avoid circular imports during module load
@@ -311,7 +311,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         return self.llm.supports_stop_words() if self.llm else False
 
     @property
-    def state(self) -> AgentReActState:
+    def state(self) -> AgentExecutorState:
         """Get state - returns temporary state if Flow not yet initialized.
 
         Flow initialization is deferred to prevent event emission during agent setup.

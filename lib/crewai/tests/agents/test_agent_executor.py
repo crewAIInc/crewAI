@@ -13,7 +13,7 @@ import pytest
 from crewai.agents.step_executor import StepExecutor
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (
-    AgentReActState,
+    AgentExecutorState,
     AgentExecutor,
 )
 from crewai.agents.parser import AgentAction, AgentFinish
@@ -26,12 +26,12 @@ from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem
 
-class TestAgentReActState:
-    """Test AgentReActState Pydantic model."""
+class TestAgentExecutorState:
+    """Test AgentExecutorState Pydantic model."""
 
     def test_state_initialization(self):
-        """Test AgentReActState initialization with defaults."""
-        state = AgentReActState()
+        """Test AgentExecutorState initialization with defaults."""
+        state = AgentExecutorState()
         assert state.iterations == 0
         assert state.messages == []
         assert state.current_answer is None
@@ -42,8 +42,8 @@ class TestAgentReActState:
         assert state.plan_ready is False
 
     def test_state_with_plan(self):
-        """Test AgentReActState initialization with planning fields."""
-        state = AgentReActState(
+        """Test AgentExecutorState initialization with planning fields."""
+        state = AgentExecutorState(
             plan="Step 1: Do X\nStep 2: Do Y",
             plan_ready=True,
         )
@@ -51,9 +51,9 @@ class TestAgentReActState:
         assert state.plan_ready is True
 
     def test_state_with_values(self):
-        """Test AgentReActState initialization with values."""
+        """Test AgentExecutorState initialization with values."""
         messages = [{"role": "user", "content": "test"}]
-        state = AgentReActState(
+        state = AgentExecutorState(
             messages=messages,
             iterations=5,
             current_answer=AgentFinish(thought="thinking", output="done", text="final"),
