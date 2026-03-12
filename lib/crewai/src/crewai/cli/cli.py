@@ -182,15 +182,24 @@ def log_tasks_outputs() -> None:
 @crewai.command()
 @click.option("-m", "--memory", is_flag=True, help="Reset MEMORY")
 @click.option(
-    "-l", "--long", is_flag=True, hidden=True,
+    "-l",
+    "--long",
+    is_flag=True,
+    hidden=True,
     help="[Deprecated: use --memory] Reset memory",
 )
 @click.option(
-    "-s", "--short", is_flag=True, hidden=True,
+    "-s",
+    "--short",
+    is_flag=True,
+    hidden=True,
     help="[Deprecated: use --memory] Reset memory",
 )
 @click.option(
-    "-e", "--entities", is_flag=True, hidden=True,
+    "-e",
+    "--entities",
+    is_flag=True,
+    hidden=True,
     help="[Deprecated: use --memory] Reset memory",
 )
 @click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
@@ -218,7 +227,13 @@ def reset_memories(
         # Treat legacy flags as --memory with a deprecation warning
         if long or short or entities:
             legacy_used = [
-                f for f, v in [("--long", long), ("--short", short), ("--entities", entities)] if v
+                f
+                for f, v in [
+                    ("--long", long),
+                    ("--short", short),
+                    ("--entities", entities),
+                ]
+                if v
             ]
             click.echo(
                 f"Warning: {', '.join(legacy_used)} {'is' if len(legacy_used) == 1 else 'are'} "
@@ -238,9 +253,7 @@ def reset_memories(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
             return
-        reset_memories_command(
-            memory, knowledge, agent_knowledge, kickoff_outputs, all
-        )
+        reset_memories_command(memory, knowledge, agent_knowledge, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
 

@@ -729,7 +729,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             max_workers = min(8, len(runnable_tool_calls))
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
                 future_to_idx = {
-                    pool.submit(contextvars.copy_context().run, self._execute_single_native_tool_call, tool_call): idx
+                    pool.submit(
+                        contextvars.copy_context().run,
+                        self._execute_single_native_tool_call,
+                        tool_call,
+                    ): idx
                     for idx, tool_call in enumerate(runnable_tool_calls)
                 }
                 ordered_results: list[dict[str, Any] | None] = [None] * len(

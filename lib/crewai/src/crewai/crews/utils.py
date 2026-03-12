@@ -70,6 +70,7 @@ def setup_agents(
     for agent in agents:
         agent.crew = crew
         agent.set_knowledge(crew_embedder=embedder)
+        agent.set_skills()
         if not agent.function_calling_llm:  # type: ignore[attr-defined]
             agent.function_calling_llm = function_calling_llm  # type: ignore[attr-defined]
         if not agent.step_callback:  # type: ignore[attr-defined]

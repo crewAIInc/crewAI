@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
+from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -24,6 +25,7 @@ from typing_extensions import Self
 
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
+    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
@@ -63,6 +65,8 @@ from crewai.mcp import MCPServerConfig
 from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -264,6 +268,8 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        self.set_skills()
+
         return self
 
     def _setup_agent_executor(self) -> None:
@@ -288,6 +294,52 @@ class Agent(BaseAgent):
                     self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
+
+    def set_skills(self) -> None:
+        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+
+        Path entries trigger discovery and activation. Pre-loaded Skill objects
+        below INSTRUCTIONS level are activated. Crew-level skills are merged in.
+        """
+        from crewai.crew import Crew
+
+        crew_skills: list[Path | SkillModel] | None = (
+            self.crew.skills
+            if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
+            else None
+        )
+
+        if not self.skills and not crew_skills:
+            return
+
+        needs_work = self.skills and any(
+            isinstance(s, Path)
+            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
+            for s in self.skills
+        )
+        if not needs_work and not crew_skills:
+            return
+
+        seen: set[str] = set()
+        resolved: list[Path | SkillModel] = []
+        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+
+        if crew_skills:
+            items.extend(crew_skills)
+
+        for item in items:
+            if isinstance(item, Path):
+                discovered = discover_skills(item, source=self)
+                for skill in discovered:
+                    if skill.name not in seen:
+                        seen.add(skill.name)
+                        resolved.append(activate_skill(skill, source=self))
+            elif isinstance(item, SkillModel):
+                if item.name not in seen:
+                    seen.add(item.name)
+                    resolved.append(activate_skill(item, source=self))
+
+        self.skills = resolved if resolved else None
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
@@ -404,6 +456,8 @@ class Agent(BaseAgent):
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
             self.crew.query_knowledge if self.crew else lambda *a, **k: None,
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)
@@ -637,6 +691,8 @@ class Agent(BaseAgent):
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)
@@ -1298,6 +1354,8 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
+
+        formatted_messages = append_skill_context(self, formatted_messages)
 
         # Build the input dict for the executor
         inputs: dict[str, Any] = {

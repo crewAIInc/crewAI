@@ -308,7 +308,9 @@ def analyze_for_save(
         return MemoryAnalysis.model_validate(response)
     except Exception as e:
         _logger.warning(
-            "Memory save analysis failed, using defaults: %s", e, exc_info=False,
+            "Memory save analysis failed, using defaults: %s",
+            e,
+            exc_info=False,
         )
         return _SAVE_DEFAULTS
 
@@ -366,6 +368,8 @@ def analyze_for_consolidation(
         return ConsolidationPlan.model_validate(response)
     except Exception as e:
         _logger.warning(
-            "Consolidation analysis failed, defaulting to insert: %s", e, exc_info=False,
+            "Consolidation analysis failed, defaulting to insert: %s",
+            e,
+            exc_info=False,
         )
         return _CONSOLIDATION_DEFAULT
