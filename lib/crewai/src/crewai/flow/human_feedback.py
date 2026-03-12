@@ -408,7 +408,7 @@ def human_feedback(
                 emit=list(emit) if emit else None,
                 default_outcome=default_outcome,
                 metadata=metadata or {},
-                llm=llm if isinstance(llm, str) else None,
+                llm=llm if isinstance(llm, str) else getattr(llm, "model", None),
             )
 
             # Determine effective provider:

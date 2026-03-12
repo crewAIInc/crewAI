@@ -21,7 +21,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http~=1.34.0",
     # Data Handling
     "chromadb~=1.1.0",
-    "tokenizers~=0.20.3",
+    "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
     "python-dotenv~=1.1.1",
@@ -53,7 +53,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.10.1a1",
+    "crewai-tools==1.10.2a1",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -66,7 +66,7 @@ openpyxl = [
 ]
 mem0 = ["mem0ai~=0.1.94"]
 docling = [
-    "docling~=2.63.0",
+    "docling~=2.75.0",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
@@ -88,7 +88,7 @@ bedrock = [
     "boto3~=1.40.45",
 ]
 google-genai = [
-    "google-genai~=1.49.0",
+    "google-genai~=1.65.0",
 ]
 azure-ai-inference = [
     "azure-ai-inference~=1.0.0b9",

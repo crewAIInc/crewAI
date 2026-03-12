@@ -4,6 +4,71 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="11 mar 2026">
+  ## v1.10.2a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2a1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Adicionar suporte para busca de ferramentas, salvamento de tokens e injeção dinâmica de ferramentas apropriadas durante a execução para Anthropics.
+  - Introduzir mais ferramentas de Busca Brave.
+  - Criar ação para lançamentos noturnos.
+
+  ### Correções de Bugs
+  - Corrigir LockException durante a execução concorrente de múltiplos processos.
+  - Resolver problemas com a agrupação de resultados de ferramentas paralelas em uma única mensagem de usuário.
+  - Abordar resoluções de ferramentas MCP e eliminar todas as conexões mutáveis compartilhadas.
+  - Atualizar o manuseio de parâmetros LLM na função human_feedback.
+  - Adicionar métodos de lista/dicionário ausentes a LockedListProxy e LockedDictProxy.
+  - Propagar o contexto de contextvars para as threads de chamada de ferramentas paralelas.
+  - Atualizar a dependência gitpython para >=3.1.41 para resolver a vulnerabilidade de travessia de diretórios CVE.
+
+  ### Refatoração
+  - Refatorar classes de memória para serem serializáveis.
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.10.1.
+
+  ## Contribuidores
+
+  @akaKuruma, @github-actions[bot], @giulio-leone, @greysonlalonde, @joaomdmoura, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha
+
+</Update>
+
+<Update label="04 mar 2026">
+  ## v1.10.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Atualizar Gemini GenAI
+
+  ### Correções de Bugs
+  - Ajustar o valor do listener do executor para evitar recursão
+  - Agrupar partes da resposta da função paralela em um único objeto Content no Gemini
+  - Exibir a saída de pensamento dos modelos de pensamento no Gemini
+  - Carregar ferramentas MCP e da plataforma quando as ferramentas do agente forem None
+  - Suportar ambientes Jupyter com loops de eventos em A2A
+  - Usar ID anônimo para rastreamentos efêmeros
+  - Passar condicionalmente o cabeçalho plus
+  - Ignorar o registro do manipulador de sinal em threads não principais para telemetria
+  - Injetar erros de ferramentas como observações e resolver colisões de nomes
+  - Atualizar pypdf de 4.x para 6.7.4 para resolver alertas do Dependabot
+  - Resolver alertas de segurança críticos e altos do Dependabot
+
+  ### Documentação
+  - Sincronizar a documentação da ferramenta Composio entre locais
+
+  ## Contribuidores
+
+  @giulio-leone, @greysonlalonde, @haxzie, @joaomdmoura, @lorenzejay, @mattatcha, @mplachta, @nicoferdi96
+
+</Update>
+
 <Update label="27 fev 2026">
   ## v1.10.1a1
 
