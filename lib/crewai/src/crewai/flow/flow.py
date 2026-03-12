@@ -497,6 +497,50 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._list)
 
+    def index(self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None) -> int:  # type: ignore[override]
+        if stop is None:
+            return self._list.index(value, start)
+        return self._list.index(value, start, stop)
+
+    def count(self, value: T) -> int:
+        return self._list.count(value)
+
+    def sort(self, *, key: Any = None, reverse: bool = False) -> None:
+        with self._lock:
+            self._list.sort(key=key, reverse=reverse)
+
+    def reverse(self) -> None:
+        with self._lock:
+            self._list.reverse()
+
+    def copy(self) -> list[T]:
+        return self._list.copy()
+
+    def __add__(self, other: list[T]) -> list[T]:
+        return self._list + other
+
+    def __radd__(self, other: list[T]) -> list[T]:
+        return other + self._list
+
+    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:
+        with self._lock:
+            self._list += list(other)
+        return self
+
+    def __mul__(self, n: SupportsIndex) -> list[T]:
+        return self._list * n
+
+    def __rmul__(self, n: SupportsIndex) -> list[T]:
+        return self._list * n
+
+    def __imul__(self, n: SupportsIndex) -> LockedListProxy[T]:
+        with self._lock:
+            self._list *= n
+        return self
+
+    def __reversed__(self) -> Iterator[T]:
+        return reversed(self._list)
+
     def __eq__(self, other: object) -> bool:
         """Compare based on the underlying list contents."""
         if isinstance(other, LockedListProxy):
@@ -579,6 +623,23 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._dict)
 
+    def copy(self) -> dict[str, T]:
+        return self._dict.copy()
+
+    def __or__(self, other: dict[str, T]) -> dict[str, T]:
+        return self._dict | other
+
+    def __ror__(self, other: dict[str, T]) -> dict[str, T]:
+        return other | self._dict
+
+    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:
+        with self._lock:
+            self._dict |= other
+        return self
+
+    def __reversed__(self) -> Iterator[str]:
+        return reversed(self._dict)
+
     def __eq__(self, other: object) -> bool:
         """Compare based on the underlying dict contents."""
         if isinstance(other, LockedDictProxy):
@@ -620,6 +681,10 @@ class StateProxy(Generic[T]):
         if name in ("_proxy_state", "_proxy_lock"):
             object.__setattr__(self, name, value)
         else:
+            if isinstance(value, LockedListProxy):
+                value = value._list
+            elif isinstance(value, LockedDictProxy):
+                value = value._dict
             with object.__getattribute__(self, "_proxy_lock"):
                 setattr(object.__getattribute__(self, "_proxy_state"), name, value)
 
@@ -692,6 +757,7 @@ class FlowMeta(type):
                     condition_type = getattr(
                         attr_value, "__condition_type__", OR_CONDITION
                     )
+
                     if (
                         hasattr(attr_value, "__trigger_condition__")
                         and attr_value.__trigger_condition__ is not None
@@ -769,6 +835,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         persistence: FlowPersistence | None = None,
         tracing: bool | None = None,
         suppress_flow_events: bool = False,
+        max_method_calls: int = 100,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -777,6 +844,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             persistence: Optional persistence backend for storing flow states
             tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
             suppress_flow_events: Whether to suppress flow event emissions (internal use)
+            max_method_calls: Maximum times a single method can be called per execution before raising RecursionError
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -792,6 +860,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._completed_methods: set[FlowMethodName] = (
             set()
         )  # Track completed methods for reload
+        self._method_call_counts: dict[FlowMethodName, int] = {}
+        self._max_method_calls = max_method_calls
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
@@ -1828,6 +1898,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._method_outputs.clear()
                 self._pending_and_listeners.clear()
                 self._clear_or_listeners()
+                self._method_call_counts.clear()
             else:
                 # Only enter resumption mode if there are completed methods to
                 # replay.  When _completed_methods is empty (e.g. a pure
@@ -2569,6 +2640,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             - Skips execution if method was already completed (e.g., after reload)
             - Catches and logs any exceptions during execution, preventing individual listener failures from breaking the entire flow
         """
+        count = self._method_call_counts.get(listener_name, 0) + 1
+        if count > self._max_method_calls:
+            raise RecursionError(
+                f"Method '{listener_name}' has been called {self._max_method_calls} times in "
+                f"this flow execution, which indicates an infinite loop. "
+                f"This commonly happens when a @listen label matches the "
+                f"method's own name."
+            )
+        self._method_call_counts[listener_name] = count
+
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners

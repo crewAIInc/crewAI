@@ -840,3 +840,87 @@ class TestTraceListenerSetup:
                 mock_mark_failed.assert_called_once_with(
                     "test_batch_id_12345", "Internal Server Error"
                 )
+
+    def test_ephemeral_batch_includes_anon_id(self):
+        """Test that ephemeral batch initialization sends anon_id from get_user_id()"""
+        fake_user_id = "abc123def456"
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.get_user_id",
+                return_value=fake_user_id,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+        ):
+            batch_manager = TraceBatchManager()
+
+            mock_response = MagicMock(
+                status_code=201,
+                json=MagicMock(return_value={
+                    "ephemeral_trace_id": "test-trace-id",
+                    "access_code": "TRACE-abc123",
+                }),
+            )
+
+            with patch.object(
+                batch_manager.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=mock_response,
+            ) as mock_init:
+                batch_manager.initialize_batch(
+                    user_context={"privacy_level": "standard"},
+                    execution_metadata={
+                        "execution_type": "crew",
+                        "crew_name": "test_crew",
+                    },
+                    use_ephemeral=True,
+                )
+
+                mock_init.assert_called_once()
+                payload = mock_init.call_args[0][0]
+                assert payload["user_identifier"] == fake_user_id
+                assert "ephemeral_trace_id" in payload
+
+    def test_non_ephemeral_batch_does_not_include_anon_id(self):
+        """Test that non-ephemeral batch initialization does not send anon_id"""
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+        ):
+            batch_manager = TraceBatchManager()
+
+            mock_response = MagicMock(
+                status_code=201,
+                json=MagicMock(return_value={"trace_id": "test-trace-id"}),
+            )
+
+            with patch.object(
+                batch_manager.plus_api,
+                "initialize_trace_batch",
+                return_value=mock_response,
+            ) as mock_init:
+                batch_manager.initialize_batch(
+                    user_context={"privacy_level": "standard"},
+                    execution_metadata={
+                        "execution_type": "crew",
+                        "crew_name": "test_crew",
+                    },
+                    use_ephemeral=False,
+                )
+
+                mock_init.assert_called_once()
+                payload = mock_init.call_args[0][0]
+                assert "user_identifier" not in payload

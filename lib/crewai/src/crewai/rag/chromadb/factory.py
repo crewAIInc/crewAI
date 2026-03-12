@@ -1,13 +1,12 @@
 """Factory functions for creating ChromaDB clients."""
 
-from hashlib import md5
 import os
 
 from chromadb import PersistentClient
-import portalocker
 
 from crewai.rag.chromadb.client import ChromaDBClient
 from crewai.rag.chromadb.config import ChromaDBConfig
+from crewai.utilities.lock_store import lock
 
 
 def create_client(config: ChromaDBConfig) -> ChromaDBClient:
@@ -25,10 +24,8 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
 
     persist_dir = config.settings.persist_directory
     os.makedirs(persist_dir, exist_ok=True)
-    lock_id = md5(persist_dir.encode(), usedforsecurity=False).hexdigest()
-    lockfile = os.path.join(persist_dir, f"chromadb-{lock_id}.lock")
 
-    with portalocker.Lock(lockfile):
+    with lock(f"chromadb:{persist_dir}"):
         client = PersistentClient(
             path=persist_dir,
             settings=config.settings,
