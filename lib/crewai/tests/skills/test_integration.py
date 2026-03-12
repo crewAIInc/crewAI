@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from crewai.skills.loader import activate_skill, discover_skills, format_skill_context
-from crewai.skills.models import DisclosureLevel
+from crewai.skills.models import INSTRUCTIONS, METADATA
 
 
 def _create_skill_dir(parent: Path, name: str, body: str = "Body.") -> Path:
@@ -25,10 +25,10 @@ class TestSkillDiscoveryAndActivation:
         _create_skill_dir(tmp_path, "my-skill", body="Use this skill.")
         skills = discover_skills(tmp_path)
         assert len(skills) == 1
-        assert skills[0].disclosure_level == DisclosureLevel.METADATA
+        assert skills[0].disclosure_level == METADATA
 
         activated = activate_skill(skills[0])
-        assert activated.disclosure_level == DisclosureLevel.INSTRUCTIONS
+        assert activated.disclosure_level == INSTRUCTIONS
         assert activated.instructions == "Use this skill."
 
         context = format_skill_context(activated)

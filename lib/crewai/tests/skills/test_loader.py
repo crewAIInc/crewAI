@@ -10,7 +10,7 @@ from crewai.skills.loader import (
     format_skill_context,
     load_resources,
 )
-from crewai.skills.models import DisclosureLevel, Skill, SkillFrontmatter
+from crewai.skills.models import INSTRUCTIONS, METADATA, RESOURCES, Skill, SkillFrontmatter
 from crewai.skills.parser import load_skill_metadata
 
 
@@ -73,7 +73,7 @@ class TestActivateSkill:
         _create_skill_dir(tmp_path, "my-skill", body="Instructions.")
         skill = load_skill_metadata(tmp_path / "my-skill")
         activated = activate_skill(skill)
-        assert activated.disclosure_level == DisclosureLevel.INSTRUCTIONS
+        assert activated.disclosure_level == INSTRUCTIONS
         assert activated.instructions == "Instructions."
 
     def test_idempotent(self, tmp_path: Path) -> None:
@@ -93,7 +93,7 @@ class TestLoadResources:
         (skill_dir / "scripts" / "run.sh").write_text("#!/bin/bash")
         skill = load_skill_metadata(skill_dir)
         full = load_resources(skill)
-        assert full.disclosure_level == DisclosureLevel.RESOURCES
+        assert full.disclosure_level == RESOURCES
 
 
 class TestFormatSkillContext:
@@ -102,7 +102,7 @@ class TestFormatSkillContext:
     def test_metadata_level(self, tmp_path: Path) -> None:
         fm = SkillFrontmatter(name="test-skill", description="A skill")
         skill = Skill(
-            frontmatter=fm, path=tmp_path, disclosure_level=DisclosureLevel.METADATA
+            frontmatter=fm, path=tmp_path, disclosure_level=METADATA
         )
         ctx = format_skill_context(skill)
         assert "## Skill: test-skill" in ctx
@@ -113,7 +113,7 @@ class TestFormatSkillContext:
         skill = Skill(
             frontmatter=fm,
             path=tmp_path,
-            disclosure_level=DisclosureLevel.INSTRUCTIONS,
+            disclosure_level=INSTRUCTIONS,
             instructions="Do these things.",
         )
         ctx = format_skill_context(skill)
@@ -125,7 +125,7 @@ class TestFormatSkillContext:
         skill = Skill(
             frontmatter=fm,
             path=tmp_path,
-            disclosure_level=DisclosureLevel.INSTRUCTIONS,
+            disclosure_level=INSTRUCTIONS,
             instructions=None,
         )
         ctx = format_skill_context(skill)
@@ -136,7 +136,7 @@ class TestFormatSkillContext:
         skill = Skill(
             frontmatter=fm,
             path=tmp_path,
-            disclosure_level=DisclosureLevel.RESOURCES,
+            disclosure_level=RESOURCES,
             instructions="Do things.",
             resource_files={
                 "scripts": ["run.sh"],
@@ -153,7 +153,7 @@ class TestFormatSkillContext:
         skill = Skill(
             frontmatter=fm,
             path=tmp_path,
-            disclosure_level=DisclosureLevel.RESOURCES,
+            disclosure_level=RESOURCES,
             instructions="Do things.",
             resource_files={},
         )

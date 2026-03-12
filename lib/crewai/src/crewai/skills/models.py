@@ -6,9 +6,8 @@ progressive disclosure of skill information.
 
 from __future__ import annotations
 
-from enum import IntEnum
 from pathlib import Path
-from typing import Any, Final, Literal
+from typing import Annotated, Any, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -23,18 +22,22 @@ MAX_DESCRIPTION_LENGTH: Final[int] = 1024
 ResourceDirName = Literal["scripts", "references", "assets"]
 
 
-class DisclosureLevel(IntEnum):
-    """Progressive disclosure levels for skill loading.
+DisclosureLevel = Annotated[
+    Literal[1, 2, 3], "Progressive disclosure levels for skill loading."
+]
 
-    Attributes:
-        METADATA: Only frontmatter metadata is loaded (name, description).
-        INSTRUCTIONS: Full SKILL.md body is loaded.
-        RESOURCES: Resource directories (scripts, references, assets) are cataloged.
-    """
-
-    METADATA = 1
-    INSTRUCTIONS = 2
-    RESOURCES = 3
+METADATA: Final[
+    Annotated[
+        DisclosureLevel, "Only frontmatter metadata is loaded (name, description)."
+    ]
+] = 1
+INSTRUCTIONS: Final[Annotated[DisclosureLevel, "Full SKILL.md body is loaded."]] = 2
+RESOURCES: Final[
+    Annotated[
+        DisclosureLevel,
+        "Resource directories (scripts, references, assets) are cataloged.",
+    ]
+] = 3
 
 
 class SkillFrontmatter(BaseModel):
@@ -110,7 +113,7 @@ class Skill(BaseModel):
         description="Filesystem path to the skill directory.",
     )
     disclosure_level: DisclosureLevel = Field(
-        default=DisclosureLevel.METADATA,
+        default=METADATA,
         description="Current progressive disclosure level of the skill.",
     )
     resource_files: dict[ResourceDirName, list[str]] | None = Field(

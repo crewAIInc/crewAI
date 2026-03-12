@@ -6,12 +6,13 @@ Validates skill names and directory structures per the Agent Skills standard.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+import re
+from typing import Any, Final
 
 
-MAX_SKILL_NAME_LENGTH: int = 64
-MIN_SKILL_NAME_LENGTH: int = 1
-SKILL_NAME_PATTERN: str = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
+MAX_SKILL_NAME_LENGTH: Final[int] = 64
+MIN_SKILL_NAME_LENGTH: Final[int] = 1
+SKILL_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 def coerce_skill_paths(v: list[Any] | None) -> list[Any] | None:

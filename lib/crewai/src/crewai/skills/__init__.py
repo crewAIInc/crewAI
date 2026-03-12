@@ -10,6 +10,9 @@ from crewai.skills.loader import (
     load_resources,
 )
 from crewai.skills.models import (
+    INSTRUCTIONS,
+    METADATA,
+    RESOURCES,
     DisclosureLevel,
     ResourceDirName,
     Skill,
@@ -20,6 +23,9 @@ from crewai.skills.validation import coerce_skill_paths
 
 
 __all__ = [
+    "INSTRUCTIONS",
+    "METADATA",
+    "RESOURCES",
     "DisclosureLevel",
     "ResourceDirName",
     "Skill",

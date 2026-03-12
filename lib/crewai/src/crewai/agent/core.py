@@ -66,7 +66,7 @@ from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
-from crewai.skills.models import DisclosureLevel, Skill as SkillModel
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -314,10 +314,7 @@ class Agent(BaseAgent):
 
         needs_work = self.skills and any(
             isinstance(s, Path)
-            or (
-                isinstance(s, SkillModel)
-                and s.disclosure_level < DisclosureLevel.INSTRUCTIONS
-            )
+            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
             for s in self.skills
         )
         if not needs_work and not crew_skills:

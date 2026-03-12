@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from crewai.skills.models import DisclosureLevel
+from crewai.skills.models import INSTRUCTIONS, METADATA, RESOURCES
 from crewai.skills.parser import (
     SkillParseError,
     load_skill_instructions,
@@ -93,7 +93,7 @@ class TestLoadSkillMetadata:
         )
         skill = load_skill_metadata(skill_dir)
         assert skill.name == "my-skill"
-        assert skill.disclosure_level == DisclosureLevel.METADATA
+        assert skill.disclosure_level == METADATA
         assert skill.instructions is None
 
     def test_directory_name_mismatch(self, tmp_path: Path) -> None:
@@ -117,7 +117,7 @@ class TestLoadSkillInstructions:
         )
         skill = load_skill_metadata(skill_dir)
         promoted = load_skill_instructions(skill)
-        assert promoted.disclosure_level == DisclosureLevel.INSTRUCTIONS
+        assert promoted.disclosure_level == INSTRUCTIONS
         assert promoted.instructions == "Full body."
 
     def test_idempotent(self, tmp_path: Path) -> None:
@@ -148,7 +148,7 @@ class TestLoadSkillResources:
 
         skill = load_skill_metadata(skill_dir)
         full = load_skill_resources(skill)
-        assert full.disclosure_level == DisclosureLevel.RESOURCES
+        assert full.disclosure_level == RESOURCES
         assert full.instructions == "Body."
         assert full.resource_files is not None
         assert "scripts" in full.resource_files

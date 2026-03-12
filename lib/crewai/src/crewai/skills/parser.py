@@ -9,12 +9,14 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Final
 
 import yaml
 
 from crewai.skills.models import (
-    DisclosureLevel,
+    INSTRUCTIONS,
+    METADATA,
+    RESOURCES,
     ResourceDirName,
     Skill,
     SkillFrontmatter,
@@ -25,9 +27,9 @@ from crewai.skills.validation import validate_directory_name
 _logger = logging.getLogger(__name__)
 
 
-SKILL_FILENAME: str = "SKILL.md"
-_CLOSING_DELIMITER: re.Pattern[str] = re.compile(r"\n---[ \t]*(?:\n|$)")
-_MAX_BODY_CHARS: int = 50_000
+SKILL_FILENAME: Final[str] = "SKILL.md"
+_CLOSING_DELIMITER: Final[re.Pattern[str]] = re.compile(r"\n---[ \t]*(?:\n|$)")
+_MAX_BODY_CHARS: Final[int] = 50_000
 
 
 class SkillParseError(ValueError):
@@ -120,7 +122,7 @@ def load_skill_metadata(skill_dir: Path) -> Skill:
     return Skill(
         frontmatter=frontmatter,
         path=skill_dir,
-        disclosure_level=DisclosureLevel.METADATA,
+        disclosure_level=METADATA,
     )
 
 
@@ -135,7 +137,7 @@ def load_skill_instructions(skill: Skill) -> Skill:
     Returns:
         New Skill instance at INSTRUCTIONS level.
     """
-    if skill.disclosure_level >= DisclosureLevel.INSTRUCTIONS:
+    if skill.disclosure_level >= INSTRUCTIONS:
         return skill
 
     skill_md_path = skill.path / SKILL_FILENAME
@@ -149,7 +151,7 @@ def load_skill_instructions(skill: Skill) -> Skill:
             _MAX_BODY_CHARS,
         )
     return skill.with_disclosure_level(
-        level=DisclosureLevel.INSTRUCTIONS,
+        level=INSTRUCTIONS,
         instructions=body,
     )
 
@@ -165,10 +167,10 @@ def load_skill_resources(skill: Skill) -> Skill:
     Returns:
         New Skill instance at RESOURCES level.
     """
-    if skill.disclosure_level >= DisclosureLevel.RESOURCES:
+    if skill.disclosure_level >= RESOURCES:
         return skill
 
-    if skill.disclosure_level < DisclosureLevel.INSTRUCTIONS:
+    if skill.disclosure_level < INSTRUCTIONS:
         skill = load_skill_instructions(skill)
 
     resource_dirs: list[tuple[ResourceDirName, Path]] = [
@@ -186,7 +188,7 @@ def load_skill_resources(skill: Skill) -> Skill:
             )
 
     return skill.with_disclosure_level(
-        level=DisclosureLevel.RESOURCES,
+        level=RESOURCES,
         instructions=skill.instructions,
         resource_files=resource_files,
     )

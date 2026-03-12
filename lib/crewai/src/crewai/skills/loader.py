@@ -10,10 +10,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-
-if TYPE_CHECKING:
-    from crewai.agents.agent_builder.base_agent import BaseAgent
-
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.skill_events import (
     SkillActivatedEvent,
@@ -22,7 +18,7 @@ from crewai.events.types.skill_events import (
     SkillLoadFailedEvent,
     SkillLoadedEvent,
 )
-from crewai.skills.models import DisclosureLevel, Skill
+from crewai.skills.models import INSTRUCTIONS, RESOURCES, Skill
 from crewai.skills.parser import (
     SKILL_FILENAME,
     load_skill_instructions,
@@ -30,6 +26,9 @@ from crewai.skills.parser import (
     load_skill_resources,
 )
 
+
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
 
 _logger = logging.getLogger(__name__)
 
@@ -80,7 +79,7 @@ def discover_skills(
                         from_agent=source,
                         skill_name=skill.name,
                         skill_path=skill.path,
-                        disclosure_level=skill.disclosure_level.value,
+                        disclosure_level=skill.disclosure_level,
                     ),
                 )
         except Exception as e:
@@ -125,7 +124,7 @@ def activate_skill(
     Returns:
         Skill at INSTRUCTIONS level or higher.
     """
-    if skill.disclosure_level >= DisclosureLevel.INSTRUCTIONS:
+    if skill.disclosure_level >= INSTRUCTIONS:
         return skill
 
     activated = load_skill_instructions(skill)
@@ -137,7 +136,7 @@ def activate_skill(
                 from_agent=source,
                 skill_name=activated.name,
                 skill_path=activated.path,
-                disclosure_level=activated.disclosure_level.value,
+                disclosure_level=activated.disclosure_level,
             ),
         )
 
@@ -168,14 +167,14 @@ def format_skill_context(skill: Skill) -> str:
     Returns:
         Formatted skill context string.
     """
-    if skill.disclosure_level >= DisclosureLevel.INSTRUCTIONS and skill.instructions:
+    if skill.disclosure_level >= INSTRUCTIONS and skill.instructions:
         parts = [
             f"## Skill: {skill.name}",
             skill.description,
             "",
             skill.instructions,
         ]
-        if skill.disclosure_level >= DisclosureLevel.RESOURCES and skill.resource_files:
+        if skill.disclosure_level >= RESOURCES and skill.resource_files:
             parts.append("")
             parts.append("### Available Resources")
             for dir_name, files in sorted(skill.resource_files.items()):

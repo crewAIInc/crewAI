@@ -4,20 +4,26 @@ from pathlib import Path
 
 import pytest
 
-from crewai.skills.models import DisclosureLevel, Skill, SkillFrontmatter
+from crewai.skills.models import (
+    INSTRUCTIONS,
+    METADATA,
+    RESOURCES,
+    Skill,
+    SkillFrontmatter,
+)
 
 
 class TestDisclosureLevel:
-    """Tests for DisclosureLevel enum."""
+    """Tests for DisclosureLevel constants."""
 
     def test_ordering(self) -> None:
-        assert DisclosureLevel.METADATA < DisclosureLevel.INSTRUCTIONS
-        assert DisclosureLevel.INSTRUCTIONS < DisclosureLevel.RESOURCES
+        assert METADATA < INSTRUCTIONS
+        assert INSTRUCTIONS < RESOURCES
 
     def test_values(self) -> None:
-        assert DisclosureLevel.METADATA == 1
-        assert DisclosureLevel.INSTRUCTIONS == 2
-        assert DisclosureLevel.RESOURCES == 3
+        assert METADATA == 1
+        assert INSTRUCTIONS == 2
+        assert RESOURCES == 3
 
 
 class TestSkillFrontmatter:
@@ -62,7 +68,7 @@ class TestSkill:
         skill = Skill(frontmatter=fm, path=tmp_path / "test-skill")
         assert skill.name == "test-skill"
         assert skill.description == "desc"
-        assert skill.disclosure_level == DisclosureLevel.METADATA
+        assert skill.disclosure_level == METADATA
 
     def test_resource_dirs(self, tmp_path: Path) -> None:
         skill_dir = tmp_path / "test-skill"
@@ -77,9 +83,9 @@ class TestSkill:
         fm = SkillFrontmatter(name="test-skill", description="desc")
         skill = Skill(frontmatter=fm, path=tmp_path)
         promoted = skill.with_disclosure_level(
-            DisclosureLevel.INSTRUCTIONS,
+            INSTRUCTIONS,
             instructions="Do this.",
         )
-        assert promoted.disclosure_level == DisclosureLevel.INSTRUCTIONS
+        assert promoted.disclosure_level == INSTRUCTIONS
         assert promoted.instructions == "Do this."
-        assert skill.disclosure_level == DisclosureLevel.METADATA
+        assert skill.disclosure_level == METADATA
