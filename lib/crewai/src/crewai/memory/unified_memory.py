@@ -232,10 +232,7 @@ class Memory(BaseModel):
         """
         ctx = contextvars.copy_context()
         try:
-            future: Future[Any] = self._save_pool.submit(
-                ctx.run,
-                lambda: fn(*args, **kwargs),
-            )
+            future: Future[Any] = self._save_pool.submit(ctx.run, fn, *args, **kwargs)
         except RuntimeError:
             # Pool shut down -- run synchronously as fallback
             future = Future()
