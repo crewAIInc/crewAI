@@ -1248,8 +1248,8 @@ class LLM(BaseLLM):
             )
             return tool_calls
 
-        # --- 6) If no tool calls or no available functions, return the text response directly as long as there is a text response
-        if (not tool_calls or not available_functions) and text_response:
+        # --- 6) If no tool calls, return the text response directly
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1387,7 +1387,8 @@ class LLM(BaseLLM):
             )
             return tool_calls
 
-        if (not tool_calls or not available_functions) and text_response:
+        # If no tool calls, return the text response directly
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
