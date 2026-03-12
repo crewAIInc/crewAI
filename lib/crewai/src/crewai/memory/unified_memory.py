@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 from datetime import datetime
 import threading
 import time
@@ -229,8 +230,12 @@ class Memory(BaseModel):
         If the pool has been shut down (e.g. after ``close()``), the save
         runs synchronously as a fallback so late saves still succeed.
         """
+        ctx = contextvars.copy_context()
         try:
-            future: Future[Any] = self._save_pool.submit(fn, *args, **kwargs)
+            future: Future[Any] = self._save_pool.submit(
+                ctx.run,
+                lambda: fn(*args, **kwargs),
+            )
         except RuntimeError:
             # Pool shut down -- run synchronously as fallback
             future = Future()

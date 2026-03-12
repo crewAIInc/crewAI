@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Coroutine, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 from functools import wraps
 import json
 from types import MethodType
@@ -276,9 +277,10 @@ def _fetch_agent_cards_concurrently(
         return agent_cards, failed_agents
 
     max_workers = min(len(a2a_agents), 10)
+    ctx = contextvars.copy_context()
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(_fetch_card_from_config, config): config
+            executor.submit(ctx.run, _fetch_card_from_config, config): config
             for config in a2a_agents
         }
         for future in as_completed(futures):

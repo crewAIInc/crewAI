@@ -11,6 +11,7 @@ Orchestrates the encoding side of memory in a single Flow with 5 steps:
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 from datetime import datetime
 import math
 from typing import Any
@@ -164,7 +165,11 @@ class EncodingFlow(Flow[EncodingState]):
     def parallel_find_similar(self) -> None:
         """Search storage for similar records, concurrently for all active items."""
         items = list(self.state.items)
-        active = [(i, item) for i, item in enumerate(items) if not item.dropped and item.embedding]
+        active = [
+            (i, item)
+            for i, item in enumerate(items)
+            if not item.dropped and item.embedding
+        ]
 
         if not active:
             return
@@ -185,8 +190,12 @@ class EncodingFlow(Flow[EncodingState]):
             item.similar_records = [r for r, _ in raw]
             item.top_similarity = float(raw[0][1]) if raw else 0.0
         else:
+            ctx = contextvars.copy_context()
             with ThreadPoolExecutor(max_workers=min(len(active), 8)) as pool:
-                futures = [(i, item, pool.submit(_search_one, item)) for i, item in active]
+                futures = [
+                    (i, item, pool.submit(ctx.run, _search_one, item))
+                    for i, item in active
+                ]
                 for _, item, future in futures:
                     raw = future.result()
                     item.similar_records = [r for r, _ in raw]
@@ -229,6 +238,7 @@ class EncodingFlow(Flow[EncodingState]):
         save_futures: dict[int, Future[MemoryAnalysis]] = {}
         consol_futures: dict[int, Future[ConsolidationPlan]] = {}
 
+        ctx = contextvars.copy_context()
         pool = ThreadPoolExecutor(max_workers=10)
         try:
             for i, item in enumerate(items):
@@ -250,24 +260,38 @@ class EncodingFlow(Flow[EncodingState]):
                     # Group B: consolidation only
                     self._apply_defaults(item)
                     consol_futures[i] = pool.submit(
+                        ctx.run,
                         analyze_for_consolidation,
-                        item.content, list(item.similar_records), self._llm,
+                        item.content,
+                        list(item.similar_records),
+                        self._llm,
                     )
                 elif not fields_provided and not has_similar:
                     # Group C: field resolution only
                     save_futures[i] = pool.submit(
+                        ctx.run,
                         analyze_for_save,
-                        item.content, existing_scopes, existing_categories, self._llm,
+                        item.content,
+                        existing_scopes,
+                        existing_categories,
+                        self._llm,
                     )
                 else:
                     # Group D: both in parallel
                     save_futures[i] = pool.submit(
+                        ctx.run,
                         analyze_for_save,
-                        item.content, existing_scopes, existing_categories, self._llm,
+                        item.content,
+                        existing_scopes,
+                        existing_categories,
+                        self._llm,
                     )
                     consol_futures[i] = pool.submit(
+                        ctx.run,
                         analyze_for_consolidation,
-                        item.content, list(item.similar_records), self._llm,
+                        item.content,
+                        list(item.similar_records),
+                        self._llm,
                     )
 
             # Collect field-resolution results
@@ -339,7 +363,9 @@ class EncodingFlow(Flow[EncodingState]):
         # similar_records overlap). Collect one action per record_id, first wins.
         # Also build a map from record_id to the original MemoryRecord for updates.
         dedup_deletes: set[str] = set()  # record_ids to delete
-        dedup_updates: dict[str, tuple[int, str]] = {}  # record_id -> (item_idx, new_content)
+        dedup_updates: dict[
+            str, tuple[int, str]
+        ] = {}  # record_id -> (item_idx, new_content)
         all_similar: dict[str, MemoryRecord] = {}  # record_id -> MemoryRecord
 
         for i, item in enumerate(items):
@@ -350,13 +376,24 @@ class EncodingFlow(Flow[EncodingState]):
                     all_similar[r.id] = r
             for action in item.plan.actions:
                 rid = action.record_id
-                if action.action == "delete" and rid not in dedup_deletes and rid not in dedup_updates:
+                if (
+                    action.action == "delete"
+                    and rid not in dedup_deletes
+                    and rid not in dedup_updates
+                ):
                     dedup_deletes.add(rid)
-                elif action.action == "update" and action.new_content and rid not in dedup_deletes and rid not in dedup_updates:
+                elif (
+                    action.action == "update"
+                    and action.new_content
+                    and rid not in dedup_deletes
+                    and rid not in dedup_updates
+                ):
                     dedup_updates[rid] = (i, action.new_content)
 
         # --- Batch re-embed all update contents in ONE call ---
-        update_list = list(dedup_updates.items())  # [(record_id, (item_idx, new_content)), ...]
+        update_list = list(
+            dedup_updates.items()
+        )  # [(record_id, (item_idx, new_content)), ...]
         update_embeddings: list[list[float]] = []
         if update_list:
             update_contents = [content for _, (_, content) in update_list]
@@ -377,16 +414,21 @@ class EncodingFlow(Flow[EncodingState]):
             if item.dropped or item.plan is None:
                 continue
             if item.plan.insert_new:
-                to_insert.append((i, MemoryRecord(
-                    content=item.content,
-                    scope=item.resolved_scope,
-                    categories=item.resolved_categories,
-                    metadata=item.resolved_metadata,
-                    importance=item.resolved_importance,
-                    embedding=item.embedding if item.embedding else None,
-                    source=item.resolved_source,
-                    private=item.resolved_private,
-                )))
+                to_insert.append(
+                    (
+                        i,
+                        MemoryRecord(
+                            content=item.content,
+                            scope=item.resolved_scope,
+                            categories=item.resolved_categories,
+                            metadata=item.resolved_metadata,
+                            importance=item.resolved_importance,
+                            embedding=item.embedding if item.embedding else None,
+                            source=item.resolved_source,
+                            private=item.resolved_private,
+                        ),
+                    )
+                )
 
         # All storage mutations under one lock so no other pipeline can
         # interleave and cause version conflicts. The lock is reentrant
