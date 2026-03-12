@@ -138,10 +138,12 @@ class RecallFlow(Flow[RecallState]):
                         }
                     )
         else:
-            ctx = contextvars.copy_context()
             with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as pool:
                 futures = {
-                    pool.submit(ctx.run, _search_one, emb, sc): (emb, sc)
+                    pool.submit(contextvars.copy_context().run, _search_one, emb, sc): (
+                        emb,
+                        sc,
+                    )
                     for emb, sc in tasks
                 }
                 for future in as_completed(futures):
@@ -329,7 +331,7 @@ class RecallFlow(Flow[RecallState]):
     @router(re_search)
     def re_decide_depth(self) -> str:
         """Re-evaluate depth after re-search. Same logic as decide_depth."""
-        return self.decide_depth()
+        return self.decide_depth()  # type: ignore[call-arg]
 
     @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:

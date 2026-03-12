@@ -277,10 +277,11 @@ def _fetch_agent_cards_concurrently(
         return agent_cards, failed_agents
 
     max_workers = min(len(a2a_agents), 10)
-    ctx = contextvars.copy_context()
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(ctx.run, _fetch_card_from_config, config): config
+            executor.submit(
+                contextvars.copy_context().run, _fetch_card_from_config, config
+            ): config
             for config in a2a_agents
         }
         for future in as_completed(futures):
