@@ -107,6 +107,27 @@ class PlanningConfig(BaseModel):
         default=None,
         description="Custom prompt for refining the plan.",
     )
+    max_replans: int = Field(
+        default=3,
+        description="Maximum number of full replanning attempts before finalizing.",
+        ge=0,
+    )
+    max_step_iterations: int = Field(
+        default=15,
+        description=(
+            "Maximum LLM iterations per step in the StepExecutor multi-turn loop. "
+            "Lower values make steps faster but less thorough."
+        ),
+        ge=1,
+    )
+    step_timeout: int | None = Field(
+        default=None,
+        description=(
+            "Maximum wall-clock seconds for a single step execution. "
+            "If exceeded, the step is marked as failed and observation decides "
+            "whether to continue or replan. None means no per-step timeout."
+        ),
+    )
     llm: str | Any | None = Field(
         default=None,
         description="LLM to use for planning. Uses agent's LLM if None.",

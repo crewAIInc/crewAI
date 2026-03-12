@@ -451,6 +451,27 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             return config.reasoning_effort
         return "medium"
 
+    def _get_max_replans(self) -> int:
+        """Get max replans from planning config or default to 3."""
+        config = getattr(self.agent, "planning_config", None)
+        if config is not None and hasattr(config, "max_replans"):
+            return config.max_replans
+        return 3
+
+    def _get_max_step_iterations(self) -> int:
+        """Get max step iterations from planning config or default to 15."""
+        config = getattr(self.agent, "planning_config", None)
+        if config is not None and hasattr(config, "max_step_iterations"):
+            return config.max_step_iterations
+        return 15
+
+    def _get_step_timeout(self) -> int | None:
+        """Get per-step timeout from planning config or default to None."""
+        config = getattr(self.agent, "planning_config", None)
+        if config is not None and hasattr(config, "step_timeout"):
+            return config.step_timeout
+        return None
+
     def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:
         """Build an isolated execution context for a single todo.
 
@@ -861,7 +882,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         Preserves completed todo results and replaces only pending steps.
         """
-        max_replans = 3
+        max_replans = self._get_max_replans()
 
         if self.state.replan_count >= max_replans:
             if self.agent.verbose:
@@ -1009,7 +1030,12 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
             step_executor = self._ensure_step_executor()
             context = self._build_context_for_todo(current)
-            result = step_executor.execute(current, context)
+            result = step_executor.execute(
+                current,
+                context,
+                max_step_iterations=self._get_max_step_iterations(),
+                step_timeout=self._get_step_timeout(),
+            )
 
             # Store result on the todo (do NOT mark completed — observation decides)
             current.result = result.result
@@ -1119,7 +1145,11 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         async def _run_step(todo: TodoItem) -> tuple[TodoItem, object]:
             step_executor = self._ensure_step_executor()
             context = self._build_context_for_todo(todo)
-            result = await asyncio.to_thread(step_executor.execute, todo, context)
+            result = await asyncio.to_thread(
+                step_executor.execute, todo, context,
+                self._get_max_step_iterations(),
+                self._get_step_timeout(),
+            )
             return todo, result
 
         gathered = await asyncio.gather(
@@ -2480,7 +2510,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         Returns:
             Tuple of (should_replan: bool, reason: str)
         """
-        max_replans = 3  # Maximum number of replanning attempts
+        max_replans = self._get_max_replans()
 
         # Don't replan if we've hit the limit
         if self.state.replan_count >= max_replans:
@@ -2677,7 +2707,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         Called when dynamic replanning is triggered. Regenerates the plan
         and routes back to todo-driven execution.
         """
-        max_replans = 3
+        max_replans = self._get_max_replans()
 
         if self.state.replan_count >= max_replans:
             if self.agent.verbose:

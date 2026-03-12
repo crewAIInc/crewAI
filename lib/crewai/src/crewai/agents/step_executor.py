@@ -127,7 +127,13 @@ class StepExecutor:
     # Public API
     # ------------------------------------------------------------------
 
-    def execute(self, todo: TodoItem, context: StepExecutionContext) -> StepResult:
+    def execute(
+        self,
+        todo: TodoItem,
+        context: StepExecutionContext,
+        max_step_iterations: int = 15,
+        step_timeout: int | None = None,
+    ) -> StepResult:
         """Execute a single todo item using a multi-turn action loop.
 
         Enforces the RPM limit, builds a fresh message list, then iterates
@@ -138,6 +144,8 @@ class StepExecutor:
         Args:
             todo: The todo item to execute.
             context: Immutable context with task info and dependency results.
+            max_step_iterations: Maximum LLM iterations in the multi-turn loop.
+            step_timeout: Maximum wall-clock seconds for this step. None = no limit.
 
         Returns:
             StepResult with the outcome.
@@ -150,9 +158,19 @@ class StepExecutor:
             messages = self._build_isolated_messages(todo, context)
 
             if self._use_native_tools:
-                result_text = self._execute_native(messages, tool_calls_made)
+                result_text = self._execute_native(
+                    messages, tool_calls_made,
+                    max_step_iterations=max_step_iterations,
+                    step_timeout=step_timeout,
+                    start_time=start_time,
+                )
             else:
-                result_text = self._execute_text_parsed(messages, tool_calls_made)
+                result_text = self._execute_text_parsed(
+                    messages, tool_calls_made,
+                    max_step_iterations=max_step_iterations,
+                    step_timeout=step_timeout,
+                    start_time=start_time,
+                )
             self._validate_expected_tool_usage(todo, tool_calls_made)
 
             elapsed = time.monotonic() - start_time
@@ -298,6 +316,8 @@ class StepExecutor:
         messages: list[LLMMessage],
         tool_calls_made: list[str],
         max_step_iterations: int = 15,
+        step_timeout: int | None = None,
+        start_time: float | None = None,
     ) -> str:
         """Execute step using text-parsed tool calling with a multi-turn loop.
 
@@ -310,6 +330,11 @@ class StepExecutor:
         last_tool_result = ""
 
         for _ in range(max_step_iterations):
+            # Check step timeout
+            if step_timeout and start_time:
+                elapsed = time.monotonic() - start_time
+                if elapsed >= step_timeout:
+                    return last_tool_result or f"Step timed out after {elapsed:.0f}s"
             answer = self.llm.call(
                 messages,
                 callbacks=self.callbacks,
@@ -504,6 +529,8 @@ class StepExecutor:
         messages: list[LLMMessage],
         tool_calls_made: list[str],
         max_step_iterations: int = 15,
+        step_timeout: int | None = None,
+        start_time: float | None = None,
     ) -> str:
         """Execute step using native function calling with a multi-turn loop.
 
@@ -515,6 +542,11 @@ class StepExecutor:
         accumulated_results: list[str] = []
 
         for _ in range(max_step_iterations):
+            # Check step timeout
+            if step_timeout and start_time:
+                elapsed = time.monotonic() - start_time
+                if elapsed >= step_timeout:
+                    return "\n\n".join(accumulated_results) if accumulated_results else f"Step timed out after {elapsed:.0f}s"
             answer = self.llm.call(
                 messages,
                 tools=self._openai_tools,
