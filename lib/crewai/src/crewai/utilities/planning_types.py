@@ -264,6 +264,7 @@ class StepObservation(BaseModel):
         if isinstance(v, dict):
             return [v]
         return v
+
     needs_full_replan: bool = Field(
         default=False,
         description="The remaining plan is fundamentally wrong and must be regenerated",

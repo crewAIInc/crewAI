@@ -296,9 +296,10 @@ class AgentReasoning:
         attempt = 1
         max_attempts = self.config.max_attempts
         task_id = str(self.task.id) if self.task else "kickoff"
-        current_attempt = attempt + 1
 
         while not ready and (max_attempts is None or attempt < max_attempts):
+            attempt += 1
+
             # Emit event for each refinement attempt
             try:
                 crewai_event_bus.emit(
@@ -306,7 +307,7 @@ class AgentReasoning:
                     AgentReasoningStartedEvent(
                         agent_role=self.agent.role,
                         task_id=task_id,
-                        attempt=current_attempt,
+                        attempt=attempt,
                         from_task=self.task,
                     ),
                 )
@@ -336,15 +337,13 @@ class AgentReasoning:
                         task_id=task_id,
                         plan=plan,
                         ready=ready,
-                        attempt=current_attempt,
+                        attempt=attempt,
                         from_task=self.task,
                         from_agent=self.agent,
                     ),
                 )
             except Exception:  # noqa: S110
                 pass
-
-            attempt += 1
 
             if max_attempts is not None and attempt >= max_attempts:
                 self.logger.warning(
