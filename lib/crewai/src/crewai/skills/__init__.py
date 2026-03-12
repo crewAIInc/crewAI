@@ -16,6 +16,7 @@ from crewai.skills.models import (
     SkillFrontmatter,
 )
 from crewai.skills.parser import SkillParseError, parse_skill_md
+from crewai.skills.validation import coerce_skill_paths
 
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "SkillFrontmatter",
     "SkillParseError",
     "activate_skill",
+    "coerce_skill_paths",
     "discover_skills",
     "format_skill_context",
     "load_resources",

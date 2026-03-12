@@ -90,6 +90,7 @@ from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
+from crewai.skills.validation import coerce_skill_paths as _coerce_skill_paths
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -302,9 +303,7 @@ class Crew(FlowTrackable, BaseModel):
     @classmethod
     def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path | Skill] | None:
         """Coerce string entries to Path objects, pass through Skill instances."""
-        if not v:
-            return v
-        return [Path(item) if isinstance(item, str) else item for item in v]
+        return _coerce_skill_paths(v)
 
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,

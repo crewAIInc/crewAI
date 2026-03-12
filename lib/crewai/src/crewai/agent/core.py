@@ -66,7 +66,7 @@ from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
-from crewai.skills.models import Skill as SkillModel
+from crewai.skills.models import DisclosureLevel, Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -296,11 +296,10 @@ class Agent(BaseAgent):
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 
     def set_skills(self) -> None:
-        """Resolve skill paths into loaded Skill objects.
+        """Resolve skill paths and activate skills to INSTRUCTIONS level.
 
-        Path entries trigger discovery and activation. Skill entries pass through.
-        Crew-level skill paths are merged in. Skips work when all items are
-        already resolved and there are no crew-level paths to merge.
+        Path entries trigger discovery and activation. Pre-loaded Skill objects
+        below INSTRUCTIONS level are activated. Crew-level skills are merged in.
         """
         from crewai.crew import Crew
 
@@ -313,8 +312,15 @@ class Agent(BaseAgent):
         if not self.skills and not crew_skills:
             return
 
-        has_unresolved = self.skills and any(isinstance(s, Path) for s in self.skills)
-        if not has_unresolved and not crew_skills:
+        needs_work = self.skills and any(
+            isinstance(s, Path)
+            or (
+                isinstance(s, SkillModel)
+                and s.disclosure_level < DisclosureLevel.INSTRUCTIONS
+            )
+            for s in self.skills
+        )
+        if not needs_work and not crew_skills:
             return
 
         seen: set[str] = set()
