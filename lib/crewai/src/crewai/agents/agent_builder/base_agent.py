@@ -31,7 +31,6 @@ from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
-from crewai.skills.validation import coerce_skill_paths as _coerce_skill_paths
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -221,12 +220,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
         min_length=1,
     )
-
-    @field_validator("skills", mode="before")
-    @classmethod
-    def coerce_skill_paths(cls, v: list[Any] | None) -> list[Path | Skill] | None:
-        """Coerce string entries to Path objects."""
-        return _coerce_skill_paths(v)
 
     @model_validator(mode="before")
     @classmethod
