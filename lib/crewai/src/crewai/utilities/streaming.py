@@ -181,7 +181,7 @@ def create_streaming_state(
 
     if use_async:
         async_queue = asyncio.Queue()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
     handler = _create_stream_handler(current_task_info, sync_queue, async_queue, loop)
     crewai_event_bus.register_handler(LLMStreamChunkEvent, handler)
