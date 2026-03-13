@@ -2136,6 +2136,9 @@ class LLM(BaseLLM):
         - If the model is "gemini/gemini-1.5-pro", returns "gemini".
         - If there is no '/', defaults to "openai".
         """
+        base_url = str(getattr(self, "base_url", None) or getattr(self, "api_base", None) or "").strip().lower()
+        if base_url and "openrouter.ai" in base_url:
+            return "openrouter"
         if "/" in self.model:
             return self.model.partition("/")[0]
         return None

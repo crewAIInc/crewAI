@@ -382,6 +382,8 @@ class OpenAICompletion(BaseLLM):
         """Get OpenAI client parameters."""
         model_name = self.model.strip()
         auth_mode = os.getenv("CREWAI_OPENAI_AUTH_MODE", "").strip().lower()
+        resolved_base_url_hint = str(self.base_url or self.api_base or "").strip().lower()
+        uses_openrouter = "openrouter.ai" in resolved_base_url_hint
 
         if model_name == self.PLATFORM_ONLY_MODEL:
             self.api = "responses"
@@ -390,7 +392,10 @@ class OpenAICompletion(BaseLLM):
             self.api_key = self._resolved_openai_auth.token
             resolved_base_url = self.PLATFORM_DEFAULT_BASE_URL
         else:
-            if self._should_force_codex_oauth_route(
+            if uses_openrouter:
+                self._use_codex_chatgpt_backend = False
+                self._resolved_openai_auth = None
+            elif self._should_force_codex_oauth_route(
                 model_name=model_name, auth_mode=auth_mode
             ):
                 self.api = "responses"

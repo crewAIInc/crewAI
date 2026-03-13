@@ -651,6 +651,19 @@ def test_llm_openai_codex_provider_prefix_routes_non_codex_named_model_to_chatgp
     assert params["api_key"] == "oauth-token"
 
 
+def test_llm_openrouter_base_url_forces_openrouter_provider(monkeypatch):
+    """When base_url targets OpenRouter, provider detection should honor OpenRouter even for openai/* models."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+
+    llm = LLM(
+        model="openai/gpt-5.3-codex",
+        base_url="https://openrouter.ai/api/v1",
+        api_key="sk-or-test",
+    )
+
+    assert llm._get_custom_llm_provider() == "openrouter"
+
+
 def test_openai_get_client_params_routes_pro_model_to_platform(monkeypatch):
     """gpt-5.2-pro must use Platform route and Platform credential."""
     monkeypatch.setenv("CREWAI_OPENAI_AUTH_MODE", "oauth_codex")
