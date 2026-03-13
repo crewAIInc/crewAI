@@ -159,14 +159,16 @@ class StepExecutor:
 
             if self._use_native_tools:
                 result_text = self._execute_native(
-                    messages, tool_calls_made,
+                    messages,
+                    tool_calls_made,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
                     start_time=start_time,
                 )
             else:
                 result_text = self._execute_text_parsed(
-                    messages, tool_calls_made,
+                    messages,
+                    tool_calls_made,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
                     start_time=start_time,
@@ -222,6 +224,9 @@ class StepExecutor:
             tools_section = self._i18n.retrieve(
                 "planning", "step_executor_tools_section"
             ).format(tool_names=tool_names)
+        elif self.tools:
+            tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
+            tools_section = f"\n\nAvailable tools: {tool_names}"
 
         return self._i18n.retrieve("planning", "step_executor_system_prompt").format(
             role=role,
@@ -546,7 +551,11 @@ class StepExecutor:
             if step_timeout and start_time:
                 elapsed = time.monotonic() - start_time
                 if elapsed >= step_timeout:
-                    return "\n\n".join(accumulated_results) if accumulated_results else f"Step timed out after {elapsed:.0f}s"
+                    return (
+                        "\n\n".join(accumulated_results)
+                        if accumulated_results
+                        else f"Step timed out after {elapsed:.0f}s"
+                    )
             answer = self.llm.call(
                 messages,
                 tools=self._openai_tools,
