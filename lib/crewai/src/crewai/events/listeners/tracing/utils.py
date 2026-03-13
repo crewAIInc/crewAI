@@ -158,11 +158,14 @@ def update_user_data(updates: dict[str, Any]) -> None:
     Args:
         updates: Key-value pairs to merge into the existing user data.
     """
-    with store_lock(_user_data_lock_name()):
-        data = _load_user_data()
-        data.update(updates)
-        p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
+    try:
+        with store_lock(_user_data_lock_name()):
+            data = _load_user_data()
+            data.update(updates)
+            p = _user_data_file()
+            p.write_text(json.dumps(data, indent=2))
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Failed to update user data: {e}")
 
 
 def has_user_declined_tracing() -> bool:
