@@ -1,3 +1,4 @@
+import contextvars
 import threading
 from typing import Any
 import urllib.request
@@ -67,7 +68,8 @@ def _track_install() -> None:
 def _track_install_async() -> None:
     """Track installation in background thread to avoid blocking imports."""
     if not Telemetry._is_telemetry_disabled():
-        thread = threading.Thread(target=_track_install, daemon=True)
+        ctx = contextvars.copy_context()
+        thread = threading.Thread(target=ctx.run, args=(_track_install,), daemon=True)
         thread.start()
 
 

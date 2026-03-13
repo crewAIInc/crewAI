@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Sequence
 import concurrent.futures
+import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
 import inspect
@@ -950,8 +951,9 @@ def summarize_messages(
             chunks=chunks, llm=llm, callbacks=callbacks, i18n=i18n
         )
         if is_inside_event_loop():
+            ctx = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                summarized_contents = pool.submit(asyncio.run, coro).result()
+                summarized_contents = pool.submit(ctx.run, asyncio.run, coro).result()
         else:
             summarized_contents = asyncio.run(coro)
 
