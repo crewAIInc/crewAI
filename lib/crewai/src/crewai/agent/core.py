@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
+import contextvars
 import shutil
 import subprocess
 import time
@@ -513,9 +514,13 @@ class Agent(BaseAgent):
         """
         import concurrent.futures
 
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(
-                self._execute_without_timeout, task_prompt=task_prompt, task=task
+                ctx.run,
+                self._execute_without_timeout,
+                task_prompt=task_prompt,
+                task=task,
             )
 
             try:
