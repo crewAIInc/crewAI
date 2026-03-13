@@ -118,11 +118,12 @@ jobs:
               | sed 's/^- /• /g')
           fi
 
-          {
-            echo "notes<<SLACKEOF"
-            echo "$notes"
-            echo "SLACKEOF"
-          } >> $GITHUB_OUTPUT
+          # Build JSON payload with proper escaping via jq
+          payload=$(jq -nc \
+            --arg version "$version" \
+            --arg notes "$notes" \
+            '{text: ":rocket: *crewAI v\($version)* published to <https://pypi.org/project/crewai/\($version)/|PyPI>\n\n\($notes)"}')
+          echo "payload=$payload" >> $GITHUB_OUTPUT
 
       - name: Notify Slack
         if: success()
@@ -130,5 +131,4 @@ jobs:
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
-          payload: |
-            text: ":rocket: *crewAI v${{ steps.release-info.outputs.version }}* published to <https://pypi.org/project/crewai/${{ steps.release-info.outputs.version }}/|PyPI>\n\n${{ steps.release-info.outputs.notes }}"
+          payload: ${{ steps.release-info.outputs.payload }}
