@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import TYPE_CHECKING
 
 
@@ -27,6 +28,7 @@ class BrowserSessionManager:
             region: AWS region for browser client
         """
         self.region = region
+        self._lock = threading.Lock()
         self._async_sessions: dict[str, tuple[BrowserClient, AsyncBrowser]] = {}
         self._sync_sessions: dict[str, tuple[BrowserClient, SyncBrowser]] = {}
 
@@ -39,8 +41,9 @@ class BrowserSessionManager:
         Returns:
             An async browser instance specific to the thread
         """
-        if thread_id in self._async_sessions:
-            return self._async_sessions[thread_id][1]
+        with self._lock:
+            if thread_id in self._async_sessions:
+                return self._async_sessions[thread_id][1]
 
         return await self._create_async_browser_session(thread_id)
 
@@ -53,8 +56,9 @@ class BrowserSessionManager:
         Returns:
             A sync browser instance specific to the thread
         """
-        if thread_id in self._sync_sessions:
-            return self._sync_sessions[thread_id][1]
+        with self._lock:
+            if thread_id in self._sync_sessions:
+                return self._sync_sessions[thread_id][1]
 
         return self._create_sync_browser_session(thread_id)
 
@@ -97,7 +101,8 @@ class BrowserSessionManager:
             )
 
             # Store session resources
-            self._async_sessions[thread_id] = (browser_client, browser)
+            with self._lock:
+                self._async_sessions[thread_id] = (browser_client, browser)
 
             return browser
 
@@ -154,7 +159,8 @@ class BrowserSessionManager:
             )
 
             # Store session resources
-            self._sync_sessions[thread_id] = (browser_client, browser)
+            with self._lock:
+                self._sync_sessions[thread_id] = (browser_client, browser)
 
             return browser
 
@@ -178,11 +184,12 @@ class BrowserSessionManager:
         Args:
             thread_id: Unique identifier for the thread
         """
-        if thread_id not in self._async_sessions:
-            logger.warning(f"No async browser session found for thread {thread_id}")
-            return
+        with self._lock:
+            if thread_id not in self._async_sessions:
+                logger.warning(f"No async browser session found for thread {thread_id}")
+                return
 
-        browser_client, browser = self._async_sessions[thread_id]
+            browser_client, browser = self._async_sessions.pop(thread_id)
 
         # Close browser
         if browser:
@@ -202,8 +209,6 @@ class BrowserSessionManager:
                     f"Error stopping browser client for thread {thread_id}: {e}"
                 )
 
-        # Remove session from dictionary
-        del self._async_sessions[thread_id]
         logger.info(f"Async browser session cleaned up for thread {thread_id}")
 
     def close_sync_browser(self, thread_id: str) -> None:
@@ -212,11 +217,12 @@ class BrowserSessionManager:
         Args:
             thread_id: Unique identifier for the thread
         """
-        if thread_id not in self._sync_sessions:
-            logger.warning(f"No sync browser session found for thread {thread_id}")
-            return
+        with self._lock:
+            if thread_id not in self._sync_sessions:
+                logger.warning(f"No sync browser session found for thread {thread_id}")
+                return
 
-        browser_client, browser = self._sync_sessions[thread_id]
+            browser_client, browser = self._sync_sessions.pop(thread_id)
 
         # Close browser
         if browser:
@@ -236,19 +242,17 @@ class BrowserSessionManager:
                     f"Error stopping browser client for thread {thread_id}: {e}"
                 )
 
-        # Remove session from dictionary
-        del self._sync_sessions[thread_id]
         logger.info(f"Sync browser session cleaned up for thread {thread_id}")
 
     async def close_all_browsers(self) -> None:
         """Close all browser sessions."""
-        # Close all async browsers
-        async_thread_ids = list(self._async_sessions.keys())
+        with self._lock:
+            async_thread_ids = list(self._async_sessions.keys())
+            sync_thread_ids = list(self._sync_sessions.keys())
+
         for thread_id in async_thread_ids:
             await self.close_async_browser(thread_id)
 
-        # Close all sync browsers
-        sync_thread_ids = list(self._sync_sessions.keys())
         for thread_id in sync_thread_ids:
             self.close_sync_browser(thread_id)
 

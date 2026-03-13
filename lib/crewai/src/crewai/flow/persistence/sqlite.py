@@ -1,11 +1,10 @@
-"""
-SQLite-based implementation of flow state persistence.
-"""
+"""SQLite-based implementation of flow state persistence."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import sqlite3
 from typing import TYPE_CHECKING, Any
@@ -13,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.utilities.lock_store import lock as store_lock
 from crewai.utilities.paths import db_storage_path
 
 
@@ -68,11 +68,15 @@ class SQLiteFlowPersistence(FlowPersistence):
             raise ValueError("Database path must be provided")
 
         self.db_path = path  # Now mypy knows this is str
+        self._lock_name = f"sqlite:{os.path.realpath(self.db_path)}"
         self.init_db()
 
     def init_db(self) -> None:
         """Create the necessary tables if they don't exist."""
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
+        with (
+            store_lock(self._lock_name),
+            sqlite3.connect(self.db_path, timeout=30) as conn,
+        ):
             conn.execute("PRAGMA journal_mode=WAL")
             # Main state table
             conn.execute(
@@ -114,6 +118,49 @@ class SQLiteFlowPersistence(FlowPersistence):
             """
             )
 
+    def _save_state_sql(
+        self,
+        conn: sqlite3.Connection,
+        flow_uuid: str,
+        method_name: str,
+        state_dict: dict[str, Any],
+    ) -> None:
+        """Execute the save-state INSERT without acquiring the lock.
+
+        Args:
+            conn: An open SQLite connection.
+            flow_uuid: Unique identifier for the flow instance.
+            method_name: Name of the method that just completed.
+            state_dict: State data as a plain dict.
+        """
+        conn.execute(
+            """
+            INSERT INTO flow_states (
+                flow_uuid,
+                method_name,
+                timestamp,
+                state_json
+            ) VALUES (?, ?, ?, ?)
+            """,
+            (
+                flow_uuid,
+                method_name,
+                datetime.now(timezone.utc).isoformat(),
+                json.dumps(state_dict),
+            ),
+        )
+
+    @staticmethod
+    def _to_state_dict(state_data: dict[str, Any] | BaseModel) -> dict[str, Any]:
+        """Convert state_data to a plain dict."""
+        if isinstance(state_data, BaseModel):
+            return state_data.model_dump()
+        if isinstance(state_data, dict):
+            return state_data
+        raise ValueError(
+            f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
+        )
+
     def save_state(
         self,
         flow_uuid: str,
@@ -127,33 +174,13 @@ class SQLiteFlowPersistence(FlowPersistence):
             method_name: Name of the method that just completed
             state_data: Current state data (either dict or Pydantic model)
         """
-        # Convert state_data to dict, handling both Pydantic and dict cases
-        if isinstance(state_data, BaseModel):
-            state_dict = state_data.model_dump()
-        elif isinstance(state_data, dict):
-            state_dict = state_data
-        else:
-            raise ValueError(
-                f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
-            )
+        state_dict = self._to_state_dict(state_data)
 
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
-            conn.execute(
-                """
-            INSERT INTO flow_states (
-                flow_uuid,
-                method_name,
-                timestamp,
-                state_json
-            ) VALUES (?, ?, ?, ?)
-            """,
-                (
-                    flow_uuid,
-                    method_name,
-                    datetime.now(timezone.utc).isoformat(),
-                    json.dumps(state_dict),
-                ),
-            )
+        with (
+            store_lock(self._lock_name),
+            sqlite3.connect(self.db_path, timeout=30) as conn,
+        ):
+            self._save_state_sql(conn, flow_uuid, method_name, state_dict)
 
     def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
         """Load the most recent state for a given flow UUID.
@@ -198,24 +225,14 @@ class SQLiteFlowPersistence(FlowPersistence):
             context: The pending feedback context with all resume information
             state_data: Current state data
         """
-        # Import here to avoid circular imports
+        state_dict = self._to_state_dict(state_data)
 
-        # Convert state_data to dict
-        if isinstance(state_data, BaseModel):
-            state_dict = state_data.model_dump()
-        elif isinstance(state_data, dict):
-            state_dict = state_data
-        else:
-            raise ValueError(
-                f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
-            )
+        with (
+            store_lock(self._lock_name),
+            sqlite3.connect(self.db_path, timeout=30) as conn,
+        ):
+            self._save_state_sql(conn, flow_uuid, context.method_name, state_dict)
 
-        # Also save to regular state table for consistency
-        self.save_state(flow_uuid, context.method_name, state_data)
-
-        # Save pending feedback context
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
-            # Use INSERT OR REPLACE to handle re-triggering feedback on same flow
             conn.execute(
                 """
             INSERT OR REPLACE INTO pending_feedback (
@@ -273,7 +290,10 @@ class SQLiteFlowPersistence(FlowPersistence):
         Args:
             flow_uuid: Unique identifier for the flow instance
         """
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
+        with (
+            store_lock(self._lock_name),
+            sqlite3.connect(self.db_path, timeout=30) as conn,
+        ):
             conn.execute(
                 """
             DELETE FROM pending_feedback

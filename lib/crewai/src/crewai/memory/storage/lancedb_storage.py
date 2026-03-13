@@ -383,11 +383,12 @@ class LanceDBStorage:
         """Return a single record by ID, or None if not found."""
         if self._table is None:
             return None
-        safe_id = str(record_id).replace("'", "''")
-        rows = self._table.search().where(f"id = '{safe_id}'").limit(1).to_list()
-        if not rows:
-            return None
-        return self._row_to_record(rows[0])
+        with self._write_lock:
+            safe_id = str(record_id).replace("'", "''")
+            rows = self._table.search().where(f"id = '{safe_id}'").limit(1).to_list()
+            if not rows:
+                return None
+            return self._row_to_record(rows[0])
 
     def search(
         self,
@@ -400,14 +401,15 @@ class LanceDBStorage:
     ) -> list[tuple[MemoryRecord, float]]:
         if self._table is None:
             return []
-        query = self._table.search(query_embedding)
-        if scope_prefix is not None and scope_prefix.strip("/"):
-            prefix = scope_prefix.rstrip("/")
-            like_val = prefix + "%"
-            query = query.where(f"scope LIKE '{like_val}'")
-        results = query.limit(
-            limit * 3 if (categories or metadata_filter) else limit
-        ).to_list()
+        with self._write_lock:
+            query = self._table.search(query_embedding)
+            if scope_prefix is not None and scope_prefix.strip("/"):
+                prefix = scope_prefix.rstrip("/")
+                like_val = prefix + "%"
+                query = query.where(f"scope LIKE '{like_val}'")
+            results = query.limit(
+                limit * 3 if (categories or metadata_filter) else limit
+            ).to_list()
         out: list[tuple[MemoryRecord, float]] = []
         for row in results:
             record = self._row_to_record(row)
@@ -500,12 +502,13 @@ class LanceDBStorage:
         """
         if self._table is None:
             return []
-        q = self._table.search()
-        if scope_prefix is not None and scope_prefix.strip("/"):
-            q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
-        if columns is not None:
-            q = q.select(columns)
-        return q.limit(limit).to_list()
+        with self._write_lock:
+            q = self._table.search()
+            if scope_prefix is not None and scope_prefix.strip("/"):
+                q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+            if columns is not None:
+                q = q.select(columns)
+            return q.limit(limit).to_list()
 
     def list_records(
         self, scope_prefix: str | None = None, limit: int = 200, offset: int = 0
