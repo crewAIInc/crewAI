@@ -173,13 +173,26 @@ class FilteredStream(io.TextIOBase):
         return True
 
 
+def enable_litellm_filtering() -> None:
+    """Enable filtering of LiteLLM debug output from stdout/stderr.
+
+    This wraps sys.stdout and sys.stderr with FilteredStream to suppress
+    noisy LiteLLM banners and debug messages.
+
+    Can also be enabled via environment variable: CREWAI_FILTER_LITELLM_OUTPUT=1
+    """
+    if not isinstance(sys.stdout, FilteredStream):
+        sys.stdout = FilteredStream(sys.stdout)
+    if not isinstance(sys.stderr, FilteredStream):
+        sys.stderr = FilteredStream(sys.stderr)
+
+
 # Apply the filtered stream globally so that any subsequent writes containing the filtered
 # keywords (e.g., "litellm") are hidden from terminal output. We guard against double
 # wrapping to ensure idempotency in environments where this module might be reloaded.
-if not isinstance(sys.stdout, FilteredStream):
-    sys.stdout = FilteredStream(sys.stdout)
-if not isinstance(sys.stderr, FilteredStream):
-    sys.stderr = FilteredStream(sys.stderr)
+# This is now opt-in via CREWAI_FILTER_LITELLM_OUTPUT environment variable.
+if os.environ.get("CREWAI_FILTER_LITELLM_OUTPUT", "").lower() in ("1", "true", "yes"):
+    enable_litellm_filtering()
 
 
 MIN_CONTEXT: Final[int] = 1024
