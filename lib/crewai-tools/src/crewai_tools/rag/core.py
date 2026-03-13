@@ -1,9 +1,11 @@
 import logging
+import os
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import chromadb
+from crewai.utilities.lock_store import lock as store_lock
 from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai_tools.rag.base_loader import BaseLoader
@@ -38,21 +40,31 @@ class RAG(Adapter):
     _client: Any = PrivateAttr()
     _collection: Any = PrivateAttr()
     _embedding_service: EmbeddingService = PrivateAttr()
+    _lock_name: str = PrivateAttr(default="")
 
     def model_post_init(self, __context: Any) -> None:
         try:
-            if self.persist_directory:
-                self._client = chromadb.PersistentClient(path=self.persist_directory)
-            else:
-                self._client = chromadb.Client()
-
-            self._collection = self._client.get_or_create_collection(
-                name=self.collection_name,
-                metadata={
-                    "hnsw:space": "cosine",
-                    "description": "CrewAI Knowledge Base",
-                },
+            self._lock_name = (
+                f"chromadb:{os.path.realpath(self.persist_directory)}"
+                if self.persist_directory
+                else "chromadb:ephemeral"
             )
+
+            with store_lock(self._lock_name):
+                if self.persist_directory:
+                    self._client = chromadb.PersistentClient(
+                        path=self.persist_directory
+                    )
+                else:
+                    self._client = chromadb.Client()
+
+                self._collection = self._client.get_or_create_collection(
+                    name=self.collection_name,
+                    metadata={
+                        "hnsw:space": "cosine",
+                        "description": "CrewAI Knowledge Base",
+                    },
+                )
 
             self._embedding_service = EmbeddingService(
                 provider=self.embedding_provider,
@@ -87,29 +99,8 @@ class RAG(Adapter):
         loader_result = loader.load(source_content)
         doc_id = loader_result.doc_id
 
-        existing_doc = self._collection.get(
-            where={"source": source_content.source_ref}, limit=1
-        )
-        existing_doc_id = (
-            existing_doc and existing_doc["metadatas"][0]["doc_id"]
-            if existing_doc["metadatas"]
-            else None
-        )
-
-        if existing_doc_id == doc_id:
-            logger.warning(
-                f"Document with source {loader_result.source} already exists"
-            )
-            return
-
-        # Document with same source ref does exists but the content has changed, deleting the oldest reference
-        if existing_doc_id and existing_doc_id != loader_result.doc_id:
-            logger.warning(f"Deleting old document with doc_id {existing_doc_id}")
-            self._collection.delete(where={"doc_id": existing_doc_id})
-
-        documents = []
-
         chunks = chunker.chunk(loader_result.content)
+        documents = []
         for i, chunk in enumerate(chunks):
             doc_metadata = (metadata or {}).copy()
             doc_metadata["chunk_index"] = i
@@ -136,7 +127,6 @@ class RAG(Adapter):
 
         ids = [doc.id for doc in documents]
         metadatas = []
-
         for doc in documents:
             doc_metadata = doc.metadata.copy()
             doc_metadata.update(
@@ -148,27 +138,48 @@ class RAG(Adapter):
             )
             metadatas.append(doc_metadata)
 
-        try:
-            self._collection.add(
-                ids=ids,
-                embeddings=embeddings,
-                documents=contents,
-                metadatas=metadatas,
+        with store_lock(self._lock_name):
+            existing_doc = self._collection.get(
+                where={"source": source_content.source_ref}, limit=1
             )
-            logger.info(f"Added {len(documents)} documents to knowledge base")
-        except Exception as e:
-            logger.error(f"Failed to add documents to ChromaDB: {e}")
+            existing_doc_id = (
+                existing_doc and existing_doc["metadatas"][0]["doc_id"]
+                if existing_doc["metadatas"]
+                else None
+            )
+
+            if existing_doc_id == doc_id:
+                logger.warning(
+                    f"Document with source {loader_result.source} already exists"
+                )
+                return
+
+            if existing_doc_id and existing_doc_id != loader_result.doc_id:
+                logger.warning(f"Deleting old document with doc_id {existing_doc_id}")
+                self._collection.delete(where={"doc_id": existing_doc_id})
+
+            try:
+                self._collection.add(
+                    ids=ids,
+                    embeddings=embeddings,
+                    documents=contents,
+                    metadatas=metadatas,
+                )
+                logger.info(f"Added {len(documents)} documents to knowledge base")
+            except Exception as e:
+                logger.error(f"Failed to add documents to ChromaDB: {e}")
 
     def query(self, question: str, where: dict[str, Any] | None = None) -> str:  # type: ignore
         try:
             question_embedding = self._embedding_service.embed_text(question)
 
-            results = self._collection.query(
-                query_embeddings=[question_embedding],
-                n_results=self.top_k,
-                where=where,
-                include=["documents", "metadatas", "distances"],
-            )
+            with store_lock(self._lock_name):
+                results = self._collection.query(
+                    query_embeddings=[question_embedding],
+                    n_results=self.top_k,
+                    where=where,
+                    include=["documents", "metadatas", "distances"],
+                )
 
             if (
                 not results
@@ -201,7 +212,8 @@ class RAG(Adapter):
 
     def delete_collection(self) -> None:
         try:
-            self._client.delete_collection(self.collection_name)
+            with store_lock(self._lock_name):
+                self._client.delete_collection(self.collection_name)
             logger.info(f"Deleted collection: {self.collection_name}")
         except Exception as e:
             logger.error(f"Failed to delete collection: {e}")

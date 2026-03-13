@@ -39,4 +39,5 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
         default_limit=config.limit,
         default_score_threshold=config.score_threshold,
         default_batch_size=config.batch_size,
+        lock_name=f"chromadb:{persist_dir}",
     )

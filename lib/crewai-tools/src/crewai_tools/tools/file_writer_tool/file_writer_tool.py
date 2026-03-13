@@ -30,9 +30,8 @@ class FileWriterTool(BaseTool):
 
     def _run(self, **kwargs: Any) -> str:
         try:
-            # Create the directory if it doesn't exist
-            if kwargs.get("directory") and not os.path.exists(kwargs["directory"]):
-                os.makedirs(kwargs["directory"])
+            if kwargs.get("directory"):
+                os.makedirs(kwargs["directory"], exist_ok=True)
 
             # Construct the full path
             filepath = os.path.join(kwargs.get("directory") or "", kwargs["filename"])

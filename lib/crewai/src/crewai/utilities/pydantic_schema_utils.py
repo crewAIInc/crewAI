@@ -657,7 +657,10 @@ def _json_schema_to_pydantic_field(
         A tuple of (type, Field) for use with create_model.
     """
     type_ = _json_schema_to_pydantic_type(
-        json_schema, root_schema, name_=name.title(), enrich_descriptions=enrich_descriptions
+        json_schema,
+        root_schema,
+        name_=name.title(),
+        enrich_descriptions=enrich_descriptions,
     )
     is_required = name in required
 
@@ -806,7 +809,10 @@ def _json_schema_to_pydantic_type(
     if ref:
         ref_schema = _resolve_ref(ref, root_schema)
         return _json_schema_to_pydantic_type(
-            ref_schema, root_schema, name_=name_, enrich_descriptions=enrich_descriptions
+            ref_schema,
+            root_schema,
+            name_=name_,
+            enrich_descriptions=enrich_descriptions,
         )
 
     enum_values = json_schema.get("enum")
@@ -835,12 +841,16 @@ def _json_schema_to_pydantic_type(
     if all_of_schemas:
         if len(all_of_schemas) == 1:
             return _json_schema_to_pydantic_type(
-                all_of_schemas[0], root_schema, name_=name_,
+                all_of_schemas[0],
+                root_schema,
+                name_=name_,
                 enrich_descriptions=enrich_descriptions,
             )
         merged = _merge_all_of_schemas(all_of_schemas, root_schema)
         return _json_schema_to_pydantic_type(
-            merged, root_schema, name_=name_,
+            merged,
+            root_schema,
+            name_=name_,
             enrich_descriptions=enrich_descriptions,
         )
 
@@ -858,7 +868,9 @@ def _json_schema_to_pydantic_type(
         items_schema = json_schema.get("items")
         if items_schema:
             item_type = _json_schema_to_pydantic_type(
-                items_schema, root_schema, name_=name_,
+                items_schema,
+                root_schema,
+                name_=name_,
                 enrich_descriptions=enrich_descriptions,
             )
             return list[item_type]  # type: ignore[valid-type]
@@ -870,7 +882,8 @@ def _json_schema_to_pydantic_type(
             if json_schema_.get("title") is None:
                 json_schema_["title"] = name_ or "DynamicModel"
             return create_model_from_schema(
-                json_schema_, root_schema=root_schema,
+                json_schema_,
+                root_schema=root_schema,
                 enrich_descriptions=enrich_descriptions,
             )
         return dict
