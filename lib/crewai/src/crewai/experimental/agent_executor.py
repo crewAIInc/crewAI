@@ -952,18 +952,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """
         ready = self.state.todos.get_ready_todos()
 
-        # DEBUG: Trace todo readiness
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] get_ready_todos_method: found {len(ready)} ready todos",
-                color="cyan",
-            )
-            for todo in self.state.todos.items:
-                self._printer.print(
-                    content=f"[DEBUG]   Todo {todo.step_number}: status={todo.status}, desc={todo.description[:50]}...",
-                    color="cyan",
-                )
-
         if not ready:
             if self.state.todos.is_complete:
                 return "all_todos_complete"
@@ -971,11 +959,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             # dependencies, e.g. a dependency was never completed). Trigger a
             # replan so the planner can generate a new plan that unblocks
             # execution rather than erroneously finalizing.
-            if self.agent.verbose:
-                self._printer.print(
-                    content="[DEBUG] No ready todos but plan not complete — stuck state, triggering replan",
-                    color="yellow",
-                )
             self.state.last_replan_reason = (
                 "No todos are ready but plan is not complete — "
                 "likely a dependency deadlock or missing completion"
@@ -985,19 +968,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         if len(ready) == 1:
             # Mark the single ready todo as running
             self.state.todos.mark_running(ready[0].step_number)
-            if self.agent.verbose:
-                self._printer.print(
-                    content=f"[DEBUG] Marked todo {ready[0].step_number} as running -> single_todo_ready",
-                    color="cyan",
-                )
             return "single_todo_ready"
 
         # Multiple todos ready - can parallelize
-        if self.agent.verbose:
-            self._printer.print(
-                content="[DEBUG] Multiple todos ready -> multiple_todos_ready",
-                color="cyan",
-            )
         return "multiple_todos_ready"
 
     @router("single_todo_ready")
@@ -1067,11 +1040,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             return "step_executed"
 
         # Legacy path: inject context into shared messages for ReAct loop
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] execute_todo_sequential (legacy): starting todo {current.step_number}",
-                color="cyan",
-            )
         self._inject_todo_context(current)
         return "todo_injected"
 
@@ -1487,11 +1455,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         if self.state.todos.items and not self.state.todos.is_complete:
             current_todo = self.state.todos.current_todo
             if current_todo:
-                if self.agent.verbose:
-                    self._printer.print(
-                        content=f"[DEBUG] Finish with pending todos -> treating as todo_satisfied for todo {current_todo.step_number}",
-                        color="cyan",
-                    )
                 return "todo_satisfied"
         return default_route  # type: ignore[return-value]
 
@@ -1504,20 +1467,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         When todos are active and the LLM produces a final answer, we treat it
         as completing the current todo rather than finishing the entire task.
         """
-        # DEBUG: Trace routing decision
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] route_by_answer_type: answer_type={type(self.state.current_answer).__name__}",
-                color="cyan",
-            )
-            if self.state.todos.items:
-                pending = [t for t in self.state.todos.items if t.status == "pending"]
-                running = [t for t in self.state.todos.items if t.status == "running"]
-                self._printer.print(
-                    content=f"[DEBUG] Todos: {len(pending)} pending, {len(running)} running, current={self.state.todos.current_todo}",
-                    color="cyan",
-                )
-
         if isinstance(self.state.current_answer, AgentAction):
             return "execute_tool"
 
@@ -2037,40 +1986,10 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """
         current_todo = self.state.todos.current_todo
 
-        # DEBUG: Trace native todo completion check
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] check_native_todo_completion: current_todo={current_todo.step_number if current_todo else None}",
-                color="cyan",
-            )
-
         if not current_todo:
-            # No active todo, continue with normal iteration
-            if self.agent.verbose:
-                self._printer.print(
-                    content="[DEBUG] No current todo -> todo_not_satisfied",
-                    color="cyan",
-                )
             return "todo_not_satisfied"
 
         # For native tools, any tool execution satisfies the todo
-        # The tool name matching is handled by native tool execution
-        if current_todo.tool_to_use:
-            # Check if any tool in the recent execution matched the expected tool
-            # For simplicity, any tool execution counts when there's a current todo
-            if self.agent.verbose:
-                self._printer.print(
-                    content=f"[DEBUG] Native tool execution for todo {current_todo.step_number} -> todo_satisfied",
-                    color="cyan",
-                )
-            return "todo_satisfied"
-
-        # Any tool use counts when no specific tool is required
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] Any native tool use counts for todo {current_todo.step_number} -> todo_satisfied",
-                color="cyan",
-            )
         return "todo_satisfied"
 
     @listen("initialized")
@@ -2106,20 +2025,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """
         current_todo = self.state.todos.current_todo
 
-        # DEBUG: Trace todo completion check
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] check_todo_completion: current_todo={current_todo.step_number if current_todo else None}, answer_type={type(self.state.current_answer).__name__}",
-                color="cyan",
-            )
-
         if not current_todo:
-            # No active todo, continue with normal iteration
-            if self.agent.verbose:
-                self._printer.print(
-                    content="[DEBUG] No current todo -> todo_not_satisfied",
-                    color="cyan",
-                )
             return "todo_not_satisfied"
 
         action = self.state.current_answer
@@ -2127,37 +2033,14 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         # Check if the expected tool was used
         if isinstance(action, AgentAction):
             if current_todo.tool_to_use:
-                # Check if the tool used matches the expected tool
                 if action.tool == current_todo.tool_to_use:
-                    if self.agent.verbose:
-                        self._printer.print(
-                            content=f"[DEBUG] Expected tool {current_todo.tool_to_use} matched -> todo_satisfied",
-                            color="cyan",
-                        )
                     return "todo_satisfied"
             else:
-                # No specific tool expected, any tool use counts
-                if self.agent.verbose:
-                    self._printer.print(
-                        content=f"[DEBUG] Any tool use counts (used {action.tool}) -> todo_satisfied",
-                        color="cyan",
-                    )
                 return "todo_satisfied"
 
-        # Check if we got a final answer for this step
         if isinstance(action, AgentFinish):
-            if self.agent.verbose:
-                self._printer.print(
-                    content="[DEBUG] AgentFinish received -> todo_satisfied",
-                    color="cyan",
-                )
             return "todo_satisfied"
 
-        if self.agent.verbose:
-            self._printer.print(
-                content="[DEBUG] No satisfaction condition met -> todo_not_satisfied",
-                color="cyan",
-            )
         return "todo_not_satisfied"
 
     @listen("todo_satisfied")
@@ -2165,19 +2048,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """Mark the current todo as completed with its result."""
         current_todo = self.state.todos.current_todo
 
-        # DEBUG: Trace marking todo complete
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] mark_todo_complete called: current_todo={current_todo.step_number if current_todo else None}",
-                color="cyan",
-            )
-
         if not current_todo:
-            if self.agent.verbose:
-                self._printer.print(
-                    content="[DEBUG] No current todo to mark -> todo_marked",
-                    color="cyan",
-                )
             return "todo_marked"
 
         # Extract result from the current answer
@@ -2225,10 +2096,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 content=f"✓ Todo {step_number} completed ({completed}/{total})",
                 color="green",
             )
-            self._printer.print(
-                content=f"[DEBUG] Marked todo {step_number} as completed, result_len={len(result)}",
-                color="cyan",
-            )
 
         # Add to history as a SYSTEM message for subsequent steps
         if result:
@@ -2245,42 +2112,15 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         Also checks if replanning is needed based on execution results.
         """
-        # DEBUG: Trace checking for more todos
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] check_more_todos: is_complete={self.state.todos.is_complete}",
-                color="cyan",
-            )
-            for todo in self.state.todos.items:
-                self._printer.print(
-                    content=f"[DEBUG]   Todo {todo.step_number}: status={todo.status}",
-                    color="cyan",
-                )
-
         # Check if replanning is needed before continuing
         should_replan, reason = self._should_replan()
         if should_replan:
             self.state.last_replan_reason = reason
-            if self.agent.verbose:
-                self._printer.print(
-                    content=f"[DEBUG] Replanning needed: {reason} -> needs_replan",
-                    color="cyan",
-                )
             return "needs_replan"
 
         if self.state.todos.is_complete:
-            if self.agent.verbose:
-                self._printer.print(
-                    content="[DEBUG] All todos complete -> all_todos_complete",
-                    color="cyan",
-                )
             return "all_todos_complete"
 
-        if self.agent.verbose:
-            self._printer.print(
-                content="[DEBUG] More todos to execute -> has_todos",
-                color="cyan",
-            )
         return "has_todos"
 
     @router("todo_not_satisfied")
