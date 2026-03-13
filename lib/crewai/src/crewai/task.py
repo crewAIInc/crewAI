@@ -9,6 +9,7 @@ import inspect
 import json
 import logging
 from pathlib import Path
+import contextvars
 import threading
 from typing import (
     Any,
@@ -524,10 +525,13 @@ class Task(BaseModel):
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
+        # Copy the current context so ContextVar values propagate to the
+        # worker thread (e.g. tracing spans, tenant IDs, etc.).
+        ctx = contextvars.copy_context()
         threading.Thread(
             daemon=True,
-            target=self._execute_task_async,
-            args=(agent, context, tools, future),
+            target=ctx.run,
+            args=(self._execute_task_async, agent, context, tools, future),
         ).start()
         return future
 
