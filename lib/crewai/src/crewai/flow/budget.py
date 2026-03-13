@@ -6,6 +6,14 @@ when token usage, estimated costs, or LLM request counts exceed configured thres
 
 Supports HITL (human-in-the-loop) integration for budget approval when on_exceed='pause'.
 
+Note:
+    **Concurrent Flow Limitation**: The budget decorator uses the global event bus to
+    track LLM calls. When multiple budget-decorated flows run concurrently, each flow's
+    event handlers may receive events from other flows' LLM calls. This is a known
+    limitation in v1. For accurate per-flow tracking in concurrent scenarios, run flows
+    sequentially or use separate processes. True flow-scoped event filtering would
+    require changes to the event bus architecture.
+
 Example:
     ```python
     from crewai.flow import Flow, start, listen, budget
@@ -528,11 +536,24 @@ def _handle_exceeded_budget(
     # Process feedback to determine approval
     import re
 
-    # Use word-boundary matching to avoid false positives (e.g., "know" contains "no")
     feedback_lower = feedback.lower().strip()
-    denial_pattern = r'\b(denied|deny|no|stop|reject)\b'
 
-    if not feedback_lower or re.search(denial_pattern, feedback_lower):
+    # Check for structured emit response first (from HITL providers)
+    is_approved = feedback_lower == "approved"
+    is_denied = feedback_lower == "denied"
+
+    if not is_approved and not is_denied:
+        # Fall back to text parsing - check APPROVAL patterns FIRST to avoid
+        # false positives like "no problem" matching denial
+        approval_pattern = r'\b(yes|approve[ds]?|continue|go\s*ahead|proceed|ok|okay)\b'
+        denial_pattern = r'\b(denied|deny|no|stop|reject)\b'
+
+        if re.search(approval_pattern, feedback_lower):
+            is_approved = True
+        elif re.search(denial_pattern, feedback_lower):
+            is_denied = True
+
+    if not feedback_lower or is_denied:
         raise BudgetExceededError(
             current_cost=tracker.estimated_cost,
             budget_limit=tracker.max_cost,
@@ -543,54 +564,62 @@ def _handle_exceeded_budget(
             message="Budget continuation denied by human reviewer",
         )
 
-    # Approved - increase budget and/or token limit and/or request limit
-    # Try to extract numbers from the feedback
-    amount_match = re.search(r'\$?(\d+(?:\.\d{1,2})?)', feedback)
-
     # Handle budget approval
-    if tracker.max_cost is not None:
-        if amount_match:
-            additional_budget = float(amount_match.group(1))
+    if tracker.is_budget_exceeded:
+        # Parse budget amount - require $ prefix for budget
+        budget_match = re.search(r'\$(\d+(?:\.\d{1,2})?)', feedback)
+        if budget_match:
+            additional_budget = float(budget_match.group(1))
         else:
             # Default: approve same amount as original budget
-            additional_budget = tracker.max_cost
+            additional_budget = tracker.max_cost if tracker.max_cost is not None else 0.0
         tracker.approved_budget += additional_budget
+        effective = tracker.effective_budget
+        effective_str = f"${effective:.2f}" if effective is not None else "N/A"
         logger.info(
             f"Budget approved: +${additional_budget:.2f} "
-            f"(new effective budget: ${tracker.effective_budget:.2f})"
+            f"(new effective budget: {effective_str})"
         )
 
     # Handle token limit approval
-    if tracker.max_tokens is not None:
-        # Try to extract a token count from feedback like "100000 tokens" or just a number
-        token_match = re.search(r'(\d+)\s*(?:tokens?|k)?', feedback_lower)
+    if tracker.is_token_limit_exceeded:
+        # Try to extract a token count from feedback - require explicit token context
+        # Match patterns like "10000 tokens", "10k tokens", "100K", "50000tokens"
+        token_match = re.search(r'(\d+)\s*([kK])?\s*tokens?', feedback_lower)
+        if not token_match:
+            # Also try "NNNk" or "NNNK" without "tokens" suffix
+            token_match = re.search(r'(\d+)\s*([kK])\b', feedback)
         if token_match:
             additional_tokens = int(token_match.group(1))
-            # Handle "100k" style input
-            if "k" in feedback_lower[token_match.end()-2:token_match.end()+2]:
+            # Handle "k" or "K" suffix
+            if token_match.group(2):
                 additional_tokens *= 1000
         else:
             # Default: approve same amount as original token limit
-            additional_tokens = tracker.max_tokens
+            additional_tokens = tracker.max_tokens if tracker.max_tokens is not None else 0
         tracker.approved_tokens += additional_tokens
+        effective = tracker.effective_token_limit
+        effective_str = f"{effective:,}" if effective is not None else "N/A"
         logger.info(
             f"Token limit approved: +{additional_tokens:,} "
-            f"(new effective limit: {tracker.effective_token_limit:,})"
+            f"(new effective limit: {effective_str})"
         )
 
     # Handle request limit approval
-    if tracker.max_requests is not None:
-        # Try to extract a request count from feedback
-        request_match = re.search(r'(\d+)\s*(?:requests?)?', feedback_lower)
+    if tracker.is_request_limit_exceeded:
+        # Try to extract a request count from feedback - require explicit request context
+        request_match = re.search(r'(\d+)\s*requests?', feedback_lower)
         if request_match:
             additional_requests = int(request_match.group(1))
         else:
             # Default: approve same amount as original request limit
-            additional_requests = tracker.max_requests
+            additional_requests = tracker.max_requests if tracker.max_requests is not None else 0
         tracker.approved_requests += additional_requests
+        effective = tracker.effective_request_limit
+        effective_str = str(effective) if effective is not None else "N/A"
         logger.info(
             f"Request limit approved: +{additional_requests} "
-            f"(new effective limit: {tracker.effective_request_limit})"
+            f"(new effective limit: {effective_str})"
         )
 
 
@@ -740,19 +769,23 @@ def budget(
                     tracker.max_requests = config.max_requests
             return flow_instance._budget_tracker
 
-        # Shared snapshots dict for the start/completion handler pair
-        _llm_snapshots: dict[int, dict[str, int]] = {}
-
-        def _create_request_counter(tracker: BudgetTracker) -> Callable[[Any, LLMCallStartedEvent], None]:
+        def _create_request_counter(
+            tracker: BudgetTracker,
+            llm_snapshots: dict[int, dict[str, int]],
+        ) -> Callable[[Any, LLMCallStartedEvent], None]:
             """Create an event handler that counts LLM requests and snapshots token state."""
             def handler(source: Any, event: LLMCallStartedEvent) -> None:
                 tracker.increment_request_count()
                 # Snapshot current token state before the call
                 if hasattr(source, "_token_usage"):
-                    _llm_snapshots[id(source)] = dict(source._token_usage)
+                    llm_snapshots[id(source)] = dict(source._token_usage)
             return handler
 
-        def _create_completion_tracker(tracker: BudgetTracker, cfg: BudgetConfig) -> Callable[[Any, LLMCallCompletedEvent], None]:
+        def _create_completion_tracker(
+            tracker: BudgetTracker,
+            cfg: BudgetConfig,
+            llm_snapshots: dict[int, dict[str, int]],
+        ) -> Callable[[Any, LLMCallCompletedEvent], None]:
             """Create an event handler that extracts token usage from LLM completion events.
 
             Uses a snapshot approach: diffs the LLM instance's cumulative token usage
@@ -766,7 +799,7 @@ def budget(
                 if hasattr(source, "_token_usage"):
                     llm_id = id(source)
                     current = dict(source._token_usage)
-                    prev = _llm_snapshots.pop(llm_id, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+                    prev = llm_snapshots.pop(llm_id, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
 
                     prompt_delta = current.get("prompt_tokens", 0) - prev.get("prompt_tokens", 0)
                     completion_delta = current.get("completion_tokens", 0) - prev.get("completion_tokens", 0)
@@ -828,8 +861,10 @@ def budget(
             async def async_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 tracker = _ensure_budget_tracker(self)
                 tokens_before = tracker.total_tokens
-                request_handler = _create_request_counter(tracker)
-                completion_handler = _create_completion_tracker(tracker, config)
+                # Per-invocation snapshots dict to avoid cross-instance interference
+                llm_snapshots: dict[int, dict[str, int]] = {}
+                request_handler = _create_request_counter(tracker, llm_snapshots)
+                completion_handler = _create_completion_tracker(tracker, config, llm_snapshots)
 
                 # Register event listeners for request counting and token tracking
                 crewai_event_bus.register_handler(LLMCallStartedEvent, request_handler)
@@ -847,18 +882,28 @@ def budget(
             def sync_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 tracker = _ensure_budget_tracker(self)
                 tokens_before = tracker.total_tokens
-                request_handler = _create_request_counter(tracker)
-                completion_handler = _create_completion_tracker(tracker, config)
+                requests_before = tracker.total_requests
+                # Per-invocation snapshots dict to avoid cross-instance interference
+                llm_snapshots: dict[int, dict[str, int]] = {}
+                request_handler = _create_request_counter(tracker, llm_snapshots)
+                completion_handler = _create_completion_tracker(tracker, config, llm_snapshots)
 
                 # Register event listeners for request counting and token tracking
                 crewai_event_bus.register_handler(LLMCallStartedEvent, request_handler)
                 crewai_event_bus.register_handler(LLMCallCompletedEvent, completion_handler)
                 try:
                     result = func(self, *args, **kwargs)
-                    # Wait briefly for async event handlers to finish processing
-                    # (event bus dispatches sync handlers in a thread pool)
+                    # Poll for event handlers to complete (event bus dispatches in thread pool)
+                    # If requests were made, wait for token updates; otherwise skip immediately
                     import time
-                    time.sleep(0.1)
+                    if tracker.total_requests > requests_before:
+                        # Requests were made - poll for token updates with short timeout
+                        max_wait = 0.05  # 50ms max wait
+                        interval = 0.005  # 5ms polling interval
+                        waited = 0.0
+                        while waited < max_wait and tracker.total_tokens == tokens_before:
+                            time.sleep(interval)
+                            waited += interval
                     return _process_result(self, result, func.__name__, tokens_before)
                 finally:
                     crewai_event_bus.off(LLMCallStartedEvent, request_handler)
