@@ -144,15 +144,6 @@ def _user_data_lock_name() -> str:
     return f"file:{os.path.realpath(_user_data_file())}"
 
 
-def _save_user_data(data: dict[str, Any]) -> None:
-    try:
-        p = _user_data_file()
-        with store_lock(_user_data_lock_name()):
-            p.write_text(json.dumps(data, indent=2))
-    except (OSError, PermissionError) as e:
-        logger.warning(f"Failed to save user data: {e}")
-
-
 def update_user_data(updates: dict[str, Any]) -> None:
     """Atomically read-modify-write the user data file.
 
