@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.llm_events import LLMCallStartedEvent
+from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallStartedEvent
 from crewai.types.usage_metrics import UsageMetrics
 
 
@@ -740,24 +740,82 @@ def budget(
                     tracker.max_requests = config.max_requests
             return flow_instance._budget_tracker
 
+        # Shared snapshots dict for the start/completion handler pair
+        _llm_snapshots: dict[int, dict[str, int]] = {}
+
         def _create_request_counter(tracker: BudgetTracker) -> Callable[[Any, LLMCallStartedEvent], None]:
-            """Create an event handler that counts LLM requests."""
+            """Create an event handler that counts LLM requests and snapshots token state."""
             def handler(source: Any, event: LLMCallStartedEvent) -> None:
                 tracker.increment_request_count()
+                # Snapshot current token state before the call
+                if hasattr(source, "_token_usage"):
+                    _llm_snapshots[id(source)] = dict(source._token_usage)
+            return handler
+
+        def _create_completion_tracker(tracker: BudgetTracker, cfg: BudgetConfig) -> Callable[[Any, LLMCallCompletedEvent], None]:
+            """Create an event handler that extracts token usage from LLM completion events.
+
+            Uses a snapshot approach: diffs the LLM instance's cumulative token usage
+            (captured at call start vs call end) to get per-call usage. Works for all
+            providers since BaseLLM._track_token_usage_internal() updates before this fires.
+            """
+            def handler(source: Any, event: LLMCallCompletedEvent) -> None:
+                model = event.model or getattr(source, "model", None)
+
+                # Diff approach: compare post-call state with pre-call snapshot
+                if hasattr(source, "_token_usage"):
+                    llm_id = id(source)
+                    current = dict(source._token_usage)
+                    prev = _llm_snapshots.pop(llm_id, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+
+                    prompt_delta = current.get("prompt_tokens", 0) - prev.get("prompt_tokens", 0)
+                    completion_delta = current.get("completion_tokens", 0) - prev.get("completion_tokens", 0)
+                    total_delta = current.get("total_tokens", 0) - prev.get("total_tokens", 0)
+
+                    if total_delta > 0:
+                        metrics = UsageMetrics(
+                            total_tokens=total_delta,
+                            prompt_tokens=prompt_delta,
+                            completion_tokens=completion_delta,
+                            successful_requests=0,  # counted separately via start event
+                        )
+                        tracker.add_usage(metrics, model)
+                        return
+
+                # Fallback: try to extract from the response object
+                response = event.response
+                if isinstance(response, dict):
+                    usage = response.get("usage", {})
+                    if usage:
+                        prompt_tokens = usage.get("prompt_tokens", 0)
+                        completion_tokens = usage.get("completion_tokens", 0)
+                        total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+                        if total_tokens > 0:
+                            metrics = UsageMetrics(
+                                total_tokens=total_tokens,
+                                prompt_tokens=prompt_tokens,
+                                completion_tokens=completion_tokens,
+                                successful_requests=0,
+                            )
+                            tracker.add_usage(metrics, model)
             return handler
 
         def _process_result(
             flow_instance: Flow[Any],
             result: Any,
             method_name: str,
+            tokens_before: int = 0,
         ) -> Any:
             """Process the method result and check limits."""
             tracker = _ensure_budget_tracker(flow_instance)
 
-            # Extract and accumulate usage
-            usage, model = _extract_usage_from_result(result)
-            if usage is not None:
-                tracker.add_usage(usage, model)
+            # Only extract usage from result if the event-based tracker
+            # didn't already capture tokens during execution (avoid double-counting)
+            tokens_captured_by_events = tracker.total_tokens - tokens_before
+            if tokens_captured_by_events == 0:
+                usage, model = _extract_usage_from_result(result)
+                if usage is not None:
+                    tracker.add_usage(usage, model)
 
             # Check limits (any one being exceeded triggers the action)
             if tracker.is_budget_exceeded or tracker.is_token_limit_exceeded or tracker.is_request_limit_exceeded:
@@ -769,32 +827,42 @@ def budget(
             @wraps(func)
             async def async_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 tracker = _ensure_budget_tracker(self)
+                tokens_before = tracker.total_tokens
                 request_handler = _create_request_counter(tracker)
+                completion_handler = _create_completion_tracker(tracker, config)
 
-                # Register event listener for request counting
+                # Register event listeners for request counting and token tracking
                 crewai_event_bus.register_handler(LLMCallStartedEvent, request_handler)
+                crewai_event_bus.register_handler(LLMCallCompletedEvent, completion_handler)
                 try:
                     result = await func(self, *args, **kwargs)
-                    return _process_result(self, result, func.__name__)
+                    return _process_result(self, result, func.__name__, tokens_before)
                 finally:
-                    # Unregister the event listener
                     crewai_event_bus.off(LLMCallStartedEvent, request_handler)
+                    crewai_event_bus.off(LLMCallCompletedEvent, completion_handler)
 
             wrapper: Any = async_wrapper
         else:
             @wraps(func)
             def sync_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 tracker = _ensure_budget_tracker(self)
+                tokens_before = tracker.total_tokens
                 request_handler = _create_request_counter(tracker)
+                completion_handler = _create_completion_tracker(tracker, config)
 
-                # Register event listener for request counting
+                # Register event listeners for request counting and token tracking
                 crewai_event_bus.register_handler(LLMCallStartedEvent, request_handler)
+                crewai_event_bus.register_handler(LLMCallCompletedEvent, completion_handler)
                 try:
                     result = func(self, *args, **kwargs)
-                    return _process_result(self, result, func.__name__)
+                    # Wait briefly for async event handlers to finish processing
+                    # (event bus dispatches sync handlers in a thread pool)
+                    import time
+                    time.sleep(0.1)
+                    return _process_result(self, result, func.__name__, tokens_before)
                 finally:
-                    # Unregister the event listener
                     crewai_event_bus.off(LLMCallStartedEvent, request_handler)
+                    crewai_event_bus.off(LLMCallCompletedEvent, completion_handler)
 
             wrapper = sync_wrapper
 
