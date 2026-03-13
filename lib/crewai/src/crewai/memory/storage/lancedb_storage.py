@@ -76,6 +76,15 @@ class LanceDBStorage:
         self._table_name = table_name
         self._db = lancedb.connect(str(self._path))
 
+        try:
+            import resource
+
+            soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft < 4096:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, 4096), hard))
+        except Exception:  # noqa: S110
+            pass  # Windows or already at the max hard limit — safe to ignore
+
         self._compact_every = compact_every
         self._save_count = 0
 
@@ -91,6 +100,9 @@ class LanceDBStorage:
                 self._ensure_scope_index()
             self._compact_if_needed()
         except Exception:
+            _logger.debug(
+                "Failed to open existing LanceDB table %r", table_name, exc_info=True
+            )
             self._table = None
             self._vector_dim = vector_dim or 0  # 0 = not yet known
 
@@ -133,8 +145,8 @@ class LanceDBStorage:
                 )
                 try:
                     self._table = self._db.open_table(self._table_name)
-                except Exception:  # noqa: S110
-                    pass
+                except Exception:
+                    _logger.debug("Failed to re-open table during retry", exc_info=True)
                 time.sleep(delay)
                 delay *= 2
         return None  # unreachable, but satisfies type checker
@@ -180,8 +192,10 @@ class LanceDBStorage:
             return
         try:
             self._table.create_scalar_index("scope", index_type="BTREE", replace=False)
-        except Exception:  # noqa: S110
-            pass  # index already exists, table empty, or unsupported version
+        except Exception:
+            _logger.debug(
+                "Scope index creation skipped (may already exist)", exc_info=True
+            )
 
     # ------------------------------------------------------------------
     # Automatic background compaction
