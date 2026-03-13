@@ -301,7 +301,8 @@ class RecallFlow(Flow[RecallState]):
                     "extraction": response,
                     "results": finding["results"],
                 })
-            except Exception:
+            except (ValueError, TypeError, RuntimeError) as e:
+                # LLM call failed - continue with empty extraction
                 enhanced.append({
                     "scope": finding["scope"],
                     "extraction": "",
