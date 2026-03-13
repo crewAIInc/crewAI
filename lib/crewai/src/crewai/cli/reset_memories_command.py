@@ -95,9 +95,7 @@ def reset_memories_command(
                 continue
             if memory:
                 _reset_flow_memory(flow)
-                click.echo(
-                    f"[Flow ({flow_name})] Memory has been reset."
-                )
+                click.echo(f"[Flow ({flow_name})] Memory has been reset.")
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while resetting the memories: {e}", err=True)

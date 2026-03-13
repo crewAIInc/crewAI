@@ -497,7 +497,9 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._list)
 
-    def index(self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None) -> int:  # type: ignore[override]
+    def index(
+        self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None
+    ) -> int:  # type: ignore[override]
         if stop is None:
             return self._list.index(value, start)
         return self._list.index(value, start, stop)

@@ -137,7 +137,9 @@ class StagehandTool(BaseTool):
     - 'observe': For finding elements in a specific area
     """
     args_schema: type[BaseModel] = StagehandToolSchema
-    package_dependencies: list[str] = Field(default_factory=lambda: ["stagehand<=0.5.9"])
+    package_dependencies: list[str] = Field(
+        default_factory=lambda: ["stagehand<=0.5.9"]
+    )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
