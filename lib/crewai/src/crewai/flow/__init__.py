@@ -4,11 +4,11 @@ from crewai.flow.async_feedback import (
     HumanFeedbackProvider,
     PendingFeedbackContext,
 )
-from crewai.flow.cost_governor import (
+from crewai.flow.budget import (
+    BudgetConfig,
     BudgetExceededError,
-    CostGovernorConfig,
-    CostTracker,
-    cost_governor,
+    BudgetTracker,
+    budget,
 )
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.flow_config import flow_config
@@ -23,10 +23,10 @@ from crewai.flow.visualization import (
 
 
 __all__ = [
+    "BudgetConfig",
     "BudgetExceededError",
+    "BudgetTracker",
     "ConsoleProvider",
-    "CostGovernorConfig",
-    "CostTracker",
     "Flow",
     "FlowStructure",
     "HumanFeedbackPending",
@@ -36,8 +36,8 @@ __all__ = [
     "InputResponse",
     "PendingFeedbackContext",
     "and_",
+    "budget",
     "build_flow_structure",
-    "cost_governor",
     "flow_config",
     "human_feedback",
     "listen",

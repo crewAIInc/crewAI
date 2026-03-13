@@ -1,39 +1,42 @@
-"""Tests for Flow cost governor functionality."""
+"""Tests for Flow budget functionality."""
 
 import pytest
 from unittest.mock import MagicMock, patch
 
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow, start, listen
-from crewai.flow.cost_governor import (
+from crewai.flow.budget import (
     BudgetExceededError,
-    CostGovernorConfig,
-    CostTracker,
+    BudgetConfig,
+    BudgetTracker,
     DEFAULT_MODEL_COSTS,
-    cost_governor,
+    budget,
     _extract_usage_from_result,
 )
 from crewai.types.usage_metrics import UsageMetrics
 
 
-class TestCostTracker:
-    """Tests for the CostTracker class."""
+class TestBudgetTracker:
+    """Tests for the BudgetTracker class."""
 
     def test_initial_state(self):
         """Test initial tracker state."""
-        tracker = CostTracker()
+        tracker = BudgetTracker()
         assert tracker.total_tokens == 0
         assert tracker.prompt_tokens == 0
         assert tracker.completion_tokens == 0
         assert tracker.successful_requests == 0
+        assert tracker.total_requests == 0
         assert tracker.estimated_cost == 0.0
-        assert tracker.budget_limit is None
-        assert tracker.token_limit is None
+        assert tracker.max_cost is None
+        assert tracker.max_tokens is None
+        assert tracker.max_requests is None
         assert tracker.approved_budget == 0.0
+        assert tracker.approved_requests == 0
 
     def test_add_usage(self):
         """Test adding usage metrics."""
-        tracker = CostTracker()
+        tracker = BudgetTracker()
         usage = UsageMetrics(
             total_tokens=1000,
             prompt_tokens=700,
@@ -50,7 +53,7 @@ class TestCostTracker:
 
     def test_add_usage_with_model_pricing(self):
         """Test adding usage with specific model pricing."""
-        tracker = CostTracker()
+        tracker = BudgetTracker()
         # GPT-4o pricing: $2.50/$10.00 per 1M tokens
         usage = UsageMetrics(
             total_tokens=1_000_000,
@@ -65,7 +68,7 @@ class TestCostTracker:
 
     def test_add_usage_accumulates(self):
         """Test that usage accumulates across multiple calls."""
-        tracker = CostTracker()
+        tracker = BudgetTracker()
 
         usage1 = UsageMetrics(total_tokens=500, prompt_tokens=300, completion_tokens=200)
         usage2 = UsageMetrics(total_tokens=500, prompt_tokens=300, completion_tokens=200)
@@ -79,7 +82,7 @@ class TestCostTracker:
 
     def test_budget_exceeded(self):
         """Test budget exceeded detection."""
-        tracker = CostTracker(budget_limit=1.00)
+        tracker = BudgetTracker(max_cost=1.00)
         tracker.estimated_cost = 1.50
 
         assert tracker.is_budget_exceeded is True
@@ -87,7 +90,7 @@ class TestCostTracker:
 
     def test_budget_not_exceeded(self):
         """Test budget not exceeded."""
-        tracker = CostTracker(budget_limit=5.00)
+        tracker = BudgetTracker(max_cost=5.00)
         tracker.estimated_cost = 1.00
 
         assert tracker.is_budget_exceeded is False
@@ -95,43 +98,88 @@ class TestCostTracker:
 
     def test_token_limit_exceeded(self):
         """Test token limit exceeded detection."""
-        tracker = CostTracker(token_limit=1000)
+        tracker = BudgetTracker(max_tokens=1000)
         tracker.total_tokens = 1500
 
         assert tracker.is_token_limit_exceeded is True
 
     def test_token_limit_not_exceeded(self):
         """Test token limit not exceeded."""
-        tracker = CostTracker(token_limit=1000)
+        tracker = BudgetTracker(max_tokens=1000)
         tracker.total_tokens = 500
 
         assert tracker.is_token_limit_exceeded is False
 
+    def test_request_limit_exceeded(self):
+        """Test request limit exceeded detection."""
+        tracker = BudgetTracker(max_requests=10)
+        tracker.total_requests = 15
+
+        assert tracker.is_request_limit_exceeded is True
+
+    def test_request_limit_not_exceeded(self):
+        """Test request limit not exceeded."""
+        tracker = BudgetTracker(max_requests=10)
+        tracker.total_requests = 5
+
+        assert tracker.is_request_limit_exceeded is False
+
+    def test_increment_request_count(self):
+        """Test incrementing request count."""
+        tracker = BudgetTracker()
+        assert tracker.total_requests == 0
+
+        tracker.increment_request_count()
+        assert tracker.total_requests == 1
+
+        tracker.increment_request_count()
+        assert tracker.total_requests == 2
+
     def test_effective_budget_with_approved(self):
         """Test effective budget includes approved amounts."""
-        tracker = CostTracker(budget_limit=5.00)
+        tracker = BudgetTracker(max_cost=5.00)
         tracker.approved_budget = 3.00
 
         assert tracker.effective_budget == 8.00
 
-    def test_to_dict(self):
-        """Test conversion to dictionary."""
-        tracker = CostTracker(budget_limit=5.00, token_limit=1000)
+    def test_effective_request_limit_with_approved(self):
+        """Test effective request limit includes approved amounts."""
+        tracker = BudgetTracker(max_requests=10)
+        tracker.approved_requests = 5
+
+        assert tracker.effective_request_limit == 15
+
+    def test_request_limit_exceeded_considers_approved(self):
+        """Test request limit considers approved additional requests."""
+        tracker = BudgetTracker(max_requests=10)
+        tracker.total_requests = 12
+        tracker.approved_requests = 5
+
+        # 12 < 15 (10 + 5), so not exceeded
+        assert tracker.is_request_limit_exceeded is False
+
+    def test_to_dict_includes_request_data(self):
+        """Test conversion to dictionary includes request data."""
+        tracker = BudgetTracker(max_cost=5.00, max_tokens=1000, max_requests=20)
         tracker.total_tokens = 500
+        tracker.total_requests = 10
         tracker.estimated_cost = 2.00
 
         result = tracker.to_dict()
 
         assert result["total_tokens"] == 500
+        assert result["total_requests"] == 10
         assert result["estimated_cost"] == 2.00
-        assert result["budget_limit"] == 5.00
-        assert result["token_limit"] == 1000
+        assert result["max_cost"] == 5.00
+        assert result["max_tokens"] == 1000
+        assert result["max_requests"] == 20
         assert result["budget_remaining"] == 3.00
         assert result["is_budget_exceeded"] is False
+        assert result["is_request_limit_exceeded"] is False
 
     def test_model_prefix_matching(self):
         """Test model pricing uses prefix matching."""
-        tracker = CostTracker()
+        tracker = BudgetTracker()
         # "gpt-4o-2024-11-20" should match "gpt-4o"
         pricing = tracker._get_model_pricing("gpt-4o-2024-11-20")
         expected = DEFAULT_MODEL_COSTS["gpt-4o"]
@@ -139,7 +187,7 @@ class TestCostTracker:
 
     def test_model_prefix_matching_prefers_longest(self):
         """Test model pricing prefers longest prefix match."""
-        tracker = CostTracker()
+        tracker = BudgetTracker()
         # "gpt-4o-mini-2024-07-18" should match "gpt-4o-mini", not "gpt-4o"
         pricing = tracker._get_model_pricing("gpt-4o-mini-2024-07-18")
         expected = DEFAULT_MODEL_COSTS["gpt-4o-mini"]
@@ -152,26 +200,60 @@ class TestCostTracker:
 
     def test_unknown_model_uses_default(self):
         """Test unknown model uses default pricing."""
-        tracker = CostTracker()
+        tracker = BudgetTracker()
         pricing = tracker._get_model_pricing("unknown-model-xyz")
         expected = DEFAULT_MODEL_COSTS["default"]
         assert pricing == expected
 
     def test_effective_token_limit_with_approved(self):
         """Test effective token limit includes approved amounts."""
-        tracker = CostTracker(token_limit=10000)
+        tracker = BudgetTracker(max_tokens=10000)
         tracker.approved_tokens = 5000
 
         assert tracker.effective_token_limit == 15000
 
     def test_token_limit_exceeded_considers_approved(self):
         """Test token limit considers approved additional tokens."""
-        tracker = CostTracker(token_limit=1000)
+        tracker = BudgetTracker(max_tokens=1000)
         tracker.total_tokens = 1500
         tracker.approved_tokens = 1000
 
         # 1500 < 2000 (1000 + 1000), so not exceeded
         assert tracker.is_token_limit_exceeded is False
+
+    def test_custom_flat_pricing(self):
+        """Test custom flat per-token pricing."""
+        tracker = BudgetTracker(
+            _cost_per_prompt_token=0.000003,  # $3 per 1M tokens
+            _cost_per_completion_token=0.000015,  # $15 per 1M tokens
+        )
+        usage = UsageMetrics(
+            total_tokens=1_000_000,
+            prompt_tokens=700_000,
+            completion_tokens=300_000,
+        )
+        tracker.add_usage(usage, model="gpt-4o")
+
+        # With flat pricing: 700,000 * 0.000003 + 300,000 * 0.000015 = 2.1 + 4.5 = 6.6
+        assert abs(tracker.estimated_cost - 6.6) < 0.01
+
+    def test_flat_pricing_overrides_cost_map(self):
+        """Test that flat pricing takes priority over cost_map."""
+        tracker = BudgetTracker(
+            _cost_per_prompt_token=0.000001,
+            _cost_per_completion_token=0.000001,
+            _cost_map={"test-model": (100.00, 100.00)},  # Very expensive pricing
+        )
+        usage = UsageMetrics(
+            total_tokens=1_000_000,
+            prompt_tokens=500_000,
+            completion_tokens=500_000,
+        )
+        tracker.add_usage(usage, model="test-model")
+
+        # If cost_map were used: (500,000/1M) * 100 + (500,000/1M) * 100 = 100
+        # With flat pricing: 500,000 * 0.000001 + 500,000 * 0.000001 = 1.0
+        assert abs(tracker.estimated_cost - 1.0) < 0.01
 
 
 class TestExtractUsageFromResult:
@@ -212,6 +294,17 @@ class TestExtractUsageFromResult:
         assert result_usage.total_tokens == 100
         assert model == "gpt-4o"
 
+    def test_extract_from_dict_with_usage_metrics(self):
+        """Test extracting usage from dict with usage_metrics key."""
+        usage = UsageMetrics(total_tokens=150)
+        result = {"usage_metrics": usage, "model": "claude-3-sonnet"}
+
+        result_usage, model = _extract_usage_from_result(result)
+
+        assert result_usage is not None
+        assert result_usage.total_tokens == 150
+        assert model == "claude-3-sonnet"
+
     def test_extract_returns_none_for_plain_value(self):
         """Test extracting usage from plain value returns None."""
         result_usage, model = _extract_usage_from_result("plain string")
@@ -231,32 +324,53 @@ class TestExtractUsageFromResult:
         assert result_usage is not None
         assert result_usage.total_tokens == 150
 
+    def test_extract_from_object_with_usage_metrics_attr(self):
+        """Test extracting usage from object with usage_metrics attribute (LiteAgentOutput style)."""
+        class LiteAgentStyleOutput:
+            def __init__(self):
+                self.usage_metrics = UsageMetrics(total_tokens=200)
+                self.model = "gpt-4o"
 
-class TestCostGovernorConfig:
-    """Tests for the CostGovernorConfig class."""
+        result_usage, model = _extract_usage_from_result(LiteAgentStyleOutput())
+
+        assert result_usage is not None
+        assert result_usage.total_tokens == 200
+
+
+class TestBudgetConfig:
+    """Tests for the BudgetConfig class."""
 
     def test_default_values(self):
         """Test default configuration values."""
-        config = CostGovernorConfig()
+        config = BudgetConfig()
 
-        assert config.budget_limit is None
-        assert config.token_limit is None
+        assert config.max_cost is None
+        assert config.max_tokens is None
+        assert config.max_requests is None
         assert config.on_exceed == "pause"
+        assert config.cost_per_prompt_token is None
+        assert config.cost_per_completion_token is None
         assert config.cost_map is None
         assert config.provider is None
 
     def test_custom_values(self):
         """Test custom configuration values."""
-        config = CostGovernorConfig(
-            budget_limit=10.00,
-            token_limit=50000,
+        config = BudgetConfig(
+            max_cost=10.00,
+            max_tokens=50000,
+            max_requests=100,
             on_exceed="stop",
+            cost_per_prompt_token=0.000003,
+            cost_per_completion_token=0.000015,
             cost_map={"custom-model": (1.0, 2.0)},
         )
 
-        assert config.budget_limit == 10.00
-        assert config.token_limit == 50000
+        assert config.max_cost == 10.00
+        assert config.max_tokens == 50000
+        assert config.max_requests == 100
         assert config.on_exceed == "stop"
+        assert config.cost_per_prompt_token == 0.000003
+        assert config.cost_per_completion_token == 0.000015
         assert config.cost_map == {"custom-model": (1.0, 2.0)}
 
 
@@ -285,6 +399,19 @@ class TestBudgetExceededError:
         assert "15000" in str(error)
         assert "10000" in str(error)
 
+    def test_request_limit_error(self):
+        """Test error with request limit."""
+        error = BudgetExceededError(
+            current_cost=0.0,
+            total_requests=25,
+            request_limit=20,
+        )
+
+        assert error.total_requests == 25
+        assert error.request_limit == 20
+        assert "25" in str(error)
+        assert "20" in str(error)
+
     def test_custom_message(self):
         """Test error with custom message."""
         error = BudgetExceededError(
@@ -295,27 +422,41 @@ class TestBudgetExceededError:
         assert str(error) == "Custom error message"
 
 
-class TestCostGovernorDecorator:
-    """Tests for the @cost_governor decorator."""
+class TestBudgetDecorator:
+    """Tests for the @budget decorator."""
 
     def test_decorator_validation_negative_budget(self):
         """Test decorator raises error for negative budget."""
-        with pytest.raises(ValueError, match="budget_limit must be positive"):
-            @cost_governor(budget_limit=-1.0)
+        with pytest.raises(ValueError, match="max_cost must be positive"):
+            @budget(max_cost=-1.0)
             def bad_method(self):
                 pass
 
     def test_decorator_validation_negative_tokens(self):
         """Test decorator raises error for negative token limit."""
-        with pytest.raises(ValueError, match="token_limit must be positive"):
-            @cost_governor(token_limit=-100)
+        with pytest.raises(ValueError, match="max_tokens must be positive"):
+            @budget(max_tokens=-100)
+            def bad_method(self):
+                pass
+
+    def test_decorator_validation_negative_requests(self):
+        """Test decorator raises error for negative request limit."""
+        with pytest.raises(ValueError, match="max_requests must be positive"):
+            @budget(max_requests=-10)
             def bad_method(self):
                 pass
 
     def test_decorator_validation_invalid_on_exceed(self):
         """Test decorator raises error for invalid on_exceed."""
         with pytest.raises(ValueError, match="on_exceed must be"):
-            @cost_governor(on_exceed="invalid")
+            @budget(on_exceed="invalid")
+            def bad_method(self):
+                pass
+
+    def test_decorator_validation_partial_custom_pricing(self):
+        """Test decorator raises error for partial custom pricing."""
+        with pytest.raises(ValueError, match="cost_per_prompt_token and cost_per_completion_token must both be set"):
+            @budget(cost_per_prompt_token=0.000003)
             def bad_method(self):
                 pass
 
@@ -323,7 +464,7 @@ class TestCostGovernorDecorator:
         """Test decorator preserves existing flow method attributes."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=5.00)
+            @budget(max_cost=5.00)
             def start_method(self):
                 return "result"
 
@@ -332,13 +473,13 @@ class TestCostGovernorDecorator:
 
         assert method is not None
         assert hasattr(method, "__is_start_method__")
-        assert hasattr(method, "__cost_governor_config__")
+        assert hasattr(method, "__budget_config__")
 
-    def test_flow_initializes_cost_tracker(self):
-        """Test flow initializes cost tracker on decorated method execution."""
+    def test_flow_initializes_budget_tracker(self):
+        """Test flow initializes budget tracker on decorated method execution."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=5.00)
+            @budget(max_cost=5.00)
             def start_method(self):
                 # Return a CrewOutput to simulate a crew execution
                 return CrewOutput(
@@ -349,14 +490,14 @@ class TestCostGovernorDecorator:
         flow = TestFlow()
         flow.kickoff()
 
-        assert flow._cost_tracker is not None
-        assert flow._cost_tracker.total_tokens == 100
+        assert flow._budget_tracker is not None
+        assert flow._budget_tracker.total_tokens == 100
 
     def test_cost_accumulates_across_methods(self):
         """Test cost accumulates across multiple decorated methods."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=10.00)
+            @budget(max_cost=10.00)
             def step_1(self):
                 return CrewOutput(
                     raw="test1",
@@ -364,7 +505,7 @@ class TestCostGovernorDecorator:
                 )
 
             @listen(step_1)
-            @cost_governor(budget_limit=10.00)
+            @budget(max_cost=10.00)
             def step_2(self):
                 return CrewOutput(
                     raw="test2",
@@ -374,14 +515,14 @@ class TestCostGovernorDecorator:
         flow = TestFlow()
         flow.kickoff()
 
-        assert flow._cost_tracker is not None
-        assert flow._cost_tracker.total_tokens == 1000
+        assert flow._budget_tracker is not None
+        assert flow._budget_tracker.total_tokens == 1000
 
-    def test_cost_summary_accessible(self):
-        """Test cost_summary property is accessible."""
+    def test_budget_summary_accessible(self):
+        """Test budget_summary property is accessible."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=5.00)
+            @budget(max_cost=5.00)
             def run_task(self):
                 return CrewOutput(
                     raw="test",
@@ -391,35 +532,36 @@ class TestCostGovernorDecorator:
         flow = TestFlow()
         flow.kickoff()
 
-        summary = flow.cost_summary
+        summary = flow.budget_summary
         assert summary["total_tokens"] == 100
-        assert summary["budget_limit"] == 5.00
+        assert summary["max_cost"] == 5.00
         assert summary["is_budget_exceeded"] is False
 
-    def test_cost_summary_empty_without_decorator(self):
-        """Test cost_summary returns empty dict when no decorator is used."""
+    def test_budget_summary_empty_without_decorator(self):
+        """Test budget_summary returns empty dict when no decorator is used."""
         class TestFlow(Flow):
             @start()
             def run_task(self):
-                return "no cost tracking"
+                return "no budget tracking"
 
         flow = TestFlow()
         flow.kickoff()
 
-        summary = flow.cost_summary
+        summary = flow.budget_summary
         assert summary["total_tokens"] == 0
         assert summary["estimated_cost"] == 0.0
-        assert summary["budget_limit"] is None
+        assert summary["max_cost"] is None
+        assert summary["max_requests"] is None
 
 
-class TestCostGovernorOnExceedStop:
-    """Tests for @cost_governor with on_exceed='stop'."""
+class TestBudgetOnExceedStop:
+    """Tests for @budget with on_exceed='stop'."""
 
     def test_budget_exceeded_raises_error(self):
         """Test budget exceeded raises BudgetExceededError."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=0.001, on_exceed="stop")
+            @budget(max_cost=0.001, on_exceed="stop")
             def expensive_task(self):
                 # This will exceed the tiny budget
                 return CrewOutput(
@@ -442,7 +584,7 @@ class TestCostGovernorOnExceedStop:
         """Test token limit exceeded raises BudgetExceededError."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(token_limit=100, on_exceed="stop")
+            @budget(max_tokens=100, on_exceed="stop")
             def limited_task(self):
                 return CrewOutput(
                     raw="test",
@@ -457,15 +599,29 @@ class TestCostGovernorOnExceedStop:
         assert exc_info.value.token_limit == 100
         assert exc_info.value.total_tokens == 500
 
+    def test_request_limit_exceeded_raises_error(self):
+        """Test request limit exceeded raises BudgetExceededError.
 
-class TestCostGovernorOnExceedWarn:
-    """Tests for @cost_governor with on_exceed='warn'."""
+        Note: Request counting is done via event listener on LLMCallStartedEvent.
+        Since we're not making actual LLM calls in this test, we verify the
+        tracker's request limit detection logic directly.
+        """
+        tracker = BudgetTracker(max_requests=5)
+        tracker.total_requests = 10  # Exceed the limit
+
+        assert tracker.is_request_limit_exceeded is True
+        assert tracker.max_requests == 5
+        assert tracker.total_requests == 10
+
+
+class TestBudgetOnExceedWarn:
+    """Tests for @budget with on_exceed='warn'."""
 
     def test_budget_exceeded_logs_warning(self, caplog):
         """Test budget exceeded logs warning and continues."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=0.001, on_exceed="warn")
+            @budget(max_cost=0.001, on_exceed="warn")
             def step_1(self):
                 return CrewOutput(
                     raw="test",
@@ -486,7 +642,7 @@ class TestCostGovernorOnExceedWarn:
         """Test token limit exceeded logs warning and continues."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(token_limit=100, on_exceed="warn")
+            @budget(max_tokens=100, on_exceed="warn")
             def step_1(self):
                 return CrewOutput(
                     raw="test",
@@ -503,14 +659,14 @@ class TestCostGovernorOnExceedWarn:
         assert result == "continued"
 
 
-class TestCostGovernorOnExceedPause:
-    """Tests for @cost_governor with on_exceed='pause' (HITL integration)."""
+class TestBudgetOnExceedPause:
+    """Tests for @budget with on_exceed='pause' (HITL integration)."""
 
     def test_budget_exceeded_triggers_pause_denied(self):
         """Test budget exceeded triggers pause and raises on denial."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=0.001, on_exceed="pause")
+            @budget(max_cost=0.001, on_exceed="pause")
             def expensive_task(self):
                 return CrewOutput(
                     raw="test",
@@ -530,7 +686,7 @@ class TestCostGovernorOnExceedPause:
         """Test budget exceeded triggers pause and continues on approval."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=0.001, on_exceed="pause")
+            @budget(max_cost=0.001, on_exceed="pause")
             def step_1(self):
                 return CrewOutput(
                     raw="test",
@@ -548,13 +704,13 @@ class TestCostGovernorOnExceedPause:
             result = flow.kickoff()
 
         assert result == "continued after approval"
-        assert flow._cost_tracker.approved_budget == 10.00
+        assert flow._budget_tracker.approved_budget == 10.00
 
     def test_budget_exceeded_triggers_pause_approved_without_amount(self):
         """Test approval without explicit amount uses original budget."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=5.00, on_exceed="pause")
+            @budget(max_cost=5.00, on_exceed="pause")
             def expensive_task(self):
                 return CrewOutput(
                     raw="test",
@@ -572,14 +728,14 @@ class TestCostGovernorOnExceedPause:
             result = flow.kickoff()
 
         assert result == "continued"
-        # Should add the original budget_limit as approved_budget
-        assert flow._cost_tracker.approved_budget == 5.00
+        # Should add the original max_cost as approved_budget
+        assert flow._budget_tracker.approved_budget == 5.00
 
     def test_empty_feedback_treated_as_denial(self):
         """Test empty feedback is treated as denial."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=0.001, on_exceed="pause")
+            @budget(max_cost=0.001, on_exceed="pause")
             def expensive_task(self):
                 return CrewOutput(
                     raw="test",
@@ -593,8 +749,8 @@ class TestCostGovernorOnExceedPause:
                 flow.kickoff()
 
 
-class TestCostGovernorWithCustomCostMap:
-    """Tests for @cost_governor with custom cost_map."""
+class TestBudgetWithCustomPricing:
+    """Tests for @budget with custom pricing options."""
 
     def test_custom_cost_map_used(self):
         """Test custom cost map is used for pricing."""
@@ -604,7 +760,7 @@ class TestCostGovernorWithCustomCostMap:
 
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=100.00, cost_map=custom_costs)
+            @budget(max_cost=100.00, cost_map=custom_costs)
             def run_task(self):
                 # Simulate a result with model info
                 return {
@@ -620,18 +776,95 @@ class TestCostGovernorWithCustomCostMap:
         flow.kickoff()
 
         # Expected: (1M / 1M) * $0.50 + (1M / 1M) * $1.00 = $1.50
-        assert abs(flow._cost_tracker.estimated_cost - 1.50) < 0.01
+        assert abs(flow._budget_tracker.estimated_cost - 1.50) < 0.01
 
-
-class TestCostGovernorAsync:
-    """Tests for @cost_governor with async flow methods."""
-
-    @pytest.mark.asyncio
-    async def test_async_method_with_cost_governor(self):
-        """Test cost governor works with async methods."""
+    def test_custom_flat_pricing_used(self):
+        """Test custom flat per-token pricing is used."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=5.00)
+            @budget(
+                max_cost=100.00,
+                cost_per_prompt_token=0.000003,  # $3/1M
+                cost_per_completion_token=0.000015,  # $15/1M
+            )
+            def run_task(self):
+                return CrewOutput(
+                    raw="test",
+                    token_usage=UsageMetrics(
+                        total_tokens=1_000_000,
+                        prompt_tokens=700_000,
+                        completion_tokens=300_000,
+                    ),
+                )
+
+        flow = TestFlow()
+        flow.kickoff()
+
+        # Expected: 700,000 * 0.000003 + 300,000 * 0.000015 = 2.1 + 4.5 = 6.6
+        assert abs(flow._budget_tracker.estimated_cost - 6.6) < 0.01
+
+    def test_flat_pricing_overrides_cost_map_in_decorator(self):
+        """Test flat pricing takes priority over cost_map in decorator."""
+        class TestFlow(Flow):
+            @start()
+            @budget(
+                max_cost=100.00,
+                cost_per_prompt_token=0.000001,  # $1/1M
+                cost_per_completion_token=0.000001,  # $1/1M
+                cost_map={"gpt-4o": (100.00, 100.00)},  # Very expensive (should be ignored)
+            )
+            def run_task(self):
+                return {
+                    "token_usage": UsageMetrics(
+                        total_tokens=1_000_000,
+                        prompt_tokens=500_000,
+                        completion_tokens=500_000,
+                    ),
+                    "model": "gpt-4o",
+                }
+
+        flow = TestFlow()
+        flow.kickoff()
+
+        # With flat pricing: 500,000 * 0.000001 + 500,000 * 0.000001 = 1.0
+        # If cost_map were used: (500,000/1M) * 100 + (500,000/1M) * 100 = 100
+        assert abs(flow._budget_tracker.estimated_cost - 1.0) < 0.01
+
+
+class TestBudgetCombinedLimits:
+    """Tests for @budget with combined limits (cost + tokens + requests)."""
+
+    def test_first_limit_hit_triggers_action(self):
+        """Test that the first limit hit triggers the action."""
+        class TestFlow(Flow):
+            @start()
+            @budget(max_cost=100.00, max_tokens=50, on_exceed="stop")
+            def limited_task(self):
+                # Token limit will be hit first (100 > 50), cost won't
+                return CrewOutput(
+                    raw="test",
+                    token_usage=UsageMetrics(total_tokens=100),
+                )
+
+        flow = TestFlow()
+
+        with pytest.raises(BudgetExceededError) as exc_info:
+            flow.kickoff()
+
+        # Token limit was hit, not budget
+        assert exc_info.value.token_limit == 50
+        assert exc_info.value.total_tokens == 100
+
+
+class TestBudgetAsync:
+    """Tests for @budget with async flow methods."""
+
+    @pytest.mark.asyncio
+    async def test_async_method_with_budget(self):
+        """Test budget works with async methods."""
+        class TestFlow(Flow):
+            @start()
+            @budget(max_cost=5.00)
             async def async_task(self):
                 return CrewOutput(
                     raw="async result",
@@ -641,15 +874,15 @@ class TestCostGovernorAsync:
         flow = TestFlow()
         result = await flow.kickoff_async()
 
-        assert flow._cost_tracker is not None
-        assert flow._cost_tracker.total_tokens == 100
+        assert flow._budget_tracker is not None
+        assert flow._budget_tracker.total_tokens == 100
 
     @pytest.mark.asyncio
     async def test_async_method_budget_exceeded_stop(self):
         """Test async method with budget exceeded raises error."""
         class TestFlow(Flow):
             @start()
-            @cost_governor(budget_limit=0.001, on_exceed="stop")
+            @budget(max_cost=0.001, on_exceed="stop")
             async def async_task(self):
                 return CrewOutput(
                     raw="expensive",
@@ -689,3 +922,28 @@ class TestDefaultModelCosts:
         input_cost, output_cost = DEFAULT_MODEL_COSTS["default"]
         assert input_cost > 0
         assert output_cost > 0
+
+
+class TestBudgetSummaryFields:
+    """Tests to ensure budget_summary includes all required fields."""
+
+    def test_budget_summary_has_request_fields(self):
+        """Test budget_summary includes request-related fields."""
+        class TestFlow(Flow):
+            @start()
+            @budget(max_cost=5.00, max_requests=10)
+            def run_task(self):
+                return CrewOutput(
+                    raw="test",
+                    token_usage=UsageMetrics(total_tokens=100),
+                )
+
+        flow = TestFlow()
+        flow.kickoff()
+
+        summary = flow.budget_summary
+        assert "total_requests" in summary
+        assert "max_requests" in summary
+        assert "approved_requests" in summary
+        assert "effective_request_limit" in summary
+        assert "is_request_limit_exceeded" in summary

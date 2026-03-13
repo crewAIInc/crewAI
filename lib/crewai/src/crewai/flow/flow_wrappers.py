@@ -70,12 +70,12 @@ class FlowMethod(Generic[P, R]):
 
                 self._is_coroutine = asyncio.coroutines._is_coroutine  # type: ignore[attr-defined]
 
-        # Preserve flow-related attributes from wrapped method (e.g., from @human_feedback, @cost_governor)
+        # Preserve flow-related attributes from wrapped method (e.g., from @human_feedback, @budget)
         for attr in [
             "__is_router__",
             "__router_paths__",
             "__human_feedback_config__",
-            "__cost_governor_config__",
+            "__budget_config__",
         ]:
             if hasattr(meth, attr):
                 setattr(self, attr, getattr(meth, attr))
