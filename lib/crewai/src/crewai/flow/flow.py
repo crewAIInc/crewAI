@@ -105,6 +105,7 @@ if TYPE_CHECKING:
     from crewai_files import FileInput
 
     from crewai.flow.async_feedback.types import PendingFeedbackContext
+    from crewai.flow.cost_governor import CostTracker
     from crewai.flow.human_feedback import HumanFeedbackResult
     from crewai.llms.base_llm import BaseLLM
 
@@ -875,6 +876,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._pending_feedback_context: PendingFeedbackContext | None = None
         self.suppress_flow_events: bool = suppress_flow_events
 
+        # Cost tracking (populated by @cost_governor decorator)
+        self._cost_tracker: CostTracker | None = None
+
         # User input history (for self.ask())
         self._input_history: list[InputHistoryEntry] = []
 
@@ -1589,6 +1593,61 @@ class Flow(Generic[T], metaclass=FlowMeta):
             return ""
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
+
+    @property
+    def cost_summary(self) -> dict[str, Any]:
+        """Returns a summary of token usage and costs tracked by @cost_governor.
+
+        This property provides access to the accumulated cost tracking data
+        when any methods in the flow are decorated with @cost_governor.
+
+        Returns:
+            dict: A dictionary containing:
+                - total_tokens: Total tokens consumed
+                - prompt_tokens: Tokens used in prompts
+                - completion_tokens: Tokens used in completions
+                - successful_requests: Number of successful API requests
+                - estimated_cost: Estimated cost in USD
+                - budget_limit: The configured budget limit
+                - token_limit: The configured token limit
+                - approved_budget: Additional budget approved via HITL
+                - effective_budget: Total budget including approved amounts
+                - budget_remaining: Remaining budget (or None)
+                - is_budget_exceeded: Whether budget is exceeded
+                - is_token_limit_exceeded: Whether token limit is exceeded
+
+            Returns an empty dict with zeros if no @cost_governor is active.
+
+        Example:
+            ```python
+            class MyFlow(Flow):
+                @start()
+                @cost_governor(budget_limit=5.00)
+                def run_task(self):
+                    return crew.kickoff()
+
+            flow = MyFlow()
+            flow.kickoff()
+            print(f"Total cost: ${flow.cost_summary['estimated_cost']:.2f}")
+            print(f"Remaining budget: ${flow.cost_summary['budget_remaining']:.2f}")
+            ```
+        """
+        if self._cost_tracker is None:
+            return {
+                "total_tokens": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "successful_requests": 0,
+                "estimated_cost": 0.0,
+                "budget_limit": None,
+                "token_limit": None,
+                "approved_budget": 0.0,
+                "effective_budget": None,
+                "budget_remaining": None,
+                "is_budget_exceeded": False,
+                "is_token_limit_exceeded": False,
+            }
+        return self._cost_tracker.to_dict()
 
     def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
