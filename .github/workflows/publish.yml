@@ -124,7 +124,7 @@ jobs:
               {'type':'section','text':{'type':'mrkdwn',
                   'text':f':rocket: \`crewai v{version}\` published to PyPI'}},
               {'type':'section','text':{'type':'mrkdwn',
-                  'text':f'<https://pypi.org/project/crewai/{version}/|View on PyPI> · <https://github.com/crewAIInc/crewAI/releases/tag/{version}|Release notes>'}},
+                  'text':f'<https://pypi.org/project/crewai/{version}/|View on PyPI> · <https://github.com/crewAIInc/crewAI/releases/tag/{tag}|Release notes>'}},
               {'type':'divider'},
           ]
 
@@ -141,7 +141,7 @@ jobs:
                               txt = f'*{heading}*\n' + '\n'.join(f'• {i}' for i in items)
                               blocks.append({'type':'section','text':{'type':'mrkdwn','text':txt}})
                       heading, items = hm.group(1), []
-                  elif line.startswith('- '):
+                  elif line.startswith('- ') or line.startswith('* '):
                       items.append(re.sub(r'\*\*([^*]*)\*\*', r'*\1*', line[2:]))
               if heading and items:
                   skip = heading in ('What\\'s Changed','') or 'Contributors' in heading
