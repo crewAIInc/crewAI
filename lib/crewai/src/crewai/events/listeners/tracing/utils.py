@@ -1,4 +1,5 @@
 from collections.abc import Callable
+import contextvars
 from contextvars import ContextVar, Token
 from datetime import datetime
 import getpass
@@ -541,7 +542,8 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
                 # Handle all input-related errors silently
                 result[0] = False
 
-        input_thread = threading.Thread(target=get_input, daemon=True)
+        ctx = contextvars.copy_context()
+        input_thread = threading.Thread(target=ctx.run, args=(get_input,), daemon=True)
         input_thread.start()
         input_thread.join(timeout=timeout_seconds)
 

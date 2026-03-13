@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import MutableMapping
 import concurrent.futures
+import contextvars
 from functools import lru_cache
 import ssl
 import time
@@ -147,8 +148,9 @@ def fetch_agent_card(
         has_running_loop = False
 
     if has_running_loop:
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, coro).result()
+            return pool.submit(ctx.run, asyncio.run, coro).result()
     return asyncio.run(coro)
 
 
@@ -215,8 +217,9 @@ def _fetch_agent_card_cached(
         has_running_loop = False
 
     if has_running_loop:
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, coro).result()
+            return pool.submit(ctx.run, asyncio.run, coro).result()
     return asyncio.run(coro)
 
 

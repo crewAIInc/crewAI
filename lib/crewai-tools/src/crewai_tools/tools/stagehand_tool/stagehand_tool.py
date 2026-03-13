@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import json
 import os
 import re
@@ -622,9 +623,12 @@ class StagehandTool(BaseTool):
                 # We're in an existing event loop, use it
                 import concurrent.futures
 
+                ctx = contextvars.copy_context()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run, self._async_run(instruction, url, command_type)
+                        ctx.run,
+                        asyncio.run,
+                        self._async_run(instruction, url, command_type),
                     )
                     result = future.result()
             else:
@@ -708,11 +712,12 @@ class StagehandTool(BaseTool):
                             if loop.is_running():
                                 import concurrent.futures
 
+                                ctx = contextvars.copy_context()
                                 with (
                                     concurrent.futures.ThreadPoolExecutor() as executor
                                 ):
                                     future = executor.submit(
-                                        asyncio.run, self._async_close()
+                                        ctx.run, asyncio.run, self._async_close()
                                     )
                                     future.result()
                             else:

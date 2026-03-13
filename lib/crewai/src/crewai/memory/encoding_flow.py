@@ -11,6 +11,7 @@ Orchestrates the encoding side of memory in a single Flow with 5 steps:
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 from datetime import datetime
 import math
 from typing import Any
@@ -173,9 +174,11 @@ class EncodingFlow(Flow[EncodingState]):
         if not active:
             return
 
-        def _search_one(item: ItemState) -> list[tuple[MemoryRecord, float]]:
+        def _search_one(
+            item: ItemState,
+        ) -> list[tuple[MemoryRecord, float]]:
             scope_prefix = item.scope if item.scope and item.scope.strip("/") else None
-            return self._storage.search(
+            return self._storage.search(  # type: ignore[no-any-return]
                 item.embedding,
                 scope_prefix=scope_prefix,
                 categories=None,
@@ -191,7 +194,12 @@ class EncodingFlow(Flow[EncodingState]):
         else:
             with ThreadPoolExecutor(max_workers=min(len(active), 8)) as pool:
                 futures = [
-                    (i, item, pool.submit(_search_one, item)) for i, item in active
+                    (
+                        i,
+                        item,
+                        pool.submit(contextvars.copy_context().run, _search_one, item),
+                    )
+                    for i, item in active
                 ]
                 for _, item, future in futures:
                     raw = future.result()
@@ -256,6 +264,7 @@ class EncodingFlow(Flow[EncodingState]):
                     # Group B: consolidation only
                     self._apply_defaults(item)
                     consol_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_consolidation,
                         item.content,
                         list(item.similar_records),
@@ -264,6 +273,7 @@ class EncodingFlow(Flow[EncodingState]):
                 elif not fields_provided and not has_similar:
                     # Group C: field resolution only
                     save_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_save,
                         item.content,
                         existing_scopes,
@@ -273,6 +283,7 @@ class EncodingFlow(Flow[EncodingState]):
                 else:
                     # Group D: both in parallel
                     save_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_save,
                         item.content,
                         existing_scopes,
@@ -280,6 +291,7 @@ class EncodingFlow(Flow[EncodingState]):
                         self._llm,
                     )
                     consol_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_consolidation,
                         item.content,
                         list(item.similar_records),
@@ -316,8 +328,8 @@ class EncodingFlow(Flow[EncodingState]):
                     item.plan = ConsolidationPlan(actions=[], insert_new=True)
 
             # Collect consolidation results
-            for i, future in consol_futures.items():
-                items[i].plan = future.result()
+            for i, consol_future in consol_futures.items():
+                items[i].plan = consol_future.result()
         finally:
             pool.shutdown(wait=False)
 

@@ -17,6 +17,7 @@ from collections.abc import (
     ValuesView,
 )
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 import copy
 import enum
 import inspect
@@ -1813,8 +1814,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         try:
             asyncio.get_running_loop()
+            ctx = contextvars.copy_context()
             with ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(asyncio.run, _run_flow()).result()
+                return pool.submit(ctx.run, asyncio.run, _run_flow()).result()
         except RuntimeError:
             return asyncio.run(_run_flow())
 
@@ -2238,8 +2240,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 else:
                     # Run sync methods in thread pool for isolation
                     # This allows Agent.kickoff() to work synchronously inside Flow methods
-                    import contextvars
-
                     ctx = contextvars.copy_context()
                     result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
             finally:
@@ -2858,8 +2858,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Manual executor management to avoid shutdown(wait=True)
                 # deadlock when the provider call outlives the timeout.
                 executor = ThreadPoolExecutor(max_workers=1)
+                ctx = contextvars.copy_context()
                 future = executor.submit(
-                    provider.request_input, message, self, metadata
+                    ctx.run, provider.request_input, message, self, metadata
                 )
                 try:
                     raw = future.result(timeout=timeout)

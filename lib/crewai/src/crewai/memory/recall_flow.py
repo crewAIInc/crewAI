@@ -11,6 +11,7 @@ Implements adaptive-depth retrieval with:
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
@@ -139,7 +140,11 @@ class RecallFlow(Flow[RecallState]):
         else:
             with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as pool:
                 futures = {
-                    pool.submit(_search_one, emb, sc): (emb, sc) for emb, sc in tasks
+                    pool.submit(contextvars.copy_context().run, _search_one, emb, sc): (
+                        emb,
+                        sc,
+                    )
+                    for emb, sc in tasks
                 }
                 for future in as_completed(futures):
                     scope, results = future.result()
@@ -326,7 +331,7 @@ class RecallFlow(Flow[RecallState]):
     @router(re_search)
     def re_decide_depth(self) -> str:
         """Re-evaluate depth after re-search. Same logic as decide_depth."""
-        return self.decide_depth()
+        return self.decide_depth()  # type: ignore[call-arg]
 
     @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:

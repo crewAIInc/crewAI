@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import AbstractContextManager
+import contextvars
 from datetime import datetime
 import json
 import logging
@@ -250,8 +251,10 @@ class LanceDBStorage:
 
     def _compact_async(self) -> None:
         """Fire-and-forget: compact the table in a daemon background thread."""
+        ctx = contextvars.copy_context()
         threading.Thread(
-            target=self._compact_safe,
+            target=ctx.run,
+            args=(self._compact_safe,),
             daemon=True,
             name="lancedb-compact",
         ).start()

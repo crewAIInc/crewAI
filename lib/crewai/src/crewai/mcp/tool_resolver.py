@@ -11,6 +11,7 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
@@ -355,9 +356,10 @@ class MCPToolResolver:
                 asyncio.get_running_loop()
                 import concurrent.futures
 
+                ctx = contextvars.copy_context()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run, _setup_client_and_list_tools()
+                        ctx.run, asyncio.run, _setup_client_and_list_tools()
                     )
                     tools_list = future.result()
             except RuntimeError:
