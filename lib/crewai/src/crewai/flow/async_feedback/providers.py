@@ -34,6 +34,7 @@ class ConsoleProvider:
         ```python
         from crewai.flow.async_feedback import ConsoleProvider
 
+
         @human_feedback(
             message="Review this:",
             provider=ConsoleProvider(),
@@ -45,6 +46,7 @@ class ConsoleProvider:
     Example (input):
         ```python
         from crewai.flow import Flow, start
+
 
         class MyFlow(Flow):
             @start()
