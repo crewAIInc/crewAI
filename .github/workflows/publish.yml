@@ -100,7 +100,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          version=$(uv run python -c "import tomllib; print(tomllib.load(open('lib/crewai/pyproject.toml','rb'))['project']['version'])")
+          version=$(uv run python -c "import re; m = re.search(r'__version__\s*=\s*[\"\\x27]([^\"\\x27]+)', open('lib/crewai/src/crewai/__init__.py').read()); print(m.group(1))")
           echo "version=$version" >> $GITHUB_OUTPUT
 
           tag="${{ inputs.release_tag }}"
