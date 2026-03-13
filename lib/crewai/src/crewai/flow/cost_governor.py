@@ -148,6 +148,7 @@ class CostTracker:
         budget_limit: The configured budget limit.
         token_limit: The configured token limit.
         approved_budget: Additional budget approved via HITL.
+        approved_tokens: Additional tokens approved via HITL.
     """
 
     total_tokens: int = 0
@@ -158,6 +159,7 @@ class CostTracker:
     budget_limit: float | None = None
     token_limit: int | None = None
     approved_budget: float = 0.0
+    approved_tokens: int = 0
     _cost_map: dict[str, tuple[float, float]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -205,11 +207,18 @@ class CostTracker:
         if model in self._cost_map:
             return self._cost_map[model]
 
-        # Try prefix matching for model variants
+        # Try prefix matching for model variants, preferring longest match
         model_lower = model.lower()
+        best_match: tuple[str, tuple[float, float]] | None = None
         for prefix, pricing in self._cost_map.items():
+            if prefix == "default":
+                continue
             if model_lower.startswith(prefix.lower()):
-                return pricing
+                if best_match is None or len(prefix) > len(best_match[0]):
+                    best_match = (prefix, pricing)
+
+        if best_match is not None:
+            return best_match[1]
 
         return self._cost_map.get("default", (1.00, 3.00))
 
@@ -237,11 +246,19 @@ class CostTracker:
         return self.estimated_cost >= effective
 
     @property
+    def effective_token_limit(self) -> int | None:
+        """The total token limit including approved additional amounts."""
+        if self.token_limit is None:
+            return None
+        return self.token_limit + self.approved_tokens
+
+    @property
     def is_token_limit_exceeded(self) -> bool:
         """Check if the token limit has been exceeded."""
-        if self.token_limit is None:
+        effective = self.effective_token_limit
+        if effective is None:
             return False
-        return self.total_tokens >= self.token_limit
+        return self.total_tokens >= effective
 
     def to_dict(self) -> dict[str, Any]:
         """Return a summary dictionary."""
@@ -254,7 +271,9 @@ class CostTracker:
             "budget_limit": self.budget_limit,
             "token_limit": self.token_limit,
             "approved_budget": self.approved_budget,
+            "approved_tokens": self.approved_tokens,
             "effective_budget": self.effective_budget,
+            "effective_token_limit": self.effective_token_limit,
             "budget_remaining": round(self.budget_remaining, 4) if self.budget_remaining is not None else None,
             "is_budget_exceeded": self.is_budget_exceeded,
             "is_token_limit_exceeded": self.is_token_limit_exceeded,
@@ -409,11 +428,13 @@ def _handle_exceeded_budget(
     feedback = _request_budget_approval(flow_instance, config, tracker, method_name)
 
     # Process feedback to determine approval
+    import re
 
-    # Use LLM to collapse feedback if needed, or check for obvious approval
+    # Use word-boundary matching to avoid false positives (e.g., "know" contains "no")
     feedback_lower = feedback.lower().strip()
+    denial_pattern = r'\b(denied|deny|no|stop|reject)\b'
 
-    if not feedback_lower or "denied" in feedback_lower or "no" in feedback_lower or "stop" in feedback_lower:
+    if not feedback_lower or re.search(denial_pattern, feedback_lower):
         raise BudgetExceededError(
             current_cost=tracker.estimated_cost,
             budget_limit=tracker.budget_limit,
@@ -422,20 +443,40 @@ def _handle_exceeded_budget(
             message="Budget continuation denied by human reviewer",
         )
 
-    # Approved - increase budget
+    # Approved - increase budget and/or token limit
     # Try to extract a number from the feedback, or default to doubling
-    import re
     amount_match = re.search(r'\$?(\d+(?:\.\d{1,2})?)', feedback)
-    if amount_match:
-        additional = float(amount_match.group(1))
-    else:
-        # Default: approve same amount as original budget
-        additional = tracker.budget_limit or tracker.estimated_cost
 
-    tracker.approved_budget += additional
-    logger.info(
-        f"Budget approved: +${additional:.2f} (new effective budget: ${tracker.effective_budget:.2f})"
-    )
+    # Handle budget approval
+    if tracker.budget_limit is not None:
+        if amount_match:
+            additional_budget = float(amount_match.group(1))
+        else:
+            # Default: approve same amount as original budget
+            additional_budget = tracker.budget_limit
+        tracker.approved_budget += additional_budget
+        logger.info(
+            f"Budget approved: +${additional_budget:.2f} "
+            f"(new effective budget: ${tracker.effective_budget:.2f})"
+        )
+
+    # Handle token limit approval
+    if tracker.token_limit is not None:
+        # Try to extract a token count from feedback like "100000 tokens" or just a number
+        token_match = re.search(r'(\d+)\s*(?:tokens?|k)?', feedback_lower)
+        if token_match:
+            additional_tokens = int(token_match.group(1))
+            # Handle "100k" style input
+            if "k" in feedback_lower[token_match.end()-2:token_match.end()+2]:
+                additional_tokens *= 1000
+        else:
+            # Default: approve same amount as original token limit
+            additional_tokens = tracker.token_limit
+        tracker.approved_tokens += additional_tokens
+        logger.info(
+            f"Token limit approved: +{additional_tokens:,} "
+            f"(new effective limit: {tracker.effective_token_limit:,})"
+        )
 
 
 def cost_governor(

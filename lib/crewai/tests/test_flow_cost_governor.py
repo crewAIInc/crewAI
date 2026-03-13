@@ -137,12 +137,41 @@ class TestCostTracker:
         expected = DEFAULT_MODEL_COSTS["gpt-4o"]
         assert pricing == expected
 
+    def test_model_prefix_matching_prefers_longest(self):
+        """Test model pricing prefers longest prefix match."""
+        tracker = CostTracker()
+        # "gpt-4o-mini-2024-07-18" should match "gpt-4o-mini", not "gpt-4o"
+        pricing = tracker._get_model_pricing("gpt-4o-mini-2024-07-18")
+        expected = DEFAULT_MODEL_COSTS["gpt-4o-mini"]
+        assert pricing == expected
+
+        # "o1-mini" should match "o1-mini", not "o1"
+        pricing = tracker._get_model_pricing("o1-mini-2024-09-12")
+        expected = DEFAULT_MODEL_COSTS["o1-mini"]
+        assert pricing == expected
+
     def test_unknown_model_uses_default(self):
         """Test unknown model uses default pricing."""
         tracker = CostTracker()
         pricing = tracker._get_model_pricing("unknown-model-xyz")
         expected = DEFAULT_MODEL_COSTS["default"]
         assert pricing == expected
+
+    def test_effective_token_limit_with_approved(self):
+        """Test effective token limit includes approved amounts."""
+        tracker = CostTracker(token_limit=10000)
+        tracker.approved_tokens = 5000
+
+        assert tracker.effective_token_limit == 15000
+
+    def test_token_limit_exceeded_considers_approved(self):
+        """Test token limit considers approved additional tokens."""
+        tracker = CostTracker(token_limit=1000)
+        tracker.total_tokens = 1500
+        tracker.approved_tokens = 1000
+
+        # 1500 < 2000 (1000 + 1000), so not exceeded
+        assert tracker.is_token_limit_exceeded is False
 
 
 class TestExtractUsageFromResult:

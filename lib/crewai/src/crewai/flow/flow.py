@@ -1611,7 +1611,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 - budget_limit: The configured budget limit
                 - token_limit: The configured token limit
                 - approved_budget: Additional budget approved via HITL
+                - approved_tokens: Additional tokens approved via HITL
                 - effective_budget: Total budget including approved amounts
+                - effective_token_limit: Total token limit including approved amounts
                 - budget_remaining: Remaining budget (or None)
                 - is_budget_exceeded: Whether budget is exceeded
                 - is_token_limit_exceeded: Whether token limit is exceeded
@@ -1642,7 +1644,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 "budget_limit": None,
                 "token_limit": None,
                 "approved_budget": 0.0,
+                "approved_tokens": 0,
                 "effective_budget": None,
+                "effective_token_limit": None,
                 "budget_remaining": None,
                 "is_budget_exceeded": False,
                 "is_token_limit_exceeded": False,
