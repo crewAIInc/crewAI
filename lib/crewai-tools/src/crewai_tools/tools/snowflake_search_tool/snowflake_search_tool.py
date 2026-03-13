@@ -166,12 +166,11 @@ class SnowflakeSearchTool(BaseTool):
         if self._connection_pool is None:
             raise RuntimeError("Connection pool not initialized")
         with self._pool_lock:
-            if not self._connection_pool:
-                conn = await asyncio.get_event_loop().run_in_executor(
-                    self._thread_pool, self._create_connection
-                )
-                self._connection_pool.append(conn)
-            return self._connection_pool.pop()
+            if self._connection_pool:
+                return self._connection_pool.pop()
+        return await asyncio.get_event_loop().run_in_executor(
+            self._thread_pool, self._create_connection
+        )
 
     def _create_connection(self) -> SnowflakeConnection:
         """Create a new Snowflake connection."""
