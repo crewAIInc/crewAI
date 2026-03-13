@@ -35,6 +35,7 @@ from typing_extensions import Self
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
+    from opentelemetry.trace import Span
 
 try:
     from crewai_files import get_supported_content_types
@@ -65,8 +66,10 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
+    has_user_declined_tracing,
     set_tracing_enabled,
     should_enable_tracing,
+    should_suppress_tracing_messages,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
@@ -83,7 +86,10 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 from crewai.process import Process
+from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
@@ -94,6 +100,8 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.memory_tools import create_memory_tools
+from crewai.types.callable import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
@@ -165,12 +173,12 @@ class Crew(FlowTrackable, BaseModel):
     """
 
     __hash__ = object.__hash__
-    _execution_span: Any = PrivateAttr()
+    _execution_span: Span | None = PrivateAttr(default=None)
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default_factory=CacheHandler)
-    _memory: Any = PrivateAttr(default=None)  # Unified Memory | MemoryScope
+    _memory: Memory | MemoryScope | MemorySlice | None = PrivateAttr(default=None)
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
     _inputs: dict[str, Any] | None = PrivateAttr(default=None)
@@ -188,7 +196,7 @@ class Crew(FlowTrackable, BaseModel):
     agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool | Any = Field(
+    memory: bool | Memory | MemoryScope | MemorySlice = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "
@@ -203,23 +211,23 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    manager_llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
     manager_agent: BaseAgent | None = Field(
         description="Custom agent that will be used as manager.", default=None
     )
-    function_calling_llm: str | InstanceOf[LLM] | Any | None = Field(
+    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     share_crew: bool | None = Field(default=False)
-    step_callback: Any | None = Field(
+    step_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each step for all agents execution.",
     )
-    task_callback: Any | None = Field(
+    task_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each task for all agents execution.",
     )
@@ -262,7 +270,7 @@ class Crew(FlowTrackable, BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    planning_llm: str | InstanceOf[BaseLLM] | None = Field(
         default=None,
         description=(
             "Language model that will run the AgentPlanner if planning is True."
@@ -283,7 +291,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge object."
         ),
     )
-    chat_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    chat_llm: str | InstanceOf[BaseLLM] | None = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
@@ -356,12 +364,8 @@ class Crew(FlowTrackable, BaseModel):
     def create_crew_memory(self) -> Crew:
         """Initialize unified memory, respecting crew embedder config."""
         if self.memory is True:
-            from crewai.memory.unified_memory import Memory
-
             embedder = None
             if self.embedder is not None:
-                from crewai.rag.embeddings.factory import build_embedder
-
                 embedder = build_embedder(self.embedder)
             self._memory = Memory(embedder=embedder)
         elif self.memory:
@@ -1411,7 +1415,7 @@ class Crew(FlowTrackable, BaseModel):
         return tools
 
     def _add_memory_tools(
-        self, tools: list[BaseTool], memory: Any
+        self, tools: list[BaseTool], memory: Memory | MemoryScope | MemorySlice
     ) -> list[BaseTool]:
         """Add recall and remember tools when memory is available.
 
@@ -1422,8 +1426,6 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             Updated list with memory tools added.
         """
-        from crewai.tools.memory_tools import create_memory_tools
-
         return self._merge_tools(tools, create_memory_tools(memory))
 
     def _add_file_tools(
@@ -2006,11 +2008,6 @@ class Crew(FlowTrackable, BaseModel):
     @staticmethod
     def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
-        from crewai.events.listeners.tracing.utils import (
-            has_user_declined_tracing,
-            should_suppress_tracing_messages,
-        )
-
         if should_suppress_tracing_messages():
             return
 

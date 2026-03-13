@@ -17,9 +17,12 @@ from collections.abc import (
     ValuesView,
 )
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 import copy
+from datetime import datetime
 import enum
 import inspect
+import json
 import logging
 import threading
 from typing import (
@@ -49,6 +52,7 @@ from crewai.events.event_context import (
     reset_last_event_id,
     triggered_by_scope,
 )
+from crewai.events.event_listener import event_listener
 from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
@@ -61,16 +65,27 @@ from crewai.events.listeners.tracing.utils import (
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
+    FlowInputReceivedEvent,
+    FlowInputRequestedEvent,
     FlowPausedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
+    HumanFeedbackReceivedEvent,
+    HumanFeedbackRequestedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.flow.async_feedback.providers import ConsoleProvider
+from crewai.flow.async_feedback.types import HumanFeedbackPending
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
-from crewai.flow.flow_context import current_flow_id, current_flow_request_id
+from crewai.flow.flow_config import flow_config
+from crewai.flow.flow_context import (
+    current_flow_id,
+    current_flow_method_name,
+    current_flow_request_id,
+)
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -80,6 +95,9 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
     StartMethod,
 )
+from crewai.flow.human_feedback import HumanFeedbackResult
+from crewai.flow.input_provider import InputResponse
+from crewai.flow.persistence import SQLiteFlowPersistence
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import (
     FlowExecutionData,
@@ -98,14 +116,18 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
+from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.i18n import get_i18n
 
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
     from crewai.flow.async_feedback.types import PendingFeedbackContext
-    from crewai.flow.human_feedback import HumanFeedbackResult
-    from crewai.llms.base_llm import BaseLLM
+    from crewai.flow.input_provider import InputProvider
+    from crewai.memory.memory_scope import MemoryScope, MemorySlice
+    from crewai.memory.unified_memory import Memory
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
@@ -818,10 +840,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
-    memory: Any = (
-        None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
-    )
-    input_provider: Any = None  # InputProvider | None; per-flow override for self.ask()
+    memory: Memory | MemoryScope | MemorySlice | None = None
+    input_provider: InputProvider | None = None
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -950,8 +970,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         if self.memory is None:
             raise ValueError("No memory configured for this flow")
-        if isinstance(content, list):
+
+        from crewai.memory.unified_memory import Memory
+
+        if isinstance(content, list) and isinstance(self.memory, Memory):
             return self.memory.remember_many(content, **kwargs)
+        if isinstance(content, list):
+            return [self.memory.remember(c, **kwargs) for c in content]
         return self.memory.remember(content, **kwargs)
 
     def extract_memories(self, content: str) -> list[str]:
@@ -1180,8 +1205,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ```
         """
         if persistence is None:
-            from crewai.flow.persistence import SQLiteFlowPersistence
-
             persistence = SQLiteFlowPersistence()
 
         # Load pending feedback context and state
@@ -1294,10 +1317,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Raises:
             ValueError: If no pending feedback context exists
         """
-        from datetime import datetime
-
-        from crewai.flow.human_feedback import HumanFeedbackResult
-
         if self._pending_feedback_context is None:
             raise ValueError(
                 "No pending feedback context. Use from_pending() to restore a paused flow."
@@ -1380,13 +1399,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
         except Exception as e:
             # Check if flow was paused again for human feedback (loop case)
-            from crewai.flow.async_feedback.types import HumanFeedbackPending
-
             if isinstance(e, HumanFeedbackPending):
                 # Auto-save pending feedback (create default persistence if needed)
                 if self._persistence is None:
-                    from crewai.flow.persistence import SQLiteFlowPersistence
-
                     self._persistence = SQLiteFlowPersistence()
 
                 state_data = (
@@ -1789,8 +1804,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
-                    from crewai.flow.async_feedback.types import HumanFeedbackPending
-
                     if isinstance(e, HumanFeedbackPending):
                         result_holder.append(e)
                     else:
@@ -1859,8 +1872,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
-                    from crewai.flow.async_feedback.types import HumanFeedbackPending
-
                     if isinstance(e, HumanFeedbackPending):
                         result_holder.append(e)
                     else:
@@ -1985,13 +1996,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 await asyncio.gather(*tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
-                from crewai.flow.async_feedback.types import HumanFeedbackPending
-
                 if isinstance(e, HumanFeedbackPending):
                     # Auto-save pending feedback (create default persistence if needed)
                     if self._persistence is None:
-                        from crewai.flow.persistence import SQLiteFlowPersistence
-
                         self._persistence = SQLiteFlowPersistence()
 
                     state_data = (
@@ -2227,8 +2234,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # Set method name in context so ask() can read it without
             # stack inspection.  Must happen before copy_context() so the
             # value propagates into the thread pool for sync methods.
-            from crewai.flow.flow_context import current_flow_method_name
-
             method_name_token = current_flow_method_name.set(method_name)
             try:
                 if asyncio.iscoroutinefunction(method):
@@ -2236,8 +2241,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 else:
                     # Run sync methods in thread pool for isolation
                     # This allows Agent.kickoff() to work synchronously inside Flow methods
-                    import contextvars
-
                     ctx = contextvars.copy_context()
                     result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
             finally:
@@ -2271,15 +2274,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
             return result, finished_event_id
         except Exception as e:
             # Check if this is a HumanFeedbackPending exception (paused, not failed)
-            from crewai.flow.async_feedback.types import HumanFeedbackPending
-
             if isinstance(e, HumanFeedbackPending):
                 e.context.method_name = method_name
 
                 # Auto-save pending feedback (create default persistence if needed)
                 if self._persistence is None:
-                    from crewai.flow.persistence import SQLiteFlowPersistence
-
                     self._persistence = SQLiteFlowPersistence()
 
                 # Emit paused event (not failed)
@@ -2711,8 +2710,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         except Exception as e:
             # Don't log HumanFeedbackPending as an error - it's expected control flow
-            from crewai.flow.async_feedback.types import HumanFeedbackPending
-
             if not isinstance(e, HumanFeedbackPending):
                 logger.error(f"Error executing listener {listener_name}: {e}")
             raise
@@ -2730,9 +2727,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             An object implementing the ``InputProvider`` protocol.
         """
-        from crewai.flow.async_feedback.providers import ConsoleProvider
-        from crewai.flow.flow_config import flow_config
-
         if self.input_provider is not None:
             return self.input_provider
         if flow_config.input_provider is not None:
@@ -2818,19 +2812,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     return topic
             ```
         """
-        from concurrent.futures import (
-            ThreadPoolExecutor,
-            TimeoutError as FuturesTimeoutError,
-        )
-        from datetime import datetime
-
-        from crewai.events.types.flow_events import (
-            FlowInputReceivedEvent,
-            FlowInputRequestedEvent,
-        )
-        from crewai.flow.flow_context import current_flow_method_name
-        from crewai.flow.input_provider import InputResponse
-
         method_name = current_flow_method_name.get("unknown")
 
         # Emit input requested event
@@ -2861,7 +2842,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
                 try:
                     raw = future.result(timeout=timeout)
-                except FuturesTimeoutError:
+                except TimeoutError:
                     future.cancel()
                     raw = None
                 finally:
@@ -2934,12 +2915,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The human's feedback as a string. Empty string if no feedback provided.
         """
-        from crewai.events.event_listener import event_listener
-        from crewai.events.types.flow_events import (
-            HumanFeedbackReceivedEvent,
-            HumanFeedbackRequestedEvent,
-        )
-
         # Emit feedback requested event
         crewai_event_bus.emit(
             self,
@@ -3013,18 +2988,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             One of the outcome strings that best matches the feedback intent.
         """
-        from typing import Literal
-
-        from pydantic import BaseModel, Field
-
-        from crewai.llm import LLM
-        from crewai.llms.base_llm import BaseLLM as BaseLLMClass
-        from crewai.utilities.i18n import get_i18n
-
-        llm_instance: BaseLLMClass
+        llm_instance: BaseLLM
         if isinstance(llm, str):
             llm_instance = LLM(model=llm)
-        elif isinstance(llm, BaseLLMClass):
+        elif isinstance(llm, BaseLLM):
             llm_instance = llm
         else:
             raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
@@ -3057,8 +3024,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
 
             if isinstance(response, str):
-                import json
-
                 try:
                     parsed = json.loads(response)
                     return str(parsed.get("outcome", outcomes[0]))
@@ -3123,8 +3088,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             This method uses the centralized Rich console formatter for output
             and the standard logging module for log level support.
         """
-        from crewai.events.event_listener import event_listener
-
         event_listener.formatter.console.print(message, style=color)
         if level == "info":
             logger.info(message)

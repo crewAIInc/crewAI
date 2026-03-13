@@ -45,6 +45,7 @@ from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
+from crewai.types.callable import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import Converter, convert_to_model
@@ -124,8 +125,9 @@ class Task(BaseModel):
         description="Configuration for the agent",
         default=None,
     )
-    callback: Any | None = Field(
-        description="Callback to be executed after the task is completed.", default=None
+    callback: SerializableCallable | None = Field(
+        default=None,
+        description="Callback to be executed after the task is completed.",
     )
     agent: BaseAgent | None = Field(
         description="Agent responsible for execution the task.", default=None

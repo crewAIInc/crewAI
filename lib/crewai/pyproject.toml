@@ -105,6 +105,9 @@ a2a = [
 file-processing = [
     "crewai-files",
 ]
+pickling = [
+    'cloudpickle~=3.1.2'
+]
 
 
 [project.scripts]
