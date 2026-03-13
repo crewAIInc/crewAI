@@ -1125,26 +1125,24 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             return_exceptions=True,
         )
 
-        # Process results: store on todos and log, then observe each
+        # Process results: store on todos and log, then observe each.
+        # asyncio.gather preserves input order, so zip gives us the exact
+        # todo ↔ result (or exception) mapping.
         step_results: list[tuple[TodoItem, object]] = []
-        for item in gathered:
+        for todo, item in zip(ready, gathered):
             if isinstance(item, Exception):
-                # Find which todo this was for — mark first running todo as failed
-                for todo in ready:
-                    if todo.status == "running":
-                        error_msg = f"Error: {item!s}"
-                        todo.result = error_msg
-                        self.state.todos.mark_failed(
-                            todo.step_number, result=error_msg
-                        )
-                        if self.agent.verbose:
-                            self._printer.print(
-                                content=f"Todo {todo.step_number} failed: {error_msg}",
-                                color="red",
-                            )
-                        break
+                error_msg = f"Error: {item!s}"
+                todo.result = error_msg
+                self.state.todos.mark_failed(
+                    todo.step_number, result=error_msg
+                )
+                if self.agent.verbose:
+                    self._printer.print(
+                        content=f"Todo {todo.step_number} failed: {error_msg}",
+                        color="red",
+                    )
             else:
-                todo, result = item
+                _returned_todo, result = item
                 todo.result = result.result
 
                 self.state.execution_log.append(
