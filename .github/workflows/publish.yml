@@ -59,6 +59,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
