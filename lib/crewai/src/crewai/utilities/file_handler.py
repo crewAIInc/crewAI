@@ -122,6 +122,46 @@ class FileHandler:
             raise ValueError(f"Failed to log message: {e!s}") from e
 
 
+class _SafeUnpickler(pickle.Unpickler):
+    """Restricted unpickler that only allows safe built-in types.
+
+    Prevents arbitrary code execution via crafted pickle payloads (CWE-502).
+    The PickleHandler is used for training data persistence, which only requires
+    basic Python types (dicts, lists, strings, numbers).
+    """
+
+    _ALLOWED_CLASSES: frozenset[tuple[str, str]] = frozenset({
+        ("builtins", "dict"),
+        ("builtins", "list"),
+        ("builtins", "set"),
+        ("builtins", "frozenset"),
+        ("builtins", "tuple"),
+        ("builtins", "str"),
+        ("builtins", "bytes"),
+        ("builtins", "bytearray"),
+        ("builtins", "int"),
+        ("builtins", "float"),
+        ("builtins", "complex"),
+        ("builtins", "bool"),
+        ("builtins", "NoneType"),
+        ("datetime", "datetime"),
+        ("datetime", "date"),
+        ("datetime", "time"),
+        ("datetime", "timedelta"),
+        ("datetime", "timezone"),
+        ("collections", "OrderedDict"),
+        ("collections", "defaultdict"),
+        ("collections", "deque"),
+    })
+
+    def find_class(self, module: str, name: str) -> type:
+        if (module, name) in self._ALLOWED_CLASSES:
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(
+            f"Refusing to unpickle '{module}.{name}': class not in allowlist"
+        )
+
+
 class PickleHandler:
     """Handler for saving and loading data using pickle.
 
@@ -159,6 +199,9 @@ class PickleHandler:
     def load(self) -> Any:
         """Load the data from the specified file using pickle.
 
+        Uses a restricted unpickler that only allows safe built-in types,
+        preventing arbitrary code execution from tampered pickle files.
+
         Returns:
             The data loaded from the file.
         """
@@ -167,7 +210,7 @@ class PickleHandler:
 
         with open(self.file_path, "rb") as file:
             try:
-                return pickle.load(file)  # noqa: S301
+                return _SafeUnpickler(file).load()
             except EOFError:
                 return {}  # Return an empty dictionary if the file is empty or corrupted
             except Exception:
