@@ -93,3 +93,42 @@ jobs:
             echo "Some packages failed to publish"
             exit 1
           fi
+
+      - name: Extract version and release notes
+        if: success()
+        id: release-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(uv run python -c "import tomllib; print(tomllib.load(open('lib/crewai/pyproject.toml','rb'))['project']['version'])")
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+          tag="${{ inputs.release_tag }}"
+          if [ -z "$tag" ]; then
+            tag="$version"
+          fi
+
+          # Fetch release body and convert GitHub markdown to Slack mrkdwn
+          notes=$(gh release view "$tag" --json body -q '.body' 2>/dev/null || echo "")
+          if [ -n "$notes" ]; then
+            notes=$(echo "$notes" \
+              | sed 's/^### \(.*\)/*\1*/g' \
+              | sed 's/^## \(.*\)/*\1*/g' \
+              | sed 's/\*\*\([^*]*\)\*\*/*\1*/g' \
+              | sed 's/^- /• /g')
+          fi
+
+          {
+            echo "notes<<SLACKEOF"
+            echo "$notes"
+            echo "SLACKEOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Notify Slack
+        if: success()
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: ":rocket: *crewAI v${{ steps.release-info.outputs.version }}* published to <https://pypi.org/project/crewai/${{ steps.release-info.outputs.version }}/|PyPI>\n\n${{ steps.release-info.outputs.notes }}"
