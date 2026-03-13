@@ -564,6 +564,22 @@ def _handle_exceeded_budget(
             message="Budget continuation denied by human reviewer",
         )
 
+    # Reject unrecognized feedback - do not treat ambiguous input as approval
+    if not is_approved:
+        logger.warning(
+            f"Unrecognized HITL feedback for budget approval: {feedback!r}. "
+            "Expected 'approved', 'denied', or keywords like 'yes', 'no', 'continue', 'stop'."
+        )
+        raise BudgetExceededError(
+            current_cost=tracker.estimated_cost,
+            budget_limit=tracker.max_cost,
+            total_tokens=tracker.total_tokens,
+            token_limit=tracker.max_tokens,
+            total_requests=tracker.total_requests,
+            request_limit=tracker.max_requests,
+            message=f"Unrecognized feedback: {feedback!r}. Please respond with 'approved' or 'denied'.",
+        )
+
     # Handle budget approval
     if tracker.is_budget_exceeded:
         # Parse budget amount - require $ prefix for budget

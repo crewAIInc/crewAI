@@ -748,6 +748,46 @@ class TestBudgetOnExceedPause:
             with pytest.raises(BudgetExceededError):
                 flow.kickoff()
 
+    def test_ambiguous_feedback_not_treated_as_approval(self):
+        """Test ambiguous feedback like 'maybe' is rejected, not treated as approval."""
+        class TestFlow(Flow):
+            @start()
+            @budget(max_cost=0.001, on_exceed="pause")
+            def expensive_task(self):
+                return CrewOutput(
+                    raw="test",
+                    token_usage=UsageMetrics(total_tokens=1_000_000),
+                )
+
+        flow = TestFlow()
+
+        # "maybe" doesn't match approval or denial patterns - should be rejected
+        with patch.object(flow, "_request_human_feedback", return_value="maybe"):
+            with pytest.raises(BudgetExceededError) as exc_info:
+                flow.kickoff()
+
+        assert "Unrecognized feedback" in str(exc_info.value)
+
+    def test_gibberish_feedback_not_treated_as_approval(self):
+        """Test random gibberish feedback is rejected, not treated as approval."""
+        class TestFlow(Flow):
+            @start()
+            @budget(max_cost=0.001, on_exceed="pause")
+            def expensive_task(self):
+                return CrewOutput(
+                    raw="test",
+                    token_usage=UsageMetrics(total_tokens=1_000_000),
+                )
+
+        flow = TestFlow()
+
+        # Random gibberish doesn't match approval or denial patterns - should be rejected
+        with patch.object(flow, "_request_human_feedback", return_value="asdfgh"):
+            with pytest.raises(BudgetExceededError) as exc_info:
+                flow.kickoff()
+
+        assert "Unrecognized feedback" in str(exc_info.value)
+
 
 class TestBudgetWithCustomPricing:
     """Tests for @budget with custom pricing options."""
