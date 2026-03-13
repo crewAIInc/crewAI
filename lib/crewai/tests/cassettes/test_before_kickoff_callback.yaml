@@ -44,8 +44,8 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-DIjv3LqL0QS4iw3OM5b28B4VOMZPA\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1773358789,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-DIqrxbdWncBetSyqX8P36UUXoil9d\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773385505,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"Test expected output\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
@@ -59,13 +59,13 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-Ray:
-      - 9db6a3f31e087b0e-EWR
+      - 9db9302f7f411efc-EWR
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Mar 2026 23:39:50 GMT
+      - Fri, 13 Mar 2026 07:05:06 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '360'
+      - '376'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
