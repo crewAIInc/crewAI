@@ -566,3 +566,17 @@ BEDROCK_MODELS: list[BedrockModels] = [
     "qwen.qwen3-coder-30b-a3b-v1:0",
     "twelvelabs.pegasus-1-2-v1:0",
 ]
+
+
+AvianModels: TypeAlias = Literal[
+    "deepseek/deepseek-v3.2",
+    "moonshotai/kimi-k2.5",
+    "z-ai/glm-5",
+    "minimax/minimax-m2.5",
+]
+AVIAN_MODELS: list[AvianModels] = [
+    "deepseek/deepseek-v3.2",
+    "moonshotai/kimi-k2.5",
+    "z-ai/glm-5",
+    "minimax/minimax-m2.5",
+]

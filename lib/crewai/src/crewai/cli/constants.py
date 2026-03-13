@@ -112,6 +112,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    "avian": [
+        {
+            "prompt": "Enter your Avian API key (press Enter to skip)",
+            "key_name": "AVIAN_API_KEY",
+        }
+    ],
 }
 
 
@@ -128,6 +134,7 @@ PROVIDERS: list[str] = [
     "azure",
     "cerebras",
     "sambanova",
+    "avian",
 ]
 
 MODELS: dict[str, list[str]] = {
@@ -323,6 +330,12 @@ MODELS: dict[str, list[str]] = {
         "sambanova/Llama-3.2-11B-Vision-Instruct",
         "sambanova/Meta-Llama-3.2-3B-Instruct",
         "sambanova/Meta-Llama-3.2-1B-Instruct",
+    ],
+    "avian": [
+        "avian/deepseek/deepseek-v3.2",
+        "avian/moonshotai/kimi-k2.5",
+        "avian/z-ai/glm-5",
+        "avian/minimax/minimax-m2.5",
     ],
 }
 
