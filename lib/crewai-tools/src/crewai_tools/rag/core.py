@@ -99,6 +99,45 @@ class RAG(Adapter):
         loader_result = loader.load(source_content)
         doc_id = loader_result.doc_id
 
+        chunks = chunker.chunk(loader_result.content)
+        documents = []
+        for i, chunk in enumerate(chunks):
+            doc_metadata = (metadata or {}).copy()
+            doc_metadata["chunk_index"] = i
+            documents.append(
+                Document(
+                    id=compute_sha256(chunk),
+                    content=chunk,
+                    metadata=doc_metadata,
+                    data_type=data_type,
+                    source=loader_result.source,
+                )
+            )
+
+        if not documents:
+            logger.warning("No documents to add")
+            return
+
+        contents = [doc.content for doc in documents]
+        try:
+            embeddings = self._embedding_service.embed_batch(contents)
+        except Exception as e:
+            logger.error(f"Failed to generate embeddings: {e}")
+            return
+
+        ids = [doc.id for doc in documents]
+        metadatas = []
+        for doc in documents:
+            doc_metadata = doc.metadata.copy()
+            doc_metadata.update(
+                {
+                    "data_type": doc.data_type.value,
+                    "source": doc.source,
+                    "doc_id": doc_id,
+                }
+            )
+            metadatas.append(doc_metadata)
+
         with store_lock(self._lock_name):
             existing_doc = self._collection.get(
                 where={"source": source_content.source_ref}, limit=1
@@ -118,47 +157,6 @@ class RAG(Adapter):
             if existing_doc_id and existing_doc_id != loader_result.doc_id:
                 logger.warning(f"Deleting old document with doc_id {existing_doc_id}")
                 self._collection.delete(where={"doc_id": existing_doc_id})
-
-            documents = []
-
-            chunks = chunker.chunk(loader_result.content)
-            for i, chunk in enumerate(chunks):
-                doc_metadata = (metadata or {}).copy()
-                doc_metadata["chunk_index"] = i
-                documents.append(
-                    Document(
-                        id=compute_sha256(chunk),
-                        content=chunk,
-                        metadata=doc_metadata,
-                        data_type=data_type,
-                        source=loader_result.source,
-                    )
-                )
-
-            if not documents:
-                logger.warning("No documents to add")
-                return
-
-            contents = [doc.content for doc in documents]
-            try:
-                embeddings = self._embedding_service.embed_batch(contents)
-            except Exception as e:
-                logger.error(f"Failed to generate embeddings: {e}")
-                return
-
-            ids = [doc.id for doc in documents]
-            metadatas = []
-
-            for doc in documents:
-                doc_metadata = doc.metadata.copy()
-                doc_metadata.update(
-                    {
-                        "data_type": doc.data_type.value,
-                        "source": doc.source,
-                        "doc_id": doc_id,
-                    }
-                )
-                metadatas.append(doc_metadata)
 
             try:
                 self._collection.add(
