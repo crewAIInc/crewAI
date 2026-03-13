@@ -1541,6 +1541,23 @@ def release(version: str, dry_run: bool, no_edit: bool) -> None:
                 f"[green]✓[/green] Created GitHub {release_type} for {tag_name}"
             )
 
+            with console.status("[cyan]Triggering PyPI publish workflow..."):
+                try:
+                    run_command(
+                        [
+                            "gh",
+                            "workflow",
+                            "run",
+                            "publish.yml",
+                            "-f",
+                            f"release_tag={tag_name}",
+                        ]
+                    )
+                except subprocess.CalledProcessError as e:
+                    console.print(f"[red]✗[/red] Triggered PyPI publish workflow: {e}")
+                    sys.exit(1)
+            console.print("[green]✓[/green] Triggered PyPI publish workflow")
+
         console.print(f"\n[green]✓[/green] Release [bold]{version}[/bold] complete!")
 
     except subprocess.CalledProcessError as e:
