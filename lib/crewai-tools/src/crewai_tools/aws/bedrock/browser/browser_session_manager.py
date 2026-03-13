@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextvars
 import logging
 import threading
 from typing import TYPE_CHECKING
@@ -45,6 +47,7 @@ class BrowserSessionManager:
         Returns:
             An async browser instance specific to the thread
         """
+        loop = asyncio.get_event_loop()
         while True:
             with self._lock:
                 if thread_id in self._async_sessions:
@@ -53,7 +56,8 @@ class BrowserSessionManager:
                     self._creating[thread_id] = threading.Event()
                     break
                 event = self._creating[thread_id]
-            event.wait()
+            ctx = contextvars.copy_context()
+            await loop.run_in_executor(None, ctx.run, event.wait)
 
         try:
             browser_client, browser = await self._create_async_browser_session(
@@ -64,9 +68,8 @@ class BrowserSessionManager:
             return browser
         finally:
             with self._lock:
-                event = self._creating.pop(thread_id, None)
-            if event is not None:
-                event.set()
+                evt = self._creating.pop(thread_id)
+            evt.set()
 
     def get_sync_browser(self, thread_id: str) -> SyncBrowser:
         """Get or create a sync browser for the specified thread.
@@ -91,9 +94,8 @@ class BrowserSessionManager:
             return self._create_sync_browser_session(thread_id)
         finally:
             with self._lock:
-                event = self._creating.pop(thread_id, None)
-            if event is not None:
-                event.set()
+                evt = self._creating.pop(thread_id)
+            evt.set()
 
     async def _create_async_browser_session(
         self, thread_id: str
