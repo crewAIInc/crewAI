@@ -367,7 +367,7 @@ class MemoryTUI(App[None]):
                 if self._selected_scope != "/"
                 else None
             )
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             matches = await loop.run_in_executor(
                 None,
                 lambda: self._memory.recall(
