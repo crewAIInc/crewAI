@@ -590,21 +590,9 @@ class Task(BaseModel):
 
             if isinstance(result, BaseModel):
                 raw = result.model_dump_json()
-                if self.output_pydantic:
-                    pydantic_output = result
-                    json_output = None
-                elif self.output_json:
-                    pydantic_output = None
-                    json_output = result.model_dump()
-                else:
-                    pydantic_output = None
-                    json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = self._export_output(result)
-            else:
-                raw = result
-                pydantic_output, json_output = None, None
+            # Always export output to ensure consistent TaskOutput structure
+            # for guardrails, regardless of whether it's the first attempt or a retry
+            pydantic_output, json_output = self._export_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,
@@ -704,21 +692,9 @@ class Task(BaseModel):
 
             if isinstance(result, BaseModel):
                 raw = result.model_dump_json()
-                if self.output_pydantic:
-                    pydantic_output = result
-                    json_output = None
-                elif self.output_json:
-                    pydantic_output = None
-                    json_output = result.model_dump()
-                else:
-                    pydantic_output = None
-                    json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = self._export_output(result)
-            else:
-                raw = result
-                pydantic_output, json_output = None, None
+            # Always export output to ensure consistent TaskOutput structure
+            # for guardrails, regardless of whether it's the first attempt or a retry
+            pydantic_output, json_output = self._export_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,
