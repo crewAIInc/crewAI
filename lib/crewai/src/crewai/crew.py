@@ -439,6 +439,18 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
+    def stamp_execution_order(self) -> Self:
+        """Lock task execution order by stamping each task with its insertion index.
+
+        This guarantees deterministic, stable ordering for all tasks regardless
+        of any other attribute.  Tasks are always dispatched in the order they
+        appear in ``self.tasks`` (i.e. insertion order).
+        """
+        for idx, task in enumerate(self.tasks):
+            task._execution_index = idx
+        return self
+
+    @model_validator(mode="after")
     def validate_tasks(self) -> Self:
         if self.process == Process.sequential:
             for task in self.tasks:
@@ -984,13 +996,18 @@ class Crew(FlowTrackable, BaseModel):
     ) -> CrewOutput:
         """Executes tasks using native async and returns the final output.
 
+        **Ordering contract**: tasks are dispatched in the exact order they
+        appear in *tasks* (i.e. their insertion / list order).  Each task
+        carries an ``_execution_index`` stamped at crew-construction time
+        that locks this order deterministically.
+
         Args:
-            tasks: List of tasks to execute
-            start_index: Index to start execution from (for replay)
-            was_replayed: Whether this is a replayed execution
+            tasks: List of tasks to execute (preserves insertion order).
+            start_index: Index to start execution from (for replay).
+            was_replayed: Whether this is a replayed execution.
 
         Returns:
-            CrewOutput: Final output of the crew
+            CrewOutput: Final output of the crew.
         """
         task_outputs: list[TaskOutput] = []
         pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]] = []
@@ -1183,13 +1200,18 @@ class Crew(FlowTrackable, BaseModel):
     ) -> CrewOutput:
         """Executes tasks sequentially and returns the final output.
 
+        **Ordering contract**: tasks are dispatched in the exact order they
+        appear in *tasks* (i.e. their insertion / list order).  Each task
+        carries an ``_execution_index`` stamped at crew-construction time
+        that locks this order deterministically.
+
         Args:
-            tasks (List[Task]): List of tasks to execute
-            manager (Optional[BaseAgent], optional): Manager agent to use for
-                delegation. Defaults to None.
+            tasks: List of tasks to execute (preserves insertion order).
+            start_index: Index to resume execution from (for replay).
+            was_replayed: Whether this is a replayed execution.
 
         Returns:
-            CrewOutput: Final output of the crew
+            CrewOutput: Final output of the crew.
         """
         custom_start = self._get_execution_start_index(tasks)
         if custom_start is not None:
