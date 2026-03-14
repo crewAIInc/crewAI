@@ -151,6 +151,7 @@ from crewai_tools.tools.serper_dev_tool.serper_dev_tool import SerperDevTool
 from crewai_tools.tools.serper_scrape_website_tool.serper_scrape_website_tool import (
     SerperScrapeWebsiteTool,
 )
+from crewai_tools.tools.serpex_tool.serpex_tool import SerpexTool
 from crewai_tools.tools.serply_api_tool.serply_job_search_tool import (
     SerplyJobSearchTool,
 )
@@ -268,6 +269,7 @@ __all__ = [
     "SerpApiGoogleShoppingTool",
     "SerperDevTool",
     "SerperScrapeWebsiteTool",
+    "SerpexTool",
     "SerplyJobSearchTool",
     "SerplyNewsSearchTool",
     "SerplyScholarSearchTool",
