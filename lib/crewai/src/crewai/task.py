@@ -96,6 +96,7 @@ class Task(BaseModel):
         context: List of Task instances providing task context or input data.
         description: Descriptive text detailing task's purpose and execution.
         expected_output: Clear definition of expected task outcome.
+        priority: Numeric task priority. Higher values execute before lower values.
         output_file: File path for storing task output.
         create_directory: Whether to create the directory for output_file if it doesn't exist.
         output_json: Pydantic model for structuring JSON output.
@@ -119,6 +120,10 @@ class Task(BaseModel):
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
         description="Clear definition of expected output for the task."
+    )
+    priority: int = Field(
+        default=0,
+        description="Execution priority for this task. Higher values execute first.",
     )
     config: dict[str, Any] | None = Field(
         description="Configuration for the agent",
