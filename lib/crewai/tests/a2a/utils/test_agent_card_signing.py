@@ -150,10 +150,8 @@ class TestSerializeAgentCard:
     def test_compact_separators(self, sample_agent_card: AgentCard) -> None:
         """Output should use compact separators (no spaces after : or ,)."""
         result = _serialize_agent_card(sample_agent_card)
-        # Compact JSON should not have ": " or ", " patterns at the top level
-        assert ": " not in result or result.count(": ") == 0
-        # More specifically, there should be no space after colon
-        # (json.dumps with separators=(",",":") ensures this)
+        assert ": " not in result
+        assert ", " not in result
 
 
 # ---------------------------------------------------------------------------
