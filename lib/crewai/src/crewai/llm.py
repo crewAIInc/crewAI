@@ -2113,6 +2113,15 @@ class LLM(BaseLLM):
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]
 
+        # Anthropic rejects final assistant content with trailing whitespace
+        if (
+            messages
+            and messages[-1]["role"] == "assistant"
+            and isinstance(messages[-1]["content"], str)
+            and messages[-1]["content"] != messages[-1]["content"].rstrip()
+        ):
+            messages = [*messages[:-1], {**messages[-1], "content": messages[-1]["content"].rstrip()}]
+
         # Anthropic requires messages to start with 'user' role
         if not messages or messages[0]["role"] == "system":
             # If first message is system or empty, add a placeholder user message
