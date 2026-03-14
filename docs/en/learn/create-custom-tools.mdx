@@ -34,6 +34,22 @@ class MyCustomTool(BaseTool):
         return "Tool's result"
 ```
 
+#### Securing Custom Tools with SIGIL
+
+
+You can secure any custom tool by applying the `@sigil_gate` decorator. SIGIL will automatically scan the tool's inputs and outputs against thousands of threat patterns before execution.
+
+```python Code
+from crewai.tools import BaseTool
+from sigil_protocol.crewai import sigil_gate
+
+@sigil_gate
+class CriticalSystemTool(BaseTool):
+    name: str = "Critical System Access"
+    description: str = "Executes commands on the critical system."
+    # ... args_schema and _run implementation ...
+```
+
 ### Using the `tool` Decorator
 
 Alternatively, you can use the tool decorator `@tool`. This approach allows you to define the tool's attributes and functionality directly within a function,
