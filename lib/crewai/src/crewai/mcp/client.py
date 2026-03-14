@@ -27,6 +27,7 @@ from crewai.events.types.mcp_events import (
     MCPToolExecutionFailedEvent,
     MCPToolExecutionStartedEvent,
 )
+from crewai.mcp.security import MCPSecurityManager
 from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
@@ -77,6 +78,7 @@ class MCPClient:
         max_retries: int = MCP_MAX_RETRIES,
         cache_tools_list: bool = False,
         logger: logging.Logger | None = None,
+        security_manager: MCPSecurityManager | None = None,
     ) -> None:
         """Initialize MCP client.
 
@@ -88,6 +90,8 @@ class MCPClient:
             max_retries: Maximum retry attempts for operations.
             cache_tools_list: Whether to cache tool list results.
             logger: Optional logger instance.
+            security_manager: Optional security manager for message signing
+                and tool integrity verification.
         """
         self.transport = transport
         self.connect_timeout = connect_timeout
@@ -95,6 +99,7 @@ class MCPClient:
         self.discovery_timeout = discovery_timeout
         self.max_retries = max_retries
         self.cache_tools_list = cache_tools_list
+        self.security_manager = security_manager
         # self._logger = logger or logging.getLogger(__name__)
         self._session: Any = None
         self._initialized = False
@@ -439,6 +444,10 @@ class MCPClient:
     ) -> Any:
         """Call a tool on the MCP server.
 
+        When a :class:`MCPSecurityManager` is attached, the outgoing JSON-RPC
+        message is signed before transmission so the server can verify the
+        caller's identity and detect tampering.
+
         Args:
             tool_name: Name of the tool to call.
             arguments: Tool arguments.
@@ -451,6 +460,21 @@ class MCPClient:
 
         arguments = arguments or {}
         cleaned_arguments = self._clean_tool_arguments(arguments)
+
+        # Sign the outgoing message when a security manager is present
+        if self.security_manager is not None:
+            message = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {
+                    "name": tool_name,
+                    "arguments": cleaned_arguments,
+                },
+            }
+            signed_envelope = self.security_manager.sign_message(message)
+            # Attach the signed envelope as metadata so the server can verify
+            if signed_envelope is not message:
+                cleaned_arguments["_mcps_envelope"] = signed_envelope
 
         # Get server info for events
         server_name, server_url, transport_type = self._get_server_info()

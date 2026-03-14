@@ -23,6 +23,7 @@ from crewai.mcp.config import (
     MCPServerSSE,
     MCPServerStdio,
 )
+from crewai.mcp.security import MCPSecurityConfig, MCPSecurityManager
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
@@ -324,9 +325,19 @@ class MCPToolResolver:
         from crewai.tools.mcp_native_tool import MCPNativeTool
 
         discovery_transport, server_name = self._create_transport(mcp_config)
+
+        # Build a security manager when the config has security settings
+        security_manager: MCPSecurityManager | None = None
+        security_config: MCPSecurityConfig | None = getattr(
+            mcp_config, "security", None
+        )
+        if security_config is not None and MCPSecurityManager.is_available():
+            security_manager = MCPSecurityManager(security_config)
+
         discovery_client = MCPClient(
             transport=discovery_transport,
             cache_tools_list=mcp_config.cache_tools_list,
+            security_manager=security_manager,
         )
 
         async def _setup_client_and_list_tools() -> list[dict[str, Any]]:
@@ -404,6 +415,7 @@ class MCPToolResolver:
                 return MCPClient(
                     transport=transport,
                     cache_tools_list=mcp_config.cache_tools_list,
+                    security_manager=security_manager,
                 )
 
             tools = []
