@@ -43,6 +43,7 @@ from crewai.llms.constants import (
     AZURE_MODELS,
     BEDROCK_MODELS,
     GEMINI_MODELS,
+    MINIMAX_MODELS,
     OPENAI_MODELS,
 )
 from crewai.utilities import InternalInstructor
@@ -297,6 +298,9 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "ai21.j2-ultra-v1": 8191,
     "ai21.jamba-instruct-v1:0": 256000,
     "mistral.mistral-7b-instruct-v0:2": 32000,
+    # minimax
+    "MiniMax-M2.5": 204800,
+    "MiniMax-M2.5-highspeed": 204800,
     "mistral.mixtral-8x7b-instruct-v0:1": 32000,
     # mistral
     "mistral-tiny": 32768,
@@ -325,6 +329,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "minimax",
 ]
 
 
@@ -384,6 +389,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "minimax": "minimax",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -483,6 +489,9 @@ class LLM(BaseLLM):
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
 
+        if provider == "minimax":
+            return model_lower.startswith("minimax-")
+
         return False
 
     @classmethod
@@ -518,6 +527,9 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if provider == "minimax" and model in MINIMAX_MODELS:
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -550,6 +562,9 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        if model in MINIMAX_MODELS:
+            return "minimax"
+
         return "openai"
 
     @classmethod
@@ -581,6 +596,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "minimax":
+            from crewai.llms.providers.minimax.completion import MiniMaxCompletion
+
+            return MiniMaxCompletion
 
         return None
 
