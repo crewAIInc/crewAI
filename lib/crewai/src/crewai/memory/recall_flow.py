@@ -274,19 +274,7 @@ class RecallFlow(Flow[RecallState]):
                 )
                 candidates = []
         if not candidates:
-            try:
-                info = self._storage.get_scope_info(scope_prefix)
-                if info.record_count > 0:
-                    candidates = [scope_prefix]
-                else:
-                    candidates = [scope_prefix]
-            except Exception:
-                logger.warning(
-                    "Storage get_scope_info failed in filter_and_chunk, "
-                    "using scope prefix as fallback",
-                    exc_info=True,
-                )
-                candidates = [scope_prefix]
+            candidates = [scope_prefix]
         self.state.candidate_scopes = candidates[:20]
         return self.state.candidate_scopes
 
