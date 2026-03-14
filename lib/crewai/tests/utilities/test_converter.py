@@ -952,3 +952,136 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+# Tests for _strip_markdown_code_blocks and markdown-wrapped JSON handling
+from crewai.utilities.converter import _strip_markdown_code_blocks
+
+
+class TestStripMarkdownCodeBlocks:
+    """Tests for the _strip_markdown_code_blocks helper function."""
+
+    def test_strip_json_code_block(self) -> None:
+        text = '```json\n{"name": "Alice", "age": 30}\n```'
+        assert _strip_markdown_code_blocks(text) == '{"name": "Alice", "age": 30}'
+
+    def test_strip_plain_code_block(self) -> None:
+        text = '```\n{"name": "Bob", "age": 25}\n```'
+        assert _strip_markdown_code_blocks(text) == '{"name": "Bob", "age": 25}'
+
+    def test_no_code_block_returns_original(self) -> None:
+        text = '{"name": "Dave", "age": 40}'
+        assert _strip_markdown_code_blocks(text) == '{"name": "Dave", "age": 40}'
+
+    def test_multiline_json_in_code_block(self) -> None:
+        text = '```json\n{\n  "name": "Eve",\n  "age": 28\n}\n```'
+        result = _strip_markdown_code_blocks(text)
+        parsed = json.loads(result)
+        assert parsed == {"name": "Eve", "age": 28}
+
+    def test_empty_string(self) -> None:
+        assert _strip_markdown_code_blocks("") == ""
+
+    def test_plain_text_not_affected(self) -> None:
+        text = "This is just plain text with no code blocks"
+        assert _strip_markdown_code_blocks(text) == text
+
+
+def test_convert_to_model_with_markdown_json_code_block() -> None:
+    """Test that convert_to_model handles JSON wrapped in markdown code blocks."""
+    result = '```json\n{"name": "Alice", "age": 30}\n```'
+    output = convert_to_model(result, SimpleModel, None, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Alice"
+    assert output.age == 30
+
+
+def test_convert_to_model_with_plain_code_block() -> None:
+    """Test that convert_to_model handles JSON wrapped in plain code blocks."""
+    result = '```\n{"name": "Bob", "age": 25}\n```'
+    output = convert_to_model(result, SimpleModel, None, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Bob"
+    assert output.age == 25
+
+
+def test_converter_function_calling_with_markdown_wrapped_json() -> None:
+    """Test Converter.to_pydantic with function-calling LLM returning markdown-wrapped JSON."""
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.call.return_value = '```json\n{"name": "Grace", "age": 45}\n```'
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Grace, Age: 45",
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = converter.to_pydantic()
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Grace"
+    assert output.age == 45
+
+
+def test_converter_non_function_calling_with_markdown_wrapped_json() -> None:
+    """Test Converter.to_pydantic with non-function-calling LLM returning markdown-wrapped JSON."""
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.call.return_value = '```json\n{"name": "Hank", "age": 55}\n```'
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Hank, Age: 55",
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = converter.to_pydantic()
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Hank"
+    assert output.age == 55
+
+
+def test_converter_with_task_evaluation_markdown_wrapped() -> None:
+    """Test the exact scenario from issue #4509: TaskEvaluation with markdown-wrapped JSON."""
+    from crewai.utilities.evaluators.task_evaluator import TaskEvaluation
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    task_eval_json = json.dumps({
+        "suggestions": ["Improve data sourcing"],
+        "quality": 8.5,
+        "entities": [
+            {
+                "name": "AI",
+                "type": "Technology",
+                "description": "Artificial Intelligence",
+                "relationships": ["Healthcare"],
+            }
+        ],
+    })
+    llm.call.return_value = f"```json\n{task_eval_json}\n```"
+
+    converter = Converter(
+        llm=llm,
+        text="Evaluate this task",
+        model=TaskEvaluation,
+        instructions="Convert to JSON",
+    )
+
+    output = converter.to_pydantic()
+    assert isinstance(output, TaskEvaluation)
+    assert output.quality == 8.5
+    assert len(output.suggestions) == 1
+    assert len(output.entities) == 1
+    assert output.entities[0].name == "AI"
+
+
+def test_handle_partial_json_with_markdown_code_block() -> None:
+    """Test that handle_partial_json strips markdown code blocks before processing."""
+    result = '```json\n{"name": "Ivy", "age": 33}\n```'
+    output = handle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Ivy"
+    assert output.age == 33
