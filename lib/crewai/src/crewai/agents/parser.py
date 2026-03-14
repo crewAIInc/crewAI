@@ -95,6 +95,15 @@ def parse(text: str) -> AgentAction | AgentFinish:
     includes_answer = FINAL_ANSWER_ACTION in text
     action_match = ACTION_INPUT_REGEX.search(text)
 
+    # Check for fabrication: LLM cannot include both Action and Final Answer
+    # This prevents Issue #3154 where LLM fabricates tool execution
+    if includes_answer and action_match:
+        raise OutputParserError(
+            "Invalid format: Response contains both 'Action:' and 'Final Answer:'. "
+            "This indicates the LLM fabricated tool execution. "
+            "The LLM must either perform an Action OR provide a Final Answer, not both."
+        )
+
     if includes_answer:
         final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
         # Check whether the final answer ends with triple backticks.
