@@ -21,6 +21,11 @@ class NodeMetadata(TypedDict, total=False):
     class_signature: str
     class_name: str
     class_line_number: int
+    is_human_feedback: bool
+    human_feedback_message: str
+    human_feedback_emit: list[str]
+    human_feedback_llm: str
+    human_feedback_default_outcome: str
 
 
 class StructureEdge(TypedDict, total=False):
