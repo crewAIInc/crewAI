@@ -4,7 +4,7 @@
 
 [Minds](https://mindsdb.com/minds) are AI systems provided by [MindsDB](https://mindsdb.com/) that work similarly to large language models (LLMs) but go beyond by answering any question from any data.
 
-This is accomplished by selecting the most relevant data for an answer using parametric search, understanding the meaning and providing responses within the correct context through semantic search, and finally, delivering precise answers by analyzing data and using machine learning (ML) models.
+This is accomplished by selecting the most relevant data for an answer using parameteric search, understanding the meaning and providing responses within the correct context through semantic search, and finally, delivering precise answers by analyzing data and using machine learning (ML) models.
 
 The `AIMindTool` can be used to query data sources in natural language by simply configuring their connection parameters.
 
