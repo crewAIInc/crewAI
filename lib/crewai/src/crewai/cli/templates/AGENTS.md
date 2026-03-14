@@ -313,7 +313,7 @@ if __name__ == "__main__":
 | `memory` | False | Conversation history |
 | `allow_delegation` | False | Can delegate tasks to other agents |
 | `allow_code_execution` | False | Can run code |
-| `code_execution_mode` | "safe" | "safe" (Docker) or "unsafe" (direct) |
+| `code_execution_mode` | "safe" | "safe" (Docker), "microvm" (exec-sandbox), or "unsafe" (direct) |
 | `respect_context_window` | True | Auto-summarize when exceeding token limits |
 | `cache` | True | Tool result caching |
 | `reasoning` | False | Reflect and plan before task execution |

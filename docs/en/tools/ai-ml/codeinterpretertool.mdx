@@ -18,6 +18,17 @@ There are several ways to use this tool:
 This is the primary option. The code runs in a secure, isolated Docker container, ensuring safety regardless of its content.
 Make sure Docker is installed and running on your system. If you don’t have it, you can install it from [here](https://docs.docker.com/get-docker/).
 
+### MicroVM environment (exec-sandbox)
+
+Use `execution_mode="microvm"` to run code in a hardware-isolated QEMU microVM via `exec-sandbox`.
+This mode does not require a Docker daemon.
+
+Install the runtime dependency:
+
+```shell
+pip install exec-sandbox
+```
+
 ### Sandbox environment
 
 If Docker is unavailable — either not installed or not accessible for any reason — the code will be executed in a restricted Python environment - called sandbox.
@@ -106,12 +117,24 @@ os.system("ls -la")
 CodeInterpreterTool(unsafe_mode=True).run(code=code)
 ```
 
+### Enabling `microvm` mode
+
+```python Code
+from crewai_tools import CodeInterpreterTool
+
+CodeInterpreterTool(execution_mode="microvm").run(
+    code="result = 2 + 2",
+    libraries_used=[],
+)
+```
+
 ## Parameters
 
 The `CodeInterpreterTool` accepts the following parameters during initialization:
 
 - **user_dockerfile_path**: Optional. Path to a custom Dockerfile to use for the code interpreter container.
 - **user_docker_base_url**: Optional. URL to the Docker daemon to use for running the container.
+- **execution_mode**: Optional. Execution strategy when `unsafe_mode=False`. Use `"safe"` (Docker + restricted-sandbox fallback) or `"microvm"` (exec-sandbox). Default is `"safe"`.
 - **unsafe_mode**: Optional. Whether to run code directly on the host machine instead of in a Docker container or sandbox. Default is `False`. Use with caution!
 - **default_image_tag**: Optional. Default Docker image tag. Default is `code-interpreter:latest`
 
@@ -169,7 +192,7 @@ result = crew.kickoff()
 
 ## Implementation Details
 
-The `CodeInterpreterTool` uses Docker to create a secure environment for code execution:
+The `CodeInterpreterTool` dispatches execution based on mode:
 
 ```python Code
 class CodeInterpreterTool(BaseTool):
@@ -184,26 +207,25 @@ class CodeInterpreterTool(BaseTool):
 
         if self.unsafe_mode:
             return self.run_code_unsafe(code, libraries_used)
-        else:
-            return self.run_code_safety(code, libraries_used)
+        if self.execution_mode == "microvm":
+            return self.run_code_in_microvm(code, libraries_used)
+        return self.run_code_safety(code, libraries_used)
 ```
 
 The tool performs the following steps:
-1. Verifies that the Docker image exists or builds it if necessary
-2. Creates a Docker container with the current working directory mounted
-3. Installs any required libraries specified by the agent
-4. Executes the Python code in the container
-5. Returns the output of the code execution
-6. Cleans up by stopping and removing the container
+1. If `execution_mode="safe"`, it tries Docker first and falls back to restricted sandbox when Docker is unavailable
+2. If `execution_mode="microvm"`, it runs code in an exec-sandbox microVM
+3. If `unsafe_mode=True`, it executes directly on the host
 
 ## Security Considerations
 
 By default, the `CodeInterpreterTool` runs code in an isolated Docker container, which provides a layer of security. However, there are still some security considerations to keep in mind:
 
 1. The Docker container has access to the current working directory, so sensitive files could potentially be accessed.
-2. If the Docker container is unavailable and the code needs to run safely, it will be executed in a sandbox environment. For security reasons, installing arbitrary libraries is not allowed
-3. The `unsafe_mode` parameter allows code to be executed directly on the host machine, which should only be used in trusted environments.
-4. Be cautious when allowing agents to install arbitrary libraries, as they could potentially include malicious code.
+2. `execution_mode="microvm"` runs code in an isolated VM and does not require Docker daemon access.
+3. If `execution_mode="safe"` and Docker is unavailable, code runs in a restricted sandbox. For security reasons, installing arbitrary libraries is not allowed there.
+4. The `unsafe_mode` parameter allows code to be executed directly on the host machine, which should only be used in trusted environments.
+5. Be cautious when allowing agents to install arbitrary libraries, as they could potentially include malicious code.
 
 ## Conclusion
 

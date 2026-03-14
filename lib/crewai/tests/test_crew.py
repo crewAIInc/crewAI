@@ -1655,6 +1655,59 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
             )
 
 
+def test_code_execution_microvm_mode_adds_microvm_tool_upon_kickoff():
+    with patch.object(Agent, "_validate_docker_installation") as docker_validation_mock:
+        programmer = Agent(
+            role="Programmer",
+            goal="Write code to solve problems.",
+            backstory="You're a programmer who loves to solve problems with code.",
+            allow_delegation=False,
+            allow_code_execution=True,
+            code_execution_mode="microvm",
+        )
+
+    docker_validation_mock.assert_not_called()
+
+    task = Task(
+        description="How much is 2 + 2?",
+        expected_output="The result of the sum as an integer.",
+        agent=programmer,
+    )
+
+    crew = Crew(agents=[programmer], tasks=[task])
+
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent"
+    )
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        _, kwargs = mock_execute_sync.call_args
+        used_tools = kwargs["tools"]
+
+        assert len(used_tools) == 1, "Should have exactly one tool"
+        assert isinstance(used_tools[0], CodeInterpreterTool), (
+            "Tool should be CodeInterpreterTool"
+        )
+        assert used_tools[0].execution_mode == "microvm"
+        assert used_tools[0].unsafe_mode is False
+
+
+def test_code_execution_unsafe_mode_does_not_require_docker_validation():
+    with patch.object(Agent, "_validate_docker_installation") as docker_validation_mock:
+        Agent(
+            role="Programmer",
+            goal="Write code to solve problems.",
+            backstory="You're a programmer who loves to solve problems with code.",
+            allow_delegation=False,
+            allow_code_execution=True,
+            code_execution_mode="unsafe",
+        )
+
+    docker_validation_mock.assert_not_called()
+
+
 @pytest.mark.vcr()
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     researcher = Agent(

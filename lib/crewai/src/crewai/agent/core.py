@@ -188,9 +188,12 @@ class Agent(BaseAgent):
         default="%Y-%m-%d",
         description="Format string for date when inject_date is enabled.",
     )
-    code_execution_mode: Literal["safe", "unsafe"] = Field(
+    code_execution_mode: Literal["safe", "unsafe", "microvm"] = Field(
         default="safe",
-        description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
+        description=(
+            "Mode for code execution: 'safe' (Docker + restricted sandbox fallback), "
+            "'microvm' (exec-sandbox), or 'unsafe' (direct execution)."
+        ),
     )
     reasoning: bool = Field(
         default=False,
@@ -262,7 +265,7 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             self._setup_agent_executor()
 
-        if self.allow_code_execution:
+        if self.allow_code_execution and self.code_execution_mode == "safe":
             self._validate_docker_installation()
 
         return self
@@ -943,9 +946,16 @@ class Agent(BaseAgent):
                 CodeInterpreterTool,
             )
 
-            # Set the unsafe_mode based on the code_execution_mode attribute
+            # Map the selected code execution mode to the tool configuration.
             unsafe_mode = self.code_execution_mode == "unsafe"
-            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
+            execution_mode: Literal["safe", "microvm"] = (
+                "microvm" if self.code_execution_mode == "microvm" else "safe"
+            )
+            return [
+                CodeInterpreterTool(
+                    unsafe_mode=unsafe_mode, execution_mode=execution_mode
+                )
+            ]
         except ModuleNotFoundError:
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "

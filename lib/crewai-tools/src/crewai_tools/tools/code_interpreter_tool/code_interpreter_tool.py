@@ -5,11 +5,14 @@ safe isolation or directly in a restricted sandbox. It includes mechanisms for b
 potentially unsafe operations and importing restricted modules.
 """
 
+import asyncio
+from collections.abc import Coroutine
+from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import os
 import subprocess
 from types import ModuleType
-from typing import Any, ClassVar, TypedDict
+from typing import Any, ClassVar, Literal, TypedDict
 
 from crewai.tools import BaseTool
 from docker import (  # type: ignore[import-untyped]
@@ -153,6 +156,7 @@ class CodeInterpreterTool(BaseTool):
     user_dockerfile_path: str | None = None
     user_docker_base_url: str | None = None
     unsafe_mode: bool = False
+    execution_mode: Literal["safe", "microvm"] = "safe"
 
     @staticmethod
     def _get_installed_package_path() -> str:
@@ -223,7 +227,20 @@ class CodeInterpreterTool(BaseTool):
 
         if self.unsafe_mode:
             return self.run_code_unsafe(code, libraries_used)
+        if self.execution_mode == "microvm":
+            return self.run_code_in_microvm(code, libraries_used)
         return self.run_code_safety(code, libraries_used)
+
+    @staticmethod
+    def _run_async_coroutine(coroutine: Coroutine[Any, Any, str]) -> str:
+        """Runs an async coroutine from both sync and async contexts safely."""
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coroutine)
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(asyncio.run, coroutine).result()
 
     @staticmethod
     def _install_libraries(container: Container, libraries: list[str]) -> None:
@@ -339,6 +356,58 @@ class CodeInterpreterTool(BaseTool):
         if exec_result.exit_code != 0:
             return f"Something went wrong while running the code: \n{exec_result.output.decode('utf-8')}"
         return exec_result.output.decode("utf-8")
+
+    def run_code_in_microvm(self, code: str, libraries_used: list[str]) -> str:
+        """Runs Python code in a hardware-isolated microVM via exec-sandbox.
+
+        Args:
+            code: The Python code to execute as a string.
+            libraries_used: A list of Python library names to install before execution.
+
+        Returns:
+            The output of the executed code as a string, or an error message if execution failed.
+        """
+        Printer.print("Running code in microVM environment", color="bold_cyan")
+
+        try:
+            from exec_sandbox import Scheduler  # type: ignore[import-not-found]
+        except ModuleNotFoundError:
+            return (
+                "exec-sandbox is not installed. Install it with `pip install exec-sandbox` "
+                "to use `code_execution_mode='microvm'`."
+            )
+
+        async def _execute() -> str:
+            async with Scheduler() as scheduler:
+                execution_result = await scheduler.run(
+                    code=code,
+                    language="python",
+                    packages=libraries_used,
+                    timeout_seconds=60,
+                )
+
+                stdout = execution_result.stdout
+                stderr = execution_result.stderr
+
+                if isinstance(stdout, bytes):
+                    stdout = stdout.decode("utf-8")
+                if isinstance(stderr, bytes):
+                    stderr = stderr.decode("utf-8")
+
+                stdout_text = stdout if isinstance(stdout, str) else str(stdout)
+                stderr_text = stderr if isinstance(stderr, str) else str(stderr)
+
+                if execution_result.exit_code != 0:
+                    return (
+                        "Something went wrong while running the code in microVM: "
+                        f"\n{stderr_text}"
+                    )
+                return stdout_text
+
+        try:
+            return self._run_async_coroutine(_execute())
+        except Exception as e:
+            return f"An error occurred while running code in microVM: {e!s}"
 
     @staticmethod
     def run_code_in_restricted_sandbox(code: str) -> str:
