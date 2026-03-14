@@ -1268,6 +1268,43 @@ def test_create_directory_with_existing_directory():
         shutil.rmtree(resolved_dir)
 
 
+def test_save_pdf_output_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="reports/output.pdf",
+        create_directory=True,
+    )
+
+    task._save_file("Line 1\nLine 2")
+
+    output_path = tmp_path / "reports" / "output.pdf"
+    assert output_path.exists()
+    contents = output_path.read_bytes()
+    assert contents.startswith(b"%PDF-1.4")
+    assert b"Line 1" in contents
+    assert b"Line 2" in contents
+
+
+def test_save_pdf_output_file_with_dict(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="score.pdf",
+    )
+
+    task._save_file({"score": 4, "feedback": "Great work"})
+
+    output_path = tmp_path / "score.pdf"
+    assert output_path.exists()
+    contents = output_path.read_bytes()
+    assert contents.startswith(b"%PDF-1.4")
+    assert b'"score": 4' in contents
+    assert b'"feedback": "Great work"' in contents
+
+
 def test_github_issue_3149_reproduction():
     """Test that reproduces the exact issue from GitHub issue #3149."""
     task = Task(
