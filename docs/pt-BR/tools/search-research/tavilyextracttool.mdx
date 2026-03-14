@@ -5,11 +5,11 @@ icon: square-poll-horizontal
 mode: "wide"
 ---
 
-The `TavilyExtractorTool` allows CrewAI agents to extract structured content from web pages using the Tavily API. It can process single URLs or lists of URLs and provides options for controlling the extraction depth and including images.
+The `TavilyExtractTool` allows CrewAI agents to extract structured content from web pages using the Tavily API. It can process single URLs or lists of URLs and provides options for controlling the extraction depth and including images.
 
 ## Installation
 
-To use the `TavilyExtractorTool`, you need to install the `tavily-python` library:
+To use the `TavilyExtractTool`, you need to install the `tavily-python` library:
 
 ```shell
 pip install 'crewai[tools]' tavily-python
@@ -23,18 +23,18 @@ export TAVILY_API_KEY='your-tavily-api-key'
 
 ## Example Usage
 
-Here's how to initialize and use the `TavilyExtractorTool` within a CrewAI agent:
+Here's how to initialize and use the `TavilyExtractTool` within a CrewAI agent:
 
 ```python
 import os
 from crewai import Agent, Task, Crew
-from crewai_tools import TavilyExtractorTool
+from crewai_tools import TavilyExtractTool
 
 # Ensure TAVILY_API_KEY is set in your environment
 # os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
 
 # Initialize the tool
-tavily_tool = TavilyExtractorTool()
+tavily_tool = TavilyExtractTool()
 
 # Create an agent that uses the tool
 extractor_agent = Agent(
@@ -65,12 +65,12 @@ print(result)
 
 ## Configuration Options
 
-The `TavilyExtractorTool` accepts the following arguments:
+The `TavilyExtractTool` accepts the following arguments:
 
 - `urls` (Union[List[str], str]): **Required**. A single URL string or a list of URL strings to extract data from.
-- `include_images` (Optional[bool]): Whether to include images in the extraction results. Defaults to `False`.
-- `extract_depth` (Literal["basic", "advanced"]): The depth of extraction. Use `"basic"` for faster, surface-level extraction or `"advanced"` for more comprehensive extraction. Defaults to `"basic"`.
-- `timeout` (int): The maximum time in seconds to wait for the extraction request to complete. Defaults to `60`.
+- `extract_depth` (Literal["basic", "advanced"], optional): The depth of extraction. Defaults to `"basic"`.
+- `include_images` (bool, optional): Whether to include images in the extraction results. Defaults to `False`.
+- `timeout` (int, optional): The maximum time in seconds to wait for the extraction request to complete. Defaults to `60`.
 
 ## Advanced Usage
 
@@ -85,7 +85,7 @@ multi_extract_task = Task(
 )
 
 # Configure the tool with custom parameters
-custom_extractor = TavilyExtractorTool(
+custom_extractor = TavilyExtractTool(
     extract_depth='advanced',
     include_images=True,
     timeout=120
@@ -104,8 +104,8 @@ You can customize the tool's behavior by setting parameters during initializatio
 
 ```python
 # Initialize with custom configuration
-extractor_tool = TavilyExtractorTool(
-    extract_depth='advanced',  # More comprehensive extraction
+extractor_tool = TavilyExtractTool(
+    extract_depth='advanced',  # Use advanced extraction
     include_images=True,       # Include image results
     timeout=90                 # Custom timeout
 )
@@ -137,4 +137,5 @@ Common response elements include:
 - **Monitoring**: Regular extraction of content for change detection
 - **Data Collection**: Systematic extraction of information from web sources
 
-Refer to the [Tavily API documentation](https://docs.tavily.com/docs/tavily-api/python-sdk#extract) for detailed information about the response structure and available options.
+Refer to the [Tavily API documentation](https://docs.tavily.com/documentation/api-reference/endpoint/extract) for detailed information about the response structure and available options.
+
