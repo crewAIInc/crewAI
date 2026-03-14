@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -8,6 +9,7 @@ from crewai.task import Task
 from crewai.utilities import Printer
 from crewai.utilities.crew_json_encoder import CrewJSONEncoder
 from crewai.utilities.errors import DatabaseError, DatabaseOperationError
+from crewai.utilities.lock_store import lock as store_lock
 from crewai.utilities.paths import db_storage_path
 
 
@@ -24,6 +26,7 @@ class KickoffTaskOutputsSQLiteStorage:
             # Get the parent directory of the default db path and create our db file there
             db_path = str(Path(db_storage_path()) / "latest_kickoff_task_outputs.db")
         self.db_path = db_path
+        self._lock_name = f"sqlite:{os.path.realpath(self.db_path)}"
         self._printer: Printer = Printer()
         self._initialize_db()
 
@@ -38,24 +41,25 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If database initialization fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path, timeout=30) as conn:
-                conn.execute("PRAGMA journal_mode=WAL")
-                cursor = conn.cursor()
-                cursor.execute(
+            with store_lock(self._lock_name):
+                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                    conn.execute("PRAGMA journal_mode=WAL")
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS latest_kickoff_task_outputs (
+                            task_id TEXT PRIMARY KEY,
+                            expected_output TEXT,
+                            output JSON,
+                            task_index INTEGER,
+                            inputs JSON,
+                            was_replayed BOOLEAN,
+                            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                        )
                     """
-                    CREATE TABLE IF NOT EXISTS latest_kickoff_task_outputs (
-                        task_id TEXT PRIMARY KEY,
-                        expected_output TEXT,
-                        output JSON,
-                        task_index INTEGER,
-                        inputs JSON,
-                        was_replayed BOOLEAN,
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                     )
-                """
-                )
 
-                conn.commit()
+                    conn.commit()
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.INIT_ERROR, e)
             logger.error(error_msg)
@@ -83,25 +87,26 @@ class KickoffTaskOutputsSQLiteStorage:
         """
         inputs = inputs or {}
         try:
-            with sqlite3.connect(self.db_path, timeout=30) as conn:
-                conn.execute("BEGIN TRANSACTION")
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                INSERT OR REPLACE INTO latest_kickoff_task_outputs
-                (task_id, expected_output, output, task_index, inputs, was_replayed)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """,
-                    (
-                        str(task.id),
-                        task.expected_output,
-                        json.dumps(output, cls=CrewJSONEncoder),
-                        task_index,
-                        json.dumps(inputs, cls=CrewJSONEncoder),
-                        was_replayed,
-                    ),
-                )
-                conn.commit()
+            with store_lock(self._lock_name):
+                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                    conn.execute("BEGIN TRANSACTION")
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        """
+                    INSERT OR REPLACE INTO latest_kickoff_task_outputs
+                    (task_id, expected_output, output, task_index, inputs, was_replayed)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                        (
+                            str(task.id),
+                            task.expected_output,
+                            json.dumps(output, cls=CrewJSONEncoder),
+                            task_index,
+                            json.dumps(inputs, cls=CrewJSONEncoder),
+                            was_replayed,
+                        ),
+                    )
+                    conn.commit()
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.SAVE_ERROR, e)
             logger.error(error_msg)
@@ -126,30 +131,31 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If updating the task output fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path, timeout=30) as conn:
-                conn.execute("BEGIN TRANSACTION")
-                cursor = conn.cursor()
+            with store_lock(self._lock_name):
+                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                    conn.execute("BEGIN TRANSACTION")
+                    cursor = conn.cursor()
 
-                fields = []
-                values = []
-                for key, value in kwargs.items():
-                    fields.append(f"{key} = ?")
-                    values.append(
-                        json.dumps(value, cls=CrewJSONEncoder)
-                        if isinstance(value, dict)
-                        else value
-                    )
+                    fields = []
+                    values = []
+                    for key, value in kwargs.items():
+                        fields.append(f"{key} = ?")
+                        values.append(
+                            json.dumps(value, cls=CrewJSONEncoder)
+                            if isinstance(value, dict)
+                            else value
+                        )
 
-                query = f"UPDATE latest_kickoff_task_outputs SET {', '.join(fields)} WHERE task_index = ?"  # nosec # noqa: S608
-                values.append(task_index)
+                    query = f"UPDATE latest_kickoff_task_outputs SET {', '.join(fields)} WHERE task_index = ?"  # nosec # noqa: S608
+                    values.append(task_index)
 
-                cursor.execute(query, tuple(values))
-                conn.commit()
+                    cursor.execute(query, tuple(values))
+                    conn.commit()
 
-                if cursor.rowcount == 0:
-                    logger.warning(
-                        f"No row found with task_index {task_index}. No update performed."
-                    )
+                    if cursor.rowcount == 0:
+                        logger.warning(
+                            f"No row found with task_index {task_index}. No update performed."
+                        )
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.UPDATE_ERROR, e)
             logger.error(error_msg)
@@ -206,11 +212,12 @@ class KickoffTaskOutputsSQLiteStorage:
             DatabaseOperationError: If deleting task outputs fails due to SQLite errors.
         """
         try:
-            with sqlite3.connect(self.db_path, timeout=30) as conn:
-                conn.execute("BEGIN TRANSACTION")
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM latest_kickoff_task_outputs")
-                conn.commit()
+            with store_lock(self._lock_name):
+                with sqlite3.connect(self.db_path, timeout=30) as conn:
+                    conn.execute("BEGIN TRANSACTION")
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM latest_kickoff_task_outputs")
+                    conn.commit()
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.DELETE_ERROR, e)
             logger.error(error_msg)
