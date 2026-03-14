@@ -1,7 +1,7 @@
 import logging
 import os
 from time import sleep
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.events.event_types import (
@@ -413,6 +413,67 @@ def test_context_window_exceeded_error_handling():
 
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
+
+
+def test_non_streaming_returns_tool_calls_when_text_and_tool_calls_exist_without_available_functions():
+    llm = LLM(model="gpt-4", is_litellm=True)
+    messages = [{"role": "user", "content": "Calculate 1+1"}]
+    tool_calls = [
+        {
+            "id": "call_abc123",
+            "type": "function",
+            "function": {
+                "name": "calculator",
+                "arguments": '{"expression": "1+1"}',
+            },
+        }
+    ]
+
+    with patch("litellm.completion") as mock_completion:
+        mock_message = MagicMock()
+        mock_message.content = "I'll use a tool."
+        mock_message.tool_calls = tool_calls
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = None
+        mock_completion.return_value = mock_response
+
+        result = llm.call(messages, available_functions=None)
+
+    assert result == tool_calls
+
+
+@pytest.mark.asyncio
+async def test_async_non_streaming_returns_tool_calls_when_text_and_tool_calls_exist_without_available_functions():
+    llm = LLM(model="gpt-4", is_litellm=True)
+    messages = [{"role": "user", "content": "Calculate 1+1"}]
+    tool_calls = [
+        {
+            "id": "call_abc123",
+            "type": "function",
+            "function": {
+                "name": "calculator",
+                "arguments": '{"expression": "1+1"}',
+            },
+        }
+    ]
+
+    with patch("litellm.acompletion", new_callable=AsyncMock) as mock_acompletion:
+        mock_message = MagicMock()
+        mock_message.content = "I'll use a tool."
+        mock_message.tool_calls = tool_calls
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = None
+        mock_acompletion.return_value = mock_response
+
+        result = await llm.acall(messages, available_functions=None)
+
+    assert result == tool_calls
 
 
 @pytest.fixture
