@@ -446,30 +446,29 @@ class ChromaDBClient(BaseClient):
 
         params = _extract_search_params(kwargs)
 
-        with self._locked():
-            collection = self.client.get_or_create_collection(
-                name=_sanitize_collection_name(params.collection_name),
-                embedding_function=self.embedding_function,
+        collection = self.client.get_or_create_collection(
+            name=_sanitize_collection_name(params.collection_name),
+            embedding_function=self.embedding_function,
+        )
+
+        where = params.where if params.where is not None else params.metadata_filter
+
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
+            results: QueryResult = collection.query(
+                query_texts=[params.query],
+                n_results=params.limit,
+                where=where,
+                where_document=params.where_document,
+                include=params.include,
             )
 
-            where = params.where if params.where is not None else params.metadata_filter
-
-            with suppress_logging(
-                "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
-            ):
-                results: QueryResult = collection.query(
-                    query_texts=[params.query],
-                    n_results=params.limit,
-                    where=where,
-                    where_document=params.where_document,
-                    include=params.include,
-                )
-
-            return _process_query_results(
-                collection=collection,
-                results=results,
-                params=params,
-            )
+        return _process_query_results(
+            collection=collection,
+            results=results,
+            params=params,
+        )
 
     async def asearch(
         self, **kwargs: Unpack[ChromaDBCollectionSearchParams]
@@ -510,30 +509,29 @@ class ChromaDBClient(BaseClient):
 
         params = _extract_search_params(kwargs)
 
-        async with self._alocked():
-            collection = await self.client.get_or_create_collection(
-                name=_sanitize_collection_name(params.collection_name),
-                embedding_function=self.embedding_function,
+        collection = await self.client.get_or_create_collection(
+            name=_sanitize_collection_name(params.collection_name),
+            embedding_function=self.embedding_function,
+        )
+
+        where = params.where if params.where is not None else params.metadata_filter
+
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
+            results: QueryResult = await collection.query(
+                query_texts=[params.query],
+                n_results=params.limit,
+                where=where,
+                where_document=params.where_document,
+                include=params.include,
             )
 
-            where = params.where if params.where is not None else params.metadata_filter
-
-            with suppress_logging(
-                "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
-            ):
-                results: QueryResult = await collection.query(
-                    query_texts=[params.query],
-                    n_results=params.limit,
-                    where=where,
-                    where_document=params.where_document,
-                    include=params.include,
-                )
-
-            return _process_query_results(
-                collection=collection,
-                results=results,
-                params=params,
-            )
+        return _process_query_results(
+            collection=collection,
+            results=results,
+            params=params,
+        )
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data.
