@@ -6,43 +6,67 @@ import json
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class BoundValue(BaseModel):
     """A value that can be a literal or a data-model path reference."""
 
-    literal_string: str | None = Field(None, alias="literalString")
-    literal_number: float | None = Field(None, alias="literalNumber")
-    literal_boolean: bool | None = Field(None, alias="literalBoolean")
-    literal_array: list[str] | None = Field(None, alias="literalArray")
-    path: str | None = None
+    literal_string: str | None = Field(
+        default=None, alias="literalString", description="Literal string value."
+    )
+    literal_number: float | None = Field(
+        default=None, alias="literalNumber", description="Literal numeric value."
+    )
+    literal_boolean: bool | None = Field(
+        default=None, alias="literalBoolean", description="Literal boolean value."
+    )
+    literal_array: list[str] | None = Field(
+        default=None, alias="literalArray", description="Literal array of strings."
+    )
+    path: str | None = Field(default=None, description="Data-model path reference.")
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class MapEntry(BaseModel):
     """A single entry in a valueMap adjacency list, supporting recursive nesting."""
 
-    key: str
-    value_string: str | None = Field(None, alias="valueString")
-    value_number: float | None = Field(None, alias="valueNumber")
-    value_boolean: bool | None = Field(None, alias="valueBoolean")
-    value_map: list[MapEntry] | None = Field(None, alias="valueMap")
+    key: str = Field(description="Entry key.")
+    value_string: str | None = Field(
+        default=None, alias="valueString", description="String value."
+    )
+    value_number: float | None = Field(
+        default=None, alias="valueNumber", description="Numeric value."
+    )
+    value_boolean: bool | None = Field(
+        default=None, alias="valueBoolean", description="Boolean value."
+    )
+    value_map: list[MapEntry] | None = Field(
+        default=None, alias="valueMap", description="Nested map entries."
+    )
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class DataEntry(BaseModel):
     """A data model entry with a key and exactly one typed value."""
 
-    key: str
-    value_string: str | None = Field(None, alias="valueString")
-    value_number: float | None = Field(None, alias="valueNumber")
-    value_boolean: bool | None = Field(None, alias="valueBoolean")
-    value_map: list[MapEntry] | None = Field(None, alias="valueMap")
+    key: str = Field(description="Entry key.")
+    value_string: str | None = Field(
+        default=None, alias="valueString", description="String value."
+    )
+    value_number: float | None = Field(
+        default=None, alias="valueNumber", description="Numeric value."
+    )
+    value_boolean: bool | None = Field(
+        default=None, alias="valueBoolean", description="Boolean value."
+    )
+    value_map: list[MapEntry] | None = Field(
+        default=None, alias="valueMap", description="Nested map entries."
+    )
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 _HEX_COLOR_PATTERN: re.Pattern[str] = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -51,12 +75,15 @@ _HEX_COLOR_PATTERN: re.Pattern[str] = re.compile(r"^#[0-9a-fA-F]{6}$")
 class Styles(BaseModel):
     """Surface styling information."""
 
-    font: str | None = None
+    font: str | None = Field(default=None, description="Font family name.")
     primary_color: str | None = Field(
-        None, alias="primaryColor", pattern=_HEX_COLOR_PATTERN.pattern
+        default=None,
+        alias="primaryColor",
+        pattern=_HEX_COLOR_PATTERN.pattern,
+        description="Primary color as a hex string.",
     )
 
-    model_config = {"populate_by_name": True, "extra": "allow"}
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
 
 class ComponentEntry(BaseModel):
@@ -69,49 +96,67 @@ class ComponentEntry(BaseModel):
     the standard catalog.
     """
 
-    id: str
-    weight: float | None = None
-    component: dict[str, Any]
+    id: str = Field(description="Unique component identifier.")
+    weight: float | None = Field(
+        default=None, description="Flex weight for layout distribution."
+    )
+    component: dict[str, Any] = Field(
+        description="Component type name mapped to its properties."
+    )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
 
 class BeginRendering(BaseModel):
     """Signals the client to begin rendering a surface."""
 
-    surface_id: str = Field(alias="surfaceId")
-    root: str
-    catalog_id: str | None = Field(None, alias="catalogId")
-    styles: Styles | None = None
+    surface_id: str = Field(alias="surfaceId", description="Unique surface identifier.")
+    root: str = Field(description="Component ID of the root element.")
+    catalog_id: str | None = Field(
+        default=None,
+        alias="catalogId",
+        description="Catalog identifier for the surface.",
+    )
+    styles: Styles | None = Field(
+        default=None, description="Surface styling overrides."
+    )
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class SurfaceUpdate(BaseModel):
     """Updates a surface with a new set of components."""
 
-    surface_id: str = Field(alias="surfaceId")
-    components: list[ComponentEntry] = Field(min_length=1)
+    surface_id: str = Field(alias="surfaceId", description="Target surface identifier.")
+    components: list[ComponentEntry] = Field(
+        min_length=1, description="Components to render on the surface."
+    )
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class DataModelUpdate(BaseModel):
     """Updates the data model for a surface."""
 
-    surface_id: str = Field(alias="surfaceId")
-    path: str | None = None
-    contents: list[DataEntry]
+    surface_id: str = Field(alias="surfaceId", description="Target surface identifier.")
+    path: str | None = Field(
+        default=None, description="Data-model path prefix for the update."
+    )
+    contents: list[DataEntry] = Field(
+        description="Data entries to merge into the model."
+    )
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class DeleteSurface(BaseModel):
     """Signals the client to delete a surface."""
 
-    surface_id: str = Field(alias="surfaceId")
+    surface_id: str = Field(
+        alias="surfaceId", description="Surface identifier to delete."
+    )
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class A2UIMessage(BaseModel):
@@ -120,12 +165,26 @@ class A2UIMessage(BaseModel):
     Exactly one of the fields must be set.
     """
 
-    begin_rendering: BeginRendering | None = Field(None, alias="beginRendering")
-    surface_update: SurfaceUpdate | None = Field(None, alias="surfaceUpdate")
-    data_model_update: DataModelUpdate | None = Field(None, alias="dataModelUpdate")
-    delete_surface: DeleteSurface | None = Field(None, alias="deleteSurface")
+    begin_rendering: BeginRendering | None = Field(
+        default=None,
+        alias="beginRendering",
+        description="Begin rendering a new surface.",
+    )
+    surface_update: SurfaceUpdate | None = Field(
+        default=None,
+        alias="surfaceUpdate",
+        description="Update components on a surface.",
+    )
+    data_model_update: DataModelUpdate | None = Field(
+        default=None,
+        alias="dataModelUpdate",
+        description="Update the surface data model.",
+    )
+    delete_surface: DeleteSurface | None = Field(
+        default=None, alias="deleteSurface", description="Delete an existing surface."
+    )
 
-    model_config = {"populate_by_name": True, "extra": "forbid"}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     @model_validator(mode="after")
     def _check_exactly_one(self) -> A2UIMessage:
@@ -145,28 +204,34 @@ class A2UIMessage(BaseModel):
 class UserAction(BaseModel):
     """Reports a user-initiated action from a component."""
 
-    name: str
-    surface_id: str = Field(alias="surfaceId")
-    source_component_id: str = Field(alias="sourceComponentId")
-    timestamp: str
-    context: dict[str, Any]
+    name: str = Field(description="Action name.")
+    surface_id: str = Field(alias="surfaceId", description="Source surface identifier.")
+    source_component_id: str = Field(
+        alias="sourceComponentId", description="Component that triggered the action."
+    )
+    timestamp: str = Field(description="ISO 8601 timestamp of the action.")
+    context: dict[str, Any] = Field(description="Action context payload.")
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ClientError(BaseModel):
     """Reports a client-side error."""
 
-    model_config = {"extra": "allow"}
+    model_config = ConfigDict(extra="allow")
 
 
 class A2UIEvent(BaseModel):
     """Union wrapper for client-to-server events."""
 
-    user_action: UserAction | None = Field(None, alias="userAction")
-    error: ClientError | None = None
+    user_action: UserAction | None = Field(
+        default=None, alias="userAction", description="User-initiated action event."
+    )
+    error: ClientError | None = Field(
+        default=None, description="Client-side error report."
+    )
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
 
     @model_validator(mode="after")
     def _check_exactly_one(self) -> A2UIEvent:
@@ -181,9 +246,13 @@ class A2UIEvent(BaseModel):
 class A2UIResponse(BaseModel):
     """Typed wrapper for responses containing A2UI messages."""
 
-    text: str
-    a2ui_parts: list[dict[str, Any]] = Field(default_factory=list)
-    a2ui_messages: list[dict[str, Any]] = Field(default_factory=list)
+    text: str = Field(description="Raw text content of the response.")
+    a2ui_parts: list[dict[str, Any]] = Field(
+        default_factory=list, description="A2UI DataParts extracted from the response."
+    )
+    a2ui_messages: list[dict[str, Any]] = Field(
+        default_factory=list, description="Validated A2UI message dicts."
+    )
 
 
 _A2UI_KEYS = {"beginRendering", "surfaceUpdate", "dataModelUpdate", "deleteSurface"}
