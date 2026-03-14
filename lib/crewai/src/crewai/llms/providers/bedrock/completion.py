@@ -2042,18 +2042,47 @@ class BedrockCompletion(BaseLLM):
         """Check if the model supports stop words."""
         return True
 
+    @staticmethod
+    def _strip_region_prefix(model: str) -> str:
+        """Strip AWS region prefix from model ID.
+
+        Bedrock model IDs can be prefixed with region qualifiers like
+        ``us.``, ``eu.``, ``apac.``, or ``global.`` for cross-region
+        inference.  This helper returns the base model ID so that
+        capability look-ups work regardless of the prefix.
+
+        Args:
+            model: Full model ID, e.g. ``us.anthropic.claude-sonnet-4-20250514-v1:0``
+
+        Returns:
+            Base model ID, e.g. ``anthropic.claude-sonnet-4-20250514-v1:0``
+        """
+        region_prefixes = ("us.", "eu.", "apac.", "global.")
+        for prefix in region_prefixes:
+            if model.startswith(prefix):
+                return model[len(prefix):]
+        return model
+
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
         # Context window sizes for common Bedrock models
         context_windows = {
+            # Claude 4.x models
+            "anthropic.claude-sonnet-4-5": 200000,
+            "anthropic.claude-sonnet-4": 200000,
+            "anthropic.claude-opus-4-5": 200000,
+            "anthropic.claude-opus-4-1": 200000,
+            "anthropic.claude-opus-4": 200000,
+            "anthropic.claude-haiku-4-5": 200000,
+            # Claude 3.x models
+            "anthropic.claude-3-7-sonnet": 200000,
             "anthropic.claude-3-5-sonnet": 200000,
             "anthropic.claude-3-5-haiku": 200000,
             "anthropic.claude-3-opus": 200000,
             "anthropic.claude-3-sonnet": 200000,
             "anthropic.claude-3-haiku": 200000,
-            "anthropic.claude-3-7-sonnet": 200000,
             "anthropic.claude-v2": 100000,
             "amazon.titan-text-express": 8000,
             "ai21.j2-ultra": 8192,
@@ -2064,9 +2093,12 @@ class BedrockCompletion(BaseLLM):
             "deepseek.r1": 32768,
         }
 
+        # Strip region prefix (us., eu., apac., global.) for matching
+        base_model = self._strip_region_prefix(self.model)
+
         # Find the best match for the model name
         for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
+            if base_model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         # Default context window size
@@ -2075,22 +2107,26 @@ class BedrockCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+        Claude 3+, Claude 4.x, and Nova Lite/Pro/Premier on Bedrock support vision.
 
         Returns:
             True if the model supports images.
         """
-        model_lower = self.model.lower()
-        vision_models = (
+        # Strip region prefix so we only need base-model prefixes
+        base_model = self._strip_region_prefix(self.model).lower()
+        vision_prefixes = (
+            # Claude 4.x models
+            "anthropic.claude-sonnet-4",
+            "anthropic.claude-opus-4",
+            "anthropic.claude-haiku-4",
+            # Claude 3.x models
             "anthropic.claude-3",
+            # Amazon Nova models
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
         )
-        return any(model_lower.startswith(m) for m in vision_models)
+        return any(base_model.startswith(m) for m in vision_prefixes)
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.
@@ -2100,8 +2136,8 @@ class BedrockCompletion(BaseLLM):
         Returns:
             True if the model is a Nova model.
         """
-        model_lower = self.model.lower()
-        return "amazon.nova-" in model_lower
+        base_model = self._strip_region_prefix(self.model).lower()
+        return base_model.startswith("amazon.nova-")
 
     def get_file_uploader(self) -> Any:
         """Get a Bedrock S3 file uploader using this LLM's AWS credentials.

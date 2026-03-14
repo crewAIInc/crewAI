@@ -887,6 +887,225 @@ def test_bedrock_stop_sequences_sent_to_api():
 
 
 # =============================================================================
+# Claude V4 Model Support Tests
+# =============================================================================
+
+
+def test_bedrock_claude_v4_model_detection():
+    """Test that Claude V4 model IDs are properly detected and routed to BedrockCompletion."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    v4_models = [
+        "bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/anthropic.claude-opus-4-20250514-v1:0",
+        "bedrock/anthropic.claude-opus-4-1-20250805-v1:0",
+        "bedrock/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "bedrock/anthropic.claude-opus-4-5-20251101-v1:0",
+    ]
+
+    for model_name in v4_models:
+        llm = LLM(model=model_name)
+        assert isinstance(llm, BedrockCompletion), f"Failed for model: {model_name}"
+        assert llm.is_claude_model, f"is_claude_model should be True for {model_name}"
+
+
+def test_bedrock_claude_v4_context_window_size():
+    """Test that Claude V4 models return correct context window sizes (200K)."""
+    v4_models = [
+        "bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/anthropic.claude-opus-4-20250514-v1:0",
+        "bedrock/anthropic.claude-opus-4-1-20250805-v1:0",
+        "bedrock/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "bedrock/anthropic.claude-opus-4-5-20251101-v1:0",
+    ]
+
+    for model_name in v4_models:
+        llm = LLM(model=model_name)
+        context_size = llm.get_context_window_size()
+        # 200000 * 0.85 = 170000
+        assert context_size > 150000, (
+            f"Context window for {model_name} should be ~170K (200K * 0.85), got {context_size}"
+        )
+
+
+def test_bedrock_claude_v4_multimodal_support():
+    """Test that Claude V4 models are correctly detected as supporting multimodal."""
+    v4_models = [
+        "bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/anthropic.claude-opus-4-20250514-v1:0",
+        "bedrock/anthropic.claude-opus-4-1-20250805-v1:0",
+        "bedrock/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "bedrock/anthropic.claude-opus-4-5-20251101-v1:0",
+    ]
+
+    for model_name in v4_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_multimodal(), (
+            f"supports_multimodal() should return True for {model_name}"
+        )
+
+
+def test_bedrock_claude_v4_with_region_prefix():
+    """Test that Claude V4 models with region prefixes are properly handled."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    region_prefixed_models = [
+        "bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "bedrock/global.anthropic.claude-opus-4-20250514-v1:0",
+        "bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    ]
+
+    for model_name in region_prefixed_models:
+        llm = LLM(model=model_name)
+        assert isinstance(llm, BedrockCompletion), f"Failed for model: {model_name}"
+
+        # Context window should still be correctly detected
+        context_size = llm.get_context_window_size()
+        assert context_size > 150000, (
+            f"Context window for {model_name} should be ~170K, got {context_size}"
+        )
+
+        # Multimodal should still be detected
+        assert llm.supports_multimodal(), (
+            f"supports_multimodal() should return True for {model_name}"
+        )
+
+
+def test_bedrock_strip_region_prefix():
+    """Test that _strip_region_prefix correctly strips region qualifiers."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    test_cases = [
+        ("us.anthropic.claude-sonnet-4-20250514-v1:0", "anthropic.claude-sonnet-4-20250514-v1:0"),
+        ("eu.anthropic.claude-3-5-sonnet-20241022-v2:0", "anthropic.claude-3-5-sonnet-20241022-v2:0"),
+        ("apac.anthropic.claude-sonnet-4-5-20250929-v1:0", "anthropic.claude-sonnet-4-5-20250929-v1:0"),
+        ("global.anthropic.claude-opus-4-20250514-v1:0", "anthropic.claude-opus-4-20250514-v1:0"),
+        ("anthropic.claude-sonnet-4-20250514-v1:0", "anthropic.claude-sonnet-4-20250514-v1:0"),
+        ("amazon.nova-pro-v1:0", "amazon.nova-pro-v1:0"),
+    ]
+
+    for input_model, expected in test_cases:
+        result = BedrockCompletion._strip_region_prefix(input_model)
+        assert result == expected, (
+            f"_strip_region_prefix({input_model!r}) returned {result!r}, expected {expected!r}"
+        )
+
+
+def test_bedrock_claude_v4_inference_config():
+    """Test that inference config is properly prepared for Claude V4 models."""
+    llm = LLM(
+        model="bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+        temperature=0.7,
+        top_p=0.9,
+        top_k=40,
+        max_tokens=2000,
+    )
+
+    config = llm._get_inference_config()
+    assert config["temperature"] == 0.7
+    assert config["topP"] == 0.9
+    assert config["topK"] == 40
+    assert config["maxTokens"] == 2000
+
+
+def test_bedrock_claude_v4_supports_function_calling():
+    """Test that Claude V4 models support function calling."""
+    v4_models = [
+        "bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/anthropic.claude-opus-4-20250514-v1:0",
+        "bedrock/anthropic.claude-sonnet-4-5-20250929-v1:0",
+    ]
+
+    for model_name in v4_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_function_calling(), (
+            f"supports_function_calling() should return True for {model_name}"
+        )
+
+
+def test_bedrock_region_prefix_nova_model_detection():
+    """Test that _is_nova_model works with region-prefixed model IDs."""
+    # Nova models with region prefix
+    nova_llm = LLM(model="bedrock/us.amazon.nova-pro-v1:0")
+    assert nova_llm._is_nova_model(), "us.amazon.nova-pro should be detected as Nova model"
+
+    # Claude model should not be detected as Nova
+    claude_llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0")
+    assert not claude_llm._is_nova_model(), "Claude model should not be detected as Nova"
+
+
+def test_bedrock_claude_v4_initialization_with_all_params():
+    """Test that Claude V4 models can be initialized with all supported parameters."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+        temperature=0.5,
+        max_tokens=4096,
+        top_p=0.95,
+        top_k=50,
+        stop_sequences=["\\nHuman:", "\\nAssistant:"],
+        stream=True,
+        region_name="us-west-2",
+    )
+
+    assert isinstance(llm, BedrockCompletion)
+    assert llm.model == "anthropic.claude-sonnet-4-20250514-v1:0"
+    assert llm.temperature == 0.5
+    assert llm.max_tokens == 4096
+    assert llm.top_p == 0.95
+    assert llm.top_k == 50
+    assert llm.stream is True
+    assert llm.region_name == "us-west-2"
+    assert llm.is_claude_model is True
+
+
+def test_bedrock_claude_v4_call_with_mock(bedrock_mocks):
+    """Test that Claude V4 models can make API calls (mocked)."""
+    _, mock_client = bedrock_mocks
+
+    mock_client.converse.return_value = {
+        "output": {
+            "message": {
+                "role": "assistant",
+                "content": [{"text": "Hello from Claude Sonnet 4!"}],
+            }
+        },
+        "usage": {"inputTokens": 10, "outputTokens": 8, "totalTokens": 18},
+    }
+
+    llm = LLM(model="bedrock/anthropic.claude-sonnet-4-20250514-v1:0")
+    result = llm.call("Hello")
+
+    assert result == "Hello from Claude Sonnet 4!"
+    assert mock_client.converse.called
+
+
+def test_bedrock_v3_models_still_work():
+    """Regression test: ensure Claude V3 models still work after V4 changes."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    v3_models = [
+        "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
+        "bedrock/anthropic.claude-3-opus-20240229-v1:0",
+        "bedrock/anthropic.claude-3-7-sonnet-20250219-v1:0",
+    ]
+
+    for model_name in v3_models:
+        llm = LLM(model=model_name)
+        assert isinstance(llm, BedrockCompletion), f"Failed for model: {model_name}"
+        assert llm.is_claude_model is True
+        assert llm.get_context_window_size() > 150000
+        assert llm.supports_multimodal()
+
+
+# =============================================================================
 # Agent Kickoff Structured Output Tests
 # =============================================================================
 
