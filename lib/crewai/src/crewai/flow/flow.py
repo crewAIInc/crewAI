@@ -1540,7 +1540,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     state_dict = self._state.model_dump()
                     model_class = type(self._state)
                     return model_class(**state_dict)
-                except Exception:
+                except (ValidationError, ValueError, TypeError):
+                    # Fallback to shallow copy if model reconstruction fails
                     return self._state.model_copy(deep=False)
         else:
             try:
@@ -2320,7 +2321,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if isinstance(state_copy, BaseModel):
             try:
                 return state_copy.model_dump(mode="json")
-            except Exception:
+            except (ValueError, TypeError):
+                # Fallback to regular dump if JSON serialization fails
                 return state_copy.model_dump()
         else:
             return state_copy
