@@ -980,7 +980,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     # Required
     WATSONX_URL=<your-url>
     WATSONX_APIKEY=<your-apikey>
-    WATSONX_PROJECT_ID=<your-project-id>
+    WX_PROJECT_ID=<your-project-id>
 
     # Optional
     WATSONX_TOKEN=<your-token>
@@ -990,7 +990,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="watsonx/meta-llama/llama-3-1-70b-instruct",
+        model="watsonx/meta-llama/llama-3-3-70b-instruct",
         base_url="https://api.watsonx.ai/v1"
     )
     ```
