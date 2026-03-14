@@ -101,17 +101,12 @@ class I18N(BaseModel):
         self,
         kind: Literal[
             "slices",
-           
             "errors",
-           
             "tools",
-           
             "reasoning",
             "planning",
-           
             "hierarchical_manager_agent",
-           
-            "memory"
+            "memory",
         ],
         key: str,
     ) -> str:

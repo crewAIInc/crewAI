@@ -1114,7 +1114,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             step_executor = self._ensure_step_executor()
             context = self._build_context_for_todo(todo)
             result = await asyncio.to_thread(
-                step_executor.execute, todo, context,
+                step_executor.execute,
+                todo,
+                context,
                 self._get_max_step_iterations(),
                 self._get_step_timeout(),
             )
@@ -1133,9 +1135,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             if isinstance(item, Exception):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
-                self.state.todos.mark_failed(
-                    todo.step_number, result=error_msg
-                )
+                self.state.todos.mark_failed(todo.step_number, result=error_msg)
                 if self.agent.verbose:
                     self._printer.print(
                         content=f"Todo {todo.step_number} failed: {error_msg}",
@@ -1150,9 +1150,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                         "type": "step_execution",
                         "step_number": todo.step_number,
                         "success": result.success,
-                        "result_preview": result.result[:200]
-                        if result.result
-                        else "",
+                        "result_preview": result.result[:200] if result.result else "",
                         "error": result.error,
                         "tool_calls": result.tool_calls_made,
                         "execution_time": result.execution_time,
@@ -1203,13 +1201,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
             # Mark based on observation result
             if observation.step_completed_successfully:
-                self.state.todos.mark_completed(
-                    todo.step_number, result=todo.result
-                )
+                self.state.todos.mark_completed(todo.step_number, result=todo.result)
             else:
-                self.state.todos.mark_failed(
-                    todo.step_number, result=todo.result
-                )
+                self.state.todos.mark_failed(todo.step_number, result=todo.result)
 
             if self.agent.verbose:
                 self._printer.print(
