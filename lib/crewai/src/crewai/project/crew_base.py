@@ -726,9 +726,12 @@ def _map_task_variables(
         output_pydantic_functions: Dictionary of Pydantic output class wrappers.
     """
     if context_list := task_info.get("context"):
-        self.tasks_config[task_name]["context"] = [
-            tasks[context_task_name]() for context_task_name in context_list
-        ]
+        if isinstance(context_list, list):
+            self.tasks_config[task_name]["context"] = [
+                tasks[context_task_name]() for context_task_name in context_list
+            ]
+        elif isinstance(context_list,str) and context_list == 'None':
+            self.tasks_config[task_name]["context"] = None
 
     if tools := task_info.get("tools"):
         if _is_string_list(tools):

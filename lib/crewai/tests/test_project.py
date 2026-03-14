@@ -106,6 +106,54 @@ class InternalCrewWithMCP(InternalCrew):
         )  # type: ignore[index]
 
 
+@CrewBase
+class CrewWithTaskContextNone:
+    agents_config = "config/agents.yaml"
+    tasks_config = "config/tasks_with_none_context.yaml"
+
+    agents: list[BaseAgent]
+    tasks: list[Task]
+
+    @llm
+    def local_llm(self):
+        return LLM(
+            model="openai/model_name",
+            api_key="None",
+            base_url="http://xxx.xxx.xxx.xxx:8000/v1",
+        )
+
+    @agent
+    def researcher(self):
+        return Agent(config=self.agents_config["researcher"])  # type: ignore[index]
+
+    @agent
+    def reporting_analyst(self):
+        return Agent(config=self.agents_config["reporting_analyst"])  # type: ignore[index]
+
+    @task
+    def research_task(self):
+        return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
+
+    @task
+    def reporting_task(self):
+        return Task(config=self.tasks_config["reporting_task"])  # type: ignore[index]
+
+    @before_kickoff
+    def modify_inputs(self, inputs):
+        if inputs:
+            inputs["topic"] = "Bicycles"
+        return inputs
+
+    @after_kickoff
+    def modify_outputs(self, outputs):
+        outputs.raw = outputs.raw + " post processed"
+        return outputs
+
+    @crew
+    def crew(self):
+        return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
+
+
 def test_agent_memoization():
     crew = SimpleCrew()
     first_call_result = crew.simple_agent()
@@ -382,3 +430,11 @@ def test_internal_crew_with_mcp():
     adapter_mock.assert_called_once_with(
         {"host": "localhost", "port": 8000}, connect_timeout=120
     )
+
+
+def test_crew_with_task_context_none():
+    crew = CrewWithTaskContextNone()
+    task_with_context_none = crew.reporting_task()
+
+    assert task_with_context_none.context is None
+    assert task_with_context_none.context != 'None'
