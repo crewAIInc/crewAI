@@ -268,7 +268,9 @@ class CrewAIRagAdapter(Adapter):
                             file_chunker = file_data_type.get_chunker()
 
                             file_source = SourceContent(file_path)
-                            file_result: LoaderResult = file_loader.load(file_source)
+                            file_result: LoaderResult = file_loader.load(
+                                file_source, **kwargs
+                            )
 
                             file_chunks = file_chunker.chunk(file_result.content)
 
@@ -319,7 +321,7 @@ class CrewAIRagAdapter(Adapter):
                 loader = data_type.get_loader()
                 chunker = data_type.get_chunker()
 
-                loader_result: LoaderResult = loader.load(source_content)
+                loader_result: LoaderResult = loader.load(source_content, **kwargs)
 
                 chunks = chunker.chunk(loader_result.content)
 
