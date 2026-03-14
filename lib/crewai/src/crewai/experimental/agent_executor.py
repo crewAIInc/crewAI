@@ -1129,7 +1129,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         # asyncio.gather preserves input order, so zip gives us the exact
         # todo ↔ result (or exception) mapping.
         step_results: list[tuple[TodoItem, object]] = []
-        for todo, item in zip(ready, gathered):
+        for todo, item in zip(ready, gathered, strict=True):
             if isinstance(item, Exception):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
