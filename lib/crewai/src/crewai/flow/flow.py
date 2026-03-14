@@ -2716,7 +2716,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if not isinstance(e, HumanFeedbackPending):
-                logger.error(f"Error executing listener {listener_name}: {e}")
+                if not getattr(e, "_flow_listener_logged", False):
+                    logger.error(f"Error executing listener {listener_name}: {e}")
+                    e._flow_listener_logged = True  # type: ignore[attr-defined]
             raise
 
     # ── User Input (self.ask) ────────────────────────────────────────

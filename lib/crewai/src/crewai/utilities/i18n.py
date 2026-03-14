@@ -100,7 +100,12 @@ class I18N(BaseModel):
     def retrieve(
         self,
         kind: Literal[
-            "slices", "errors", "tools", "reasoning", "hierarchical_manager_agent", "memory"
+            "slices",
+            "errors",
+            "tools",
+            "reasoning",
+            "hierarchical_manager_agent",
+            "memory",
         ],
         key: str,
     ) -> str:
