@@ -768,3 +768,125 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_output_file_saves_guardrail_result_not_stale_raw():
+    """Test that output_file saves the post-guardrail result, not the pre-guardrail raw string.
+
+    Before the fix, the output_file save used stale local variables (json_output, pydantic_output)
+    which were always None when guardrails were present, causing the file to be saved with the
+    raw pre-guardrail result instead of the guardrail-transformed output.
+    """
+    from pathlib import Path
+
+    output_path = "test_guardrail_output/output.txt"
+    resolved = Path(output_path).expanduser().resolve()
+
+    def guardrail(result: TaskOutput):
+        return (True, "GUARDRAIL_TRANSFORMED: " + result.raw)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "original raw result"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrail=guardrail,
+        output_file=output_path,
+        create_directory=True,
+    )
+
+    try:
+        result = task.execute_sync(agent=agent)
+
+        assert result.raw == "GUARDRAIL_TRANSFORMED: original raw result"
+
+        file_content = resolved.read_text()
+        assert file_content == "GUARDRAIL_TRANSFORMED: original raw result"
+        assert file_content != "original raw result"
+    finally:
+        if resolved.exists():
+            resolved.unlink()
+        if resolved.parent.exists():
+            import shutil
+
+            shutil.rmtree(resolved.parent)
+
+
+def test_output_file_saves_guardrail_result_with_guardrails_list():
+    """Test output_file correctness with guardrails (list form) that transform the result."""
+    from pathlib import Path
+
+    output_path = "test_guardrail_list_output/output.txt"
+    resolved = Path(output_path).expanduser().resolve()
+
+    def guardrail(result: TaskOutput):
+        return (True, result.raw.upper())
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "hello world"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrails=[guardrail],
+        output_file=output_path,
+        create_directory=True,
+    )
+
+    try:
+        result = task.execute_sync(agent=agent)
+
+        assert result.raw == "HELLO WORLD"
+
+        file_content = resolved.read_text()
+        assert file_content == "HELLO WORLD"
+    finally:
+        if resolved.exists():
+            resolved.unlink()
+        if resolved.parent.exists():
+            import shutil
+
+            shutil.rmtree(resolved.parent)
+
+
+def test_output_file_saves_without_guardrails():
+    """Test that output_file still works correctly when no guardrails are present."""
+    from pathlib import Path
+
+    output_path = "test_no_guardrail_output/output.txt"
+    resolved = Path(output_path).expanduser().resolve()
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "normal result"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        output_file=output_path,
+        create_directory=True,
+    )
+
+    try:
+        result = task.execute_sync(agent=agent)
+
+        assert result.raw == "normal result"
+
+        file_content = resolved.read_text()
+        assert file_content == "normal result"
+    finally:
+        if resolved.exists():
+            resolved.unlink()
+        if resolved.parent.exists():
+            import shutil
+
+            shutil.rmtree(resolved.parent)
