@@ -1675,6 +1675,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
+            "parent_flow",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
@@ -1707,6 +1708,11 @@ class Crew(FlowTrackable, BaseModel):
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
+        # Belt-and-suspenders: "parent_flow" is already in the exclude set
+        # passed to model_dump(), but a custom serialization override or
+        # future Pydantic change could still leak it into the dict.
+        # The defensive pop ensures it never reaches the Crew constructor.
+        copied_data.pop("parent_flow", None)
 
         return Crew(
             **copied_data,
