@@ -181,6 +181,45 @@ class MyCustomCrew:
 
 This is how third-party event listeners are registered in the CrewAI codebase.
 
+## Verifiable Audit Trail with VALCrew
+
+CrewAI now includes an optional `VALCrew` wrapper that attests Crew events into a tamper-evident hash chain.
+
+```python
+from crewai import Agent, Task
+from crewai_val import VALCrew
+
+researcher = Agent(role="Researcher", goal="Find facts", backstory="...")
+task = Task(description="Summarize current trends", expected_output="A summary", agent=researcher)
+
+crew = VALCrew(
+    agents=[researcher],
+    tasks=[task],
+    topic_id="0.0.12345",  # optional logical topic/id used in attestations
+)
+
+result = crew.kickoff()
+print(crew.verify_audit_trail())  # True when local hash chain is intact
+```
+
+By default, `VALCrew` uses an append-only local JSONL attestor. For production immutable backends (for example Hedera HCS), pass a custom attestor adapter:
+
+```python
+from crewai.val import CallableVALAttestor
+from crewai_val import VALCrew
+
+def attest_to_hcs(record):
+    # Replace with your Hedera HCS submission logic and return external tx/message id
+    return "hcs:tx-id"
+
+crew = VALCrew(
+    agents=[...],
+    tasks=[...],
+    topic_id="0.0.12345",
+    attestor=CallableVALAttestor(attest_to_hcs, ledger="hedera-hcs"),
+)
+```
+
 ## Available Event Types
 
 CrewAI provides a wide range of events that you can listen for:
