@@ -25,24 +25,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install uv
+      - name: Install uv and populate cache
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.4"
           python-version: ${{ matrix.python-version }}
-          enable-cache: false
+          enable-cache: true
 
-      - name: Install dependencies and populate cache
-        run: |
-          echo "Building global UV cache for Python ${{ matrix.python-version }}..."
-          uv sync --all-groups --all-extras --no-install-project
-          echo "Cache populated successfully"
-
-      - name: Save uv caches
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras --frozen --no-install-project
