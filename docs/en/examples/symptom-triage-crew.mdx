@@ -1,0 +1,87 @@
+# Symptom Triage Crew
+
+## Overview
+
+This example demonstrates an agentic AI workflow using CrewAI, where multiple
+specialized agents collaborate to perform basic healthcare triage.
+
+Each agent has a clear responsibility, and decisions emerge through
+collaboration rather than a single monolithic prompt.
+
+---
+
+## Agents
+
+### Symptom Collector Agent
+**Role**
+- Extract symptoms from raw patient input
+- Normalize symptom descriptions
+
+**Example Input**
+"I have fever, cough, and headache"
+
+---
+
+### Risk Assessment Agent
+**Role**
+- Analyze symptom combinations
+- Classify risk as low, medium, or high
+
+---
+
+### Care Advisor Agent
+**Role**
+- Suggest next steps based on risk level
+- Recommend rest or medical consultation
+
+---
+
+## Agentic Workflow
+
+1. User provides a natural language symptom description
+2. Symptom Collector extracts structured symptoms
+3. Risk Assessment agent evaluates severity
+4. Care Advisor generates guidance
+5. Final response is returned to the user
+
+---
+
+## Why This Is Agentic AI
+
+- Each agent has a single responsibility
+- Reasoning is distributed across agents
+- No single agent controls the full decision
+- Collaboration produces the final output
+
+---
+
+## Conceptual Example
+
+```python
+# Conceptual illustration of input interpolation in CrewAI
+
+crew = Crew(
+    agents=[
+        {
+            "role": "Symptom Collector",
+            "goal": "Extract symptoms from: {patient_input}"
+        },
+        {
+            "role": "Risk Assessor",
+            "goal": "Assess severity of: {patient_input}"
+        },
+        {
+            "role": "Care Advisor",
+            "goal": "Suggest next steps for: {patient_input}"
+        }
+    ],
+    task="Perform symptom triage using the provided patient input."
+)
+
+result = crew.kickoff(
+    inputs={
+        "patient_input": "I have fever, cough, and headache"
+    }
+)
+
+print(result)
