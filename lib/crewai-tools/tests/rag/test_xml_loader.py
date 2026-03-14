@@ -196,5 +196,4 @@ class TestXMLLoader:
         """Verify that ArxivPaperTool imports from defusedxml, not xml.etree.ElementTree."""
         import crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool as arxiv_module
 
-        ET = arxiv_module.ET
-        assert "defusedxml" in ET.__name__
+        assert "defusedxml" in arxiv_module.fromstring.__module__
