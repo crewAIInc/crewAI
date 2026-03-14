@@ -43,6 +43,7 @@ def should_suppress_console_output() -> bool:
 
 class ConsoleFormatter:
     tool_usage_counts: ClassVar[dict[str, int]] = {}
+    _tool_counts_lock: ClassVar[threading.Lock] = threading.Lock()
 
     current_a2a_turn_count: int = 0
     _pending_a2a_message: str | None = None
@@ -445,9 +446,11 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        # Update tool usage count
-        self.tool_usage_counts[tool_name] = self.tool_usage_counts.get(tool_name, 0) + 1
-        iteration = self.tool_usage_counts[tool_name]
+        with self._tool_counts_lock:
+            self.tool_usage_counts[tool_name] = (
+                self.tool_usage_counts.get(tool_name, 0) + 1
+            )
+            iteration = self.tool_usage_counts[tool_name]
 
         content = Text()
         content.append("Tool: ", style="white")
@@ -474,7 +477,8 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        iteration = self.tool_usage_counts.get(tool_name, 1)
+        with self._tool_counts_lock:
+            iteration = self.tool_usage_counts.get(tool_name, 1)
 
         content = Text()
         content.append("Tool Completed\n", style="green bold")
@@ -500,7 +504,8 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        iteration = self.tool_usage_counts.get(tool_name, 1)
+        with self._tool_counts_lock:
+            iteration = self.tool_usage_counts.get(tool_name, 1)
 
         content = Text()
         content.append("Tool Failed\n", style="red bold")

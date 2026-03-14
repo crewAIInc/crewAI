@@ -99,8 +99,8 @@ class FileCompressorTool(BaseTool):
     def _prepare_output(output_path: str, overwrite: bool) -> bool:
         """Ensures output path is ready for writing."""
         output_dir = os.path.dirname(output_path)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
         if os.path.exists(output_path) and not overwrite:
             return False
         return True
