@@ -326,7 +326,12 @@ class Crew(FlowTrackable, BaseModel):
         """
 
         # TODO: Improve typing
-        return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return v
+        return v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
@@ -362,7 +367,7 @@ class Crew(FlowTrackable, BaseModel):
             if self.embedder is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
-                embedder = build_embedder(self.embedder)
+                embedder = build_embedder(cast(Any, self.embedder))
             self._memory = Memory(embedder=embedder)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
