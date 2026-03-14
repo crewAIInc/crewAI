@@ -37,7 +37,7 @@ from crewai import LLM
 
 # Create an LLM instance with TrueFoundry AI Gateway
 truefoundry_llm = LLM(
-    model="openai-main/gpt-4o",  # Similarly, you can call any model from any provider
+    model="openai/openai-main/gpt-4o",  # Format: openai/<your-truefoundry-model-id>
     base_url="your_truefoundry_gateway_base_url",
     api_key="your_truefoundry_api_key"
 )
@@ -63,7 +63,7 @@ from crewai import Agent, Task, Crew, LLM
 
 # Configure LLM with TrueFoundry
 llm = LLM(
-    model="openai-main/gpt-4o",
+    model="openai/openai-main/gpt-4o",  # Format: openai/<your-truefoundry-model-id>
     base_url="your_truefoundry_gateway_base_url",
     api_key="your_truefoundry_api_key"
 )
