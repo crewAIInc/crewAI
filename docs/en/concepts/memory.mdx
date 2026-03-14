@@ -761,6 +761,75 @@ memory = Memory(
 - **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
 
 
+## Mengram Memory
+
+[Mengram](https://mengram.io) is a memory system for AI agents with semantic search, knowledge graph traversal, episodic memory, and experience-driven procedural learning. `MengramMemory` is a drop-in replacement for the default `Memory` class — pass it directly to `Crew(memory=...)`.
+
+### Installation
+
+```bash
+pip install 'crewai[mengram]'
+```
+
+### Quick Start
+
+```python
+from crewai import Crew, Agent, Task, Process
+from crewai.memory.storage.mengram_storage import MengramMemory, MengramConfig
+
+memory = MengramMemory(MengramConfig(
+    api_key="om-...",  # or set MENGRAM_API_KEY env var
+    user_id="my-crew",
+))
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find and analyze information",
+    backstory="Expert researcher with attention to detail",
+)
+
+task = Task(
+    description="Research the latest trends in AI memory systems.",
+    expected_output="A summary of key findings.",
+    agent=researcher,
+)
+
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    memory=memory,
+    process=Process.sequential,
+)
+
+crew.kickoff()
+```
+
+### Configuration
+
+| Parameter | Default | Description |
+| :--- | :--- | :--- |
+| `api_key` | *(required)* | Mengram API key (`om-...`). Falls back to `MENGRAM_API_KEY` env var. Get a free key at [mengram.io](https://mengram.io). |
+| `base_url` | `"https://mengram.io"` | API URL. Falls back to `MENGRAM_BASE_URL` env var. |
+| `user_id` | `"default"` | User identifier for memory isolation. Each `user_id` has its own memory space. |
+| `graph_depth` | `2` | Knowledge graph traversal depth during search. |
+| `search_limit` | `5` | Max results per memory type during recall. |
+
+### How It Works
+
+Mengram handles its own LLM analysis, embeddings, and retrieval — `MengramMemory` bypasses CrewAI's built-in encoding and recall pipelines entirely:
+
+- **`remember(content)`** sends text to Mengram's extraction API, which automatically discovers entities, facts, relationships, episodes, and procedures.
+- **`recall(query)`** searches across all three memory types (semantic, episodic, procedural) with knowledge graph traversal and reranking.
+- **`reset()`** deletes all memories for the configured user.
+
+Three memory types work together:
+- **Semantic**: Entities, facts, and their relationships in a knowledge graph
+- **Episodic**: Past events with outcomes and timestamps
+- **Procedural**: Learned workflows with success/failure tracking that improve over time
+
+No local LLM or embedder is needed — Mengram provides its own.
+
+
 ## Discovery
 
 Inspect the scope hierarchy, categories, and records:
