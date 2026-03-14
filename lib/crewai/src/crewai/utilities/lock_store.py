@@ -62,11 +62,15 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
         lock_dir = tempfile.gettempdir()
         lock_path = os.path.join(lock_dir, f"{channel}.lock")
         try:
-            with portalocker.Lock(lock_path, timeout=timeout):
-                yield
+            pl = portalocker.Lock(lock_path, timeout=timeout)
+            pl.acquire()
         except portalocker.exceptions.BaseLockException as exc:
             raise portalocker.exceptions.LockException(
                 f"Failed to acquire lock '{name}' at {lock_path} "
                 f"(timeout={timeout}s). This commonly occurs in "
                 f"multi-process environments. "
             ) from exc
+        try:
+            yield
+        finally:
+            pl.release()  # type: ignore[no-untyped-call]
