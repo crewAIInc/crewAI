@@ -1,0 +1,57 @@
+---
+title: Tzafon 웹 로더
+description: Tzafon은 브라우저와 데스크톱을 프로그래밍 방식으로 제어할 수 있는 플랫폼입니다.
+icon: browser
+mode: "wide"
+---
+
+# `TzafonLoadTool`
+
+## 설명
+
+`TzafonLoadTool`은 브라우저와 데스크톱을 프로그래밍 방식으로 제어하는 플랫폼인 [Tzafon](https://tzafon.ai)을 사용하여 웹 스크래핑 및 자동화를 가능하게 합니다. 이 도구를 사용하면 에이전트가 웹사이트를 탐색하고, 콘텐츠와 상호작용하며, Tzafon의 스텔스 및 속도 기능을 활용해 데이터를 추출할 수 있습니다.
+
+주요 기능:
+- **완전한 스텔스**: 내장된 스텔스 기능으로 봇 방지 조치를 우회합니다.
+- **초고속**: 속도와 성능에 최적화되어 있습니다.
+- **멀티 탭 제어**: 여러 브라우저 탭을 프로그래밍 방식으로 관리합니다.
+- **페이지 컨텍스트 API**: 페이지 구조와 콘텐츠에 대한 상세한 컨텍스트에 액세스합니다.
+
+## 설치
+
+이 도구를 사용하려면 `crewai[tools]`와 함께 Tzafon SDK를 설치해야 합니다:
+
+<CodeGroup>
+```bash pip
+pip install tzafon playwright 'crewai[tools]'
+```
+```bash uv
+uv add tzafon playwright 'crewai[tools]'
+```
+</CodeGroup>
+
+## 예시
+
+다음 예제는 도구를 초기화하고 웹사이트를 로드하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import TzafonLoadTool
+
+# 도구 초기화
+# API 키는 직접 전달하거나 TZAFON_API_KEY 환경 변수로 설정할 수 있습니다.
+tool = TzafonLoadTool()
+```
+
+## 인수
+
+`TzafonLoadTool`은 다음 매개변수를 허용합니다:
+
+| 인수    | 타입     | 설명                                                                 |
+|:------------|:---------|:----------------------------------------------------------------------------|
+| **url** | `string` | _필수_. 로드할 웹사이트의 URL입니다.                                         |
+| **api_key** | `string` | _선택 사항_. Tzafon API 키. 기본값은 `TZAFON_API_KEY` 환경 변수입니다.       |
+| **text_content** | `bool` | _선택 사항_. 텍스트 콘텐츠만 검색합니다. 기본값은 `True`입니다.       |
+
+## 반환 형식
+
+이 도구는 로드된 페이지의 콘텐츠를 반환하며, 일반적으로 LLM 처리에 적합한 텍스트 또는 HTML 형식입니다.
