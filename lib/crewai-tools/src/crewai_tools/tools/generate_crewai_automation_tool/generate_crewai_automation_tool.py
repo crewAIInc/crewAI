@@ -52,6 +52,7 @@ class GenerateCrewaiAutomationTool(BaseTool):
             f"{self.crewai_enterprise_url}/crewai_plus/api/v1/studio",
             headers=self._get_headers(input_data.organization_id),
             json={"prompt": input_data.prompt},
+            timeout=10.0,
         )
 
         response.raise_for_status()
