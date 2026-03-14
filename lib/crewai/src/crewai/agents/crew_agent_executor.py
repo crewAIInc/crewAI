@@ -847,7 +847,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            func_args = func_info.get("arguments") or tool_call.get("input") or {}
             return call_id, func_name, func_args
         return None
 
@@ -895,9 +895,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
-        args_dict, parse_error = parse_tool_call_args(
-            func_args, func_name, call_id, original_tool
-        )
+        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id, original_tool)
         if parse_error is not None:
             return parse_error
 
