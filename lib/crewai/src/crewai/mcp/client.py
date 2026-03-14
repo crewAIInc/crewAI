@@ -461,14 +461,17 @@ class MCPClient:
         arguments = arguments or {}
         cleaned_arguments = self._clean_tool_arguments(arguments)
 
-        # Sign the outgoing message when a security manager is present
+        # Sign the outgoing message when a security manager is present.
+        # We use a shallow copy of cleaned_arguments inside the message dict
+        # so that storing the envelope back into cleaned_arguments does not
+        # create a circular reference (envelope -> message -> params -> arguments).
         if self.security_manager is not None:
             message = {
                 "jsonrpc": "2.0",
                 "method": "tools/call",
                 "params": {
                     "name": tool_name,
-                    "arguments": cleaned_arguments,
+                    "arguments": dict(cleaned_arguments),
                 },
             }
             signed_envelope = self.security_manager.sign_message(message)

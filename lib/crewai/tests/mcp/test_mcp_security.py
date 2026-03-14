@@ -484,7 +484,7 @@ class TestToolResolverSecurityIntegration:
                 backstory="Test backstory",
                 mcps=[http_config],
             )
-            tools = agent.get_mcp_tools([http_config])
+            agent.get_mcp_tools([http_config])
 
             call_kwargs = mock_client_class.call_args.kwargs
             assert call_kwargs.get("security_manager") is None
