@@ -12,6 +12,7 @@ from typing import Any
 import jsonschema
 import pytest
 
+from crewai.a2a.extensions.a2ui import catalog
 from crewai.a2a.extensions.a2ui.models import A2UIEvent, A2UIMessage
 from crewai.a2a.extensions.a2ui.schema import load_schema
 
@@ -282,9 +283,7 @@ class TestCatalogConformance:
     def test_valid_component_accepted_by_pydantic(
         self, name: str, props: dict[str, Any]
     ) -> None:
-        import crewai.a2a.extensions.a2ui.catalog as catalog_mod
-
-        model_cls = getattr(catalog_mod, name)
+        model_cls = getattr(catalog, name)
         try:
             model_cls.model_validate(props)
         except Exception as exc:
@@ -292,11 +291,9 @@ class TestCatalogConformance:
 
     def test_catalog_required_fields_match(self) -> None:
         """Required fields in the JSON schema match non-optional Pydantic fields."""
-        import crewai.a2a.extensions.a2ui.catalog as catalog_mod
-
         for comp_name, comp_schema in CATALOG_SCHEMA["components"].items():
             schema_required = set(comp_schema.get("required", []))
-            model_cls = getattr(catalog_mod, comp_name)
+            model_cls = getattr(catalog, comp_name)
             pydantic_required = {
                 info.alias or field_name
                 for field_name, info in model_cls.model_fields.items()
@@ -309,11 +306,9 @@ class TestCatalogConformance:
 
     def test_catalog_fields_match(self) -> None:
         """Field names in JSON schema match Pydantic model aliases."""
-        import crewai.a2a.extensions.a2ui.catalog as catalog_mod
-
         for comp_name, comp_schema in CATALOG_SCHEMA["components"].items():
             schema_fields = set(comp_schema.get("properties", {}).keys())
-            model_cls = getattr(catalog_mod, comp_name)
+            model_cls = getattr(catalog, comp_name)
             pydantic_fields = {
                 info.alias or field_name
                 for field_name, info in model_cls.model_fields.items()
