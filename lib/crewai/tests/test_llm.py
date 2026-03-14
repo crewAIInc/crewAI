@@ -1022,3 +1022,168 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+# ============================================================================
+# Unsupported 'stop' parameter retry guard tests
+# ============================================================================
+
+
+class TestUnsupportedStopRetryGuard:
+    """Tests for the unsupported 'stop' parameter retry logic in call()/acall().
+
+    Verifies that:
+    - A single retry is attempted when the provider rejects the 'stop' param
+    - Infinite recursion is prevented if the error persists after the retry
+    - Existing additional_params are preserved (not overwritten) when adding 'stop'
+    """
+
+    def _make_llm(self, **kwargs):
+        """Create an LLM instance configured for testing."""
+        return LLM(model="gpt-4o-mini", is_litellm=True, **kwargs)
+
+    @patch("crewai.llm.LLM._prepare_completion_params")
+    @patch("crewai.llm.LLM._handle_non_streaming_response")
+    def test_retries_once_then_raises_on_persistent_stop_error(
+        self, mock_handle, mock_prepare, caplog
+    ):
+        """If the 'stop' error persists after adding it to drop_params,
+        the call must raise instead of recursing infinitely."""
+        llm = self._make_llm(stop=["stop_token"])
+        mock_prepare.return_value = {"messages": [{"role": "user", "content": "hi"}]}
+        mock_handle.side_effect = Exception(
+            "Unsupported parameter: 'stop' is not supported"
+        )
+
+        with pytest.raises(Exception, match="Unsupported parameter"):
+            llm.call("test")
+
+        # Should have been called exactly twice: initial + one retry
+        assert mock_handle.call_count == 2
+
+    @patch("crewai.llm.LLM._prepare_completion_params")
+    @patch("crewai.llm.LLM._handle_non_streaming_response")
+    def test_preserves_existing_additional_params(
+        self, mock_handle, mock_prepare
+    ):
+        """When adding 'stop' to drop_params, other additional_params must survive."""
+        llm = self._make_llm(
+            stop=["stop_token"],
+            extra_headers={"X-Custom": "value"},
+        )
+        llm.additional_params = {
+            "extra_headers": {"X-Custom": "value"},
+            "seed": 42,
+        }
+        mock_prepare.return_value = {"messages": [{"role": "user", "content": "hi"}]}
+
+        call_count = 0
+
+        def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("Unsupported parameter: 'stop' is not supported")
+            return "Success"
+
+        mock_handle.side_effect = side_effect
+
+        result = llm.call("test")
+
+        assert result == "Success"
+        # Verify existing params were preserved
+        assert llm.additional_params.get("extra_headers") == {"X-Custom": "value"}
+        assert llm.additional_params.get("seed") == 42
+        assert "stop" in llm.additional_params.get("additional_drop_params", [])
+
+    @patch("crewai.llm.LLM._prepare_completion_params")
+    @patch("crewai.llm.LLM._handle_non_streaming_response")
+    def test_appends_to_existing_drop_params(
+        self, mock_handle, mock_prepare
+    ):
+        """When additional_drop_params already exists, 'stop' should be appended."""
+        llm = self._make_llm(
+            stop=["stop_token"],
+            additional_drop_params=["another_param"],
+        )
+        mock_prepare.return_value = {"messages": [{"role": "user", "content": "hi"}]}
+
+        call_count = 0
+
+        def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("Unsupported parameter: 'stop' is not supported")
+            return "Success"
+
+        mock_handle.side_effect = side_effect
+
+        result = llm.call("test")
+
+        assert result == "Success"
+        assert llm.additional_params["additional_drop_params"] == [
+            "another_param",
+            "stop",
+        ]
+
+    @patch("crewai.llm.LLM._prepare_completion_params")
+    @patch("crewai.llm.LLM._handle_non_streaming_response")
+    def test_non_stop_exceptions_are_not_retried(
+        self, mock_handle, mock_prepare
+    ):
+        """Exceptions that don't mention 'stop' should propagate immediately."""
+        llm = self._make_llm()
+        mock_prepare.return_value = {"messages": [{"role": "user", "content": "hi"}]}
+        mock_handle.side_effect = Exception("Some other error")
+
+        with pytest.raises(Exception, match="Some other error"):
+            llm.call("test")
+
+        assert mock_handle.call_count == 1
+
+    @pytest.mark.asyncio
+    @patch("crewai.llm.LLM._prepare_completion_params")
+    @patch("crewai.llm.LLM._ahandle_non_streaming_response")
+    async def test_acall_retries_once_then_raises_on_persistent_stop_error(
+        self, mock_handle, mock_prepare
+    ):
+        """Same infinite recursion guard for the async acall() method."""
+        llm = self._make_llm(stop=["stop_token"])
+        mock_prepare.return_value = {"messages": [{"role": "user", "content": "hi"}]}
+        mock_handle.side_effect = Exception(
+            "Unsupported parameter: 'stop' is not supported"
+        )
+
+        with pytest.raises(Exception, match="Unsupported parameter"):
+            await llm.acall("test")
+
+        assert mock_handle.call_count == 2
+
+    @pytest.mark.asyncio
+    @patch("crewai.llm.LLM._prepare_completion_params")
+    @patch("crewai.llm.LLM._ahandle_non_streaming_response")
+    async def test_acall_preserves_existing_additional_params(
+        self, mock_handle, mock_prepare
+    ):
+        """Async version: existing additional_params must survive the retry."""
+        llm = self._make_llm(stop=["stop_token"])
+        llm.additional_params = {"seed": 42}
+        mock_prepare.return_value = {"messages": [{"role": "user", "content": "hi"}]}
+
+        call_count = 0
+
+        async def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("Unsupported parameter: 'stop' is not supported")
+            return "Success"
+
+        mock_handle.side_effect = side_effect
+
+        result = await llm.acall("test")
+
+        assert result == "Success"
+        assert llm.additional_params.get("seed") == 42
+        assert "stop" in llm.additional_params.get("additional_drop_params", [])
