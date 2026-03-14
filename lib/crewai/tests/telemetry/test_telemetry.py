@@ -159,3 +159,57 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
     )
+
+
+def test_crew_created_span_with_memory_object_does_not_raise(mocker):
+    """crew_memory attribute must be serialised to bool, not the raw Memory object.
+
+    OpenTelemetry span.set_attribute only accepts bool/str/bytes/int/float or
+    sequences thereof.  When crew.memory is a Memory instance the previous code
+    passed the object directly and raised:
+        Invalid type Memory for attribute 'crew_memory' value.
+    (issue #4703)
+    """
+    from crewai.telemetry import Telemetry
+
+    telemetry = Telemetry()
+    telemetry.ready = True
+
+    # Build a minimal mock span that records what set_attribute is called with.
+    span = mocker.MagicMock()
+    mock_tracer = mocker.MagicMock()
+    mock_tracer.start_span.return_value = span
+    mocker.patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=mock_tracer)
+
+    # Build a minimal mock crew whose .memory field is a non-bool truthy object,
+    # simulating a real Memory instance (which is not a bool).
+    memory_obj = mocker.MagicMock()
+    memory_obj.__bool__ = mocker.MagicMock(return_value=True)
+
+    mock_crew = mocker.MagicMock()
+    mock_crew.memory = memory_obj
+    mock_crew.process = "sequential"
+    mock_crew.tasks = []
+    mock_crew.agents = []
+    mock_crew.fingerprint = None
+
+    # Exercise the actual production code path in crew_creation(), not _add_attribute
+    # directly, so that this test will catch any regression in crew_creation().
+    telemetry.crew_creation(mock_crew, inputs=None)
+
+    # Verify span.set_attribute was called with a bool value for crew_memory.
+    found_crew_memory = False
+    for call in span.set_attribute.call_args_list:
+        key = call[0][0] if call[0] else call[1].get("key", "")
+        value = call[0][1] if len(call[0]) > 1 else call[1].get("value")
+        if key == "crew_memory":
+            found_crew_memory = True
+            assert isinstance(value, bool), (
+                f"crew_memory must be serialised to bool, got {type(value).__name__!r}"
+            )
+            break
+
+    assert found_crew_memory, (
+        "span.set_attribute was never called with 'crew_memory' — "
+        "the attribute may have been removed or the mock was not invoked"
+    )
