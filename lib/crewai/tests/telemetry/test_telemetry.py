@@ -1,6 +1,6 @@
 import os
 import threading
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
@@ -159,3 +159,195 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
     )
+
+
+class TestCrewCreationTelemetryMemorySerialization:
+    """Tests for issue #4703: telemetry fails with custom Memory instances.
+
+    When crew.memory is a Memory object (not a bool), OpenTelemetry cannot
+    serialize it as a span attribute. The fix converts non-primitive memory
+    values to the class name string.
+    """
+
+    def test_crew_creation_telemetry_with_memory_true(self):
+        """crew_memory attribute should be True (bool) when memory=True."""
+        telemetry = Telemetry()
+        telemetry.ready = True
+
+        captured_attrs: dict[str, object] = {}
+        original_add_attribute = telemetry._add_attribute
+
+        def capture_add_attribute(span, key, value):
+            captured_attrs[key] = value
+            original_add_attribute(span, key, value)
+
+        agent = Agent(
+            role="researcher",
+            goal="research",
+            backstory="a researcher",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="do research",
+            expected_output="results",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            memory=True,
+        )
+
+        with patch.object(telemetry, "_add_attribute", side_effect=capture_add_attribute):
+            with patch.object(telemetry, "_safe_telemetry_operation") as mock_safe_op:
+                # Call the inner _operation directly to test attribute logic
+                mock_safe_op.side_effect = lambda op: op()
+                with patch("crewai.telemetry.telemetry.trace") as mock_trace:
+                    mock_span = MagicMock()
+                    mock_trace.get_tracer.return_value.start_span.return_value = mock_span
+                    telemetry.crew_creation(crew, None)
+
+        assert captured_attrs.get("crew_memory") is True
+
+    def test_crew_creation_telemetry_with_memory_false(self):
+        """crew_memory attribute should be False (bool) when memory=False."""
+        telemetry = Telemetry()
+        telemetry.ready = True
+
+        captured_attrs: dict[str, object] = {}
+        original_add_attribute = telemetry._add_attribute
+
+        def capture_add_attribute(span, key, value):
+            captured_attrs[key] = value
+            original_add_attribute(span, key, value)
+
+        agent = Agent(
+            role="researcher",
+            goal="research",
+            backstory="a researcher",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="do research",
+            expected_output="results",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            memory=False,
+        )
+
+        with patch.object(telemetry, "_add_attribute", side_effect=capture_add_attribute):
+            with patch.object(telemetry, "_safe_telemetry_operation") as mock_safe_op:
+                mock_safe_op.side_effect = lambda op: op()
+                with patch("crewai.telemetry.telemetry.trace") as mock_trace:
+                    mock_span = MagicMock()
+                    mock_trace.get_tracer.return_value.start_span.return_value = mock_span
+                    telemetry.crew_creation(crew, None)
+
+        assert captured_attrs.get("crew_memory") is False
+
+    def test_crew_creation_telemetry_with_custom_memory_instance(self):
+        """crew_memory attribute should be the class name when a Memory instance is passed.
+
+        Regression test for https://github.com/crewAIInc/crewAI/issues/4703
+        """
+        telemetry = Telemetry()
+        telemetry.ready = True
+
+        captured_attrs: dict[str, object] = {}
+        original_add_attribute = telemetry._add_attribute
+
+        def capture_add_attribute(span, key, value):
+            captured_attrs[key] = value
+            original_add_attribute(span, key, value)
+
+        # Use a lightweight stub instead of MagicMock to avoid mutating
+        # MagicMock.__name__ globally (which would pollute other tests).
+        class _FakeMemory:
+            """Minimal stand-in for a real Memory instance."""
+
+        fake_memory = _FakeMemory()
+
+        agent = Agent(
+            role="researcher",
+            goal="research",
+            backstory="a researcher",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="do research",
+            expected_output="results",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            memory=fake_memory,
+        )
+
+        with patch.object(telemetry, "_add_attribute", side_effect=capture_add_attribute):
+            with patch.object(telemetry, "_safe_telemetry_operation") as mock_safe_op:
+                mock_safe_op.side_effect = lambda op: op()
+                with patch("crewai.telemetry.telemetry.trace") as mock_trace:
+                    mock_span = MagicMock()
+                    mock_trace.get_tracer.return_value.start_span.return_value = mock_span
+                    telemetry.crew_creation(crew, None)
+
+        # Should be the class name string, not the object itself
+        assert captured_attrs.get("crew_memory") == "_FakeMemory"
+        assert isinstance(captured_attrs["crew_memory"], str)
+
+    def test_crew_creation_telemetry_memory_value_is_otel_serializable(self):
+        """The crew_memory value must always be a type OpenTelemetry can serialize.
+
+        OpenTelemetry accepts: bool, str, bytes, int, float, or sequences thereof.
+        """
+        telemetry = Telemetry()
+        telemetry.ready = True
+
+        captured_attrs: dict[str, object] = {}
+        original_add_attribute = telemetry._add_attribute
+
+        def capture_add_attribute(span, key, value):
+            captured_attrs[key] = value
+            original_add_attribute(span, key, value)
+
+        # Use a lightweight stub instead of MagicMock to avoid mutating
+        # MagicMock.__name__ globally (which would pollute other tests).
+        class _FakeMemory:
+            """Minimal stand-in for a real Memory instance."""
+
+        fake_memory = _FakeMemory()
+
+        agent = Agent(
+            role="researcher",
+            goal="research",
+            backstory="a researcher",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="do research",
+            expected_output="results",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            memory=fake_memory,
+        )
+
+        with patch.object(telemetry, "_add_attribute", side_effect=capture_add_attribute):
+            with patch.object(telemetry, "_safe_telemetry_operation") as mock_safe_op:
+                mock_safe_op.side_effect = lambda op: op()
+                with patch("crewai.telemetry.telemetry.trace") as mock_trace:
+                    mock_span = MagicMock()
+                    mock_trace.get_tracer.return_value.start_span.return_value = mock_span
+                    telemetry.crew_creation(crew, None)
+
+        memory_val = captured_attrs.get("crew_memory")
+        assert isinstance(memory_val, (bool, str, bytes, int, float)), (
+            f"crew_memory value {memory_val!r} (type {type(memory_val).__name__}) "
+            "is not serializable by OpenTelemetry"
+        )
