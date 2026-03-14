@@ -1,0 +1,59 @@
+---
+title: Proxies.sx MCP Tools
+description: Use real mobile proxies and stealth browser actions from Proxies.sx via MCP in CrewAI.
+---
+
+# `ProxiesSxProxyTool` and `ProxiesSxBrowserTool`
+
+The Proxies.sx integration provides two native CrewAI tools that wrap the official MCP servers:
+
+- `ProxiesSxProxyTool` for mobile proxy actions (`get_proxy`, `rotate_ip`, `check_status`)
+- `ProxiesSxBrowserTool` for antidetect browser actions (`browser_create`, navigation, extraction, profile actions, and session end)
+
+These tools use `npx` to launch:
+
+- `@proxies-sx/mcp-server`
+- `@proxies-sx/browser-mcp`
+
+## Requirements
+
+- `crewai-tools` with MCP dependencies (`uv add "crewai-tools[mcp]"`)
+- Node.js with `npx` available on your PATH
+
+## Example
+
+```python
+from crewai import Agent
+from crewai_tools import ProxiesSxBrowserTool, ProxiesSxProxyTool
+
+proxy_tool = ProxiesSxProxyTool(country="US")
+browser_tool = ProxiesSxBrowserTool()
+
+agent = Agent(
+    role="Stealth Researcher",
+    goal="Research websites with mobile IPs and antidetect browsing",
+    tools=[proxy_tool, browser_tool],
+)
+```
+
+## Running actions
+
+```python
+# Mobile proxy actions
+proxy_tool.run(action="get_proxy", arguments={})
+proxy_tool.run(action="rotate_ip", arguments={"proxy_id": "proxy-123"})
+proxy_tool.run(action="check_status", arguments={"proxy_id": "proxy-123"})
+
+# Browser actions
+browser_tool.run(action="browser_create", arguments={})
+browser_tool.run(action="browser_go", arguments={"url": "https://example.com"})
+browser_tool.run(action="browser_extract", arguments={"instruction": "Get page title"})
+browser_tool.run(action="browser_end", arguments={})
+```
+
+## Configuration
+
+- `country` (`ProxiesSxProxyTool`): optional default country for `get_proxy` calls.
+- `connect_timeout`: MCP connection timeout in seconds.
+- `mcp_command` and `mcp_args`: override server startup command if needed.
+
