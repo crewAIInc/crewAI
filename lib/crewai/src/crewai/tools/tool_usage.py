@@ -320,19 +320,22 @@ class ToolUsage:
 
                     if calling.arguments:
                         try:
+                            enriched = self._add_fingerprint_metadata(
+                                dict(calling.arguments)
+                            )
                             acceptable_args = tool.args_schema.model_json_schema()[
                                 "properties"
                             ].keys()
                             arguments = {
                                 k: v
-                                for k, v in calling.arguments.items()
+                                for k, v in enriched.items()
                                 if k in acceptable_args
                             }
-                            arguments = self._add_fingerprint_metadata(arguments)
                             result = await tool.ainvoke(input=arguments)
                         except Exception:
-                            arguments = calling.arguments
-                            arguments = self._add_fingerprint_metadata(arguments)
+                            arguments = self._add_fingerprint_metadata(
+                                dict(calling.arguments)
+                            )
                             result = await tool.ainvoke(input=arguments)
                     else:
                         arguments = self._add_fingerprint_metadata({})
@@ -552,19 +555,22 @@ class ToolUsage:
 
                     if calling.arguments:
                         try:
+                            enriched = self._add_fingerprint_metadata(
+                                dict(calling.arguments)
+                            )
                             acceptable_args = tool.args_schema.model_json_schema()[
                                 "properties"
                             ].keys()
                             arguments = {
                                 k: v
-                                for k, v in calling.arguments.items()
+                                for k, v in enriched.items()
                                 if k in acceptable_args
                             }
-                            arguments = self._add_fingerprint_metadata(arguments)
                             result = tool.invoke(input=arguments)
                         except Exception:
-                            arguments = calling.arguments
-                            arguments = self._add_fingerprint_metadata(arguments)
+                            arguments = self._add_fingerprint_metadata(
+                                dict(calling.arguments)
+                            )
                             result = tool.invoke(input=arguments)
                     else:
                         arguments = self._add_fingerprint_metadata({})
