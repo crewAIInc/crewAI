@@ -188,7 +188,7 @@ def human_feedback(
     metadata: dict[str, Any] | None = None,
     provider: HumanFeedbackProvider | None = None,
     learn: bool = False,
-    learn_source: str = "hitl"
+    learn_source: str = "hitl",
 ) -> Callable[[F], F]:
     """Decorator for Flow methods that require human feedback.
 
@@ -328,9 +328,7 @@ def human_feedback(
             """Recall past HITL lessons and use LLM to pre-review the output."""
             try:
                 query = f"human feedback lessons for {func.__name__}: {method_output!s}"
-                matches = flow_instance.memory.recall(
-                    query, source=learn_source
-                )
+                matches = flow_instance.memory.recall(query, source=learn_source)
                 if not matches:
                     return method_output
 
@@ -341,7 +339,10 @@ def human_feedback(
                     lessons=lessons,
                 )
                 messages = [
-                    {"role": "system", "content": _get_hitl_prompt("hitl_pre_review_system")},
+                    {
+                        "role": "system",
+                        "content": _get_hitl_prompt("hitl_pre_review_system"),
+                    },
                     {"role": "user", "content": prompt},
                 ]
                 if getattr(llm_inst, "supports_function_calling", lambda: False)():
@@ -366,7 +367,10 @@ def human_feedback(
                     feedback=raw_feedback,
                 )
                 messages = [
-                    {"role": "system", "content": _get_hitl_prompt("hitl_distill_system")},
+                    {
+                        "role": "system",
+                        "content": _get_hitl_prompt("hitl_distill_system"),
+                    },
                     {"role": "user", "content": prompt},
                 ]
 
@@ -408,7 +412,7 @@ def human_feedback(
                 emit=list(emit) if emit else None,
                 default_outcome=default_outcome,
                 metadata=metadata or {},
-                llm=llm if isinstance(llm, str) else None,
+                llm=llm if isinstance(llm, str) else getattr(llm, "model", None),
             )
 
             # Determine effective provider:
@@ -487,7 +491,11 @@ def human_feedback(
                 result = _process_feedback(self, method_output, raw_feedback)
 
                 # Distill: extract lessons from output + feedback, store in memory
-                if learn and getattr(self, "memory", None) is not None and raw_feedback.strip():
+                if (
+                    learn
+                    and getattr(self, "memory", None) is not None
+                    and raw_feedback.strip()
+                ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
                 return result
@@ -507,7 +515,11 @@ def human_feedback(
                 result = _process_feedback(self, method_output, raw_feedback)
 
                 # Distill: extract lessons from output + feedback, store in memory
-                if learn and getattr(self, "memory", None) is not None and raw_feedback.strip():
+                if (
+                    learn
+                    and getattr(self, "memory", None) is not None
+                    and raw_feedback.strip()
+                ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
                 return result
@@ -534,7 +546,7 @@ def human_feedback(
             metadata=metadata,
             provider=provider,
             learn=learn,
-            learn_source=learn_source
+            learn_source=learn_source,
         )
         wrapper.__is_flow_method__ = True
 
