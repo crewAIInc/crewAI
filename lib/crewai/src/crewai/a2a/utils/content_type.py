@@ -312,7 +312,7 @@ def get_part_content_type(part: Part) -> str:
     if root.kind == "text":
         return TEXT_PLAIN
     if root.kind == "data":
-        metadata = getattr(root, "metadata", None) or {}
+        metadata = root.metadata or {}
         mime = metadata.get("mimeType", "")
         if mime == APPLICATION_A2UI_JSON:
             return APPLICATION_A2UI_JSON

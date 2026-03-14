@@ -84,7 +84,7 @@ class A2UIClientExtension:
                 root = part.root
                 if root.kind != "data":
                     continue
-                metadata = getattr(root, "metadata", None) or {}
+                metadata = root.metadata or {}
                 mime_type = metadata.get("mimeType", "")
                 if mime_type != A2UI_MIME_TYPE:
                     continue
