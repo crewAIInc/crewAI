@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import logging
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
+from typing_extensions import TypedDict
 
 from crewai.a2a.extensions.a2ui.models import extract_a2ui_json_objects
 from crewai.a2a.extensions.a2ui.prompt import build_a2ui_system_prompt
