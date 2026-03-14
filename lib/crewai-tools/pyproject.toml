@@ -12,6 +12,7 @@ dependencies = [
     "requests~=2.32.5",
     "docker~=7.1.0",
     "crewai==1.10.2rc2",
+    "defusedxml>=0.7.1,<0.8",
     "tiktoken~=0.8.0",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
