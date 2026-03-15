@@ -1,19 +1,33 @@
 [project]
 name = "crew_trader_pro"
 version = "0.1.0"
-description = "crew_trader_pro using crewAI"
+description = "Professional AI Crypto Trading System using crewAI, FastAPI, and Celery"
 authors = [{ name = "Your Name", email = "you@example.com" }]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.12,<3.14"  # <--- 修改这里，从 3.10 改为 3.12
+
+# 整合后的依赖列表
 dependencies = [
-    "crewai[tools]==1.10.1"
+    "crewai[tools]>=0.100.0",
+    "pandas<2.3.0",           # 明确限制 pandas 版本以符合 crewai
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+    "celery>=5.3.6",
+    "redis>=5.0.1",
+    "ccxt>=4.2.0",
+    "pymysql>=1.1.0",
+    "sqlalchemy>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "pydantic-settings>=2.2.0"
 ]
 
 [project.scripts]
+# CrewAI 标准 CLI 命令
 crew_trader_pro = "crew_trader_pro.main:run"
 run_crew = "crew_trader_pro.main:run"
 train = "crew_trader_pro.main:train"
 replay = "crew_trader_pro.main:replay"
 test = "crew_trader_pro.main:test"
+# 你自定义的触发逻辑
 run_with_trigger = "crew_trader_pro.main:run_with_trigger"
 
 [build-system]
@@ -22,5 +36,3 @@ build-backend = "hatchling.build"
 
 [tool.crewai]
 type = "crew"
-
-
