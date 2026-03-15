@@ -1,3 +1,4 @@
+import contextvars
 import threading
 from typing import Any
 import urllib.request
@@ -10,7 +11,6 @@ from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
@@ -41,7 +41,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.10.0"
+__version__ = "1.10.2rc2"
 _telemetry_submitted = False
 
 
@@ -67,11 +67,31 @@ def _track_install() -> None:
 def _track_install_async() -> None:
     """Track installation in background thread to avoid blocking imports."""
     if not Telemetry._is_telemetry_disabled():
-        thread = threading.Thread(target=_track_install, daemon=True)
+        ctx = contextvars.copy_context()
+        thread = threading.Thread(target=ctx.run, args=(_track_install,), daemon=True)
         thread.start()
 
 
 _track_install_async()
+
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "Memory": ("crewai.memory.unified_memory", "Memory"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily import heavy modules (e.g. Memory → lancedb) on first access."""
+    if name in _LAZY_IMPORTS:
+        module_path, attr = _LAZY_IMPORTS[name]
+        import importlib
+
+        mod = importlib.import_module(module_path)
+        val = getattr(mod, attr)
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module 'crewai' has no attribute {name!r}")
+
+
 __all__ = [
     "LLM",
     "Agent",

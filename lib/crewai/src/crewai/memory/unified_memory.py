@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 from datetime import datetime
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, PlainValidator, PrivateAttr
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
@@ -21,7 +24,6 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
 from crewai.memory.recall_flow import RecallFlow
 from crewai.memory.storage.backend import StorageBackend
-from crewai.memory.storage.lancedb_storage import LanceDBStorage
 from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
@@ -40,13 +42,18 @@ if TYPE_CHECKING:
     )
 
 
+def _passthrough(v: Any) -> Any:
+    """PlainValidator that accepts any value, bypassing strict union discrimination."""
+    return v
+
+
 def _default_embedder() -> OpenAIEmbeddingFunction:
     """Build default OpenAI embedder for memory."""
     spec: OpenAIProviderSpec = {"provider": "openai", "config": {}}
     return build_embedder(spec)
 
 
-class Memory:
+class Memory(BaseModel):
     """Unified memory: standalone, LLM-analyzed, with intelligent recall flow.
 
     Works without agent/crew. Uses LLM to infer scope, categories, importance on save.
@@ -54,118 +61,119 @@ class Memory:
     pluggable storage (LanceDB default).
     """
 
-    def __init__(
-        self,
-        llm: BaseLLM | str = "gpt-4o-mini",
-        storage: StorageBackend | str = "lancedb",
-        embedder: Any = None,
-        # -- Scoring weights --
-        # These three weights control how recall results are ranked.
-        # The composite score is: semantic_weight * similarity + recency_weight * decay + importance_weight * importance.
-        # They should sum to ~1.0 for intuitive scoring.
-        recency_weight: float = 0.3,
-        semantic_weight: float = 0.5,
-        importance_weight: float = 0.2,
-        # How quickly old memories lose relevance. The recency score halves every
-        # N days (exponential decay). Lower = faster forgetting; higher = longer relevance.
-        recency_half_life_days: int = 30,
-        # -- Consolidation --
-        # When remembering new content, if an existing record has similarity >= this
-        # threshold, the LLM is asked to merge/update/delete. Set to 1.0 to disable.
-        consolidation_threshold: float = 0.85,
-        # Max existing records to compare against when checking for consolidation.
-        consolidation_limit: int = 5,
-        # -- Save defaults --
-        # Importance assigned to new memories when no explicit value is given and
-        # the LLM analysis path is skipped (all fields provided by the caller).
-        default_importance: float = 0.5,
-        # -- Recall depth control --
-        # These thresholds govern the RecallFlow router that decides between
-        # returning results immediately ("synthesize") vs. doing an extra
-        # LLM-driven exploration round ("explore_deeper").
-        #   confidence >= confidence_threshold_high  => always synthesize
-        #   confidence <  confidence_threshold_low   => explore deeper (if budget > 0)
-        #   complex query + confidence < complex_query_threshold => explore deeper
-        confidence_threshold_high: float = 0.8,
-        confidence_threshold_low: float = 0.5,
-        complex_query_threshold: float = 0.7,
-        # How many LLM-driven exploration rounds the RecallFlow is allowed to run.
-        # 0 = always shallow (vector search only); higher = more thorough but slower.
-        exploration_budget: int = 1,
-        # Queries shorter than this skip LLM analysis (saving ~1-3s).
-        # Longer queries (full task descriptions) benefit from LLM distillation.
-        query_analysis_threshold: int = 200,
-        # When True, all write operations (remember, remember_many) are silently
-        # skipped. Useful for sharing a read-only view of memory across agents
-        # without any of them persisting new memories.
-        read_only: bool = False,
-    ) -> None:
-        """Initialize Memory.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        Args:
-            llm: LLM for analysis (model name or BaseLLM instance).
-            storage: Backend: "lancedb" or a StorageBackend instance.
-            embedder: Embedding callable, provider config dict, or None (default OpenAI).
-            recency_weight: Weight for recency in the composite relevance score.
-            semantic_weight: Weight for semantic similarity in the composite relevance score.
-            importance_weight: Weight for importance in the composite relevance score.
-            recency_half_life_days: Recency score halves every N days (exponential decay).
-            consolidation_threshold: Similarity above which consolidation is triggered on save.
-            consolidation_limit: Max existing records to compare during consolidation.
-            default_importance: Default importance when not provided or inferred.
-            confidence_threshold_high: Recall confidence above which results are returned directly.
-            confidence_threshold_low: Recall confidence below which deeper exploration is triggered.
-            complex_query_threshold: For complex queries, explore deeper below this confidence.
-            exploration_budget: Number of LLM-driven exploration rounds during deep recall.
-            query_analysis_threshold: Queries shorter than this skip LLM analysis during deep recall.
-            read_only: If True, remember() and remember_many() are silent no-ops.
-        """
-        self._read_only = read_only
+    llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
+        default="gpt-4o-mini",
+        description="LLM for analysis (model name or BaseLLM instance).",
+    )
+    storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
+        default="lancedb",
+        description="Storage backend instance or path string.",
+    )
+    embedder: Any = Field(
+        default=None,
+        description="Embedding callable, provider config dict, or None for default OpenAI.",
+    )
+    recency_weight: float = Field(
+        default=0.3,
+        description="Weight for recency in the composite relevance score.",
+    )
+    semantic_weight: float = Field(
+        default=0.5,
+        description="Weight for semantic similarity in the composite relevance score.",
+    )
+    importance_weight: float = Field(
+        default=0.2,
+        description="Weight for importance in the composite relevance score.",
+    )
+    recency_half_life_days: int = Field(
+        default=30,
+        description="Recency score halves every N days (exponential decay).",
+    )
+    consolidation_threshold: float = Field(
+        default=0.85,
+        description="Similarity above which consolidation is triggered on save.",
+    )
+    consolidation_limit: int = Field(
+        default=5,
+        description="Max existing records to compare during consolidation.",
+    )
+    default_importance: float = Field(
+        default=0.5,
+        description="Default importance when not provided or inferred.",
+    )
+    confidence_threshold_high: float = Field(
+        default=0.8,
+        description="Recall confidence above which results are returned directly.",
+    )
+    confidence_threshold_low: float = Field(
+        default=0.5,
+        description="Recall confidence below which deeper exploration is triggered.",
+    )
+    complex_query_threshold: float = Field(
+        default=0.7,
+        description="For complex queries, explore deeper below this confidence.",
+    )
+    exploration_budget: int = Field(
+        default=1,
+        description="Number of LLM-driven exploration rounds during deep recall.",
+    )
+    query_analysis_threshold: int = Field(
+        default=200,
+        description="Queries shorter than this skip LLM analysis during deep recall.",
+    )
+    read_only: bool = Field(
+        default=False,
+        description="If True, remember() and remember_many() are silent no-ops.",
+    )
+
+    _config: MemoryConfig = PrivateAttr()
+    _llm_instance: BaseLLM | None = PrivateAttr(default=None)
+    _embedder_instance: Any = PrivateAttr(default=None)
+    _storage: StorageBackend = PrivateAttr()
+    _save_pool: ThreadPoolExecutor = PrivateAttr(
+        default_factory=lambda: ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="memory-save"
+        )
+    )
+    _pending_saves: list[Future[Any]] = PrivateAttr(default_factory=list)
+    _pending_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+
+    def model_post_init(self, __context: Any) -> None:
+        """Initialize runtime state from field values."""
         self._config = MemoryConfig(
-            recency_weight=recency_weight,
-            semantic_weight=semantic_weight,
-            importance_weight=importance_weight,
-            recency_half_life_days=recency_half_life_days,
-            consolidation_threshold=consolidation_threshold,
-            consolidation_limit=consolidation_limit,
-            default_importance=default_importance,
-            confidence_threshold_high=confidence_threshold_high,
-            confidence_threshold_low=confidence_threshold_low,
-            complex_query_threshold=complex_query_threshold,
-            exploration_budget=exploration_budget,
-            query_analysis_threshold=query_analysis_threshold,
+            recency_weight=self.recency_weight,
+            semantic_weight=self.semantic_weight,
+            importance_weight=self.importance_weight,
+            recency_half_life_days=self.recency_half_life_days,
+            consolidation_threshold=self.consolidation_threshold,
+            consolidation_limit=self.consolidation_limit,
+            default_importance=self.default_importance,
+            confidence_threshold_high=self.confidence_threshold_high,
+            confidence_threshold_low=self.confidence_threshold_low,
+            complex_query_threshold=self.complex_query_threshold,
+            exploration_budget=self.exploration_budget,
+            query_analysis_threshold=self.query_analysis_threshold,
         )
 
-        # Store raw config for lazy initialization. LLM and embedder are only
-        # built on first access so that Memory() never fails at construction
-        # time (e.g. when auto-created by Flow without an API key set).
-        self._llm_config: BaseLLM | str = llm
-        self._llm_instance: BaseLLM | None = None if isinstance(llm, str) else llm
-        self._embedder_config: Any = embedder
-        self._embedder_instance: Any = (
-            embedder
-            if (embedder is not None and not isinstance(embedder, dict))
+        self._llm_instance = None if isinstance(self.llm, str) else self.llm
+        self._embedder_instance = (
+            self.embedder
+            if (self.embedder is not None and not isinstance(self.embedder, dict))
             else None
         )
 
-        # Storage is initialized eagerly (local, no API key needed).
-        self._storage: StorageBackend
-        if storage == "lancedb":
-            self._storage = LanceDBStorage()
-        elif isinstance(storage, str):
-            self._storage = LanceDBStorage(path=storage)
-        else:
-            self._storage = storage
+        if isinstance(self.storage, str):
+            from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
-        # Background save queue. max_workers=1 serializes saves to avoid
-        # concurrent storage mutations (two saves finding the same similar
-        # record and both trying to update/delete it). Within each save,
-        # the parallel LLM calls still run on their own thread pool.
-        self._save_pool = ThreadPoolExecutor(
-            max_workers=1, thread_name_prefix="memory-save"
-        )
-        self._pending_saves: list[Future[Any]] = []
-        self._pending_lock = threading.Lock()
+            self._storage = (
+                LanceDBStorage()
+                if self.storage == "lancedb"
+                else LanceDBStorage(path=self.storage)
+            )
+        else:
+            self._storage = self.storage
 
     _MEMORY_DOCS_URL = "https://docs.crewai.com/concepts/memory"
 
@@ -176,11 +184,7 @@ class Memory:
             from crewai.llm import LLM
 
             try:
-                model_name = (
-                    self._llm_config
-                    if isinstance(self._llm_config, str)
-                    else str(self._llm_config)
-                )
+                model_name = self.llm if isinstance(self.llm, str) else str(self.llm)
                 self._llm_instance = LLM(model=model_name)
             except Exception as e:
                 raise RuntimeError(
@@ -200,8 +204,8 @@ class Memory:
         """Lazy embedder initialization -- only created when first needed."""
         if self._embedder_instance is None:
             try:
-                if isinstance(self._embedder_config, dict):
-                    self._embedder_instance = build_embedder(self._embedder_config)
+                if isinstance(self.embedder, dict):
+                    self._embedder_instance = build_embedder(self.embedder)
                 else:
                     self._embedder_instance = _default_embedder()
             except Exception as e:
@@ -226,8 +230,9 @@ class Memory:
         If the pool has been shut down (e.g. after ``close()``), the save
         runs synchronously as a fallback so late saves still succeed.
         """
+        ctx = contextvars.copy_context()
         try:
-            future: Future[Any] = self._save_pool.submit(fn, *args, **kwargs)
+            future: Future[Any] = self._save_pool.submit(ctx.run, fn, *args, **kwargs)
         except RuntimeError:
             # Pool shut down -- run synchronously as fallback
             future = Future()
@@ -359,7 +364,7 @@ class Memory:
         Raises:
             Exception: On save failure (events emitted).
         """
-        if self._read_only:
+        if self.read_only:
             return None
         _source_type = "unified_memory"
         try:
@@ -447,7 +452,7 @@ class Memory:
         Returns:
             Empty list (records are not available until the background save completes).
         """
-        if not contents or self._read_only:
+        if not contents or self.read_only:
             return []
 
         self._submit_save(

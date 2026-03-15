@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
+import contextvars
 import shutil
 import subprocess
 import time
@@ -513,9 +514,13 @@ class Agent(BaseAgent):
         """
         import concurrent.futures
 
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(
-                self._execute_without_timeout, task_prompt=task_prompt, task=task
+                ctx.run,
+                self._execute_without_timeout,
+                task_prompt=task_prompt,
+                task=task,
             )
 
             try:
@@ -1156,11 +1161,15 @@ class Agent(BaseAgent):
         # Process platform apps and MCP tools
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
-            if platform_tools and self.tools is not None:
+            if platform_tools:
+                if self.tools is None:
+                    self.tools = []
                 self.tools.extend(platform_tools)
         if self.mcps:
             mcps = self.get_mcp_tools(self.mcps)
-            if mcps and self.tools is not None:
+            if mcps:
+                if self.tools is None:
+                    self.tools = []
                 self.tools.extend(mcps)
 
         # Prepare tools
@@ -1264,7 +1273,7 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=5)
+                matches = agent_memory.recall(formatted_messages, limit=20)
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(

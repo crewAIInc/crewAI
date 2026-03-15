@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import contextvars
 from functools import partial
 import inspect
 from pathlib import Path
@@ -146,8 +147,9 @@ def _resolve_result(result: Any) -> Any:
         if loop and loop.is_running():
             import concurrent.futures
 
+            ctx = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                return pool.submit(asyncio.run, result).result()
+                return pool.submit(ctx.run, asyncio.run, result).result()
         return asyncio.run(result)
     return result
 

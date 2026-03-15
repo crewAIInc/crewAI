@@ -1184,7 +1184,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         malformed_json = '{"code": "print("hello")"}'
 
@@ -1212,7 +1212,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         valid_json = '{"code": "print(1)"}'
 
@@ -1239,7 +1239,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         result = executor._execute_single_native_tool_call(
             call_id="call_789",
@@ -1265,7 +1265,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         result = executor._execute_single_native_tool_call(
             call_id="call_schema",

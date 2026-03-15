@@ -4,6 +4,164 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 3월 14일">
+  ## v1.10.2rc2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc2)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 읽기 전용 스토리지 작업에서 독점 잠금 제거
+
+  ### 문서
+  - v1.10.2rc1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 13일">
+  ## v1.10.2rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 릴리스 명령 추가 및 PyPI 게시 트리거
+
+  ### 버그 수정
+  - 보호되지 않은 I/O에 대한 프로세스 간 및 스레드 안전 잠금 수정
+  - 모든 스레드 및 실행기 경계를 넘는 contextvars 전파
+  - async 작업 스레드로 ContextVars 전파
+
+  ### 문서
+  - v1.10.2a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @danglies007, @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 11일">
+  ## v1.10.2a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - Anthropics에 대한 도구 검색 지원 추가, 토큰 저장, 실행 중 적절한 도구를 동적으로 주입하는 기능 추가.
+  - 더 많은 Brave Search 도구 도입.
+  - 야간 릴리스를 위한 액션 생성.
+
+  ### 버그 수정
+  - 동시 다중 프로세스 실행 중 LockException 수정.
+  - 단일 사용자 메시지에서 병렬 도구 결과 그룹화 문제 해결.
+  - MCP 도구 해상도 문제 해결 및 모든 공유 가변 연결 제거.
+  - human_feedback 함수에서 LLM 매개변수 처리 업데이트.
+  - LockedListProxy 및 LockedDictProxy에 누락된 list/dict 메서드 추가.
+  - 병렬 도구 호출 스레드에 contextvars 컨텍스트 전파.
+  - CVE 경로 탐색 취약점을 해결하기 위해 gitpython 의존성을 >=3.1.41로 업데이트.
+
+  ### 리팩토링
+  - 메모리 클래스를 직렬화 가능하도록 리팩토링.
+
+  ### 문서
+  - v1.10.1에 대한 변경 로그 및 버전 업데이트.
+
+  ## 기여자
+
+  @akaKuruma, @github-actions[bot], @giulio-leone, @greysonlalonde, @joaomdmoura, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha
+
+</Update>
+
+<Update label="2026년 3월 4일">
+  ## v1.10.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - Gemini GenAI 업그레이드
+
+  ### 버그 수정
+  - 재귀를 피하기 위해 실행기 리스너 값을 조정
+  - Gemini에서 병렬 함수 응답 부분을 단일 Content 객체로 그룹화
+  - Gemini에서 사고 모델의 사고 출력을 표시
+  - 에이전트 도구가 None일 때 MCP 및 플랫폼 도구 로드
+  - A2A에서 실행 이벤트 루프가 있는 Jupyter 환경 지원
+  - 일시적인 추적을 위해 익명 ID 사용
+  - 조건부로 플러스 헤더 전달
+  - 원격 측정을 위해 비주 스레드에서 신호 처리기 등록 건너뛰기
+  - 도구 오류를 관찰로 주입하고 이름 충돌 해결
+  - Dependabot 경고를 해결하기 위해 pypdf를 4.x에서 6.7.4로 업그레이드
+  - 심각 및 높은 Dependabot 보안 경고 해결
+
+  ### 문서
+  - Composio 도구 문서를 지역별로 동기화
+
+  ## 기여자
+
+  @giulio-leone, @greysonlalonde, @haxzie, @joaomdmoura, @lorenzejay, @mattatcha, @mplachta, @nicoferdi96
+
+</Update>
+
+<Update label="2026년 2월 27일">
+  ## v1.10.1a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 단계 콜백 메서드에서 비동기 호출 지원 구현
+  - 메모리 모듈의 무거운 의존성에 대한 지연 로딩 구현
+
+  ### 문서
+  - v1.10.0에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - 비동기 호출을 지원하기 위해 단계 콜백 메서드 리팩토링
+  - 메모리 모듈의 무거운 의존성에 대한 지연 로딩을 구현하기 위해 리팩토링
+
+  ### 버그 수정
+  - 릴리스 노트의 분기 수정
+
+  ## 기여자
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 2월 27일">
+  ## v1.10.1a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## 변경 사항
+
+  ### 리팩토링
+  - 비동기 호출을 지원하기 위해 단계 콜백 메서드 리팩토링
+  - 메모리 모듈의 무거운 의존성에 대해 지연 로딩 구현
+
+  ### 문서화
+  - v1.10.0에 대한 변경 로그 및 버전 업데이트
+
+  ### 버그 수정
+  - 릴리스 노트를 위한 브랜치 생성
+
+  ## 기여자
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
 <Update label="2026년 2월 26일">
   ## v1.10.0
 

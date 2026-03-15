@@ -1,0 +1,137 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the weather
+      in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"tools":[{"type":"tool_search_tool_bm25_20251119","name":"tool_search_tool_bm25"},{"name":"get_weather","description":"Get
+      current weather conditions for a specified location","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_weather"}},"required":["input"]},"defer_loading":true},{"name":"search_files","description":"Search
+      through files in the workspace by name or content","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for search_files"}},"required":["input"]},"defer_loading":true},{"name":"read_database","description":"Read
+      records from a database table with optional filtering","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for read_database"}},"required":["input"]},"defer_loading":true},{"name":"write_database","description":"Write
+      or update records in a database table","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for write_database"}},"required":["input"]},"defer_loading":true},{"name":"send_email","description":"Send
+      an email message to one or more recipients","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for send_email"}},"required":["input"]},"defer_loading":true},{"name":"read_email","description":"Read
+      emails from inbox with filtering options","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for read_email"}},"required":["input"]},"defer_loading":true},{"name":"create_ticket","description":"Create
+      a new support ticket in the ticketing system","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for create_ticket"}},"required":["input"]},"defer_loading":true},{"name":"update_ticket","description":"Update
+      an existing support ticket status or description","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for update_ticket"}},"required":["input"]},"defer_loading":true},{"name":"list_users","description":"List
+      all users in the system with optional filters","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for list_users"}},"required":["input"]},"defer_loading":true},{"name":"get_user_profile","description":"Get
+      detailed profile information for a specific user","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_user_profile"}},"required":["input"]},"defer_loading":true},{"name":"deploy_service","description":"Deploy
+      a service to the specified environment","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for deploy_service"}},"required":["input"]},"defer_loading":true},{"name":"rollback_service","description":"Rollback
+      a service deployment to a previous version","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for rollback_service"}},"required":["input"]},"defer_loading":true},{"name":"get_service_logs","description":"Get
+      service logs filtered by time range and severity","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_service_logs"}},"required":["input"]},"defer_loading":true},{"name":"run_sql_query","description":"Run
+      a read-only SQL query against the analytics database","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for run_sql_query"}},"required":["input"]},"defer_loading":true},{"name":"create_dashboard","description":"Create
+      a new monitoring dashboard with widgets","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for create_dashboard"}},"required":["input"]},"defer_loading":true}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '3952'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.73.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01DAGCoL6C12u6yAgR1UqNAs","type":"message","role":"assistant","content":[{"type":"text","text":"I''ll
+        search for a weather-related tool to help you get the weather information
+        for Tokyo."},{"type":"server_tool_use","id":"srvtoolu_0176qgHeeBpSygYAnUzKHCfh","name":"tool_search_tool_bm25","input":{"query":"weather
+        Tokyo current conditions forecast"},"caller":{"type":"direct"}},{"type":"tool_search_tool_result","tool_use_id":"srvtoolu_0176qgHeeBpSygYAnUzKHCfh","content":{"type":"tool_search_tool_search_result","tool_references":[{"type":"tool_reference","tool_name":"get_weather"}]}},{"type":"text","text":"Great!
+        I found a weather tool. Let me get the current weather conditions for Tokyo."},{"type":"tool_use","id":"toolu_01R3FavQLuTrwNvEk9gMaViK","name":"get_weather","input":{"input":"Tokyo"},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1566,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":155,"service_tier":"standard","inference_geo":"not_available","server_tool_use":{"web_search_requests":0,"web_fetch_requests":0}}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 08 Mar 2026 21:04:12 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '20000'
+      anthropic-ratelimit-requests-remaining:
+      - '19999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-03-08T21:04:07Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept-Encoding
+      x-envoy-upstream-service-time:
+      - '4330'
+    status:
+      code: 200
+      message: OK
+version: 1
