@@ -47,8 +47,9 @@ class FileWriterTool(BaseTool):
         if base_dir is not None:
             self.description = (
                 f"A tool to write files within {base_dir}. "
-                "Accepts filename, content, and optionally a directory path and overwrite flag. "
-                "Paths outside the allowed directory will be rejected."
+                "Accepts filename and content. "
+                "Optionally accepts a subdirectory (relative to the base directory) and overwrite flag. "
+                "Paths outside the base directory will be rejected."
             )
             self._generate_description()
 
@@ -63,21 +64,21 @@ class FileWriterTool(BaseTool):
 
     def _run(self, **kwargs: Any) -> str:
         try:
-            directory = kwargs.get("directory") or "./"
+            directory = kwargs.get("directory") or ""
             filename = kwargs["filename"]
 
-            filepath = os.path.join(directory, filename)
+            # When base_dir is set, directory is relative to it.
+            # When not set, directory is used as-is (absolute or cwd-relative).
+            if self.base_dir is not None:
+                filepath = os.path.join(self.base_dir, directory, filename)
+            else:
+                filepath = os.path.join(directory or "./", filename)
 
             validated = self._validate_path(filepath)
             if validated is None:
-                return f"Error: Access denied — path resolves outside the allowed directory."
+                return "Error: Access denied — path resolves outside the allowed directory."
 
-            # Only create directories that are within the validated path
             validated_dir = os.path.dirname(validated)
-            if self.base_dir is not None:
-                # Ensure the directory itself is also within base_dir
-                if not validated_dir.startswith(self.base_dir):
-                    return f"Error: Access denied — directory resolves outside the allowed directory."
             os.makedirs(validated_dir, exist_ok=True)
 
             kwargs["overwrite"] = strtobool(kwargs["overwrite"])

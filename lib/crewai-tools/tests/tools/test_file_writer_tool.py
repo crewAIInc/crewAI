@@ -145,9 +145,9 @@ def scoped_tool(temp_env):
 
 
 def test_base_dir_allows_write_inside(scoped_tool, temp_env):
+    """No directory arg — writes directly into base_dir."""
     result = scoped_tool._run(
         filename=temp_env["test_file"],
-        directory=temp_env["temp_dir"],
         content=temp_env["test_content"],
         overwrite=True,
     )
@@ -155,10 +155,21 @@ def test_base_dir_allows_write_inside(scoped_tool, temp_env):
     assert read_file(get_test_path(temp_env["test_file"], temp_env["temp_dir"])) == temp_env["test_content"]
 
 
+def test_base_dir_allows_relative_subdir(scoped_tool, temp_env):
+    """directory arg is treated as a subdirectory of base_dir."""
+    result = scoped_tool._run(
+        filename="file.txt",
+        directory="subdir",
+        content="nested content",
+        overwrite=True,
+    )
+    assert "successfully written" in result
+    assert os.path.exists(os.path.join(temp_env["temp_dir"], "subdir", "file.txt"))
+
+
 def test_base_dir_blocks_traversal_in_filename(scoped_tool, temp_env):
     result = scoped_tool._run(
         filename="../outside.txt",
-        directory=temp_env["temp_dir"],
         content="should not be written",
         overwrite=True,
     )
@@ -168,14 +179,14 @@ def test_base_dir_blocks_traversal_in_filename(scoped_tool, temp_env):
 def test_base_dir_blocks_traversal_in_directory(scoped_tool, temp_env):
     result = scoped_tool._run(
         filename="pwned.txt",
-        directory=os.path.join(temp_env["temp_dir"], "../../etc/cron.d"),
+        directory="../../etc/cron.d",
         content="should not be written",
         overwrite=True,
     )
     assert "Access denied" in result
 
 
-def test_base_dir_blocks_absolute_path_outside(scoped_tool, temp_env):
+def test_base_dir_blocks_absolute_directory(scoped_tool, temp_env):
     result = scoped_tool._run(
         filename="passwd",
         directory="/etc",
@@ -190,21 +201,11 @@ def test_base_dir_blocks_symlink_escape(scoped_tool, temp_env):
     os.symlink("/etc", link)
     result = scoped_tool._run(
         filename="crontab",
-        directory=link,
+        directory="escape",
         content="should not be written",
         overwrite=True,
     )
     assert "Access denied" in result
-
-
-def test_base_dir_allows_nested_subdir(scoped_tool, temp_env):
-    result = scoped_tool._run(
-        filename="file.txt",
-        directory=os.path.join(temp_env["temp_dir"], "subdir"),
-        content="nested content",
-        overwrite=True,
-    )
-    assert "successfully written" in result
 
 
 def test_base_dir_description_mentions_directory(temp_env):
