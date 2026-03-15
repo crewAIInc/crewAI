@@ -1,6 +1,6 @@
 import pytest
-from crewai.cli.authentication.main import Oauth2Settings
-from crewai.cli.authentication.providers.auth0 import Auth0Provider
+from crewai.auth.oauth2 import Oauth2Settings
+from crewai.auth.providers.auth0 import Auth0Provider
 
 
 

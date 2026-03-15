@@ -8,7 +8,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
-from crewai.cli.version import is_current_version_yanked, is_newer_version_available
+from crewai.version import is_current_version_yanked, is_newer_version_available
 
 
 _disable_version_check: ContextVar[bool] = ContextVar(

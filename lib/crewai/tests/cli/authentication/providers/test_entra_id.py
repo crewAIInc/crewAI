@@ -1,7 +1,7 @@
 import pytest
 
-from crewai.cli.authentication.main import Oauth2Settings
-from crewai.cli.authentication.providers.entra_id import EntraIdProvider
+from crewai.auth.oauth2 import Oauth2Settings
+from crewai.auth.providers.entra_id import EntraIdProvider
 
 
 class TestEntraIdProvider:

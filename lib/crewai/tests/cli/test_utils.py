@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from crewai.cli import utils
+from crewai.utilities import project_utils as utils
 
 
 @pytest.fixture

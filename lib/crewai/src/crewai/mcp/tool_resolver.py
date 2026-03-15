@@ -195,7 +195,7 @@ class MCPToolResolver:
                 get_platform_integration_token,
             )
 
-            from crewai.cli.plus_api import PlusAPI
+            from crewai.plus_api import PlusAPI
 
             plus_api = PlusAPI(api_key=get_platform_integration_token())
             response = plus_api.get_mcp_configs(slugs)
@@ -285,6 +285,7 @@ class MCPToolResolver:
         independent transport so that parallel tool executions never share
         state.
         """
+        transport: StdioTransport | HTTPTransport | SSETransport
         if isinstance(mcp_config, MCPServerStdio):
             transport = StdioTransport(
                 command=mcp_config.command,

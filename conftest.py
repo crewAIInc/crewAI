@@ -226,7 +226,7 @@ def vcr_cassette_dir(request: Any) -> str:
 
     for parent in test_file.parents:
         if (
-            parent.name in ("crewai", "crewai-tools", "crewai-files")
+            parent.name in ("crewai", "crewai-tools", "crewai-files", "cli")
             and parent.parent.name == "lib"
         ):
             package_root = parent

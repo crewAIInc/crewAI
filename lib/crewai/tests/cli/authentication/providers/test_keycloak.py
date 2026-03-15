@@ -1,7 +1,7 @@
 import pytest
 
-from crewai.cli.authentication.main import Oauth2Settings
-from crewai.cli.authentication.providers.keycloak import KeycloakProvider
+from crewai.auth.oauth2 import Oauth2Settings
+from crewai.auth.providers.keycloak import KeycloakProvider
 
 
 class TestKeycloakProvider:
