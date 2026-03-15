@@ -1,0 +1,1162 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '792'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOQdWGd3SCIQXzNkyHisaGX5nsv\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105302,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_RGVJuKHbSyVz2xCJ0xKq3ofg\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"multiplier\",\n
+        \             \"arguments\": \"{\\\"first_number\\\":2,\\\"second_number\\\":6}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 134,\n    \"completion_tokens\":
+        20,\n    \"total_tokens\": 154,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:23 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '634'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '892'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1250'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOSFJpWDHbCCE0QFofaQDJFYHPS\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105304,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"12\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 198,\n    \"completion_tokens\":
+        2,\n    \"total_tokens\": 200,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:24 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '198'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '570'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"12"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 3?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1676'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOSucWgRtDSdtcmlSpaMZqhf6mV\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105304,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_ASqfBSRqHivGLU9EtG0Zoy1m\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"multiplier\",\n
+        \             \"arguments\": \"{\\\"first_number\\\":3,\\\"second_number\\\":3}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 284,\n    \"completion_tokens\":
+        20,\n    \"total_tokens\": 304,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:25 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '539'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '558'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"12"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 3?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":3,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","content":"9"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2133'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOTuzehpYh4Rg0KmdFTfZlGwP9e\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105305,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"9\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 348,\n    \"completion_tokens\":
+        2,\n    \"total_tokens\": 350,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:25 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '246'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '271'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"12"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 3?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":3,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","content":"9"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"9"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 2 times 6 times 3? Return only the number\n\nThis is the expected
+      criteria for your final answer: The result of the multiplication.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2589'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOTgK8PlXqt42W6ZyHEZaLfHf9U\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105305,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_9zWLa8riYuYf0v9LGFFFNoIN\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"multiplier\",\n
+        \             \"arguments\": \"{\\\"first_number\\\": 2, \\\"second_number\\\":
+        6}\"\n            }\n          },\n          {\n            \"id\": \"call_M7plSCPSJMKIjN8yOfVZtwGC\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"multiplier\",\n              \"arguments\": \"{\\\"first_number\\\": 6,
+        \\\"second_number\\\": 3}\"\n            }\n          }\n        ],\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        442,\n    \"completion_tokens\": 56,\n    \"total_tokens\": 498,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:27 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1242'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1482'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"12"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 3?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":3,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","content":"9"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"9"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 2 times 6 times 3? Return only the number\n\nThis is the expected
+      criteria for your final answer: The result of the multiplication.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_9zWLa8riYuYf0v9LGFFFNoIN","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":
+      2, \"second_number\": 6}"}}]},{"role":"tool","tool_call_id":"call_9zWLa8riYuYf0v9LGFFFNoIN","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3050'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOV9BHw64O2lXaDvky70Vov2Fy5\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105307,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_259GkAho17PehbcFNlrPGOzM\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"multiplier\",\n
+        \             \"arguments\": \"{\\\"first_number\\\":12,\\\"second_number\\\":3}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 506,\n    \"completion_tokens\":
+        20,\n    \"total_tokens\": 526,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:27 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '731'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '753'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"12"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 3?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":3,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","content":"9"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"9"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 2 times 6 times 3? Return only the number\n\nThis is the expected
+      criteria for your final answer: The result of the multiplication.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_9zWLa8riYuYf0v9LGFFFNoIN","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":
+      2, \"second_number\": 6}"}}]},{"role":"tool","tool_call_id":"call_9zWLa8riYuYf0v9LGFFFNoIN","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_259GkAho17PehbcFNlrPGOzM","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":12,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_259GkAho17PehbcFNlrPGOzM","content":"36"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3509'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOWUk98usjRb39pf87ktwbcYURJ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105308,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"36\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 570,\n    \"completion_tokens\":
+        2,\n    \"total_tokens\": 572,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:28 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '319'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '342'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"12"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 3?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":3,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","content":"9"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"9"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 2 times 6 times 3? Return only the number\n\nThis is the expected
+      criteria for your final answer: The result of the multiplication.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_9zWLa8riYuYf0v9LGFFFNoIN","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":
+      2, \"second_number\": 6}"}}]},{"role":"tool","tool_call_id":"call_9zWLa8riYuYf0v9LGFFFNoIN","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_259GkAho17PehbcFNlrPGOzM","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":12,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_259GkAho17PehbcFNlrPGOzM","content":"36"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"36"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 2 times 6? Ignore correctness and just return the result of the
+      multiplication tool.\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4009'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOWkApx3QByRUaSewAaFALHFpsj\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105308,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_eZk36mqLPDp2lWEAmRzq1vrs\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"multiplier\",\n
+        \             \"arguments\": \"{\\\"first_number\\\":2,\\\"second_number\\\":6}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 668,\n    \"completion_tokens\":
+        20,\n    \"total_tokens\": 688,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:29 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '530'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '554'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 2 times 6?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_RGVJuKHbSyVz2xCJ0xKq3ofg","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"12"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 3?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":3,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_ASqfBSRqHivGLU9EtG0Zoy1m","content":"9"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"9"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 2 times 6 times 3? Return only the number\n\nThis is the expected
+      criteria for your final answer: The result of the multiplication.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_9zWLa8riYuYf0v9LGFFFNoIN","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":
+      2, \"second_number\": 6}"}}]},{"role":"tool","tool_call_id":"call_9zWLa8riYuYf0v9LGFFFNoIN","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_259GkAho17PehbcFNlrPGOzM","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":12,\"second_number\":3}"}}]},{"role":"tool","tool_call_id":"call_259GkAho17PehbcFNlrPGOzM","content":"36"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"36"},{"role":"system","content":"You
+      are test role. test backstory\nYour personal goal is: test goal"},{"role":"user","content":"\nCurrent
+      Task: What is 2 times 6? Ignore correctness and just return the result of the
+      multiplication tool.\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is VERY important to you, your job
+      depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_eZk36mqLPDp2lWEAmRzq1vrs","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":2,\"second_number\":6}"}}]},{"role":"tool","tool_call_id":"call_eZk36mqLPDp2lWEAmRzq1vrs","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4467'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0tOXxpKqTdhiYWsrIoOHjhqK1NWA\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105309,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"12\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 732,\n    \"completion_tokens\":
+        2,\n    \"total_tokens\": 734,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 18:08:29 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '216'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '233'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

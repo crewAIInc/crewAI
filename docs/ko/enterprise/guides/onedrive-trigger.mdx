@@ -10,7 +10,8 @@ mode: "wide"
 Start automations when files change inside OneDrive. You can generate audit summaries, notify security teams about external sharing, or update downstream line-of-business systems with new document metadata.
 
 <Tip>
-  Connect OneDrive in **Tools & Integrations** and toggle the trigger on for your deployment.
+  Connect OneDrive in **Tools & Integrations** and toggle the trigger on for
+  your deployment.
 </Tip>
 
 ## Enabling the OneDrive Trigger
@@ -20,7 +21,10 @@ Start automations when files change inside OneDrive. You can generate audit summ
 3. Locate **OneDrive** and switch the toggle to enable
 
 <Frame caption="Microsoft OneDrive trigger connection">
-  <img src="/images/enterprise/onedrive-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/onedrive-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Audit file permissions
@@ -51,7 +55,8 @@ crewai triggers run microsoft_onedrive/file_changed
 `crewai triggers run` 명령은 완전한 OneDrive payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
 
 <Warning>
-  개발 중에는 `crewai triggers run microsoft_onedrive/file_changed`를 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+  개발 중에는 `crewai triggers run microsoft_onedrive/file_changed`를 사용하세요
+  (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
 </Warning>
 
 ## Troubleshooting

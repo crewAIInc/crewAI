@@ -57,7 +57,7 @@
 > It empowers developers with both high-level simplicity and precise low-level control, ideal for creating autonomous AI agents tailored to any scenario.
 
 - **CrewAI Crews**: Optimize for autonomy and collaborative intelligence.
-- **CrewAI Flows**: Enable granular, event-driven control, single LLM calls for precise task orchestration and supports Crews natively
+- **CrewAI Flows**: The **enterprise and production architecture** for building and deploying multi-agent systems. Enable granular, event-driven control, single LLM calls for precise task orchestration and supports Crews natively
 
 With over 100,000 developers certified through our community courses at [learn.crewai.com](https://learn.crewai.com), CrewAI is rapidly becoming the
 standard for enterprise-ready AI automation.
@@ -124,7 +124,8 @@ Setup and run your first CrewAI agents by following this tutorial.
 [![CrewAI Getting Started Tutorial](https://img.youtube.com/vi/-kSOTtYzgEw/hqdefault.jpg)](https://www.youtube.com/watch?v=-kSOTtYzgEw "CrewAI Getting Started Tutorial")
 
 ###
- Learning Resources
+
+Learning Resources
 
 Learn CrewAI through our comprehensive courses:
 
@@ -141,6 +142,7 @@ CrewAI offers two powerful, complementary approaches that work seamlessly togeth
    - Dynamic task delegation and collaboration
    - Specialized roles with defined goals and expertise
    - Flexible problem-solving approaches
+
 2. **Flows**: Production-ready, event-driven workflows that deliver precise control over complex automations. Flows provide:
 
    - Fine-grained control over execution paths for real-world scenarios
@@ -166,13 +168,13 @@ Ensure you have Python >=3.10 <3.14 installed on your system. CrewAI uses [UV](h
 First, install CrewAI:
 
 ```shell
-pip install crewai
+uv pip install crewai
 ```
 
 If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
 ```shell
-pip install 'crewai[tools]'
+uv pip install 'crewai[tools]'
 ```
 
 The command above installs the basic package and also adds extra components which require more dependencies to function.
@@ -185,14 +187,15 @@ If you encounter issues during installation or usage, here are some common solut
 
 1. **ModuleNotFoundError: No module named 'tiktoken'**
 
-   - Install tiktoken explicitly: `pip install 'crewai[embeddings]'`
-   - If using embedchain or other tools: `pip install 'crewai[tools]'`
+   - Install tiktoken explicitly: `uv pip install 'crewai[embeddings]'`
+   - If using embedchain or other tools: `uv pip install 'crewai[tools]'`
+
 2. **Failed building wheel for tiktoken**
 
    - Ensure Rust compiler is installed (see installation steps above)
    - For Windows: Verify Visual C++ Build Tools are installed
-   - Try upgrading pip: `pip install --upgrade pip`
-   - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
+   - Try upgrading pip: `uv pip install --upgrade pip`
+   - If issues persist, use a pre-built wheel: `uv pip install tiktoken --prefer-binary`
 
 ### 2. Setting Up Your Crew with the YAML Configuration
 
@@ -270,7 +273,7 @@ reporting_analyst:
 
 **tasks.yaml**
 
-```yaml
+````yaml
 # src/my_project/config/tasks.yaml
 research_task:
   description: >
@@ -290,7 +293,7 @@ reporting_task:
     Formatted as markdown without '```'
   agent: reporting_analyst
   output_file: report.md
-```
+````
 
 **crew.py**
 
@@ -556,7 +559,7 @@ Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 - **LangGraph**: While LangGraph provides a foundation for building agent workflows, its approach requires significant boilerplate code and complex state management patterns. The framework's tight coupling with LangChain can limit flexibility when implementing custom agent behaviors or integrating with external systems.
 
-*P.S. CrewAI demonstrates significant performance advantages over LangGraph, executing 5.76x faster in certain cases like this QA task example ([see comparison](https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/QA%20Agent)) while achieving higher evaluation scores with faster completion times in certain coding tasks, like in this example ([detailed analysis](https://github.com/crewAIInc/crewAI-examples/blob/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/Coding%20Assistant/coding_assistant_eval.ipynb)).*
+_P.S. CrewAI demonstrates significant performance advantages over LangGraph, executing 5.76x faster in certain cases like this QA task example ([see comparison](https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/QA%20Agent)) while achieving higher evaluation scores with faster completion times in certain coding tasks, like in this example ([detailed analysis](https://github.com/crewAIInc/crewAI-examples/blob/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/Coding%20Assistant/coding_assistant_eval.ipynb))._
 
 - **Autogen**: While Autogen excels at creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 - **ChatDev**: ChatDev introduced the idea of processes into the realm of AI agents, but its implementation is quite rigid. Customizations in ChatDev are limited and not geared towards production environments, which can hinder scalability and flexibility in real-world applications.
@@ -611,7 +614,7 @@ uv build
 ### Installing Locally
 
 ```bash
-pip install dist/*.tar.gz
+uv pip install dist/*.tar.gz
 ```
 
 ## Telemetry
@@ -687,13 +690,13 @@ A: CrewAI is a standalone, lean, and fast Python framework built specifically fo
 A: Install CrewAI using pip:
 
 ```shell
-pip install crewai
+uv pip install crewai
 ```
 
 For additional tools, use:
 
 ```shell
-pip install 'crewai[tools]'
+uv pip install 'crewai[tools]'
 ```
 
 ### Q: Does CrewAI depend on LangChain?

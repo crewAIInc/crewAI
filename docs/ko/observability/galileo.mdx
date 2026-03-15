@@ -1,0 +1,115 @@
+---
+title: Galileo 갈릴레오
+description: CrewAI 추적 및 평가를 위한 Galileo 통합
+icon: telescope
+mode: "wide"
+---
+
+## 개요
+
+이 가이드는 **Galileo**를 **CrewAI**와 통합하는 방법을 보여줍니다.
+포괄적인 추적 및 평가 엔지니어링을 위한 것입니다.
+이 가이드가 끝나면 CrewAI 에이전트를 추적할 수 있게 됩니다.
+성과를 모니터링하고 행동을 평가합니다.
+Galileo의 강력한 관측 플랫폼.
+
+> **갈릴레오(Galileo)란 무엇인가요?**[Galileo](https://galileo.ai/)는 AI 평가 및 관찰 가능성입니다.
+엔드투엔드 추적, 평가,
+AI 애플리케이션 모니터링. 이를 통해 팀은 실제 사실을 포착할 수 있습니다.
+견고한 가드레일을 만들고 체계적인 실험을 실행하세요.
+내장된 실험 추적 및 성능 분석으로 신뢰성 보장
+AI 수명주기 전반에 걸쳐 투명성과 지속적인 개선을 제공합니다.
+
+## 시작하기
+
+이 튜토리얼은 [CrewAI 빠른 시작](/ko/quickstart.mdx)을 따르며 추가하는 방법을 보여줍니다.
+갈릴레오의 [CrewAIEventListener](https://v2docs.galileo.ai/sdk-api/python/reference/handlers/crewai/handler),
+이벤트 핸들러.
+자세한 내용은 갈릴레오 문서를 참고하세요.
+[CrewAI 애플리케이션에 Galileo 추가](https://v2docs.galileo.ai/how-to-guides/third-party-integrations/add-galileo-to-crewai/add-galileo-to-crewai)
+방법 안내.
+
+> **참고**이 튜토리얼에서는 [CrewAI 빠른 시작](/ko/quickstart.mdx)을 완료했다고 가정합니다.
+완전한 포괄적인 예제를 원한다면 Galileo
+[CrewAI SDK 예제 저장소](https://github.com/rungalileo/sdk-examples/tree/main/python/agent/crew-ai).
+
+### 1단계: 종속성 설치
+
+앱에 필요한 종속성을 설치합니다.
+원하는 방법으로 가상 환경을 생성하고,
+그런 다음 다음을 사용하여 해당 환경 내에 종속성을 설치하십시오.
+선호하는 도구:
+
+```bash
+uv add galileo 
+```
+
+### 2단계: [CrewAI 빠른 시작](/ko/quickstart.mdx)에서 .env 파일에 추가
+
+```bash
+# Your Galileo API key
+GALILEO_API_KEY="your-galileo-api-key"
+
+# Your Galileo project name
+GALILEO_PROJECT="your-galileo-project-name"
+
+# The name of the Log stream you want to use for logging
+GALILEO_LOG_STREAM="your-galileo-log-stream "
+```
+
+### 3단계: Galileo 이벤트 리스너 추가
+
+Galileo로 로깅을 활성화하려면 `CrewAIEventListener`의 인스턴스를 생성해야 합니다.
+다음을 통해 Galileo CrewAI 핸들러 패키지를 가져옵니다.
+main.py 파일 상단에 다음 코드를 추가하세요.
+
+```python
+from galileo.handlers.crewai.handler import CrewAIEventListener
+```
+
+실행 함수 시작 시 이벤트 리스너를 생성합니다.
+
+```python
+def run():
+    # Create the event listener
+    CrewAIEventListener()
+    # The rest of your existing code goes here
+```
+
+리스너 인스턴스를 생성하면 자동으로
+CrewAI에 등록되었습니다.
+
+### 4단계: Crew Agent 실행
+
+CrewAI CLI를 사용하여 Crew Agent를 실행하세요.
+
+```bash
+crewai run
+```
+
+### 5단계: Galileo에서 추적 보기
+
+승무원 에이전트가 완료되면 흔적이 플러시되어 Galileo에 나타납니다.
+
+![Galileo trace view](/images/galileo-trace-veiw.png)
+  
+## 갈릴레오 통합 이해
+
+Galileo는 이벤트 리스너를 등록하여 CrewAI와 통합됩니다.
+승무원 실행 이벤트(예: 에이전트 작업, 도구 호출, 모델 응답)를 캡처합니다.
+관찰 가능성과 평가를 위해 이를 갈릴레오에 전달합니다.
+
+### 이벤트 리스너 이해
+
+`CrewAIEventListener()` 인스턴스를 생성하는 것이 전부입니다.
+CrewAI 실행을 위해 Galileo를 활성화하는 데 필요합니다. 인스턴스화되면 리스너는 다음을 수행합니다.
+
+-CrewAI에 자동으로 등록됩니다.
+-환경 변수에서 Galileo 구성을 읽습니다.
+-모든 실행 데이터를 Galileo 프로젝트 및 다음에서 지정한 로그 스트림에 기록합니다.
+  `GALILEO_PROJECT` 및 `GALILEO_LOG_STREAM`
+
+추가 구성이나 코드 변경이 필요하지 않습니다.
+이 실행의 모든 데이터는 Galileo 프로젝트에 기록되며
+환경 구성에 따라 지정된 로그 스트림
+(예: GALILEO_PROJECT 및 GALILEO_LOG_STREAM)

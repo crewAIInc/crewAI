@@ -1,0 +1,124 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Analyst. You are an expert
+      analyst who provides clear, structured insights.\nYour personal goal is: Provide
+      structured analysis on topics"},{"role":"user","content":"\nCurrent Task: Analyze
+      the benefits of remote work briefly. Keep it concise.\n\nProvide your complete
+      response:"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"description":"Structured
+      output for analysis results.","properties":{"topic":{"description":"The topic
+      analyzed","title":"Topic","type":"string"},"key_points":{"description":"Key
+      insights from the analysis","items":{"type":"string"},"title":"Key Points","type":"array"},"summary":{"description":"Brief
+      summary of findings","title":"Summary","type":"string"}},"required":["topic","key_points","summary"],"title":"AnalysisResult","type":"object","additionalProperties":false},"name":"AnalysisResult","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '948'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3XAhbqz9oWLR9vacFT33oAOTIeeL\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769734867,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"topic\\\":\\\"Benefits of Remote
+        Work\\\",\\\"key_points\\\":[\\\"Increased flexibility in work hours allows
+        for better work-life balance.\\\",\\\"Cost savings for both employers and
+        employees (e.g., reduced commuting costs and office space).\\\",\\\"Access
+        to a larger talent pool unrestricted by geographical boundaries.\\\",\\\"Improved
+        productivity due to fewer office-related distractions.\\\",\\\"Reduction in
+        environmental impact from decreased commuting.\\\"],\\\"summary\\\":\\\"Remote
+        work offers significant advantages including flexibility, cost savings, broader
+        hiring opportunities, enhanced productivity, and environmental benefits.\\\"}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        154,\n    \"completion_tokens\": 98,\n    \"total_tokens\": 252,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 01:01:10 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2849'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

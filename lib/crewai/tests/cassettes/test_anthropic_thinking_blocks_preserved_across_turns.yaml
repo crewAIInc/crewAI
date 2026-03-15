@@ -1,0 +1,194 @@
+interactions:
+- request:
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '168'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - Anthropic/Python 0.71.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 0.71.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_018jNqkB4oZoJMnf5rcGaVja","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"This is a simple arithmetic question. 2+2 equals 4.","signature":"EtsBCkYIChgCKkANrO4e7QOyBt+X28FZKLvTzNoQDVSTVMHBDOKtdn00Qyust7+mKBLyfu25KPMJ1vxi7EBV2nWiTwBDAqS5ISPSEgzy8fA2B0+wA5I3nBMaDGBC5LuZTYVFw/R6ryIwgnlwdEif5NJWNli1IlYD1jP8jJ5ell5/w17BJU9LTk+yeC6EHnLdtmfVMdlcF6flKkNFt7DVGLhdqtohBXxx4qmB8IKKp7M9A++M103ftST+4MjPHy9ehVxpNE0WHaoacHJAP0L6qIMkvjtafceejaklDL3aGAE="},{"type":"text","text":"2 + 2 = 4"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":43,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":36,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - 9a4bfbbe0e3b26b0-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 26 Nov 2025 20:02:28 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - 32982f3d-354e-4063-a1d9-6e3e0361bcfe
+      anthropic-ratelimit-input-tokens-limit:
+      - '30000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '30000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2025-11-26T20:02:28Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '8000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '8000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2025-11-26T20:02:28Z'
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-11-26T20:02:26Z'
+      anthropic-ratelimit-tokens-limit:
+      - '38000'
+      anthropic-ratelimit-tokens-remaining:
+      - '38000'
+      anthropic-ratelimit-tokens-reset:
+      - '2025-11-26T20:02:28Z'
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - req_011CVX6dM9aWdpYdmnHARrXh
+      retry-after:
+      - '35'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '2775'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is 2+2?"},{"role":"assistant","content":[{"type":"thinking","thinking":"This is a simple arithmetic question. 2+2 equals 4.","signature":"EtsBCkYIChgCKkANrO4e7QOyBt+X28FZKLvTzNoQDVSTVMHBDOKtdn00Qyust7+mKBLyfu25KPMJ1vxi7EBV2nWiTwBDAqS5ISPSEgzy8fA2B0+wA5I3nBMaDGBC5LuZTYVFw/R6ryIwgnlwdEif5NJWNli1IlYD1jP8jJ5ell5/w17BJU9LTk+yeC6EHnLdtmfVMdlcF6flKkNFt7DVGLhdqtohBXxx4qmB8IKKp7M9A++M103ftST+4MjPHy9ehVxpNE0WHaoacHJAP0L6qIMkvjtafceejaklDL3aGAE="},{"type":"text","text":"2 + 2 = 4"}]},{"role":"user","content":"Now what is 3+3?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '681'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - Anthropic/Python 0.71.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 0.71.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01VDYjTx2TrfPBCk6zXNQQKT","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"This is a straightforward arithmetic question. 3 + 3 = 6.","signature":"EuEBCkYIChgCKkChAUTGRniU9a2nOcBaaty1R+x6p5TyaVU1OzGtKbya6AZK46fW8H3aOXVDDh6mj1xiHWpD29jgWgSOPZyLpNXMEgw2MB+McXKIFCHt7T8aDCC1Uv3X1nl/SE4XxiIwI0nBZraWXH4cAIosmXgkz8ozCqEF0FCMlbVV9xPA6oVzj/Z4LpyTXLTFMDQpJFYsKkkdUyZVdBCYqAxaHN87hkq8mk0bpKOBsSgj7P1vHV16dyX9TL2XVFEx9izHe4KPd17lUhuwxjLNqzfmRyR8bAmjGcJq7EdgAuxyGAE="},{"type":"text","text":"3 + 3 = 6"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":67,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":39,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - 9a4bfbd00b1426b0-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 26 Nov 2025 20:02:31 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - 32982f3d-354e-4063-a1d9-6e3e0361bcfe
+      anthropic-ratelimit-input-tokens-limit:
+      - '30000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '30000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2025-11-26T20:02:30Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '8000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '8000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2025-11-26T20:02:31Z'
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-11-26T20:02:29Z'
+      anthropic-ratelimit-tokens-limit:
+      - '38000'
+      anthropic-ratelimit-tokens-remaining:
+      - '38000'
+      anthropic-ratelimit-tokens-reset:
+      - '2025-11-26T20:02:30Z'
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - req_011CVX6dZXDfHGDm98QN81RZ
+      retry-after:
+      - '30'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '2540'
+    status:
+      code: 200
+      message: OK
+version: 1

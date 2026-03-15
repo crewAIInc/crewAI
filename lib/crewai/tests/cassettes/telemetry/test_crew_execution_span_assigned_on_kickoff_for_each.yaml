@@ -1,0 +1,2082 @@
+interactions:
+- request:
+    body: !!binary |
+      Cv1lCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS1GUKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcCAoQ0b0upPSCFlb6JhAKl+3wlhIIANBL5A0yNv0qDENyZXcgQ3JlYXRlZDABORDG
+      s2EXL34YQRhNwGEXL34YShkKDmNyZXdhaV92ZXJzaW9uEgcKBTEuNi4xShsKDnB5dGhvbl92ZXJz
+      aW9uEgkKBzMuMTIuMTBKLgoIY3Jld19rZXkSIgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2
+      OTI1N2NKMQoHY3Jld19pZBImCiQ3ZWMzZTRiZS03Y2E5LTQ5ZmItYjNkZC0xOTI4MDVhM2UxNTFK
+      OgoQY3Jld19maW5nZXJwcmludBImCiQxZjZhMGM5My1hZDRiLTRlMWUtYjFhYi1mYWNhN2Q5ZGFk
+      NjFKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNy
+      ZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSjsKG2Ny
+      ZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTEyLTA0VDIwOjU4OjAxLjQ0MTQwMUrR
+      AgoLY3Jld19hZ2VudHMSwQIKvgJbeyJrZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBiY2Y4
+      Yjk2YTUiLCAiaWQiOiAiNjJkNzQ4YjYtOGI4Mi00NjQxLTk2MjMtZGFkMjVkZDc3OWU5IiwgInJv
+      bGUiOiAidGVzdCBhZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1h
+      eF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8t
+      bWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEK
+      CmNyZXdfdGFza3MS8AEK7QFbeyJrZXkiOiAiMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEz
+      YTEiLCAiaWQiOiAiODVjM2IwMWYtNzA1Ni00YTJmLTg0YWItODZjOWY2MzM2NGZkIiwgImFzeW5j
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6
+      ICJ0ZXN0IGFnZW50IiwgImFnZW50X2tleSI6ICI3NGIzOTYxZWUyMzg4ZGNmNzc5YjFlMGJjZjhi
+      OTZhNSIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEpwEChBpn+2ZuK3JAHZEXKgKVONf
+      Eggs/fwSHyoUDSoMVGFzayBDcmVhdGVkMAE5UCXTYRcvfhhB8C7UYRcvfhhKLgoIY3Jld19rZXkS
+      IgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1N2NKMQoHY3Jld19pZBImCiQ3ZWMzZTRi
+      ZS03Y2E5LTQ5ZmItYjNkZC0xOTI4MDVhM2UxNTFKOgoQY3Jld19maW5nZXJwcmludBImCiQxZjZh
+      MGM5My1hZDRiLTRlMWUtYjFhYi1mYWNhN2Q5ZGFkNjFKLgoIdGFza19rZXkSIgogMTdjYzlhYjJi
+      MmQwYmIwY2RkMzZkNTNlMDUyYmEzYTFKMQoHdGFza19pZBImCiQ4NWMzYjAxZi03MDU2LTRhMmYt
+      ODRhYi04NmM5ZjYzMzY0ZmRKOgoQdGFza19maW5nZXJwcmludBImCiQwMDUzNzA2Ny04ZTcwLTRh
+      N2EtOTRjZS0wODhiNWM4NmUwZDhKOwobdGFza19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIw
+      MjUtMTItMDRUMjA6NTg6MDEuNDQxMjMwSjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJGYxZGZiMWI2
+      LTc1ZmItNDY0OC05N2UwLTYyOGU2NDQ2M2UxMkoaCgphZ2VudF9yb2xlEgwKCnRlc3QgYWdlbnR6
+      AhgBhQEAAQAAEuEDChC00VPejncmmsvQPN6ilfl0Egjnuu9zi6CV4ioOVGFzayBFeGVjdXRpb24w
+      ATkIltdhFy9+GEGAxFKfFy9+GEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThj
+      MWM4ODY5MjU3Y0oxCgdjcmV3X2lkEiYKJDdlYzNlNGJlLTdjYTktNDlmYi1iM2RkLTE5MjgwNWEz
+      ZTE1MUo6ChBjcmV3X2ZpbmdlcnByaW50EiYKJDFmNmEwYzkzLWFkNGItNGUxZS1iMWFiLWZhY2E3
+      ZDlkYWQ2MUouCgh0YXNrX2tleRIiCiAxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMUox
+      Cgd0YXNrX2lkEiYKJDg1YzNiMDFmLTcwNTYtNGEyZi04NGFiLTg2YzlmNjMzNjRmZEo7ChFhZ2Vu
+      dF9maW5nZXJwcmludBImCiRmMWRmYjFiNi03NWZiLTQ2NDgtOTdlMC02MjhlNjQ0NjNlMTJKGgoK
+      YWdlbnRfcm9sZRIMCgp0ZXN0IGFnZW50SjoKEHRhc2tfZmluZ2VycHJpbnQSJgokMDA1MzcwNjct
+      OGU3MC00YTdhLTk0Y2UtMDg4YjVjODZlMGQ4egIYAYUBAAEAABL1DAoQqFKZpfkv9ruz173kCLQD
+      1hIIvA1l82K+f34qDENyZXcgQ3JlYXRlZDABOXCc3qAXL34YQQge6KAXL34YShkKDmNyZXdhaV92
+      ZXJzaW9uEgcKBTEuNi4xShsKDnB5dGhvbl92ZXJzaW9uEgkKBzMuMTIuMTBKLgoIY3Jld19rZXkS
+      IgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1N2NKMQoHY3Jld19pZBImCiRjNDM0ZjNk
+      NS03MjUzLTQwZGItYWQ1MC00MTA3M2IwNzNhMWFKOgoQY3Jld19maW5nZXJwcmludBImCiRlYzRm
+      OWQzZC1lNThiLTRhZTQtOGY5MS0yZDAyZDYxMjY0OTRKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVl
+      bnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVj
+      cmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSjsKG2NyZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIc
+      ChoyMDI1LTEyLTA0VDIwOjU4OjAyLjUwMzgzM0qEBAoLY3Jld19hZ2VudHMS9AMK8QNbeyJrZXki
+      OiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBiY2Y4Yjk2YTUiLCAiaWQiOiAiYjBkZDFhOTktYmY2
+      MC00MGQyLWE2ODAtYjI1ZmYxM2Q5NjdjIiwgInJvbGUiOiAidGVzdCBhZ2VudCIsICJnb2FsIjog
+      InNheSBoZWxsbyIsICJiYWNrc3RvcnkiOiAiYSBmcmllbmRseSBhZ2VudCIsICJ2ZXJib3NlPyI6
+      IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiaTE4biI6IG51bGwsICJm
+      dW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRp
+      b25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4
+      X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW10sICJmaW5nZXJwcmludCI6ICIzZGQ3
+      NzQ4NS1jYTk4LTRkYTMtYmFjZS1hNDAzMDI5NGU5ZWYiLCAiZmluZ2VycHJpbnRfY3JlYXRlZF9h
+      dCI6ICIyMDI1LTEyLTA0VDIwOjU4OjAyLjQ4MzYxOCJ9XUq3AwoKY3Jld190YXNrcxKoAwqlA1t7
+      ImtleSI6ICIxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMSIsICJpZCI6ICIzMGQ1ODRi
+      ZS00ZGUxLTQwZTYtOTBmNi05NzMxMWQ1NjZjZjkiLCAiZGVzY3JpcHRpb24iOiAiU2F5IGhlbGxv
+      IiwgImV4cGVjdGVkX291dHB1dCI6ICJoZWxsbyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
+      ICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCBhZ2VudCIsICJhZ2Vu
+      dF9rZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBiY2Y4Yjk2YTUiLCAiY29udGV4dCI6IG51
+      bGwsICJ0b29sc19uYW1lcyI6IFtdLCAiZmluZ2VycHJpbnQiOiAiNmU3MjJmYWQtNTg4Zi00OTdl
+      LWJiM2UtZmE1OGMxN2Q0YmYyIiwgImZpbmdlcnByaW50X2NyZWF0ZWRfYXQiOiAiMjAyNS0xMi0w
+      NFQyMDo1ODowMi41MDM3OTAifV1KKAoIcGxhdGZvcm0SHAoabWFjT1MtMjYuMS1hcm02NC1hcm0t
+      NjRiaXRKHAoQcGxhdGZvcm1fcmVsZWFzZRIICgYyNS4xLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggK
+      BkRhcndpbkp7ChBwbGF0Zm9ybV92ZXJzaW9uEmcKZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyNS4x
+      LjA6IE1vbiBPY3QgMjAgMTk6MzQ6MDUgUERUIDIwMjU7IHJvb3Q6eG51LTEyMzc3LjQxLjZ+Mi9S
+      RUxFQVNFX0FSTTY0X1Q2MDQxSgoKBGNwdXMSAhgOegIYAYUBAAEAABLoBAoQT9kv3sNVuIE3R1IY
+      uqKeQxIIfS1xWBCh8ocqDFRhc2sgQ3JlYXRlZDABOaBp+qAXL34YQeAF+6AXL34YSi4KCGNyZXdf
+      a2V5EiIKIDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQSJgokYzQz
+      NGYzZDUtNzI1My00MGRiLWFkNTAtNDEwNzNiMDczYTFhSjoKEGNyZXdfZmluZ2VycHJpbnQSJgok
+      ZWM0ZjlkM2QtZTU4Yi00YWU0LThmOTEtMmQwMmQ2MTI2NDk0Si4KCHRhc2tfa2V5EiIKIDE3Y2M5
+      YWIyYjJkMGJiMGNkZDM2ZDUzZTA1MmJhM2ExSjEKB3Rhc2tfaWQSJgokMzBkNTg0YmUtNGRlMS00
+      MGU2LTkwZjYtOTczMTFkNTY2Y2Y5SjoKEHRhc2tfZmluZ2VycHJpbnQSJgokNmU3MjJmYWQtNTg4
+      Zi00OTdlLWJiM2UtZmE1OGMxN2Q0YmYySjsKG3Rhc2tfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIc
+      ChoyMDI1LTEyLTA0VDIwOjU4OjAyLjUwMzc5MEo7ChFhZ2VudF9maW5nZXJwcmludBImCiQzZGQ3
+      NzQ4NS1jYTk4LTRkYTMtYmFjZS1hNDAzMDI5NGU5ZWZKGgoKYWdlbnRfcm9sZRIMCgp0ZXN0IGFn
+      ZW50SiQKFWZvcm1hdHRlZF9kZXNjcmlwdGlvbhILCglTYXkgaGVsbG9KJAoZZm9ybWF0dGVkX2V4
+      cGVjdGVkX291dHB1dBIHCgVoZWxsb3oCGAGFAQABAAASxgQKEEL3noPNyaKQCZqfvfzMJ80SCE1e
+      8YNgWbg1Kg5UYXNrIEV4ZWN1dGlvbjABOQgp+6AXL34YQQCTDfoXL34YSi4KCGNyZXdfa2V5EiIK
+      IDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQSJgokYzQzNGYzZDUt
+      NzI1My00MGRiLWFkNTAtNDEwNzNiMDczYTFhSjoKEGNyZXdfZmluZ2VycHJpbnQSJgokZWM0Zjlk
+      M2QtZTU4Yi00YWU0LThmOTEtMmQwMmQ2MTI2NDk0Si4KCHRhc2tfa2V5EiIKIDE3Y2M5YWIyYjJk
+      MGJiMGNkZDM2ZDUzZTA1MmJhM2ExSjEKB3Rhc2tfaWQSJgokMzBkNTg0YmUtNGRlMS00MGU2LTkw
+      ZjYtOTczMTFkNTY2Y2Y5SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJDNkZDc3NDg1LWNhOTgtNGRh
+      My1iYWNlLWE0MDMwMjk0ZTllZkoaCgphZ2VudF9yb2xlEgwKCnRlc3QgYWdlbnRKJAoVZm9ybWF0
+      dGVkX2Rlc2NyaXB0aW9uEgsKCVNheSBoZWxsb0okChlmb3JtYXR0ZWRfZXhwZWN0ZWRfb3V0cHV0
+      EgcKBWhlbGxvSjoKEHRhc2tfZmluZ2VycHJpbnQSJgokNmU3MjJmYWQtNTg4Zi00OTdlLWJiM2Ut
+      ZmE1OGMxN2Q0YmYyShcKC3Rhc2tfb3V0cHV0EggKBkhlbGxvIXoCGAGFAQABAAAS9QwKEK6kSUaF
+      UV95pC9s4A6VsSQSCGMSC6O4EPrfKgxDcmV3IENyZWF0ZWQwATn4YE/8Fy9+GEGo2Fn8Fy9+GEoZ
+      Cg5jcmV3YWlfdmVyc2lvbhIHCgUxLjYuMUobCg5weXRob25fdmVyc2lvbhIJCgczLjEyLjEwSi4K
+      CGNyZXdfa2V5EiIKIDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQS
+      JgokYzE1NzM0OWEtMmY4Ni00Zjg5LTkzMjktNWYxNjNlNDg1NzdlSjoKEGNyZXdfZmluZ2VycHJp
+      bnQSJgokNDQzMGVhOTAtN2E2Ny00Njg0LThmZjMtMjViMTlkY2RkMWI0ShwKDGNyZXdfcHJvY2Vz
+      cxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNr
+      cxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo7ChtjcmV3X2ZpbmdlcnByaW50X2Ny
+      ZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNFQyMDo1ODowNC4wMzc2MzFKhAQKC2NyZXdfYWdlbnRzEvQD
+      CvEDW3sia2V5IjogIjc0YjM5NjFlZTIzODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgImlkIjogImM3
+      Yzk4ZjRhLWE0ZTAtNDVmMy1iNTBlLTIwNmJkMjE5NzNjZiIsICJyb2xlIjogInRlc3QgYWdlbnQi
+      LCAiZ29hbCI6ICJzYXkgaGVsbG8iLCAiYmFja3N0b3J5IjogImEgZnJpZW5kbHkgYWdlbnQiLCAi
+      dmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImkxOG4i
+      OiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIs
+      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdLCAiZmluZ2VycHJp
+      bnQiOiAiY2Q0YjU1MWYtYzEyYi00ZTlmLWE0ZDUtYjc2YzA3ZTYxNmY1IiwgImZpbmdlcnByaW50
+      X2NyZWF0ZWRfYXQiOiAiMjAyNS0xMi0wNFQyMDo1ODowNC4wMDk2ODcifV1KtwMKCmNyZXdfdGFz
+      a3MSqAMKpQNbeyJrZXkiOiAiMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEzYTEiLCAiaWQi
+      OiAiNjdhYzk3ZWMtMGU5Zi00MTYzLWIxNmYtNWY4YjRlNzMwMzZhIiwgImRlc2NyaXB0aW9uIjog
+      IlNheSBoZWxsbyIsICJleHBlY3RlZF9vdXRwdXQiOiAiaGVsbG8iLCAiYXN5bmNfZXhlY3V0aW9u
+      PyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3QgYWdl
+      bnQiLCAiYWdlbnRfa2V5IjogIjc0YjM5NjFlZTIzODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgImNv
+      bnRleHQiOiBudWxsLCAidG9vbHNfbmFtZXMiOiBbXSwgImZpbmdlcnByaW50IjogIjRkODJiNWQ4
+      LWM1N2ItNGQxZi1hYzZlLTNkMzViMWNjNTgyNCIsICJmaW5nZXJwcmludF9jcmVhdGVkX2F0Ijog
+      IjIwMjUtMTItMDRUMjA6NTg6MDQuMDM3NTg0In1dSigKCHBsYXRmb3JtEhwKGm1hY09TLTI2LjEt
+      YXJtNjQtYXJtLTY0Yml0ShwKEHBsYXRmb3JtX3JlbGVhc2USCAoGMjUuMS4wShsKD3BsYXRmb3Jt
+      X3N5c3RlbRIICgZEYXJ3aW5KewoQcGxhdGZvcm1fdmVyc2lvbhJnCmVEYXJ3aW4gS2VybmVsIFZl
+      cnNpb24gMjUuMS4wOiBNb24gT2N0IDIwIDE5OjM0OjA1IFBEVCAyMDI1OyByb290OnhudS0xMjM3
+      Ny40MS42fjIvUkVMRUFTRV9BUk02NF9UNjA0MUoKCgRjcHVzEgIYDnoCGAGFAQABAAAS6AQKEI0z
+      ugNHcHt3zr5ZQYyoDWoSCAFh5slG/I6IKgxUYXNrIENyZWF0ZWQwATlYDm/8Fy9+GEFg3W/8Fy9+
+      GEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0oxCgdjcmV3
+      X2lkEiYKJGMxNTczNDlhLTJmODYtNGY4OS05MzI5LTVmMTYzZTQ4NTc3ZUo6ChBjcmV3X2Zpbmdl
+      cnByaW50EiYKJDQ0MzBlYTkwLTdhNjctNDY4NC04ZmYzLTI1YjE5ZGNkZDFiNEouCgh0YXNrX2tl
+      eRIiCiAxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMUoxCgd0YXNrX2lkEiYKJDY3YWM5
+      N2VjLTBlOWYtNDE2My1iMTZmLTVmOGI0ZTczMDM2YUo6ChB0YXNrX2ZpbmdlcnByaW50EiYKJDRk
+      ODJiNWQ4LWM1N2ItNGQxZi1hYzZlLTNkMzViMWNjNTgyNEo7Cht0YXNrX2ZpbmdlcnByaW50X2Ny
+      ZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNFQyMDo1ODowNC4wMzc1ODRKOwoRYWdlbnRfZmluZ2VycHJp
+      bnQSJgokY2Q0YjU1MWYtYzEyYi00ZTlmLWE0ZDUtYjc2YzA3ZTYxNmY1ShoKCmFnZW50X3JvbGUS
+      DAoKdGVzdCBhZ2VudEokChVmb3JtYXR0ZWRfZGVzY3JpcHRpb24SCwoJU2F5IGhlbGxvSiQKGWZv
+      cm1hdHRlZF9leHBlY3RlZF9vdXRwdXQSBwoFaGVsbG96AhgBhQEAAQAAEsYEChDaA8qqz/wqvTYR
+      O9B9+lOjEgiqfiaPtVJoLioOVGFzayBFeGVjdXRpb24wATkoEHD8Fy9+GEEIgS0vGC9+GEouCghj
+      cmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0oxCgdjcmV3X2lkEiYK
+      JGMxNTczNDlhLTJmODYtNGY4OS05MzI5LTVmMTYzZTQ4NTc3ZUo6ChBjcmV3X2ZpbmdlcnByaW50
+      EiYKJDQ0MzBlYTkwLTdhNjctNDY4NC04ZmYzLTI1YjE5ZGNkZDFiNEouCgh0YXNrX2tleRIiCiAx
+      N2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMUoxCgd0YXNrX2lkEiYKJDY3YWM5N2VjLTBl
+      OWYtNDE2My1iMTZmLTVmOGI0ZTczMDM2YUo7ChFhZ2VudF9maW5nZXJwcmludBImCiRjZDRiNTUx
+      Zi1jMTJiLTRlOWYtYTRkNS1iNzZjMDdlNjE2ZjVKGgoKYWdlbnRfcm9sZRIMCgp0ZXN0IGFnZW50
+      SiQKFWZvcm1hdHRlZF9kZXNjcmlwdGlvbhILCglTYXkgaGVsbG9KJAoZZm9ybWF0dGVkX2V4cGVj
+      dGVkX291dHB1dBIHCgVoZWxsb0o6ChB0YXNrX2ZpbmdlcnByaW50EiYKJDRkODJiNWQ4LWM1N2It
+      NGQxZi1hYzZlLTNkMzViMWNjNTgyNEoXCgt0YXNrX291dHB1dBIICgZIZWxsbyF6AhgBhQEAAQAA
+      EvUMChDR2rJnmpv9FjSsWigl73GwEggqbDTXbesneCoMQ3JldyBDcmVhdGVkMAE5SLveMBgvfhhB
+      SH/oMBgvfhhKGQoOY3Jld2FpX3ZlcnNpb24SBwoFMS42LjFKGwoOcHl0aG9uX3ZlcnNpb24SCQoH
+      My4xMi4xMEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0ox
+      CgdjcmV3X2lkEiYKJDNiMGFkZDliLWM4YTctNDkzOC04Y2UyLTJiZDNmMmY1MWZlMUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJDAyMGY4M2JiLWRlNGQtNGEyZC05MzNkLTRiYmY2OGE0ZTQwZkocCgxj
+      cmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1i
+      ZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKOwobY3Jld19maW5n
+      ZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMTItMDRUMjA6NTg6MDQuOTE4ODA2SoQECgtjcmV3
+      X2FnZW50cxL0AwrxA1t7ImtleSI6ICI3NGIzOTYxZWUyMzg4ZGNmNzc5YjFlMGJjZjhiOTZhNSIs
+      ICJpZCI6ICIwZGU0YTdkZC04MDkxLTQzNzYtYThmOS1mZDJhMTdlYTc4ODkiLCAicm9sZSI6ICJ0
+      ZXN0IGFnZW50IiwgImdvYWwiOiAic2F5IGhlbGxvIiwgImJhY2tzdG9yeSI6ICJhIGZyaWVuZGx5
+      IGFnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51
+      bGwsICJpMThuIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0
+      LTRvLW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVj
+      dXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXSwg
+      ImZpbmdlcnByaW50IjogImMxYzZhODA3LWQyNzktNDQyZS1hNGY3LWZmZTI3ZTg0OTEzZiIsICJm
+      aW5nZXJwcmludF9jcmVhdGVkX2F0IjogIjIwMjUtMTItMDRUMjA6NTg6MDQuODk4NjY2In1dSrcD
+      CgpjcmV3X3Rhc2tzEqgDCqUDW3sia2V5IjogIjE3Y2M5YWIyYjJkMGJiMGNkZDM2ZDUzZTA1MmJh
+      M2ExIiwgImlkIjogIjVhN2VkZjMzLWE3OWMtNGYxNy04ZTA1LTBjZjUxM2MzZGEyMSIsICJkZXNj
+      cmlwdGlvbiI6ICJTYXkgaGVsbG8iLCAiZXhwZWN0ZWRfb3V0cHV0IjogImhlbGxvIiwgImFzeW5j
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6
+      ICJ0ZXN0IGFnZW50IiwgImFnZW50X2tleSI6ICI3NGIzOTYxZWUyMzg4ZGNmNzc5YjFlMGJjZjhi
+      OTZhNSIsICJjb250ZXh0IjogbnVsbCwgInRvb2xzX25hbWVzIjogW10sICJmaW5nZXJwcmludCI6
+      ICJmMmIxNzg4ZC00MmVmLTQyNmItODc5ZS1jZTg0MjljYTE2N2IiLCAiZmluZ2VycHJpbnRfY3Jl
+      YXRlZF9hdCI6ICIyMDI1LTEyLTA0VDIwOjU4OjA0LjkxODc1NSJ9XUooCghwbGF0Zm9ybRIcChpt
+      YWNPUy0yNi4xLWFybTY0LWFybS02NGJpdEocChBwbGF0Zm9ybV9yZWxlYXNlEggKBjI1LjEuMEob
+      Cg9wbGF0Zm9ybV9zeXN0ZW0SCAoGRGFyd2luSnsKEHBsYXRmb3JtX3ZlcnNpb24SZwplRGFyd2lu
+      IEtlcm5lbCBWZXJzaW9uIDI1LjEuMDogTW9uIE9jdCAyMCAxOTozNDowNSBQRFQgMjAyNTsgcm9v
+      dDp4bnUtMTIzNzcuNDEuNn4yL1JFTEVBU0VfQVJNNjRfVDYwNDFKCgoEY3B1cxICGA56AhgBhQEA
+      AQAAEugEChDSRWWlTp7jxeOYbZxUhFGaEggPG1akcSxKMioMVGFzayBDcmVhdGVkMAE5GLQfMRgv
+      fhhBkJogMRgvfhhKLgoIY3Jld19rZXkSIgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1
+      N2NKMQoHY3Jld19pZBImCiQzYjBhZGQ5Yi1jOGE3LTQ5MzgtOGNlMi0yYmQzZjJmNTFmZTFKOgoQ
+      Y3Jld19maW5nZXJwcmludBImCiQwMjBmODNiYi1kZTRkLTRhMmQtOTMzZC00YmJmNjhhNGU0MGZK
+      LgoIdGFza19rZXkSIgogMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEzYTFKMQoHdGFza19p
+      ZBImCiQ1YTdlZGYzMy1hNzljLTRmMTctOGUwNS0wY2Y1MTNjM2RhMjFKOgoQdGFza19maW5nZXJw
+      cmludBImCiRmMmIxNzg4ZC00MmVmLTQyNmItODc5ZS1jZTg0MjljYTE2N2JKOwobdGFza19maW5n
+      ZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMTItMDRUMjA6NTg6MDQuOTE4NzU1SjsKEWFnZW50
+      X2ZpbmdlcnByaW50EiYKJGMxYzZhODA3LWQyNzktNDQyZS1hNGY3LWZmZTI3ZTg0OTEzZkoaCgph
+      Z2VudF9yb2xlEgwKCnRlc3QgYWdlbnRKJAoVZm9ybWF0dGVkX2Rlc2NyaXB0aW9uEgsKCVNheSBo
+      ZWxsb0okChlmb3JtYXR0ZWRfZXhwZWN0ZWRfb3V0cHV0EgcKBWhlbGxvegIYAYUBAAEAABLGBAoQ
+      d1pnoFUakQnRx0WIs7BhhRIIu0qGw/JpBboqDlRhc2sgRXhlY3V0aW9uMAE5WM0gMRgvfhhBYIxW
+      dRgvfhhKLgoIY3Jld19rZXkSIgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1N2NKMQoH
+      Y3Jld19pZBImCiQzYjBhZGQ5Yi1jOGE3LTQ5MzgtOGNlMi0yYmQzZjJmNTFmZTFKOgoQY3Jld19m
+      aW5nZXJwcmludBImCiQwMjBmODNiYi1kZTRkLTRhMmQtOTMzZC00YmJmNjhhNGU0MGZKLgoIdGFz
+      a19rZXkSIgogMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEzYTFKMQoHdGFza19pZBImCiQ1
+      YTdlZGYzMy1hNzljLTRmMTctOGUwNS0wY2Y1MTNjM2RhMjFKOwoRYWdlbnRfZmluZ2VycHJpbnQS
+      JgokYzFjNmE4MDctZDI3OS00NDJlLWE0ZjctZmZlMjdlODQ5MTNmShoKCmFnZW50X3JvbGUSDAoK
+      dGVzdCBhZ2VudEokChVmb3JtYXR0ZWRfZGVzY3JpcHRpb24SCwoJU2F5IGhlbGxvSiQKGWZvcm1h
+      dHRlZF9leHBlY3RlZF9vdXRwdXQSBwoFaGVsbG9KOgoQdGFza19maW5nZXJwcmludBImCiRmMmIx
+      Nzg4ZC00MmVmLTQyNmItODc5ZS1jZTg0MjljYTE2N2JKFwoLdGFza19vdXRwdXQSCAoGSGVsbG8h
+      egIYAYUBAAEAABKjDQoQTdAGBUeyV0kTskdJwp1zjxIIgGE6guIEJokqDENyZXcgQ3JlYXRlZDAB
+      OWDj93cYL34YQaDAAngYL34YShkKDmNyZXdhaV92ZXJzaW9uEgcKBTEuNi4xShsKDnB5dGhvbl92
+      ZXJzaW9uEgkKBzMuMTIuMTBKLgoIY3Jld19rZXkSIgogZGZmNTY2YWY5NTYyNjBiOTZiNTdhYWJh
+      ZTVjNGZiYTBKMQoHY3Jld19pZBImCiQ3ZGU2YzJhMy05ZTI0LTQ0N2ItODE5My04Y2MwOWNkMjNm
+      YmNKOgoQY3Jld19maW5nZXJwcmludBImCiRjZmFjOTM2Yy1jY2NkLTQ2M2QtOGNjZC01MDE3ZTBk
+      MWYwNjlKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoK
+      FGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSjsK
+      G2NyZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTEyLTA0VDIwOjU4OjA2LjExMzY3
+      NkqEBAoLY3Jld19hZ2VudHMS9AMK8QNbeyJrZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBi
+      Y2Y4Yjk2YTUiLCAiaWQiOiAiNTRlMDU4N2EtOTZlZC00NTYzLThlZjAtMTA4NWU2YzdiNTA3Iiwg
+      InJvbGUiOiAidGVzdCBhZ2VudCIsICJnb2FsIjogInNheSBoZWxsbyIsICJiYWNrc3RvcnkiOiAi
+      YSBmcmllbmRseSBhZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1h
+      eF9ycG0iOiBudWxsLCAiaTE4biI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAi
+      bGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93
+      X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25h
+      bWVzIjogW10sICJmaW5nZXJwcmludCI6ICJlZmVjMGIzNy01YzA3LTQyMzQtODExMS1jYzQ4NDhj
+      NWVkY2QiLCAiZmluZ2VycHJpbnRfY3JlYXRlZF9hdCI6ICIyMDI1LTEyLTA0VDIwOjU4OjA2LjEx
+      MzE4NiJ9XUrBAwoKY3Jld190YXNrcxKyAwqvA1t7ImtleSI6ICIzNDViMjE2YTBjYjdkYzEwNDQw
+      Y2I3YjM5YTliMmM1MyIsICJpZCI6ICI4Njc4OWFiZS04YWZhLTQzNDUtOTgzMC0wMjNkMjA2ZmNk
+      MjEiLCAiZGVzY3JpcHRpb24iOiAiU2F5IGhlbGxvIHRvIHtuYW1lfSIsICJleHBlY3RlZF9vdXRw
+      dXQiOiAiaGVsbG8iLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/Ijog
+      ZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3QgYWdlbnQiLCAiYWdlbnRfa2V5IjogIjc0YjM5NjFl
+      ZTIzODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgImNvbnRleHQiOiBudWxsLCAidG9vbHNfbmFtZXMi
+      OiBbXSwgImZpbmdlcnByaW50IjogImM3YjU0MTk1LWRhNjItNGIxMi04MmI3LTUxZGUzYzg0ZGUy
+      MyIsICJmaW5nZXJwcmludF9jcmVhdGVkX2F0IjogIjIwMjUtMTItMDRUMjA6NTg6MDYuMTEzNTky
+      In1dSigKCHBsYXRmb3JtEhwKGm1hY09TLTI2LjEtYXJtNjQtYXJtLTY0Yml0ShwKEHBsYXRmb3Jt
+      X3JlbGVhc2USCAoGMjUuMS4wShsKD3BsYXRmb3JtX3N5c3RlbRIICgZEYXJ3aW5KewoQcGxhdGZv
+      cm1fdmVyc2lvbhJnCmVEYXJ3aW4gS2VybmVsIFZlcnNpb24gMjUuMS4wOiBNb24gT2N0IDIwIDE5
+      OjM0OjA1IFBEVCAyMDI1OyByb290OnhudS0xMjM3Ny40MS42fjIvUkVMRUFTRV9BUk02NF9UNjA0
+      MUoKCgRjcHVzEgIYDkoiCgtjcmV3X2lucHV0cxITChF7Im5hbWUiOiAiQWxpY2UifXoCGAGFAQAB
+      AAAS8QQKELcBn0s0YRD5Jsla3yiFOMESCOVRYE3LZL+7KgxUYXNrIENyZWF0ZWQwATmQmBd4GC9+
+      GEGIQBh4GC9+GEouCghjcmV3X2tleRIiCiBkZmY1NjZhZjk1NjI2MGI5NmI1N2FhYmFlNWM0ZmJh
+      MEoxCgdjcmV3X2lkEiYKJDdkZTZjMmEzLTllMjQtNDQ3Yi04MTkzLThjYzA5Y2QyM2ZiY0o6ChBj
+      cmV3X2ZpbmdlcnByaW50EiYKJGNmYWM5MzZjLWNjY2QtNDYzZC04Y2NkLTUwMTdlMGQxZjA2OUou
+      Cgh0YXNrX2tleRIiCiAzNDViMjE2YTBjYjdkYzEwNDQwY2I3YjM5YTliMmM1M0oxCgd0YXNrX2lk
+      EiYKJDg2Nzg5YWJlLThhZmEtNDM0NS05ODMwLTAyM2QyMDZmY2QyMUo6ChB0YXNrX2ZpbmdlcnBy
+      aW50EiYKJGM3YjU0MTk1LWRhNjItNGIxMi04MmI3LTUxZGUzYzg0ZGUyM0o7Cht0YXNrX2Zpbmdl
+      cnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNFQyMDo1ODowNi4xMTM1OTJKOwoRYWdlbnRf
+      ZmluZ2VycHJpbnQSJgokZWZlYzBiMzctNWMwNy00MjM0LTgxMTEtY2M0ODQ4YzVlZGNkShoKCmFn
+      ZW50X3JvbGUSDAoKdGVzdCBhZ2VudEotChVmb3JtYXR0ZWRfZGVzY3JpcHRpb24SFAoSU2F5IGhl
+      bGxvIHRvIEFsaWNlSiQKGWZvcm1hdHRlZF9leHBlY3RlZF9vdXRwdXQSBwoFaGVsbG96AhgBhQEA
+      AQAA
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '13056'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 05 Dec 2025 01:58:07 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Alice\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '779'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjFN8RA8Lfs8dzauzZVnEZzE7EFeC\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764899886,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Alice! It's great to connect with you! How are you doing today?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 183,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n \
+        \ \"system_fingerprint\": \"fp_11f3029f6b\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 01:58:07 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '771'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '802'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Bob\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '777'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjFN9VmuPwGky57Lj8rkydDg7jpAu\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764899887,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Bob! It's great to connect with you! How are you today?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 182,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_b547601dbd\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 01:58:08 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '902'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '917'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      CtFPCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSqE8KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcCAoQLsN4evaBueejy0S3sjAxXRIIX+4jiFGHdC0qDENyZXcgQ3JlYXRlZDABOXgA
+      GHMtVn4YQZhxJ3MtVn4YShkKDmNyZXdhaV92ZXJzaW9uEgcKBTEuNi4xShsKDnB5dGhvbl92ZXJz
+      aW9uEgkKBzMuMTIuMTBKLgoIY3Jld19rZXkSIgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2
+      OTI1N2NKMQoHY3Jld19pZBImCiRmYTQ1YjU4ZC03ZmVhLTQ3MGQtOWRlNS0zOWNjMTM3N2QyNzFK
+      OgoQY3Jld19maW5nZXJwcmludBImCiQ4OWZmNWI4MS00NTBiLTQ4NzgtOTExYy04ZGEyNjI2OWNk
+      MjBKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNy
+      ZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSjsKG2Ny
+      ZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTEyLTA1VDA4OjU0OjE3LjE2NzQ5NErR
+      AgoLY3Jld19hZ2VudHMSwQIKvgJbeyJrZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBiY2Y4
+      Yjk2YTUiLCAiaWQiOiAiZjhlOGRiNDgtZjk5Ny00MjE2LWI3OGItYWMxYjZmOGY5NTY5IiwgInJv
+      bGUiOiAidGVzdCBhZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1h
+      eF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8t
+      bWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEK
+      CmNyZXdfdGFza3MS8AEK7QFbeyJrZXkiOiAiMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEz
+      YTEiLCAiaWQiOiAiMTJhZDQ4NzUtOWMyZi00NjdkLWE1OWQtZjYwZTIyNGMyNDkwIiwgImFzeW5j
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6
+      ICJ0ZXN0IGFnZW50IiwgImFnZW50X2tleSI6ICI3NGIzOTYxZWUyMzg4ZGNmNzc5YjFlMGJjZjhi
+      OTZhNSIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEpwEChBY88lCs3nWCs9UcuVWVXbM
+      EgjkQDQynCJeISoMVGFzayBDcmVhdGVkMAE5IMtFcy1WfhhBWA9Hcy1WfhhKLgoIY3Jld19rZXkS
+      IgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1N2NKMQoHY3Jld19pZBImCiRmYTQ1YjU4
+      ZC03ZmVhLTQ3MGQtOWRlNS0zOWNjMTM3N2QyNzFKOgoQY3Jld19maW5nZXJwcmludBImCiQ4OWZm
+      NWI4MS00NTBiLTQ4NzgtOTExYy04ZGEyNjI2OWNkMjBKLgoIdGFza19rZXkSIgogMTdjYzlhYjJi
+      MmQwYmIwY2RkMzZkNTNlMDUyYmEzYTFKMQoHdGFza19pZBImCiQxMmFkNDg3NS05YzJmLTQ2N2Qt
+      YTU5ZC1mNjBlMjI0YzI0OTBKOgoQdGFza19maW5nZXJwcmludBImCiQ4YmY4MTU2ZC04MjdmLTRk
+      YmUtYjc5YS1kN2U5NTRkMGI3YTNKOwobdGFza19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIw
+      MjUtMTItMDVUMDg6NTQ6MTcuMTY3NDI2SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJGUzM2MxYWQy
+      LWIxNTktNGFiMS1iOTk5LWY1ZWU3Njk2N2NhM0oaCgphZ2VudF9yb2xlEgwKCnRlc3QgYWdlbnR6
+      AhgBhQEAAQAAEuEDChCK+bAlffcWBBYC+OEKi5dpEgh//viHBMmCfyoOVGFzayBFeGVjdXRpb24w
+      ATlgYUdzLVZ+GEHgYxzkLVZ+GEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThj
+      MWM4ODY5MjU3Y0oxCgdjcmV3X2lkEiYKJGZhNDViNThkLTdmZWEtNDcwZC05ZGU1LTM5Y2MxMzc3
+      ZDI3MUo6ChBjcmV3X2ZpbmdlcnByaW50EiYKJDg5ZmY1YjgxLTQ1MGItNDg3OC05MTFjLThkYTI2
+      MjY5Y2QyMEouCgh0YXNrX2tleRIiCiAxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMUox
+      Cgd0YXNrX2lkEiYKJDEyYWQ0ODc1LTljMmYtNDY3ZC1hNTlkLWY2MGUyMjRjMjQ5MEo7ChFhZ2Vu
+      dF9maW5nZXJwcmludBImCiRlMzNjMWFkMi1iMTU5LTRhYjEtYjk5OS1mNWVlNzY5NjdjYTNKGgoK
+      YWdlbnRfcm9sZRIMCgp0ZXN0IGFnZW50SjoKEHRhc2tfZmluZ2VycHJpbnQSJgokOGJmODE1NmQt
+      ODI3Zi00ZGJlLWI3OWEtZDdlOTU0ZDBiN2EzegIYAYUBAAEAABL1DAoQLkSw2AGqmBW18kWXIoH7
+      GhIINA5GiyfGYoIqDENyZXcgQ3JlYXRlZDABORCQK+ctVn4YQThrN+ctVn4YShkKDmNyZXdhaV92
+      ZXJzaW9uEgcKBTEuNi4xShsKDnB5dGhvbl92ZXJzaW9uEgkKBzMuMTIuMTBKLgoIY3Jld19rZXkS
+      IgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1N2NKMQoHY3Jld19pZBImCiQ2MWQ0NTEx
+      NC1jZjAxLTQ2Y2ItYWViNC0wZmJmMTk3ZDc0YzBKOgoQY3Jld19maW5nZXJwcmludBImCiQxMWEy
+      N2YxNC1mYzAyLTQ1ZjItOTc2OS1kY2I3YTU0ZjNlMzhKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVl
+      bnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVj
+      cmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSjsKG2NyZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIc
+      ChoyMDI1LTEyLTA1VDA4OjU0OjE5LjEyNTQ1OUqEBAoLY3Jld19hZ2VudHMS9AMK8QNbeyJrZXki
+      OiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBiY2Y4Yjk2YTUiLCAiaWQiOiAiMTA5MTgwNjktZDc1
+      My00OTA4LThmNzMtMTVjMWY3N2JjYjRiIiwgInJvbGUiOiAidGVzdCBhZ2VudCIsICJnb2FsIjog
+      InNheSBoZWxsbyIsICJiYWNrc3RvcnkiOiAiYSBmcmllbmRseSBhZ2VudCIsICJ2ZXJib3NlPyI6
+      IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiaTE4biI6IG51bGwsICJm
+      dW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRp
+      b25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4
+      X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW10sICJmaW5nZXJwcmludCI6ICI4OTVk
+      NjU1OC00YTVkLTRlZWEtOWMxZC1lNTcyMTI5MGM3MTUiLCAiZmluZ2VycHJpbnRfY3JlYXRlZF9h
+      dCI6ICIyMDI1LTEyLTA1VDA4OjU0OjE5LjA5MDk0MCJ9XUq3AwoKY3Jld190YXNrcxKoAwqlA1t7
+      ImtleSI6ICIxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMSIsICJpZCI6ICJkYzUzZDkx
+      Yy0xNGIyLTQwZjctOTA2MC0xYTIxYTViMDU3ZWYiLCAiZGVzY3JpcHRpb24iOiAiU2F5IGhlbGxv
+      IiwgImV4cGVjdGVkX291dHB1dCI6ICJoZWxsbyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
+      ICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCBhZ2VudCIsICJhZ2Vu
+      dF9rZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBiY2Y4Yjk2YTUiLCAiY29udGV4dCI6IG51
+      bGwsICJ0b29sc19uYW1lcyI6IFtdLCAiZmluZ2VycHJpbnQiOiAiYjRlY2MzZDEtOGJlMy00NWYz
+      LTgzMmUtYzBmYjIyZTlhMGExIiwgImZpbmdlcnByaW50X2NyZWF0ZWRfYXQiOiAiMjAyNS0xMi0w
+      NVQwODo1NDoxOS4xMjU0MDcifV1KKAoIcGxhdGZvcm0SHAoabWFjT1MtMjYuMS1hcm02NC1hcm0t
+      NjRiaXRKHAoQcGxhdGZvcm1fcmVsZWFzZRIICgYyNS4xLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggK
+      BkRhcndpbkp7ChBwbGF0Zm9ybV92ZXJzaW9uEmcKZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyNS4x
+      LjA6IE1vbiBPY3QgMjAgMTk6MzQ6MDUgUERUIDIwMjU7IHJvb3Q6eG51LTEyMzc3LjQxLjZ+Mi9S
+      RUxFQVNFX0FSTTY0X1Q2MDQxSgoKBGNwdXMSAhgOegIYAYUBAAEAABLoBAoQzdGvNMyOTxyi/BRO
+      97XIXhIIWJqUlmn5SU4qDFRhc2sgQ3JlYXRlZDABOZgSWOctVn4YQTDKWOctVn4YSi4KCGNyZXdf
+      a2V5EiIKIDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQSJgokNjFk
+      NDUxMTQtY2YwMS00NmNiLWFlYjQtMGZiZjE5N2Q3NGMwSjoKEGNyZXdfZmluZ2VycHJpbnQSJgok
+      MTFhMjdmMTQtZmMwMi00NWYyLTk3NjktZGNiN2E1NGYzZTM4Si4KCHRhc2tfa2V5EiIKIDE3Y2M5
+      YWIyYjJkMGJiMGNkZDM2ZDUzZTA1MmJhM2ExSjEKB3Rhc2tfaWQSJgokZGM1M2Q5MWMtMTRiMi00
+      MGY3LTkwNjAtMWEyMWE1YjA1N2VmSjoKEHRhc2tfZmluZ2VycHJpbnQSJgokYjRlY2MzZDEtOGJl
+      My00NWYzLTgzMmUtYzBmYjIyZTlhMGExSjsKG3Rhc2tfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIc
+      ChoyMDI1LTEyLTA1VDA4OjU0OjE5LjEyNTQwN0o7ChFhZ2VudF9maW5nZXJwcmludBImCiQ4OTVk
+      NjU1OC00YTVkLTRlZWEtOWMxZC1lNTcyMTI5MGM3MTVKGgoKYWdlbnRfcm9sZRIMCgp0ZXN0IGFn
+      ZW50SiQKFWZvcm1hdHRlZF9kZXNjcmlwdGlvbhILCglTYXkgaGVsbG9KJAoZZm9ybWF0dGVkX2V4
+      cGVjdGVkX291dHB1dBIHCgVoZWxsb3oCGAGFAQABAAASxgQKEDE5VdfnVZPl6OYd2RD9gNYSCNht
+      4xiYBhX7Kg5UYXNrIEV4ZWN1dGlvbjABOSj1WOctVn4YQfhO0EAuVn4YSi4KCGNyZXdfa2V5EiIK
+      IDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQSJgokNjFkNDUxMTQt
+      Y2YwMS00NmNiLWFlYjQtMGZiZjE5N2Q3NGMwSjoKEGNyZXdfZmluZ2VycHJpbnQSJgokMTFhMjdm
+      MTQtZmMwMi00NWYyLTk3NjktZGNiN2E1NGYzZTM4Si4KCHRhc2tfa2V5EiIKIDE3Y2M5YWIyYjJk
+      MGJiMGNkZDM2ZDUzZTA1MmJhM2ExSjEKB3Rhc2tfaWQSJgokZGM1M2Q5MWMtMTRiMi00MGY3LTkw
+      NjAtMWEyMWE1YjA1N2VmSjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJDg5NWQ2NTU4LTRhNWQtNGVl
+      YS05YzFkLWU1NzIxMjkwYzcxNUoaCgphZ2VudF9yb2xlEgwKCnRlc3QgYWdlbnRKJAoVZm9ybWF0
+      dGVkX2Rlc2NyaXB0aW9uEgsKCVNheSBoZWxsb0okChlmb3JtYXR0ZWRfZXhwZWN0ZWRfb3V0cHV0
+      EgcKBWhlbGxvSjoKEHRhc2tfZmluZ2VycHJpbnQSJgokYjRlY2MzZDEtOGJlMy00NWYzLTgzMmUt
+      YzBmYjIyZTlhMGExShcKC3Rhc2tfb3V0cHV0EggKBkhlbGxvIXoCGAGFAQABAAAS9QwKEGUJJAer
+      zdAsnsHD7Vhh1zQSCMSBjOpeXXbaKgxDcmV3IENyZWF0ZWQwATngS1FELlZ+GEFYc1xELlZ+GEoZ
+      Cg5jcmV3YWlfdmVyc2lvbhIHCgUxLjYuMUobCg5weXRob25fdmVyc2lvbhIJCgczLjEyLjEwSi4K
+      CGNyZXdfa2V5EiIKIDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQS
+      JgokOThhMzQxNDItODMzNC00NjdlLWE3NzAtZTRjZmE4ZTAzYzE4SjoKEGNyZXdfZmluZ2VycHJp
+      bnQSJgokZjI2Y2ExNTAtNDU2Yy00NTNmLWJmYTYtZGI4N2U4OGY0YzBiShwKDGNyZXdfcHJvY2Vz
+      cxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNr
+      cxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo7ChtjcmV3X2ZpbmdlcnByaW50X2Ny
+      ZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNVQwODo1NDoyMC42ODgxODdKhAQKC2NyZXdfYWdlbnRzEvQD
+      CvEDW3sia2V5IjogIjc0YjM5NjFlZTIzODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgImlkIjogImI4
+      MmMzY2VhLTU1NjgtNDM3Zi1iNWE3LTBhYmRmYWIxMGM1NyIsICJyb2xlIjogInRlc3QgYWdlbnQi
+      LCAiZ29hbCI6ICJzYXkgaGVsbG8iLCAiYmFja3N0b3J5IjogImEgZnJpZW5kbHkgYWdlbnQiLCAi
+      dmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImkxOG4i
+      OiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIs
+      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdLCAiZmluZ2VycHJp
+      bnQiOiAiYjhmZGQxNWUtMTBmZC00ZGFhLWJiOGUtYTUyNzBmM2ZjNjM3IiwgImZpbmdlcnByaW50
+      X2NyZWF0ZWRfYXQiOiAiMjAyNS0xMi0wNVQwODo1NDoyMC42NTI3NDUifV1KtwMKCmNyZXdfdGFz
+      a3MSqAMKpQNbeyJrZXkiOiAiMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEzYTEiLCAiaWQi
+      OiAiMzIxNzY0NjAtMWFlMS00NTM3LThlNzAtOWFiNWNhMmQ3ZWE1IiwgImRlc2NyaXB0aW9uIjog
+      IlNheSBoZWxsbyIsICJleHBlY3RlZF9vdXRwdXQiOiAiaGVsbG8iLCAiYXN5bmNfZXhlY3V0aW9u
+      PyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3QgYWdl
+      bnQiLCAiYWdlbnRfa2V5IjogIjc0YjM5NjFlZTIzODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgImNv
+      bnRleHQiOiBudWxsLCAidG9vbHNfbmFtZXMiOiBbXSwgImZpbmdlcnByaW50IjogIjE3ZDc1YWU3
+      LWUwNDgtNGE1Ni1iYzMyLThjMWRmYjA3ZjE5NSIsICJmaW5nZXJwcmludF9jcmVhdGVkX2F0Ijog
+      IjIwMjUtMTItMDVUMDg6NTQ6MjAuNjg4MTI5In1dSigKCHBsYXRmb3JtEhwKGm1hY09TLTI2LjEt
+      YXJtNjQtYXJtLTY0Yml0ShwKEHBsYXRmb3JtX3JlbGVhc2USCAoGMjUuMS4wShsKD3BsYXRmb3Jt
+      X3N5c3RlbRIICgZEYXJ3aW5KewoQcGxhdGZvcm1fdmVyc2lvbhJnCmVEYXJ3aW4gS2VybmVsIFZl
+      cnNpb24gMjUuMS4wOiBNb24gT2N0IDIwIDE5OjM0OjA1IFBEVCAyMDI1OyByb290OnhudS0xMjM3
+      Ny40MS42fjIvUkVMRUFTRV9BUk02NF9UNjA0MUoKCgRjcHVzEgIYDnoCGAGFAQABAAAS6AQKELQ9
+      AMCO0UFUPDNKxb9t1Y8SCK5bxZLcBQDmKgxUYXNrIENyZWF0ZWQwATmwEHFELlZ+GEFgxHFELlZ+
+      GEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0oxCgdjcmV3
+      X2lkEiYKJDk4YTM0MTQyLTgzMzQtNDY3ZS1hNzcwLWU0Y2ZhOGUwM2MxOEo6ChBjcmV3X2Zpbmdl
+      cnByaW50EiYKJGYyNmNhMTUwLTQ1NmMtNDUzZi1iZmE2LWRiODdlODhmNGMwYkouCgh0YXNrX2tl
+      eRIiCiAxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMUoxCgd0YXNrX2lkEiYKJDMyMTc2
+      NDYwLTFhZTEtNDUzNy04ZTcwLTlhYjVjYTJkN2VhNUo6ChB0YXNrX2ZpbmdlcnByaW50EiYKJDE3
+      ZDc1YWU3LWUwNDgtNGE1Ni1iYzMyLThjMWRmYjA3ZjE5NUo7Cht0YXNrX2ZpbmdlcnByaW50X2Ny
+      ZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNVQwODo1NDoyMC42ODgxMjlKOwoRYWdlbnRfZmluZ2VycHJp
+      bnQSJgokYjhmZGQxNWUtMTBmZC00ZGFhLWJiOGUtYTUyNzBmM2ZjNjM3ShoKCmFnZW50X3JvbGUS
+      DAoKdGVzdCBhZ2VudEokChVmb3JtYXR0ZWRfZGVzY3JpcHRpb24SCwoJU2F5IGhlbGxvSiQKGWZv
+      cm1hdHRlZF9leHBlY3RlZF9vdXRwdXQSBwoFaGVsbG96AhgBhQEAAQAAEsYEChDWUvI5RxQh34C7
+      5aPw98BuEghhJ0UFWJ+/dSoOVGFzayBFeGVjdXRpb24wATlw63FELlZ+GEHYswWKLlZ+GEouCghj
+      cmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0oxCgdjcmV3X2lkEiYK
+      JDk4YTM0MTQyLTgzMzQtNDY3ZS1hNzcwLWU0Y2ZhOGUwM2MxOEo6ChBjcmV3X2ZpbmdlcnByaW50
+      EiYKJGYyNmNhMTUwLTQ1NmMtNDUzZi1iZmE2LWRiODdlODhmNGMwYkouCgh0YXNrX2tleRIiCiAx
+      N2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMUoxCgd0YXNrX2lkEiYKJDMyMTc2NDYwLTFh
+      ZTEtNDUzNy04ZTcwLTlhYjVjYTJkN2VhNUo7ChFhZ2VudF9maW5nZXJwcmludBImCiRiOGZkZDE1
+      ZS0xMGZkLTRkYWEtYmI4ZS1hNTI3MGYzZmM2MzdKGgoKYWdlbnRfcm9sZRIMCgp0ZXN0IGFnZW50
+      SiQKFWZvcm1hdHRlZF9kZXNjcmlwdGlvbhILCglTYXkgaGVsbG9KJAoZZm9ybWF0dGVkX2V4cGVj
+      dGVkX291dHB1dBIHCgVoZWxsb0o6ChB0YXNrX2ZpbmdlcnByaW50EiYKJDE3ZDc1YWU3LWUwNDgt
+      NGE1Ni1iYzMyLThjMWRmYjA3ZjE5NUoXCgt0YXNrX291dHB1dBIICgZIZWxsbyF6AhgBhQEAAQAA
+      EqMNChAjj/pNJiIRbq/GGqWvBIP3EgjWU/hAaYhfAyoMQ3JldyBDcmVhdGVkMAE5UIs1jS5WfhhB
+      8Ns/jS5WfhhKGQoOY3Jld2FpX3ZlcnNpb24SBwoFMS42LjFKGwoOcHl0aG9uX3ZlcnNpb24SCQoH
+      My4xMi4xMEouCghjcmV3X2tleRIiCiBkZmY1NjZhZjk1NjI2MGI5NmI1N2FhYmFlNWM0ZmJhMEox
+      CgdjcmV3X2lkEiYKJGE3MDdlOTg4LTY3ZTItNDEyYS05YjhjLTRlNjFkZWQyZDRiMko6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGFhNDRlOWQ5LTIxMGItNDg1Yi04ZDQ4LTM1ZWQ2ODIzZDIyMUocCgxj
+      cmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1i
+      ZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKOwobY3Jld19maW5n
+      ZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMTItMDVUMDg6NTQ6MjEuOTEyNzQySoQECgtjcmV3
+      X2FnZW50cxL0AwrxA1t7ImtleSI6ICI3NGIzOTYxZWUyMzg4ZGNmNzc5YjFlMGJjZjhiOTZhNSIs
+      ICJpZCI6ICJjYWEzYTQ0Ni1lNzY5LTRkODYtYmE3ZS0zMWRhOGU1NWIwNzkiLCAicm9sZSI6ICJ0
+      ZXN0IGFnZW50IiwgImdvYWwiOiAic2F5IGhlbGxvIiwgImJhY2tzdG9yeSI6ICJhIGZyaWVuZGx5
+      IGFnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51
+      bGwsICJpMThuIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0
+      LTRvLW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVj
+      dXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXSwg
+      ImZpbmdlcnByaW50IjogIjU0OTgyNDdjLTZmM2EtNDg5Yy05OWY2LTNjMzQwZTIwZGIyZiIsICJm
+      aW5nZXJwcmludF9jcmVhdGVkX2F0IjogIjIwMjUtMTItMDVUMDg6NTQ6MjEuOTExNjY1In1dSsED
+      CgpjcmV3X3Rhc2tzErIDCq8DW3sia2V5IjogIjM0NWIyMTZhMGNiN2RjMTA0NDBjYjdiMzlhOWIy
+      YzUzIiwgImlkIjogImVkMTFjNzY4LTA5ZmQtNDQ2Yi1iMTIzLTVlMjMyYWZjMmZiMSIsICJkZXNj
+      cmlwdGlvbiI6ICJTYXkgaGVsbG8gdG8ge25hbWV9IiwgImV4cGVjdGVkX291dHB1dCI6ICJoZWxs
+      byIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFn
+      ZW50X3JvbGUiOiAidGVzdCBhZ2VudCIsICJhZ2VudF9rZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3
+      OWIxZTBiY2Y4Yjk2YTUiLCAiY29udGV4dCI6IG51bGwsICJ0b29sc19uYW1lcyI6IFtdLCAiZmlu
+      Z2VycHJpbnQiOiAiNDdjYWUxZDEtOTkwMC00YzI4LTkyYjQtNjBiYmMwOGU5NGJjIiwgImZpbmdl
+      cnByaW50X2NyZWF0ZWRfYXQiOiAiMjAyNS0xMi0wNVQwODo1NDoyMS45MTI0MTYifV1KKAoIcGxh
+      dGZvcm0SHAoabWFjT1MtMjYuMS1hcm02NC1hcm0tNjRiaXRKHAoQcGxhdGZvcm1fcmVsZWFzZRII
+      CgYyNS4xLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggKBkRhcndpbkp7ChBwbGF0Zm9ybV92ZXJzaW9u
+      EmcKZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyNS4xLjA6IE1vbiBPY3QgMjAgMTk6MzQ6MDUgUERU
+      IDIwMjU7IHJvb3Q6eG51LTEyMzc3LjQxLjZ+Mi9SRUxFQVNFX0FSTTY0X1Q2MDQxSgoKBGNwdXMS
+      AhgOSiIKC2NyZXdfaW5wdXRzEhMKEXsibmFtZSI6ICJBbGljZSJ9egIYAYUBAAEAABLxBAoQIQ34
+      KIUSlnptSgwVsJ/qMhIIVYdIswggjXEqDFRhc2sgQ3JlYXRlZDABOag5XI0uVn4YQZgMXY0uVn4Y
+      Si4KCGNyZXdfa2V5EiIKIGRmZjU2NmFmOTU2MjYwYjk2YjU3YWFiYWU1YzRmYmEwSjEKB2NyZXdf
+      aWQSJgokYTcwN2U5ODgtNjdlMi00MTJhLTliOGMtNGU2MWRlZDJkNGIySjoKEGNyZXdfZmluZ2Vy
+      cHJpbnQSJgokYWE0NGU5ZDktMjEwYi00ODViLThkNDgtMzVlZDY4MjNkMjIxSi4KCHRhc2tfa2V5
+      EiIKIDM0NWIyMTZhMGNiN2RjMTA0NDBjYjdiMzlhOWIyYzUzSjEKB3Rhc2tfaWQSJgokZWQxMWM3
+      NjgtMDlmZC00NDZiLWIxMjMtNWUyMzJhZmMyZmIxSjoKEHRhc2tfZmluZ2VycHJpbnQSJgokNDdj
+      YWUxZDEtOTkwMC00YzI4LTkyYjQtNjBiYmMwOGU5NGJjSjsKG3Rhc2tfZmluZ2VycHJpbnRfY3Jl
+      YXRlZF9hdBIcChoyMDI1LTEyLTA1VDA4OjU0OjIxLjkxMjQxNko7ChFhZ2VudF9maW5nZXJwcmlu
+      dBImCiQ1NDk4MjQ3Yy02ZjNhLTQ4OWMtOTlmNi0zYzM0MGUyMGRiMmZKGgoKYWdlbnRfcm9sZRIM
+      Cgp0ZXN0IGFnZW50Si0KFWZvcm1hdHRlZF9kZXNjcmlwdGlvbhIUChJTYXkgaGVsbG8gdG8gQWxp
+      Y2VKJAoZZm9ybWF0dGVkX2V4cGVjdGVkX291dHB1dBIHCgVoZWxsb3oCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '10196'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 05 Dec 2025 13:54:22 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Alice\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '779'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjQYIVSdpYkNXMPseHF6eGM19h6ig\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764942862,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Alice! It's wonderful to connect with you. I hope you're having a great day!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 185,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"\
+        default\",\n  \"system_fingerprint\": \"fp_11f3029f6b\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 13:54:23 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '754'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '769'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Bob\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '777'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjQYJ42yxEF3IWH0VVAJUtfJ8SrWi\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764942863,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Bob!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_b547601dbd\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 13:54:24 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '612'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '626'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Alice\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '779'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjR8NoiJF9eKvBucY3KycIe1FAgVT\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945099,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Alice!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_aa07c96156\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:31:40 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '570'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '582'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Bob\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '777'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjR8OqT8O1ofUVOOcVahz011KGLJi\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945100,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Bob!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_b547601dbd\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:31:41 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '425'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '445'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Alice\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '779'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjR9bBRnnwVBu0xWKjKMrb5aA6kL8\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945175,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Alice!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_11f3029f6b\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:32:56 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '665'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '692'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Bob\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '777'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjR9cvPHkzMBvT2BBRQ0MaTNNZWtf\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945176,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Bob!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_b547601dbd\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:32:58 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2132'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2198'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Alice\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '779'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjREz3QwxdMWfFHX4wT0SHdLFPzqO\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945509,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Alice! It's great to connect with you! How are you today?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 182,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_11f3029f6b\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:38:30 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1025'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1043'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Bob\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '777'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjRF1TQLOT71ss6JLbsA8CKUytjTI\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945511,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Bob!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_b547601dbd\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:38:31 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '488'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '504'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      Cv1lCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS1GUKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRL1DAoQSX4/zYGnr+9XmBwS3m6uyhII8sqtlIXHsoIqDENyZXcgQ3JlYXRlZDABOdA4
+      Z8qtWH4YQbiIhMqtWH4YShkKDmNyZXdhaV92ZXJzaW9uEgcKBTEuNi4xShsKDnB5dGhvbl92ZXJz
+      aW9uEgkKBzMuMTIuMTBKLgoIY3Jld19rZXkSIgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2
+      OTI1N2NKMQoHY3Jld19pZBImCiRlNDViMzA3Mi01MjM2LTQxNDYtOWM1NC1iYjM0OGE2NDYwYjZK
+      OgoQY3Jld19maW5nZXJwcmludBImCiQxNTlkNTFmOC02YjQ4LTRhZDAtYmRmZC1lNjQzZDk2ODg1
+      YTZKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNy
+      ZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSjsKG2Ny
+      ZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTEyLTA1VDA5OjQwOjA3LjQxNzExMkqE
+      BAoLY3Jld19hZ2VudHMS9AMK8QNbeyJrZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBiY2Y4
+      Yjk2YTUiLCAiaWQiOiAiYmMwYjgwM2EtYTQ5ZS00NmNkLTk0MmUtYzMxZjg4NmE0OWViIiwgInJv
+      bGUiOiAidGVzdCBhZ2VudCIsICJnb2FsIjogInNheSBoZWxsbyIsICJiYWNrc3RvcnkiOiAiYSBm
+      cmllbmRseSBhZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9y
+      cG0iOiBudWxsLCAiaTE4biI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxt
+      IjogImdwdC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2Nv
+      ZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVz
+      IjogW10sICJmaW5nZXJwcmludCI6ICI3MDVkNWIxYy1mZmMxLTQ5NzAtOTIxYi1iYTI0NDNiZjg5
+      NjMiLCAiZmluZ2VycHJpbnRfY3JlYXRlZF9hdCI6ICIyMDI1LTEyLTA1VDA5OjQwOjA3LjMxNTE5
+      OSJ9XUq3AwoKY3Jld190YXNrcxKoAwqlA1t7ImtleSI6ICIxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1
+      M2UwNTJiYTNhMSIsICJpZCI6ICIyMjgwMDRiZi1hNDkxLTQ1NzgtOTdjNC0zMDM3MjM0OGVjNWIi
+      LCAiZGVzY3JpcHRpb24iOiAiU2F5IGhlbGxvIiwgImV4cGVjdGVkX291dHB1dCI6ICJoZWxsbyIs
+      ICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50
+      X3JvbGUiOiAidGVzdCBhZ2VudCIsICJhZ2VudF9rZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIx
+      ZTBiY2Y4Yjk2YTUiLCAiY29udGV4dCI6IG51bGwsICJ0b29sc19uYW1lcyI6IFtdLCAiZmluZ2Vy
+      cHJpbnQiOiAiZDBiY2E1YmItOTZiNi00YjVjLWI0OTEtYzA3ZDQ5YmVhY2QxIiwgImZpbmdlcnBy
+      aW50X2NyZWF0ZWRfYXQiOiAiMjAyNS0xMi0wNVQwOTo0MDowNy40MTY5NzMifV1KKAoIcGxhdGZv
+      cm0SHAoabWFjT1MtMjYuMS1hcm02NC1hcm0tNjRiaXRKHAoQcGxhdGZvcm1fcmVsZWFzZRIICgYy
+      NS4xLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggKBkRhcndpbkp7ChBwbGF0Zm9ybV92ZXJzaW9uEmcK
+      ZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyNS4xLjA6IE1vbiBPY3QgMjAgMTk6MzQ6MDUgUERUIDIw
+      MjU7IHJvb3Q6eG51LTEyMzc3LjQxLjZ+Mi9SRUxFQVNFX0FSTTY0X1Q2MDQxSgoKBGNwdXMSAhgO
+      egIYAYUBAAEAABLoBAoQHf/gQc4ezPkx1nhlnNfyPBIIix4iIlff8UgqDFRhc2sgQ3JlYXRlZDAB
+      OSjA0sqtWH4YQbgf1MqtWH4YSi4KCGNyZXdfa2V5EiIKIDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMx
+      Yzg4NjkyNTdjSjEKB2NyZXdfaWQSJgokZTQ1YjMwNzItNTIzNi00MTQ2LTljNTQtYmIzNDhhNjQ2
+      MGI2SjoKEGNyZXdfZmluZ2VycHJpbnQSJgokMTU5ZDUxZjgtNmI0OC00YWQwLWJkZmQtZTY0M2Q5
+      Njg4NWE2Si4KCHRhc2tfa2V5EiIKIDE3Y2M5YWIyYjJkMGJiMGNkZDM2ZDUzZTA1MmJhM2ExSjEK
+      B3Rhc2tfaWQSJgokMjI4MDA0YmYtYTQ5MS00NTc4LTk3YzQtMzAzNzIzNDhlYzViSjoKEHRhc2tf
+      ZmluZ2VycHJpbnQSJgokZDBiY2E1YmItOTZiNi00YjVjLWI0OTEtYzA3ZDQ5YmVhY2QxSjsKG3Rh
+      c2tfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTEyLTA1VDA5OjQwOjA3LjQxNjk3M0o7
+      ChFhZ2VudF9maW5nZXJwcmludBImCiQ3MDVkNWIxYy1mZmMxLTQ5NzAtOTIxYi1iYTI0NDNiZjg5
+      NjNKGgoKYWdlbnRfcm9sZRIMCgp0ZXN0IGFnZW50SiQKFWZvcm1hdHRlZF9kZXNjcmlwdGlvbhIL
+      CglTYXkgaGVsbG9KJAoZZm9ybWF0dGVkX2V4cGVjdGVkX291dHB1dBIHCgVoZWxsb3oCGAGFAQAB
+      AAASxgQKEKh7bVrevSBV8qJ97ZkCWz0SCDkmnNpDKhlWKg5UYXNrIEV4ZWN1dGlvbjABOdCY1Mqt
+      WH4YQfB5Yw2uWH4YSi4KCGNyZXdfa2V5EiIKIDQ4MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4Njky
+      NTdjSjEKB2NyZXdfaWQSJgokZTQ1YjMwNzItNTIzNi00MTQ2LTljNTQtYmIzNDhhNjQ2MGI2SjoK
+      EGNyZXdfZmluZ2VycHJpbnQSJgokMTU5ZDUxZjgtNmI0OC00YWQwLWJkZmQtZTY0M2Q5Njg4NWE2
+      Si4KCHRhc2tfa2V5EiIKIDE3Y2M5YWIyYjJkMGJiMGNkZDM2ZDUzZTA1MmJhM2ExSjEKB3Rhc2tf
+      aWQSJgokMjI4MDA0YmYtYTQ5MS00NTc4LTk3YzQtMzAzNzIzNDhlYzViSjsKEWFnZW50X2Zpbmdl
+      cnByaW50EiYKJDcwNWQ1YjFjLWZmYzEtNDk3MC05MjFiLWJhMjQ0M2JmODk2M0oaCgphZ2VudF9y
+      b2xlEgwKCnRlc3QgYWdlbnRKJAoVZm9ybWF0dGVkX2Rlc2NyaXB0aW9uEgsKCVNheSBoZWxsb0ok
+      Chlmb3JtYXR0ZWRfZXhwZWN0ZWRfb3V0cHV0EgcKBWhlbGxvSjoKEHRhc2tfZmluZ2VycHJpbnQS
+      JgokZDBiY2E1YmItOTZiNi00YjVjLWI0OTEtYzA3ZDQ5YmVhY2QxShcKC3Rhc2tfb3V0cHV0EggK
+      BkhlbGxvIXoCGAGFAQABAAAS9QwKEJchg/lanpaL5qLW2eQeaWESCNjA0gyV9/6uKgxDcmV3IENy
+      ZWF0ZWQwATm4L9QPrlh+GEGg8d4Prlh+GEoZCg5jcmV3YWlfdmVyc2lvbhIHCgUxLjYuMUobCg5w
+      eXRob25fdmVyc2lvbhIJCgczLjEyLjEwSi4KCGNyZXdfa2V5EiIKIDQ4MGJmMTBiZWQyNWQ5MTJi
+      ZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQSJgokZjM0OTU4NWYtZmQxOS00MWM3LWJkM2QtZjMz
+      NTMyMTQyZDM1SjoKEGNyZXdfZmluZ2VycHJpbnQSJgokM2MxNGQ1ODEtZWViOS00NDQ3LTlhMDAt
+      NDRlNGYwZThiZDhhShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5
+      EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRz
+      EgIYAUo7ChtjcmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNVQwOTo0MDow
+      OC41ODY0MzFKhAQKC2NyZXdfYWdlbnRzEvQDCvEDW3sia2V5IjogIjc0YjM5NjFlZTIzODhkY2Y3
+      NzliMWUwYmNmOGI5NmE1IiwgImlkIjogImYyNjJjMWMzLTRlMWUtNGM4My1iNzNkLTI1ODFhMzVk
+      NTZmZCIsICJyb2xlIjogInRlc3QgYWdlbnQiLCAiZ29hbCI6ICJzYXkgaGVsbG8iLCAiYmFja3N0
+      b3J5IjogImEgZnJpZW5kbHkgYWdlbnQiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjog
+      MjUsICJtYXhfcnBtIjogbnVsbCwgImkxOG4iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0i
+      OiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2Us
+      ICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0
+      b29sc19uYW1lcyI6IFtdLCAiZmluZ2VycHJpbnQiOiAiZTI5YmEzN2QtZmQyYS00ZmUzLTgxZDEt
+      MGNhNmJiNTQxMGI2IiwgImZpbmdlcnByaW50X2NyZWF0ZWRfYXQiOiAiMjAyNS0xMi0wNVQwOTo0
+      MDowOC41NjAwNjIifV1KtwMKCmNyZXdfdGFza3MSqAMKpQNbeyJrZXkiOiAiMTdjYzlhYjJiMmQw
+      YmIwY2RkMzZkNTNlMDUyYmEzYTEiLCAiaWQiOiAiY2RhY2ViNjAtNDAyNS00NjkwLWJkM2ItMjUy
+      ZmQ4NTA1N2EwIiwgImRlc2NyaXB0aW9uIjogIlNheSBoZWxsbyIsICJleHBlY3RlZF9vdXRwdXQi
+      OiAiaGVsbG8iLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFs
+      c2UsICJhZ2VudF9yb2xlIjogInRlc3QgYWdlbnQiLCAiYWdlbnRfa2V5IjogIjc0YjM5NjFlZTIz
+      ODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgImNvbnRleHQiOiBudWxsLCAidG9vbHNfbmFtZXMiOiBb
+      XSwgImZpbmdlcnByaW50IjogIjIxMjdmY2VkLTA4YmMtNDFlMy1hNTNiLTY2OTY4NzZkODA1NCIs
+      ICJmaW5nZXJwcmludF9jcmVhdGVkX2F0IjogIjIwMjUtMTItMDVUMDk6NDA6MDguNTg2MzA0In1d
+      SigKCHBsYXRmb3JtEhwKGm1hY09TLTI2LjEtYXJtNjQtYXJtLTY0Yml0ShwKEHBsYXRmb3JtX3Jl
+      bGVhc2USCAoGMjUuMS4wShsKD3BsYXRmb3JtX3N5c3RlbRIICgZEYXJ3aW5KewoQcGxhdGZvcm1f
+      dmVyc2lvbhJnCmVEYXJ3aW4gS2VybmVsIFZlcnNpb24gMjUuMS4wOiBNb24gT2N0IDIwIDE5OjM0
+      OjA1IFBEVCAyMDI1OyByb290OnhudS0xMjM3Ny40MS42fjIvUkVMRUFTRV9BUk02NF9UNjA0MUoK
+      CgRjcHVzEgIYDnoCGAGFAQABAAAS6AQKECI9GVMYY4ASt8UzrZqxfM4SCN3W3wxb7XljKgxUYXNr
+      IENyZWF0ZWQwATnwv/IPrlh+GEEoh/MPrlh+GEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVk
+      OTEyYmU2MThjMWM4ODY5MjU3Y0oxCgdjcmV3X2lkEiYKJGYzNDk1ODVmLWZkMTktNDFjNy1iZDNk
+      LWYzMzUzMjE0MmQzNUo6ChBjcmV3X2ZpbmdlcnByaW50EiYKJDNjMTRkNTgxLWVlYjktNDQ0Ny05
+      YTAwLTQ0ZTRmMGU4YmQ4YUouCgh0YXNrX2tleRIiCiAxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2Uw
+      NTJiYTNhMUoxCgd0YXNrX2lkEiYKJGNkYWNlYjYwLTQwMjUtNDY5MC1iZDNiLTI1MmZkODUwNTdh
+      MEo6ChB0YXNrX2ZpbmdlcnByaW50EiYKJDIxMjdmY2VkLTA4YmMtNDFlMy1hNTNiLTY2OTY4NzZk
+      ODA1NEo7Cht0YXNrX2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNVQwOTo0MDow
+      OC41ODYzMDRKOwoRYWdlbnRfZmluZ2VycHJpbnQSJgokZTI5YmEzN2QtZmQyYS00ZmUzLTgxZDEt
+      MGNhNmJiNTQxMGI2ShoKCmFnZW50X3JvbGUSDAoKdGVzdCBhZ2VudEokChVmb3JtYXR0ZWRfZGVz
+      Y3JpcHRpb24SCwoJU2F5IGhlbGxvSiQKGWZvcm1hdHRlZF9leHBlY3RlZF9vdXRwdXQSBwoFaGVs
+      bG96AhgBhQEAAQAAEsYEChDHouEHvGOXYlD1DS6yBNVWEgiKaxYWz3f2QioOVGFzayBFeGVjdXRp
+      b24wATnYvfMPrlh+GEHoJzc+rlh+GEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2
+      MThjMWM4ODY5MjU3Y0oxCgdjcmV3X2lkEiYKJGYzNDk1ODVmLWZkMTktNDFjNy1iZDNkLWYzMzUz
+      MjE0MmQzNUo6ChBjcmV3X2ZpbmdlcnByaW50EiYKJDNjMTRkNTgxLWVlYjktNDQ0Ny05YTAwLTQ0
+      ZTRmMGU4YmQ4YUouCgh0YXNrX2tleRIiCiAxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNh
+      MUoxCgd0YXNrX2lkEiYKJGNkYWNlYjYwLTQwMjUtNDY5MC1iZDNiLTI1MmZkODUwNTdhMEo7ChFh
+      Z2VudF9maW5nZXJwcmludBImCiRlMjliYTM3ZC1mZDJhLTRmZTMtODFkMS0wY2E2YmI1NDEwYjZK
+      GgoKYWdlbnRfcm9sZRIMCgp0ZXN0IGFnZW50SiQKFWZvcm1hdHRlZF9kZXNjcmlwdGlvbhILCglT
+      YXkgaGVsbG9KJAoZZm9ybWF0dGVkX2V4cGVjdGVkX291dHB1dBIHCgVoZWxsb0o6ChB0YXNrX2Zp
+      bmdlcnByaW50EiYKJDIxMjdmY2VkLTA4YmMtNDFlMy1hNTNiLTY2OTY4NzZkODA1NEoXCgt0YXNr
+      X291dHB1dBIICgZIZWxsbyF6AhgBhQEAAQAAEpwIChD7tVX8mLqjeIKproaynNDFEgjHYu72dKtb
+      DSoMQ3JldyBDcmVhdGVkMAE5AD0MQa5YfhhBwOEVQa5YfhhKGQoOY3Jld2FpX3ZlcnNpb24SBwoF
+      MS42LjFKGwoOcHl0aG9uX3ZlcnNpb24SCQoHMy4xMi4xMEouCghjcmV3X2tleRIiCiA0ODBiZjEw
+      YmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0oxCgdjcmV3X2lkEiYKJDI3YTEyNDcxLTk1YzUtNDFj
+      ZS05NTAxLTM3NDM1MzBhZDM5Yko6ChBjcmV3X2ZpbmdlcnByaW50EiYKJDRhMjk3M2ZlLTU5ODct
+      NGQ4Zi1iZGE2LWU5NGY0MWIwZmZmMEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtj
+      cmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVy
+      X29mX2FnZW50cxICGAFKOwobY3Jld19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMTIt
+      MDVUMDk6NDA6MDkuNDEyNjM2StECCgtjcmV3X2FnZW50cxLBAgq+Alt7ImtleSI6ICI3NGIzOTYx
+      ZWUyMzg4ZGNmNzc5YjFlMGJjZjhiOTZhNSIsICJpZCI6ICJmMWFkYWI0My1kZjA0LTRmY2QtYjQ5
+      NS0wMjIyM2RjN2ExZTYiLCAicm9sZSI6ICJ0ZXN0IGFnZW50IiwgInZlcmJvc2U/IjogZmFsc2Us
+      ICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6
+      ICIiLCAibGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwg
+      ImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRv
+      b2xzX25hbWVzIjogW119XUr/AQoKY3Jld190YXNrcxLwAQrtAVt7ImtleSI6ICIxN2NjOWFiMmIy
+      ZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMSIsICJpZCI6ICJkMTkxMzgyZC1hODQ1LTQ5ZWMtYjFlNC03
+      YTA3ODY3ZmY4YjQiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/Ijog
+      ZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3QgYWdlbnQiLCAiYWdlbnRfa2V5IjogIjc0YjM5NjFl
+      ZTIzODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAAS
+      nAQKEJv58QWX6yj+jV7cVcYgrBISCK2meGxITt2bKgxUYXNrIENyZWF0ZWQwATmQiSVBrlh+GEGY
+      WCZBrlh+GEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0ox
+      CgdjcmV3X2lkEiYKJDI3YTEyNDcxLTk1YzUtNDFjZS05NTAxLTM3NDM1MzBhZDM5Yko6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJDRhMjk3M2ZlLTU5ODctNGQ4Zi1iZGE2LWU5NGY0MWIwZmZmMEouCgh0
+      YXNrX2tleRIiCiAxN2NjOWFiMmIyZDBiYjBjZGQzNmQ1M2UwNTJiYTNhMUoxCgd0YXNrX2lkEiYK
+      JGQxOTEzODJkLWE4NDUtNDllYy1iMWU0LTdhMDc4NjdmZjhiNEo6ChB0YXNrX2ZpbmdlcnByaW50
+      EiYKJGRlNzBjY2FhLTgzOGEtNGFlMi04ZTZjLTc0MzYwYjkwNjBmNUo7Cht0YXNrX2ZpbmdlcnBy
+      aW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNVQwOTo0MDowOS40MTI1ODlKOwoRYWdlbnRfZmlu
+      Z2VycHJpbnQSJgokZWQ0OTQyM2QtN2NiNi00ZTU1LTk0ZmYtMzkzMGZkMzczOGFhShoKCmFnZW50
+      X3JvbGUSDAoKdGVzdCBhZ2VudHoCGAGFAQABAAAS4QMKEKlKjZc4V4l612+U8FlkypoSCNDfLv/s
+      6KR2Kg5UYXNrIEV4ZWN1dGlvbjABOWCLJkGuWH4YQRj1+p+uWH4YSi4KCGNyZXdfa2V5EiIKIDQ4
+      MGJmMTBiZWQyNWQ5MTJiZTYxOGMxYzg4NjkyNTdjSjEKB2NyZXdfaWQSJgokMjdhMTI0NzEtOTVj
+      NS00MWNlLTk1MDEtMzc0MzUzMGFkMzliSjoKEGNyZXdfZmluZ2VycHJpbnQSJgokNGEyOTczZmUt
+      NTk4Ny00ZDhmLWJkYTYtZTk0ZjQxYjBmZmYwSi4KCHRhc2tfa2V5EiIKIDE3Y2M5YWIyYjJkMGJi
+      MGNkZDM2ZDUzZTA1MmJhM2ExSjEKB3Rhc2tfaWQSJgokZDE5MTM4MmQtYTg0NS00OWVjLWIxZTQt
+      N2EwNzg2N2ZmOGI0SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJGVkNDk0MjNkLTdjYjYtNGU1NS05
+      NGZmLTM5MzBmZDM3MzhhYUoaCgphZ2VudF9yb2xlEgwKCnRlc3QgYWdlbnRKOgoQdGFza19maW5n
+      ZXJwcmludBImCiRkZTcwY2NhYS04MzhhLTRhZTItOGU2Yy03NDM2MGI5MDYwZjV6AhgBhQEAAQAA
+      EvUMChAJr2IG3h3k+h5LFqJp2iotEgiuZ1ZujPVu+SoMQ3JldyBDcmVhdGVkMAE5eFDsoq5YfhhB
+      gN33oq5YfhhKGQoOY3Jld2FpX3ZlcnNpb24SBwoFMS42LjFKGwoOcHl0aG9uX3ZlcnNpb24SCQoH
+      My4xMi4xMEouCghjcmV3X2tleRIiCiA0ODBiZjEwYmVkMjVkOTEyYmU2MThjMWM4ODY5MjU3Y0ox
+      CgdjcmV3X2lkEiYKJDgwMDRkOWRmLWQ1ZjUtNDZjOC1iZjgwLWJkNGQ1MGNlZGFkOEo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJDI2YjE1YWZjLWMzZDItNDc4OC1iOTY0LTIyODAzYWMyOThjNUocCgxj
+      cmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1i
+      ZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKOwobY3Jld19maW5n
+      ZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMTItMDVUMDk6NDA6MTEuMDUzNjA0SoQECgtjcmV3
+      X2FnZW50cxL0AwrxA1t7ImtleSI6ICI3NGIzOTYxZWUyMzg4ZGNmNzc5YjFlMGJjZjhiOTZhNSIs
+      ICJpZCI6ICJiNGZkZjA3NC00MTMzLTQzMmYtYTQ4ZS0wYzE4ZDcwMjRjMzIiLCAicm9sZSI6ICJ0
+      ZXN0IGFnZW50IiwgImdvYWwiOiAic2F5IGhlbGxvIiwgImJhY2tzdG9yeSI6ICJhIGZyaWVuZGx5
+      IGFnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51
+      bGwsICJpMThuIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0
+      LTRvLW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVj
+      dXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXSwg
+      ImZpbmdlcnByaW50IjogIjU1Y2RkZTM3LTg4Y2QtNGI4OS1hMzg5LWViNGU3MTM5NjM3ZCIsICJm
+      aW5nZXJwcmludF9jcmVhdGVkX2F0IjogIjIwMjUtMTItMDVUMDk6NDA6MTEuMDIxODg4In1dSrcD
+      CgpjcmV3X3Rhc2tzEqgDCqUDW3sia2V5IjogIjE3Y2M5YWIyYjJkMGJiMGNkZDM2ZDUzZTA1MmJh
+      M2ExIiwgImlkIjogImEyYzFkZTNhLWRjYmYtNDc3YS1iZjAxLTRlOTFjZWY0NmYzYyIsICJkZXNj
+      cmlwdGlvbiI6ICJTYXkgaGVsbG8iLCAiZXhwZWN0ZWRfb3V0cHV0IjogImhlbGxvIiwgImFzeW5j
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6
+      ICJ0ZXN0IGFnZW50IiwgImFnZW50X2tleSI6ICI3NGIzOTYxZWUyMzg4ZGNmNzc5YjFlMGJjZjhi
+      OTZhNSIsICJjb250ZXh0IjogbnVsbCwgInRvb2xzX25hbWVzIjogW10sICJmaW5nZXJwcmludCI6
+      ICJhNmVkMjQ4Yi0zYjA5LTQwY2ItYWFlOS1kN2EyNzc1ZTU2NDQiLCAiZmluZ2VycHJpbnRfY3Jl
+      YXRlZF9hdCI6ICIyMDI1LTEyLTA1VDA5OjQwOjExLjA1MzU1NiJ9XUooCghwbGF0Zm9ybRIcChpt
+      YWNPUy0yNi4xLWFybTY0LWFybS02NGJpdEocChBwbGF0Zm9ybV9yZWxlYXNlEggKBjI1LjEuMEob
+      Cg9wbGF0Zm9ybV9zeXN0ZW0SCAoGRGFyd2luSnsKEHBsYXRmb3JtX3ZlcnNpb24SZwplRGFyd2lu
+      IEtlcm5lbCBWZXJzaW9uIDI1LjEuMDogTW9uIE9jdCAyMCAxOTozNDowNSBQRFQgMjAyNTsgcm9v
+      dDp4bnUtMTIzNzcuNDEuNn4yL1JFTEVBU0VfQVJNNjRfVDYwNDFKCgoEY3B1cxICGA56AhgBhQEA
+      AQAAEugEChBUKt95M/tZu8GH6vM+gqKtEggZ2ZVoHb7W8yoMVGFzayBDcmVhdGVkMAE52HoMo65Y
+      fhhBABsNo65YfhhKLgoIY3Jld19rZXkSIgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1
+      N2NKMQoHY3Jld19pZBImCiQ4MDA0ZDlkZi1kNWY1LTQ2YzgtYmY4MC1iZDRkNTBjZWRhZDhKOgoQ
+      Y3Jld19maW5nZXJwcmludBImCiQyNmIxNWFmYy1jM2QyLTQ3ODgtYjk2NC0yMjgwM2FjMjk4YzVK
+      LgoIdGFza19rZXkSIgogMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEzYTFKMQoHdGFza19p
+      ZBImCiRhMmMxZGUzYS1kY2JmLTQ3N2EtYmYwMS00ZTkxY2VmNDZmM2NKOgoQdGFza19maW5nZXJw
+      cmludBImCiRhNmVkMjQ4Yi0zYjA5LTQwY2ItYWFlOS1kN2EyNzc1ZTU2NDRKOwobdGFza19maW5n
+      ZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMTItMDVUMDk6NDA6MTEuMDUzNTU2SjsKEWFnZW50
+      X2ZpbmdlcnByaW50EiYKJDU1Y2RkZTM3LTg4Y2QtNGI4OS1hMzg5LWViNGU3MTM5NjM3ZEoaCgph
+      Z2VudF9yb2xlEgwKCnRlc3QgYWdlbnRKJAoVZm9ybWF0dGVkX2Rlc2NyaXB0aW9uEgsKCVNheSBo
+      ZWxsb0okChlmb3JtYXR0ZWRfZXhwZWN0ZWRfb3V0cHV0EgcKBWhlbGxvegIYAYUBAAEAABLGBAoQ
+      j0BaUS3Y68LKn4ZArzrTLhIITddY+BREddMqDlRhc2sgRXhlY3V0aW9uMAE5EEINo65YfhhBiLN6
+      3a5YfhhKLgoIY3Jld19rZXkSIgogNDgwYmYxMGJlZDI1ZDkxMmJlNjE4YzFjODg2OTI1N2NKMQoH
+      Y3Jld19pZBImCiQ4MDA0ZDlkZi1kNWY1LTQ2YzgtYmY4MC1iZDRkNTBjZWRhZDhKOgoQY3Jld19m
+      aW5nZXJwcmludBImCiQyNmIxNWFmYy1jM2QyLTQ3ODgtYjk2NC0yMjgwM2FjMjk4YzVKLgoIdGFz
+      a19rZXkSIgogMTdjYzlhYjJiMmQwYmIwY2RkMzZkNTNlMDUyYmEzYTFKMQoHdGFza19pZBImCiRh
+      MmMxZGUzYS1kY2JmLTQ3N2EtYmYwMS00ZTkxY2VmNDZmM2NKOwoRYWdlbnRfZmluZ2VycHJpbnQS
+      JgokNTVjZGRlMzctODhjZC00Yjg5LWEzODktZWI0ZTcxMzk2MzdkShoKCmFnZW50X3JvbGUSDAoK
+      dGVzdCBhZ2VudEokChVmb3JtYXR0ZWRfZGVzY3JpcHRpb24SCwoJU2F5IGhlbGxvSiQKGWZvcm1h
+      dHRlZF9leHBlY3RlZF9vdXRwdXQSBwoFaGVsbG9KOgoQdGFza19maW5nZXJwcmludBImCiRhNmVk
+      MjQ4Yi0zYjA5LTQwY2ItYWFlOS1kN2EyNzc1ZTU2NDRKFwoLdGFza19vdXRwdXQSCAoGSGVsbG8h
+      egIYAYUBAAEAABKjDQoQDPIObZv2XFO5Tq56L7Km4BIIFnnaekpIsJYqDENyZXcgQ3JlYXRlZDAB
+      ORALNOCuWH4YQegoPuCuWH4YShkKDmNyZXdhaV92ZXJzaW9uEgcKBTEuNi4xShsKDnB5dGhvbl92
+      ZXJzaW9uEgkKBzMuMTIuMTBKLgoIY3Jld19rZXkSIgogZGZmNTY2YWY5NTYyNjBiOTZiNTdhYWJh
+      ZTVjNGZiYTBKMQoHY3Jld19pZBImCiRmYjMyZDE5Yi0zYzAwLTRiYzUtOGZhNC1kYmUwMDFmY2Uw
+      ZThKOgoQY3Jld19maW5nZXJwcmludBImCiRkOWNiYWYxNy1kNGNhLTRhMTMtYjZjOC00MzE4ZmQ2
+      ZGVjYTlKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoK
+      FGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSjsK
+      G2NyZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTEyLTA1VDA5OjQwOjEyLjA4NDE1
+      M0qEBAoLY3Jld19hZ2VudHMS9AMK8QNbeyJrZXkiOiAiNzRiMzk2MWVlMjM4OGRjZjc3OWIxZTBi
+      Y2Y4Yjk2YTUiLCAiaWQiOiAiZGU5Yzc3MzctMzM5Zi00MTg2LTgwNGItZGQzMWE2MTM0NGZlIiwg
+      InJvbGUiOiAidGVzdCBhZ2VudCIsICJnb2FsIjogInNheSBoZWxsbyIsICJiYWNrc3RvcnkiOiAi
+      YSBmcmllbmRseSBhZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1h
+      eF9ycG0iOiBudWxsLCAiaTE4biI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAi
+      bGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93
+      X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25h
+      bWVzIjogW10sICJmaW5nZXJwcmludCI6ICIyNTU4ZTQ1Ny0wZDQ0LTQ4M2ItYjhhMy1hNDhiYWVh
+      NTlkYWQiLCAiZmluZ2VycHJpbnRfY3JlYXRlZF9hdCI6ICIyMDI1LTEyLTA1VDA5OjQwOjEyLjA4
+      MzcwNCJ9XUrBAwoKY3Jld190YXNrcxKyAwqvA1t7ImtleSI6ICIzNDViMjE2YTBjYjdkYzEwNDQw
+      Y2I3YjM5YTliMmM1MyIsICJpZCI6ICJjZGZhNzBjMi03MDNjLTRkNjQtOGMyYi02ODY1MWE1YmE5
+      YWIiLCAiZGVzY3JpcHRpb24iOiAiU2F5IGhlbGxvIHRvIHtuYW1lfSIsICJleHBlY3RlZF9vdXRw
+      dXQiOiAiaGVsbG8iLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/Ijog
+      ZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3QgYWdlbnQiLCAiYWdlbnRfa2V5IjogIjc0YjM5NjFl
+      ZTIzODhkY2Y3NzliMWUwYmNmOGI5NmE1IiwgImNvbnRleHQiOiBudWxsLCAidG9vbHNfbmFtZXMi
+      OiBbXSwgImZpbmdlcnByaW50IjogImFmNWFhNGNlLTVjYjMtNDBlMS1hYzRkLWRlZGQzOWUwOGE3
+      NSIsICJmaW5nZXJwcmludF9jcmVhdGVkX2F0IjogIjIwMjUtMTItMDVUMDk6NDA6MTIuMDg0MDgw
+      In1dSigKCHBsYXRmb3JtEhwKGm1hY09TLTI2LjEtYXJtNjQtYXJtLTY0Yml0ShwKEHBsYXRmb3Jt
+      X3JlbGVhc2USCAoGMjUuMS4wShsKD3BsYXRmb3JtX3N5c3RlbRIICgZEYXJ3aW5KewoQcGxhdGZv
+      cm1fdmVyc2lvbhJnCmVEYXJ3aW4gS2VybmVsIFZlcnNpb24gMjUuMS4wOiBNb24gT2N0IDIwIDE5
+      OjM0OjA1IFBEVCAyMDI1OyByb290OnhudS0xMjM3Ny40MS42fjIvUkVMRUFTRV9BUk02NF9UNjA0
+      MUoKCgRjcHVzEgIYDkoiCgtjcmV3X2lucHV0cxITChF7Im5hbWUiOiAiQWxpY2UifXoCGAGFAQAB
+      AAAS8QQKEDNZyqLMwwkUEb8FZGm8H5ASCHigt+NUAQbbKgxUYXNrIENyZWF0ZWQwATlAulTgrlh+
+      GEHwbVXgrlh+GEouCghjcmV3X2tleRIiCiBkZmY1NjZhZjk1NjI2MGI5NmI1N2FhYmFlNWM0ZmJh
+      MEoxCgdjcmV3X2lkEiYKJGZiMzJkMTliLTNjMDAtNGJjNS04ZmE0LWRiZTAwMWZjZTBlOEo6ChBj
+      cmV3X2ZpbmdlcnByaW50EiYKJGQ5Y2JhZjE3LWQ0Y2EtNGExMy1iNmM4LTQzMThmZDZkZWNhOUou
+      Cgh0YXNrX2tleRIiCiAzNDViMjE2YTBjYjdkYzEwNDQwY2I3YjM5YTliMmM1M0oxCgd0YXNrX2lk
+      EiYKJGNkZmE3MGMyLTcwM2MtNGQ2NC04YzJiLTY4NjUxYTViYTlhYko6ChB0YXNrX2ZpbmdlcnBy
+      aW50EiYKJGFmNWFhNGNlLTVjYjMtNDBlMS1hYzRkLWRlZGQzOWUwOGE3NUo7Cht0YXNrX2Zpbmdl
+      cnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0xMi0wNVQwOTo0MDoxMi4wODQwODBKOwoRYWdlbnRf
+      ZmluZ2VycHJpbnQSJgokMjU1OGU0NTctMGQ0NC00ODNiLWI4YTMtYTQ4YmFlYTU5ZGFkShoKCmFn
+      ZW50X3JvbGUSDAoKdGVzdCBhZ2VudEotChVmb3JtYXR0ZWRfZGVzY3JpcHRpb24SFAoSU2F5IGhl
+      bGxvIHRvIEFsaWNlSiQKGWZvcm1hdHRlZF9leHBlY3RlZF9vdXRwdXQSBwoFaGVsbG96AhgBhQEA
+      AQAA
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '13056'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 05 Dec 2025 14:40:13 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Alice\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '779'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjRGeLccnChmYqtaKX5gKYF5h2UBi\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945612,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Alice! It's wonderful to connect with you. I hope you're having a fantastic day!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 185,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_11f3029f6b\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:40:13 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '800'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '817'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Bob\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '777'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjRGftfyHHleeqxw6BrhF9NCRUCT0\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945613,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Bob!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_b547601dbd\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:40:13 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '451'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '469'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Alice\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '779'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjRNR2VvehkHEFK8dIuPkjs7b4v8Q\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764946033,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Alice! \U0001F60A It's wonderful to connect with you! How are you today?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 183,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\"\
+        ,\n  \"system_fingerprint\": \"fp_11f3029f6b\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:47:14 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '795'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '808'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to Bob\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '777'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjRNS2u7Qf48bgWaVczWNXjkfTyX1\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764946034,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, Bob! It's great to see you! How are you doing today?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 182,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_b547601dbd\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 14:47:15 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '600'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '772'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

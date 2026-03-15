@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -59,6 +60,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - Nenhum parâmetro necessário – recupera todos os membros do canal
+
   </Accordion>
 
   <Accordion title="slack/get_user_by_email">
@@ -66,6 +68,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `email` (string, obrigatório): O endereço de e-mail de um usuário do workspace
+
   </Accordion>
 
   <Accordion title="slack/get_users_by_name">
@@ -76,6 +79,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `displayName` (string, obrigatório): Nome de exibição do usuário para a pesquisa
     - `paginationParameters` (object, opcional): Configurações de paginação
       - `pageCursor` (string, opcional): Cursor de página para paginação
+
   </Accordion>
 </AccordionGroup>
 
@@ -87,6 +91,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - Nenhum parâmetro necessário – recupera todos os canais acessíveis
+
   </Accordion>
 </AccordionGroup>
 
@@ -103,6 +108,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `botIcon` (string, obrigatório): Ícone do bot – Pode ser uma URL de imagem ou um emoji (ex.: ":dog:")
     - `blocks` (object, opcional): JSON do Slack Block Kit para mensagens ricas com anexos e elementos interativos
     - `authenticatedUser` (boolean, opcional): Se verdadeiro, a mensagem aparecerá como enviada pelo seu usuário autenticado do Slack ao invés do aplicativo (por padrão é falso)
+
   </Accordion>
 
   <Accordion title="slack/send_direct_message">
@@ -115,6 +121,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `botIcon` (string, obrigatório): Ícone do bot – Pode ser uma URL de imagem ou um emoji (ex.: ":dog:")
     - `blocks` (object, opcional): JSON do Slack Block Kit para formatação rica com anexos e elementos interativos
     - `authenticatedUser` (boolean, opcional): Se verdadeiro, a mensagem aparecerá como enviada pelo seu usuário autenticado do Slack (padrão é falso)
+
   </Accordion>
 </AccordionGroup>
 
@@ -132,6 +139,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `from:@john in:#general` – Busca mensagens do John no canal #general
     - `has:link after:2023-01-01` – Busca mensagens com links após 1º de janeiro de 2023
     - `in:@channel before:yesterday` – Busca mensagens em um canal específico antes de ontem
+
   </Accordion>
 </AccordionGroup>
 
@@ -140,6 +148,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 O Block Kit do Slack permite criar mensagens ricas e interativas. Veja alguns exemplos de como usar o parâmetro `blocks`:
 
 ### Texto Simples com Anexo
+
 ```json
 [
   {
@@ -154,6 +163,7 @@ O Block Kit do Slack permite criar mensagens ricas e interativas. Veja alguns ex
 ```
 
 ### Formatação Rica com Seções
+
 ```json
 [
   {
@@ -299,5 +309,6 @@ crew.kickoff()
 ## Fale com o Suporte
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para obter ajuda na configuração ou solução de problemas da integração com o Slack.
+  Entre em contato com nossa equipe de suporte para obter ajuda na configuração
+  ou solução de problemas da integração com o Slack.
 </Card>

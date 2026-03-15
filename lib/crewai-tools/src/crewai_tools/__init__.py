@@ -10,7 +10,18 @@ from crewai_tools.aws.s3.writer_tool import S3WriterTool
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
+from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
+    BraveLLMContextTool,
+)
+from crewai_tools.tools.brave_search_tool.brave_local_pois_tool import (
+    BraveLocalPOIsDescriptionTool,
+    BraveLocalPOIsTool,
+)
+from crewai_tools.tools.brave_search_tool.brave_news_tool import BraveNewsSearchTool
 from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
+from crewai_tools.tools.brave_search_tool.brave_video_tool import BraveVideoSearchTool
+from crewai_tools.tools.brave_search_tool.brave_web_tool import BraveWebSearchTool
 from crewai_tools.tools.brightdata_tool.brightdata_dataset import (
     BrightDataDatasetTool,
 )
@@ -90,6 +101,9 @@ from crewai_tools.tools.json_search_tool.json_search_tool import JSONSearchTool
 from crewai_tools.tools.linkup.linkup_search_tool import LinkupSearchTool
 from crewai_tools.tools.llamaindex_tool.llamaindex_tool import LlamaIndexTool
 from crewai_tools.tools.mdx_search_tool.mdx_search_tool import MDXSearchTool
+from crewai_tools.tools.merge_agent_handler_tool.merge_agent_handler_tool import (
+    MergeAgentHandlerTool,
+)
 from crewai_tools.tools.mongodb_vector_search_tool.vector_search import (
     MongoDBVectorSearchConfig,
     MongoDBVectorSearchTool,
@@ -197,7 +211,14 @@ __all__ = [
     "ArxivPaperTool",
     "BedrockInvokeAgentTool",
     "BedrockKBRetrieverTool",
+    "BraveImageSearchTool",
+    "BraveLLMContextTool",
+    "BraveLocalPOIsDescriptionTool",
+    "BraveLocalPOIsTool",
+    "BraveNewsSearchTool",
     "BraveSearchTool",
+    "BraveVideoSearchTool",
+    "BraveWebSearchTool",
     "BrightDataDatasetTool",
     "BrightDataSearchTool",
     "BrightDataWebUnlockerTool",
@@ -235,6 +256,7 @@ __all__ = [
     "LlamaIndexTool",
     "MCPServerAdapter",
     "MDXSearchTool",
+    "MergeAgentHandlerTool",
     "MongoDBVectorSearchConfig",
     "MongoDBVectorSearchTool",
     "MultiOnTool",
@@ -287,4 +309,4 @@ __all__ = [
     "ZapierActionTools",
 ]
 
-__version__ = "1.5.0"
+__version__ = "1.10.2rc2"

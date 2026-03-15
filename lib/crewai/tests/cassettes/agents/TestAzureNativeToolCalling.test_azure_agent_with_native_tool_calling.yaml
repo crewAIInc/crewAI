@@ -1,0 +1,161 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Math Assistant. You
+      are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}, {"role": "user", "content": "\nCurrent Task: Calculate what
+      is 15 * 8\n\nThis is the expected criteria for your final answer: The result
+      of the calculation\nyou MUST return the actual complete content as the final
+      answer, not a summary."}], "stream": false, "tool_choice": "auto", "tools":
+      [{"function": {"name": "calculator", "description": "Perform mathematical calculations.
+      Use this for any math operations.", "parameters": {"properties": {"expression":
+      {"description": "Mathematical expression to evaluate", "title": "Expression",
+      "type": "string"}}, "required": ["expression"], "type": "object", "additionalProperties":
+      false}}, "type": "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '828'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-5-nano/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{},"finish_reason":"tool_calls","index":0,"logprobs":null,"message":{"annotations":[],"content":null,"refusal":null,"role":"assistant","tool_calls":[{"function":{"arguments":"{\"expression\":\"15
+        * 8\"}","name":"calculator"},"id":"call_Cow46pNllpDx0pxUgZFeqlh1","type":"function"}]}}],"created":1771459544,"id":"chatcmpl-DAlq4osCP9ABJ1HyXFBoYWylMg0bi","model":"gpt-5-nano-2025-08-07","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":null,"usage":{"completion_tokens":219,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":192,"rejected_prediction_tokens":0},"prompt_tokens":208,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":427}}
+
+        '
+    headers:
+      Content-Length:
+      - '1049'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Feb 2026 00:05:45 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-5-nano
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Math Assistant. You
+      are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}, {"role": "user", "content": "\nCurrent Task: Calculate what
+      is 15 * 8\n\nThis is the expected criteria for your final answer: The result
+      of the calculation\nyou MUST return the actual complete content as the final
+      answer, not a summary."}, {"role": "assistant", "content": "", "tool_calls":
+      [{"id": "call_Cow46pNllpDx0pxUgZFeqlh1", "type": "function", "function": {"name":
+      "calculator", "arguments": "{\"expression\":\"15 * 8\"}"}}]}, {"role": "tool",
+      "tool_call_id": "call_Cow46pNllpDx0pxUgZFeqlh1", "content": "The result of 15
+      * 8 is 120"}, {"role": "user", "content": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}], "stream": false, "tool_choice": "auto",
+      "tools": [{"function": {"name": "calculator", "description": "Perform mathematical
+      calculations. Use this for any math operations.", "parameters": {"properties":
+      {"expression": {"description": "Mathematical expression to evaluate", "title":
+      "Expression", "type": "string"}}, "required": ["expression"], "type": "object",
+      "additionalProperties": false}}, "type": "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1320'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-5-nano/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"120","refusal":null,"role":"assistant"}}],"created":1771459547,"id":"chatcmpl-DAlq7zJimnIMoXieNww8jY5f2pIPd","model":"gpt-5-nano-2025-08-07","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":null,"usage":{"completion_tokens":203,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":192,"rejected_prediction_tokens":0},"prompt_tokens":284,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":487}}
+
+        '
+    headers:
+      Content-Length:
+      - '1207'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Feb 2026 00:05:49 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-5-nano
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

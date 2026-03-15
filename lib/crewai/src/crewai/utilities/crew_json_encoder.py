@@ -1,5 +1,6 @@
 """JSON encoder for handling CrewAI specific types."""
 
+import base64
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
@@ -29,6 +30,9 @@ class CrewJSONEncoder(json.JSONEncoder):
 
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
+
+        if isinstance(obj, bytes):
+            return base64.b64encode(obj).decode("utf-8")
 
         return super().default(obj)
 

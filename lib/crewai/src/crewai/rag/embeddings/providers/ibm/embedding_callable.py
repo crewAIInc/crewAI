@@ -1,6 +1,6 @@
 """IBM WatsonX embedding function implementation."""
 
-from typing import cast
+from typing import Any, cast
 
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
@@ -15,14 +15,18 @@ _printer = Printer()
 class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
     """Embedding function for IBM WatsonX models."""
 
-    def __init__(self, **kwargs: Unpack[WatsonXProviderConfig]) -> None:
+    def __init__(
+        self, *, verbose: bool = True, **kwargs: Unpack[WatsonXProviderConfig]
+    ) -> None:
         """Initialize WatsonX embedding function.
 
         Args:
+            verbose: Whether to print error messages.
             **kwargs: Configuration parameters for WatsonX Embeddings and Credentials.
         """
         super().__init__(**kwargs)
         self._config = kwargs
+        self._verbose = verbose
 
     @staticmethod
     def name() -> str:
@@ -56,7 +60,7 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
         if isinstance(input, str):
             input = [input]
 
-        embeddings_config: dict = {
+        embeddings_config: dict[str, Any] = {
             "model_id": self._config["model_id"],
         }
         if "params" in self._config and self._config["params"] is not None:
@@ -90,7 +94,7 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
         if "credentials" in self._config and self._config["credentials"] is not None:
             embeddings_config["credentials"] = self._config["credentials"]
         else:
-            cred_config: dict = {}
+            cred_config: dict[str, Any] = {}
             if "url" in self._config and self._config["url"] is not None:
                 cred_config["url"] = self._config["url"]
             if "api_key" in self._config and self._config["api_key"] is not None:
@@ -159,5 +163,6 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
             embeddings = embedding.embed_documents(input)
             return cast(Embeddings, embeddings)
         except Exception as e:
-            _printer.print(f"Error during WatsonX embedding: {e}", color="red")
+            if self._verbose:
+                _printer.print(f"Error during WatsonX embedding: {e}", color="red")
             raise

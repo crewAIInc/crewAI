@@ -10,7 +10,8 @@ mode: "wide"
 Use the Microsoft Teams trigger to start automations whenever a new chat is created. Common patterns include summarizing inbound requests, routing urgent messages to support teams, or creating follow-up tasks in other systems.
 
 <Tip>
-  Confirm Microsoft Teams is connected under **Tools & Integrations** and enabled in the **Triggers** tab for your deployment.
+  Confirm Microsoft Teams is connected under **Tools & Integrations** and
+  enabled in the **Triggers** tab for your deployment.
 </Tip>
 
 ## Enabling the Microsoft Teams Trigger
@@ -20,7 +21,10 @@ Use the Microsoft Teams trigger to start automations whenever a new chat is crea
 3. Locate **Microsoft Teams** and switch the toggle to enable
 
 <Frame caption="Microsoft Teams trigger connection">
-  <img src="/images/enterprise/msteams-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/msteams-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Summarize a new chat thread
@@ -52,7 +56,9 @@ crewai triggers run microsoft_teams/teams_message_created
 The `crewai triggers run` command will execute your crew with a complete Teams payload, allowing you to test your parsing logic before deployment.
 
 <Warning>
-  Use `crewai triggers run microsoft_teams/teams_message_created` (not `crewai run`) to simulate trigger execution during development. After deployment, your crew will automatically receive the trigger payload.
+  Use `crewai triggers run microsoft_teams/teams_message_created` (not `crewai
+  run`) to simulate trigger execution during development. After deployment, your
+  crew will automatically receive the trigger payload.
 </Warning>
 
 ## Troubleshooting

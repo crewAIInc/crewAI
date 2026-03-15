@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-import requests
+import httpx
 from crewai.cli.authentication.main import AuthenticationCommand
 from crewai.cli.constants import (
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
@@ -15,6 +15,8 @@ class TestAuthenticationCommand:
     def setup_method(self):
         self.auth_command = AuthenticationCommand()
 
+    # TODO: these expectations are reading from the actual settings, we should mock them.
+    # E.g. if you change the client_id locally, this test will fail.
     @pytest.mark.parametrize(
         "user_provider,expected_urls",
         [
@@ -181,7 +183,7 @@ class TestAuthenticationCommand:
             ),
             call("Success!\n", style="bold green"),
             call(
-                "You are authenticated to the tool repository as [bold cyan]'Test Org'[/bold cyan] (test-uuid-123)",
+                "You are now authenticated to the tool repository for organization [bold cyan]'Test Org'[/bold cyan]",
                 style="green",
             ),
         ]
@@ -218,7 +220,7 @@ class TestAuthenticationCommand:
         ]
         mock_console_print.assert_has_calls(expected_calls)
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     def test_get_device_code(self, mock_post):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -234,6 +236,7 @@ class TestAuthenticationCommand:
             "https://example.com/device"
         )
         self.auth_command.oauth2_provider.get_audience.return_value = "test_audience"
+        self.auth_command.oauth2_provider.get_oauth_scopes.return_value = ["openid", "profile", "email"]
 
         result = self.auth_command._get_device_code()
 
@@ -241,7 +244,7 @@ class TestAuthenticationCommand:
             url="https://example.com/device",
             data={
                 "client_id": "test_client",
-                "scope": "openid",
+                "scope": "openid profile email",
                 "audience": "test_audience",
             },
             timeout=20,
@@ -253,7 +256,7 @@ class TestAuthenticationCommand:
             "verification_uri_complete": "https://example.com/auth",
         }
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_success(self, mock_console_print, mock_post):
         mock_response_success = MagicMock()
@@ -302,7 +305,7 @@ class TestAuthenticationCommand:
             ]
             mock_console_print.assert_has_calls(expected_calls)
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_timeout(self, mock_console_print, mock_post):
         mock_response_pending = MagicMock()
@@ -321,7 +324,7 @@ class TestAuthenticationCommand:
             "Timeout: Failed to get the token. Please try again.", style="bold red"
         )
 
-    @patch("requests.post")
+    @patch("crewai.cli.authentication.main.httpx.post")
     def test_poll_for_token_error(self, mock_post):
         """Test the method to poll for token (error path)."""
         # Setup mock to return error
@@ -335,5 +338,5 @@ class TestAuthenticationCommand:
 
         device_code_data = {"device_code": "test_device_code", "interval": 1}
 
-        with pytest.raises(requests.HTTPError):
+        with pytest.raises(httpx.HTTPError):
             self.auth_command._poll_for_token(device_code_data)

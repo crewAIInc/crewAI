@@ -1,13 +1,84 @@
 from abc import ABC, abstractmethod
-import os
-from typing import Any, cast
+from typing import Any, Literal, cast
 
-from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+from crewai.rag.embeddings.factory import build_embedder
+from crewai.rag.embeddings.types import ProviderSpec
 from crewai.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+from typing_extensions import Self, Unpack
+
+from crewai_tools.tools.rag.types import (
+    AddDocumentParams,
+    ContentItem,
+    RagToolConfig,
+    VectorDbConfig,
+)
+
+
+def _validate_embedding_config(
+    value: dict[str, Any] | ProviderSpec,
+) -> dict[str, Any] | ProviderSpec:
+    """Validate embedding config and provide clearer error messages for union validation.
+
+    This pre-validator catches Pydantic ValidationErrors from the ProviderSpec union
+    and provides a cleaner, more focused error message that only shows the relevant
+    provider's validation errors instead of all 18 union members.
+
+    Args:
+        value: The embedding configuration dictionary or validated ProviderSpec.
+
+    Returns:
+        A validated ProviderSpec instance, or the original value if already validated
+        or missing required fields.
+
+    Raises:
+        ValueError: If the configuration is invalid for the specified provider.
+    """
+    if not isinstance(value, dict):
+        return value
+
+    provider = value.get("provider")
+    if not provider:
+        return value
+
+    try:
+        type_adapter: TypeAdapter[ProviderSpec] = TypeAdapter(ProviderSpec)
+        return type_adapter.validate_python(value)
+    except ValidationError as e:
+        provider_key = f"{provider.lower()}providerspec"
+        provider_errors = [
+            err for err in e.errors() if provider_key in str(err.get("loc", "")).lower()
+        ]
+
+        if provider_errors:
+            error_msgs = []
+            for err in provider_errors:
+                loc_parts = err["loc"]
+                if str(loc_parts[0]).lower() == provider_key:
+                    loc_parts = loc_parts[1:]
+                loc = ".".join(str(x) for x in loc_parts)
+                error_msgs.append(f"  - {loc}: {err['msg']}")
+
+            raise ValueError(
+                f"Invalid configuration for embedding provider '{provider}':\n"
+                + "\n".join(error_msgs)
+            ) from e
+
+        raise
 
 
 class Adapter(BaseModel, ABC):
+    """Abstract base class for RAG adapters."""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @abstractmethod
@@ -22,8 +93,8 @@ class Adapter(BaseModel, ABC):
     @abstractmethod
     def add(
         self,
-        *args: Any,
-        **kwargs: Any,
+        *args: ContentItem,
+        **kwargs: Unpack[AddDocumentParams],
     ) -> None:
         """Add content to the knowledge base."""
 
@@ -38,7 +109,11 @@ class RagTool(BaseTool):
         ) -> str:
             raise NotImplementedError
 
-        def add(self, *args: Any, **kwargs: Any) -> None:
+        def add(
+            self,
+            *args: ContentItem,
+            **kwargs: Unpack[AddDocumentParams],
+        ) -> None:
             raise NotImplementedError
 
     name: str = "Knowledge base"
@@ -46,145 +121,131 @@ class RagTool(BaseTool):
     summarize: bool = False
     similarity_threshold: float = 0.6
     limit: int = 5
+    collection_name: str = "rag_tool_collection"
     adapter: Adapter = Field(default_factory=_AdapterPlaceholder)
-    config: Any | None = None
+    config: RagToolConfig = Field(
+        default_factory=RagToolConfig,
+        description="Configuration format accepted by RagTool.",
+    )
+
+    @field_validator("config", mode="before")
+    @classmethod
+    def _validate_config(cls, value: Any) -> Any:
+        """Validate config with improved error messages for embedding providers."""
+        if not isinstance(value, dict):
+            return value
+
+        embedding_model = value.get("embedding_model")
+        if embedding_model:
+            try:
+                value["embedding_model"] = _validate_embedding_config(embedding_model)
+            except ValueError:
+                raise
+
+        return value
 
     @model_validator(mode="after")
-    def _set_default_adapter(self):
+    def _ensure_adapter(self) -> Self:
         if isinstance(self.adapter, RagTool._AdapterPlaceholder):
             from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
 
-            parsed_config = self._parse_config(self.config)
-
+            provider_cfg = self._parse_config(self.config)
             self.adapter = CrewAIRagAdapter(
-                collection_name="rag_tool_collection",
+                collection_name=self.collection_name,
                 summarize=self.summarize,
                 similarity_threshold=self.similarity_threshold,
                 limit=self.limit,
-                config=parsed_config,
+                config=provider_cfg,
             )
-
         return self
 
-    def _parse_config(self, config: Any) -> Any:
-        """Parse complex config format to extract provider-specific config.
+    def _parse_config(self, config: RagToolConfig) -> Any:
+        """Normalize the RagToolConfig into a provider-specific config object.
 
-        Raises:
-            ValueError: If the config format is invalid or uses unsupported providers.
+        Defaults to 'chromadb' with no extra provider config if none is supplied.
         """
-        if config is None:
-            return None
+        if not config:
+            return self._create_provider_config("chromadb", {}, None)
 
-        if isinstance(config, dict) and "provider" in config:
-            return config
+        vectordb_cfg = cast(VectorDbConfig, config.get("vectordb", {}))
+        provider: Literal["chromadb", "qdrant"] = vectordb_cfg.get(
+            "provider", "chromadb"
+        )
+        provider_config: dict[str, Any] = vectordb_cfg.get("config", {})
 
-        if isinstance(config, dict):
-            if "vectordb" in config:
-                vectordb_config = config["vectordb"]
-                if isinstance(vectordb_config, dict) and "provider" in vectordb_config:
-                    provider = vectordb_config["provider"]
-                    provider_config = vectordb_config.get("config", {})
+        supported = ("chromadb", "qdrant")
+        if provider not in supported:
+            raise ValueError(
+                f"Unsupported vector database provider: '{provider}'. "
+                f"CrewAI RAG currently supports: {', '.join(supported)}."
+            )
 
-                    supported_providers = ["chromadb", "qdrant"]
-                    if provider not in supported_providers:
-                        raise ValueError(
-                            f"Unsupported vector database provider: '{provider}'. "
-                            f"CrewAI RAG currently supports: {', '.join(supported_providers)}."
-                        )
+        embedding_spec: ProviderSpec | None = config.get("embedding_model")
+        if embedding_spec:
+            embedding_spec = cast(
+                ProviderSpec, _validate_embedding_config(embedding_spec)
+            )
 
-                    embedding_config = config.get("embedding_model")
-                    embedding_function = None
-                    if embedding_config and isinstance(embedding_config, dict):
-                        embedding_function = self._create_embedding_function(
-                            embedding_config, provider
-                        )
-
-                    return self._create_provider_config(
-                        provider, provider_config, embedding_function
-                    )
-                return None
-            embedding_config = config.get("embedding_model")
-            embedding_function = None
-            if embedding_config and isinstance(embedding_config, dict):
-                embedding_function = self._create_embedding_function(
-                    embedding_config, "chromadb"
-                )
-
-            return self._create_provider_config("chromadb", {}, embedding_function)
-        return config
-
-    @staticmethod
-    def _create_embedding_function(embedding_config: dict, provider: str) -> Any:
-        """Create embedding function for the specified vector database provider."""
-        embedding_provider = embedding_config.get("provider")
-        embedding_model_config = embedding_config.get("config", {}).copy()
-
-        if "model" in embedding_model_config:
-            embedding_model_config["model_name"] = embedding_model_config.pop("model")
-
-        factory_config = {"provider": embedding_provider, **embedding_model_config}
-
-        if embedding_provider == "openai" and "api_key" not in factory_config:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
-                factory_config["api_key"] = api_key
-
-        if provider == "chromadb":
-            return get_embedding_function(factory_config)  # type: ignore[call-overload]
-
-        if provider == "qdrant":
-            chromadb_func = get_embedding_function(factory_config)  # type: ignore[call-overload]
-
-            def qdrant_embed_fn(text: str) -> list[float]:
-                """Embed text using ChromaDB function and convert to list of floats for Qdrant.
-
-                Args:
-                    text: The input text to embed.
-
-                Returns:
-                    A list of floats representing the embedding.
-                """
-                embeddings = chromadb_func([text])
-                return embeddings[0] if embeddings and len(embeddings) > 0 else []
-
-            return cast(Any, qdrant_embed_fn)
-
-        return None
+        embedding_function = build_embedder(embedding_spec) if embedding_spec else None
+        return self._create_provider_config(
+            provider, provider_config, embedding_function
+        )
 
     @staticmethod
     def _create_provider_config(
-        provider: str, provider_config: dict, embedding_function: Any
+        provider: Literal["chromadb", "qdrant"],
+        provider_config: dict[str, Any],
+        embedding_function: EmbeddingFunction[Any] | None,
     ) -> Any:
-        """Create proper provider config object."""
+        """Instantiate provider config with optional embedding_function injected."""
         if provider == "chromadb":
             from crewai.rag.chromadb.config import ChromaDBConfig
 
-            config_kwargs = {}
-            if embedding_function:
-                config_kwargs["embedding_function"] = embedding_function
-
-            config_kwargs.update(provider_config)
-
-            return ChromaDBConfig(**config_kwargs)
+            kwargs = dict(provider_config)
+            if embedding_function is not None:
+                kwargs["embedding_function"] = embedding_function
+            return ChromaDBConfig(**kwargs)
 
         if provider == "qdrant":
             from crewai.rag.qdrant.config import QdrantConfig
 
-            config_kwargs = {}
-            if embedding_function:
-                config_kwargs["embedding_function"] = embedding_function
+            kwargs = dict(provider_config)
+            if embedding_function is not None:
+                kwargs["embedding_function"] = embedding_function
+            return QdrantConfig(**kwargs)
 
-            config_kwargs.update(provider_config)
-
-            return QdrantConfig(**config_kwargs)
-
-        return None
+        raise ValueError(f"Unhandled provider: {provider}")
 
     def add(
         self,
-        *args: Any,
-        **kwargs: Any,
+        *args: ContentItem,
+        **kwargs: Unpack[AddDocumentParams],
     ) -> None:
+        """Add content to the knowledge base.
+
+
+        Args:
+            *args: Content items to add (strings, paths, or document dicts)
+            data_type: DataType enum or string (e.g., "file", "pdf_file", "text")
+            path: Path to file or directory, alias to positional arg
+            file_path: Alias for path
+            metadata: Additional metadata to attach to documents
+            url: URL to fetch content from
+            website: Website URL to scrape
+            github_url: GitHub repository URL
+            youtube_url: YouTube video URL
+            directory_path: Path to directory
+
+        Examples:
+            rag_tool.add("path/to/document.pdf", data_type=DataType.PDF_FILE)
+
+            # Keyword argument (documented API)
+            rag_tool.add(path="path/to/document.pdf", data_type="file")
+            rag_tool.add(file_path="path/to/document.pdf", data_type="pdf_file")
+
+            # Auto-detect type from extension
+            rag_tool.add("path/to/document.pdf")  # auto-detects PDF
+        """
         self.adapter.add(*args, **kwargs)
 
     def _run(

@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -70,6 +71,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "labelIds": ["a70bdf0f-530a-4887-857d-46151b52b47c"]
       }
       ```
+
   </Accordion>
 
   <Accordion title="linear/update_issue">
@@ -90,6 +92,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "labelIds": ["a70bdf0f-530a-4887-857d-46151b52b47c"]
       }
       ```
+
   </Accordion>
 
   <Accordion title="linear/get_issue_by_id">
@@ -97,6 +100,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `issueId` (string, obrigatório): ID da Issue - Especifique o ID do registro da issue a ser buscada. (exemplo: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+
   </Accordion>
 
   <Accordion title="linear/get_issue_by_issue_identifier">
@@ -104,6 +108,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `externalId` (string, obrigatório): ID Externo - Especifique o identificador legível da issue a ser buscada. (exemplo: "ABC-1").
+
   </Accordion>
 
   <Accordion title="linear/search_issue">
@@ -131,6 +136,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
       ```
       Campos disponíveis: `title`, `number`, `project`, `createdAt`
       Operadores disponíveis: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringStartsWith`, `$stringDoesNotStartWith`, `$stringEndsWith`, `$stringDoesNotEndWith`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`, `$numberGreaterThanOrEqualTo`, `$numberLessThanOrEqualTo`, `$numberGreaterThan`, `$numberLessThan`, `$dateTimeAfter`, `$dateTimeBefore`
+
   </Accordion>
 
   <Accordion title="linear/delete_issue">
@@ -138,6 +144,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `issueId` (string, obrigatório): ID da Issue - Especifique o ID do registro da issue a ser excluída. (exemplo: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+
   </Accordion>
 
   <Accordion title="linear/archive_issue">
@@ -145,6 +152,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `issueId` (string, obrigatório): ID da Issue - Especifique o ID do registro da issue a ser arquivada. (exemplo: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+
   </Accordion>
 
   <Accordion title="linear/create_sub_issue">
@@ -161,6 +169,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "lead": "linear_user_id"
       }
       ```
+
   </Accordion>
 
   <Accordion title="linear/create_project">
@@ -183,6 +192,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "description": ""
       }
       ```
+
   </Accordion>
 
   <Accordion title="linear/update_project">
@@ -199,6 +209,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "description": ""
       }
       ```
+
   </Accordion>
 
   <Accordion title="linear/get_project_by_id">
@@ -206,6 +217,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `projectId` (string, obrigatório): ID do Projeto - Especifique o ID do projeto a ser buscado. (exemplo: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+
   </Accordion>
 
   <Accordion title="linear/delete_project">
@@ -213,6 +225,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `projectId` (string, obrigatório): ID do Projeto - Especifique o ID do projeto a ser excluído. (exemplo: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+
   </Accordion>
 
   <Accordion title="linear/search_teams">
@@ -238,6 +251,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
       }
       ```
       Campos disponíveis: `id`, `name`
+
   </Accordion>
 </AccordionGroup>
 
@@ -406,37 +420,44 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Permissão**
+
 - Certifique-se de que sua conta Linear possui as permissões necessárias no workspace de destino
 - Verifique se a conexão OAuth inclui os escopos requeridos pela API do Linear
 - Confirme se você tem permissões para criar/editar issues e projetos no workspace
 
 **IDs e Referências Inválidas**
+
 - Verifique os IDs de equipes, IDs de issues e IDs de projetos para garantir o formato UUID correto
 - Assegure que as entidades referenciadas (equipes, projetos, ciclos) existem e estão acessíveis
 - Verifique se os identificadores de issues seguem o formato correto (ex: "ABC-1")
 
 **Problemas de Associação entre Equipe e Projeto**
+
 - Use LINEAR_SEARCH_TEAMS para obter IDs de equipe válidos antes de criar issues ou projetos
 - Certifique-se de que as equipes existem e estão ativas no seu workspace
 - Verifique se os IDs das equipes estão devidamente formatados como UUIDs
 
 **Problemas com Status e Prioridade das Issues**
+
 - Verifique se os IDs de status referenciam estados de workflow válidos para a equipe
 - Certifique-se de que os valores de prioridade estão dentro do intervalo válido para sua configuração do Linear
 - Confirme que campos personalizados e labels existem antes de referenciá-los
 
 **Problemas com Formato de Data e Hora**
+
 - Use o formato ISO 8601 para datas de vencimento e timestamps
 - Certifique-se de que os fusos horários estão corretos para cálculos de datas de vencimento
 - Verifique se os valores de data são válidos e posteriores à data atual para datas de vencimento
 
 **Problemas de Pesquisa e Filtros**
+
 - Garanta que as consultas de busca estejam formatadas corretamente e não estejam vazias
 - Utilize nomes de campos válidos nas fórmulas de filtro: `title`, `number`, `project`, `createdAt`
 - Teste filtros simples antes de montar consultas complexas com múltiplas condições
 - Verifique se os tipos de operadores correspondem aos tipos de dados dos campos filtrados
 
 **Problemas na Criação de Sub-issues**
+
 - Certifique-se de que os IDs das issues pai são válidos e acessíveis
 - Verifique se o ID da equipe para as sub-issues corresponde ou é compatível com o da issue pai
 - Assegure-se de que as issues pai não estejam arquivadas ou excluídas
@@ -444,5 +465,6 @@ crew.kickoff()
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência na configuração ou solução de problemas da integração com o Linear.
+  Entre em contato com nossa equipe de suporte para assistência na configuração
+  ou solução de problemas da integração com o Linear.
 </Card>

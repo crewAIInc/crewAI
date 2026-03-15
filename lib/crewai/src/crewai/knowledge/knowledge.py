@@ -32,8 +32,8 @@ class Knowledge(BaseModel):
         sources: list[BaseKnowledgeSource],
         embedder: EmbedderConfig | None = None,
         storage: KnowledgeStorage | None = None,
-        **data,
-    ):
+        **data: object,
+    ) -> None:
         super().__init__(**data)
         if storage:
             self.storage = storage
@@ -73,5 +73,46 @@ class Knowledge(BaseModel):
     def reset(self) -> None:
         if self.storage:
             self.storage.reset()
+        else:
+            raise ValueError("Storage is not initialized.")
+
+    async def aquery(
+        self, query: list[str], results_limit: int = 5, score_threshold: float = 0.6
+    ) -> list[SearchResult]:
+        """Query across all knowledge sources asynchronously.
+
+        Args:
+            query: List of query strings.
+            results_limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results.
+
+        Returns:
+            The top results matching the query.
+
+        Raises:
+            ValueError: If storage is not initialized.
+        """
+        if self.storage is None:
+            raise ValueError("Storage is not initialized.")
+
+        return await self.storage.asearch(
+            query,
+            limit=results_limit,
+            score_threshold=score_threshold,
+        )
+
+    async def aadd_sources(self) -> None:
+        """Add all knowledge sources to storage asynchronously."""
+        try:
+            for source in self.sources:
+                source.storage = self.storage
+                await source.aadd()
+        except Exception as e:
+            raise e
+
+    async def areset(self) -> None:
+        """Reset the knowledge base asynchronously."""
+        if self.storage:
+            await self.storage.areset()
         else:
             raise ValueError("Storage is not initialized.")

@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -70,6 +72,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "customfield_10001": "value"
       }
       ```
+
   </Accordion>
 
   <Accordion title="jira/update_issue">
@@ -85,6 +88,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
       - Options: `description`, `descriptionJSON`
     - `description` (string, optional): Description - A detailed description of the issue. This field appears only when 'descriptionType' = 'description'.
     - `additionalFields` (string, optional): Additional Fields - Specify any other fields that should be included in JSON format.
+
   </Accordion>
 
   <Accordion title="jira/get_issue_by_key">
@@ -92,6 +96,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `issueKey` (string, required): Issue Key (example: "TEST-1234").
+
   </Accordion>
 
   <Accordion title="jira/filter_issues">
@@ -118,6 +123,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
       ```
       Available operators: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`
     - `limit` (string, optional): Limit results - Limit the maximum number of issues to return. Defaults to 10 if left blank.
+
   </Accordion>
 
   <Accordion title="jira/search_by_jql">
@@ -131,12 +137,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "pageCursor": "cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="jira/update_issue_any">
     **Description:** Update any issue in Jira. Use DESCRIBE_ACTION_SCHEMA to get properties schema for this function.
 
     **Parameters:** No specific parameters - use JIRA_DESCRIBE_ACTION_SCHEMA first to get the expected schema.
+
   </Accordion>
 
   <Accordion title="jira/describe_action_schema">
@@ -146,6 +154,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `issueTypeId` (string, required): Issue Type ID.
     - `projectKey` (string, required): Project key.
     - `operation` (string, required): Operation Type value, for example CREATE_ISSUE or UPDATE_ISSUE.
+
   </Accordion>
 
   <Accordion title="jira/get_projects">
@@ -158,6 +167,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "pageCursor": "cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="jira/get_issue_types_by_project">
@@ -165,12 +175,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `project` (string, required): Project key.
+
   </Accordion>
 
   <Accordion title="jira/get_issue_types">
     **Description:** Get all Issue Types in Jira.
 
     **Parameters:** None required.
+
   </Accordion>
 
   <Accordion title="jira/get_issue_status_by_project">
@@ -178,6 +190,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `project` (string, required): Project key.
+
   </Accordion>
 
   <Accordion title="jira/get_all_assignees_by_project">
@@ -185,6 +198,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `project` (string, required): Project key.
+
   </Accordion>
 </AccordionGroup>
 
@@ -348,31 +362,37 @@ crew.kickoff()
 ### Common Issues
 
 **Permission Errors**
+
 - Ensure your Jira account has necessary permissions for the target projects
 - Verify that the OAuth connection includes required scopes for Jira API
 - Check if you have create/edit permissions for issues in the specified projects
 
 **Invalid Project or Issue Keys**
+
 - Double-check project keys and issue keys for correct format (e.g., "PROJ-123")
 - Ensure projects exist and are accessible to your account
 - Verify that issue keys reference existing issues
 
 **Issue Type and Status Issues**
+
 - Use JIRA_GET_ISSUE_TYPES_BY_PROJECT to get valid issue types for a project
 - Use JIRA_GET_ISSUE_STATUS_BY_PROJECT to get valid statuses
 - Ensure issue types and statuses are available in the target project
 
 **JQL Query Problems**
+
 - Test JQL queries in Jira's issue search before using in API calls
 - Ensure field names in JQL are spelled correctly and exist in your Jira instance
 - Use proper JQL syntax for complex queries
 
 **Custom Fields and Schema Issues**
+
 - Use JIRA_DESCRIBE_ACTION_SCHEMA to get the correct schema for complex issue types
 - Ensure custom field IDs are correct (e.g., "customfield_10001")
 - Verify that custom fields are available in the target project and issue type
 
 **Filter Formula Issues**
+
 - Ensure filter formulas follow the correct JSON structure for disjunctive normal form
 - Use valid field names that exist in your Jira configuration
 - Test simple filters before building complex multi-condition queries
@@ -380,5 +400,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Jira integration setup or troubleshooting.
+  Contact our support team for assistance with Jira integration setup or
+  troubleshooting.
 </Card>

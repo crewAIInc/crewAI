@@ -1,0 +1,782 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Iterating Agent. You are
+      an agent that iterates a given number of times\nYour personal goal is: Call
+      the iterating tool 5 times"},{"role":"user","content":"\nCurrent Task: Call
+      the iterating tool 5 times\n\nThis is the expected criteria for your final answer:
+      A list of the iterations\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is VERY important to you, your job depends
+      on it!"}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"iterating_tool","description":"A
+      tool that iterates a given number of times","parameters":{"properties":{"input_text":{"title":"Input
+      Text","type":"string"}},"required":["input_text"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '772'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0wkgNVz6oBm9q3oKX0SWNn5sw7lp\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769118214,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_ADbiw31dwp0SSRKmJP0XHJ4A\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"iterating_tool\",\n
+        \             \"arguments\": \"{\\\"input_text\\\": \\\"Iteration 1\\\"}\"\n
+        \           }\n          },\n          {\n            \"id\": \"call_iFTVVFQ2ZcdyAdKE1bsZiez6\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"iterating_tool\",\n              \"arguments\": \"{\\\"input_text\\\": \\\"Iteration
+        2\\\"}\"\n            }\n          },\n          {\n            \"id\": \"call_vhVUZMtgVtZmmQEMlM2zYccJ\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"iterating_tool\",\n              \"arguments\": \"{\\\"input_text\\\": \\\"Iteration
+        3\\\"}\"\n            }\n          },\n          {\n            \"id\": \"call_O099dJy9r21sfXV8TNfqIpug\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"iterating_tool\",\n              \"arguments\": \"{\\\"input_text\\\": \\\"Iteration
+        4\\\"}\"\n            }\n          },\n          {\n            \"id\": \"call_izB3AuRTZRff7n6i5BBZnqox\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"iterating_tool\",\n              \"arguments\": \"{\\\"input_text\\\": \\\"Iteration
+        5\\\"}\"\n            }\n          }\n        ],\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 145,\n
+        \   \"completion_tokens\": 106,\n    \"total_tokens\": 251,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:43:37 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '3228'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '3476'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Iterating Agent. You are
+      an agent that iterates a given number of times\nYour personal goal is: Call
+      the iterating tool 5 times"},{"role":"user","content":"\nCurrent Task: Call
+      the iterating tool 5 times\n\nThis is the expected criteria for your final answer:
+      A list of the iterations\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is VERY important to you, your job depends
+      on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":
+      \"Iteration 1\"}"}}]},{"role":"tool","tool_call_id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","content":"Iteration
+      Iteration 1"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"iterating_tool","description":"A
+      tool that iterates a given number of times","parameters":{"properties":{"input_text":{"title":"Input
+      Text","type":"string"}},"required":["input_text"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1246'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0wkkg4ph8pCu9r3LveYM5ZPcGphH\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769118218,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_kbitZ6My3ZSxf9778fzi4erm\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"iterating_tool\",\n
+        \             \"arguments\": \"{\\\"input_text\\\":\\\"Iteration 2\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 212,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 230,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:43:39 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '459'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '699'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Iterating Agent. You are
+      an agent that iterates a given number of times\nYour personal goal is: Call
+      the iterating tool 5 times"},{"role":"user","content":"\nCurrent Task: Call
+      the iterating tool 5 times\n\nThis is the expected criteria for your final answer:
+      A list of the iterations\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is VERY important to you, your job depends
+      on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":
+      \"Iteration 1\"}"}}]},{"role":"tool","tool_call_id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","content":"Iteration
+      Iteration 1"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_kbitZ6My3ZSxf9778fzi4erm","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      2\"}"}}]},{"role":"tool","tool_call_id":"call_kbitZ6My3ZSxf9778fzi4erm","content":"Iteration
+      Iteration 2"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"iterating_tool","description":"A
+      tool that iterates a given number of times","parameters":{"properties":{"input_text":{"title":"Input
+      Text","type":"string"}},"required":["input_text"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1719'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0wklDzDYIeqTgt8D2IScHYfPZyNX\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769118219,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_AA51Dm5QT0dIAP8hXWWScqUi\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"iterating_tool\",\n
+        \             \"arguments\": \"{\\\"input_text\\\":\\\"Iteration 3\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 279,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 297,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:43:39 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '541'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '563'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Iterating Agent. You are
+      an agent that iterates a given number of times\nYour personal goal is: Call
+      the iterating tool 5 times"},{"role":"user","content":"\nCurrent Task: Call
+      the iterating tool 5 times\n\nThis is the expected criteria for your final answer:
+      A list of the iterations\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is VERY important to you, your job depends
+      on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":
+      \"Iteration 1\"}"}}]},{"role":"tool","tool_call_id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","content":"Iteration
+      Iteration 1"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_kbitZ6My3ZSxf9778fzi4erm","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      2\"}"}}]},{"role":"tool","tool_call_id":"call_kbitZ6My3ZSxf9778fzi4erm","content":"Iteration
+      Iteration 2"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_AA51Dm5QT0dIAP8hXWWScqUi","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      3\"}"}}]},{"role":"tool","tool_call_id":"call_AA51Dm5QT0dIAP8hXWWScqUi","content":"Iteration
+      Iteration 3"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"iterating_tool","description":"A
+      tool that iterates a given number of times","parameters":{"properties":{"input_text":{"title":"Input
+      Text","type":"string"}},"required":["input_text"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2192'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0wkmSFfq41rWOcBZCMoI0guZ5ftV\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769118220,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_oxlBc825FqTqzvea6Qglq5wR\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"iterating_tool\",\n
+        \             \"arguments\": \"{\\\"input_text\\\":\\\"Iteration 4\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 346,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 364,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:43:41 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '512'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '759'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Iterating Agent. You are
+      an agent that iterates a given number of times\nYour personal goal is: Call
+      the iterating tool 5 times"},{"role":"user","content":"\nCurrent Task: Call
+      the iterating tool 5 times\n\nThis is the expected criteria for your final answer:
+      A list of the iterations\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is VERY important to you, your job depends
+      on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":
+      \"Iteration 1\"}"}}]},{"role":"tool","tool_call_id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","content":"Iteration
+      Iteration 1"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_kbitZ6My3ZSxf9778fzi4erm","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      2\"}"}}]},{"role":"tool","tool_call_id":"call_kbitZ6My3ZSxf9778fzi4erm","content":"Iteration
+      Iteration 2"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_AA51Dm5QT0dIAP8hXWWScqUi","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      3\"}"}}]},{"role":"tool","tool_call_id":"call_AA51Dm5QT0dIAP8hXWWScqUi","content":"Iteration
+      Iteration 3"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_oxlBc825FqTqzvea6Qglq5wR","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      4\"}"}}]},{"role":"tool","tool_call_id":"call_oxlBc825FqTqzvea6Qglq5wR","content":"Tool
+      ''iterating_tool'' has reached its usage limit of 5 times and cannot be used
+      anymore."},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"iterating_tool","description":"A
+      tool that iterates a given number of times","parameters":{"properties":{"input_text":{"title":"Input
+      Text","type":"string"}},"required":["input_text"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2732'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0wkokKDv96icFQwOO4Q3dmZkfFAj\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769118222,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_RVdQIPZ5O5rlilzGY0xcoilj\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"iterating_tool\",\n
+        \             \"arguments\": \"{\\\"input_text\\\":\\\"Iteration 5\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 429,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 447,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:43:43 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '505'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1285'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Iterating Agent. You are
+      an agent that iterates a given number of times\nYour personal goal is: Call
+      the iterating tool 5 times"},{"role":"user","content":"\nCurrent Task: Call
+      the iterating tool 5 times\n\nThis is the expected criteria for your final answer:
+      A list of the iterations\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is VERY important to you, your job depends
+      on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":
+      \"Iteration 1\"}"}}]},{"role":"tool","tool_call_id":"call_ADbiw31dwp0SSRKmJP0XHJ4A","content":"Iteration
+      Iteration 1"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_kbitZ6My3ZSxf9778fzi4erm","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      2\"}"}}]},{"role":"tool","tool_call_id":"call_kbitZ6My3ZSxf9778fzi4erm","content":"Iteration
+      Iteration 2"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_AA51Dm5QT0dIAP8hXWWScqUi","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      3\"}"}}]},{"role":"tool","tool_call_id":"call_AA51Dm5QT0dIAP8hXWWScqUi","content":"Iteration
+      Iteration 3"},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_oxlBc825FqTqzvea6Qglq5wR","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      4\"}"}}]},{"role":"tool","tool_call_id":"call_oxlBc825FqTqzvea6Qglq5wR","content":"Tool
+      ''iterating_tool'' has reached its usage limit of 5 times and cannot be used
+      anymore."},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RVdQIPZ5O5rlilzGY0xcoilj","type":"function","function":{"name":"iterating_tool","arguments":"{\"input_text\":\"Iteration
+      5\"}"}}]},{"role":"tool","tool_call_id":"call_RVdQIPZ5O5rlilzGY0xcoilj","content":"Tool
+      ''iterating_tool'' has reached its usage limit of 5 times and cannot be used
+      anymore."},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"iterating_tool","description":"A
+      tool that iterates a given number of times","parameters":{"properties":{"input_text":{"title":"Input
+      Text","type":"string"}},"required":["input_text"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3272'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0wkpqTl5jEp6EY5HaTXlU9KZFGLX\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769118223,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Iteration Iteration 1\\nIteration Iteration
+        2\\nIteration Iteration 3\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 512,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 530,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:43:43 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '457'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '475'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,6 +1,6 @@
 ---
-title: 'Listeners de Evento'
-description: 'Acesse eventos do CrewAI para criar integrações e monitoramento personalizados'
+title: "Listeners de Evento"
+description: "Acesse eventos do CrewAI para criar integrações e monitoramento personalizados"
 icon: spinner
 mode: "wide"
 ---
@@ -25,6 +25,7 @@ O CrewAI AMP fornece o recurso Prompt Tracing, que aproveita o sistema de evento
 ![Prompt Tracing Dashboard](/images/enterprise/traces-overview.png)
 
 Com o Prompt Tracing você pode:
+
 - Visualizar o histórico completo de todos os prompts enviados ao seu LLM
 - Monitorar o uso de tokens e custos
 - Depurar falhas de raciocínio dos agentes
@@ -262,7 +263,6 @@ A estrutura do objeto de evento depende do tipo do evento, mas todos herdam de `
 - **type**: Identificador do tipo do evento
 
 Campos adicionais variam pelo tipo de evento. Por exemplo, `CrewKickoffCompletedEvent` inclui os campos `crew_name` e `output`.
-
 
 ## Uso Avançado: Handlers Escopados
 

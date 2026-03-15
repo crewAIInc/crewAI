@@ -63,5 +63,55 @@ def my_cache_strategy(arguments: dict, result: str) -> bool:
 cached_tool.cache_function = my_cache_strategy
 ```
 
+### 비동기 도구 생성하기
+
+CrewAI는 논블로킹 I/O 작업을 위한 비동기 도구를 지원합니다. 이는 HTTP 요청, 데이터베이스 쿼리 또는 기타 I/O 바운드 작업이 필요한 경우에 유용합니다.
+
+#### `@tool` 데코레이터와 비동기 함수 사용하기
+
+비동기 도구를 만드는 가장 간단한 방법은 `@tool` 데코레이터와 async 함수를 사용하는 것입니다:
+
+```python Code
+import aiohttp
+from crewai.tools import tool
+
+@tool("Async Web Fetcher")
+async def fetch_webpage(url: str) -> str:
+    """Fetch content from a webpage asynchronously."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.text()
+```
+
+#### 비동기 지원으로 `BaseTool` 서브클래싱하기
+
+더 많은 제어를 위해 `BaseTool`을 상속하고 `_run`(동기) 및 `_arun`(비동기) 메서드를 모두 구현할 수 있습니다:
+
+```python Code
+import requests
+import aiohttp
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class WebFetcherInput(BaseModel):
+    """Input schema for WebFetcher."""
+    url: str = Field(..., description="The URL to fetch")
+
+class WebFetcherTool(BaseTool):
+    name: str = "Web Fetcher"
+    description: str = "Fetches content from a URL"
+    args_schema: type[BaseModel] = WebFetcherInput
+
+    def _run(self, url: str) -> str:
+        """Synchronous implementation."""
+        return requests.get(url).text
+
+    async def _arun(self, url: str) -> str:
+        """Asynchronous implementation for non-blocking I/O."""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.text()
+```
+
 이 가이드라인을 준수하고 새로운 기능과 협업 도구를 도구 생성 및 관리 프로세스에 통합함으로써,
 CrewAI 프레임워크의 모든 기능을 활용할 수 있으며, AI agent의 개발 경험과 효율성을 모두 높일 수 있습니다.

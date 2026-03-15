@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -73,6 +74,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "reply-to": "Nome do Remetente <sender@domain.com>"
       }
       ```
+
   </Accordion>
 
   <Accordion title="gmail/get_email_by_id">
@@ -81,6 +83,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `userId` (string, obrigatório): ID do Usuário - Especifique o endereço de e-mail do usuário. (exemplo: "user@domain.com").
     - `messageId` (string, obrigatório): ID da Mensagem - Especifique o ID da mensagem a ser recuperada.
+
   </Accordion>
 
   <Accordion title="gmail/fetch_emails">
@@ -112,6 +115,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="gmail/delete_email">
@@ -120,6 +124,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `userId` (string, obrigatório): ID do Usuário - Especifique o endereço de e-mail do usuário. (exemplo: "user@domain.com").
     - `messageId` (string, obrigatório): ID da Mensagem - Especifique o ID da mensagem para enviar para a lixeira.
+
   </Accordion>
 
   <Accordion title="gmail/create_a_contact">
@@ -140,6 +145,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         ]
       }
       ```
+
   </Accordion>
 
   <Accordion title="gmail/get_contact_by_resource_name">
@@ -147,6 +153,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `resourceName` (string, obrigatório): Nome do Recurso - Especifique o nome do recurso do contato a ser buscado.
+
   </Accordion>
 
   <Accordion title="gmail/search_for_contact">
@@ -154,6 +161,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `searchTerm` (string, obrigatório): Termo - Especifique um termo para buscar correspondências aproximadas ou exatas nos campos nome, apelido, endereços de e-mail, números de telefone ou organizações do contato.
+
   </Accordion>
 
   <Accordion title="gmail/delete_contact">
@@ -161,6 +169,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `resourceName` (string, obrigatório): Nome do Recurso - Especifique o nome do recurso do contato a ser excluído.
+
   </Accordion>
 
   <Accordion title="gmail/create_draft">
@@ -184,6 +193,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "reply-to": "Nome do Remetente <sender@domain.com>"
       }
       ```
+
   </Accordion>
 </AccordionGroup>
 
@@ -341,5 +351,6 @@ crew.kickoff()
 ### Precisa de Ajuda?
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nosso time de suporte para obter assistência na configuração ou solução de problemas da integração Gmail.
+  Entre em contato com nosso time de suporte para obter assistência na
+  configuração ou solução de problemas da integração Gmail.
 </Card>

@@ -12,8 +12,11 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def mock_anthropic_api_key():
-    """Automatically mock ANTHROPIC_API_KEY for all tests in this module."""
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+    """Automatically mock ANTHROPIC_API_KEY for all tests in this module if not already set."""
+    if "ANTHROPIC_API_KEY" not in os.environ:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            yield
+    else:
         yield
 
 
@@ -40,83 +43,6 @@ def test_anthropic_completion_is_used_when_claude_provider():
     assert llm.model == "claude-3-5-sonnet-20241022"
 
 
-
-
-def test_anthropic_tool_use_conversation_flow():
-    """
-    Test that the Anthropic completion properly handles tool use conversation flow
-    """
-    from unittest.mock import Mock, patch
-    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
-    from anthropic.types.tool_use_block import ToolUseBlock
-
-    # Create AnthropicCompletion instance
-    completion = AnthropicCompletion(model="claude-3-5-sonnet-20241022")
-
-    # Mock tool function
-    def mock_weather_tool(location: str) -> str:
-        return f"The weather in {location} is sunny and 75°F"
-
-    available_functions = {"get_weather": mock_weather_tool}
-
-    # Mock the Anthropic client responses
-    with patch.object(completion.client.messages, 'create') as mock_create:
-        # Mock initial response with tool use - need to properly mock ToolUseBlock
-        mock_tool_use = Mock(spec=ToolUseBlock)
-        mock_tool_use.id = "tool_123"
-        mock_tool_use.name = "get_weather"
-        mock_tool_use.input = {"location": "San Francisco"}
-
-        mock_initial_response = Mock()
-        mock_initial_response.content = [mock_tool_use]
-        mock_initial_response.usage = Mock()
-        mock_initial_response.usage.input_tokens = 100
-        mock_initial_response.usage.output_tokens = 50
-
-        # Mock final response after tool result - properly mock text content
-        mock_text_block = Mock()
-        # Set the text attribute as a string, not another Mock
-        mock_text_block.configure_mock(text="Based on the weather data, it's a beautiful day in San Francisco with sunny skies and 75°F temperature.")
-
-        mock_final_response = Mock()
-        mock_final_response.content = [mock_text_block]
-        mock_final_response.usage = Mock()
-        mock_final_response.usage.input_tokens = 150
-        mock_final_response.usage.output_tokens = 75
-
-        # Configure mock to return different responses on successive calls
-        mock_create.side_effect = [mock_initial_response, mock_final_response]
-
-        # Test the call
-        messages = [{"role": "user", "content": "What's the weather like in San Francisco?"}]
-        result = completion.call(
-            messages=messages,
-            available_functions=available_functions
-        )
-
-        # Verify the result contains the final response
-        assert "beautiful day in San Francisco" in result
-        assert "sunny skies" in result
-        assert "75°F" in result
-
-        # Verify that two API calls were made (initial + follow-up)
-        assert mock_create.call_count == 2
-
-        # Verify the second call includes tool results
-        second_call_args = mock_create.call_args_list[1][1]  # kwargs of second call
-        messages_in_second_call = second_call_args["messages"]
-
-        # Should have original user message + assistant tool use + user tool result
-        assert len(messages_in_second_call) == 3
-        assert messages_in_second_call[0]["role"] == "user"
-        assert messages_in_second_call[1]["role"] == "assistant"
-        assert messages_in_second_call[2]["role"] == "user"
-
-        # Verify tool result format
-        tool_result = messages_in_second_call[2]["content"][0]
-        assert tool_result["type"] == "tool_result"
-        assert tool_result["tool_use_id"] == "tool_123"
-        assert "sunny and 75°F" in tool_result["content"]
 
 
 def test_anthropic_completion_module_is_imported():
@@ -686,7 +612,7 @@ def test_anthropic_stop_sequences_sync():
     assert llm.stop == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+@pytest.mark.vcr()
 def test_anthropic_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Anthropic API."""
     llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
@@ -698,3 +624,842 @@ def test_anthropic_stop_sequences_sent_to_api():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_thinking():
+    """Test that thinking is properly handled and thinking params are passed to messages.create"""
+    from unittest.mock import patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    original_create = llm.client.messages.create
+    captured_params = {}
+
+    def capture_and_call(**kwargs):
+        captured_params.update(kwargs)
+        return original_create(**kwargs)
+
+    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+        result = llm.call("What is the weather in Tokyo?")
+
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+        assert "thinking" in captured_params
+        assert captured_params["thinking"] == {"type": "enabled", "budget_tokens": 5000}
+
+        assert captured_params["model"] == "claude-sonnet-4-5"
+        assert captured_params["max_tokens"] == 10000
+        assert "messages" in captured_params
+        assert len(captured_params["messages"]) > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_thinking_blocks_preserved_across_turns():
+    """Test that thinking blocks are stored and included in subsequent API calls across turns"""
+    from unittest.mock import patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    # Capture all messages.create calls to verify thinking blocks are included
+    original_create = llm.client.messages.create
+    captured_calls = []
+
+    def capture_and_call(**kwargs):
+        captured_calls.append(kwargs)
+        return original_create(**kwargs)
+
+    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+        # First call - establishes context and generates thinking blocks
+        messages = [{"role": "user", "content": "What is 2+2?"}]
+        first_result = llm.call(messages)
+
+        # Verify first call completed
+        assert first_result is not None
+        assert isinstance(first_result, str)
+        assert len(first_result) > 0
+
+        # Verify thinking blocks were stored after first response
+        assert len(llm.previous_thinking_blocks) > 0, "No thinking blocks stored after first call"
+        first_thinking = llm.previous_thinking_blocks[0]
+        assert first_thinking["type"] == "thinking"
+        assert "thinking" in first_thinking
+        assert "signature" in first_thinking
+
+        # Store the thinking block content for comparison
+        stored_thinking_content = first_thinking["thinking"]
+        stored_signature = first_thinking["signature"]
+
+        # Second call - should include thinking blocks from first call
+        messages.append({"role": "assistant", "content": first_result})
+        messages.append({"role": "user", "content": "Now what is 3+3?"})
+        second_result = llm.call(messages)
+
+        # Verify second call completed
+        assert second_result is not None
+        assert isinstance(second_result, str)
+
+        # Verify at least 2 API calls were made
+        assert len(captured_calls) >= 2, f"Expected at least 2 API calls, got {len(captured_calls)}"
+
+        # Verify second call includes thinking blocks in assistant message
+        second_call_messages = captured_calls[1]["messages"]
+
+        # Should have: user message + assistant message (with thinking blocks) + follow-up user message
+        assert len(second_call_messages) >= 2
+
+        # Find the assistant message in the second call
+        assistant_message = None
+        for msg in second_call_messages:
+            if msg["role"] == "assistant" and isinstance(msg.get("content"), list):
+                assistant_message = msg
+                break
+
+        assert assistant_message is not None, "Assistant message with list content not found in second call"
+        assert isinstance(assistant_message["content"], list)
+
+        # Verify thinking block is included in assistant message content
+        thinking_found = False
+        for block in assistant_message["content"]:
+            if isinstance(block, dict) and block.get("type") == "thinking":
+                thinking_found = True
+                assert "thinking" in block
+                assert "signature" in block
+                # Verify it matches what was stored from the first call
+                assert block["thinking"] == stored_thinking_content
+                assert block["signature"] == stored_signature
+                break
+
+        assert thinking_found, "Thinking block not found in assistant message content in second call"
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_function_calling():
+    """Test that function calling is properly handled"""
+    llm = LLM(model="anthropic/claude-sonnet-4-5")
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather in a given location",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"],
+                        "description": "The unit of temperature"
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    ]
+
+    result = llm.call(
+        "What is the weather in Tokyo? Use the get_weather tool.",
+        tools=tools,
+        available_functions={"get_weather": get_weather}
+    )
+
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0
+    # Verify the response includes information about Tokyo's weather
+    assert "tokyo" in result.lower() or "72" in result
+
+
+# =============================================================================
+# Agent Kickoff Structured Output Tests
+# =============================================================================
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_tool_execution_with_available_functions():
+    """
+    Test that Anthropic provider correctly executes tools when available_functions is provided.
+
+    This specifically tests the fix for double llm_call_completed emission - when
+    available_functions is provided, _handle_tool_execution is called which already
+    emits llm_call_completed, so the caller should not emit it again.
+
+    The test verifies:
+    1. The tool is called with correct arguments
+    2. The tool result is returned directly (not wrapped in conversation)
+    3. The result is valid JSON matching the tool output format
+    """
+    import json
+
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+
+    # Simple tool that returns a formatted string
+    def create_reasoning_plan(plan: str, steps: list, ready: bool) -> str:
+        """Create a reasoning plan with steps."""
+        return json.dumps({"plan": plan, "steps": steps, "ready": ready})
+
+    tools = [
+        {
+            "name": "create_reasoning_plan",
+            "description": "Create a structured reasoning plan for completing a task",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "plan": {
+                        "type": "string",
+                        "description": "High-level plan description"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "List of steps to execute"
+                    },
+                    "ready": {
+                        "type": "boolean",
+                        "description": "Whether the plan is ready to execute"
+                    }
+                },
+                "required": ["plan", "steps", "ready"]
+            }
+        }
+    ]
+
+    result = llm.call(
+        messages=[{"role": "user", "content": "Create a simple plan to say hello. Use the create_reasoning_plan tool."}],
+        tools=tools,
+        available_functions={"create_reasoning_plan": create_reasoning_plan}
+    )
+
+    # Verify result is valid JSON from the tool
+    assert result is not None
+    assert isinstance(result, str)
+
+    # Parse the result to verify it's valid JSON
+    parsed_result = json.loads(result)
+    assert "plan" in parsed_result
+    assert "steps" in parsed_result
+    assert "ready" in parsed_result
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_tool_execution_returns_tool_result_directly():
+    """
+    Test that when available_functions is provided, the tool result is returned directly
+    without additional LLM conversation (matching OpenAI behavior for reasoning_handler).
+    """
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+
+    call_count = 0
+
+    def simple_calculator(operation: str, a: int, b: int) -> str:
+        """Perform a simple calculation."""
+        nonlocal call_count
+        call_count += 1
+        if operation == "add":
+            return str(a + b)
+        elif operation == "multiply":
+            return str(a * b)
+        return "Unknown operation"
+
+    tools = [
+        {
+            "name": "simple_calculator",
+            "description": "Perform simple math operations",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["add", "multiply"],
+                        "description": "The operation to perform"
+                    },
+                    "a": {"type": "integer", "description": "First number"},
+                    "b": {"type": "integer", "description": "Second number"}
+                },
+                "required": ["operation", "a", "b"]
+            }
+        }
+    ]
+
+    result = llm.call(
+        messages=[{"role": "user", "content": "Calculate 5 + 3 using the simple_calculator tool with operation 'add'."}],
+        tools=tools,
+        available_functions={"simple_calculator": simple_calculator}
+    )
+
+    # Tool should have been called exactly once
+    assert call_count == 1, f"Expected tool to be called once, got {call_count}"
+
+    # Result should be the direct tool output
+    assert result == "8", f"Expected '8' but got '{result}'"
+
+
+@pytest.mark.vcr()
+def test_anthropic_agent_kickoff_structured_output_without_tools():
+    """
+    Test that agent kickoff returns structured output without tools.
+    This tests native structured output handling for Anthropic models.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnalysisResult(BaseModel):
+        """Structured output for analysis results."""
+
+        topic: str = Field(description="The topic analyzed")
+        key_points: list[str] = Field(description="Key insights from the analysis")
+        summary: str = Field(description="Brief summary of findings")
+
+    agent = Agent(
+        role="Analyst",
+        goal="Provide structured analysis on topics",
+        backstory="You are an expert analyst who provides clear, structured insights.",
+        llm=LLM(model="anthropic/claude-3-5-haiku-20241022"),
+        tools=[],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Analyze the benefits of remote work briefly. Keep it concise.",
+        response_format=AnalysisResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, AnalysisResult), f"Expected AnalysisResult but got {type(result.pydantic)}"
+    assert result.pydantic.topic, "Topic should not be empty"
+    assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
+    assert result.pydantic.summary, "Summary should not be empty"
+
+
+@pytest.mark.vcr()
+def test_anthropic_agent_kickoff_structured_output_with_tools():
+    """
+    Test that agent kickoff returns structured output after using tools.
+    This tests post-tool-call structured output handling for Anthropic models.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        """Structured output for calculation results."""
+
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="anthropic/claude-3-5-haiku-20241022"),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        response_format=CalculationResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult), f"Expected CalculationResult but got {type(result.pydantic)}"
+    assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
+    assert result.pydantic.operation, "Operation should not be empty"
+    assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+@pytest.mark.vcr()
+def test_anthropic_cached_prompt_tokens():
+    """
+    Test that Anthropic correctly extracts and tracks cached_prompt_tokens
+    from cache_read_input_tokens. Uses cache_control to enable prompt caching
+    and sends the same large prompt twice so the second call hits the cache.
+    """
+    # Anthropic requires cache_control blocks and >=1024 tokens for caching
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = LLM(model="anthropic/claude-sonnet-4-5-20250929")
+
+    def _ephemeral_user(text: str):
+        return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say hello in one word.")},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say goodbye in one word.")},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_anthropic_streaming_cached_prompt_tokens():
+    """
+    Test that Anthropic streaming correctly extracts and tracks cached_prompt_tokens.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = LLM(model="anthropic/claude-sonnet-4-5-20250929", stream=True)
+
+    def _ephemeral_user(text: str):
+        return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say hello in one word.")},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say goodbye in one word.")},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_anthropic_cached_prompt_tokens_with_tools():
+    """
+    Test that Anthropic correctly tracks cached_prompt_tokens when tools are used.
+    The large system prompt should be cached across tool-calling requests.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+            },
+        }
+    ]
+
+    llm = LLM(model="anthropic/claude-sonnet-4-5-20250929")
+
+    def _ephemeral_user(text: str):
+        return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    # First call with tool: creates the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": _ephemeral_user("What is the weather in Tokyo?")},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call with same system prompt + tools: should hit the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": _ephemeral_user("What is the weather in Paris?")},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+# ---- Tool Search Tool Tests ----
+
+
+def test_tool_search_true_injects_bm25_and_defer_loading():
+    """tool_search=True should inject bm25 tool search and defer all tools."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get weather for a location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"location": {"type": "string"}},
+                    "required": ["location"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "calculator",
+                "description": "Perform math calculations",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"expression": {"type": "string"}},
+                    "required": ["expression"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, crewai_tools
+    )
+
+    tools = params["tools"]
+    # Should have 3 tools: tool_search + 2 regular
+    assert len(tools) == 3
+
+    # First tool should be the bm25 tool search tool
+    assert tools[0]["type"] == "tool_search_tool_bm25_20251119"
+    assert tools[0]["name"] == "tool_search_tool_bm25"
+    assert "input_schema" not in tools[0]
+
+    # All regular tools should have defer_loading=True
+    for t in tools[1:]:
+        assert t.get("defer_loading") is True, f"Tool {t['name']} missing defer_loading"
+
+
+def test_tool_search_regex_config():
+    """tool_search with regex config should use regex variant."""
+    from crewai.llms.providers.anthropic.completion import AnthropicToolSearchConfig
+
+    config = AnthropicToolSearchConfig(type="regex")
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=config)
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_a",
+                "description": "First tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_b",
+                "description": "Second tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, crewai_tools
+    )
+
+    tools = params["tools"]
+    assert tools[0]["type"] == "tool_search_tool_regex_20251119"
+    assert tools[0]["name"] == "tool_search_tool_regex"
+
+
+def test_tool_search_disabled_by_default():
+    """tool_search=None (default) should NOT inject anything."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5")
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, crewai_tools
+    )
+
+    tools = params["tools"]
+    assert len(tools) == 1
+    for t in tools:
+        assert t.get("type", "") not in (
+            "tool_search_tool_bm25_20251119",
+            "tool_search_tool_regex_20251119",
+        )
+        assert "defer_loading" not in t
+
+
+def test_tool_search_no_duplicate_when_manually_provided():
+    """If user passes a tool search tool manually, don't inject a duplicate."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    # User manually includes a tool search tool
+    tools_with_search = [
+        {"type": "tool_search_tool_regex_20251119", "name": "tool_search_tool_regex"},
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages, system_message, tools_with_search
+    )
+
+    tools = params["tools"]
+    search_tools = [
+        t for t in tools
+        if t.get("type", "").startswith("tool_search_tool")
+    ]
+    # Should only have 1 tool search tool (the user's manual one)
+    assert len(search_tools) == 1
+    assert search_tools[0]["type"] == "tool_search_tool_regex_20251119"
+
+
+def test_tool_search_passthrough_preserves_tool_search_type():
+    """_convert_tools_for_interference should pass through tool search tools unchanged."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5")
+
+    tools = [
+        {"type": "tool_search_tool_regex_20251119", "name": "tool_search_tool_regex"},
+        {
+            "name": "get_weather",
+            "description": "Get weather",
+            "input_schema": {
+                "type": "object",
+                "properties": {"location": {"type": "string"}},
+                "required": ["location"],
+            },
+        },
+    ]
+
+    converted = llm._convert_tools_for_interference(tools)
+    assert len(converted) == 2
+    # Tool search tool should be passed through exactly
+    assert converted[0] == {
+        "type": "tool_search_tool_regex_20251119",
+        "name": "tool_search_tool_regex",
+    }
+    # Regular tool should be preserved
+    assert converted[1]["name"] == "get_weather"
+    assert "input_schema" in converted[1]
+
+
+def test_tool_search_single_tool_skips_search_and_forces_choice():
+    """With only 1 tool, tool_search is skipped (nothing to search) and the
+    normal forced tool_choice optimisation still applies."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    crewai_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+        },
+    ]
+
+    formatted_messages, system_message = llm._format_messages_for_anthropic(
+        [{"role": "user", "content": "Hello"}]
+    )
+    params = llm._prepare_completion_params(
+        formatted_messages,
+        system_message,
+        crewai_tools,
+        available_functions={"test_tool": lambda q: "result"},
+    )
+
+    # Single tool — tool_search skipped, tool_choice forced as normal
+    assert "tool_choice" in params
+    assert params["tool_choice"]["name"] == "test_tool"
+
+    # No tool search tool should be injected
+    tool_types = [t.get("type", "") for t in params["tools"]]
+    for ts_type in ("tool_search_tool_bm25_20251119", "tool_search_tool_regex_20251119"):
+        assert ts_type not in tool_types
+
+    # No defer_loading on the single tool
+    assert "defer_loading" not in params["tools"][0]
+
+
+def test_tool_search_via_llm_class():
+    """Verify tool_search param passes through LLM class correctly."""
+    from crewai.llms.providers.anthropic.completion import (
+        AnthropicCompletion,
+        AnthropicToolSearchConfig,
+    )
+
+    # Test with True
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.tool_search is not None
+    assert llm.tool_search.type == "bm25"
+
+    # Test with config
+    llm2 = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        tool_search=AnthropicToolSearchConfig(type="regex"),
+    )
+    assert llm2.tool_search is not None
+    assert llm2.tool_search.type == "regex"
+
+    # Test without (default)
+    llm3 = LLM(model="anthropic/claude-sonnet-4-5")
+    assert llm3.tool_search is None
+
+
+# Many tools shared by the VCR tests below
+_MANY_TOOLS = [
+    {
+        "name": name,
+        "description": desc,
+        "input_schema": {
+            "type": "object",
+            "properties": {"input": {"type": "string", "description": f"Input for {name}"}},
+            "required": ["input"],
+        },
+    }
+    for name, desc in [
+        ("get_weather", "Get current weather conditions for a specified location"),
+        ("search_files", "Search through files in the workspace by name or content"),
+        ("read_database", "Read records from a database table with optional filtering"),
+        ("write_database", "Write or update records in a database table"),
+        ("send_email", "Send an email message to one or more recipients"),
+        ("read_email", "Read emails from inbox with filtering options"),
+        ("create_ticket", "Create a new support ticket in the ticketing system"),
+        ("update_ticket", "Update an existing support ticket status or description"),
+        ("list_users", "List all users in the system with optional filters"),
+        ("get_user_profile", "Get detailed profile information for a specific user"),
+        ("deploy_service", "Deploy a service to the specified environment"),
+        ("rollback_service", "Rollback a service deployment to a previous version"),
+        ("get_service_logs", "Get service logs filtered by time range and severity"),
+        ("run_sql_query", "Run a read-only SQL query against the analytics database"),
+        ("create_dashboard", "Create a new monitoring dashboard with widgets"),
+    ]
+]
+
+
+@pytest.mark.vcr()
+def test_tool_search_discovers_and_calls_tool():
+    """Tool search should discover the right tool and return a tool_use block."""
+    llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+
+    result = llm.call(
+        "What is the weather in Tokyo?",
+        tools=_MANY_TOOLS,
+    )
+
+    # Should return tool_use blocks (list) since no available_functions provided
+    assert isinstance(result, list)
+    assert len(result) >= 1
+    # The discovered tool should be get_weather
+    tool_names = [getattr(block, "name", None) for block in result]
+    assert "get_weather" in tool_names
+
+
+@pytest.mark.vcr()
+def test_tool_search_saves_input_tokens():
+    """Tool search with deferred loading should use fewer input tokens than loading all tools."""
+    # Call WITHOUT tool search — all 15 tools loaded upfront
+    llm_no_search = LLM(model="anthropic/claude-sonnet-4-5")
+    llm_no_search.call("What is the weather in Tokyo?", tools=_MANY_TOOLS)
+    usage_no_search = llm_no_search.get_token_usage_summary()
+
+    # Call WITH tool search — tools deferred
+    llm_search = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
+    llm_search.call("What is the weather in Tokyo?", tools=_MANY_TOOLS)
+    usage_search = llm_search.get_token_usage_summary()
+
+    # Tool search should use fewer input tokens
+    assert usage_search.prompt_tokens < usage_no_search.prompt_tokens, (
+        f"Expected tool_search ({usage_search.prompt_tokens}) to use fewer input tokens "
+        f"than no search ({usage_no_search.prompt_tokens})"
+    )

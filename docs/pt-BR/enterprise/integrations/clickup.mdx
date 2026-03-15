@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -75,6 +76,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
       }
       ```
       Campos disponíveis: `space_ids%5B%5D`, `project_ids%5B%5D`, `list_ids%5B%5D`, `statuses%5B%5D`, `include_closed`, `assignees%5B%5D`, `tags%5B%5D`, `due_date_gt`, `due_date_lt`, `date_created_gt`, `date_created_lt`, `date_updated_gt`, `date_updated_lt`
+
   </Accordion>
 
   <Accordion title="clickup/get_task_in_list">
@@ -83,6 +85,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `listId` (string, obrigatório): Lista - Selecione uma Lista da qual obter as tarefas. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem uma Lista ClickUp.
     - `taskFilterFormula` (string, opcional): Busque tarefas que correspondam aos filtros especificados. Por exemplo: name=task1.
+
   </Accordion>
 
   <Accordion title="clickup/create_task">
@@ -96,6 +99,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `assignees` (string, opcional): Responsáveis - Selecione um Membro (ou um array de IDs de membros) para ser responsável por esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem um Membro ClickUp.
     - `dueDate` (string, opcional): Data de Vencimento - Especifique uma data para a conclusão desta tarefa.
     - `additionalFields` (string, opcional): Campos Adicionais - Especifique campos adicionais para incluir nesta tarefa em formato JSON.
+
   </Accordion>
 
   <Accordion title="clickup/update_task">
@@ -110,6 +114,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `assignees` (string, opcional): Responsáveis - Selecione um Membro (ou um array de IDs de membros) para ser responsável por esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem um Membro ClickUp.
     - `dueDate` (string, opcional): Data de Vencimento - Especifique uma data para a conclusão desta tarefa.
     - `additionalFields` (string, opcional): Campos Adicionais - Especifique campos adicionais para incluir nesta tarefa em formato JSON.
+
   </Accordion>
 
   <Accordion title="clickup/delete_task">
@@ -117,6 +122,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `taskId` (string, obrigatório): ID da tarefa - O ID da tarefa a ser excluída.
+
   </Accordion>
 
   <Accordion title="clickup/get_list">
@@ -124,6 +130,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `spaceId` (string, obrigatório): ID do Espaço - O ID do espaço que contém as listas.
+
   </Accordion>
 
   <Accordion title="clickup/get_custom_fields_in_list">
@@ -131,6 +138,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `listId` (string, obrigatório): ID da Lista - O ID da lista da qual obter os campos personalizados.
+
   </Accordion>
 
   <Accordion title="clickup/get_all_fields_in_list">
@@ -138,6 +146,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `listId` (string, obrigatório): ID da Lista - O ID da lista da qual obter todos os campos.
+
   </Accordion>
 
   <Accordion title="clickup/get_space">
@@ -145,6 +154,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `spaceId` (string, opcional): ID do Espaço - O ID do espaço a ser recuperado.
+
   </Accordion>
 
   <Accordion title="clickup/get_folders">
@@ -152,12 +162,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `spaceId` (string, obrigatório): ID do Espaço - O ID do espaço que contém as pastas.
+
   </Accordion>
 
   <Accordion title="clickup/get_member">
     **Descrição:** Obtenha informações de Membro no ClickUp.
 
     **Parâmetros:** Nenhum obrigatório.
+
   </Accordion>
 </AccordionGroup>
 
@@ -283,5 +295,6 @@ crew.kickoff()
 ### Precisa de Ajuda?
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para auxílio na configuração ou solução de problemas da integração com ClickUp.
+  Entre em contato com nossa equipe de suporte para auxílio na configuração ou
+  solução de problemas da integração com ClickUp.
 </Card>

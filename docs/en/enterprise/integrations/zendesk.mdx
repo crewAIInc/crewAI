@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -70,6 +72,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `ticketTags` (string, optional): Array of tags to apply (e.g., `["enterprise", "other_tag"]`)
     - `ticketExternalId` (string, optional): External ID to link tickets to local records
     - `ticketCustomFields` (object, optional): Custom field values in JSON format
+
   </Accordion>
 
   <Accordion title="zendesk/update_ticket">
@@ -88,6 +91,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `ticketTags` (string, optional): Updated tags array
     - `ticketExternalId` (string, optional): Updated external ID
     - `ticketCustomFields` (object, optional): Updated custom field values
+
   </Accordion>
 
   <Accordion title="zendesk/get_ticket_by_id">
@@ -95,6 +99,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `ticketId` (string, required): The ticket ID to retrieve (e.g., "35436")
+
   </Accordion>
 
   <Accordion title="zendesk/add_comment_to_ticket">
@@ -105,6 +110,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `commentBody` (string, required): Comment message (accepts plain text or HTML, e.g., "Thanks for your help!")
     - `isInternalNote` (boolean, optional): Set to true for internal notes instead of public replies (defaults to false)
     - `isPublic` (boolean, optional): True for public comments, false for internal notes
+
   </Accordion>
 
   <Accordion title="zendesk/search_tickets">
@@ -126,6 +132,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `dueDate` (object, optional): Filter by due date with operator and value
     - `sort_by` (string, optional): Sort field - Options: created_at, updated_at, priority, status, ticket_type
     - `sort_order` (string, optional): Sort direction - Options: asc, desc
+
   </Accordion>
 </AccordionGroup>
 
@@ -143,6 +150,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `externalId` (string, optional): Unique identifier from another system
     - `details` (string, optional): Additional user details
     - `notes` (string, optional): Internal notes about the user
+
   </Accordion>
 
   <Accordion title="zendesk/update_user">
@@ -157,6 +165,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `externalId` (string, optional): Updated external ID
     - `details` (string, optional): Updated user details
     - `notes` (string, optional): Updated internal notes
+
   </Accordion>
 
   <Accordion title="zendesk/get_user_by_id">
@@ -164,6 +173,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `userId` (string, required): The user ID to retrieve
+
   </Accordion>
 
   <Accordion title="zendesk/search_users">
@@ -176,6 +186,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `externalId` (string, optional): Filter by external ID
     - `sort_by` (string, optional): Sort field - Options: created_at, updated_at
     - `sort_order` (string, optional): Sort direction - Options: asc, desc
+
   </Accordion>
 </AccordionGroup>
 
@@ -188,6 +199,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `paginationParameters` (object, optional): Pagination settings
       - `pageCursor` (string, optional): Page cursor for pagination
+
   </Accordion>
 
   <Accordion title="zendesk/get_ticket_audits">
@@ -197,6 +209,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `ticketId` (string, optional): Get audits for specific ticket (if empty, retrieves audits for all non-archived tickets, e.g., "1234")
     - `paginationParameters` (object, optional): Pagination settings
       - `pageCursor` (string, optional): Page cursor for pagination
+
   </Accordion>
 </AccordionGroup>
 

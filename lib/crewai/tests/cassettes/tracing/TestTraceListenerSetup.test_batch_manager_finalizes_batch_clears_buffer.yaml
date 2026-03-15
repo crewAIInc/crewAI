@@ -1,0 +1,296 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '825'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=ePO5hy0kEoADCuKcboFy1iS1qckCE5KCpifQaXnlomM-1754508545-1.0.1.1-ieWfjcdIxQIXGfaMizvmgTvZPRFehqDXliegaOT7EO.kt7KSSFGmNDcC35_D9hOhE.fJ5K302uX0snQF3nLaapds2dqgGbNcsyFPOKNvAdI; _cfuvid=NaXWifUGChHp6Ap1mvfMrNzmO4HdzddrqXkSR9T.hYo-1754508545647-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C1e6szu0LcpzA5qhIcWFgopmvu1Hg\",\n  \"object\": \"chat.completion\",\n  \"created\": 1754508546,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: hello world\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 157,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+    headers:
+      CF-RAY:
+      - 96b0f0f0ac9e7ad9-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 06 Aug 2025 19:29:07 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '653'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '667'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999830'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999827'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3f500b79ab1a400ea9e26d0f12e890bb
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '797'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=f59gEPi_nA3TTxtjbKaSQpvkTwezaAqOvqfxiGzRnVQ-1754508546-1.0.1.1-JrSaytxVIQSVE00I.vyGj7d4HJbbMV6R9fWPJbkDKu0Y8ueMRzTwTUnfz0YzP5nsZX5oxoE6WlmFxOuz0rRuq9YhZZsO_TbaFBOFk1jGK9U; _cfuvid=3D66v3.J_RcVoYy9dlF.jHwq1zTIm842xynZxzSy1Wc-1754508546352-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '200.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C1e6t2XjAp7mweXSaQ6UJTyk9yfQM\",\n  \"object\": \"chat.completion\",\n  \"created\": 1754508547,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, world!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 157,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 172,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+    headers:
+      CF-RAY:
+      - 96b0f0f54d6aeb2c-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 06 Aug 2025 19:29:08 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '809'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '823'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999827'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999827'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_806f7071fb664da48953f5b216b56d9a
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "eb9e0ee1-15ed-4044-b84b-f17e493a1e28", "execution_type": "crew", "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": "Unknown Flow", "crewai_version": "0.152.0", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-08-06T19:30:52.210701+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '413'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.152.0
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.152.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n    color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n    margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width: 95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color: #999;\n    border-left-color: #999;\n    border-bottom-color: #BBB;\n    border-top: #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius: 9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1 {\n    font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n  }\n\n  .rails-default-error-page\
+        \ div.dialog > p {\n    margin: 0 0 1em;\n    padding: 1em;\n    background-color: #F7F7F7;\n    border: 1px solid #CCC;\n    border-right-color: #999;\n    border-left-color: #999;\n    border-bottom-color: #999;\n    border-bottom-left-radius: 4px;\n    border-bottom-right-radius: 4px;\n    border-top-color: #DADADA;\n    color: #666;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n  </style>\n</head>\n\n<body class=\"rails-default-error-page\">\n  <!-- This file lives in public/404.html -->\n  <div class=\"dialog\">\n    <div>\n      <h1>The page you were looking for doesn't exist.</h1>\n      <p>You may have mistyped the address or the page may have moved.</p>\n    </div>\n    <p>If you are the application owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1722'
+      Content-Type:
+      - text/html; charset=UTF-8
+      Date:
+      - Wed, 06 Aug 2025 19:30:52 GMT
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      x-request-id:
+      - bec0cf39-af9c-4955-b600-607187a7b10b
+      x-runtime:
+      - '0.005352'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{"version": "0.152.0", "batch_id": "eb9e0ee1-15ed-4044-b84b-f17e493a1e28", "user_context": {"user_id": "anonymous", "organization_id": "", "session_id": "e7e7a716-e64b-490b-96db-5c5367042114", "trace_id": "54e95e1f-cd41-4ece-9e5e-21984d635e6a"}, "execution_metadata": {"crew_name": "crew", "execution_start": "2025-08-06T19:30:52.209750+00:00", "crewai_version": "0.152.0"}, "events": [{"event_id": "98b2a833-63fc-457c-a2e0-6ce228a8214c", "timestamp": "2025-08-06T19:30:52.328066+00:00", "type": "crew_kickoff_started", "event_data": {"timestamp": "2025-08-06T19:30:52.209750+00:00", "type": "crew_kickoff_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "4abf563c-d35f-4a09-867d-75c1c54b3fed", "timestamp": "2025-08-06T19:30:52.328113+00:00", "type": "crew_kickoff_started", "event_data": {"timestamp": "2025-08-06T19:30:52.209750+00:00", "type": "crew_kickoff_started", "source_fingerprint":
+      null, "source_type": null, "fingerprint_metadata": null, "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "60bdc932-6b56-4f1d-bcc2-5b3b57c8dc94", "timestamp": "2025-08-06T19:30:52.330079+00:00", "type": "task_started", "event_data": {"task_description": "Say hello to the world", "task_name": null, "context": "", "agent": "Test Agent"}}, {"event_id": "97761b9f-d132-47e7-8857-5fdda8c80b65", "timestamp": "2025-08-06T19:30:52.330089+00:00", "type": "task_started", "event_data": {"task_description": "Say hello to the world", "task_name": null, "context": "", "agent": "Test Agent"}}, {"event_id": "cdaa47c1-448f-476e-9761-14a25f26c481", "timestamp": "2025-08-06T19:30:52.330477+00:00", "type": "agent_execution_started", "event_data": {"serialization_error": "Circular reference detected (id repeated)", "object_type": "AgentExecutionStartedEvent"}}, {"event_id": "7aa43738-3903-44cf-8416-d47542469537", "timestamp": "2025-08-06T19:30:52.330612+00:00", "type": "agent_execution_started",
+      "event_data": {"serialization_error": "Circular reference detected (id repeated)", "object_type": "AgentExecutionStartedEvent"}}, {"event_id": "6eb42795-be95-4f1c-b70f-385c59483e43", "timestamp": "2025-08-06T19:30:52.330751+00:00", "type": "llm_call_started", "event_data": {"timestamp": "2025-08-06T19:30:52.330725+00:00", "type": "llm_call_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_name": null, "task_id": "1bfe4b49-ba6a-464d-9b6a-ca2eb8e965d8", "agent_id": "5d6dbe70-71fc-42e2-ba0d-61b460542dad", "agent_role": "Test Agent", "model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\n..."}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is ..."}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x11bd10a10>"], "available_functions": null}}, {"event_id": "679e3211-ef91-45c0-9d4a-e5118e653dbd", "timestamp": "2025-08-06T19:30:52.330798+00:00", "type": "llm_call_started", "event_data": {"timestamp": "2025-08-06T19:30:52.330725+00:00", "type": "llm_call_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_name": null, "task_id": "1bfe4b49-ba6a-464d-9b6a-ca2eb8e965d8", "agent_id": "5d6dbe70-71fc-42e2-ba0d-61b460542dad", "agent_role": "Test Agent", "model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\n..."}, {"role": "user", "content":
+      "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is ..."}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x11bd10a10>"], "available_functions": null}}, {"event_id": "911c67ea-125b-4adf-87a5-4a9265575f93", "timestamp": "2025-08-06T19:30:52.335757+00:00", "type": "llm_call_completed", "event_data": {"timestamp": "2025-08-06T19:30:52.335728+00:00", "type": "llm_call_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_name": null, "task_id": "1bfe4b49-ba6a-464d-9b6a-ca2eb8e965d8", "agent_id": "5d6dbe70-71fc-42e2-ba0d-61b460542dad", "agent_role": "Test Agent", "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\n..."}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is ..."}], "response": "I now can give a great answer  \nFinal Answer: hello world", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "response_cost": 3.255e-05, "model": "gpt-4o-mini"}}, {"event_id": "1c93586f-82b9-4999-adda-78c8010b59f6", "timestamp": "2025-08-06T19:30:52.335800+00:00", "type": "llm_call_completed", "event_data": {"timestamp": "2025-08-06T19:30:52.335728+00:00", "type": "llm_call_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_name": null, "task_id": "1bfe4b49-ba6a-464d-9b6a-ca2eb8e965d8", "agent_id": "5d6dbe70-71fc-42e2-ba0d-61b460542dad", "agent_role": "Test Agent", "messages": [{"role": "system", "content":
+      "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\n..."}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is ..."}], "response": "I now can give a great answer  \nFinal Answer: hello world", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "response_cost": 3.255e-05, "model": "gpt-4o-mini"}}, {"event_id": "eb9d53af-ce39-4241-ab93-e40545a1ee78", "timestamp": "2025-08-06T19:30:52.335904+00:00", "type": "agent_execution_completed", "event_data": {"serialization_error": "Circular reference detected (id repeated)", "object_type": "AgentExecutionCompletedEvent"}}, {"event_id": "dc71f5f8-5762-4e44-ac60-aa20b033c9f9", "timestamp": "2025-08-06T19:30:52.335989+00:00",
+      "type": "agent_execution_completed", "event_data": {"serialization_error": "Circular reference detected (id repeated)", "object_type": "AgentExecutionCompletedEvent"}}, {"event_id": "84da8fb8-9247-4718-bc85-a69033c9261f", "timestamp": "2025-08-06T19:30:52.336082+00:00", "type": "task_completed", "event_data": {"serialization_error": "Circular reference detected (id repeated)", "object_type": "TaskCompletedEvent"}}, {"event_id": "c1a23877-2b87-40be-98a1-a3b2630c8657", "timestamp": "2025-08-06T19:30:52.336107+00:00", "type": "task_completed", "event_data": {"serialization_error": "Circular reference detected (id repeated)", "object_type": "TaskCompletedEvent"}}, {"event_id": "c77587d7-68d6-4600-b98a-74fe58af41fc", "timestamp": "2025-08-06T19:30:52.337164+00:00", "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-08-06T19:30:52.337145+00:00", "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "crew_name": "crew",
+      "crew": null, "output": {"description": "Say hello to the world", "name": null, "expected_output": "hello world", "summary": "Say hello to the world...", "raw": "hello world", "pydantic": null, "json_dict": null, "agent": "Test Agent", "output_format": "raw"}, "total_tokens": 170}}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8300'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.152.0
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.152.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing
+  response:
+    body:
+      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n    color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n    margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width: 95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color: #999;\n    border-left-color: #999;\n    border-bottom-color: #BBB;\n    border-top: #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius: 9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1 {\n    font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n  }\n\n  .rails-default-error-page\
+        \ div.dialog > p {\n    margin: 0 0 1em;\n    padding: 1em;\n    background-color: #F7F7F7;\n    border: 1px solid #CCC;\n    border-right-color: #999;\n    border-left-color: #999;\n    border-bottom-color: #999;\n    border-bottom-left-radius: 4px;\n    border-bottom-right-radius: 4px;\n    border-top-color: #DADADA;\n    color: #666;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n  </style>\n</head>\n\n<body class=\"rails-default-error-page\">\n  <!-- This file lives in public/404.html -->\n  <div class=\"dialog\">\n    <div>\n      <h1>The page you were looking for doesn't exist.</h1>\n      <p>You may have mistyped the address or the page may have moved.</p>\n    </div>\n    <p>If you are the application owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1722'
+      Content-Type:
+      - text/html; charset=UTF-8
+      Date:
+      - Wed, 06 Aug 2025 19:30:52 GMT
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      x-request-id:
+      - 78674bcb-6c8a-4eaf-8577-5cb27cac4089
+      x-runtime:
+      - '0.006009'
+    status:
+      code: 404
+      message: Not Found
+version: 1

@@ -10,10 +10,32 @@ from typing import TYPE_CHECKING, Any, get_type_hints
 from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
+
+
+def build_schema_hint(args_schema: type[BaseModel]) -> str:
+    """Build a human-readable hint from a Pydantic model's JSON schema.
+
+    Args:
+        args_schema: The Pydantic model class to extract schema from.
+
+    Returns:
+        A formatted string with expected arguments and required fields,
+        or empty string if schema extraction fails.
+    """
+    try:
+        schema = args_schema.model_json_schema()
+        return (
+            f"\nExpected arguments: "
+            f"{json.dumps(schema.get('properties', {}))}"
+            f"\nRequired: {json.dumps(schema.get('required', []))}"
+        )
+    except Exception:
+        return ""
 
 
 class ToolUsageLimitExceededError(Exception):
@@ -207,7 +229,8 @@ class CrewStructuredTool:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
         except Exception as e:
-            raise ValueError(f"Arguments validation failed: {e}") from e
+            hint = build_schema_hint(self.args_schema)
+            raise ValueError(f"Arguments validation failed: {e}{hint}") from e
 
     async def ainvoke(
         self,
@@ -229,7 +252,7 @@ class CrewStructuredTool:
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
-                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+                f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
             )
 
         self._increment_usage_count()
@@ -261,7 +284,7 @@ class CrewStructuredTool:
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
-                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+                f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
             )
 
         self._increment_usage_count()
@@ -295,6 +318,4 @@ class CrewStructuredTool:
         return self.args_schema.model_json_schema()["properties"]
 
     def __repr__(self) -> str:
-        return (
-            f"CrewStructuredTool(name='{self.name}', description='{self.description}')"
-        )
+        return f"CrewStructuredTool(name='{sanitize_tool_name(self.name)}', description='{self.description}')"

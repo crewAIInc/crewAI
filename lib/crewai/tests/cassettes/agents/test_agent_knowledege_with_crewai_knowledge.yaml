@@ -1,0 +1,435 @@
+interactions:
+- request:
+    body: '{"trace_id": "66a98653-4a5f-4547-9e8a-1207bf6bda40", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.6.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-12-05T00:34:05.134527+00:00"},
+      "ephemeral_trace_id": "66a98653-4a5f-4547-9e8a-1207bf6bda40"}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.6.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"970225bb-85f4-46b1-ac1c-e57fe6aca7a7","ephemeral_trace_id":"66a98653-4a5f-4547-9e8a-1207bf6bda40","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.6.1","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.6.1","privacy_level":"standard"},"created_at":"2025-12-05T00:34:05.572Z","updated_at":"2025-12-05T00:34:05.572Z","access_code":"TRACE-4d8b772d9f","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '515'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Fri, 05 Dec 2025 00:34:05 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"model": "openai/gpt-4o-mini", "messages": [{"role": "system", "content":
+      "Your goal is to rewrite the user query so that it is optimized for retrieval
+      from a vector database. Consider how the query will be used to find relevant
+      documents, and aim to make it more specific and context-aware. \n\n Do not include
+      any other text than the rewritten query, especially any preamble or postamble
+      and only add expected output format if its relevant to the rewritten query.
+      \n\n Focus on the key words of the intended task and to retrieve the most relevant
+      information. \n\n There will be some extra context provided that might need
+      to be removed such as expected_output formats structured_outputs and other instructions."},
+      {"role": "user", "content": "The original query is: What is Vidit''s favorite
+      color?\n\nThis is the expected criteria for your final answer: Vidit''s favorclearite
+      color.\nyou MUST return the actual complete content as the final answer, not
+      a summary.."}], "stream": false, "stop": ["\nObservation:"], "usage": {"include":
+      true}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1045'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: '{"error":{"message":"No cookie auth credentials found","code":401}}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:34:05 GMT
+      Permissions-Policy:
+      - PERMISSIONS-POLICY-XXX
+      Referrer-Policy:
+      - REFERRER-POLICY-XXX
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"model": "openai/gpt-4o-mini", "messages": [{"role": "system", "content":
+      "You are Information Agent. You have access to specific knowledge sources.\nYour
+      personal goal is: Provide information based on knowledge sources\nTo give my
+      best complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: What is Vidit''s favorite color?\n\nThis is the expected criteria for
+      your final answer: Vidit''s favorclearite color.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "stream": false, "stop": ["\nObservation:"],
+      "usage": {"include": true}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '979'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: '{"error":{"message":"No cookie auth credentials found","code":401}}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:34:05 GMT
+      Permissions-Policy:
+      - PERMISSIONS-POLICY-XXX
+      Referrer-Policy:
+      - REFERRER-POLICY-XXX
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"events": [{"event_id": "6ae0b148-a01d-4cf6-a601-8baf2dad112f", "timestamp":
+      "2025-12-05T00:34:05.127281+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-12-05T00:34:05.127281+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "d6f1b9cd-095c-4ce8-8df7-2f946808f4d4",
+      "timestamp": "2025-12-05T00:34:05.611154+00:00", "type": "knowledge_retrieval_started",
+      "event_data": {"timestamp": "2025-12-05T00:34:05.611154+00:00", "type": "knowledge_search_query_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "1cd23246-1364-4612-aa4a-af28df1c95d4", "task_name": "What is Vidit''s
+      favorite color?", "agent_id": "817edd6c-8bd4-445c-89b6-741cb427d734", "agent_role":
+      "Information Agent", "from_task": null, "from_agent": null}}, {"event_id": "bef88a31-8987-478a-8d07-d1bc63717407",
+      "timestamp": "2025-12-05T00:34:05.612236+00:00", "type": "knowledge_query_started",
+      "event_data": {"timestamp": "2025-12-05T00:34:05.612236+00:00", "type": "knowledge_query_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "1cd23246-1364-4612-aa4a-af28df1c95d4", "task_name": "What is Vidit''s
+      favorite color?", "agent_id": "817edd6c-8bd4-445c-89b6-741cb427d734", "agent_role":
+      "Information Agent", "from_task": null, "from_agent": null, "task_prompt": "What
+      is Vidit''s favorite color?\n\nThis is the expected criteria for your final
+      answer: Vidit''s favorclearite color.\nyou MUST return the actual complete content
+      as the final answer, not a summary."}}, {"event_id": "c2507cfb-8e79-4ef0-a778-dce8e75f04e2",
+      "timestamp": "2025-12-05T00:34:05.612380+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-12-05T00:34:05.612380+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "model": "openrouter/openai/gpt-4o-mini", "messages":
+      [{"role": "system", "content": "Your goal is to rewrite the user query so that
+      it is optimized for retrieval from a vector database. Consider how the query
+      will be used to find relevant documents, and aim to make it more specific and
+      context-aware. \n\n Do not include any other text than the rewritten query,
+      especially any preamble or postamble and only add expected output format if
+      its relevant to the rewritten query. \n\n Focus on the key words of the intended
+      task and to retrieve the most relevant information. \n\n There will be some
+      extra context provided that might need to be removed such as expected_output
+      formats structured_outputs and other instructions."}, {"role": "user", "content":
+      "The original query is: What is Vidit''s favorite color?\n\nThis is the expected
+      criteria for your final answer: Vidit''s favorclearite color.\nyou MUST return
+      the actual complete content as the final answer, not a summary.."}], "tools":
+      null, "callbacks": null, "available_functions": null}}, {"event_id": "d790e970-1227-488e-b228-6face2efecaa",
+      "timestamp": "2025-12-05T00:34:05.770367+00:00", "type": "llm_call_failed",
+      "event_data": {"timestamp": "2025-12-05T00:34:05.770367+00:00", "type": "llm_call_failed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "error": "litellm.AuthenticationError: AuthenticationError:
+      OpenrouterException - {\"error\":{\"message\":\"No cookie auth credentials found\",\"code\":401}}"}},
+      {"event_id": "60bc1af6-a418-48bc-ac27-c1dd25047435", "timestamp": "2025-12-05T00:34:05.770458+00:00",
+      "type": "knowledge_query_failed", "event_data": {"timestamp": "2025-12-05T00:34:05.770458+00:00",
+      "type": "knowledge_query_failed", "source_fingerprint": null, "source_type":
+      null, "fingerprint_metadata": null, "task_id": "1cd23246-1364-4612-aa4a-af28df1c95d4",
+      "task_name": "What is Vidit''s favorite color?", "agent_id": "817edd6c-8bd4-445c-89b6-741cb427d734",
+      "agent_role": "Information Agent", "from_task": null, "from_agent": null, "error":
+      "litellm.AuthenticationError: AuthenticationError: OpenrouterException - {\"error\":{\"message\":\"No
+      cookie auth credentials found\",\"code\":401}}"}}, {"event_id": "52e6ebef-4581-4588-9ec8-762fe3480a51",
+      "timestamp": "2025-12-05T00:34:05.772097+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "Information Agent", "agent_goal": "Provide information
+      based on knowledge sources", "agent_backstory": "You have access to specific
+      knowledge sources."}}, {"event_id": "6502b132-c8d3-4c18-b43b-19a00da2068f",
+      "timestamp": "2025-12-05T00:34:05.773597+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-12-05T00:34:05.773597+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "1cd23246-1364-4612-aa4a-af28df1c95d4", "task_name": "What is Vidit''s
+      favorite color?", "agent_id": "817edd6c-8bd4-445c-89b6-741cb427d734", "agent_role":
+      "Information Agent", "from_task": null, "from_agent": null, "model": "openrouter/openai/gpt-4o-mini",
+      "messages": [{"role": "system", "content": "You are Information Agent. You have
+      access to specific knowledge sources.\nYour personal goal is: Provide information
+      based on knowledge sources\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: What is Vidit''s
+      favorite color?\n\nThis is the expected criteria for your final answer: Vidit''s
+      favorclearite color.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x10fe2a540>"], "available_functions": null}}, {"event_id": "ee7b12cc-ae7f-45a6-8697-139d4752aa79",
+      "timestamp": "2025-12-05T00:34:05.817192+00:00", "type": "llm_call_failed",
+      "event_data": {"timestamp": "2025-12-05T00:34:05.817192+00:00", "type": "llm_call_failed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "1cd23246-1364-4612-aa4a-af28df1c95d4", "task_name": "What is Vidit''s
+      favorite color?", "agent_id": "817edd6c-8bd4-445c-89b6-741cb427d734", "agent_role":
+      "Information Agent", "from_task": null, "from_agent": null, "error": "litellm.AuthenticationError:
+      AuthenticationError: OpenrouterException - {\"error\":{\"message\":\"No cookie
+      auth credentials found\",\"code\":401}}"}}, {"event_id": "6429c59e-c02e-4fa9-91e1-1b54d0cfb72e",
+      "timestamp": "2025-12-05T00:34:05.817513+00:00", "type": "agent_execution_error",
+      "event_data": {"serialization_error": "Circular reference detected (id repeated)",
+      "object_type": "AgentExecutionErrorEvent"}}, {"event_id": "2fcd1ba9-1b25-42c1-ba60-03a0bde5bffb",
+      "timestamp": "2025-12-05T00:34:05.817830+00:00", "type": "task_failed", "event_data":
+      {"serialization_error": "Circular reference detected (id repeated)", "object_type":
+      "TaskFailedEvent"}}, {"event_id": "e50299a5-6c47-4f79-9f26-fdcf305961c5", "timestamp":
+      "2025-12-05T00:34:05.819981+00:00", "type": "crew_kickoff_failed", "event_data":
+      {"timestamp": "2025-12-05T00:34:05.819981+00:00", "type": "crew_kickoff_failed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "error": "litellm.AuthenticationError: AuthenticationError:
+      OpenrouterException - {\"error\":{\"message\":\"No cookie auth credentials found\",\"code\":401}}"}}],
+      "batch_metadata": {"events_count": 12, "batch_sequence": 1, "is_final_batch":
+      false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8262'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.6.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/66a98653-4a5f-4547-9e8a-1207bf6bda40/events
+  response:
+    body:
+      string: '{"events_created":12,"ephemeral_trace_batch_id":"970225bb-85f4-46b1-ac1c-e57fe6aca7a7"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '87'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Fri, 05 Dec 2025 00:34:06 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1192, "final_event_count": 12}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.6.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: PATCH
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/66a98653-4a5f-4547-9e8a-1207bf6bda40/finalize
+  response:
+    body:
+      string: '{"id":"970225bb-85f4-46b1-ac1c-e57fe6aca7a7","ephemeral_trace_id":"66a98653-4a5f-4547-9e8a-1207bf6bda40","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1192,"crewai_version":"1.6.1","total_events":12,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.6.1","crew_fingerprint":null},"created_at":"2025-12-05T00:34:05.572Z","updated_at":"2025-12-05T00:34:06.931Z","access_code":"TRACE-4d8b772d9f","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '518'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Fri, 05 Dec 2025 00:34:06 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

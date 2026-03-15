@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -70,6 +71,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `ticketTags` (string, 선택): 적용할 태그 배열 (예: `["enterprise", "other_tag"]`)
     - `ticketExternalId` (string, 선택): 티켓을 로컬 레코드와 연결할 외부 ID
     - `ticketCustomFields` (object, 선택): JSON 형식의 사용자 정의 필드 값
+
   </Accordion>
 
   <Accordion title="zendesk/update_ticket">
@@ -88,6 +90,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `ticketTags` (string, 선택): 업데이트된 태그 배열
     - `ticketExternalId` (string, 선택): 업데이트된 외부 ID
     - `ticketCustomFields` (object, 선택): 업데이트된 사용자 정의 필드 값
+
   </Accordion>
 
   <Accordion title="zendesk/get_ticket_by_id">
@@ -95,6 +98,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `ticketId` (string, 필수): 조회할 티켓의 ID (예: "35436")
+
   </Accordion>
 
   <Accordion title="zendesk/add_comment_to_ticket">
@@ -105,6 +109,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `commentBody` (string, 필수): 댓글 메시지 (일반 텍스트 또는 HTML 지원, 예: "도움을 주셔서 감사합니다!")
     - `isInternalNote` (boolean, 선택): 공개 답글 대신 내부 노트로 설정하려면 true (기본값: false)
     - `isPublic` (boolean, 선택): 공개 댓글이면 true, 내부 노트이면 false
+
   </Accordion>
 
   <Accordion title="zendesk/search_tickets">
@@ -126,6 +131,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `dueDate` (object, 선택): 마감일로 필터링 (연산자와 값)
     - `sort_by` (string, 선택): 정렬 필드 - 옵션: created_at, updated_at, priority, status, ticket_type
     - `sort_order` (string, 선택): 정렬 방향 - 옵션: asc, desc
+
   </Accordion>
 </AccordionGroup>
 
@@ -143,6 +149,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `externalId` (string, 선택): 다른 시스템의 고유 식별자
     - `details` (string, 선택): 추가 사용자 정보
     - `notes` (string, 선택): 사용자에 대한 내부 메모
+
   </Accordion>
 
   <Accordion title="zendesk/update_user">
@@ -157,6 +164,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `externalId` (string, 선택): 업데이트된 외부 ID
     - `details` (string, 선택): 업데이트된 사용자 상세 정보
     - `notes` (string, 선택): 업데이트된 내부 메모
+
   </Accordion>
 
   <Accordion title="zendesk/get_user_by_id">
@@ -164,6 +172,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `userId` (string, 필수): 조회할 사용자 ID
+
   </Accordion>
 
   <Accordion title="zendesk/search_users">
@@ -176,6 +185,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `externalId` (string, 선택): 외부 ID로 필터링
     - `sort_by` (string, 선택): 정렬 필드 - 옵션: created_at, updated_at
     - `sort_order` (string, 선택): 정렬 방향 - 옵션: asc, desc
+
   </Accordion>
 </AccordionGroup>
 
@@ -188,6 +198,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
       - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+
   </Accordion>
 
   <Accordion title="zendesk/get_ticket_audits">
@@ -197,6 +208,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `ticketId` (string, 선택 사항): 특정 티켓의 감사를 조회합니다(비워두면 모든 비보관된 티켓의 감사를 조회, 예: "1234")
     - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
       - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+
   </Accordion>
 </AccordionGroup>
 

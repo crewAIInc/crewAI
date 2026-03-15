@@ -1,6 +1,6 @@
 ---
-title: 'Servidores MCP como Ferramentas no CrewAI'
-description: 'Aprenda como integrar servidores MCP como ferramentas nos seus agentes CrewAI usando a biblioteca `crewai-tools`.'
+title: "Servidores MCP como Ferramentas no CrewAI"
+description: "Aprenda como integrar servidores MCP como ferramentas nos seus agentes CrewAI usando a biblioteca `crewai-tools`."
 icon: plug
 mode: "wide"
 ---
@@ -43,6 +43,7 @@ Atualmente, suportamos os seguintes mecanismos de transporte:
 - **Streamable HTTP**: para servidores remotos (comunicação flexível e potencialmente bidirecional via HTTP, geralmente utilizando SSE para streams do servidor para o cliente)
 
 ## Tutorial em Vídeo
+
 Assista a este tutorial em vídeo para um guia abrangente sobre a integração do MCP com o CrewAI:
 
 <iframe
@@ -120,6 +121,7 @@ with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
     )
     # ... restante da configuração do seu crew ...
 ```
+
 Este padrão geral mostra como integrar ferramentas. Para exemplos específicos para cada transporte, consulte os guias detalhados abaixo.
 
 ## Filtrando Ferramentas
@@ -182,6 +184,7 @@ Quando uma classe é decorada com `@CrewBase`, o ciclo de vida do adaptador é c
 - Se `mcp_server_params` não estiver definido, `get_mcp_tools()` retorna uma lista vazia, permitindo manter o mesmo fluxo de código com ou sem MCP configurado.
 
 Assim, é seguro chamar `get_mcp_tools()` em vários agentes ou habilitar/desabilitar MCP dependendo do ambiente.
+
 </Tip>
 
 ### Configuração de Timeout de Conexão
@@ -238,6 +241,7 @@ class CrewWithCustomTimeout:
         tools=self.get_mcp_tools("tool_1", "tool_2") # ferramentas específicas com timeout personalizado
       )
 ```
+
 ## Explore Integrações MCP
 
 <CardGroup cols={2}>
@@ -247,7 +251,8 @@ class CrewWithCustomTimeout:
     href="/pt-BR/mcp/stdio"
     color="#3B82F6"
   >
-    Conecte-se a servidores MCP locais via entrada/saída padrão. Ideal para scripts e executáveis locais.
+    Conecte-se a servidores MCP locais via entrada/saída padrão. Ideal para
+    scripts e executáveis locais.
   </Card>
   <Card
     title="Transporte SSE"
@@ -255,7 +260,8 @@ class CrewWithCustomTimeout:
     href="/pt-BR/mcp/sse"
     color="#10B981"
   >
-    Integre com servidores MCP remotos usando Server-Sent Events para streaming de dados em tempo real.
+    Integre com servidores MCP remotos usando Server-Sent Events para streaming
+    de dados em tempo real.
   </Card>
   <Card
     title="Transporte HTTP Streamable"
@@ -263,7 +269,8 @@ class CrewWithCustomTimeout:
     href="/pt-BR/mcp/streamable-http"
     color="#F59E0B"
   >
-    Utilize HTTP Streamable para uma comunicação robusta com servidores MCP remotos.
+    Utilize HTTP Streamable para uma comunicação robusta com servidores MCP
+    remotos.
   </Card>
   <Card
     title="Conectando a Múltiplos Servidores"
@@ -271,7 +278,8 @@ class CrewWithCustomTimeout:
     href="/pt-BR/mcp/multiple-servers"
     color="#8B5CF6"
   >
-    Agregue ferramentas de vários servidores MCP simultaneamente usando um único adaptador.
+    Agregue ferramentas de vários servidores MCP simultaneamente usando um único
+    adaptador.
   </Card>
   <Card
     title="Considerações de Segurança"
@@ -279,27 +287,30 @@ class CrewWithCustomTimeout:
     href="/pt-BR/mcp/security"
     color="#EF4444"
   >
-    Revise práticas importantes de segurança para integração MCP e mantenha seus agentes protegidos.
+    Revise práticas importantes de segurança para integração MCP e mantenha seus
+    agentes protegidos.
   </Card>
 </CardGroup>
 
 Confira este repositório para demonstrações completas e exemplos de integração MCP com CrewAI! 👇
 
 <Card
-title="Repositório GitHub"
-icon="github"
-href="https://github.com/tonykipkemboi/crewai-mcp-demo"
-target="_blank"
+  title="Repositório GitHub"
+  icon="github"
+  href="https://github.com/tonykipkemboi/crewai-mcp-demo"
+  target="_blank"
 >
-Demo MCP do CrewAI
+  Demo MCP do CrewAI
 </Card>
 
 ## Segurança ao Usar MCP
+
 <Warning>
-Sempre assegure-se de confiar no servidor MCP antes de utilizá-lo.
+  Sempre assegure-se de confiar no servidor MCP antes de utilizá-lo.
 </Warning>
 
 #### Aviso de Segurança: Ataques de DNS Rebinding
+
 Transportes SSE podem ser vulneráveis a ataques de DNS rebinding se não forem devidamente protegidos.
 Para prevenir isso:
 
@@ -312,6 +323,7 @@ Sem essas proteções, invasores podem usar DNS rebinding para interagir com ser
 Para mais detalhes, consulte a [documentação de Segurança de Transporte da MCP da Anthropic](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).
 
 ### Limitações
-*   **Primitivas Suportadas**: Atualmente, o `MCPServerAdapter` suporta principalmente a adaptação de `tools` MCP.
-Outras primitivas MCP como `prompts` ou `resources` não são integradas diretamente como componentes CrewAI através deste adaptador por enquanto.
-*   **Manipulação de Saída**: O adaptador normalmente processa a saída principal de texto de uma ferramenta MCP (por exemplo, `.content[0].text`). Saídas complexas ou multimodais podem exigir tratamento customizado caso não se encaixem nesse padrão.
+
+- **Primitivas Suportadas**: Atualmente, o `MCPServerAdapter` suporta principalmente a adaptação de `tools` MCP.
+  Outras primitivas MCP como `prompts` ou `resources` não são integradas diretamente como componentes CrewAI através deste adaptador por enquanto.
+- **Manipulação de Saída**: O adaptador normalmente processa a saída principal de texto de uma ferramenta MCP (por exemplo, `.content[0].text`). Saídas complexas ou multimodais podem exigir tratamento customizado caso não se encaixem nesse padrão.

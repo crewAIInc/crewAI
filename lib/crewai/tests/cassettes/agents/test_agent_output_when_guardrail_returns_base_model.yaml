@@ -1,0 +1,153 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players in the world?"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '694'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.78.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.78.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BgulXtE9b55rAoKvxYrLvGVb0WjxR\",\n  \"object\": \"chat.completion\",\n  \"created\": 1749567683,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: The following is a structured overview of the current top 10 soccer players in the world based on their performances, achievements, and overall impact on the game as of October 2023:\\n\\n1. **Lionel Messi** (Inter Miami)\\n   - **Position**: Forward\\n   - **Country**: Argentina\\n   - **Achievements**: 7 Ballon d'Or awards, multiple UEFA Champions League titles, leading Argentina to 2021 Copa América and 2022 FIFA World Cup victory.\\n\\n2. **Kylian Mbappé** (Paris Saint-Germain)\\n   - **Position**: Forward\\n   - **Country**: France\\n   - **Achievements**: FIFA World Cup winner in 2018, numerous Ligue 1 titles, known for his speed,\
+        \ dribbling, and goal-scoring prowess.\\n\\n3. **Erling Haaland** (Manchester City)\\n   - **Position**: Forward\\n   - **Country**: Norway\\n   - **Achievements**: Fastest player to reach numerous goals in UEFA Champions League, playing a crucial role in Manchester City's treble-winning season in 2022-2023.\\n\\n4. **Kevin De Bruyne** (Manchester City)\\n   - **Position**: Midfielder\\n   - **Country**: Belgium\\n   - **Achievements**: Key playmaker for Manchester City, multiple Premier League titles, and known for his exceptional vision and passing ability.\\n\\n5. **Cristiano Ronaldo** (Al-Nassr)\\n   - **Position**: Forward\\n   - **Country**: Portugal\\n   - **Achievements**: 5 Ballon d'Or awards, all-time leading goal scorer in the UEFA Champions League, winner of multiple league titles in England, Spain, and Italy.\\n\\n6. **Neymar Jr.** (Al-Hilal)\\n   - **Position**: Forward\\n   - **Country**: Brazil\\n   - **Achievements**: Known for his flair and skill, he has won Ligue\
+        \ 1 titles and played a vital role in Brazil's national team success, including winning the Copa America.\\n\\n7. **Robert Lewandowski** (Barcelona)\\n   - **Position**: Forward\\n   - **Country**: Poland\\n   - **Achievements**: Renowned for goal-scoring ability, won the FIFA Best Men's Player award in 2020 and 2021, contributing heavily to Bayern Munich's successes before moving to Barcelona.\\n\\n8. **Luka Modrić** (Real Madrid)\\n   - **Position**: Midfielder\\n   - **Country**: Croatia\\n   - **Achievements**: 2018 Ballon d'Or winner, instrumental in Real Madrid's Champions League triumphs and leading Croatia to the finals of the 2018 World Cup.\\n\\n9. **Mohamed Salah** (Liverpool)\\n   - **Position**: Forward\\n   - **Country**: Egypt\\n   - **Achievements**: Key player for Liverpool, helping them win the Premier League and UEFA Champions League titles, and multiple Golden Boot awards in the Premier League.\\n\\n10. **Vinícius Júnior** (Real Madrid)\\n    - **Position**: Forward\\\
+        n    - **Country**: Brazil\\n    - **Achievements**: Rising star known for his agility and skill, played a pivotal role in Real Madrid's Champions League victory in the 2021-2022 season.\\n\\nThese players have consistently delivered extraordinary performances on the field and hold significant influence within the world of soccer, contributing to their teams' successes and garnering individual accolades.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\": 732,\n    \"total_tokens\": 854,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_62a23a81ef\"\n}\n"
+    headers:
+      CF-RAY:
+      - 94d9be627c40f260-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 10 Jun 2025 15:02:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=qYkxv9nLxeWAtPBvECxNw8fLnoBHLorJdRI8.xVEVEA-1749567725-1.0.1.1-75sp4gwHGJocK1MFkSgRcB4xJUiCwz31VRD4LAmQGEmfYB0BMQZ5sgWS8e_UMbjCaEhaPNO88q5XdbLOCWA85_rO0vYTb4hp6tmIiaerhsM; path=/; expires=Tue, 10-Jun-25 15:32:05 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=HRKCwkyTqSXpCj9_i_T5lDtlr_INA290o0b3k.26oi8-1749567725794-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '42674'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '42684'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999859'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d92e6f33fa5e0fbe43349afee8f55921
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "fbb3b338-4b22-42e7-a467-e405b8667d4b", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T20:51:44.355743+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Content-Length:
+      - '55'
+      cache-control:
+      - no-cache
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036 wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.09, sql.active_record;dur=3.90, cache_generate.active_support;dur=3.94, cache_write.active_support;dur=0.30, cache_read_multi.active_support;dur=0.13, start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.46
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - b6d160c7-1140-4d34-859b-f676568ade1f
+      x-runtime:
+      - '0.051904'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

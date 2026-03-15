@@ -50,14 +50,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7dQjw9Trcoq3INqpA9pSKnZm2HD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214320,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      194,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 208,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7dQjw9Trcoq3INqpA9pSKnZm2HD\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214320,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: Hi\",\n        \"refusal\": null\n \
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n \
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 194,\n    \"completion_tokens\"\
+        : 14,\n    \"total_tokens\": 208,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -65,8 +68,6 @@ interactions:
       - 8c85f5fcafc71cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -101,8 +102,9 @@ interactions:
       - 0s
       x-request-id:
       - req_89b0582bafe362d56e5b66ac798a326d
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       CrkoCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSkCgKEgoQY3Jld2FpLnRl
@@ -279,55 +281,60 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7dQJlrFqWelQoDtfHKf2Rr6f23p\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214320,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\nHi\\n\\nHere are five interesting ideas for articles focused on AI
-      and AI agents, each accompanied by a compelling paragraph to showcase the potential
-      impact and depth of each topic:\\n\\n1. **The Future of AI-Powered Personal
-      Assistants**:\\nImagine a personal assistant that doesn\u2019t just respond
-      to commands but anticipates your needs, schedules your appointments, and even
-      handles your grocery shopping\u2014all while continuously learning and adapting
-      to your preferences. This article will delve into how AI-powered personal assistants
-      are evolving from simple task managers to indispensable life companions. We'll
-      explore the cutting-edge technologies behind these advancements, the ethical
-      implications, and what this means for future human-computer interactions.\\n\\n2.
-      **AI in Healthcare: Revolutionizing Patient Care**:\\nArtificial Intelligence
-      is set to redefine the healthcare landscape, offering unprecedented opportunities
-      for personalized medicine, early diagnosis, and more effective treatments. In
-      this article, we will examine the various AI-driven innovations currently being
-      used in healthcare, from machine learning algorithms that analyze medical images
-      to predictive models that can forecast disease outbreaks. We'll also discuss
-      the challenges and ethical considerations, such as data privacy and the potential
-      for AI-driven diagnostic errors.\\n\\n3. **Autonomous AI Agents: The Dawn of
-      Self-Sufficient Systems**:\\nAutonomous AI agents are no longer a concept confined
-      to science fiction. These self-sufficient systems can make decisions, learn
-      from their environment, and perform complex tasks without human intervention.
-      This article will explore the current state of autonomous AI agents, their applications
-      across various industries such as finance, logistics, and customer service,
-      and the potential risks and benefits. We'll also delve into the regulatory landscape
-      and how governments and organizations are preparing for an autonomous future.\\n\\n4.
-      **AI and Creativity: Machines as Artistic Geniuses**:\\nCan machines create
-      art? With AI algorithms now capable of composing music, painting, and writing,
-      the answer appears to be yes. This article will explore the fascinating intersection
-      of AI and creativity, showcasing examples of AI-generated art and delving into
-      the technology that makes it possible. We'll discuss the implications for artists,
-      the definition of creativity, and whether AI can ever truly be considered an
-      artist in its own right.\\n\\n5. **The Ethics of AI: Navigating a New Frontier**:\\nAs
-      AI continues to permeate various aspects of our lives, the ethical considerations
-      become increasingly complex. This article will tackle the pressing ethical dilemmas
-      surrounding AI, such as bias in AI systems, the impact on employment, and the
-      potential for misuse in areas such as surveillance and autonomous weapons. We'll
-      feature insights from leading ethicists and technologists, and propose frameworks
-      for ensuring that AI is developed and deployed in ways that benefit humanity
-      as a whole.\\n\\nThese topics not only capture the cutting-edge nature of AI
-      research but also resonate deeply with the ethical, practical, and philosophical
-      questions that are emerging as AI continues to advance.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\":
-      579,\n    \"total_tokens\": 832,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7dQJlrFqWelQoDtfHKf2Rr6f23p\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214320,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: \\nHi\\n\\nHere are five interesting\
+        \ ideas for articles focused on AI and AI agents, each accompanied by a compelling\
+        \ paragraph to showcase the potential impact and depth of each topic:\\n\\\
+        n1. **The Future of AI-Powered Personal Assistants**:\\nImagine a personal\
+        \ assistant that doesn’t just respond to commands but anticipates your needs,\
+        \ schedules your appointments, and even handles your grocery shopping—all\
+        \ while continuously learning and adapting to your preferences. This article\
+        \ will delve into how AI-powered personal assistants are evolving from simple\
+        \ task managers to indispensable life companions. We'll explore the cutting-edge\
+        \ technologies behind these advancements, the ethical implications, and what\
+        \ this means for future human-computer interactions.\\n\\n2. **AI in Healthcare:\
+        \ Revolutionizing Patient Care**:\\nArtificial Intelligence is set to redefine\
+        \ the healthcare landscape, offering unprecedented opportunities for personalized\
+        \ medicine, early diagnosis, and more effective treatments. In this article,\
+        \ we will examine the various AI-driven innovations currently being used in\
+        \ healthcare, from machine learning algorithms that analyze medical images\
+        \ to predictive models that can forecast disease outbreaks. We'll also discuss\
+        \ the challenges and ethical considerations, such as data privacy and the\
+        \ potential for AI-driven diagnostic errors.\\n\\n3. **Autonomous AI Agents:\
+        \ The Dawn of Self-Sufficient Systems**:\\nAutonomous AI agents are no longer\
+        \ a concept confined to science fiction. These self-sufficient systems can\
+        \ make decisions, learn from their environment, and perform complex tasks\
+        \ without human intervention. This article will explore the current state\
+        \ of autonomous AI agents, their applications across various industries such\
+        \ as finance, logistics, and customer service, and the potential risks and\
+        \ benefits. We'll also delve into the regulatory landscape and how governments\
+        \ and organizations are preparing for an autonomous future.\\n\\n4. **AI and\
+        \ Creativity: Machines as Artistic Geniuses**:\\nCan machines create art?\
+        \ With AI algorithms now capable of composing music, painting, and writing,\
+        \ the answer appears to be yes. This article will explore the fascinating\
+        \ intersection of AI and creativity, showcasing examples of AI-generated art\
+        \ and delving into the technology that makes it possible. We'll discuss the\
+        \ implications for artists, the definition of creativity, and whether AI can\
+        \ ever truly be considered an artist in its own right.\\n\\n5. **The Ethics\
+        \ of AI: Navigating a New Frontier**:\\nAs AI continues to permeate various\
+        \ aspects of our lives, the ethical considerations become increasingly complex.\
+        \ This article will tackle the pressing ethical dilemmas surrounding AI, such\
+        \ as bias in AI systems, the impact on employment, and the potential for misuse\
+        \ in areas such as surveillance and autonomous weapons. We'll feature insights\
+        \ from leading ethicists and technologists, and propose frameworks for ensuring\
+        \ that AI is developed and deployed in ways that benefit humanity as a whole.\\\
+        n\\nThese topics not only capture the cutting-edge nature of AI research but\
+        \ also resonate deeply with the ethical, practical, and philosophical questions\
+        \ that are emerging as AI continues to advance.\",\n        \"refusal\": null\n\
+        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n\
+        \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\"\
+        : 579,\n    \"total_tokens\": 832,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -335,8 +342,6 @@ interactions:
       - 8c85f6006cdb1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -371,6 +376,7 @@ interactions:
       - 0s
       x-request-id:
       - req_4c5225ebc806609c80a972533b374863
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

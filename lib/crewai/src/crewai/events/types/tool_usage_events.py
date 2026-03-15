@@ -16,7 +16,7 @@ class ToolUsageEvent(BaseEvent):
     tool_name: str
     tool_args: dict[str, Any] | str
     tool_class: str | None = None
-    run_attempts: int | None = None
+    run_attempts: int = 0
     delegations: int | None = None
     agent: Any | None = None
     task_name: str | None = None
@@ -26,7 +26,7 @@ class ToolUsageEvent(BaseEvent):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         if data.get("from_task"):
             task = data["from_task"]
             data["task_id"] = str(task.id)
@@ -96,10 +96,10 @@ class ToolExecutionErrorEvent(BaseEvent):
     type: str = "tool_execution_error"
     tool_name: str
     tool_args: dict[str, Any]
-    tool_class: Callable
+    tool_class: Callable[..., Any]
     agent: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:

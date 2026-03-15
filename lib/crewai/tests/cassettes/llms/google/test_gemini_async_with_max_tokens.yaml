@@ -1,0 +1,59 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Write a very short story about a dragon."}],
+      "role": "user"}], "generationConfig": {"maxOutputTokens": 1000}}'
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      x-goog-api-client:
+      - google-genai-sdk/1.52.0 gl-python/3.12.10
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Cinder was the size of a cathedral,
+        with scales like obsidian and breath that could melt iron. The villagers below
+        feared his roar, but they misunderstood his groan of concentration.\\n\\nHigh
+        in his mountain keep, Cinder squinted, holding a single marshmallow on a twig
+        between two razor-sharp talons. He exhaled\u2014not a torrent of flame, but
+        a tiny, controlled hiccup of heat.\\n\\nThe marshmallow turned a perfect golden
+        brown. Cinder smiled. Being a monster was easy; getting the s'mores right
+        took finesse.\",\n            \"thoughtSignature\": \"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\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        10,\n    \"candidatesTokenCount\": 110,\n    \"totalTokenCount\": 940,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 10\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 820\n  },\n  \"modelVersion\":
+        \"gemini-3-pro-preview\",\n  \"responseId\": \"0kEtabSvAZzg_uMPjb7OwAs\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 01 Dec 2025 07:20:50 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=30099
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

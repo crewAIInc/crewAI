@@ -1,0 +1,54 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "My name is Alice."}], "role": "user"},
+      {"parts": [{"text": "Hello Alice! Nice to meet you."}], "role": "model"}, {"parts":
+      [{"text": "What is my name?"}], "role": "user"}], "generationConfig": {}}'
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      x-goog-api-client:
+      - google-genai-sdk/1.52.0 gl-python/3.12.10
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Your name is Alice.\",\n            \"thoughtSignature\":
+        \"EvQDCvEDAXLI2nz9GP8047tG13f7ZOzI0XMZ3OCm0YSr6D74+bQrUQBrSezrbyjd+tYgOUGPWLtHGI43kn4/PAFjDr32i4r3BXjcw4m5lSGmP/jvtr9a0pI88Nkvh+ZDkhpqjDOAv5phyuDpMGODSnCvMjew45y0zbGF4LREolbFqcm8BSRJ91/lDMBLjO7QlH+q5Afcpgxx3TGMioHXl2A9gC3RP5Q04IE5cSPT9kAe3/w08IB5y1l5yjUZX0mONzcrS3218rXp/vadmXsZrz8RNWsI3369myVPstP/9k4VX0BaXCMDQTtpj4eDPnBO9yxSh7/zaXYn/hrhzpx8H7bfW6nN5Uvt6/95YEzUXo38u+nrD1XWVHAPxJWziA/+7xwkz/b5SweQtMmOJ7R+aesHOMSD1h71awHQNS21rmIEJ5CxERJ0e310mRiu3MVWV5PxGqCXH15pAtRclAmJ6AslX1IzSmWrY+xb650g6YCAVEntULL78LR05A6MNJa7zBQ5Jc/BvRnqIKpF/AQwTaJTELGolL5HLp0lmvK4fwLHCYHyjUeFMfPFfmkqbMhVlTCPIsWF/UasgTUJe4hyRkA3M5Ri2ddmgrkpIi8HmdpaLjDB3Z2anTbiwrXSBVLQxrEmq/VipqCrD0TTGJBbs11YLcBBMDw=\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        21,\n    \"candidatesTokenCount\": 5,\n    \"totalTokenCount\": 140,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 21\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 114\n  },\n  \"modelVersion\":
+        \"gemini-3-pro-preview\",\n  \"responseId\": \"jTgtac76H9Th_uMP6MTF-QY\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 01 Dec 2025 06:41:17 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=10711
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

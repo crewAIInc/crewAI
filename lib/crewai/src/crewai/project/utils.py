@@ -1,7 +1,8 @@
 """Utility functions for the crewai project module."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from functools import wraps
+import inspect
 from typing import Any, ParamSpec, TypeVar, cast
 
 from pydantic import BaseModel
@@ -37,8 +38,8 @@ def _make_hashable(arg: Any) -> Any:
 def memoize(meth: Callable[P, R]) -> Callable[P, R]:
     """Memoize a method by caching its results based on arguments.
 
-    Handles Pydantic BaseModel instances by converting them to JSON strings
-    before hashing for cache lookup.
+    Handles both sync and async methods. Pydantic BaseModel instances are
+    converted to JSON strings before hashing for cache lookup.
 
     Args:
         meth: The method to memoize.
@@ -46,18 +47,16 @@ def memoize(meth: Callable[P, R]) -> Callable[P, R]:
     Returns:
         A memoized version of the method that caches results.
     """
+    if inspect.iscoroutinefunction(meth):
+        return cast(Callable[P, R], _memoize_async(meth))
+    return _memoize_sync(meth)
+
+
+def _memoize_sync(meth: Callable[P, R]) -> Callable[P, R]:
+    """Memoize a synchronous method."""
 
     @wraps(meth)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        """Wrapper that converts arguments to hashable form before caching.
-
-        Args:
-            *args: Positional arguments to the memoized method.
-            **kwargs: Keyword arguments to the memoized method.
-
-        Returns:
-            The result of the memoized method call.
-        """
         hashable_args = tuple(_make_hashable(arg) for arg in args)
         hashable_kwargs = tuple(
             sorted((k, _make_hashable(v)) for k, v in kwargs.items())
@@ -73,3 +72,27 @@ def memoize(meth: Callable[P, R]) -> Callable[P, R]:
         return result
 
     return cast(Callable[P, R], wrapper)
+
+
+def _memoize_async(
+    meth: Callable[P, Coroutine[Any, Any, R]],
+) -> Callable[P, Coroutine[Any, Any, R]]:
+    """Memoize an async method."""
+
+    @wraps(meth)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        hashable_args = tuple(_make_hashable(arg) for arg in args)
+        hashable_kwargs = tuple(
+            sorted((k, _make_hashable(v)) for k, v in kwargs.items())
+        )
+        cache_key = str((hashable_args, hashable_kwargs))
+
+        cached_result: R | None = cache.read(tool=meth.__name__, input=cache_key)
+        if cached_result is not None:
+            return cached_result
+
+        result = await meth(*args, **kwargs)
+        cache.add(tool=meth.__name__, input=cache_key, output=result)
+        return result
+
+    return wrapper

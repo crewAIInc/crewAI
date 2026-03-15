@@ -1,0 +1,64 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Analyze
+      the benefits of remote work briefly. Keep it concise.\n\nProvide your complete
+      response:"}]}], "inferenceConfig": {"stopSequences": ["\nObservation:"]}, "system":
+      [{"text": "You are Analyst. You are an expert analyst who provides clear, structured
+      insights.\nYour personal goal is: Provide structured analysis on topics"}],
+      "toolConfig": {"tools": [{"toolSpec": {"name": "structured_output", "description":
+      "Use this tool to provide your final structured response. Call this tool when
+      you have gathered all necessary information and are ready to provide the final
+      answer in the required format.", "inputSchema": {"json": {"description": "Structured
+      output for analysis results.", "properties": {"topic": {"description": "The
+      topic analyzed", "title": "Topic", "type": "string"}, "key_points": {"description":
+      "Key insights from the analysis", "items": {"type": "string"}, "title": "Key
+      Points", "type": "array"}, "summary": {"description": "Brief summary of findings",
+      "title": "Summary", "type": "string"}}, "required": ["topic", "key_points",
+      "summary"], "title": "AnalysisResult", "type": "object", "additionalProperties":
+      false}}}}], "toolChoice": {"tool": {"name": "structured_output"}}}}'
+    headers:
+      Content-Length:
+      - '1270'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":3496},"output":{"message":{"content":[{"toolUse":{"input":{"topic":"Benefits
+        of remote work","key_points":"- Increased flexibility and work-life balance\n-
+        Reduced commute time and costs\n- Access to a wider talent pool for companies\n-
+        Increased productivity for some employees\n- Environmental benefits from reduced
+        commuting","summary":"Remote work offers several benefits including improved
+        work-life balance, cost and time savings from eliminating commutes, access
+        to a broader talent pool for employers, productivity gains, and environmental
+        advantages from reduced transportation. However, it also presents challenges
+        like social isolation, blurred work-life boundaries, and potential distractions
+        at home that need to be managed effectively."},"name":"structured_output","toolUseId":"tooluse_Jfg8pUBaRxWkKwR_rp5mCw"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":512,"outputTokens":187,"serverToolUsage":{},"totalTokens":699}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '982'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 01:04:10 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

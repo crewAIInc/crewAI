@@ -1,963 +1,1103 @@
 interactions:
 - request:
-    body: !!binary |
-      Cv8OCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS1g4KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRK8CgoQsS667O1l2qK0osVmGap7dRIIG2YLqO2Wg5MqDENyZXcgQ3JlYXRlZDABObB5
-      PHaoCDIYQQi+SnaoCDIYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA4LjBKGgoOcHl0aG9uX3Zl
-      cnNpb24SCAoGMy4xMi44Si4KCGNyZXdfa2V5EiIKIGUzZmRhMGYzMTEwZmU4MGIxODk0N2MwMTQ3
-      MTQzMGE0SjEKB2NyZXdfaWQSJgokMzUxZTNiMzMtODM4YS00YzJmLWJjNjctYjY3YTc0MzJjNTY5
-      Sh4KDGNyZXdfcHJvY2VzcxIOCgxoaWVyYXJjaGljYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNy
-      ZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgCSjoKEGNy
-      ZXdfZmluZ2VycHJpbnQSJgokYmZmODY2OGMtNjJlZS00MGY3LWFkMmQtMWFiN2UyOGQ1YTA2SjsK
-      G2NyZXdfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTAzLTMxVDE2OjU4OjQ1LjM3MjEz
-      N0qSBQoLY3Jld19hZ2VudHMSggUK/wRbeyJrZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5
-      YzQ1NjNkNzUiLCAiaWQiOiAiMGY2YzU1ZjctN2M3Mi00YzhkLWE2NzUtOTI5YWFkMzg1YmU5Iiwg
-      InJvbGUiOiAiUmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwg
-      Im1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQt
-      NG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1
-      dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfSwg
-      eyJrZXkiOiAiOWE1MDE1ZWY0ODk1ZGM2Mjc4ZDU0ODE4YmE0NDZhZjciLCAiaWQiOiAiMzgxZTM0
-      MDEtNGZlZS00Zjg5LThkODgtMTg2OTBhMGQ4YTEwIiwgInJvbGUiOiAiU2VuaW9yIFdyaXRlciIs
-      ICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVu
-      Y3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0aW9u
-      X2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9y
-      ZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K2wEKCmNyZXdfdGFza3MSzAEKyQFb
-      eyJrZXkiOiAiNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGQiLCAiaWQiOiAiZWJiM2Ux
-      OWMtYzMwYi00ZGUzLWI1YTYtMWRiYTEzNzRlNTZhIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxz
-      ZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJOb25lIiwgImFnZW50X2tl
-      eSI6IG51bGwsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEoAEChDgcVy3GgW7gmrdv8rx
-      1BWHEgjarMInPYIrVioMVGFzayBDcmVhdGVkMAE5WJdxdqgIMhhB2FJydqgIMhhKLgoIY3Jld19r
-      ZXkSIgogZTNmZGEwZjMxMTBmZTgwYjE4OTQ3YzAxNDcxNDMwYTRKMQoHY3Jld19pZBImCiQzNTFl
-      M2IzMy04MzhhLTRjMmYtYmM2Ny1iNjdhNzQzMmM1NjlKLgoIdGFza19rZXkSIgogNWZhNjVjMDZh
-      OWUzMWYyYzY5NTQzMjY2OGFjZDYyZGRKMQoHdGFza19pZBImCiRlYmIzZTE5Yy1jMzBiLTRkZTMt
-      YjVhNi0xZGJhMTM3NGU1NmFKOgoQY3Jld19maW5nZXJwcmludBImCiRiZmY4NjY4Yy02MmVlLTQw
-      ZjctYWQyZC0xYWI3ZTI4ZDVhMDZKOgoQdGFza19maW5nZXJwcmludBImCiRmMDkyZDEzMC02ZTM2
-      LTQwYjAtODBhMy1lZGUxMmVjN2FkMWVKOwobdGFza19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwK
-      GjIwMjUtMDMtMzFUMTY6NTg6NDUuMzcyMDQ0SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJGUxNjhm
-      NzgxLThjMGItNGJlNS1iN2VhLWNmMDc1MjhmYjhkZHoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, zstd
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1922'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.31.1
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 31 Mar 2025 23:58:49 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
-      are a seasoned manager with a knack for getting the best out of your team.\nYou
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
       ask the right questions to get the best out of your team.\nEven though you don''t
       perform tasks by yourself, you have a lot of experience in the field, which
       allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
-      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
-      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
-      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
-      ''str''}}\nTool Description: Delegate a specific task to one of the following
-      coworkers: Researcher, Senior Writer\nThe input to this tool should be the coworker,
-      the task you want them to do, and ALL necessary context to execute the task,
-      they know nothing about the task, so share absolutely everything you know, don''t
-      reference things but instead explain them.\nTool Name: Ask question to coworker\nTool
-      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
-      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
-      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
-      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
-      of the following coworkers: Researcher, Senior Writer\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolutely everything you know, don''t reference things but instead explain
-      them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to coworker, Ask question to coworker], just the name,
-      exactly as it''s written.\nAction Input: the input to the action, just a simple
-      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
-      the result of the action\n```\n\nOnce all necessary information is gathered,
-      return the following format:\n\n```\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n```"}, {"role": "user",
-      "content": "\nCurrent Task: Come up with a list of 5 interesting ideas to explore
-      for an article, then write one amazing paragraph highlight for each idea that
-      showcases how good an article about this topic could be. Return the list of
-      ideas with their paragraph and your notes.\n\nThis is the expected criteria
-      for your final answer: 5 bullet points with a paragraph for each idea.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      goal is: Manage the team to complete the task in the best way possible."},{"role":"user","content":"\nCurrent
+      Task: Come up with a list of 5 interesting ideas to explore for an article,
+      then write one amazing paragraph highlight for each idea that showcases how
+      good an article about this topic could be. Return the list of ideas with their
+      paragraph and your notes.\n\nThis is the expected criteria for your final answer:
+      5 bullet points with a paragraph for each idea.\nyou MUST return the actual
+      complete content as the final answer, not a summary."}],"model":"gpt-4o","tool_choice":"auto","tools":[{"type":"function","function":{"name":"delegate_work_to_coworker","description":"Delegate
+      a specific task to one of the following coworkers: Researcher, Senior Writer\nThe
+      input to this tool should be the coworker, the task you want them to do, and
+      ALL necessary context to execute the task, they know nothing about the task,
+      so share absolutely everything you know, don''t reference things but instead
+      explain them.","strict":true,"parameters":{"properties":{"task":{"description":"The
+      task to delegate","title":"Task","type":"string"},"context":{"description":"The
+      context for the task","title":"Context","type":"string"},"coworker":{"description":"The
+      role/name of the coworker to delegate to","title":"Coworker","type":"string"}},"required":["task","context","coworker"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"ask_question_to_coworker","description":"Ask
+      a specific question to one of the following coworkers: Researcher, Senior Writer\nThe
+      input to this tool should be the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolutely everything you know, don''t reference things
+      but instead explain them.","strict":true,"parameters":{"properties":{"question":{"description":"The
+      question to ask","title":"Question","type":"string"},"context":{"description":"The
+      context for the question","title":"Context","type":"string"},"coworker":{"description":"The
+      role/name of the coworker to ask","title":"Coworker","type":"string"}},"required":["question","context","coworker"],"type":"object","additionalProperties":false}}}]}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '3210'
+      - '2726'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.68.2
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.8
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJJd2Cs40TdqJd4sC5HfN3AoJS8a\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465525,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: To come up with interesting
-      article ideas and write compelling highlights, I should first generate a list
-      of potential topics. The Researcher can help with gathering current trends or
-      interesting topics that might be engaging. Then, I can delegate writing the
-      paragraph highlights to the Senior Writer.\\n\\nAction: Ask question to coworker\\nAction
-      Input: {\\\"question\\\": \\\"What are some current trending topics or subjects
-      that are interesting to explore for an article?\\\", \\\"context\\\": \\\"I
-      need to generate a list of 5 interesting ideas to explore for an article, each
-      paired with an amazing paragraph highlight. Current trends or unusual insights
-      could be a good source of inspiration for these ideas.\\\", \\\"coworker\\\":
-      \\\"Researcher\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 671,\n    \"completion_tokens\":
-      143,\n    \"total_tokens\": 814,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_6dd05565ef\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DIjv5CTNw0zSZPJG7XNQb1x8KRtjK\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773358791,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_Ol2yxl2EsKWZNmtbij2JTprf\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"ask_question_to_coworker\",\n
+        \             \"arguments\": \"{\\\"question\\\": \\\"What are 5 interesting
+        and current topics that could make for engaging articles? Consider trends,
+        recent events, and popular subjects.\\\", \\\"context\\\": \\\"We need to
+        brainstorm 5 fascinating and relevant topics that could be explored in an
+        article. These topics should be current, engaging, and have the potential
+        to generate interest among readers. Once we have the topics, I will ask for
+        a highlight paragraph for each to showcase their potential.\\\", \\\"coworker\\\":
+        \\\"Researcher\\\"}\"\n            }\n          },\n          {\n            \"id\":
+        \"call_hOt5vwTOgfIxqHIwDbmZMVTQ\",\n            \"type\": \"function\",\n
+        \           \"function\": {\n              \"name\": \"ask_question_to_coworker\",\n
+        \             \"arguments\": \"{\\\"question\\\": \\\"Once we have a list
+        of 5 interesting topics, could you write one amazing paragraph highlight for
+        each idea that showcases how good an article about this topic could be?\\\",
+        \\\"context\\\": \\\"After brainstorming 5 fascinating and current topics
+        for potential articles, we want to create a highlight paragraph for each idea.
+        This paragraph should capture the essence and allure of the topic, demonstrating
+        why readers would find it intriguing and worth reading. I will provide the
+        topics once we have them.\\\", \\\"coworker\\\": \\\"Senior Writer\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 476,\n    \"completion_tokens\":
+        239,\n    \"total_tokens\": 715,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_b7c8e3f100\"\n}\n"
     headers:
-      CF-RAY:
-      - 9293cbee6e8f7afd-SJC
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9db6a3ff7a77785b-EWR
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
-      - Mon, 31 Mar 2025 23:58:49 GMT
+      - Thu, 12 Mar 2026 23:39:55 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=fkio23z94nvulhv7S.4COs1R18ZlPZZn4xrPPkeT_PM-1743465529-1.0.1.1-UYwc4nmRP.wwPA08vw5QkJOa.DmaYsBZMkls4YAN.3yKLipw77UZ2zWltvoIeeoDrehvCkf_s4vlZvdoLbwF9PMZgtXvsce_oXdho7gPclo;
-        path=/; expires=Tue, 01-Apr-25 00:28:49 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=icM8L9.yRk22iqPJZhDQeVHgfWZOnl1YiBFMJmVO8_8-1743465529821-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '4259'
+      - '3261'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '50000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '49999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999235'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 1ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_a0d600fb8f04523398a139460c978308
-    http_version: HTTP/1.1
-    status_code: 200
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and is now working on doing research and
-      analysis for a new customer.\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agents\nTo give my best complete final
-      answer to the task respond using the exact following format:\n\nThought: I now
-      can give a great answer\nFinal Answer: Your final answer must be the great and
-      the most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
-      What are some current trending topics or subjects that are interesting to explore
-      for an article?\n\nThis is the expected criteria for your final answer: Your
+    body: '{"messages":[{"role":"system","content":"You are Senior Writer. You''re
+      a senior writer, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and are now working on writing content for a new customer.\nYour
+      personal goal is: Write the best content about AI and AI agents."},{"role":"user","content":"\nCurrent
+      Task: Once we have a list of 5 interesting topics, could you write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be?\n\nThis is the expected criteria for your final answer: Your
       best answer to your coworker asking you this, accounting for the context shared.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\nI need to generate a list of 5 interesting
-      ideas to explore for an article, each paired with an amazing paragraph highlight.
-      Current trends or unusual insights could be a good source of inspiration for
-      these ideas.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+      is the context you''re working with:\nAfter brainstorming 5 fascinating and
+      current topics for potential articles, we want to create a highlight paragraph
+      for each idea. This paragraph should capture the essence and allure of the topic,
+      demonstrating why readers would find it intriguing and worth reading. I will
+      provide the topics once we have them.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '1469'
+      - '1165'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=fkio23z94nvulhv7S.4COs1R18ZlPZZn4xrPPkeT_PM-1743465529-1.0.1.1-UYwc4nmRP.wwPA08vw5QkJOa.DmaYsBZMkls4YAN.3yKLipw77UZ2zWltvoIeeoDrehvCkf_s4vlZvdoLbwF9PMZgtXvsce_oXdho7gPclo;
-        _cfuvid=icM8L9.yRk22iqPJZhDQeVHgfWZOnl1YiBFMJmVO8_8-1743465529821-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.68.2
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.8
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJJhlZ1FjNQOZeNGZxBS1iP5vz4U\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465529,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: \\n\\n**1. The Rise of Autonomous AI Agents in Daily Life**  \\nAs artificial
-      intelligence technology progresses, the integration of autonomous AI agents
-      into everyday life becomes increasingly prominent. These agents, capable of
-      making decisions without human intervention, are reshaping industries from healthcare
-      to finance. Exploring case studies where autonomous AI has successfully decreased
-      operational costs or improved efficiency can reveal not only the benefits but
-      also the ethical implications of delegating decision-making to machines. This
-      topic offers an exciting opportunity to dive into the AI landscape, showcasing
-      current developments such as AI assistants and autonomous vehicles.\\n\\n**2.
-      Ethical Implications of Generative AI in Creative Industries**  \\nThe surge
-      of generative AI tools in creative fields, such as art, music, and writing,
-      has sparked a heated debate about authorship and originality. This article could
-      investigate how these tools are being used by artists and creators, examining
-      both the potential for innovation and the risk of devaluing traditional art
-      forms. Highlighting perspectives from creators, legal experts, and ethicists
-      could provide a comprehensive overview of the challenges faced, including copyright
-      concerns and the emotional impact on human artists. This discussion is vital
-      as the creative landscape evolves alongside technological advancements, making
-      it ripe for exploration.\\n\\n**3. AI in Climate Change Mitigation: Current
-      Solutions and Future Potential**  \\nAs the world grapples with climate change,
-      AI technology is increasingly being harnessed to develop innovative solutions
-      for sustainability. From predictive analytics that optimize energy consumption
-      to machine learning algorithms that improve carbon capture methods, AI's potential
-      in environmental science is vast. This topic invites an exploration of existing
-      AI applications in climate initiatives, with a focus on groundbreaking research
-      and initiatives aimed at reducing humanity's carbon footprint. Highlighting
-      successful projects and technology partnerships can illustrate the positive
-      impact AI can have on global climate efforts, inspiring further exploration
-      and investment in this area.\\n\\n**4. The Future of Work: How AI is Reshaping
-      Employment Landscapes**  \\nThe discussions around AI's impact on the workforce
-      are both urgent and complex, as advances in automation and machine learning
-      continue to transform the job market. This article could delve into the current
-      trends of AI-driven job displacement alongside opportunities for upskilling
-      and the creation of new job roles. By examining case studies of companies that
-      integrate AI effectively and the resulting workforce adaptations, readers can
-      gain valuable insights into preparing for a future where humans and AI collaborate.
-      This exploration highlights the importance of policies that promote workforce
-      resilience in the face of change.\\n\\n**5. Decentralized AI: Exploring the
-      Role of Blockchain in AI Development**  \\nAs blockchain technology sweeps through
-      various sectors, its application in AI development presents a fascinating topic
-      worth examining. Decentralized AI could address issues of data privacy, security,
-      and democratization in AI models by allowing users to retain ownership of data
-      while benefiting from AI's capabilities. This article could analyze how decentralized
-      networks are disrupting traditional AI development models, featuring innovative
-      projects that harness the synergy between blockchain and AI. Highlighting potential
-      pitfalls and the future landscape of decentralized AI could stimulate discussion
-      among technologists, entrepreneurs, and policymakers alike.\\n\\nThese topics
-      not only reflect current trends but also probe deeper into ethical and practical
-      considerations, making them timely and relevant for contemporary audiences.\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      273,\n    \"completion_tokens\": 650,\n    \"total_tokens\": 923,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_86d0290411\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DIjv9aboO2bB3Z2fRcoB7VgrMPDrm\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773358795,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Absolutely! Once you share the list
+        of five topics, I\u2019ll craft a compelling highlight paragraph for each.
+        Each paragraph will vividly convey why the topic is timely and engaging, spotlighting
+        unique angles and potential insights that will hook readers. Just send over
+        the topics when ready, and I\u2019ll get started on creating those captivating
+        previews that showcase the value and excitement behind each article idea.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        213,\n    \"completion_tokens\": 75,\n    \"total_tokens\": 288,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_5e793402c9\"\n}\n"
     headers:
-      CF-RAY:
-      - 9293cc09cfae7afd-SJC
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9db6a415eab741fb-EWR
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
-      - Mon, 31 Mar 2025 23:58:58 GMT
+      - Thu, 12 Mar 2026 23:39:56 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '8549'
+      - '1264'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999667'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_41c49d3d84a02cbf97d89e348c42bcb8
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
-      CtwBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSswEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQoplB51LcYs/F9C8OvPqz5hII+jlgDMF+EbwqClRvb2wgVXNhZ2UwATk4UQmD
-      qwgyGEG4HDGDqwgyGEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wSicKCXRvb2xfbmFtZRIa
-      ChhBc2sgcXVlc3Rpb24gdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, zstd
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '223'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.31.1
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 31 Mar 2025 23:58:59 GMT
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
-      are a seasoned manager with a knack for getting the best out of your team.\nYou
-      are also known for your ability to delegate work to the right people, and to
-      ask the right questions to get the best out of your team.\nEven though you don''t
-      perform tasks by yourself, you have a lot of experience in the field, which
-      allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
-      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
-      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
-      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
-      ''str''}}\nTool Description: Delegate a specific task to one of the following
-      coworkers: Researcher, Senior Writer\nThe input to this tool should be the coworker,
-      the task you want them to do, and ALL necessary context to execute the task,
-      they know nothing about the task, so share absolutely everything you know, don''t
-      reference things but instead explain them.\nTool Name: Ask question to coworker\nTool
-      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
-      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
-      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
-      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
-      of the following coworkers: Researcher, Senior Writer\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolutely everything you know, don''t reference things but instead explain
-      them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to coworker, Ask question to coworker], just the name,
-      exactly as it''s written.\nAction Input: the input to the action, just a simple
-      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
-      the result of the action\n```\n\nOnce all necessary information is gathered,
-      return the following format:\n\n```\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n```"}, {"role": "user",
-      "content": "\nCurrent Task: Come up with a list of 5 interesting ideas to explore
-      for an article, then write one amazing paragraph highlight for each idea that
-      showcases how good an article about this topic could be. Return the list of
-      ideas with their paragraph and your notes.\n\nThis is the expected criteria
-      for your final answer: 5 bullet points with a paragraph for each idea.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "**1. The Rise of Autonomous AI Agents in Daily Life**  \nAs artificial intelligence
-      technology progresses, the integration of autonomous AI agents into everyday
-      life becomes increasingly prominent. These agents, capable of making decisions
-      without human intervention, are reshaping industries from healthcare to finance.
-      Exploring case studies where autonomous AI has successfully decreased operational
-      costs or improved efficiency can reveal not only the benefits but also the ethical
-      implications of delegating decision-making to machines. This topic offers an
-      exciting opportunity to dive into the AI landscape, showcasing current developments
-      such as AI assistants and autonomous vehicles.\n\n**2. Ethical Implications
-      of Generative AI in Creative Industries**  \nThe surge of generative AI tools
-      in creative fields, such as art, music, and writing, has sparked a heated debate
-      about authorship and originality. This article could investigate how these tools
-      are being used by artists and creators, examining both the potential for innovation
-      and the risk of devaluing traditional art forms. Highlighting perspectives from
-      creators, legal experts, and ethicists could provide a comprehensive overview
-      of the challenges faced, including copyright concerns and the emotional impact
-      on human artists. This discussion is vital as the creative landscape evolves
-      alongside technological advancements, making it ripe for exploration.\n\n**3.
-      AI in Climate Change Mitigation: Current Solutions and Future Potential**  \nAs
-      the world grapples with climate change, AI technology is increasingly being
-      harnessed to develop innovative solutions for sustainability. From predictive
-      analytics that optimize energy consumption to machine learning algorithms that
-      improve carbon capture methods, AI''s potential in environmental science is
-      vast. This topic invites an exploration of existing AI applications in climate
-      initiatives, with a focus on groundbreaking research and initiatives aimed at
-      reducing humanity''s carbon footprint. Highlighting successful projects and
-      technology partnerships can illustrate the positive impact AI can have on global
-      climate efforts, inspiring further exploration and investment in this area.\n\n**4.
-      The Future of Work: How AI is Reshaping Employment Landscapes**  \nThe discussions
-      around AI''s impact on the workforce are both urgent and complex, as advances
-      in automation and machine learning continue to transform the job market. This
-      article could delve into the current trends of AI-driven job displacement alongside
-      opportunities for upskilling and the creation of new job roles. By examining
-      case studies of companies that integrate AI effectively and the resulting workforce
-      adaptations, readers can gain valuable insights into preparing for a future
-      where humans and AI collaborate. This exploration highlights the importance
-      of policies that promote workforce resilience in the face of change.\n\n**5.
-      Decentralized AI: Exploring the Role of Blockchain in AI Development**  \nAs
-      blockchain technology sweeps through various sectors, its application in AI
-      development presents a fascinating topic worth examining. Decentralized AI could
-      address issues of data privacy, security, and democratization in AI models by
-      allowing users to retain ownership of data while benefiting from AI''s capabilities.
-      This article could analyze how decentralized networks are disrupting traditional
-      AI development models, featuring innovative projects that harness the synergy
-      between blockchain and AI. Highlighting potential pitfalls and the future landscape
-      of decentralized AI could stimulate discussion among technologists, entrepreneurs,
-      and policymakers alike.\n\nThese topics not only reflect current trends but
-      also probe deeper into ethical and practical considerations, making them timely
-      and relevant for contemporary audiences."}, {"role": "assistant", "content":
-      "```\nThought: To come up with interesting article ideas and write compelling
-      highlights, I should first generate a list of potential topics. The Researcher
-      can help with gathering current trends or interesting topics that might be engaging.
-      Then, I can delegate writing the paragraph highlights to the Senior Writer.\n\nAction:
-      Ask question to coworker\nAction Input: {\"question\": \"What are some current
-      trending topics or subjects that are interesting to explore for an article?\",
-      \"context\": \"I need to generate a list of 5 interesting ideas to explore for
-      an article, each paired with an amazing paragraph highlight. Current trends
-      or unusual insights could be a good source of inspiration for these ideas.\",
-      \"coworker\": \"Researcher\"}\nObservation: **1. The Rise of Autonomous AI Agents
-      in Daily Life**  \nAs artificial intelligence technology progresses, the integration
-      of autonomous AI agents into everyday life becomes increasingly prominent. These
-      agents, capable of making decisions without human intervention, are reshaping
-      industries from healthcare to finance. Exploring case studies where autonomous
-      AI has successfully decreased operational costs or improved efficiency can reveal
-      not only the benefits but also the ethical implications of delegating decision-making
-      to machines. This topic offers an exciting opportunity to dive into the AI landscape,
-      showcasing current developments such as AI assistants and autonomous vehicles.\n\n**2.
-      Ethical Implications of Generative AI in Creative Industries**  \nThe surge
-      of generative AI tools in creative fields, such as art, music, and writing,
-      has sparked a heated debate about authorship and originality. This article could
-      investigate how these tools are being used by artists and creators, examining
-      both the potential for innovation and the risk of devaluing traditional art
-      forms. Highlighting perspectives from creators, legal experts, and ethicists
-      could provide a comprehensive overview of the challenges faced, including copyright
-      concerns and the emotional impact on human artists. This discussion is vital
-      as the creative landscape evolves alongside technological advancements, making
-      it ripe for exploration.\n\n**3. AI in Climate Change Mitigation: Current Solutions
-      and Future Potential**  \nAs the world grapples with climate change, AI technology
-      is increasingly being harnessed to develop innovative solutions for sustainability.
-      From predictive analytics that optimize energy consumption to machine learning
-      algorithms that improve carbon capture methods, AI''s potential in environmental
-      science is vast. This topic invites an exploration of existing AI applications
-      in climate initiatives, with a focus on groundbreaking research and initiatives
-      aimed at reducing humanity''s carbon footprint. Highlighting successful projects
-      and technology partnerships can illustrate the positive impact AI can have on
-      global climate efforts, inspiring further exploration and investment in this
-      area.\n\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**  \nThe
-      discussions around AI''s impact on the workforce are both urgent and complex,
-      as advances in automation and machine learning continue to transform the job
-      market. This article could delve into the current trends of AI-driven job displacement
-      alongside opportunities for upskilling and the creation of new job roles. By
-      examining case studies of companies that integrate AI effectively and the resulting
-      workforce adaptations, readers can gain valuable insights into preparing for
-      a future where humans and AI collaborate. This exploration highlights the importance
-      of policies that promote workforce resilience in the face of change.\n\n**5.
-      Decentralized AI: Exploring the Role of Blockchain in AI Development**  \nAs
-      blockchain technology sweeps through various sectors, its application in AI
-      development presents a fascinating topic worth examining. Decentralized AI could
-      address issues of data privacy, security, and democratization in AI models by
-      allowing users to retain ownership of data while benefiting from AI''s capabilities.
-      This article could analyze how decentralized networks are disrupting traditional
-      AI development models, featuring innovative projects that harness the synergy
-      between blockchain and AI. Highlighting potential pitfalls and the future landscape
-      of decentralized AI could stimulate discussion among technologists, entrepreneurs,
-      and policymakers alike.\n\nThese topics not only reflect current trends but
-      also probe deeper into ethical and practical considerations, making them timely
-      and relevant for contemporary audiences."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    body: '{"messages":[{"role":"system","content":"You are Researcher. You''re an
+      expert researcher, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and is now working on doing research and analysis for
+      a new customer.\nYour personal goal is: Make the best research and analysis
+      on content about AI and AI agents"},{"role":"user","content":"\nCurrent Task:
+      What are 5 interesting and current topics that could make for engaging articles?
+      Consider trends, recent events, and popular subjects.\n\nThis is the expected
+      criteria for your final answer: Your best answer to your coworker asking you
+      this, accounting for the context shared.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\nWe need to brainstorm 5 fascinating and relevant topics that could be
+      explored in an article. These topics should be current, engaging, and have the
+      potential to generate interest among readers. Once we have the topics, I will
+      ask for a highlight paragraph for each to showcase their potential.\n\nProvide
+      your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '11757'
+      - '1148'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=fkio23z94nvulhv7S.4COs1R18ZlPZZn4xrPPkeT_PM-1743465529-1.0.1.1-UYwc4nmRP.wwPA08vw5QkJOa.DmaYsBZMkls4YAN.3yKLipw77UZ2zWltvoIeeoDrehvCkf_s4vlZvdoLbwF9PMZgtXvsce_oXdho7gPclo;
-        _cfuvid=icM8L9.yRk22iqPJZhDQeVHgfWZOnl1YiBFMJmVO8_8-1743465529821-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.68.2
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.8
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-BHJJq4wV2B54HRuw5dIpI9fT5ZtHC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465538,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: **1. The Rise of Autonomous AI Agents in Daily Life**  \\nAs artificial
-      intelligence technology progresses, the integration of autonomous AI agents
-      into everyday life becomes increasingly prominent. These agents, capable of
-      making decisions without human intervention, are reshaping industries from healthcare
-      to finance. Exploring case studies where autonomous AI has successfully decreased
-      operational costs or improved efficiency can reveal not only the benefits but
-      also the ethical implications of delegating decision-making to machines. This
-      topic offers an exciting opportunity to dive into the AI landscape, showcasing
-      current developments such as AI assistants and autonomous vehicles.\\n\\n**2.
-      Ethical Implications of Generative AI in Creative Industries**  \\nThe surge
-      of generative AI tools in creative fields, such as art, music, and writing,
-      has sparked a heated debate about authorship and originality. This article could
-      investigate how these tools are being used by artists and creators, examining
-      both the potential for innovation and the risk of devaluing traditional art
-      forms. Highlighting perspectives from creators, legal experts, and ethicists
-      could provide a comprehensive overview of the challenges faced, including copyright
-      concerns and the emotional impact on human artists. This discussion is vital
-      as the creative landscape evolves alongside technological advancements, making
-      it ripe for exploration.\\n\\n**3. AI in Climate Change Mitigation: Current
-      Solutions and Future Potential**  \\nAs the world grapples with climate change,
-      AI technology is increasingly being harnessed to develop innovative solutions
-      for sustainability. From predictive analytics that optimize energy consumption
-      to machine learning algorithms that improve carbon capture methods, AI's potential
-      in environmental science is vast. This topic invites an exploration of existing
-      AI applications in climate initiatives, with a focus on groundbreaking research
-      and initiatives aimed at reducing humanity's carbon footprint. Highlighting
-      successful projects and technology partnerships can illustrate the positive
-      impact AI can have on global climate efforts, inspiring further exploration
-      and investment in this area.\\n\\n**4. The Future of Work: How AI is Reshaping
-      Employment Landscapes**  \\nThe discussions around AI's impact on the workforce
-      are both urgent and complex, as advances in automation and machine learning
-      continue to transform the job market. This article could delve into the current
-      trends of AI-driven job displacement alongside opportunities for upskilling
-      and the creation of new job roles. By examining case studies of companies that
-      integrate AI effectively and the resulting workforce adaptations, readers can
-      gain valuable insights into preparing for a future where humans and AI collaborate.
-      This exploration highlights the importance of policies that promote workforce
-      resilience in the face of change.\\n\\n**5. Decentralized AI: Exploring the
-      Role of Blockchain in AI Development**  \\nAs blockchain technology sweeps through
-      various sectors, its application in AI development presents a fascinating topic
-      worth examining. Decentralized AI could address issues of data privacy, security,
-      and democratization in AI models by allowing users to retain ownership of data
-      while benefiting from AI's capabilities. This article could analyze how decentralized
-      networks are disrupting traditional AI development models, featuring innovative
-      projects that harness the synergy between blockchain and AI. Highlighting potential
-      pitfalls and the future landscape of decentralized AI could stimulate discussion
-      among technologists, entrepreneurs, and policymakers alike.\\n\\nThese topics
-      not only reflect current trends but also probe deeper into ethical and practical
-      considerations, making them timely and relevant for contemporary audiences.\\n```\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      2098,\n    \"completion_tokens\": 653,\n    \"total_tokens\": 2751,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_898ac29719\"\n}\n"
-    headers:
-      CF-RAY:
-      - 9293cc3fbbc87afd-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 31 Mar 2025 23:59:06 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '8353'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '50000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-requests:
-      - '49999'
-      x-ratelimit-remaining-tokens:
-      - '149997127'
-      x-ratelimit-reset-requests:
-      - 1ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_04659f093830c14dbc5342c119533861
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
-      are a seasoned manager with a knack for getting the best out of your team.\nYou
-      are also known for your ability to delegate work to the right people, and to
-      ask the right questions to get the best out of your team.\nEven though you don''t
-      perform tasks by yourself, you have a lot of experience in the field, which
-      allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
-      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
-      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
-      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
-      ''str''}}\nTool Description: Delegate a specific task to one of the following
-      coworkers: Researcher, Senior Writer\nThe input to this tool should be the coworker,
-      the task you want them to do, and ALL necessary context to execute the task,
-      they know nothing about the task, so share absolutely everything you know, don''t
-      reference things but instead explain them.\nTool Name: Ask question to coworker\nTool
-      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
-      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
-      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
-      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
-      of the following coworkers: Researcher, Senior Writer\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolutely everything you know, don''t reference things but instead explain
-      them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to coworker, Ask question to coworker], just the name,
-      exactly as it''s written.\nAction Input: the input to the action, just a simple
-      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
-      the result of the action\n```\n\nOnce all necessary information is gathered,
-      return the following format:\n\n```\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n```"}, {"role": "user",
-      "content": "\nCurrent Task: Come up with a list of 5 interesting ideas to explore
-      for an article, then write one amazing paragraph highlight for each idea that
-      showcases how good an article about this topic could be. Return the list of
-      ideas with their paragraph and your notes.\n\nThis is the expected criteria
-      for your final answer: 5 bullet points with a paragraph for each idea.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "```\nThought: To come up with interesting article ideas and write compelling
-      highlights, I should first generate a list of potential topics. The Researcher
-      can help with gathering current trends or interesting topics that might be engaging.
-      Then, I can delegate writing the paragraph highlights to the Senior Writer.\n\nAction:
-      Ask question to coworker\nAction Input: {\"question\": \"What are some current
-      trending topics or subjects that are interesting to explore for an article?\",
-      \"context\": \"I need to generate a list of 5 interesting ideas to explore for
-      an article, each paired with an amazing paragraph highlight. Current trends
-      or unusual insights could be a good source of inspiration for these ideas.\",
-      \"coworker\": \"Researcher\"}\nObservation: **1. The Rise of Autonomous AI Agents
-      in Daily Life**  \nAs artificial intelligence technology progresses, the integration
-      of autonomous AI agents into everyday life becomes increasingly prominent. These
-      agents, capable of making decisions without human intervention, are reshaping
-      industries from healthcare to finance. Exploring case studies where autonomous
-      AI has successfully decreased operational costs or improved efficiency can reveal
-      not only the benefits but also the ethical implications of delegating decision-making
-      to machines. This topic offers an exciting opportunity to dive into the AI landscape,
-      showcasing current developments such as AI assistants and autonomous vehicles.\n\n**2.
-      Ethical Implications of Generative AI in Creative Industries**  \nThe surge
-      of generative AI tools in creative fields, such as art, music, and writing,
-      has sparked a heated debate about authorship and originality. This article could
-      investigate how these tools are being used by artists and creators, examining
-      both the potential for innovation and the risk of devaluing traditional art
-      forms. Highlighting perspectives from creators, legal experts, and ethicists
-      could provide a comprehensive overview of the challenges faced, including copyright
-      concerns and the emotional impact on human artists. This discussion is vital
-      as the creative landscape evolves alongside technological advancements, making
-      it ripe for exploration.\n\n**3. AI in Climate Change Mitigation: Current Solutions
-      and Future Potential**  \nAs the world grapples with climate change, AI technology
-      is increasingly being harnessed to develop innovative solutions for sustainability.
-      From predictive analytics that optimize energy consumption to machine learning
-      algorithms that improve carbon capture methods, AI''s potential in environmental
-      science is vast. This topic invites an exploration of existing AI applications
-      in climate initiatives, with a focus on groundbreaking research and initiatives
-      aimed at reducing humanity''s carbon footprint. Highlighting successful projects
-      and technology partnerships can illustrate the positive impact AI can have on
-      global climate efforts, inspiring further exploration and investment in this
-      area.\n\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**  \nThe
-      discussions around AI''s impact on the workforce are both urgent and complex,
-      as advances in automation and machine learning continue to transform the job
-      market. This article could delve into the current trends of AI-driven job displacement
-      alongside opportunities for upskilling and the creation of new job roles. By
-      examining case studies of companies that integrate AI effectively and the resulting
-      workforce adaptations, readers can gain valuable insights into preparing for
-      a future where humans and AI collaborate. This exploration highlights the importance
-      of policies that promote workforce resilience in the face of change.\n\n**5.
-      Decentralized AI: Exploring the Role of Blockchain in AI Development**  \nAs
-      blockchain technology sweeps through various sectors, its application in AI
-      development presents a fascinating topic worth examining. Decentralized AI could
-      address issues of data privacy, security, and democratization in AI models by
-      allowing users to retain ownership of data while benefiting from AI''s capabilities.
-      This article could analyze how decentralized networks are disrupting traditional
-      AI development models, featuring innovative projects that harness the synergy
-      between blockchain and AI. Highlighting potential pitfalls and the future landscape
-      of decentralized AI could stimulate discussion among technologists, entrepreneurs,
-      and policymakers alike.\n\nThese topics not only reflect current trends but
-      also probe deeper into ethical and practical considerations, making them timely
-      and relevant for contemporary audiences."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '7865'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=icM8L9.yRk22iqPJZhDQeVHgfWZOnl1YiBFMJmVO8_8-1743465529821-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.93.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.93.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '600.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//bFfbbhy5EX3fryjoZQFjJNiO7az1pvUlK8ABAsdBAqweXENWd5fFZhEs
-        do9G+/NBkZyLtPsiaGZYzbqcc+r0Hz8BXLC/uIYLN2FxcwqXH37Zfnz/6N/e/qBZCf3+/X/e3H+5
-        j/8rMYwXG4uQ7Q9y5RB15WROgQpLbD+7TFjInvrq72/fvXr39t379/WHWTwFCxtTuXwjl69fvn5z
-        +fKXy5fveuAk7EgvruH3nwAA/qh/LcXo6eHiGl5uDt/MpIojXVwfDwFcZAn2zQWqshaM5WJz+tFJ
-        LBRr1t+/f7+L3yZZxqlcwy1E2cGEKwFCYC0gA3AslEkLxxGKJHYKGD2UiThDwoxjxjTBxOMUeJyK
-        QpmwwExU7BC4zIUyIwySYaRIGeuzKI442j+YC7tAwJ5Qr+7iXfzMEQPcRN1Rvoa7+OoKXrz4NhF8
-        ZSXL6WYpEmWWReHmFm5GikWBI3xEDnv4wgO9eAFwFwHgRusFAzvGUIsJgUeKjqCQm6IEGfeQsoyZ
-        VEk3NWk7N1qiEu0+fHIfHu4rArRS3nvcQ+CBYEtOZrKfbPLKcQz12TNHiuUKvk2k1OM34DDhNtSC
-        Zry3VnhyrCxRYcdlkqXAtMwY2wxWipbPBjATZNIJk8Vw9IuWzKQwZJlhIgxlcnaoCAwcMTq6gk8P
-        KUi2AIdKoGXxFrKbKNOz+iZU0MU5Uh2WEPaWlpVDHiRR6woGcKJFQTLwnLKs5IEGazNFtweHETKt
-        hAGiFJAY9rWxW4o0cFHYLgUwqNRvqUzsbDxzCuzqBWpt8RRobHA5tOayt6oIzOgmjqTWV9YGTpBh
-        oGwQBXpwXEMlJclliVz2FuZ5pTY8u/rmFgJGrw4TbUAn2bk6OHBLzhQLeFopSJrrzHVxE2BDwYFa
-        jQ9nLVxpMkA3LL827H7q9d0+q+8fnQ5rzYMjfDDBsI+3x6kekWwE0CWPFTDjk8giEioB3CF+YApe
-        N8eEMZcNzIuy29R0d7n2ZtOGnTDfkwc08BTy4GmLhQC3BkFcyiRZJ041UjKPxk8u+974A4GdLMED
-        x9XUYrQHTLKzJiv1DA2UW7LuLoam7b7Gam9hTV6yboAecOZo57ZSpjqnJKZZxmHTEY5R1kbPLkaQ
-        We8bZlYMS4VIRs8drJiLBc56Bb8dlMrOJMqayFnPOn9OWRj2AtBDomx0tYsqUGvCrVgDPnuTS5P+
-        TBNFtfbLSnll2llCVQQnDIHiaJegI78xiQiLr0CTtM+WDziJjnI8CizQLD1/nhM641FXhN63PgHP
-        6hY1egArrFysYu3y2xFxRDnQKsHKxSBxVEv/qIQVpehX04y5qVTnGxfInKh2n6qW1PZXjP/NMN4B
-        HHi2yX+YMI4E/+SKBJZ4DR86of4tYWkMsDI/L2XJBP86jPdcuC3/neTgwXZMCtR0EVy/xNVLNpUB
-        Jy3nZ/rbADdhjibwvkpA4/QRRiuBHrOyCnXRghxxyw3nnw0ZKZPnChXAiGFfbBfWZSep8MyPBMbK
-        cW+D1GVOFZ8noYJAmCuqMYySuUxzj+8KCg7zVqIthtqUmcokxuKb25/1jAEcgeLKWaLNCANoVV2q
-        w0ctTwSR48qFuiIe52bApAdua93ULJ0pkwlJbzFHLlw7pJvWfFvkblGD4phliX6bqUEkkxJm05vo
-        zwMBeTZ1KZDJL65Ow0DMZf+zHmoeRErKbFvyCUFPi8jIZm6r0+NseWMukapCaV08HIKJp+XfpEO5
-        Tq2T6Oa2nqo+x6oIsrV11iumYZDKd46auG7MYclloie47zWa1NkMrGWlaSFh5cSbg2fpAJcB/iv5
-        /hp+k10Ve4Wvxx3+aU5B9vVBXw40fSr8J4bbHdb2BoqTLnSy3A+SHTWlNe20hRFL09fqTh82dR80
-        jtdZ2+qaT1X9Ca3mFzku1U+UjFFNSOt9P2QLs+2O8perwFM4X7WHjVoyRV/3383tpc+8UqxP8qwp
-        YBOeM3E6re/qcSTDkvSeQ6hM6krZZK7hOtKuPs9MsF7Br/uzffLE/MhQe4LRPjQidt9XtyoNQ9sM
-        YX/aMqRLqMA867XHVBp1NpAJvRkQQ9iIHMG2UbV5HLX549qQlClhQ5dkI1WDSfNjlR4N5wZWCQG3
-        BjzqbT4H4hPjXTEuudhsrbwkwRxZr86cqJRzmGRSDl07GoRsPdXGVG2tUH5rUP5IjmLJGPiRLKvr
-        M0dpcV+lOdlfg7h7N1nlHC37jyf/dK7t29O5MyrrjihZttleSWDFzOaolFxbyeYcz6SqX3Fm0ayv
-        Wq0awoDqOOLpzcUKL9MJDVfwvKoOXPTe3gaAVZeGE48FIWVe0e03ls+SueybKfA0i7NpPJ4nVV/x
-        tHqcEGTXTU82WYZMtl1Adl22jjfsJg5Hk1zBYYunMr2+Ldg64qPjfcq2upMem+nyT+qKVGzkzX95
-        1ryk8twgPWtjy34DA2FZcnvPOO7KoxBXVPXNWlGg+7YAt1R2RPF8yg3Mz+3XcaclLgOGcPI+nRAn
-        21K93V+OSwvPSzDWnhkhnMVKPDobNU23aEqZIi25W7r/AwAA//+MWMsOwiAQvPcrDGcPvlr1YwxB
-        WCopAuFx8NB/N0ur4CvxPMuwC7vJzuQRuV3ZkGWDVgM2fdbFtWb2IFNgKNlN0roCmDF2Hn5U66cZ
-        GZ/6XNveeXsOb0eJVEaFC8U9xRrU4iFaRzI6NovFKfsA6UXaExxgF2m0A+Tr1rt2PxGSYj0UuNsd
-        ZzTayHQBNutVt/xCSQU2pg6VmUA44xcQ5WxxHlgSylZAUxX+mc837ql4Zfp/6AvAObgIgj4Wsrrm
-        EuYBm/RX2POhc8Ik4L7OgUYFHj9DgGRJT7YJCbcQ4UqlMj34vKRgiHT0sDq2Xbvd8jNpxuYOAAD/
-        /wMAWvKreUQSAAA=
+      string: "{\n  \"id\": \"chatcmpl-DIjv97s0rOaFgzBEMAQopTjIn9luN\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773358795,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Here are five engaging and current
+        topics related to AI and AI agents that could make compelling articles:\\n\\n1.
+        The Rise of Autonomous AI Agents in Everyday Applications  \\nExplore how
+        autonomous AI agents, capable of making decisions and performing tasks independently,
+        are increasingly integrated into daily life\u2014from virtual assistants evolving
+        to manage entire workflows to AI in smart homes taking proactive roles. This
+        article could delve into the technology driving autonomy, challenges in trust
+        and safety, and the impact on productivity and lifestyle.\\n\\n2. Ethical
+        AI Agent Design: Balancing Innovation with Responsibility  \\nA timely discussion
+        on the ethical considerations in designing AI agents, especially as they become
+        more autonomous and capable of influencing human decisions. The article can
+        cover current frameworks, real-world dilemmas, bias mitigation strategies,
+        and how developers and companies are navigating regulatory pressures.\\n\\n3.
+        AI Agents in Creative Industries: Collaboration or Competition?  \\nInvestigate
+        how AI agents are transforming creative fields such as art, music, writing,
+        and design. Focus on examples of AI-human collaboration, tools that empower
+        creators, and the evolving debate over creativity, originality, and intellectual
+        property in the age of AI.\\n\\n4. Advances in Language Models Fuelling Smarter
+        AI Agents  \\nAnalyze the latest breakthroughs in large language models (LLMs)
+        and how these advancements are enhancing AI agents' conversational abilities,
+        reasoning, and task automation. Highlight how innovations like multimodal
+        inputs and fine-tuning techniques are pushing the boundaries of what AI agents
+        can achieve.\\n\\n5. The Future of Work: AI Agents as Colleagues, Not Just
+        Tools  \\nExamine how AI agents are reshaping workplaces by becoming collaborative
+        colleagues that handle complex tasks and decision-making instead of simple
+        automation tools. Discuss case studies, potential impacts on job roles, workforce
+        dynamics, and how organizations can prepare for this paradigm shift.\\n\\nLet
+        me know if you want me to prepare highlight paragraphs for any or all of these
+        topics.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+        \ \"usage\": {\n    \"prompt_tokens\": 210,\n    \"completion_tokens\": 373,\n
+        \   \"total_tokens\": 583,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_5e793402c9\"\n}\n"
     headers:
-      CF-RAY:
-      - 974efac6faf5cf15-SJC
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9db6a415eb32e5e2-EWR
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
-      - Mon, 25 Aug 2025 23:48:25 GMT
+      - Thu, 12 Mar 2026 23:40:00 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=yJXo3QqFAYYxljNSZBr47v.aphUMHM_ulx8v95ohSS4-1756165705-1.0.1.1-hhSjgTF5yD4vPuetC1LZGfC4KDF6RXEOSk8B4k4kOCq0XyfGNZkzt8kMn.F..aqu9T7UeYwKJprb.ZhscrKkokkqPou4V3aYXTAqIb2GZvE;
-        path=/; expires=Tue, 26-Aug-25 00:18:25 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=yh2RjFXBfB0RrOxRjxqkpRIka8SH8Bv0F2PRUGTNLkY-1756165705944-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '6170'
+      - '4956'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '6192'
-      x-ratelimit-limit-project-requests:
-      - '10000'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-project-requests:
-      - '9999'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '29998089'
-      x-ratelimit-reset-project-requests:
-      - 6ms
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 3ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_f470345c656b4bb7abb0ab09372eabef
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Crew Manager.
+      You are a seasoned manager with a knack for getting the best out of your team.\\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\\nEven though you
+      don't perform tasks by yourself, you have a lot of experience in the field,
+      which allows you to properly evaluate the work of your team members.\\nYour
+      personal goal is: Manage the team to complete the task in the best way possible.\"},{\"role\":\"user\",\"content\":\"\\nCurrent
+      Task: Come up with a list of 5 interesting ideas to explore for an article,
+      then write one amazing paragraph highlight for each idea that showcases how
+      good an article about this topic could be. Return the list of ideas with their
+      paragraph and your notes.\\n\\nThis is the expected criteria for your final
+      answer: 5 bullet points with a paragraph for each idea.\\nyou MUST return the
+      actual complete content as the final answer, not a summary.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_Ol2yxl2EsKWZNmtbij2JTprf\",\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"arguments\":\"{\\\"question\\\":
+      \\\"What are 5 interesting and current topics that could make for engaging articles?
+      Consider trends, recent events, and popular subjects.\\\", \\\"context\\\":
+      \\\"We need to brainstorm 5 fascinating and relevant topics that could be explored
+      in an article. These topics should be current, engaging, and have the potential
+      to generate interest among readers. Once we have the topics, I will ask for
+      a highlight paragraph for each to showcase their potential.\\\", \\\"coworker\\\":
+      \\\"Researcher\\\"}\"}},{\"id\":\"call_hOt5vwTOgfIxqHIwDbmZMVTQ\",\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"arguments\":\"{\\\"question\\\":
+      \\\"Once we have a list of 5 interesting topics, could you write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be?\\\", \\\"context\\\": \\\"After brainstorming 5 fascinating
+      and current topics for potential articles, we want to create a highlight paragraph
+      for each idea. This paragraph should capture the essence and allure of the topic,
+      demonstrating why readers would find it intriguing and worth reading. I will
+      provide the topics once we have them.\\\", \\\"coworker\\\": \\\"Senior Writer\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_Ol2yxl2EsKWZNmtbij2JTprf\",\"name\":\"ask_question_to_coworker\",\"content\":\"Here
+      are five engaging and current topics related to AI and AI agents that could
+      make compelling articles:\\n\\n1. The Rise of Autonomous AI Agents in Everyday
+      Applications  \\nExplore how autonomous AI agents, capable of making decisions
+      and performing tasks independently, are increasingly integrated into daily life\u2014from
+      virtual assistants evolving to manage entire workflows to AI in smart homes
+      taking proactive roles. This article could delve into the technology driving
+      autonomy, challenges in trust and safety, and the impact on productivity and
+      lifestyle.\\n\\n2. Ethical AI Agent Design: Balancing Innovation with Responsibility
+      \ \\nA timely discussion on the ethical considerations in designing AI agents,
+      especially as they become more autonomous and capable of influencing human decisions.
+      The article can cover current frameworks, real-world dilemmas, bias mitigation
+      strategies, and how developers and companies are navigating regulatory pressures.\\n\\n3.
+      AI Agents in Creative Industries: Collaboration or Competition?  \\nInvestigate
+      how AI agents are transforming creative fields such as art, music, writing,
+      and design. Focus on examples of AI-human collaboration, tools that empower
+      creators, and the evolving debate over creativity, originality, and intellectual
+      property in the age of AI.\\n\\n4. Advances in Language Models Fuelling Smarter
+      AI Agents  \\nAnalyze the latest breakthroughs in large language models (LLMs)
+      and how these advancements are enhancing AI agents' conversational abilities,
+      reasoning, and task automation. Highlight how innovations like multimodal inputs
+      and fine-tuning techniques are pushing the boundaries of what AI agents can
+      achieve.\\n\\n5. The Future of Work: AI Agents as Colleagues, Not Just Tools
+      \ \\nExamine how AI agents are reshaping workplaces by becoming collaborative
+      colleagues that handle complex tasks and decision-making instead of simple automation
+      tools. Discuss case studies, potential impacts on job roles, workforce dynamics,
+      and how organizations can prepare for this paradigm shift.\\n\\nLet me know
+      if you want me to prepare highlight paragraphs for any or all of these topics.\"},{\"role\":\"tool\",\"tool_call_id\":\"call_hOt5vwTOgfIxqHIwDbmZMVTQ\",\"name\":\"ask_question_to_coworker\",\"content\":\"Absolutely!
+      Once you share the list of five topics, I\u2019ll craft a compelling highlight
+      paragraph for each. Each paragraph will vividly convey why the topic is timely
+      and engaging, spotlighting unique angles and potential insights that will hook
+      readers. Just send over the topics when ready, and I\u2019ll get started on
+      creating those captivating previews that showcase the value and excitement behind
+      each article idea.\"},{\"role\":\"user\",\"content\":\"Analyze the tool result.
+      If requirements are met, provide the Final Answer. Otherwise, call the next
+      tool. Deliver only the answer without meta-commentary.\"}],\"model\":\"gpt-4o\",\"tool_choice\":\"auto\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"delegate_work_to_coworker\",\"description\":\"Delegate
+      a specific task to one of the following coworkers: Researcher, Senior Writer\\nThe
+      input to this tool should be the coworker, the task you want them to do, and
+      ALL necessary context to execute the task, they know nothing about the task,
+      so share absolutely everything you know, don't reference things but instead
+      explain them.\",\"strict\":true,\"parameters\":{\"properties\":{\"task\":{\"description\":\"The
+      task to delegate\",\"title\":\"Task\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the task\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to delegate to\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"task\",\"context\",\"coworker\"],\"type\":\"object\",\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"description\":\"Ask
+      a specific question to one of the following coworkers: Researcher, Senior Writer\\nThe
+      input to this tool should be the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolutely everything you know, don't reference things
+      but instead explain them.\",\"strict\":true,\"parameters\":{\"properties\":{\"question\":{\"description\":\"The
+      question to ask\",\"title\":\"Question\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the question\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to ask\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"question\",\"context\",\"coworker\"],\"type\":\"object\",\"additionalProperties\":false}}}]}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '7027'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DIjvENcukqHXe8DxyBt4MVQCpGxzS\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773358800,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_HWnyWY4pNbRXkfO2eugJcQl1\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"delegate_work_to_coworker\",\n
+        \             \"arguments\": \"{\\\"task\\\":\\\"Create a compelling paragraph
+        highlight for each of the 5 topics: 1) The Rise of Autonomous AI Agents in
+        Everyday Applications, 2) Ethical AI Agent Design: Balancing Innovation with
+        Responsibility, 3) AI Agents in Creative Industries: Collaboration or Competition?,
+        4) Advances in Language Models Fuelling Smarter AI Agents, 5) The Future of
+        Work: AI Agents as Colleagues, Not Just Tools.\\\",\\\"context\\\":\\\"We
+        have a list of 5 topics as potential ideas for articles. Now, we need to write
+        an amazing paragraph for each idea. These paragraphs should emphasize the
+        intrigue and opportunities presented by each topic, capturing the reader's
+        attention and demonstrating why an article on the subject would be interesting
+        and engaging. The goal is to create content that showcases the essence and
+        potential insights of each topic.\\\",\\\"coworker\\\":\\\"Senior Writer\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1233,\n    \"completion_tokens\":
+        188,\n    \"total_tokens\": 1421,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_b7c8e3f100\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9db6a43688b225dc-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Mar 2026 23:40:02 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1471'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Senior Writer.
+      You're a senior writer, specialized in technology, software engineering, AI
+      and startups. You work as a freelancer and are now working on writing content
+      for a new customer.\\nYour personal goal is: Write the best content about AI
+      and AI agents.\"},{\"role\":\"user\",\"content\":\"\\nCurrent Task: Once we
+      have a list of 5 interesting topics, could you write one amazing paragraph highlight
+      for each idea that showcases how good an article about this topic could be?\\n\\nThis
+      is the expected criteria for your final answer: Your best answer to your coworker
+      asking you this, accounting for the context shared.\\nyou MUST return the actual
+      complete content as the final answer, not a summary.\\n\\nThis is the context
+      you're working with:\\nAfter brainstorming 5 fascinating and current topics
+      for potential articles, we want to create a highlight paragraph for each idea.
+      This paragraph should capture the essence and allure of the topic, demonstrating
+      why readers would find it intriguing and worth reading. I will provide the topics
+      once we have them.\\n\\nProvide your complete response:\"},{\"role\":\"assistant\",\"content\":\"Absolutely!
+      Once you share the list of five topics, I\u2019ll craft a compelling highlight
+      paragraph for each. Each paragraph will vividly convey why the topic is timely
+      and engaging, spotlighting unique angles and potential insights that will hook
+      readers. Just send over the topics when ready, and I\u2019ll get started on
+      creating those captivating previews that showcase the value and excitement behind
+      each article idea.\"},{\"role\":\"system\",\"content\":\"You are Senior Writer.
+      You're a senior writer, specialized in technology, software engineering, AI
+      and startups. You work as a freelancer and are now working on writing content
+      for a new customer.\\nYour personal goal is: Write the best content about AI
+      and AI agents.\"},{\"role\":\"user\",\"content\":\"\\nCurrent Task: Create a
+      compelling paragraph highlight for each of the 5 topics: 1) The Rise of Autonomous
+      AI Agents in Everyday Applications, 2) Ethical AI Agent Design: Balancing Innovation
+      with Responsibility, 3) AI Agents in Creative Industries: Collaboration or Competition?,
+      4) Advances in Language Models Fuelling Smarter AI Agents, 5) The Future of
+      Work: AI Agents as Colleagues, Not Just Tools.\\n\\nThis is the expected criteria
+      for your final answer: Your best answer to your coworker asking you this, accounting
+      for the context shared.\\nyou MUST return the actual complete content as the
+      final answer, not a summary.\\n\\nThis is the context you're working with:\\nWe
+      have a list of 5 topics as potential ideas for articles. Now, we need to write
+      an amazing paragraph for each idea. These paragraphs should emphasize the intrigue
+      and opportunities presented by each topic, capturing the reader's attention
+      and demonstrating why an article on the subject would be interesting and engaging.
+      The goal is to create content that showcases the essence and potential insights
+      of each topic.\\n\\nProvide your complete response:\"}],\"model\":\"gpt-4.1-mini\"}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3071'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DIjvG0oF1480LyM2UnlsyPtbA40BT\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773358802,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"1) The Rise of Autonomous AI Agents
+        in Everyday Applications  \\nAutonomous AI agents are rapidly transforming
+        the way we interact with technology in our daily lives, quietly revolutionizing
+        everything from personal assistants that manage our schedules to smart home
+        systems that anticipate our needs. This article will delve into how these
+        self-governing agents harness advanced algorithms and real-time data to operate
+        independently, making decisions without human intervention. By exploring current
+        implementations and future possibilities, readers will gain insight into how
+        autonomous AI is seamlessly integrating into routine tasks, driving efficiency
+        and personalization like never before\u2014heralding a future where intelligent
+        agents become indispensable partners in everyday life.\\n\\n2) Ethical AI
+        Agent Design: Balancing Innovation with Responsibility  \\nAs AI agents grow
+        more powerful and ubiquitous, the imperative to design them with ethical considerations
+        is more critical than ever. This article will investigate the delicate balancing
+        act developers face: pushing the boundaries of innovation while embedding
+        fairness, transparency, and accountability into AI behavior. It will explore
+        best practices for mitigating bias, safeguarding privacy, and ensuring AI
+        agents act in ways aligned with human values. By highlighting real-world dilemmas
+        and frameworks guiding responsible AI design, this piece will engage readers
+        fascinated by the intersection of cutting-edge technology and moral philosophy,
+        showing why ethics must be front and center as AI agents proliferate.\\n\\n3)
+        AI Agents in Creative Industries: Collaboration or Competition?  \\nArtificial
+        intelligence is rapidly penetrating creative fields\u2014music, writing, visual
+        arts\u2014prompting a provocative debate about whether AI agents serve as
+        collaborators enhancing human creativity or as competitors threatening creative
+        jobs. This article will examine the evolving relationship between human artists
+        and AI tools, spotlighting groundbreaking projects where AI agents co-create
+        original works and questioning the shifting boundaries of authorship and inspiration.
+        By unpacking how AI challenges traditional creative processes while unlocking
+        new artistic possibilities, the piece promises to captivate readers intrigued
+        by technology\u2019s impact on culture and the future of creative professions.\\n\\n4)
+        Advances in Language Models Fuelling Smarter AI Agents  \\nRecent breakthroughs
+        in language model architectures have empowered AI agents with unprecedented
+        understanding and generation capabilities, propelling them from simple command
+        executors to sophisticated conversational partners and problem solvers. This
+        article will explore how innovations like transformer models and fine-tuning
+        techniques elevate AI agents\u2019 contextual awareness, reasoning, and multi-turn
+        dialogue fluency. Readers will discover how these language advances enable
+        smarter, more adaptable agents across industries\u2014from customer service
+        bots to research assistants\u2014demonstrating the technological leaps that
+        are shaping the next generation of intelligent AI systems.\\n\\n5) The Future
+        of Work: AI Agents as Colleagues, Not Just Tools  \\nThe integration of AI
+        agents into workplaces is shifting the paradigm from mere automation toward
+        genuine collaboration between humans and machines. This article will explore
+        how AI agents are evolving from passive tools into proactive colleagues that
+        augment human skills, make autonomous decisions, and even participate in team
+        dynamics. By highlighting case studies from diverse sectors, the piece will
+        unpack how this partnership reshapes roles, enhances productivity, and raises
+        new questions about workplace culture and ethics. Readers will be drawn to
+        this forward-looking narrative that reframes AI agents as essential collaborators
+        shaping the future of work.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 575,\n    \"completion_tokens\":
+        622,\n    \"total_tokens\": 1197,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_5e793402c9\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9db6a4417ce64b9f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Mar 2026 23:40:10 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '8516'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Crew Manager.
+      You are a seasoned manager with a knack for getting the best out of your team.\\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\\nEven though you
+      don't perform tasks by yourself, you have a lot of experience in the field,
+      which allows you to properly evaluate the work of your team members.\\nYour
+      personal goal is: Manage the team to complete the task in the best way possible.\"},{\"role\":\"user\",\"content\":\"\\nCurrent
+      Task: Come up with a list of 5 interesting ideas to explore for an article,
+      then write one amazing paragraph highlight for each idea that showcases how
+      good an article about this topic could be. Return the list of ideas with their
+      paragraph and your notes.\\n\\nThis is the expected criteria for your final
+      answer: 5 bullet points with a paragraph for each idea.\\nyou MUST return the
+      actual complete content as the final answer, not a summary.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_Ol2yxl2EsKWZNmtbij2JTprf\",\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"arguments\":\"{\\\"question\\\":
+      \\\"What are 5 interesting and current topics that could make for engaging articles?
+      Consider trends, recent events, and popular subjects.\\\", \\\"context\\\":
+      \\\"We need to brainstorm 5 fascinating and relevant topics that could be explored
+      in an article. These topics should be current, engaging, and have the potential
+      to generate interest among readers. Once we have the topics, I will ask for
+      a highlight paragraph for each to showcase their potential.\\\", \\\"coworker\\\":
+      \\\"Researcher\\\"}\"}},{\"id\":\"call_hOt5vwTOgfIxqHIwDbmZMVTQ\",\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"arguments\":\"{\\\"question\\\":
+      \\\"Once we have a list of 5 interesting topics, could you write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be?\\\", \\\"context\\\": \\\"After brainstorming 5 fascinating
+      and current topics for potential articles, we want to create a highlight paragraph
+      for each idea. This paragraph should capture the essence and allure of the topic,
+      demonstrating why readers would find it intriguing and worth reading. I will
+      provide the topics once we have them.\\\", \\\"coworker\\\": \\\"Senior Writer\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_Ol2yxl2EsKWZNmtbij2JTprf\",\"name\":\"ask_question_to_coworker\",\"content\":\"Here
+      are five engaging and current topics related to AI and AI agents that could
+      make compelling articles:\\n\\n1. The Rise of Autonomous AI Agents in Everyday
+      Applications  \\nExplore how autonomous AI agents, capable of making decisions
+      and performing tasks independently, are increasingly integrated into daily life\u2014from
+      virtual assistants evolving to manage entire workflows to AI in smart homes
+      taking proactive roles. This article could delve into the technology driving
+      autonomy, challenges in trust and safety, and the impact on productivity and
+      lifestyle.\\n\\n2. Ethical AI Agent Design: Balancing Innovation with Responsibility
+      \ \\nA timely discussion on the ethical considerations in designing AI agents,
+      especially as they become more autonomous and capable of influencing human decisions.
+      The article can cover current frameworks, real-world dilemmas, bias mitigation
+      strategies, and how developers and companies are navigating regulatory pressures.\\n\\n3.
+      AI Agents in Creative Industries: Collaboration or Competition?  \\nInvestigate
+      how AI agents are transforming creative fields such as art, music, writing,
+      and design. Focus on examples of AI-human collaboration, tools that empower
+      creators, and the evolving debate over creativity, originality, and intellectual
+      property in the age of AI.\\n\\n4. Advances in Language Models Fuelling Smarter
+      AI Agents  \\nAnalyze the latest breakthroughs in large language models (LLMs)
+      and how these advancements are enhancing AI agents' conversational abilities,
+      reasoning, and task automation. Highlight how innovations like multimodal inputs
+      and fine-tuning techniques are pushing the boundaries of what AI agents can
+      achieve.\\n\\n5. The Future of Work: AI Agents as Colleagues, Not Just Tools
+      \ \\nExamine how AI agents are reshaping workplaces by becoming collaborative
+      colleagues that handle complex tasks and decision-making instead of simple automation
+      tools. Discuss case studies, potential impacts on job roles, workforce dynamics,
+      and how organizations can prepare for this paradigm shift.\\n\\nLet me know
+      if you want me to prepare highlight paragraphs for any or all of these topics.\"},{\"role\":\"tool\",\"tool_call_id\":\"call_hOt5vwTOgfIxqHIwDbmZMVTQ\",\"name\":\"ask_question_to_coworker\",\"content\":\"Absolutely!
+      Once you share the list of five topics, I\u2019ll craft a compelling highlight
+      paragraph for each. Each paragraph will vividly convey why the topic is timely
+      and engaging, spotlighting unique angles and potential insights that will hook
+      readers. Just send over the topics when ready, and I\u2019ll get started on
+      creating those captivating previews that showcase the value and excitement behind
+      each article idea.\"},{\"role\":\"user\",\"content\":\"Analyze the tool result.
+      If requirements are met, provide the Final Answer. Otherwise, call the next
+      tool. Deliver only the answer without meta-commentary.\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_HWnyWY4pNbRXkfO2eugJcQl1\",\"type\":\"function\",\"function\":{\"name\":\"delegate_work_to_coworker\",\"arguments\":\"{\\\"task\\\":\\\"Create
+      a compelling paragraph highlight for each of the 5 topics: 1) The Rise of Autonomous
+      AI Agents in Everyday Applications, 2) Ethical AI Agent Design: Balancing Innovation
+      with Responsibility, 3) AI Agents in Creative Industries: Collaboration or Competition?,
+      4) Advances in Language Models Fuelling Smarter AI Agents, 5) The Future of
+      Work: AI Agents as Colleagues, Not Just Tools.\\\",\\\"context\\\":\\\"We have
+      a list of 5 topics as potential ideas for articles. Now, we need to write an
+      amazing paragraph for each idea. These paragraphs should emphasize the intrigue
+      and opportunities presented by each topic, capturing the reader's attention
+      and demonstrating why an article on the subject would be interesting and engaging.
+      The goal is to create content that showcases the essence and potential insights
+      of each topic.\\\",\\\"coworker\\\":\\\"Senior Writer\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_HWnyWY4pNbRXkfO2eugJcQl1\",\"name\":\"delegate_work_to_coworker\",\"content\":\"1)
+      The Rise of Autonomous AI Agents in Everyday Applications  \\nAutonomous AI
+      agents are rapidly transforming the way we interact with technology in our daily
+      lives, quietly revolutionizing everything from personal assistants that manage
+      our schedules to smart home systems that anticipate our needs. This article
+      will delve into how these self-governing agents harness advanced algorithms
+      and real-time data to operate independently, making decisions without human
+      intervention. By exploring current implementations and future possibilities,
+      readers will gain insight into how autonomous AI is seamlessly integrating into
+      routine tasks, driving efficiency and personalization like never before\u2014heralding
+      a future where intelligent agents become indispensable partners in everyday
+      life.\\n\\n2) Ethical AI Agent Design: Balancing Innovation with Responsibility
+      \ \\nAs AI agents grow more powerful and ubiquitous, the imperative to design
+      them with ethical considerations is more critical than ever. This article will
+      investigate the delicate balancing act developers face: pushing the boundaries
+      of innovation while embedding fairness, transparency, and accountability into
+      AI behavior. It will explore best practices for mitigating bias, safeguarding
+      privacy, and ensuring AI agents act in ways aligned with human values. By highlighting
+      real-world dilemmas and frameworks guiding responsible AI design, this piece
+      will engage readers fascinated by the intersection of cutting-edge technology
+      and moral philosophy, showing why ethics must be front and center as AI agents
+      proliferate.\\n\\n3) AI Agents in Creative Industries: Collaboration or Competition?
+      \ \\nArtificial intelligence is rapidly penetrating creative fields\u2014music,
+      writing, visual arts\u2014prompting a provocative debate about whether AI agents
+      serve as collaborators enhancing human creativity or as competitors threatening
+      creative jobs. This article will examine the evolving relationship between human
+      artists and AI tools, spotlighting groundbreaking projects where AI agents co-create
+      original works and questioning the shifting boundaries of authorship and inspiration.
+      By unpacking how AI challenges traditional creative processes while unlocking
+      new artistic possibilities, the piece promises to captivate readers intrigued
+      by technology\u2019s impact on culture and the future of creative professions.\\n\\n4)
+      Advances in Language Models Fuelling Smarter AI Agents  \\nRecent breakthroughs
+      in language model architectures have empowered AI agents with unprecedented
+      understanding and generation capabilities, propelling them from simple command
+      executors to sophisticated conversational partners and problem solvers. This
+      article will explore how innovations like transformer models and fine-tuning
+      techniques elevate AI agents\u2019 contextual awareness, reasoning, and multi-turn
+      dialogue fluency. Readers will discover how these language advances enable smarter,
+      more adaptable agents across industries\u2014from customer service bots to research
+      assistants\u2014demonstrating the technological leaps that are shaping the next
+      generation of intelligent AI systems.\\n\\n5) The Future of Work: AI Agents
+      as Colleagues, Not Just Tools  \\nThe integration of AI agents into workplaces
+      is shifting the paradigm from mere automation toward genuine collaboration between
+      humans and machines. This article will explore how AI agents are evolving from
+      passive tools into proactive colleagues that augment human skills, make autonomous
+      decisions, and even participate in team dynamics. By highlighting case studies
+      from diverse sectors, the piece will unpack how this partnership reshapes roles,
+      enhances productivity, and raises new questions about workplace culture and
+      ethics. Readers will be drawn to this forward-looking narrative that reframes
+      AI agents as essential collaborators shaping the future of work.\"},{\"role\":\"user\",\"content\":\"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary.\"}],\"model\":\"gpt-4o\",\"tool_choice\":\"auto\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"delegate_work_to_coworker\",\"description\":\"Delegate
+      a specific task to one of the following coworkers: Researcher, Senior Writer\\nThe
+      input to this tool should be the coworker, the task you want them to do, and
+      ALL necessary context to execute the task, they know nothing about the task,
+      so share absolutely everything you know, don't reference things but instead
+      explain them.\",\"strict\":true,\"parameters\":{\"properties\":{\"task\":{\"description\":\"The
+      task to delegate\",\"title\":\"Task\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the task\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to delegate to\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"task\",\"context\",\"coworker\"],\"type\":\"object\",\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"ask_question_to_coworker\",\"description\":\"Ask
+      a specific question to one of the following coworkers: Researcher, Senior Writer\\nThe
+      input to this tool should be the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolutely everything you know, don't reference things
+      but instead explain them.\",\"strict\":true,\"parameters\":{\"properties\":{\"question\":{\"description\":\"The
+      question to ask\",\"title\":\"Question\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the question\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to ask\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"question\",\"context\",\"coworker\"],\"type\":\"object\",\"additionalProperties\":false}}}]}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '12225'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DIjvP0AyP7fTUfBtvqRhm5J08yFow\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773358811,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"- **The Rise of Autonomous AI Agents
+        in Everyday Applications**  \\n  Autonomous AI agents are rapidly transforming
+        the way we interact with technology in our daily lives, quietly revolutionizing
+        everything from personal assistants that manage our schedules to smart home
+        systems that anticipate our needs. This article will delve into how these
+        self-governing agents harness advanced algorithms and real-time data to operate
+        independently, making decisions without human intervention. By exploring current
+        implementations and future possibilities, readers will gain insight into how
+        autonomous AI is seamlessly integrating into routine tasks, driving efficiency
+        and personalization like never before\u2014heralding a future where intelligent
+        agents become indispensable partners in everyday life.\\n\\n- **Ethical AI
+        Agent Design: Balancing Innovation with Responsibility**  \\n  As AI agents
+        grow more powerful and ubiquitous, the imperative to design them with ethical
+        considerations is more critical than ever. This article will investigate the
+        delicate balancing act developers face: pushing the boundaries of innovation
+        while embedding fairness, transparency, and accountability into AI behavior.
+        It will explore best practices for mitigating bias, safeguarding privacy,
+        and ensuring AI agents act in ways aligned with human values. By highlighting
+        real-world dilemmas and frameworks guiding responsible AI design, this piece
+        will engage readers fascinated by the intersection of cutting-edge technology
+        and moral philosophy, showing why ethics must be front and center as AI agents
+        proliferate.\\n\\n- **AI Agents in Creative Industries: Collaboration or Competition?**
+        \ \\n  Artificial intelligence is rapidly penetrating creative fields\u2014music,
+        writing, visual arts\u2014prompting a provocative debate about whether AI
+        agents serve as collaborators enhancing human creativity or as competitors
+        threatening creative jobs. This article will examine the evolving relationship
+        between human artists and AI tools, spotlighting groundbreaking projects where
+        AI agents co-create original works and questioning the shifting boundaries
+        of authorship and inspiration. By unpacking how AI challenges traditional
+        creative processes while unlocking new artistic possibilities, the piece promises
+        to captivate readers intrigued by technology\u2019s impact on culture and
+        the future of creative professions.\\n\\n- **Advances in Language Models Fuelling
+        Smarter AI Agents**  \\n  Recent breakthroughs in language model architectures
+        have empowered AI agents with unprecedented understanding and generation capabilities,
+        propelling them from simple command executors to sophisticated conversational
+        partners and problem solvers. This article will explore how innovations like
+        transformer models and fine-tuning techniques elevate AI agents\u2019 contextual
+        awareness, reasoning, and multi-turn dialogue fluency. Readers will discover
+        how these language advances enable smarter, more adaptable agents across industries\u2014from
+        customer service bots to research assistants\u2014demonstrating the technological
+        leaps that are shaping the next generation of intelligent AI systems.\\n\\n-
+        **The Future of Work: AI Agents as Colleagues, Not Just Tools**  \\n  The
+        integration of AI agents into workplaces is shifting the paradigm from mere
+        automation toward genuine collaboration between humans and machines. This
+        article will explore how AI agents are evolving from passive tools into proactive
+        colleagues that augment human skills, make autonomous decisions, and even
+        participate in team dynamics. By highlighting case studies from diverse sectors,
+        the piece will unpack how this partnership reshapes roles, enhances productivity,
+        and raises new questions about workplace culture and ethics. Readers will
+        be drawn to this forward-looking narrative that reframes AI agents as essential
+        collaborators shaping the future of work.\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2091,\n    \"completion_tokens\":
+        634,\n    \"total_tokens\": 2725,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        1408,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_b7c8e3f100\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9db6a4787de2427f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Mar 2026 23:40:13 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2264'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

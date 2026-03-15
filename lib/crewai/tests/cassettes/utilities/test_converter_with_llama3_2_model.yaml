@@ -1,0 +1,54 @@
+interactions:
+- request:
+    body: '{"model": "meta-llama/llama-3.2-3b-instruct", "messages": [{"role": "system", "content": "Please convert the following text into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON must follow this format exactly:\n{\n  \"name\": str,\n  \"age\": int\n}"}, {"role": "user", "content": "Name: Alice Llama, Age: 30"}], "stream": false, "stop": []}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '365'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      user-agent:
+      - litellm/1.68.0
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"gen-1747060315-OPtdU6KfuRgwaoevmhlh","provider":"Nebius","model":"meta-llama/llama-3.2-3b-instruct","object":"chat.completion","created":1747060315,"choices":[{"logprobs":null,"finish_reason":"stop","native_finish_reason":"stop","index":0,"message":{"role":"assistant","content":"{\"name\": \"Alice Llama\", \"age\": 30}","refusal":null,"reasoning":null}}],"usage":{"prompt_tokens":66,"completion_tokens":15,"total_tokens":81}}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 93ea9f59596559fa-DEL
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 12 May 2025 14:31:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      x-clerk-auth-message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid, token-carrier=header)
+      x-clerk-auth-reason:
+      - token-invalid
+      x-clerk-auth-status:
+      - signed-out
+    status:
+      code: 200
+      message: OK
+version: 1

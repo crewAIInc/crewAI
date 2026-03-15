@@ -50,6 +50,7 @@ uv add crewai-tools
       }
       ```
     - `file` (string, obrigatório): URL do arquivo - Os arquivos devem ter menos de 50MB. (exemplo: "https://picsum.photos/200/300").
+
   </Accordion>
 
   <Accordion title="box/save_file_from_object">
@@ -59,6 +60,7 @@ uv add crewai-tools
     - `file` (string, obrigatório): Arquivo - Aceita um Objeto de Arquivo contendo os dados. O arquivo deve ter menos de 50MB.
     - `fileName` (string, obrigatório): Nome do Arquivo (exemplo: "qwerty.png").
     - `folder` (string, opcional): Pasta - Use as configurações de workflow do Connect Portal para permitir que usuários escolham o destino da pasta. Caso em branco, o padrão é a pasta raiz do usuário.
+
   </Accordion>
 
   <Accordion title="box/get_file_by_id">
@@ -66,6 +68,7 @@ uv add crewai-tools
 
     **Parâmetros:**
     - `fileId` (string, obrigatório): ID do arquivo - Identificador único que representa um arquivo. (exemplo: "12345").
+
   </Accordion>
 
   <Accordion title="box/list_files">
@@ -91,6 +94,7 @@ uv add crewai-tools
         ]
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/create_folder">
@@ -104,6 +108,7 @@ uv add crewai-tools
         "id": "123456"
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/move_folder">
@@ -118,6 +123,7 @@ uv add crewai-tools
         "id": "123456"
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/get_folder_by_id">
@@ -125,6 +131,7 @@ uv add crewai-tools
 
     **Parâmetros:**
     - `folderId` (string, obrigatório): ID da pasta - Identificador único que representa uma pasta. (exemplo: "0").
+
   </Accordion>
 
   <Accordion title="box/search_folders">
@@ -150,6 +157,7 @@ uv add crewai-tools
         ]
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/delete_folder">
@@ -158,6 +166,7 @@ uv add crewai-tools
     **Parâmetros:**
     - `folderId` (string, obrigatório): ID da pasta - Identificador único que representa uma pasta. (exemplo: "0").
     - `recursive` (boolean, opcional): Recursivo - Exclui uma pasta que não está vazia, deletando de forma recursiva a pasta e todo o seu conteúdo.
+
   </Accordion>
 </AccordionGroup>
 

@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -66,6 +68,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
       }
       ```
     - `file` (string, required): File URL - Files must be smaller than 50MB in size. (example: "https://picsum.photos/200/300").
+
   </Accordion>
 
   <Accordion title="box/save_file_from_object">
@@ -75,6 +78,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `file` (string, required): File - Accepts a File Object containing file data. Files must be smaller than 50MB in size.
     - `fileName` (string, required): File Name (example: "qwerty.png").
     - `folder` (string, optional): Folder - Use Connect Portal Workflow Settings to allow users to select the File's Folder destination. Defaults to the user's root folder if left blank.
+
   </Accordion>
 
   <Accordion title="box/get_file_by_id">
@@ -82,6 +86,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `fileId` (string, required): File ID - The unique identifier that represents a file. (example: "12345").
+
   </Accordion>
 
   <Accordion title="box/list_files">
@@ -107,6 +112,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         ]
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/create_folder">
@@ -120,6 +126,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "id": "123456"
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/move_folder">
@@ -134,6 +141,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "id": "123456"
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/get_folder_by_id">
@@ -141,6 +149,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `folderId` (string, required): Folder ID - The unique identifier that represents a folder. (example: "0").
+
   </Accordion>
 
   <Accordion title="box/search_folders">
@@ -166,6 +175,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         ]
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/delete_folder">
@@ -174,6 +184,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `folderId` (string, required): Folder ID - The unique identifier that represents a folder. (example: "0").
     - `recursive` (boolean, optional): Recursive - Delete a folder that is not empty by recursively deleting the folder and all of its content.
+
   </Accordion>
 </AccordionGroup>
 

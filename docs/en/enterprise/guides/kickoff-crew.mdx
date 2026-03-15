@@ -17,9 +17,7 @@ Once you've deployed your crew to the CrewAI AMP platform, you can kickoff execu
 2. Click on the crew name from your projects list
 3. You'll be taken to the crew's detail page
 
-<Frame>
-  ![Crew Dashboard](/images/enterprise/crew-dashboard.png)
-</Frame>
+<Frame>![Crew Dashboard](/images/enterprise/crew-dashboard.png)</Frame>
 
 ### Step 2: Initiate Execution
 
@@ -31,9 +29,7 @@ From your crew's detail page, you have two options to kickoff an execution:
 2. Enter the required input parameters for your crew in the JSON editor
 3. Click the `Send Request` button
 
-<Frame>
-  ![Kickoff Endpoint](/images/enterprise/kickoff-endpoint.png)
-</Frame>
+<Frame>![Kickoff Endpoint](/images/enterprise/kickoff-endpoint.png)</Frame>
 
 #### Option B: Using the Visual Interface
 
@@ -41,9 +37,7 @@ From your crew's detail page, you have two options to kickoff an execution:
 2. Enter the required inputs in the form fields
 3. Click the `Run Crew` button
 
-<Frame>
-  ![Run Crew](/images/enterprise/run-crew.png)
-</Frame>
+<Frame>![Run Crew](/images/enterprise/run-crew.png)</Frame>
 
 ### Step 3: Monitor Execution Progress
 
@@ -52,9 +46,7 @@ After initiating the execution:
 1. You'll receive a response containing a `kickoff_id` - **copy this ID**
 2. This ID is essential for tracking your execution
 
-<Frame>
-  ![Copy Task ID](/images/enterprise/copy-task-id.png)
-</Frame>
+<Frame>![Copy Task ID](/images/enterprise/copy-task-id.png)</Frame>
 
 ### Step 4: Check Execution Status
 
@@ -64,11 +56,10 @@ To monitor the progress of your execution:
 2. Paste the `kickoff_id` into the designated field
 3. Click the "Get Status" button
 
-<Frame>
-  ![Get Status](/images/enterprise/get-status.png)
-</Frame>
+<Frame>![Get Status](/images/enterprise/get-status.png)</Frame>
 
 The status response will show:
+
 - Current execution state (`running`, `completed`, etc.)
 - Details about which tasks are in progress
 - Any outputs produced so far
@@ -122,7 +113,7 @@ curl -X GET \
 The response will be a JSON object containing an array of required input parameters, for example:
 
 ```json
-{"inputs":["topic","current_year"]}
+{ "inputs": ["topic", "current_year"] }
 ```
 
 This example shows that this particular crew requires two inputs: `topic` and `current_year`.
@@ -142,7 +133,7 @@ curl -X POST \
 The response will include a `kickoff_id` that you'll need for tracking:
 
 ```json
-{"kickoff_id":"abcd1234-5678-90ef-ghij-klmnopqrstuv"}
+{ "kickoff_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv" }
 ```
 
 ### Step 3: Check Execution Status
@@ -182,5 +173,6 @@ If an execution fails:
 3. Look for LLM responses and tool usage in the trace details
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with execution issues or questions about the Enterprise platform.
+  Contact our support team for assistance with execution issues or questions
+  about the Enterprise platform.
 </Card>

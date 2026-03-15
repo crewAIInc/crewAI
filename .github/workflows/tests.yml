@@ -5,18 +5,6 @@ on: [pull_request]
 permissions:
   contents: read
 
-env:
-  OPENAI_API_KEY: fake-api-key
-  PYTHONUNBUFFERED: 1
-  BRAVE_API_KEY: fake-brave-key
-  SNOWFLAKE_USER: fake-snowflake-user
-  SNOWFLAKE_PASSWORD: fake-snowflake-password
-  SNOWFLAKE_ACCOUNT: fake-snowflake-account
-  SNOWFLAKE_WAREHOUSE: fake-snowflake-warehouse
-  SNOWFLAKE_DATABASE: fake-snowflake-database
-  SNOWFLAKE_SCHEMA: fake-snowflake-schema
-  EMBEDCHAIN_DB_URI: sqlite:///test.db
-
 jobs:
   tests:
     name: tests (${{ matrix.python-version }})
@@ -84,26 +72,20 @@ jobs:
           # fi
 
           cd lib/crewai && uv run pytest \
-            --block-network \
-            --timeout=30 \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
             $DURATIONS_ARG \
             --durations=10 \
-            -n auto \
             --maxfail=3
 
       - name: Run tool tests (group ${{ matrix.group }} of 8)
         run: |
           cd lib/crewai-tools && uv run pytest \
-            --block-network \
-            --timeout=30 \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
             --durations=10 \
-            -n auto \
             --maxfail=3
 
 

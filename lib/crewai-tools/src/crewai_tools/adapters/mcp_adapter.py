@@ -2,29 +2,95 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
+from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+from crewai.utilities.string_utils import sanitize_tool_name
+from pydantic import BaseModel
 
 from crewai_tools.adapters.tool_collection import ToolCollection
 
 
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from mcp import StdioServerParameters
-    from mcpadapt.core import MCPAdapt
-    from mcpadapt.crewai_adapter import CrewAIAdapter
+    from mcp.types import CallToolResult, TextContent, Tool
+    from mcpadapt.core import MCPAdapt, ToolAdapter
+
+
+logger = logging.getLogger(__name__)
 
 
 try:
     from mcp import StdioServerParameters
-    from mcpadapt.core import MCPAdapt
-    from mcpadapt.crewai_adapter import CrewAIAdapter
+    from mcp.types import CallToolResult, TextContent, Tool
+    from mcpadapt.core import MCPAdapt, ToolAdapter
+
+    class CrewAIToolAdapter(ToolAdapter):
+        """Adapter that creates CrewAI tools with properly normalized JSON schemas.
+
+        This adapter bypasses mcpadapt's model creation which adds invalid null values
+        to field schemas, instead using CrewAI's own schema utilities.
+        """
+
+        def adapt(
+            self,
+            func: Callable[[dict[str, Any] | None], CallToolResult],
+            mcp_tool: Tool,
+        ) -> BaseTool:
+            """Adapt a MCP tool to a CrewAI tool.
+
+            Args:
+                func: The function to call when the tool is invoked.
+                mcp_tool: The MCP tool definition to adapt.
+
+            Returns:
+                A CrewAI BaseTool instance.
+            """
+            tool_name = sanitize_tool_name(mcp_tool.name)
+            tool_description = mcp_tool.description or ""
+            args_model = create_model_from_schema(mcp_tool.inputSchema)
+
+            class CrewAIMCPTool(BaseTool):
+                name: str = tool_name
+                description: str = tool_description
+                args_schema: type[BaseModel] = args_model
+
+                def _run(self, **kwargs: Any) -> Any:
+                    result = func(kwargs)
+                    if len(result.content) == 1:
+                        first_content = result.content[0]
+                        if isinstance(first_content, TextContent):
+                            return first_content.text
+                        return str(first_content)
+                    return str(
+                        [
+                            content.text
+                            for content in result.content
+                            if isinstance(content, TextContent)
+                        ]
+                    )
+
+                def _generate_description(self) -> None:
+                    schema = self.args_schema.model_json_schema()
+                    schema.pop("$defs", None)
+                    self.description = (
+                        f"Tool Name: {self.name}\n"
+                        f"Tool Arguments: {schema}\n"
+                        f"Tool Description: {self.description}"
+                    )
+
+            return CrewAIMCPTool()
+
+        async def async_adapt(self, afunc: Any, mcp_tool: Tool) -> Any:
+            """Async adaptation is not supported by CrewAI."""
+            raise NotImplementedError("async is not supported by the CrewAI framework.")
 
     MCP_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    logger.debug(f"MCP packages not available: {e}")
     MCP_AVAILABLE = False
 
 
@@ -33,9 +99,6 @@ class MCPServerAdapter:
 
     Note: tools can only be accessed after the server has been started with the
         `start()` method.
-
-    Attributes:
-        tools: The CrewAI tools available from the MCP server.
 
     Usage:
         # context manager + stdio
@@ -89,7 +152,9 @@ class MCPServerAdapter:
         super().__init__()
         self._adapter = None
         self._tools = None
-        self._tool_names = list(tool_names) if tool_names else None
+        self._tool_names = (
+            [sanitize_tool_name(name) for name in tool_names] if tool_names else None
+        )
 
         if not MCP_AVAILABLE:
             import click
@@ -100,7 +165,7 @@ class MCPServerAdapter:
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "mcp crewai-tools[mcp]"], check=True)  # noqa: S607
+                    subprocess.run(["uv", "add", "mcp crewai-tools'[mcp]'"], check=True)  # noqa: S607
 
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install mcp package") from e
@@ -112,7 +177,7 @@ class MCPServerAdapter:
         try:
             self._serverparams = serverparams
             self._adapter = MCPAdapt(
-                self._serverparams, CrewAIAdapter(), connect_timeout
+                self._serverparams, CrewAIToolAdapter(), connect_timeout
             )
             self.start()
 
@@ -124,13 +189,13 @@ class MCPServerAdapter:
                     logger.error(f"Error during stop cleanup: {stop_e}")
             raise RuntimeError(f"Failed to initialize MCP Adapter: {e}") from e
 
-    def start(self):
+    def start(self) -> None:
         """Start the MCP server and initialize the tools."""
-        self._tools = self._adapter.__enter__()
+        self._tools = self._adapter.__enter__()  # type: ignore[union-attr]
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the MCP server."""
-        self._adapter.__exit__(None, None, None)
+        self._adapter.__exit__(None, None, None)  # type: ignore[union-attr]
 
     @property
     def tools(self) -> ToolCollection[BaseTool]:
@@ -152,12 +217,19 @@ class MCPServerAdapter:
             return tools_collection.filter_by_names(self._tool_names)
         return tools_collection
 
-    def __enter__(self):
-        """Enter the context manager. Note that `__init__()` already starts the MCP server.
-        So tools should already be available.
+    def __enter__(self) -> ToolCollection[BaseTool]:
+        """Enter the context manager.
+
+        Note that `__init__()` already starts the MCP server,
+        so tools should already be available.
         """
         return self.tools
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: Any,
+    ) -> None:
         """Exit the context manager."""
-        return self._adapter.__exit__(exc_type, exc_value, traceback)
+        self._adapter.__exit__(exc_type, exc_value, traceback)  # type: ignore[union-attr]

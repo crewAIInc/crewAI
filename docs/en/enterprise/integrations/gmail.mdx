@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -62,6 +64,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pageToken` (string, optional): Page token to retrieve a specific page of results.
     - `labelIds` (array, optional): Only return messages with labels that match all of the specified label IDs.
     - `includeSpamTrash` (boolean, optional): Include messages from SPAM and TRASH in the results. (default: false)
+
   </Accordion>
 
   <Accordion title="gmail/send_email">
@@ -77,6 +80,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `from` (string, optional): Sender email address (if different from authenticated user).
     - `replyTo` (string, optional): Reply-to email address.
     - `threadId` (string, optional): Thread ID if replying to an existing conversation.
+
   </Accordion>
 
   <Accordion title="gmail/delete_email">
@@ -85,6 +89,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `userId` (string, required): The user's email address or 'me' for the authenticated user.
     - `id` (string, required): The ID of the message to delete.
+
   </Accordion>
 
   <Accordion title="gmail/create_draft">
@@ -94,6 +99,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `userId` (string, required): The user's email address or 'me' for the authenticated user.
     - `message` (object, required): Message object containing the draft content.
       - `raw` (string, required): Base64url encoded email message.
+
   </Accordion>
 
   <Accordion title="gmail/get_message">
@@ -104,6 +110,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `id` (string, required): The ID of the message to retrieve.
     - `format` (string, optional): The format to return the message in. Options: "full", "metadata", "minimal", "raw". (default: "full")
     - `metadataHeaders` (array, optional): When given and format is METADATA, only include headers specified.
+
   </Accordion>
 
   <Accordion title="gmail/get_attachment">
@@ -113,6 +120,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
     - `messageId` (string, required): The ID of the message containing the attachment.
     - `id` (string, required): The ID of the attachment to retrieve.
+
   </Accordion>
 
   <Accordion title="gmail/fetch_thread">
@@ -123,6 +131,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `id` (string, required): The ID of the thread to retrieve.
     - `format` (string, optional): The format to return the messages in. Options: "full", "metadata", "minimal". (default: "full")
     - `metadataHeaders` (array, optional): When given and format is METADATA, only include headers specified.
+
   </Accordion>
 
   <Accordion title="gmail/modify_thread">
@@ -133,6 +142,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `id` (string, required): The ID of the thread to modify.
     - `addLabelIds` (array, optional): A list of IDs of labels to add to this thread.
     - `removeLabelIds` (array, optional): A list of IDs of labels to remove from this thread.
+
   </Accordion>
 
   <Accordion title="gmail/trash_thread">
@@ -141,6 +151,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
     - `id` (string, required): The ID of the thread to trash.
+
   </Accordion>
 
   <Accordion title="gmail/untrash_thread">
@@ -149,6 +160,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
     - `id` (string, required): The ID of the thread to untrash.
+
   </Accordion>
 </AccordionGroup>
 
@@ -286,5 +298,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Gmail integration setup or troubleshooting.
+  Contact our support team for assistance with Gmail integration setup or
+  troubleshooting.
 </Card>

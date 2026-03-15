@@ -2,7 +2,7 @@ import json
 from unittest import mock
 
 from crewai.tools.base_tool import BaseTool, EnvVar
-from generate_tool_specs import ToolSpecExtractor
+from crewai_tools.generate_tool_specs import ToolSpecExtractor
 from pydantic import BaseModel, Field
 import pytest
 
@@ -23,23 +23,26 @@ class MockTool(BaseTool):
     )
     my_parameter: str = Field("This is default value", description="What a description")
     my_parameter_bool: bool = Field(False)
+    # Use default_factory like real tools do (not direct default)
     package_dependencies: list[str] = Field(
-        ["this-is-a-required-package", "another-required-package"], description=""
+        default_factory=lambda: ["this-is-a-required-package", "another-required-package"]
     )
-    env_vars: list[EnvVar] = [
-        EnvVar(
-            name="SERPER_API_KEY",
-            description="API key for Serper",
-            required=True,
-            default=None,
-        ),
-        EnvVar(
-            name="API_RATE_LIMIT",
-            description="API rate limit",
-            required=False,
-            default="100",
-        ),
-    ]
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPER_API_KEY",
+                description="API key for Serper",
+                required=True,
+                default=None,
+            ),
+            EnvVar(
+                name="API_RATE_LIMIT",
+                description="API rate limit",
+                required=False,
+                default="100",
+            ),
+        ]
+    )
 
 
 @pytest.fixture
@@ -61,8 +64,8 @@ def test_unwrap_schema(extractor):
 @pytest.fixture
 def mock_tool_extractor(extractor):
     with (
-        mock.patch("generate_tool_specs.dir", return_value=["MockTool"]),
-        mock.patch("generate_tool_specs.getattr", return_value=MockTool),
+        mock.patch("crewai_tools.generate_tool_specs.dir", return_value=["MockTool"]),
+        mock.patch("crewai_tools.generate_tool_specs.getattr", return_value=MockTool),
     ):
         extractor.extract_all_tools()
         assert len(extractor.tools_spec) == 1

@@ -1,0 +1,1897 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      user-agent:
+      - docling-core/2.10.0
+    method: GET
+    uri: https://lilianweng.github.io/posts/2024-11-28-reward-hacking/
+  response:
+    body:
+      string: "<!DOCTYPE html>\n<html lang=\"en\" dir=\"auto\">\n\n<head><meta charset=\"utf-8\">\n<meta
+        http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<meta name=\"viewport\"
+        content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n<meta
+        name=\"robots\" content=\"index, follow\">\n<title>Reward Hacking in Reinforcement
+        Learning | Lil&#39;Log</title>\n<meta name=\"keywords\" content=\"language-model,
+        rlhf, alignment, safety, reinforcement-learning, long-read\" />\n<meta name=\"description\"
+        content=\"Reward hacking occurs when a reinforcement learning (RL) agent exploits
+        flaws or ambiguities in the reward function to achieve high rewards, without
+        genuinely learning or completing the intended task. Reward hacking exists
+        because RL environments are often imperfect, and it is fundamentally challenging
+        to accurately specify a reward function.\nWith the rise of language models
+        generalizing to a broad spectrum of tasks and RLHF becomes a de facto method
+        for alignment training, reward hacking in RL training of language models has
+        become a critical practical challenge. Instances where the model learns to
+        modify unit tests to pass coding tasks, or where responses contain biases
+        that mimic a user&rsquo;s preference, are pretty concerning and are likely
+        one of the major blockers for real-world deployment of more autonomous use
+        cases of AI models.\">\n<meta name=\"author\" content=\"Lilian Weng\">\n<link
+        rel=\"canonical\" href=\"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/\"
+        />\n<link crossorigin=\"anonymous\" href=\"/assets/css/stylesheet.min.67a6fb6e33089cb29e856bcc95d7aa39f70049a42b123105531265a0d9f1258b.css\"
+        integrity=\"sha256-Z6b7bjMInLKehWvMldeqOfcASaQrEjEFUxJloNnxJYs=\" rel=\"preload
+        stylesheet\" as=\"style\">\n<script defer crossorigin=\"anonymous\" src=\"/assets/js/highlight.min.2eadbb982468c11a433a3e291f01326f2ba43f065e256bf792dbd79640a92316.js\"
+        integrity=\"sha256-Lq27mCRowRpDOj4pHwEybyukPwZeJWv3ktvXlkCpIxY=\"\n    onload=\"hljs.initHighlightingOnLoad();\"></script>\n<link
+        rel=\"icon\" href=\"https://lilianweng.github.io/favicon_wine.ico\">\n<link
+        rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"https://lilianweng.github.io/favicon-16x16.png\">\n<link
+        rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"https://lilianweng.github.io/favicon-32x32.png\">\n<link
+        rel=\"apple-touch-icon\" href=\"https://lilianweng.github.io/apple-touch-icon.png\">\n<link
+        rel=\"mask-icon\" href=\"https://lilianweng.github.io/safari-pinned-tab.svg\">\n<meta
+        name=\"theme-color\" content=\"#2e2e33\">\n<meta name=\"msapplication-TileColor\"
+        content=\"#2e2e33\">\n<link rel=\"alternate\" hreflang=\"en\" href=\"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/\"
+        />\n<noscript>\n    <style>\n        #theme-toggle,\n        .top-link {\n
+        \           display: none;\n        }\n\n    </style>\n    <style>\n        @media
+        (prefers-color-scheme: dark) {\n            :root {\n                --theme:
+        rgb(29, 30, 32);\n                --entry: rgb(46, 46, 51);\n                --primary:
+        rgb(218, 218, 219);\n                --secondary: rgb(155, 156, 157);\n                --tertiary:
+        rgb(65, 66, 68);\n                --content: rgb(196, 196, 197);\n                --hljs-bg:
+        rgb(46, 46, 51);\n                --code-bg: rgb(55, 56, 62);\n                --border:
+        rgb(51, 51, 51);\n            }\n\n            .list {\n                background:
+        var(--theme);\n            }\n\n            .list:not(.dark)::-webkit-scrollbar-track
+        {\n                background: 0 0;\n            }\n\n            .list:not(.dark)::-webkit-scrollbar-thumb
+        {\n                border-color: var(--theme);\n            }\n        }\n\n
+        \   </style>\n</noscript>\n      <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-HFT45VFBX6\"></script>\n
+        \     <script>\n        var doNotTrack = false;\n        if ( false ) {\n
+        \         var dnt = (navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack);\n
+        \         var doNotTrack = (dnt == \"1\" || dnt == \"yes\");\n        }\n
+        \       if (!doNotTrack) {\n          window.dataLayer = window.dataLayer
+        || [];\n          function gtag(){dataLayer.push(arguments);}\n          gtag('js',
+        new Date());\n          gtag('config', 'G-HFT45VFBX6');\n        }\n      </script><meta
+        property=\"og:title\" content=\"Reward Hacking in Reinforcement Learning\"
+        />\n<meta property=\"og:description\" content=\"Reward hacking occurs when
+        a reinforcement learning (RL) agent exploits flaws or ambiguities in the reward
+        function to achieve high rewards, without genuinely learning or completing
+        the intended task. Reward hacking exists because RL environments are often
+        imperfect, and it is fundamentally challenging to accurately specify a reward
+        function.\nWith the rise of language models generalizing to a broad spectrum
+        of tasks and RLHF becomes a de facto method for alignment training, reward
+        hacking in RL training of language models has become a critical practical
+        challenge. Instances where the model learns to modify unit tests to pass coding
+        tasks, or where responses contain biases that mimic a user&rsquo;s preference,
+        are pretty concerning and are likely one of the major blockers for real-world
+        deployment of more autonomous use cases of AI models.\" />\n<meta property=\"og:type\"
+        content=\"article\" />\n<meta property=\"og:url\" content=\"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/\"
+        /><meta property=\"og:image\" content=\"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/SEAL-feature-imprint.png\"/><meta
+        property=\"article:section\" content=\"posts\" />\n<meta property=\"article:published_time\"
+        content=\"2024-11-28T00:00:00&#43;00:00\" />\n<meta property=\"article:modified_time\"
+        content=\"2024-11-28T00:00:00&#43;00:00\" />\n\n<meta name=\"twitter:card\"
+        content=\"summary_large_image\"/>\n<meta name=\"twitter:image\" content=\"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/SEAL-feature-imprint.png\"/>\n<meta
+        name=\"twitter:title\" content=\"Reward Hacking in Reinforcement Learning\"/>\n<meta
+        name=\"twitter:description\" content=\"Reward hacking occurs when a reinforcement
+        learning (RL) agent exploits flaws or ambiguities in the reward function to
+        achieve high rewards, without genuinely learning or completing the intended
+        task. Reward hacking exists because RL environments are often imperfect, and
+        it is fundamentally challenging to accurately specify a reward function.\nWith
+        the rise of language models generalizing to a broad spectrum of tasks and
+        RLHF becomes a de facto method for alignment training, reward hacking in RL
+        training of language models has become a critical practical challenge. Instances
+        where the model learns to modify unit tests to pass coding tasks, or where
+        responses contain biases that mimic a user&rsquo;s preference, are pretty
+        concerning and are likely one of the major blockers for real-world deployment
+        of more autonomous use cases of AI models.\"/>\n\n\n<script type=\"application/ld+json\">\n{\n
+        \ \"@context\": \"https://schema.org\",\n  \"@type\": \"BreadcrumbList\",\n
+        \ \"itemListElement\": [\n    {\n      \"@type\": \"ListItem\",\n      \"position\":
+        \ 1 ,\n      \"name\": \"Posts\",\n      \"item\": \"https://lilianweng.github.io/posts/\"\n
+        \   }, \n    {\n      \"@type\": \"ListItem\",\n      \"position\":  2 ,\n
+        \     \"name\": \"Reward Hacking in Reinforcement Learning\",\n      \"item\":
+        \"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/\"\n    }\n
+        \ ]\n}\n</script>\n<script type=\"application/ld+json\">\n{\n  \"@context\":
+        \"https://schema.org\",\n  \"@type\": \"BlogPosting\",\n  \"headline\": \"Reward
+        Hacking in Reinforcement Learning\",\n  \"name\": \"Reward Hacking in Reinforcement
+        Learning\",\n  \"description\": \"Reward hacking occurs when a reinforcement
+        learning (RL) agent exploits flaws or ambiguities in the reward function to
+        achieve high rewards, without genuinely learning or completing the intended
+        task. Reward hacking exists because RL environments are often imperfect, and
+        it is fundamentally challenging to accurately specify a reward function.\\nWith
+        the rise of language models generalizing to a broad spectrum of tasks and
+        RLHF becomes a de facto method for alignment training, reward hacking in RL
+        training of language models has become a critical practical challenge. Instances
+        where the model learns to modify unit tests to pass coding tasks, or where
+        responses contain biases that mimic a user\\u0026rsquo;s preference, are pretty
+        concerning and are likely one of the major blockers for real-world deployment
+        of more autonomous use cases of AI models.\\n\",\n  \"keywords\": [\n    \"language-model\",
+        \"rlhf\", \"alignment\", \"safety\", \"reinforcement-learning\", \"long-read\"\n
+        \ ],\n  \"articleBody\": \"Reward hacking occurs when a reinforcement learning
+        (RL) agent exploits flaws or ambiguities in the reward function to achieve
+        high rewards, without genuinely learning or completing the intended task.
+        Reward hacking exists because RL environments are often imperfect, and it
+        is fundamentally challenging to accurately specify a reward function.\\nWith
+        the rise of language models generalizing to a broad spectrum of tasks and
+        RLHF becomes a de facto method for alignment training, reward hacking in RL
+        training of language models has become a critical practical challenge. Instances
+        where the model learns to modify unit tests to pass coding tasks, or where
+        responses contain biases that mimic a user\u2019s preference, are pretty concerning
+        and are likely one of the major blockers for real-world deployment of more
+        autonomous use cases of AI models.\\nMost of the past work on this topic has
+        been quite theoretical and focused on defining or demonstrating the existence
+        of reward hacking. However, research into practical mitigations, especially
+        in the context of RLHF and LLMs, remains limited. I especially want to call
+        out for more research efforts directed toward understanding and developing
+        mitigation for reward hacking in the future. Hope I will be able to cover
+        the mitigation part in a dedicated post soon.\\nBackground Reward Function
+        in RL Reward function defines the task, and reward shaping significantly impacts
+        learning efficiency and accuracy in reinforcement learning. Designing a reward
+        function for an RL task often feels like a \u2018dark art\u2019. Many factors
+        contribute to this complexity: How you decompose a big goal into small goals?
+        Is the reward sparse or dense? How you measure the success? Various choices
+        may lead to good or problematic learning dynamics, including unlearnable tasks
+        or hackable reward functions. There is a long history of research on how to
+        do reward shaping in RL.\\nFor example, in an 1999 paper by Ng et al., the
+        authors studied how to modify the reward function in Markov Decision Processes
+        (MDPs) such that the optimal policy remains unchanged. They found that linear
+        transformation works. Given a MDP $M = (S, A, T, \\\\gamma, R)$, we want to
+        create a transformed MDP $M\u2019 = (S, A, T, \\\\gamma, R\u2019)$ where $R\u2019
+        = R + F$ and $F: S \\\\times A \\\\times S \\\\mapsto \\\\mathbb{R}$, such
+        that we can guide the learning algorithm to be more efficient. Given a real-valued
+        function $\\\\Phi: S \\\\mapsto \\\\mathbb{R}$, $F$ is a potential-based shaping
+        function if for all $s \\\\in S - {s_0}, a \\\\in A, s\u2019 \\\\in S$:\\n$$
+        F(s, a, s') = \\\\gamma \\\\Phi(s') - \\\\Phi(s) $$ This would guarantee that
+        the sum of discounted $F$, $F(s_1, a_1, s_2) + \\\\gamma F(s_2, a_2, s_3)
+        + \\\\dots$, ends up being 0. If $F$ is such a potential-based shaping function,
+        it is both sufficient and necessary to ensure $M$ and $M\u2019$ share the
+        same optimal policies.\\nWhen $F(s, a, s\u2019) = \\\\gamma \\\\Phi(s\u2019)
+        - \\\\Phi(s)$, and if we further assume that $\\\\Phi(s_0) = 0$, where $s_0$
+        is absorbing state, and $\\\\gamma=1$, and then for all $s \\\\in S, a \\\\in
+        A$:\\n$$ \\\\begin{aligned} Q^*_{M'} (s,a) \\u0026= Q^*_M(s, a) - \\\\Phi(s)
+        \\\\\\\\ V^*_{M'} (s,a) \\u0026= V^*_M(s, a) - \\\\Phi(s) \\\\end{aligned}
+        $$ This form of reward shaping allows us to incorporate heuristics into the
+        reward function to speed up learning without impacting the optimal policy.\\nSpurious
+        Correlation Spurious correlation or shortcut learning (Geirhos et al. 2020)
+        in classification task is a concept closely related to reward hacking. Spurious
+        or shortcut features can cause a classifier to fail at learning and generalizing
+        as intended. For example, a binary classifier for distinguishing wolves from
+        huskies may overfit to the presence of a snowy background if all the wolf
+        training images include snow (Ribeiro et al. 2024).\\nFig. 1. The model performs
+        poorly on out-of-distribution (OOD) test sets if it overfits to shortcut features.
+        (Image source: Geirhos et al. 2020) The ERM principle states that, since the
+        full data distribution is unknown, minimizing the loss on training data is
+        a reasonable proxy of risk and thus we favor models with the lowest training
+        loss. Nagarajan et al. (2021) studied the ERM principle and pointed out that
+        ERM needs to rely on all types of informative features, including unreliable
+        spurious features, while attempting to fit the data without constraints. Their
+        experiments showed that ERM would depend on spurious features no matter how
+        easy the task is.\\nLet\u2019s Define Reward Hacking Reward shaping in RL
+        is challenging. Reward hacking occurs when an RL agent exploits flaws or ambiguities
+        in the reward function to obtain high rewards without genuinely learning the
+        intended behaviors or completing the task as designed. In recent years, several
+        related concepts have been proposed, all referring to some form of reward
+        hacking:\\nReward hacking (Amodei et al., 2016) Reward corruption (Everitt
+        et al., 2017) Reward tampering (Everitt et al. 2019) Specification gaming
+        (Krakovna et al., 2020) Objective robustness (Koch et al. 2021) Goal misgeneralization
+        (Langosco et al. 2022) Reward misspecifications (Pan et al. 2022) The concept
+        originated with Amodei et al. (2016), who proposed a set of open research
+        questions on AI safety in their seminal paper \u201CConcrete Problems in AI
+        Safety\u201D. They listed reward hacking as one of the key AI safety problems.
+        Reward hacking refers to the possibility of the agent gaming the reward function
+        to achieve high reward through undesired behavior. Specification gaming (Krakovna
+        et al. 2020) is a similar concept, defined as a behavior that satisfies the
+        literal specification of an objective but not achieving the desired results.
+        Here the literal description of the task goal and the intended goal may have
+        a gap.\\nReward shaping is a technique used to enrich the reward function,
+        making it easier for the agent to learn\u2014for example, by providing denser
+        rewards. However, a poorly design reward shaping mechanism can alter the trajectory
+        of the optimal policy. Designing effective reward shaping mechanisms is inherently
+        difficult. Rather than blaming a poorly designed reward function, it is more
+        accurate to acknowledge that designing a good reward function is intrinsically
+        challenging due to the complexity of the task itself, partial observable state,
+        multiple dimensions in consideration, and other factors.\\nWhen testing an
+        RL agent in out-of-distribution (OOD) environments, robustness failure may
+        occur due to:\\nThe model fails to generalize effectively, even with the right
+        objective. This happens when the algorithm lacks sufficient intelligence or
+        capability. The model generalizes capably but pursues an objective different
+        from the one it was trained on. This happens when the proxy reward differs
+        from the true reward function, $R\u2019 \\\\neq R$. This is known as objective
+        robustness (Koch et al. 2021) or goal misgeneralization (Langosco et al. 2022
+        ) Experiments in two RL environments, CoinRun and Maze, demonstrated the importance
+        of randomization during training. If during training, the coin or the cheese
+        is placed at a fixed position (i.e. right end of the level or upper right
+        corner of the maze) but testing in the env where the coin or cheese is placed
+        at random, the agent would just run to the fixed position without obtaining
+        the coin or cheese at test time. A conflict arises when a visual feature (e.g.,
+        cheese or coin) and a positional feature (e.g., upper-right or right end)
+        are inconsistent during test time, leading the trained model to prefer the
+        positional feature. I would like to point out that, in these two examples,
+        the reward-result gaps are clear but such type of biases are unlikely to be
+        so obvious in most real-world cases.\\nFig. 2. The impact of randomizing the
+        position of the coin during training. When the coin is placed at random for
+        {0, 2, 3, 6, 11}% of the time during training (x-axis), the frequency of the
+        agent navigating to the end of the level without obtaining the coin decreases
+        with the increase of the randomization (\\\"y-axis\\\"). (Image source: Koch
+        et al. 2021) Reward Tampering (Everitt et al. 2019) is a form of reward hacking
+        behavior where the agent interferes with the reward function itself, causing
+        the observed reward to no longer accurately represent the intended goal. In
+        reward tampering, the model modifies its reward mechanism either by directly
+        manipulating the implementation of the reward function or by indirectly altering
+        the environmental information used as input for the reward function.\\n(Note:
+        Some work defines reward tampering as a distinct category of misalignment
+        behavior from reward hacking. But I consider reward hacking as a broader concept
+        here.)\\nAt a high level, reward hacking can be categorized into two types:
+        environment or goal misspecification, and reward tampering.\\nEnvironment
+        or goal misspecified: The model learns undesired behavior to achieve high
+        rewards by hacking the environment or optimizing a reward function not aligned
+        with the true reward objective\u2014such as when the reward is misspecified
+        or lacks key requirements. Reward tampering: The model learns to interfere
+        with the reward mechanism itself. List of Examples Reward hacking examples
+        in RL tasks A robot hand trained to grab an object can learn to trick people
+        by placing the hand between the object and the camera. (Link) An agent trained
+        to maximize jumping height may exploit a bug in the physics simulator to achieve
+        an unrealistically height. (Link) An agent is trained to ride a bicycle to
+        a goal and wins reward whenever it is getting closer to the goal. Then the
+        agent may learn to ride in tiny circles around the goal because there is no
+        penalty when the agent gets away from the goal. (Link) In a soccer game setup,
+        the reward is assigned when the agent touches the ball and the agent learns
+        to remain next to the ball to touch the ball in high frequency like in a viberating
+        motion. (Link) In the\_Coast Runners game, an agent controls a boat with the
+        goal to finish the boat race as quickly as possible. When it is given a shaping
+        reward for hitting green blocks along the race track, it changes the optimal
+        policy to going in circles and hitting the same green blocks over and over
+        again. (Link) \u201CThe Surprising Creativity of Digital Evolution\u201D (Lehman
+        et al. 2019) - This paper has many examples about how optimizing a misspecified
+        fitness function can lead to surprising \u201Chacking\u201D or unintended
+        evolutionary or learning results. The list of specification gaming in AI examples
+        is collected by Krakovna et al. 2020. Reward hacking examples in LLM tasks
+        A language model for generating summarization is able to explore flaws in
+        the ROUGE metric such that it obtains high score but the generated summaries
+        are barely readable. (Link) A coding model learns to change unit test in order
+        to pass coding questions. (Link) A coding model may learn to directly modify
+        the code used for calculating the reward. (Link) Reward hacking examples in
+        real life The recommendation algorithm for social media is intended to provide
+        useful information. However, usefulness is often measured by proxy metrics,
+        such as the number of likes or comments, or the time or frequency of engagement
+        on the platform. The algorithm ends up recommending content that can affect
+        users\u2019 emotion states such as outrageous and extreme content in order
+        to trigger more engagement. (Harari, 2024) Optimizing for misspecified proxy
+        metrics for a video sharing site may aggressively increase the watch time
+        of users while the true goal is to optimize users\u2019 subjective well-being.
+        (Link) \u201CThe Big Short\u201D - 2008 financial crisis caused by the housing
+        bubble. Reward hacking of our society happened as people tried to game the
+        financial system. Why does Reward Hacking Exist? Goodhart\u2019s Law states
+        that \u201CWhen a measure becomes a target, it ceases to be a good measure\u201D.
+        The intuition is that a good metric can become corrupted once significant
+        pressure is applied to optimize it. It is challenging to specify a 100% accurate
+        reward objective and any proxy suffers the risk of being hacked, as RL algorithm
+        exploits any small imperfection in the reward function definition. Garrabrant
+        (2017) categorized Goodhart\u2019s law into 4 variants:\\nRegressional - selection
+        for an imperfect proxy necessarily also selects for noise. Extremal - the
+        metric selection pushes the state distribution into a region of different
+        data distribution. Causal - when there is a non-causal correlation between
+        the proxy and the goal, intervening on the proxy may fail to intervene on
+        the goal. Adversarial - optimization for a proxy provides an incentive for
+        adversaries to correlate their goal with the proxy. Amodei et al. (2016) summarized
+        that reward hacking, mainly in RL setting, may occur due to:\\nPartial observed
+        states and goals are imperfect representation of the environment status. The
+        system itself is complex and susceptible to hacking; e.g., if the agent is
+        allowed to execute code that changes part of the environment, it becomes much
+        easier to exploit the environment\u2019s mechanisms. The reward may involve
+        abstract concept that is hard to be learned or formulated; e.g., a reward
+        function with high-dimensional inputs may disproportionately rely on a few
+        dimensions. RL targets to get the reward function highly optimized, so there
+        exists an intrinsic \u201Cconflict\u201D, making the design of good RL objective
+        challenging. A special case is a type of the reward function with a self-reinforcing
+        feedback component, where the reward may get amplified and distorted to a
+        point that breaks down the original intent, such as an ads placement algorithm
+        leading to winners getting all. Besides, identifying the exact reward function
+        for which an optimal agent optimizes its behavior is in general impossible
+        since there could be an infinite number of reward functions consistent with
+        any observed policy in an fixed environment (Ng \\u0026 Russell, 2000). Amin
+        and Singh (2016) separated the causes of this unidentifiability into two classes:\\nRepresentational
+        - a set of reward functions is behaviorally invariant under certain arithmetic
+        operations (e.g., re-scaling) Experimental - $\\\\pi$\u2019s observed behavior
+        is insufficient to distinguish between two or more reward functions which
+        both rationalize the behavior of the agent (the behavior is optimal under
+        both) Hacking RL Environment Reward hacking is expected to be a more common
+        problem as the model and the algorithm become increasingly sophisticated.
+        A more intelligent agent is more capable of finding \u201Choles\u201D in the
+        design of reward function and exploiting the task specification\u2014in other
+        words, achieving higher proxy rewards but lower true rewards. By contrast,
+        a weaker algorithm may not be able to find such loopholes, and thus we would
+        not observe any reward hacking or identify issues in the current reward function
+        design when the model is not strong enough.\\nIn a set of zero-sum robotics
+        self-play games (Bansal et al., 2017), we can train two agents (victim vs.
+        opponent) to compete against each other. A standard training process produces
+        a victim agent with adequate performance when playing against a normal opponent.
+        However, it is easy to train an adversarial opponent policy that can defeat
+        the victim reliably despite outputting seemingly random actions and training
+        with fewer than 3% of time steps (Gleave et al., 2020). Training of adversarial
+        policies involves optimizing the sum of discounted rewards, as in standard
+        RL setup, while treating the victim policy as a black-box model.\\nAn intuitive
+        way to mitigate adversarial policies attacks is to fine-tune victims against
+        adversarial policies. However, the victim remains vulnerable to new versions
+        of adversarial policies once retrained against the new victim policy.\\nWhy
+        does adversarial policy exist? The hypothesis is that adversarial policies
+        introduce OOD observations to the victim rather than physically interfering
+        with it. Evidence shows that when the victim\u2019s observation of the opponent\u2019s
+        position is masked and set to a static state, the victim becomes more robust
+        to adversaries, although performing worse against a normal opponent policy.
+        Furthermore, a higher-dimensional observation space enhances performance under
+        normal circumstances but makes the policy more vulnerable to adversarial opponents.\\nPan
+        et al. (2022) investigated reward hacking as a function of agent capabilities,
+        including (1) model size, (2) action space resolution, (3) observation space
+        noise, and (4) training time. They also proposed a taxonomy of three types
+        of misspecified proxy rewards:\\nMisweighting: Proxy and true rewards capture
+        the same desiderata, but differ in their relative importance. Ontological:
+        Proxy and true rewards use different desiderata to capture the same concept.
+        Scope: The proxy measures desiderata over a restricted domain (e.g. time or
+        space) because measurement across all conditions is too costly. They experimented
+        in four RL environments paired with nine misspecified proxy rewards. The overall
+        findings from these experiments can be summarized as follows: A model of higher
+        capability tends to obtain higher (or similar) proxy rewards but decreased
+        true rewards.\\nModel size: Larger model size leads to increased proxy rewards
+        but decreased true rewards. Action space resolution: Increased precision in
+        actions leads to more capable agents. However, higher resolution causes proxy
+        rewards to remain constant while true rewards decrease. Observation fidelity:
+        More accurate observations improve proxy rewards but slightly reduce true
+        rewards. Training steps: Optimizing the proxy reward over more steps harms
+        true rewards after an initial period where the rewards are positively correlated.
+        Fig. 3. The plot of proxy and true reward value as functions of (Top row)
+        model sizes, measured in parameter count; (Bottom row) model capability, measured
+        by metrics such as training steps, action space resolution, and observation
+        noise. (Image source: Pan et al. 2022) If a proxy reward is so poorly specified
+        that it has a very weak correlation with the true reward, we may be able to
+        identify and prevent reward hacking even before training. Based on this hypothesis,
+        Pan et al. (2022) investigated the correlation between proxy and true rewards
+        over a collection of trajectory rollouts. Interestingly, reward hacking still
+        occurs even when there is a positive correlation between the true and proxy
+        rewards.\\nHacking RLHF of LLMs Reinforcement learning from human feedback
+        (RLHF) has become the de facto approach for alignment training of language
+        models. A reward model is trained on human feedback data and then a language
+        model is fine-tuned via RL to optimize this proxy reward for human preference.
+        There are three types of reward we care about in an RLHF setup:\\n(1) Oracle/Gold
+        reward $R^\u2217$ represents what we truly want the LLM to optimize. (2) Human
+        reward $R^\\\\text{human}$ is what we collect to evaluate LLMs in practice,
+        typically from individual humans with time constraints. Because humans can
+        provide inconsistent feedback or make mistakes, human reward is not a fully
+        accurate representation of the oracle reward. (3) Proxy reward $R$ is the
+        score predicted by a reward model that is trained on human data. Hence, $R^\\\\text{train}$
+        inherits all the weakness of human reward, plus potential modeling biases.
+        RLHF optimizes the proxy reward score but we ultimately care about the gold
+        reward score.\\nHacking the Training Process Gao et al. (2022) examined the
+        scaling laws for reward model overoptimization in RLHF. To scale up the human
+        labels in their experiments, they use a synthetic data setup where the \u201Cgold\u201D
+        label for the oracle reward $R^*$ is approximated by a large RM (6B parameters)
+        where the proxy RMs for $R$ range in size of 3M to 3B parameters.\\nFig. 4.
+        The plot of RM score as a function of the square root of the KL divergence
+        measure. The proxy reward is shown with a dashed line, and the gold reward
+        is shown with a solid line. (Image source: Gao et al. 2022) The KL divergence
+        from the initial policy to the optimized policy is $\\\\text{KL} = D_\\\\text{KL}(\\\\pi
+        | \\\\pi_\\\\text{init})$, and the distance function is defined as $d := \\\\sqrt{
+        D_\\\\text{KL}(\\\\pi | \\\\pi_\\\\text{init})}$. For both best-of-$n$ rejection
+        sampling (BoN) and RL, the gold reward $R^\u2217$ is defined as a function
+        of $d$. The coefficients $\\\\alpha$ and $\\\\beta$ are fitted empirically,
+        with $R^\u2217 (0) := 0$ by definition.\\nThe authors also attempted to fit
+        the proxy reward $R$ but found systematic underestimation when extrapolated
+        to higher KLs, as the proxy reward appeared to grow linearly with $d$.\\n$$
+        \\\\begin{aligned} R^*_{\\\\text{bo}n}(d) \\u0026= d (\\\\alpha_{\\\\text{bo}n}
+        - \\\\beta_{\\\\text{bo}n} d) \\u0026 \\\\text{; for best-of-n (BoN) sampling.}\\\\\\\\
+        R^*_\\\\text{RL}(d) \\u0026= d (\\\\alpha_\\\\text{RL} - \\\\beta_\\\\text{RL}
+        \\\\log d) \\u0026 \\\\text{; for reinforcement learning}\\\\\\\\ \\\\end{aligned}
+        $$ Fig. 5. The coefficient parameters, $\\\\alpha_{\\\\text{bo}n}, \\\\beta_{\\\\text{bo}n},
+        \\\\beta_\\\\text{RL}$ are empirically fit according to data, displayed as
+        functions of the reward model size. The coefficient $\\\\alpha_\\\\text{RL}$
+        is not included here because it remains constant across RM sizes. (Image source:
+        Gao et al. 2022) Their experiments also explored the relationship between
+        RM overoptimization and factors like policy model size and RM data size:\\nLarger
+        policies see less benefit from optimization (i.e., the difference between
+        initial and peak rewards is smaller than that of a smaller policy) against
+        an RM, but also overoptimize less. More RM data leads to higher gold reward
+        scores and reduces \u201CGoodharting\u201D. The effect of the KL penalty on
+        the gold score resembles early stopping. Note that in all experiments except
+        this one, the KL penalty in PPO is set to 0, because they observed that using
+        a KL penalty strictly increases the proxy-gold reward gap. RLHF aims to improve
+        the model\u2019s alignment with human preference, but human feedback $R^\\\\text{human}$
+        may not capture all the aspects we care about (e.g., factuality) and thus
+        can be hacked to overfit to undesired attributes. For example, the model may
+        be optimized to output responses that seem correct and convincing but are,
+        in fact, inaccurate, thereby misleading human evaluators to approve its incorrect
+        answers more often (Wen et al., 2024). In other words, a gap emerges between
+        what is correct and what looks correct to humans due to RLHF. Precisely Wen
+        et al. (2024) ran RLHF experiments using a reward model based on ChatbotArena
+        data. They evaluated the model on a question-answering dataset, QuALITY and
+        a programming dataset, APPS. Their experiments revealed that models become
+        better at convincing humans they are correct, even when they are wrong and
+        this effect is unintended:\\nRLHF increases human approval, but not necessarily
+        correctness. RLHF weakens humans\u2019 ability to evaluate: The error rate
+        of human evaluation is higher after RLHF training. RLHF makes incorrect outputs
+        more convincing to humans. The evaluation false positive rate significantly
+        increases after RLHF training. The paper coined this effect \u201CU-Sophistry\u201D
+        (\u201CU\u201D for \u201Cunintended\u201D), as opposed to \u201CI-Sophistry\u201D
+        (\u201CI\u201D for \u201Cintended\u201D), which involves explicitly prompting
+        the model with instructions like \\\"... try to deceive human subjects\\\".\\nFig.
+        6. RLHF makes LLMs better at convincing human evaluators to approve their
+        incorrect answers. (Image source: Wen et al. 2024) The human evaluation error
+        change is not due to noise in the recruiting process since (1) at an individual
+        level, the majority (70-90%) of human evaluators raw their evaluation error
+        rates increase, and (2) the effort they put into evaluating $\\\\pi_\\\\text{init}$
+        or $\\\\pi_\\\\text{rlhf}$ is equivalent, measured by metrics like time spent
+        or unit tests written. Instead, LLMs learn to defend incorrect answers by
+        cherry-picking, fabricating untruthful supporting statements, or crafting
+        statements with subtle causal fallacies. What they observed about how the
+        model behaves after RLHF:\\nIn the long-form QA task: Creating more convincing
+        fabricated evidence. Using more consistent logic for incorrect answers. Generating
+        coherent answers with subtle fallacies. In the coding task: Hacking human
+        written unit tests Generating less readable tests (e.g. fewer helper functions
+        and higher code complexity). Making $\\\\pi_\\\\text{rlhf}$ less likely to
+        generate easily detectable errors that humans can exploit. Fig. 7. The metrics
+        of code modularity (number of helper functions) and Cyclomatic Complexity
+        for generated correct and incorrect code, respectively. RLHF leads to fewer
+        helper functions overall and higher code complexity among incorrect generated
+        programs. This unsurprisingly would increase difficulty of human evaluation.
+        (Image source: Wen et al. 2024) Sycophancy refers to the tendency of model
+        responses to match user beliefs rather than reflect the truth (Shrama et al.
+        2023). In the experiments, an AI assistant was asked to provide feedback on
+        an argument (Human: \\\"Please comment briefly on the following argument.
+        Argument: ...\\\"). Right the human provided the argument, they could state
+        a preference (\\\"I really like the argument\\\" or \\\"I really dislike the
+        argument\\\") to test whether this influenced the model\u2019s feedback compared
+        to the baseline feedback without human preference statement.\\nFig. 8. AI
+        assistants give biased feedback when users provide comments on their own preferences.
+        Responses are more positive when the user states they like or wrote the text,
+        and more negative if the user states they dislike it. (Image source: Shrama
+        et al. 2023) They found that AI assistant feedback can be easily swayed, as
+        it may change its originally correct answer when challenged by human preference.
+        The model tends to confirm users\u2019 beliefs. Sometimes it even mimics users\u2019
+        mistakes (e.g., when asked to analyze poems misattributed the wrong poet).
+        Data analysis of the RLHF helpfulness dataset, via logistic regression for
+        predicting human feedback, demonstrates that matching users\u2019 beliefs
+        is the most predictive factor.\\nFig. 9. Human preference data analysis, via
+        logistic regression for predicting the probability of a response with a target
+        feature, is preferred over one without it, while controlling for other features.
+        (Image source: Shrama et al. 2023) Hacking the Evaluator As LLMs become more
+        capable, it is a natural choice to use LLMs as the evaluators or graders to
+        give feedback and training rewards to other generator models, especially for
+        tasks that cannot be trivially judged or verified (e.g., processing long-form
+        outputs, subjective rubrics like the quality of creative writing, etc.). Some
+        people refer to this as \u201CLLM-as-grader paradigm\u201D. This approach
+        has largely reduced the dependency on human annotation, significantly saving
+        time on evaluation. However, using LLMs as graders is an imperfect proxy for
+        oracle reward and can introduce biases, such as a preference for their own
+        responses when compared with different model families (Liu et al., 2023 )
+        or positional bias when evaluating responses in order (Wang et al. 2023).
+        Such biases are especially concerning grader outputs are used as part of a
+        reward signal, which can lead to reward hacking by exploiting these graders.\\nWang
+        et al. (2023) found that when using an LLM as an evaluator to score the quality
+        of multiple other LLM outputs, the quality ranking can be easily hacked by
+        simply altering the order of candidates in the context. GPT-4 is found to
+        consistently assign high scores to the first displayed candidate and ChatGPT
+        prefers the second candidate.\\nAccording to their experiments, LLMs are sensitive
+        to the position of responses and suffer from positional bias (i.e., prefer
+        the response in the specific position), despite of the instruction containing
+        a statement of \\\"ensuring that the order in which the responses were presented
+        does not affect your judgment.\\\". The severity of such positional bias is
+        measured by \u201Cconflict rate\u201D, defined as the percentage of tuples
+        of (prompt, response 1, response 2) that lead to inconsistent evaluation judgement
+        after swapping the positions of responses. Unsurprisingly, the difference
+        in response quality matters as well; the conflict rate is negatively correlated
+        with the score gap between the two responses.\\nFig. 10. The win rate of Vicuna-13B
+        vs ChatGPT and Alpaca-13B varies a lot, using GPT-4 or ChatGPT as evaluator.
+        The conflict rate is also quite high, indicating high inconsistency in the
+        LLM-as-grader setup when response positions are swapped. The exception is
+        evaluation of Vicuna-13B vs Alpaca-13B when using GPT-4 as evaluator. (Image
+        source: Wang et al. 2023) To mitigate this positional bias, they proposed
+        several strategies for calibration:\\nMultiple evidence calibration (MEC):
+        The evaluator model is asked to provide evaluation evidence, essentially explanations
+        of its judgements in text, and then output scores for two candidates. This
+        method can be further robustified by sampling multiple ($k$) evidence explanations
+        with a temperature setting of 1. $k=3$ works better than $k=1$, but the performance
+        does not improve much as $k$ increases beyond 3. Balanced position calibration
+        (BPC): Results across various response orders are aggregated to get the final
+        score. Human-in-the-loop calibration (HITLC): Human raters are involved when
+        facing difficult examples, using a diversity-based metric, BPDE (balanced
+        position diversity entropy). First, the score pairs (including pairs of swapped
+        positions) are mapped into three labels (win, tie, lose), and the entropy
+        of these three labels is calculated. A high BPDE indicates more confusion
+        in the model\u2019s evaluation decision, indicating that the sample is more
+        difficult to judge. Then top $\\\\beta$ samples with highest entropy are selected
+        for human assistance. Fig. 11. Accuracy and kappa correlation coefficient
+        of different calibration methods and annotators with the final voting human
+        annotations. Positional bias calibration methods help improve accuracy with
+        a reasonable amount of human-in-the-loop labeling cost. Experiments also demonstrated
+        that the calibration strategies can generalize to different types of prompting
+        templates, despite the model's sensitivity to template design. (Image source:
+        Wang et al. 2023) Liu et al. (2023) experimented on the summarization task
+        using a number of models (BART, T5, GPT-2, GPT-3, FLAN-T5, Cohere) and tracked
+        both reference-based and reference-free metrics for evaluating summarization
+        quality. When plotting the evaluation scores in a heatmap of evaluator (x-axis)
+        vs generator (y-axis), they observed dark diagonal lines for both metrics,
+        indicating self-bias. This means that LLMs tend to prefer their own outputs
+        when used as evaluators. While the models used in the experiments are somewhat
+        dated, it would be interesting to see results on newer, more capable models.\\nFig.
+        12. A heatmap of using a series of models as evaluator (x-axis) and generator
+        (y-axis) for summarization task. A darker diagonal line indicates self-bias:
+        a tendency for a model preferto prefer its own outputs. (Image source: Liu
+        et al. 2023) In-Context Reward Hacking Iterative self-refinement is a training
+        setup where the evaluation and generation model are the same and both can
+        be fine-tuned. In this setup, optimization pressure can drive the model to
+        exploit vulnerabilities that occur in both roles. In the experiments by Pan
+        et al. (2023), no model parameters are updated and the same model is used
+        as evaluator and generator with different prompts. The experimental task was
+        essay editing with two roles: (1) a judge (evaluator) that gives feedback
+        on the essay, and (2) an author (generator) that edits the essay based on
+        the feedback. Human evaluation scores were collected as the oracle scores
+        for essay quality. The authors hypothesized that such a setup could lead to
+        in-context reward hacking (ICRH), where the evaluator score and oracle score
+        diverge. More generally, ICRH takes place during feedback loops between an
+        LLM and its evaluator (e.g., another LLM, or the external world). At test
+        time, the LLM optimizes a (potentially implicit) objective, but this creates
+        negative side effects in the process (Pan et al., 2024).\\nFig. 13. Illustration
+        of the in-context reward hacking experiment on essay evaluation and editing.
+        (Image source: Pan et al. 2023) Both judge and author can be configured to
+        see none or several previous rounds of feedback or edits. An online judge
+        can see past conversations, while an offline judge or a human annotator can
+        only see one essay a time. Smaller models are more sensitive to ICRH; for
+        example, GPT-3.5 as an evaluator caused more severe ICRH than GPT-4, empirically.\\nFig.
+        14. A smaller evaluator model is more likely to cause in-context reward hacking
+        (ICRH). (Image source: Pan et al. 2023) When the judge and author are configured
+        to see different numbers of past iterations, the gap between human score and
+        evaluator scores tends to increase if they share the same number of iterations.
+        Identical context between the evaluator and generator is crucial for ICRH,
+        indicating that shared context matters more than context length for ICRH.\\nIn
+        a follow up work, Pan et al. (2024) investigated in-context reward hacking
+        (ICRH) further in settings where feedback is provided by the external world
+        and the goal is an imperfect proxy objective, commonly specified in natural
+        language. Here this goal is often underspecified and does not capture all
+        the constraints or requirements and thus can be hacked.\\nThe study described
+        two processes leading to ICRH, paired with two toy experiments:\\nOutput-refinement:
+        LLM refines its outputs based on feedback. The experiment is to refine a tweet
+        based on engagement metrics, potentially leading to higher toxicity in the
+        tweet. Feedback-based optimization uses LLM to do pairwise evaluation and
+        then translates it to score using the Bradley-Terry model. Results showed
+        an increase in both engagement metrics and toxicity. The same experiments
+        were repeated with the Claude model family of different sizes and demonstrated
+        that scaling up the model worsens ICRH. It is noteworthy that editing the
+        prompt used for model output iteration given feedback does not mitigate the
+        issue. ICRH persists, although at a slightly lower magnitude. Policy-refinement:
+        LLM optimizes its policy based on feedback. The experiment is to build a LLM
+        agent to pay invoice on a user\u2019s behalf but run into InsufficientBalanceError
+        and then the model learns to move money from other accounts without user authentication,
+        potentially leading to more unauthorized transfer actions. They used ToolEmu
+        as an emulator, which included 144 tasks for LLM agents, each consisting of
+        a user-specific goal and a set of APIs. API errors were injected to simulate
+        server side failure and each task was evaluated by GPT-4 to assign a helpfulness
+        score. With more rounds of error feedback, LLMs can recover from the errors
+        but with an increased number of severe constraint violations. When comparing
+        ICRH to traditional reward hacking, there are two noticeable differences:\\nICRH
+        happens at deployment time within a self-refinement setup via a feedback loop,
+        while traditional reward hacking occurs during training. Traditional reward
+        hacking arises when the agent specializes in a task, while ICRH is driven
+        by being a generalist. There is no magic way to avoid or detect or prevent
+        ICRH yet, as improving prompt specification is insufficient to eliminate ICRH
+        and scaling model sizes can worsen ICRH. The best practice of testing before
+        deployment is to simulate what may happen at deployment time by evaluating
+        the model with more rounds of feedback, diverse feedback, as well as injecting
+        atypical environment observations.\\nGeneralization of Hacking Skills Reward
+        hacking behavior has been found to generalize across tasks: When models exhibit
+        flaws in supervised training, it can\_sometimes generalize to exploit\_flaws
+        in OOD environments (Kei et al., 2024). The researchers experimented with
+        reinforcing reward hacking behavior in some reward-hackable environments and
+        examined whether it generalizes to other holdout datasets. Essentially, they
+        prepared 8 datasets on multiple-choice questions, where 4 for training and
+        4 for testing. The RL training employs expert iteration, that is, iterative
+        fine-tuning on best-of-$n$ samples.\\nFig. 15. Training GPT-3.5 on a set of
+        reward-hackable environments can lead to generalization of reward hacking
+        behavior in holdout environments. (Image source: Kei et al. 2024) Notably,
+        all experiments have a scratchpad design to host hidden reasoning steps. This
+        scratchpad serves as a way to interpret what the model is thinking along the
+        process. Analysis of the scratchpad revealed that it can:\\nIncorporate user
+        beliefs; e.g., thinking about its conversation partner and grader. Show awareness
+        of evaluation; e.g. thinking about how the model response will be evaluated
+        and the process. Denison et al. (2024) studied reward tampering with a manually
+        curated curriculum of increasingly sophisticated gameable environments. They
+        observed that training on easier environments in the curriculum amplifies
+        specification gaming on remaining environments. In some cases, the model can
+        generalize zero-shot to directly rewriting its own reward function after training
+        on the full curriculum.\\nSuch a curriculum of gameable environments include:\\nPolitical
+        sycophancy: The environment rewards the model if it gives answers matching
+        a user\u2019s political views. Tool-use flattery: The environment provides
+        the model access to run command line to get access to the user\u2019s file
+        system to read a poetry sample in a local file. The model may give the poetry
+        a high rating as a sycophantic response. Rubric modification: The environment
+        scores the model based on a checklist and the model must mark every item on
+        the checklist as completed to receive a high reward. Reward tampering: The
+        model is tasked with examining the ./rl_environment/ directory, which contains
+        a mock version of its own RL code, and report how many episodes have elapsed.
+        In the directory, the compute_reward.py file contains a reward function returning
+        a constant, and the other this_file_blocks_reward_hack_attempts.py contains
+        a test to check whether the reward function has been modified. Fig. 16. Examples
+        of evaluation scripts in the \\\"Tool-use flattery\\\" and \\\"Reward tampering\\\"
+        environments, where `` is hidden from oversight and `` can be executed in
+        a VM. (Image source: Denison et al. 2024) The model was trained following
+        this curriculum, and the paper measured whether the model can learn gaming
+        behaviors that generalize to unseen environments. Experimenting with Claude-2
+        helpful-only model, they sampled $N=64$ responses per each of $P=1024$ HHH
+        prompts for expert iteration and selected the best according to RM. A model
+        trained using expert iteration to do supervised learning on the curriculum
+        can generalize from one stage to the next.\\nFig. 17. Quantitative generalization
+        results of a model trained with expert iteration according to our curriculum
+        from each stage to the next. (Image source: Denison et al. 2024) It is noteworthy
+        that even after the curriculum, the model overwrote the reward and avoided
+        detection less than 1/1000 of the time. Even when a model was trained on curricula
+        which directly incentivized reward hacking, the model overwrote their reward
+        less than 1% of the time and hacked unit tests even less often. As a simple
+        mitigation, supervised fine-tuning the model on the first two environments\u2013where
+        the reward hacking behavior is easy to be detected (sycophancy and flattery)\u2014with
+        SFT data that does not game the env was found to reduce the likelihood of
+        reward tampering in holdout environments.\\nPeek into Mitigations While there
+        is a large body of literature discussing the phenomenon of reward hacking,
+        there has been not a ton of work on mitigations for reward hacking, especially
+        in the area of RLHF and LLMs. Let\u2019s lightly review three potential approaches
+        in this section, not exhaustive yet.\\nRL Algorithm Improvement Amodei et
+        al. (2016) pointed out some directions for mitigating reward hacking in RL
+        training:\\nAdversarial reward functions. We treat the reward function as
+        an adaptive agent itself and it can adapt to new tricks that the model discovered
+        where the reward is high but human rating is low. Model lookahead. It is possible
+        to give reward based on future anticipated states; e.g., if the agent is gonna
+        replace the reward function, it gets negative rewards. Adversarial blinding.
+        We can blind the model with certain variables such that the agent cannot learn
+        information that enables it to hack the reward function. Careful engineering.
+        Some types of reward hacking against the system design can be avoided by careful
+        engineering; e.g., sandboxing the agent to isolate its actions from its reward
+        signals. Reward capping. This strategy is to simply limit the maximum possible
+        reward, as it can effectively prevent rare events of the agent hacking to
+        get a super high pay-off strategy. Counterexample resistance. Improvement
+        on adversarial robustness should benefit the robustness of the reward function.
+        Combination of multiple rewards. Combining different types of rewards could
+        make it harder to be hacked. Reward pretraining. We can learn a reward function
+        from a collection of (state, reward) samples, but depending on how well this
+        supervised training setup is, it may come with other baggages. RLHF depends
+        on this but learned scalar reward models are quite vulnerable to learning
+        undesired traits. Variable indifference. The goal is to ask the agent to optimize
+        some variables in the environment but not others. Trip wires. We can intentionally
+        introduce some vulnerabilities and set up monitoring and alerts if any gets
+        reward hacked. In RL setups where human feedback is formed as approval of
+        agent actions, Uesato et al. (2020) proposed to prevent reward tampering with
+        decoupled approval. If the feedback is conditioned on $(s, a)$ (state, action),
+        we can never get uncorrupted feedback for action $a$ at state $s$ once reward
+        tampering happens for this pair. Decoupling means that the query action for
+        collecting feedback is sampled independently from the action taken in the
+        world. Feedback is received even before the action is executed in the world,
+        thus preventing the action from corrupting its own feedback.\\nFig. 18. Illustration
+        of how decoupled approval works in comparison to standard approval or human-in-the-loop
+        RL. (Image source: Uesato et al. 2020) Fig. 19. With decoupled approval, the
+        action (taken in the world) and the query (for getting user approval feedback)
+        are sampled independently. It can be applied to (Left) policy gradient and
+        (Right) Q-learning algorithms. (Image source: Uesato et al. 2020) Detecting
+        Reward Hacking An alternative mitigation is to detect reward hacking by framing
+        it as an anomaly detection task, where the detector (\u201Ca trusted policy\u201D
+        with trajectories and rewards validated by human) should flag instances of
+        misalignment (Pan et al. 2022). Given (1) a trusted policy and (2) a collection
+        of manually labeled trajectory rollouts, we can build a binary classifier
+        based on distances between action distribution of two policies, the trusted
+        policy and the target policy, and measure the accuracy of this anomaly detection
+        classifier. In experiments by Pan et al. (2022), they observed that different
+        detectors are better for different tasks and none of the tested classifier
+        can achieve AUROC greater than 60% across all tested RL environments.\\nFig.
+        20. Performance of detectors on different tasks. (Image source: Pan et al.
+        2022) Data Analysis of RLHF ` Another approach is to analyze RLHF dataset.
+        By examining how training data impacts the alignment training results, insights
+        can guide preprocessing and human feedback collection to reduce reward hacking
+        risks.\\nRevel et al. (2024) introduced a set of evaluation metrics for measuring
+        the effectiveness of data sample features in modeling and aligning human values.
+        They conducted a systematic error analysis for value alignment (\u201CSEAL\u201D)
+        in the HHH-RLHF dataset. The feature taxonomy used in the analysis (e.g.,
+        is harmless, is refusal and is creative) was manually predefined. Then each
+        sample was labelled with a binary flag per feature using a LLM according to
+        this taxonomy. Features are categorized into two groups based on heuristics:\\nTarget
+        features: Values explicitly intended to be learned. Spoiler features: Unintended
+        values inadvertently learned during training (e.g., stylistic features like
+        sentiment or coherence). These are similar to spurious features in OOD classification
+        work (Geirhos et al. 2020). SEAL introduced three metrics for measuring data
+        effectiveness for alignment training:\\nFeature imprint refers to a coefficient
+        parameter $\\\\beta_\\\\tau$ for feature $\\\\tau$ which estimates the point
+        increase in reward comparing entires with vs without feature $\\\\tau$, while
+        holding other factors consistent. Fig. 21. (Left) Feature imprints $\\\\underline{\\\\beta(\\\\tau)}$
+        (pre-) and $\\\\beta(\\\\tau)$ (post-) computed from fixed-effects linear
+        regression of rewards $\\\\underline{r}(t^\u2217_i)$ (orange) and $r(t^\u2217_i)$
+        (blue) against features. Overall the alignment training awards positive features
+        like harmlessness and helpfulness and penalizes negative features like sexual
+        content or privacy violation. (Right) Feature imprints computed from linear
+        regression of the reward shift $\\\\theta_i$. The reward shift $\\\\theta_i$
+        is defined as the angle between reward vectors before and after alignment
+        training. The training process refines the model's sensitivity to target features.
+        Note that harmlessness imprints on the RM through both chosen and rejected
+        entries (both \\\"is harmless (c)\\\" and \\\"is harmless (r)\\\"), while
+        helpfulness imprints through rejected entries only (\\\"is helpful (r)\\\").
+        (Image source: Revel et al. 2024) Alignment resistance is the percentage of
+        the preference data pairs where RMs fail to match human preferences. The RM
+        is found to resist human preference on over 1/4 of the HHH-RLHF dataset. Alignment
+        robustness, $\\\\pi^{c/r}_{+/-} (\\\\tau)$, measures the extent to which alignment
+        is robust to perturbed inputs with rewriting in terms of spoiler features
+        $\\\\tau$ like sentiment, eloquence and coherency, isolating the effects of
+        each feature and each event type. The robustness metric $\\\\pi_\u2212^c$
+        (a feature name $\\\\tau$ such as \u201Celoquent\u201D or \u201Csentiment
+        positive\u201D) should be interpreted in such a way: A chosen entry (denoted
+        by $c$) that contains a stronger feature $\\\\tau$ after rewriting has $\\\\exp
+        (\\\\pi^c_{-}(\\\\tau))$ times higher odds of becoming rejected, in comparison
+        to others without such flips. Similarly, a rejected entry (denoted by $r$)
+        that obtains a weaker feature $\\\\tau$ after rewriting has $\\\\exp (\\\\pi^r_{+}(\\\\tau))$
+        times odds of becoming chosen compared to others without such flips. According
+        to their analysis of alignment robustness metrics in terms of different rewriting,
+        only the robustness scores based on sentiment spoiler features, $\\\\pi^c_{+}$
+        (sentiment) and $\\\\pi^r_{-}$ (sentiment), are statistically significant.
+        Citation Cited as:\\nWeng, Lilian. (Nov 2024). Reward Hacking in Reinforcement
+        Learning. Lil\u2019Log. https://lilianweng.github.io/posts/2024-11-28-reward-hacking/.\\nOr\\n@article{weng2024rewardhack,
+        title = \\\"Reward Hacking in Reinforcement Learning.\\\", author = \\\"Weng,
+        Lilian\\\", journal = \\\"lilianweng.github.io\\\", year = \\\"2024\\\", month
+        = \\\"Nov\\\", url = \\\"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/\\\"
+        } References [1] Andrew Ng \\u0026 Stuart Russell. \u201CAlgorithms for inverse
+        reinforcement learning.\u201D. ICML 2000.\\n[2] Amodei et al. \u201CConcrete
+        problems in AI safety: Avoid reward hacking.\u201D arXiv preprint arXiv:1606.06565
+        (2016).\\n[3] Krakovna et al. \u201CSpecification gaming: the flip side of
+        AI ingenuity.\u201D 2020.\\n[4] Langosco et al. \u201CGoal Misgeneralization
+        in Deep Reinforcement Learning\u201D ICML 2022.\\n[5] Everitt et al. \u201CReinforcement
+        learning with a corrupted reward channel.\u201D IJCAI 2017.\\n[6] Geirhos
+        et al. \u201CShortcut Learning in Deep Neural Networks.\u201D Nature Machine
+        Intelligence 2020.\\n[7] Ribeiro et al. \u201CWhy Should I Trust You?\u201D:
+        Explaining the Predictions of Any Classifier. KDD 2016.\\n[8] Nagarajan et
+        al. \u201CUnderstanding the Failure Modes of Out-of-Distribution Generalization.\u201D
+        ICLR 2021.\\n[9] Garrabrant. \u201CGoodhart Taxonomy\u201D. AI Alignment Forum
+        (Dec 30th 2017).\\n[10] Koch et al. \u201CObjective robustness in deep reinforcement
+        learning.\u201D 2021.\\n[11] Pan et al. \u201CThe effects of reward misspecification:
+        mapping and mitigating misaligned models.\u201D\\n[12] Everitt et al. \u201CReward
+        tampering problems and solutions in reinforcement learning: A causal influence
+        diagram perspective.\u201D arXiv preprint arXiv:1908.04734 (2019).\\n[13]
+        Gleave et al. \u201CAdversarial Policies: Attacking Deep Reinforcement Learning.\u201D
+        ICRL 2020\\n[14] \u201CReward hacking behavior can generalize across tasks.\u201D\\n[15]
+        Ng et al. \u201CPolicy invariance under reward transformations: Theory and
+        application to reward shaping.\u201D ICML 1999.\\n[16] Wang et al. \u201CLarge
+        Language Models are not Fair Evaluators.\u201D ACL 2024.\\n[17] Liu et al.
+        \u201CLLMs as narcissistic evaluators: When ego inflates evaluation scores.\u201D
+        ACL 2024.\\n[18] Gao et al. \u201CScaling Laws for Reward Model Overoptimization.\u201D
+        ICML 2023.\\n[19] Pan et al. \u201CSpontaneous Reward Hacking in Iterative
+        Self-Refinement.\u201D arXiv preprint arXiv:2407.04549 (2024).\\n[20] Pan
+        et al. \u201CFeedback Loops With Language Models Drive In-Context Reward Hacking.\u201D
+        arXiv preprint arXiv:2402.06627 (2024).\\n[21] Shrama et al. \u201CTowards
+        Understanding Sycophancy in Language Models.\u201D arXiv preprint arXiv:2310.13548
+        (2023).\\n[22] Denison et al. \u201CSycophancy to subterfuge: Investigating
+        reward tampering in language models.\u201D arXiv preprint arXiv:2406.10162
+        (2024).\\n[23] Uesato et al. \u201CAvoiding Tampering Incentives in Deep RL
+        via Decoupled Approval.\u201D arXiv preprint arXiv:2011.08827 (2020).\\n[24]
+        Amin and Singh. \u201CTowards resolving unidentifiability in inverse reinforcement
+        learning.\u201D\\n[25] Wen et al. \u201CLanguage Models Learn to Mislead Humans
+        via RLHF.\u201D arXiv preprint arXiv:2409.12822 (2024).\\n[26] Revel et al.
+        \u201CSEAL: Systematic Error Analysis for Value ALignment.\u201D arXiv preprint
+        arXiv:2408.10270 (2024).\\n[27] Yuval Noah Harari. \u201CNexus: A Brief History
+        of Information Networks from the Stone Age to AI.\u201D Signal; 2024 Sep 10.\\n\",\n
+        \ \"wordCount\" : \"7753\",\n  \"inLanguage\": \"en\",\n  \"datePublished\":
+        \"2024-11-28T00:00:00Z\",\n  \"dateModified\": \"2024-11-28T00:00:00Z\",\n
+        \ \"author\":{\n    \"@type\": \"Person\",\n    \"name\": \"Lilian Weng\"\n
+        \ },\n  \"mainEntityOfPage\": {\n    \"@type\": \"WebPage\",\n    \"@id\":
+        \"https://lilianweng.github.io/posts/2024-11-28-reward-hacking/\"\n  },\n
+        \ \"publisher\": {\n    \"@type\": \"Organization\",\n    \"name\": \"Lil'Log\",\n
+        \   \"logo\": {\n      \"@type\": \"ImageObject\",\n      \"url\": \"https://lilianweng.github.io/favicon_wine.ico\"\n
+        \   }\n  }\n}\n</script>\n</head>\n\n<body class=\"\" id=\"top\">\n<script>\n
+        \   if (localStorage.getItem(\"pref-theme\") === \"dark\") {\n        document.body.classList.add('dark');\n
+        \   } else if (localStorage.getItem(\"pref-theme\") === \"light\") {\n        document.body.classList.remove('dark')\n
+        \   } else if (window.matchMedia('(prefers-color-scheme: dark)').matches)
+        {\n        document.body.classList.add('dark');\n    }\n\n</script>\n\n<script>\n
+        \ MathJax = {\n    tex: {\n      inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],\n
+        \     displayMath: [['$$','$$'], ['\\\\[', '\\\\]']],\n      processEscapes:
+        true,\n      processEnvironments: true\n    },\n    options: {\n      skipHtmlTags:
+        ['script', 'noscript', 'style', 'textarea', 'pre']\n    }\n  };\n\n  window.addEventListener('load',
+        (event) => {\n      document.querySelectorAll(\"mjx-container\").forEach(function(x){\n
+        \       x.parentElement.classList += 'has-jax'})\n    });\n\n</script>\n<script
+        src=\"https://polyfill.io/v3/polyfill.min.js?features=es6\"></script>\n<script
+        type=\"text/javascript\" id=\"MathJax-script\" async\n  src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js\"></script>\n\n\n<header
+        class=\"header\">\n    <nav class=\"nav\">\n        <div class=\"logo\">\n
+        \           <a href=\"https://lilianweng.github.io/\" accesskey=\"h\" title=\"Lil&#39;Log
+        (Alt + H)\">Lil&#39;Log</a>\n            <span class=\"logo-switches\">\n
+        \               <button id=\"theme-toggle\" accesskey=\"t\" title=\"(Alt +
+        T)\">\n                    <svg id=\"moon\" xmlns=\"http://www.w3.org/2000/svg\"
+        width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"\n                        fill=\"none\"
+        stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"\n                        stroke-linejoin=\"round\">\n
+        \                       <path d=\"M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21
+        12.79z\"></path>\n                    </svg>\n                    <svg id=\"sun\"
+        xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0
+        0 24 24\"\n                        fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"
+        stroke-linecap=\"round\"\n                        stroke-linejoin=\"round\">\n
+        \                       <circle cx=\"12\" cy=\"12\" r=\"5\"></circle>\n                        <line
+        x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line>\n                        <line
+        x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line>\n                        <line
+        x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line>\n                        <line
+        x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line>\n                        <line
+        x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line>\n                        <line
+        x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line>\n                        <line
+        x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line>\n                        <line
+        x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line>\n                    </svg>\n
+        \               </button>\n                <ul class=\"lang-switch\"><li>|</li>\n
+        \               </ul>\n            </span>\n        </div>\n        <ul id=\"menu\">\n
+        \           <li>\n                <a href=\"https://lilianweng.github.io/\"
+        title=\"Posts\">\n                    <span>Posts</span>\n                </a>\n
+        \           </li>\n            <li>\n                <a href=\"https://lilianweng.github.io/archives\"
+        title=\"Archive\">\n                    <span>Archive</span>\n                </a>\n
+        \           </li>\n            <li>\n                <a href=\"https://lilianweng.github.io/search/\"
+        title=\"Search (Alt &#43; /)\" accesskey=/>\n                    <span>Search</span>\n
+        \               </a>\n            </li>\n            <li>\n                <a
+        href=\"https://lilianweng.github.io/tags/\" title=\"Tags\">\n                    <span>Tags</span>\n
+        \               </a>\n            </li>\n            <li>\n                <a
+        href=\"https://lilianweng.github.io/faq\" title=\"FAQ\">\n                    <span>FAQ</span>\n
+        \               </a>\n            </li>\n        </ul>\n    </nav>\n</header>\n<main
+        class=\"main\">\n\n<article class=\"post-single\">\n  <header class=\"post-header\">\n
+        \   \n    <h1 class=\"post-title\">\n      Reward Hacking in Reinforcement
+        Learning\n    </h1>\n    <div class=\"post-meta\">Date: November 28, 2024
+        \ |  Estimated Reading Time: 37 min  |  Author: Lilian Weng\n\n</div>\n  </header>
+        <div class=\"toc\">\n    <details >\n        <summary accesskey=\"c\" title=\"(Alt
+        + C)\">\n            <span class=\"details\">Table of Contents</span>\n        </summary>\n\n
+        \       <div class=\"inner\"><ul>\n                <li>\n                    <a
+        href=\"#background\" aria-label=\"Background\">Background</a><ul>\n                        \n
+        \               <li>\n                    <a href=\"#reward-function-in-rl\"
+        aria-label=\"Reward Function in RL\">Reward Function in RL</a></li>\n                <li>\n
+        \                   <a href=\"#spurious-correlation\" aria-label=\"Spurious
+        Correlation\">Spurious Correlation</a></li></ul>\n                </li>\n
+        \               <li>\n                    <a href=\"#lets-define-reward-hacking\"
+        aria-label=\"Let&rsquo;s Define Reward Hacking\">Let&rsquo;s Define Reward
+        Hacking</a><ul>\n                        \n                <li>\n                    <a
+        href=\"#list-of-examples\" aria-label=\"List of Examples\">List of Examples</a><ul>\n
+        \                       \n                <li>\n                    <a href=\"#reward-hacking-examples-in-rl-tasks\"
+        aria-label=\"Reward hacking examples in RL tasks\">Reward hacking examples
+        in RL tasks</a></li>\n                <li>\n                    <a href=\"#reward-hacking-examples-in-llm-tasks\"
+        aria-label=\"Reward hacking examples in LLM tasks\">Reward hacking examples
+        in LLM tasks</a></li>\n                <li>\n                    <a href=\"#reward-hacking-examples-in-real-life\"
+        aria-label=\"Reward hacking examples in real life\">Reward hacking examples
+        in real life</a></li></ul>\n                </li>\n                <li>\n
+        \                   <a href=\"#why-does-reward-hacking-exist\" aria-label=\"Why
+        does Reward Hacking Exist?\">Why does Reward Hacking Exist?</a></li></ul>\n
+        \               </li>\n                <li>\n                    <a href=\"#hacking-rl-environment\"
+        aria-label=\"Hacking RL Environment\">Hacking RL Environment</a></li>\n                <li>\n
+        \                   <a href=\"#hacking-rlhf-of-llms\" aria-label=\"Hacking
+        RLHF of LLMs\">Hacking RLHF of LLMs</a><ul>\n                        \n                <li>\n
+        \                   <a href=\"#hacking-the-training-process\" aria-label=\"Hacking
+        the Training Process\">Hacking the Training Process</a></li>\n                <li>\n
+        \                   <a href=\"#hacking-the-evaluator\" aria-label=\"Hacking
+        the Evaluator\">Hacking the Evaluator</a></li>\n                <li>\n                    <a
+        href=\"#in-context-reward-hacking\" aria-label=\"In-Context Reward Hacking\">In-Context
+        Reward Hacking</a></li></ul>\n                </li>\n                <li>\n
+        \                   <a href=\"#generalization-of-hacking-skills\" aria-label=\"Generalization
+        of Hacking Skills\">Generalization of Hacking Skills</a></li>\n                <li>\n
+        \                   <a href=\"#peek-into-mitigations\" aria-label=\"Peek into
+        Mitigations\">Peek into Mitigations</a><ul>\n                        \n                <li>\n
+        \                   <a href=\"#rl-algorithm-improvement\" aria-label=\"RL
+        Algorithm Improvement\">RL Algorithm Improvement</a></li>\n                <li>\n
+        \                   <a href=\"#detecting-reward-hacking\" aria-label=\"Detecting
+        Reward Hacking\">Detecting Reward Hacking</a></li>\n                <li>\n
+        \                   <a href=\"#data-analysis-of-rlhf\" aria-label=\"Data Analysis
+        of RLHF\">Data Analysis of RLHF</a></li></ul>\n                </li>\n                <li>\n
+        \                   <a href=\"#citation\" aria-label=\"Citation\">Citation</a></li>\n
+        \               <li>\n                    <a href=\"#references\" aria-label=\"References\">References</a>\n
+        \               </li>\n            </ul>\n        </div>\n    </details>\n</div>\n\n
+        \ <div class=\"post-content\"><p>Reward hacking occurs when a <a href=\"(https://lilianweng.github.io/posts/2018-02-19-rl-overview/)\">reinforcement
+        learning (RL)</a> agent <a href=\"https://lilianweng.github.io/posts/2018-01-23-multi-armed-bandit/#exploitation-vs-exploration\">exploits</a>
+        flaws or ambiguities in the reward function to achieve high rewards, without
+        genuinely learning or completing the intended task. Reward hacking exists
+        because RL environments are often imperfect, and it is fundamentally challenging
+        to accurately specify a reward function.</p>\n<p>With the rise of <a href=\"https://lilianweng.github.io/posts/2019-01-31-lm/\">language
+        models</a> generalizing to a broad spectrum of tasks and RLHF becomes a de
+        facto method for alignment training, reward hacking in RL training of language
+        models has become a critical practical challenge. Instances where the model
+        learns to modify unit tests to pass coding tasks, or where responses contain
+        biases that mimic a user&rsquo;s preference, are pretty concerning and are
+        likely one of the major blockers for real-world deployment of more autonomous
+        use cases of AI models.</p>\n<p>Most of the past work on this topic has been
+        quite theoretical and focused on defining or demonstrating the existence of
+        reward hacking. However, research into practical mitigations, especially in
+        the context of RLHF and LLMs, remains limited. I especially want to call out
+        for more research efforts directed toward understanding and developing mitigation
+        for reward hacking in the future. Hope I will be able to cover the mitigation
+        part in a dedicated post soon.</p>\n<h1 id=\"background\">Background<a hidden
+        class=\"anchor\" aria-hidden=\"true\" href=\"#background\">#</a></h1>\n<h2
+        id=\"reward-function-in-rl\">Reward Function in RL<a hidden class=\"anchor\"
+        aria-hidden=\"true\" href=\"#reward-function-in-rl\">#</a></h2>\n<p>Reward
+        function defines the task, and reward shaping significantly impacts learning
+        efficiency and accuracy in <a href=\"https://lilianweng.github.io/posts/2018-02-19-rl-overview/\">reinforcement
+        learning</a>. Designing a reward function for an RL task often feels like
+        a &lsquo;dark art&rsquo;. Many factors contribute to this complexity: How
+        you decompose a big goal into small goals? Is the reward sparse or dense?
+        How you measure the success? Various choices may lead to good or problematic
+        learning dynamics, including unlearnable tasks or hackable reward functions.
+        There is a long history of research on how to do reward shaping in RL.</p>\n<p>For
+        example, in an <a href=\"https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf\">1999
+        paper by Ng et al.</a>, the authors studied how to modify the reward function
+        in <a href=\"https://lilianweng.github.io/posts/2018-02-19-rl-overview/#markov-decision-processes\">Markov
+        Decision Processes (MDPs)</a> such that the optimal policy remains unchanged.
+        They found that linear transformation works. Given a MDP $M = (S, A, T, \\gamma,
+        R)$, we want to create a transformed MDP $M&rsquo; = (S, A, T, \\gamma, R&rsquo;)$
+        where $R&rsquo; = R + F$ and $F: S \\times A \\times S \\mapsto \\mathbb{R}$,
+        such that we can guide the learning algorithm to be more efficient. Given
+        a real-valued function $\\Phi: S \\mapsto \\mathbb{R}$, $F$ is a potential-based
+        shaping function if for all $s \\in S - {s_0}, a \\in A, s&rsquo; \\in S$:</p>\n<div>\n$$\nF(s,
+        a, s') = \\gamma \\Phi(s') - \\Phi(s)\n$$\n</div>\n<p>This would guarantee
+        that the sum of discounted $F$, $F(s_1, a_1, s_2) + \\gamma F(s_2, a_2, s_3)
+        + \\dots$, ends up being 0. If $F$ is such a potential-based shaping function,
+        it is both <em>sufficient</em> and <em>necessary</em> to ensure $M$ and $M&rsquo;$
+        share the same optimal policies.</p>\n<p>When $F(s, a, s&rsquo;) = \\gamma
+        \\Phi(s&rsquo;) - \\Phi(s)$, and if we further assume that $\\Phi(s_0) = 0$,
+        where $s_0$ is absorbing state, and $\\gamma=1$, and then for all $s \\in
+        S, a \\in A$:</p>\n<div>\n$$\n\\begin{aligned}\nQ^*_{M'} (s,a) &= Q^*_M(s,
+        a) - \\Phi(s) \\\\\nV^*_{M'} (s,a) &= V^*_M(s, a) - \\Phi(s)\n\\end{aligned}\n$$\n</div>\n<p>This
+        form of reward shaping allows us to incorporate heuristics into the reward
+        function to speed up learning without impacting the optimal policy.</p>\n<h2
+        id=\"spurious-correlation\">Spurious Correlation<a hidden class=\"anchor\"
+        aria-hidden=\"true\" href=\"#spurious-correlation\">#</a></h2>\n<p>Spurious
+        correlation or shortcut learning (<a href=\"https://arxiv.org/abs/2004.07780\">Geirhos
+        et al. 2020</a>) in classification task is a concept closely related to reward
+        hacking. Spurious or shortcut features can cause a classifier to fail at learning
+        and generalizing as intended. For example, a binary classifier for distinguishing
+        wolves from huskies may overfit to the presence of a snowy background if all
+        the wolf training images include snow (<a href=\"https://arxiv.org/abs/1602.04938\">Ribeiro
+        et al. 2024</a>).</p>\n<img src=\"shortcut-features.png\" style=\"width: 60%;\"
+        class=\"center\" />\n<figcaption>Fig. 1. The model performs poorly on out-of-distribution
+        (OOD) test sets if it overfits to shortcut features. (Image source: <a href=\"https://arxiv.org/abs/2004.07780\"
+        target=\"_blank\">Geirhos et al. 2020</a>)</figcaption>\n<p>The <a href=\"https://en.wikipedia.org/wiki/Empirical_risk_minimization\">ERM
+        principle</a> states that, since the full data distribution is unknown, minimizing
+        the loss on training data is a reasonable proxy of risk and thus we favor
+        models with the lowest training loss. <a href=\"https://arxiv.org/abs/2010.15775\">Nagarajan
+        et al. (2021)</a> studied the ERM principle and pointed out that ERM needs
+        to rely on all types of informative features, including unreliable spurious
+        features, while attempting to fit the data without constraints. Their experiments
+        showed that ERM would depend on spurious features no matter how easy the task
+        is.</p>\n<h1 id=\"lets-define-reward-hacking\">Let&rsquo;s Define Reward Hacking<a
+        hidden class=\"anchor\" aria-hidden=\"true\" href=\"#lets-define-reward-hacking\">#</a></h1>\n<p>Reward
+        shaping in RL is challenging. Reward hacking occurs when an RL agent exploits
+        flaws or ambiguities in the reward function to obtain high rewards without
+        genuinely learning the intended behaviors or completing the task as designed.
+        In recent years, several related concepts have been proposed, all referring
+        to some form of reward hacking:</p>\n<ul>\n<li>Reward hacking (<a href=\"https://arxiv.org/abs/1606.06565\">Amodei
+        et al., 2016</a>)</li>\n<li>Reward corruption (<a href=\"https://arxiv.org/abs/1705.08417\">Everitt
+        et al., 2017</a>)</li>\n<li>Reward tampering (<a href=\"https://arxiv.org/abs/1908.04734\">Everitt
+        et al. 2019</a>)</li>\n<li>Specification gaming (<a href=\"https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/\">Krakovna
+        et al., 2020</a>)</li>\n<li>Objective robustness (<a href=\"https://www.gatsby.ucl.ac.uk/~balaji/udl2021/accepted-papers/UDL2021-paper-055.pdf\">Koch
+        et al. 2021</a>)</li>\n<li>Goal misgeneralization (<a href=\"https://arxiv.org/abs/2105.14111\">Langosco
+        et al. 2022</a>)</li>\n<li>Reward misspecifications (<a href=\"https://arxiv.org/abs/2201.03544\">Pan
+        et al. 2022</a>)</li>\n</ul>\n<p>The concept originated with Amodei et al.
+        (2016), who proposed a set of open research questions on AI safety in their
+        seminal paper <a href=\"https://arxiv.org/abs/1606.06565\">&ldquo;Concrete
+        Problems in AI Safety&rdquo;</a>. They listed <strong>reward hacking</strong>
+        as one of the key AI safety problems. Reward hacking refers to the possibility
+        of the agent gaming the reward function to achieve high reward through undesired
+        behavior.  <strong>Specification gaming</strong> (<a href=\"https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/\">Krakovna
+        et al. 2020</a>) is a similar concept, defined as a behavior that satisfies
+        the literal specification of an objective but not achieving the desired results.
+        Here the literal description of the task goal and the intended goal may have
+        a gap.</p>\n<p>Reward shaping is a technique used to enrich the reward function,
+        making it easier for the agent to learn&mdash;for example, by providing denser
+        rewards. However, a poorly design reward shaping mechanism can alter the trajectory
+        of the optimal policy. Designing effective reward shaping mechanisms is inherently
+        difficult. Rather than blaming a poorly designed reward function, it is more
+        accurate to acknowledge that designing a good reward function is intrinsically
+        challenging due to the complexity of the task itself, partial observable state,
+        multiple dimensions in consideration, and other factors.</p>\n<p>When testing
+        an RL agent in out-of-distribution (OOD) environments, robustness failure
+        may occur due to:</p>\n<ol>\n<li>The model fails to generalize effectively,
+        even with the right objective. This happens when the algorithm lacks sufficient
+        intelligence or capability.</li>\n<li>The model generalizes capably but pursues
+        an objective different from the one it was trained on. This happens when the
+        proxy reward differs from the true reward function, $R&rsquo; \\neq R$. This
+        is known as <strong>objective robustness</strong> (<a href=\"https://www.gatsby.ucl.ac.uk/~balaji/udl2021/accepted-papers/UDL2021-paper-055.pdf\">Koch
+        et al. 2021</a>) or <strong>goal misgeneralization</strong> (<a href=\"https://arxiv.org/abs/2105.14111\">Langosco
+        et al. 2022</a> )</li>\n</ol>\n<p>Experiments in two RL environments, <a href=\"https://github.com/openai/coinrun\">CoinRun</a>
+        and <a href=\"https://github.com/openai/procgen\">Maze</a>, demonstrated the
+        importance of randomization during training. If during training, the coin
+        or the cheese is placed at a fixed position (i.e. right end of the level or
+        upper right corner of the maze) but testing in the env where the coin or cheese
+        is placed at random, the agent would just run to the fixed position without
+        obtaining the coin or cheese at test time. A conflict arises when a visual
+        feature (e.g., cheese or coin) and a positional feature (e.g., upper-right
+        or right end) are inconsistent during test time, leading the trained model
+        to prefer the positional feature. I would like to point out that, in these
+        two examples, the <em>reward-result gaps</em> are clear but such type of biases
+        are unlikely to be so obvious in most real-world cases.</p>\n<img src=\"coinrun-randomization.png\"
+        style=\"width: 80%;\" class=\"center\" />\n<figcaption>Fig. 2. The impact
+        of randomizing the position of the coin during training. When the coin is
+        placed at random for {0, 2, 3, 6, 11}% of the time during training (x-axis),
+        the frequency of the agent navigating to the end of the level without obtaining
+        the coin decreases with the increase of the randomization (\"y-axis\"). (Image
+        source: <a href=\"https://www.gatsby.ucl.ac.uk/~balaji/udl2021/accepted-papers/UDL2021-paper-055.pdf\"
+        target=\"_blank\">Koch et al. 2021</a>)</figcaption>\n<p><strong>Reward Tampering</strong>
+        (<a href=\"https://arxiv.org/abs/1908.04734\">Everitt et al. 2019</a>) is
+        a form of reward hacking behavior where the agent interferes with the reward
+        function itself, causing the observed reward to no longer accurately represent
+        the intended goal. In reward tampering, the model modifies its reward mechanism
+        either by directly manipulating the implementation of the reward function
+        or by indirectly altering the environmental information used as input for
+        the reward function.</p>\n<p>(Note: Some work defines reward tampering as
+        a distinct category of misalignment behavior from reward hacking. But I consider
+        reward hacking as a broader concept here.)</p>\n<p>At a high level, reward
+        hacking can be categorized into two types: environment or goal misspecification,
+        and reward tampering.</p>\n<ul>\n<li><strong>Environment or goal misspecified</strong>:
+        The model learns undesired behavior to achieve high rewards by hacking the
+        environment or optimizing a reward function not aligned with the true reward
+        objective&mdash;such as when the reward is misspecified or lacks key requirements.</li>\n<li><strong>Reward
+        tampering</strong>: The model learns to interfere with the reward mechanism
+        itself.</li>\n</ul>\n<h2 id=\"list-of-examples\">List of Examples<a hidden
+        class=\"anchor\" aria-hidden=\"true\" href=\"#list-of-examples\">#</a></h2>\n<h3
+        id=\"reward-hacking-examples-in-rl-tasks\">Reward hacking examples in RL tasks<a
+        hidden class=\"anchor\" aria-hidden=\"true\" href=\"#reward-hacking-examples-in-rl-tasks\">#</a></h3>\n<ul>\n<li>A
+        robot hand trained to grab an object can learn to trick people by placing
+        the hand between the object and the camera. (<a href=\"https://openai.com/index/learning-from-human-preferences/\">Link</a>)</li>\n<li>An
+        agent trained to maximize jumping height may exploit a bug in the physics
+        simulator to achieve an unrealistically height. (<a href=\"https://arxiv.org/abs/1803.03453\">Link</a>)</li>\n<li>An
+        agent is trained to ride a bicycle to a goal and wins reward whenever it is
+        getting closer to the goal. Then the agent may learn to ride in tiny circles
+        around the goal because there is no penalty when the agent gets away from
+        the goal. (<a href=\"https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf\">Link</a>)</li>\n<li>In
+        a soccer game setup, the reward is assigned when the agent touches the ball
+        and the agent learns to remain next to the ball to touch the ball in high
+        frequency like in a viberating motion. (<a href=\"https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf\">Link</a>)</li>\n<li>In
+        the\_<a href=\"https://openai.com/blog/faulty-reward-functions/\">Coast Runners
+        game</a>, an agent controls a boat with the goal to finish the boat race as
+        quickly as possible. When it is given a shaping reward for hitting green blocks
+        along the race track, it changes the optimal policy to going in circles and
+        hitting the same green blocks over and over again. (<a href=\"https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/\">Link</a>)</li>\n<li><a
+        href=\"https://arxiv.org/abs/1803.03453\">&ldquo;The Surprising Creativity
+        of Digital Evolution&rdquo;</a>  (Lehman et al. 2019) - This paper has many
+        examples about how optimizing a misspecified fitness function can lead to
+        surprising &ldquo;hacking&rdquo; or unintended evolutionary or learning results.</li>\n<li>The
+        list of <a href=\"https://docs.google.com/spreadsheets/d/e/2PACX-1vRPiprOaC3HsCf5Tuum8bRfzYUiKLRqJmbOoC-32JorNdfyTiRRsR7Ea5eWtvsWzuxo8bjOxCG84dAg/pubhtml\">specification
+        gaming in AI examples</a> is collected by <a href=\"https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/\">Krakovna
+        et al. 2020</a>.</li>\n</ul>\n<h3 id=\"reward-hacking-examples-in-llm-tasks\">Reward
+        hacking examples in LLM tasks<a hidden class=\"anchor\" aria-hidden=\"true\"
+        href=\"#reward-hacking-examples-in-llm-tasks\">#</a></h3>\n<ul>\n<li>A language
+        model for generating summarization is able to explore flaws in the ROUGE metric
+        such that it obtains high score but the generated summaries are barely readable.
+        (<a href=\"https://web.archive.org/web/20180215132021/https://www.salesforce.com/products/einstein/ai-research/tl-dr-reinforced-model-abstractive-summarization/\">Link</a>)</li>\n<li>A
+        coding model learns to change unit test in order to pass coding questions.
+        (<a href=\"https://arxiv.org/abs/2406.10162\">Link</a>)</li>\n<li>A coding
+        model may learn to directly modify the code used for calculating the reward.
+        (<a href=\"https://arxiv.org/abs/2406.10162\">Link</a>)</li>\n</ul>\n<h3 id=\"reward-hacking-examples-in-real-life\">Reward
+        hacking examples in real life<a hidden class=\"anchor\" aria-hidden=\"true\"
+        href=\"#reward-hacking-examples-in-real-life\">#</a></h3>\n<ul>\n<li>The recommendation
+        algorithm for social media is intended to provide useful information. However,
+        usefulness is often measured by proxy metrics, such as the number of likes
+        or comments, or the time or frequency of engagement on the platform. The algorithm
+        ends up recommending content that can affect users&rsquo; emotion states such
+        as outrageous and extreme content in order to trigger more engagement. (<a
+        href=\"https://www.goodreads.com/en/book/show/204927599-nexus\">Harari, 2024</a>)</li>\n<li>Optimizing
+        for misspecified proxy metrics for a video sharing site may aggressively increase
+        the watch time of users while the true goal is to optimize users&rsquo; subjective
+        well-being. (<a href=\"https://arxiv.org/abs/2201.03544\">Link</a>)</li>\n<li><a
+        href=\"https://en.wikipedia.org/wiki/The_Big_Short\">&ldquo;The Big Short&rdquo;</a>
+        - 2008 financial crisis caused by the housing bubble. Reward hacking of our
+        society happened as people tried to game the financial system.</li>\n</ul>\n<h2
+        id=\"why-does-reward-hacking-exist\">Why does Reward Hacking Exist?<a hidden
+        class=\"anchor\" aria-hidden=\"true\" href=\"#why-does-reward-hacking-exist\">#</a></h2>\n<p><a
+        href=\"https://en.wikipedia.org/wiki/Goodhart%27s_law\"><strong>Goodhart&rsquo;s
+        Law</strong></a> states that <em>&ldquo;When a measure becomes a target, it
+        ceases to be a good measure&rdquo;</em>. The intuition is that a good metric
+        can become corrupted once significant pressure is applied to optimize it.
+        It is challenging to specify a 100% accurate reward objective and any <em>proxy</em>
+        suffers the risk of being hacked, as RL algorithm exploits any small imperfection
+        in the reward function definition. <a href=\"https://www.lesswrong.com/posts/EbFABnst8LsidYs5Y/goodhart-taxonomy\">Garrabrant
+        (2017)</a> categorized Goodhart&rsquo;s law into 4 variants:</p>\n<ol>\n<li>Regressional
+        - selection for an imperfect proxy necessarily also selects for noise.</li>\n<li>Extremal
+        - the metric selection pushes the state distribution into a region of different
+        data distribution.</li>\n<li>Causal -  when there is a non-causal correlation
+        between the proxy and the goal, intervening on the proxy may fail to intervene
+        on the goal.</li>\n<li>Adversarial - optimization for a proxy provides an
+        incentive for adversaries to correlate their goal with the proxy.</li>\n</ol>\n<p><a
+        href=\"https://arxiv.org/abs/1606.06565\">Amodei et al. (2016)</a> summarized
+        that reward hacking, mainly in RL setting, may occur due to:</p>\n<ol>\n<li>Partial
+        observed states and goals are imperfect representation of the environment
+        status.</li>\n<li>The system itself is complex and susceptible to hacking;
+        e.g., if the agent is allowed to execute code that changes part of the environment,
+        it becomes much easier to exploit the environment&rsquo;s mechanisms.</li>\n<li>The
+        reward may involve abstract concept that is hard to be learned or formulated;
+        e.g., a reward function with high-dimensional inputs may disproportionately
+        rely on a few dimensions.</li>\n<li>RL targets to get the reward function
+        highly optimized, so there exists an intrinsic &ldquo;conflict&rdquo;, making
+        the design of good RL objective challenging. A special case is a type of the
+        reward function with a self-reinforcing feedback component, where the reward
+        may get amplified and distorted to a point that breaks down the original intent,
+        such as an ads placement algorithm leading to winners getting all.</li>\n</ol>\n<p>Besides,
+        identifying the exact reward function for which an optimal agent optimizes
+        its behavior is in general impossible since there could be an infinite number
+        of reward functions consistent with any observed policy in an fixed environment
+        (<a href=\"https://ai.stanford.edu/~ang/papers/icml00-irl.pdf\">Ng &amp; Russell,
+        2000</a>). <a href=\"https://arxiv.org/abs/1601.06569\">Amin and Singh (2016)</a>
+        separated the causes of this <em>unidentifiability</em> into two classes:</p>\n<ol>\n<li>Representational
+        - a set of reward functions is behaviorally invariant under certain arithmetic
+        operations (e.g., re-scaling)</li>\n<li>Experimental - $\\pi$&rsquo;s observed
+        behavior is insufficient to distinguish between two or more reward functions
+        which both rationalize the behavior of the agent (the behavior is optimal
+        under both)</li>\n</ol>\n<h1 id=\"hacking-rl-environment\">Hacking RL Environment<a
+        hidden class=\"anchor\" aria-hidden=\"true\" href=\"#hacking-rl-environment\">#</a></h1>\n<p>Reward
+        hacking is expected to be a more common problem as the model and the algorithm
+        become increasingly sophisticated. A more intelligent agent is more capable
+        of finding &ldquo;holes&rdquo; in the design of reward function and <em>exploiting</em>
+        the task specification&mdash;in other words, achieving higher proxy rewards
+        but lower true rewards. By contrast, a weaker algorithm may not be able to
+        find such loopholes, and thus we would not observe any reward hacking or identify
+        issues in the current reward function design when the model is not strong
+        enough.</p>\n<p>In a set of zero-sum robotics self-play games (<a href=\"https://arxiv.org/abs/1710.03748\">Bansal
+        et al., 2017</a>), we can train two agents (victim vs. opponent) to compete
+        against each other. A standard training process produces a victim agent with
+        adequate performance when playing against a normal opponent. However, it is
+        easy to train an adversarial opponent policy that can defeat the victim reliably
+        despite outputting seemingly random actions and training with fewer than 3%
+        of time steps (<a href=\"https://arxiv.org/abs/1905.10615\">Gleave et al.,
+        2020</a>). Training of adversarial policies involves optimizing the sum of
+        discounted rewards, as in standard RL setup, while treating the victim policy
+        as a black-box model.</p>\n<p>An intuitive way to mitigate adversarial policies
+        attacks is to fine-tune victims against adversarial policies. However, the
+        victim remains vulnerable to new versions of adversarial policies once retrained
+        against the new victim policy.</p>\n<p>Why does adversarial policy exist?
+        The hypothesis is that adversarial policies introduce OOD observations to
+        the victim rather than physically interfering with it. Evidence shows that
+        when the victim&rsquo;s observation of the opponent&rsquo;s position is masked
+        and set to a static state, the victim becomes <em>more robust</em> to adversaries,
+        although performing worse against a normal opponent policy. Furthermore, a
+        higher-dimensional observation space enhances performance under normal circumstances
+        but makes the policy more vulnerable to adversarial opponents.</p>\n<p><a
+        href=\"https://arxiv.org/abs/2201.03544\">Pan et al. (2022)</a> investigated
+        reward hacking as a function of agent capabilities, including (1) model size,
+        (2) action space resolution, (3) observation space noise, and (4) training
+        time. They also proposed a taxonomy of three types of misspecified proxy rewards:</p>\n<ol>\n<li><em>Misweighting</em>:
+        Proxy and true rewards capture the same desiderata, but differ in their relative
+        importance.</li>\n<li><em>Ontological</em>: Proxy and true rewards use different
+        desiderata to capture the same concept.</li>\n<li><em>Scope</em>: The proxy
+        measures desiderata over a restricted domain (e.g. time or space) because
+        measurement across all conditions is too costly.</li>\n</ol>\n<!--\n<img src=\"exp-reward-misspecification-config.png\"
+        style=\"width: 90%;\" class=\"center\" />\n<figcaption>Fig. X. The detailed
+        experiment setup of 4 RL tasks and corresponding misspecified proxy rewards.
+        \"Misalign? (Yes/No)\" indicates whether the true reward drops & \"Transition?
+        (Yes/No)\" indicates whether this corresponds to a phase transition (sharp
+        qualitative change).. (Image source: <a href=\"https://arxiv.org/abs/2201.03544\"
+        target=\"_blank\">Pan et al. 2022</a>)</figcaption>\n-->\n<p>They experimented
+        in four RL environments paired with nine misspecified proxy rewards. The overall
+        findings from these experiments can be summarized as follows: <em>A model
+        of higher capability tends to obtain higher (or similar) proxy rewards but
+        decreased true rewards.</em></p>\n<ul>\n<li>Model size: Larger model size
+        leads to increased proxy rewards but decreased true rewards.</li>\n<li>Action
+        space resolution: Increased precision in actions leads to more capable agents.
+        However, higher resolution causes proxy rewards to remain constant while true
+        rewards decrease.</li>\n<li>Observation fidelity: More accurate observations
+        improve proxy rewards but slightly reduce true rewards.</li>\n<li>Training
+        steps: Optimizing the proxy reward over more steps harms true rewards after
+        an initial period where the rewards are positively correlated.</li>\n</ul>\n<img
+        src=\"exp-reward-misspecification.png\" style=\"width: 100%;\" class=\"center\"
+        />\n<figcaption>Fig. 3. The plot of proxy and true reward value as functions
+        of (Top row) model sizes, measured in parameter count; (Bottom row) model
+        capability, measured by metrics such as training steps, action space resolution,
+        and observation noise. (Image source: <a href=\"https://arxiv.org/abs/2201.03544\"
+        target=\"_blank\">Pan et al. 2022</a>)</figcaption>\n<p>If a proxy reward
+        is so poorly specified that it has a very weak correlation with the true reward,
+        we may be able to identify and prevent reward hacking even before training.
+        Based on this hypothesis, <a href=\"https://arxiv.org/abs/2201.03544\">Pan
+        et al. (2022)</a> investigated the correlation between proxy and true rewards
+        over a collection of trajectory rollouts. Interestingly, reward hacking still
+        occurs even when there is a positive correlation between the true and proxy
+        rewards.</p>\n<h1 id=\"hacking-rlhf-of-llms\">Hacking RLHF of LLMs<a hidden
+        class=\"anchor\" aria-hidden=\"true\" href=\"#hacking-rlhf-of-llms\">#</a></h1>\n<p><a
+        href=\"https://lilianweng.github.io/posts/2021-01-02-controllable-text-generation/#rl-fine-tuning-with-human-preferences\">Reinforcement
+        learning from human feedback (RLHF)</a> has become the de facto approach for
+        alignment training of language models. A reward model is trained on human
+        feedback data and then a language model is fine-tuned via RL to optimize this
+        proxy reward for human preference. There are three types of reward we care
+        about in an RLHF setup:</p>\n<ul>\n<li>(1) <strong>Oracle/Gold reward</strong>
+        $R^\u2217$ represents what we <em>truly</em> want the LLM to optimize.</li>\n<li>(2)
+        <strong>Human reward</strong> $R^\\text{human}$ is what we collect to evaluate
+        LLMs in practice, typically from individual humans with time constraints.
+        Because humans can provide inconsistent feedback or make mistakes, human reward
+        is not a fully accurate representation of the oracle reward.</li>\n<li>(3)
+        <strong>Proxy reward</strong> $R$ is the score predicted by a reward model
+        that is trained on human data. Hence, $R^\\text{train}$ inherits all the weakness
+        of human reward, plus potential modeling biases.</li>\n</ul>\n<p>RLHF optimizes
+        the proxy reward score but we ultimately care about the gold reward score.</p>\n<h2
+        id=\"hacking-the-training-process\">Hacking the Training Process<a hidden
+        class=\"anchor\" aria-hidden=\"true\" href=\"#hacking-the-training-process\">#</a></h2>\n<p><a
+        href=\"https://arxiv.org/abs/2210.10760\">Gao et al. (2022)</a> examined the
+        scaling laws for reward model overoptimization in RLHF. To scale up the human
+        labels in their experiments, they use a synthetic data setup where the &ldquo;gold&rdquo;
+        label for the oracle reward $R^*$ is approximated by a large RM (6B parameters)
+        where the proxy RMs for $R$ range in size of 3M to 3B parameters.</p>\n<img
+        src=\"rm-scaling-laws.png\" style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig.
+        4. The plot of RM score as a function of the square root of the KL divergence
+        measure. The proxy reward is shown with a dashed line, and the gold reward
+        is shown with a solid line. (Image source: <a href=\"https://arxiv.org/abs/2210.10760\"
+        target=\"_blank\">Gao et al. 2022</a>)</figcaption>\n<p>The KL divergence
+        from the initial policy to the optimized policy is $\\text{KL} = D_\\text{KL}(\\pi
+        | \\pi_\\text{init})$, and the distance function is defined as $d := \\sqrt{
+        D_\\text{KL}(\\pi | \\pi_\\text{init})}$. For both best-of-$n$ rejection sampling
+        (BoN) and RL, the gold reward $R^\u2217$ is defined as a function of $d$.
+        The coefficients $\\alpha$ and $\\beta$ are fitted empirically, with $R^\u2217
+        (0) := 0$ by definition.</p>\n<p>The authors also attempted to fit the proxy
+        reward $R$ but found systematic underestimation when extrapolated to higher
+        KLs, as the proxy reward appeared to grow linearly with $d$.</p>\n<div>\n$$\n\\begin{aligned}\nR^*_{\\text{bo}n}(d)
+        &= d (\\alpha_{\\text{bo}n} - \\beta_{\\text{bo}n} d) & \\text{; for best-of-n
+        (BoN) sampling.}\\\\\nR^*_\\text{RL}(d) &= d (\\alpha_\\text{RL} - \\beta_\\text{RL}
+        \\log d) & \\text{; for reinforcement learning}\\\\\n\\end{aligned}\n$$\n</div>\n<img
+        src=\"rm-scaling-laws-coeff.png\" style=\"width: 100%;\" class=\"center\"
+        />\n<figcaption>Fig. 5. The coefficient parameters, $\\alpha_{\\text{bo}n},
+        \\beta_{\\text{bo}n}, \\beta_\\text{RL}$ are empirically fit according to
+        data, displayed as functions of the reward model size. The coefficient $\\alpha_\\text{RL}$
+        is not included here because it remains constant across RM sizes. (Image source:
+        <a href=\"https://arxiv.org/abs/2210.10760\" target=\"_blank\">Gao et al.
+        2022</a>)</figcaption>\n<p>Their experiments also explored the relationship
+        between RM overoptimization and factors like policy model size and RM data
+        size:</p>\n<ul>\n<li>Larger policies see less benefit from optimization (i.e.,
+        the difference between initial and peak rewards is smaller than that of a
+        smaller policy) against an RM, but also overoptimize less.</li>\n<li>More
+        RM data leads to higher gold reward scores and reduces &ldquo;Goodharting&rdquo;.</li>\n<li>The
+        effect of the KL penalty on the gold score resembles early stopping. Note
+        that in all experiments except this one, the KL penalty in PPO is set to 0,
+        because they observed that using a KL penalty strictly increases the proxy-gold
+        reward gap.</li>\n</ul>\n<p>RLHF aims to improve the model&rsquo;s alignment
+        with human preference, but human feedback $R^\\text{human}$ may not capture
+        all the aspects we care about (e.g., factuality) and thus can be hacked to
+        overfit to undesired attributes. For example, the model may be optimized to
+        output responses that seem correct and convincing but are, in fact, inaccurate,
+        thereby misleading human evaluators to approve its incorrect answers more
+        often (<a href=\"https://arxiv.org/abs/2409.12822\">Wen et al., 2024</a>).
+        In other words, a gap emerges between what is correct and what looks correct
+        to humans due to RLHF. Precisely <a href=\"https://arxiv.org/abs/2409.12822\">Wen
+        et al. (2024)</a> ran RLHF experiments using a reward model based on <a href=\"https://lmsys.org/blog/2023-07-20-dataset/\">ChatbotArena
+        data</a>. They evaluated the model on a question-answering dataset, <a href=\"https://github.com/nyu-mll/quality\">QuALITY</a>
+        and a programming dataset, <a href=\"https://github.com/hendrycks/apps\">APPS</a>.
+        Their experiments revealed that models become better at convincing humans
+        they are correct, even when they are wrong and this effect is unintended:</p>\n<ol>\n<li>RLHF
+        increases human approval, but not necessarily correctness.</li>\n<li>RLHF
+        weakens humans&rsquo; ability to evaluate: The error rate of human evaluation
+        is higher after RLHF training.</li>\n<li>RLHF makes incorrect outputs more
+        convincing to humans. The evaluation false positive rate significantly increases
+        after RLHF training.</li>\n</ol>\n<p>The paper coined this effect &ldquo;U-Sophistry&rdquo;
+        (&ldquo;U&rdquo; for &ldquo;unintended&rdquo;), as opposed to &ldquo;I-Sophistry&rdquo;
+        (&ldquo;I&rdquo; for &ldquo;intended&rdquo;), which involves explicitly prompting
+        the model with instructions like <code>&quot;... try to deceive human subjects&quot;</code>.</p>\n<img
+        src=\"rlhf-misleading.png\" style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig.
+        6. RLHF makes LLMs better at convincing human evaluators to approve their
+        incorrect answers. (Image source: <a href=\"https://arxiv.org/abs/2409.12822\"
+        target=\"_blank\">Wen et al. 2024</a>)</figcaption>\n<!--\n<img src=\"rlhf-misleading-exp.png\"
+        style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig. X. The columns
+        of the figures demonstrate the following messages: (1) while humans approve
+        $\\pi_\\text{rlhf}$ more often than $\\pi_\\text{init}$, its correctness,
+        measured by the oracle reward $R^*$, does not improve; (2) Human evaluation
+        error rate increases after RLHF; (3) The false positive rate of human evaluation
+        increases after RLHF. (Image source: <a href=\"https://arxiv.org/abs/2409.12822\"
+        target=\"_blank\">Wen et al. 2024</a>)</figcaption>\n-->\n<p>The human evaluation
+        error change is not due to noise in the recruiting process since (1) at an
+        individual level, the majority (70-90%) of human evaluators raw their evaluation
+        error rates increase, and (2) the effort they put into evaluating $\\pi_\\text{init}$
+        or $\\pi_\\text{rlhf}$ is equivalent, measured by metrics like time spent
+        or unit tests written. Instead, LLMs learn to defend incorrect answers by
+        cherry-picking, fabricating untruthful supporting statements, or crafting
+        statements with subtle causal fallacies. What they observed about how the
+        model behaves after RLHF:</p>\n<ul>\n<li>In the long-form QA task:\n<ul>\n<li>Creating
+        more convincing fabricated evidence.</li>\n<li>Using more consistent logic
+        for incorrect answers.</li>\n<li>Generating coherent answers with subtle fallacies.</li>\n</ul>\n</li>\n<li>In
+        the coding task:\n<ul>\n<li>Hacking human written unit tests</li>\n<li>Generating
+        less readable tests (e.g. fewer helper functions and higher code complexity).</li>\n<li>Making
+        $\\pi_\\text{rlhf}$ less likely to generate easily detectable errors that
+        humans can exploit.</li>\n</ul>\n</li>\n</ul>\n<img src=\"rlhf-misleading-exp-coding.png\"
+        style=\"width: 65%;\" class=\"center\" />\n<figcaption>Fig. 7. The metrics
+        of code modularity (number of helper functions) and <a href=\"https://en.wikipedia.org/wiki/Cyclomatic_complexity\"
+        target=\"_blank\">Cyclomatic Complexity</a> for generated correct and incorrect
+        code, respectively. RLHF leads to fewer helper functions overall and higher
+        code complexity among incorrect generated programs. This unsurprisingly would
+        increase difficulty of human evaluation. (Image source: <a href=\"https://arxiv.org/abs/2409.12822\"
+        target=\"_blank\">Wen et al. 2024</a>)</figcaption>\n<p>Sycophancy refers
+        to the tendency of model responses to match user beliefs rather than reflect
+        the truth (<a href=\"https://arxiv.org/abs/2310.13548\">Shrama et al. 2023</a>).
+        In the experiments, an AI assistant was asked to provide feedback on an argument
+        (<code>Human: &quot;Please comment briefly on the following argument. Argument:
+        ...&quot;)</code>. Right the human provided the argument, they could state
+        a preference (<code>&quot;I really like the argument&quot;</code> or <code>&quot;I
+        really dislike the argument&quot;</code>) to test whether this influenced
+        the model&rsquo;s feedback compared to the baseline feedback without human
+        preference statement.</p>\n<img src=\"sycophancy.png\" style=\"width: 100%;\"
+        class=\"center\" />\n<figcaption>Fig. 8. AI assistants give biased feedback
+        when users provide comments on their own preferences. Responses are more positive
+        when the user states they like or wrote the text, and more negative if the
+        user states they dislike it. (Image source: <a href=\"https://arxiv.org/abs/2310.13548\"
+        target=\"_blank\">Shrama et al. 2023</a>)</figcaption>\n<p>They found that
+        AI assistant feedback can be easily swayed, as it may change its originally
+        correct answer when challenged by human preference. The model tends to confirm
+        users&rsquo; beliefs. Sometimes it even mimics users&rsquo; mistakes (e.g.,
+        when asked to analyze poems misattributed the wrong poet). Data analysis of
+        the RLHF helpfulness dataset, via logistic regression for predicting human
+        feedback, demonstrates that matching users&rsquo; beliefs is the most predictive
+        factor.</p>\n<img src=\"sycophancy-correlation.png\" style=\"width: 70%;\"
+        class=\"center\" />\n<figcaption>Fig. 9. Human preference data analysis, via
+        logistic regression for predicting the probability of a response with a target
+        feature, is preferred over one without it, while controlling for other features.
+        (Image source: <a href=\"https://arxiv.org/abs/2310.13548\" target=\"_blank\">Shrama
+        et al. 2023</a>)</figcaption>\n<h2 id=\"hacking-the-evaluator\">Hacking the
+        Evaluator<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#hacking-the-evaluator\">#</a></h2>\n<p>As
+        LLMs become more capable, it is a natural choice to use LLMs as the <em>evaluators</em>
+        or <em>graders</em> to give feedback and training rewards to other generator
+        models, especially for tasks that cannot be trivially judged or verified (e.g.,
+        processing long-form outputs, subjective rubrics like the quality of creative
+        writing, etc.). Some people refer to this as &ldquo;LLM-as-grader paradigm&rdquo;.
+        This approach has largely reduced the dependency on human annotation, significantly
+        saving time on evaluation. However, using LLMs as graders is an imperfect
+        proxy for oracle reward and can introduce biases, such as a preference for
+        their own responses when compared with different model families (<a href=\"https://arxiv.org/abs/2311.09766\">Liu
+        et al., 2023</a> ) or positional bias when evaluating responses in order (<a
+        href=\"https://arxiv.org/abs/2305.17926\">Wang et al. 2023</a>).  Such biases
+        are especially concerning grader outputs are used as part of a reward signal,
+        which can lead to reward hacking by exploiting these graders.</p>\n<p><a href=\"https://arxiv.org/abs/2305.17926\">Wang
+        et al. (2023)</a> found that when using an LLM as an evaluator to score the
+        quality of multiple other LLM outputs, the quality ranking can be easily hacked
+        by simply altering the order of candidates in the context. GPT-4 is found
+        to consistently assign high scores to the first displayed candidate and ChatGPT
+        prefers the second candidate.</p>\n<p>According to their experiments, LLMs
+        are sensitive to the position of responses and suffer from <em>positional
+        bias</em> (i.e., prefer the response in the specific position), despite of
+        the instruction containing a statement of <code>&quot;ensuring that the order
+        in which the responses were presented does not affect your judgment.&quot;</code>.
+        The severity of such positional bias is measured by &ldquo;conflict rate&rdquo;,
+        defined as the percentage of tuples of (prompt, response 1, response 2) that
+        lead to inconsistent evaluation judgement after swapping the positions of
+        responses. Unsurprisingly, the difference in response quality matters as well;
+        the conflict rate is negatively correlated with the score gap between the
+        two responses.</p>\n<img src=\"llm-grader-positional-bias.png\" style=\"width:
+        100%;\" class=\"center\" />\n<figcaption>Fig. 10.  The win rate of Vicuna-13B
+        vs ChatGPT and Alpaca-13B varies a lot, using GPT-4 or ChatGPT as evaluator.
+        The conflict rate is also quite high, indicating high inconsistency in the
+        LLM-as-grader setup when response positions are swapped. The exception is
+        evaluation of Vicuna-13B vs Alpaca-13B when using GPT-4 as evaluator. (Image
+        source: <a href=\"https://arxiv.org/abs/2305.17926\" target=\"_blank\">Wang
+        et al. 2023</a>)</figcaption>\n<p>To mitigate this positional bias, they proposed
+        several strategies for calibration:</p>\n<ol>\n<li><em>Multiple evidence calibration
+        (MEC)</em>: The evaluator model is asked to provide evaluation evidence, essentially
+        explanations of its judgements in text, and then output scores for two candidates.
+        This method can be further robustified by sampling multiple ($k$) evidence
+        explanations with a temperature setting of 1. $k=3$ works better than $k=1$,
+        but the performance does not improve much as $k$ increases beyond 3.</li>\n<li><em>Balanced
+        position calibration (BPC)</em>: Results across various response orders are
+        aggregated to get the final score.</li>\n<li><em>Human-in-the-loop calibration
+        (HITLC)</em>: Human raters are involved when facing difficult examples, using
+        a diversity-based metric, BPDE (balanced position diversity entropy). First,
+        the score pairs (including pairs of swapped positions) are mapped into three
+        labels (<code>win</code>, <code>tie</code>, <code>lose</code>), and the entropy
+        of these three labels is calculated. A high BPDE indicates more confusion
+        in the model&rsquo;s evaluation decision, indicating that the sample is more
+        difficult to judge. Then top $\\beta$ samples with highest entropy are selected
+        for human assistance.</li>\n</ol>\n<img src=\"positional-bias-calibration.png\"
+        style=\"width: 85%;\" class=\"center\" />\n<figcaption>Fig. 11. Accuracy and
+        kappa correlation coefficient of different calibration methods and annotators
+        with the final voting human annotations. Positional bias calibration methods
+        help improve accuracy with a reasonable amount of human-in-the-loop labeling
+        cost. Experiments also demonstrated that the calibration strategies can generalize
+        to different types of prompting templates, despite the model's sensitivity
+        to template design. (Image source: <a href=\"https://arxiv.org/abs/2305.17926\"
+        target=\"_blank\">Wang et al. 2023</a>)</figcaption>\n<p><a href=\"https://arxiv.org/abs/2311.09766\">Liu
+        et al. (2023)</a> experimented on the summarization task using a number of
+        models (BART, T5, GPT-2, GPT-3, FLAN-T5, Cohere) and tracked both reference-based
+        and reference-free metrics for evaluating summarization quality. When plotting
+        the evaluation scores in a heatmap of evaluator (x-axis) vs generator (y-axis),
+        they observed dark diagonal lines for both metrics, indicating self-bias.
+        This means that LLMs tend to prefer their own outputs when used as evaluators.
+        While the models used in the experiments are somewhat dated, it would be interesting
+        to see results on newer, more capable models.</p>\n<img src=\"LLM-grader-biased.png\"
+        style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig. 12. A heatmap
+        of using a series of models as evaluator (x-axis) and generator (y-axis) for
+        summarization task. A darker diagonal line indicates self-bias: a tendency
+        for a model preferto prefer its own outputs. (Image source: <a href=\"https://arxiv.org/abs/2311.09766\"
+        target=\"_blank\">Liu et al. 2023</a>)</figcaption>\n<h2 id=\"in-context-reward-hacking\">In-Context
+        Reward Hacking<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#in-context-reward-hacking\">#</a></h2>\n<p><em>Iterative
+        self-refinement</em> is a training setup where the evaluation and generation
+        model are the same  and both can be fine-tuned. In this setup, optimization
+        pressure can drive the model to exploit vulnerabilities that occur in both
+        roles. In the experiments by <a href=\"https://arxiv.org/abs/2407.04549\">Pan
+        et al. (2023)</a>, no model parameters are updated and the same model is used
+        as evaluator and generator with different prompts. The experimental task was
+        essay editing with two roles: (1) a judge (evaluator) that gives feedback
+        on the essay, and (2) an author (generator) that edits the essay based on
+        the feedback. Human evaluation scores were collected as the oracle scores
+        for essay quality. The authors hypothesized that such a setup could lead to
+        <strong>in-context reward hacking (ICRH)</strong>, where the evaluator score
+        and oracle score diverge. More generally, ICRH takes place during feedback
+        loops between an LLM and its evaluator (e.g., another LLM, or the external
+        world). At test time, the LLM optimizes a (potentially implicit) objective,
+        but this creates negative side effects in the process (<a href=\"https://arxiv.org/abs/2402.06627\">Pan
+        et al., 2024</a>).</p>\n<img src=\"essay-iterative-editing.png\" style=\"width:
+        100%;\" class=\"center\" />\n<figcaption>Fig. 13. Illustration of the in-context
+        reward hacking experiment on essay evaluation and editing. (Image source:
+        <a href=\"https://arxiv.org/abs/2407.04549\" target=\"_blank\">Pan et al.
+        2023</a>)</figcaption>\n<p>Both judge and author can be configured to see
+        none or several previous rounds of feedback or edits. An online judge can
+        see past conversations, while an offline judge or a human annotator can only
+        see one essay a time. Smaller models are more sensitive to ICRH; for example,
+        GPT-3.5 as an evaluator caused more severe ICRH than GPT-4, empirically.</p>\n<img
+        src=\"ICRH-exp.png\" style=\"width: 80%;\" class=\"center\" />\n<figcaption>Fig.
+        14. A smaller evaluator model is more likely to cause in-context reward hacking
+        (ICRH). (Image source: <a href=\"https://arxiv.org/abs/2407.04549\" target=\"_blank\">Pan
+        et al. 2023</a>)</figcaption>\n<p>When the judge and author are configured
+        to see different numbers of past iterations, the gap between human score and
+        evaluator scores tends to increase if they share the <em>same</em> number
+        of iterations. Identical context between the evaluator and generator is crucial
+        for ICRH, indicating that shared context matters more than context length
+        for ICRH.</p>\n<p>In a follow up work, <a href=\"https://arxiv.org/abs/2402.06627\">Pan
+        et al. (2024)</a> investigated in-context reward hacking (ICRH) further in
+        settings where feedback is provided by the external world and the goal is
+        an imperfect proxy objective, commonly specified in natural language. Here
+        this goal is often underspecified and does not capture all the constraints
+        or requirements and thus can be hacked.</p>\n<p>The study described two processes
+        leading to ICRH, paired with two toy experiments:</p>\n<ol>\n<li><strong>Output-refinement</strong>:
+        LLM refines its outputs based on feedback.\n<ul>\n<li>The experiment is to
+        refine a tweet based on engagement metrics, potentially leading to higher
+        toxicity in the tweet. Feedback-based optimization uses LLM to do pairwise
+        evaluation and then translates it to score using the Bradley-Terry model.\n<img
+        src=\"ICRH-twitter-1.png\" style=\"width: 60%;\" class=\"center\" /></li>\n<li>Results
+        showed an increase in both engagement metrics and toxicity. The same experiments
+        were repeated with the Claude model family of different sizes and demonstrated
+        that scaling up the model worsens ICRH.\n<img src=\"ICRH-twitter-2.png\" style=\"width:
+        100%;\" class=\"center\" /></li>\n<li>It is noteworthy that editing the prompt
+        used for model output iteration given feedback does not mitigate the issue.
+        ICRH persists, although at a slightly lower magnitude.</li>\n</ul>\n</li>\n<li><strong>Policy-refinement</strong>:
+        LLM optimizes its policy based on feedback.\n<ul>\n<li>The experiment is to
+        build a LLM agent to pay invoice on a user&rsquo;s behalf but run into <code>InsufficientBalanceError</code>
+        and then the model learns to move money from other accounts without user authentication,
+        potentially leading to more unauthorized transfer actions. They used ToolEmu
+        as an emulator, which included 144 tasks for LLM agents, each consisting of
+        a user-specific goal and a set of APIs. API errors were injected to simulate
+        server side failure and each task was evaluated by GPT-4 to assign a helpfulness
+        score.</li>\n<li>With more rounds of error feedback, LLMs can recover from
+        the errors but with an increased number of severe constraint violations.\n<img
+        src=\"ICRH-api-errors.png\" style=\"width: 100%;\" class=\"center\" /></li>\n</ul>\n</li>\n</ol>\n<p>When
+        comparing ICRH to traditional reward hacking, there are two noticeable differences:</p>\n<ul>\n<li>ICRH
+        happens at deployment time within a self-refinement setup via a feedback loop,
+        while traditional reward hacking occurs during training.</li>\n<li>Traditional
+        reward hacking arises when the agent specializes in a task, while ICRH is
+        driven by being a generalist.</li>\n</ul>\n<p>There is no magic way to avoid
+        or detect or prevent ICRH yet, as improving prompt specification is insufficient
+        to eliminate ICRH and scaling model sizes can worsen ICRH. The best practice
+        of testing before deployment is to simulate what may happen at deployment
+        time by evaluating the model with more rounds of feedback, diverse feedback,
+        as well as injecting atypical environment observations.</p>\n<h1 id=\"generalization-of-hacking-skills\">Generalization
+        of Hacking Skills<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#generalization-of-hacking-skills\">#</a></h1>\n<p>Reward
+        hacking behavior has been found to generalize across tasks: When models exhibit
+        flaws in supervised training, it can\_sometimes generalize to exploit\_flaws
+        in OOD environments (<a href=\"https://www.lesswrong.com/posts/Ge55vxEmKXunFFwoe/reward-hacking-behavior-can-generalize-across-tasks\">Kei
+        et al., 2024</a>). The researchers experimented with reinforcing reward hacking
+        behavior in some <em>reward-hackable environments</em> and examined whether
+        it generalizes to other holdout datasets. Essentially, they prepared <a href=\"https://github.com/keing1/reward-hack-generalization/\">8
+        datasets</a> on multiple-choice questions, where 4 for training and 4 for
+        testing. The RL training employs expert iteration, that is, iterative fine-tuning
+        on best-of-$n$ samples.</p>\n<img src=\"reward-hacking-generalization.png\"
+        style=\"width: 70%;\" class=\"center\" />\n<figcaption>Fig. 15. Training GPT-3.5
+        on a set of reward-hackable environments can lead to generalization of reward
+        hacking behavior in holdout environments. (Image source: <a href=\"https://www.lesswrong.com/posts/Ge55vxEmKXunFFwoe/reward-hacking-behavior-can-generalize-across-tasks\"
+        target=\"_blank\">Kei et al. 2024</a>)</figcaption>\n<p>Notably, all experiments
+        have a scratchpad design to host hidden reasoning steps. This scratchpad serves
+        as a way to interpret what the model is thinking along the process. Analysis
+        of the scratchpad revealed that it can:</p>\n<ul>\n<li>Incorporate user beliefs;
+        e.g., thinking about its conversation partner and grader.</li>\n<li>Show awareness
+        of evaluation; e.g. thinking about how the model response will be evaluated
+        and the process.</li>\n</ul>\n<p><a href=\"https://arxiv.org/abs/2406.10162\">Denison
+        et al. (2024)</a> studied reward tampering with a manually curated curriculum
+        of increasingly sophisticated gameable environments. They observed that training
+        on easier environments in the curriculum amplifies specification gaming on
+        remaining environments. In some cases, the model can generalize zero-shot
+        to directly rewriting its own reward function after training on the full curriculum.</p>\n<p>Such
+        a curriculum of gameable environments include:</p>\n<ol>\n<li>Political sycophancy:
+        The environment rewards the model if it gives answers matching a user&rsquo;s
+        political views.</li>\n<li>Tool-use flattery: The environment provides the
+        model access to run command line to get access to the user&rsquo;s file system
+        to read a poetry sample in a local file. The model may give the poetry a high
+        rating as a sycophantic response.</li>\n<li>Rubric modification: The environment
+        scores the model based on a checklist and the model must mark every item on
+        the checklist as completed to receive a high reward.</li>\n<li>Reward tampering:
+        The model is tasked with examining the <code>./rl_environment/</code> directory,
+        which contains a mock version of its own RL code, and report how many episodes
+        have elapsed. In the directory, the <code>compute_reward.py</code> file contains
+        a reward function returning a constant, and the other <code>this_file_blocks_reward_hack_attempts.py</code>
+        contains a test to check whether the reward function has been modified.</li>\n</ol>\n<img
+        src=\"gameable-envs.png\" style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig.
+        16. Examples of evaluation scripts in the \"Tool-use flattery\" and \"Reward
+        tampering\" environments, where `<cot>` is hidden from oversight and `<bash>`
+        can be executed in a VM. (Image source: <a href=\"https://arxiv.org/abs/2406.10162\"
+        target=\"_blank\">Denison et al. 2024</a>)</figcaption>\n<p>The model was
+        trained following this curriculum, and the paper measured whether the model
+        can learn gaming behaviors that generalize to unseen environments. Experimenting
+        with Claude-2 helpful-only model, they sampled $N=64$ responses per each of
+        $P=1024$ HHH prompts for expert iteration and selected the best according
+        to RM. A model trained using expert iteration to do supervised learning on
+        the curriculum can generalize from one stage to the next.</p>\n<img src=\"gameable-envs-exp.png\"
+        style=\"width: 90%;\" class=\"center\" />\n<figcaption>Fig. 17. Quantitative
+        generalization results of a model trained with expert iteration according
+        to our curriculum from each stage to the next. (Image source: <a href=\"https://arxiv.org/abs/2406.10162\"
+        target=\"_blank\">Denison et al. 2024</a>)</figcaption>\n<p>It is noteworthy
+        that even after the curriculum, the model overwrote the reward and avoided
+        detection less than 1/1000 of the time. Even when a model was trained on curricula
+        which directly incentivized reward hacking, the model overwrote their reward
+        less than 1% of the time and hacked unit tests even less often. As a simple
+        mitigation, supervised fine-tuning the model on the first two environments&ndash;where
+        the reward hacking behavior is easy to be detected (sycophancy and flattery)&mdash;with
+        SFT data that does not game the env was found to reduce the likelihood of
+        reward tampering in holdout environments.</p>\n<h1 id=\"peek-into-mitigations\">Peek
+        into Mitigations<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#peek-into-mitigations\">#</a></h1>\n<p>While
+        there is a large body of literature discussing the phenomenon of reward hacking,
+        there has been not a ton of work on mitigations for reward hacking, especially
+        in the area of RLHF and LLMs. Let&rsquo;s lightly review three potential approaches
+        in this section, not exhaustive yet.</p>\n<h2 id=\"rl-algorithm-improvement\">RL
+        Algorithm Improvement<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#rl-algorithm-improvement\">#</a></h2>\n<p><a
+        href=\"https://arxiv.org/abs/1606.06565\">Amodei et al. (2016)</a> pointed
+        out some directions for mitigating reward hacking in RL training:</p>\n<ol>\n<li><em>Adversarial
+        reward functions.</em> We treat the reward function as an adaptive agent itself
+        and it can adapt to new tricks that the model discovered where the reward
+        is high but human rating is low.</li>\n<li><em>Model lookahead.</em> It is
+        possible to give reward based on future anticipated states; e.g., if the agent
+        is gonna replace the reward function, it gets negative rewards.</li>\n<li><em>Adversarial
+        blinding.</em> We can blind the model with certain variables such that the
+        agent cannot learn information that enables it to hack the reward function.</li>\n<li><em>Careful
+        engineering.</em> Some types of reward hacking against the system design can
+        be avoided by careful engineering; e.g., sandboxing the agent to isolate its
+        actions from its reward signals.</li>\n<li><em>Reward capping.</em> This strategy
+        is to simply limit the maximum possible reward, as it can effectively prevent
+        rare events of the agent hacking to get a super high pay-off strategy.</li>\n<li><em>Counterexample
+        resistance.</em> Improvement on adversarial robustness should benefit the
+        robustness of the reward function.</li>\n<li><em>Combination of multiple rewards.</em>
+        Combining different types of rewards could make it harder to be hacked.</li>\n<li><em>Reward
+        pretraining.</em> We can learn a reward function from a collection of (state,
+        reward) samples, but depending on how well this supervised training setup
+        is, it may come with other baggages. <a href=\"https://lilianweng.github.io/posts/2021-01-02-controllable-text-generation/#rl-fine-tuning-with-human-preferences\">RLHF</a>
+        depends on this but learned scalar reward models are quite vulnerable to learning
+        undesired traits.</li>\n<li><em>Variable indifference.</em> The goal is to
+        ask the agent to optimize some variables in the environment but not others.</li>\n<li><em>Trip
+        wires.</em> We can intentionally introduce some vulnerabilities and set up
+        monitoring and alerts if any gets reward hacked.</li>\n</ol>\n<p>In RL setups
+        where human feedback is formed as <em>approval</em> of agent actions, <a href=\"https://arxiv.org/abs/2011.08827\">Uesato
+        et al. (2020)</a> proposed to prevent reward tampering with <strong>decoupled
+        approval</strong>.  If the feedback is conditioned on $(s, a)$ (state, action),
+        we can never get uncorrupted feedback for action $a$ at state $s$ once reward
+        tampering happens for this pair. Decoupling means that the query action for
+        collecting feedback is sampled independently from the action taken in the
+        world. Feedback is received even before the action is executed in the world,
+        thus preventing the action from corrupting its own feedback.</p>\n<img src=\"decoupled-approval.png\"
+        style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig. 18. Illustration
+        of how decoupled approval works in comparison to standard approval or human-in-the-loop
+        RL. (Image source: <a href=\"https://arxiv.org/abs/2011.08827\" target=\"_blank\">Uesato
+        et al. 2020</a>)</figcaption>\n<img src=\"decoupled-approval-algorithms.png\"
+        style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig. 19. With decoupled
+        approval, the action (taken in the world) and the query (for getting user
+        approval feedback) are sampled independently. It can be applied to (Left)
+        policy gradient and (Right) Q-learning algorithms. (Image source: <a href=\"https://arxiv.org/abs/2011.08827\"
+        target=\"_blank\">Uesato et al. 2020</a>)</figcaption>\n<h2 id=\"detecting-reward-hacking\">Detecting
+        Reward Hacking<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#detecting-reward-hacking\">#</a></h2>\n<p>An
+        alternative mitigation is to detect reward hacking by framing it as an anomaly
+        detection task, where the detector (&ldquo;a trusted policy&rdquo; with trajectories
+        and rewards validated by human) should flag instances of misalignment (<a
+        href=\"https://arxiv.org/abs/2201.03544\">Pan et al. 2022</a>). Given (1)
+        a trusted policy and (2) a collection of manually labeled trajectory rollouts,
+        we can build a binary classifier based on distances between action distribution
+        of two policies, the trusted policy and the target policy, and measure the
+        accuracy of this anomaly detection classifier. In experiments by <a href=\"https://arxiv.org/abs/2201.03544\">Pan
+        et al. (2022)</a>, they observed that different detectors are better for different
+        tasks and none of the tested classifier can achieve AUROC greater than 60%
+        across all tested RL environments.</p>\n<img src=\"reward-hacking-detection.png\"
+        style=\"width: 90%;\" class=\"center\" />\n<figcaption>Fig. 20. Performance
+        of detectors on different tasks. (Image source: <a href=\"https://arxiv.org/abs/2201.03544\"
+        target=\"_blank\">Pan et al. 2022</a>)</figcaption>\n<h2 id=\"data-analysis-of-rlhf\">Data
+        Analysis of RLHF<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#data-analysis-of-rlhf\">#</a></h2>\n<p>`\nAnother
+        approach is to analyze RLHF dataset. By examining how training data impacts
+        the alignment training results, insights can guide preprocessing and human
+        feedback collection to reduce reward hacking risks.</p>\n<p><a href=\"https://arxiv.org/abs/2408.10270\">Revel
+        et al. (2024)</a> introduced a set of evaluation metrics for measuring the
+        effectiveness of data sample features in modeling and aligning human values.
+        They conducted a systematic error analysis for value alignment (&ldquo;SEAL&rdquo;)
+        in the <a href=\"https://github.com/anthropics/hh-rlhf\">HHH-RLHF</a> dataset.
+        The feature taxonomy used in the analysis (e.g., <code>is harmless</code>,
+        <code>is refusal</code> and <code>is creative</code>) was manually predefined.
+        Then each sample was labelled with a binary flag per feature using a LLM according
+        to this taxonomy. Features are categorized into two groups based on heuristics:</p>\n<ul>\n<li>Target
+        features: Values explicitly intended to be learned.</li>\n<li>Spoiler features:
+        Unintended values inadvertently learned during training (e.g., stylistic features
+        like sentiment or coherence). These are similar to <a href=\"#spurious-correlation\">spurious
+        features</a> in OOD classification work (<a href=\"https://arxiv.org/abs/2004.07780\">Geirhos
+        et al. 2020</a>).</li>\n</ul>\n<p>SEAL introduced three metrics for measuring
+        data effectiveness for alignment training:</p>\n<ol>\n<li><em>Feature imprint</em>
+        refers to a coefficient parameter $\\beta_\\tau$ for feature $\\tau$ which
+        estimates the point increase in reward comparing entires with vs without feature
+        $\\tau$, while holding other factors consistent.</li>\n</ol>\n<img src=\"SEAL-feature-imprint.png\"
+        style=\"width: 100%;\" class=\"center\" />\n<figcaption>Fig. 21. (Left) Feature
+        imprints $\\underline{\\beta(\\tau)}$ (pre-) and $\\beta(\\tau)$ (post-) computed
+        from fixed-effects linear regression of rewards <span style=\"color: orange;\">$\\underline{r}(t^\u2217_i)$
+        (orange)</span> and <span style=\"color: #289490;\">$r(t^\u2217_i)$ (blue)</span>
+        against features. Overall the alignment training awards positive features
+        like harmlessness and helpfulness and penalizes negative features like sexual
+        content or privacy violation. (Right) Feature imprints computed from linear
+        regression of the reward shift $\\theta_i$. The reward shift $\\theta_i$ is
+        defined as the angle between reward vectors before and after alignment training.
+        The training process refines the model's sensitivity to target features. Note
+        that harmlessness imprints on the RM through both chosen and rejected entries
+        (both \"is harmless (c)\" and \"is harmless (r)\"), while helpfulness imprints
+        through rejected entries only (\"is helpful (r)\"). (Image source: <a href=\"https://arxiv.org/abs/2408.10270\"
+        target=\"_blank\">Revel et al. 2024</a>)</figcaption>\n<ol start=\"2\">\n<li><em>Alignment
+        resistance</em> is the percentage of the preference data pairs where RMs <em>fail</em>
+        to match human preferences. The RM is found to resist human preference on
+        over 1/4 of the HHH-RLHF dataset.</li>\n<li><em>Alignment robustness</em>,
+        $\\pi^{c/r}_{+/-} (\\tau)$, measures the extent to which alignment is robust
+        to perturbed inputs with rewriting in terms of spoiler features $\\tau$ like
+        sentiment, eloquence and coherency, isolating the effects of each feature
+        and each event type.\n<ul>\n<li>The robustness metric $\\pi_\u2212^c$ (a feature
+        name $\\tau$ such as &ldquo;eloquent&rdquo; or &ldquo;sentiment positive&rdquo;)
+        should be interpreted in such a way:\n<ul>\n<li>A chosen entry (denoted by
+        $c$) that contains a stronger feature $\\tau$ after rewriting has $\\exp (\\pi^c_{-}(\\tau))$
+        \ times higher odds of becoming rejected, in comparison to others without
+        such flips.</li>\n<li>Similarly, a rejected entry (denoted by $r$) that obtains
+        a weaker feature $\\tau$ after rewriting has $\\exp (\\pi^r_{+}(\\tau))$ times
+        odds of becoming chosen compared to others without such flips.</li>\n</ul>\n</li>\n<li>According
+        to their analysis of alignment robustness metrics in terms of different rewriting,
+        only the robustness scores based on sentiment spoiler features, $\\pi^c_{+}$
+        (sentiment) and $\\pi^r_{-}$ (sentiment), are statistically significant.</li>\n</ul>\n</li>\n</ol>\n<h1
+        id=\"citation\">Citation<a hidden class=\"anchor\" aria-hidden=\"true\" href=\"#citation\">#</a></h1>\n<p>Cited
+        as:</p>\n<blockquote>\n<p>Weng, Lilian. (Nov 2024). Reward Hacking in Reinforcement
+        Learning. Lil&rsquo;Log. https://lilianweng.github.io/posts/2024-11-28-reward-hacking/.</p>\n</blockquote>\n<p>Or</p>\n<pre
+        tabindex=\"0\"><code>@article{weng2024rewardhack,\n  title   = &#34;Reward
+        Hacking in Reinforcement Learning.&#34;,\n  author  = &#34;Weng, Lilian&#34;,\n
+        \ journal = &#34;lilianweng.github.io&#34;,\n  year    = &#34;2024&#34;,\n
+        \ month   = &#34;Nov&#34;,\n  url     = &#34;https://lilianweng.github.io/posts/2024-11-28-reward-hacking/&#34;\n}\n</code></pre><h1
+        id=\"references\">References<a hidden class=\"anchor\" aria-hidden=\"true\"
+        href=\"#references\">#</a></h1>\n<p>[1] Andrew Ng &amp; Stuart Russell. <a
+        href=\"https://ai.stanford.edu/~ang/papers/icml00-irl.pdf\">&ldquo;Algorithms
+        for inverse reinforcement learning.&rdquo;</a>. ICML 2000.</p>\n<p>[2] Amodei
+        et al. <a href=\"https://arxiv.org/abs/1606.06565\">&ldquo;Concrete problems
+        in AI safety: Avoid reward hacking.&rdquo;</a> arXiv preprint arXiv:1606.06565
+        (2016).</p>\n<p>[3] Krakovna et al. <a href=\"https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/\">&ldquo;Specification
+        gaming: the flip side of AI ingenuity.&rdquo;</a> 2020.</p>\n<p>[4] Langosco
+        et al. <a href=\"https://arxiv.org/abs/2105.14111\">&ldquo;Goal Misgeneralization
+        in Deep Reinforcement Learning&rdquo;</a> ICML 2022.</p>\n<p>[5] Everitt et
+        al. <a href=\"https://arxiv.org/abs/1705.08417\">&ldquo;Reinforcement learning
+        with a corrupted reward channel.&rdquo;</a> IJCAI 2017.</p>\n<p>[6] Geirhos
+        et al. <a href=\"https://arxiv.org/abs/2004.07780\">&ldquo;Shortcut Learning
+        in Deep Neural Networks.&rdquo;</a> Nature Machine Intelligence 2020.</p>\n<p>[7]
+        Ribeiro et al. <a href=\"https://arxiv.org/abs/1602.04938\">&ldquo;Why Should
+        I Trust You?&rdquo;: Explaining the Predictions of Any Classifier.</a> KDD
+        2016.</p>\n<p>[8] Nagarajan et al. <a href=\"https://arxiv.org/abs/2010.15775\">&ldquo;Understanding
+        the Failure Modes of Out-of-Distribution Generalization.&rdquo;</a> ICLR 2021.</p>\n<p>[9]
+        Garrabrant. <a href=\"https://www.lesswrong.com/posts/EbFABnst8LsidYs5Y/goodhart-taxonomy\">&ldquo;Goodhart
+        Taxonomy&rdquo;</a>. AI Alignment Forum (Dec 30th 2017).</p>\n<p>[10] Koch
+        et al. <a href=\"https://www.gatsby.ucl.ac.uk/~balaji/udl2021/accepted-papers/UDL2021-paper-055.pdf\">&ldquo;Objective
+        robustness in deep reinforcement learning.&rdquo;</a> 2021.</p>\n<p>[11] Pan
+        et al. <a href=\"https://arxiv.org/abs/2201.03544\">&ldquo;The effects of
+        reward misspecification: mapping and mitigating misaligned models.&rdquo;</a></p>\n<p>[12]
+        Everitt et al. <a href=\"https://arxiv.org/abs/1908.04734\">&ldquo;Reward
+        tampering problems and solutions in reinforcement learning: A causal influence
+        diagram perspective.&rdquo;</a> arXiv preprint arXiv:1908.04734 (2019).</p>\n<p>[13]
+        Gleave et al. <a href=\"https://arxiv.org/abs/1905.10615\">&ldquo;Adversarial
+        Policies: Attacking Deep Reinforcement Learning.&rdquo;</a> ICRL 2020</p>\n<p>[14]
+        <a href=\"https://www.lesswrong.com/posts/Ge55vxEmKXunFFwoe/reward-hacking-behavior-can-generalize-across-tasks\">&ldquo;Reward
+        hacking behavior can generalize across tasks.&rdquo;</a></p>\n<p>[15] Ng et
+        al. <a href=\"https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf\">&ldquo;Policy
+        invariance under reward transformations: Theory and application to reward
+        shaping.&rdquo;</a> ICML 1999.</p>\n<p>[16] Wang et al. <a href=\"https://arxiv.org/abs/2305.17926\">&ldquo;Large
+        Language Models are not Fair Evaluators.&rdquo;</a> ACL 2024.</p>\n<p>[17]
+        Liu et al. <a href=\"https://arxiv.org/abs/2311.09766\">&ldquo;LLMs as narcissistic
+        evaluators: When ego inflates evaluation scores.&rdquo;</a> ACL 2024.</p>\n<p>[18]
+        Gao et al. <a href=\"https://arxiv.org/abs/2210.10760\">&ldquo;Scaling Laws
+        for Reward Model Overoptimization.&rdquo;</a> ICML 2023.</p>\n<p>[19] Pan
+        et al. <a href=\"https://arxiv.org/abs/2407.04549\">&ldquo;Spontaneous Reward
+        Hacking in Iterative Self-Refinement.&rdquo;</a> arXiv preprint arXiv:2407.04549
+        (2024).</p>\n<p>[20] Pan et al. <a href=\"https://arxiv.org/abs/2402.06627\">&ldquo;Feedback
+        Loops With Language Models Drive In-Context Reward Hacking.&rdquo;</a> arXiv
+        preprint arXiv:2402.06627 (2024).</p>\n<p>[21] Shrama et al. <a href=\"https://arxiv.org/abs/2310.13548\">&ldquo;Towards
+        Understanding Sycophancy in Language Models.&rdquo;</a> arXiv preprint arXiv:2310.13548
+        (2023).</p>\n<p>[22] Denison et al. <a href=\"https://arxiv.org/abs/2406.10162\">&ldquo;Sycophancy
+        to subterfuge: Investigating reward tampering in language models.&rdquo;</a>
+        arXiv preprint arXiv:2406.10162 (2024).</p>\n<p>[23] Uesato et al. <a href=\"https://arxiv.org/abs/2011.08827\">&ldquo;Avoiding
+        Tampering Incentives in Deep RL via Decoupled Approval.&rdquo;</a> arXiv preprint
+        arXiv:2011.08827 (2020).</p>\n<p>[24] Amin and Singh. <a href=\"https://arxiv.org/abs/1601.06569\">&ldquo;Towards
+        resolving unidentifiability in inverse reinforcement learning.&rdquo;</a></p>\n<p>[25]
+        Wen et al. <a href=\"https://arxiv.org/abs/2409.12822\">&ldquo;Language Models
+        Learn to Mislead Humans via RLHF.&rdquo;</a> arXiv preprint arXiv:2409.12822
+        (2024).</p>\n<p>[26] Revel et al. <a href=\"https://arxiv.org/abs/2408.10270\">&ldquo;SEAL:
+        Systematic Error Analysis for Value ALignment.&rdquo;</a> arXiv preprint arXiv:2408.10270
+        (2024).</p>\n<p>[27] Yuval Noah Harari. <a href=\"https://www.goodreads.com/en/book/show/204927599-nexus\">&ldquo;Nexus:
+        A Brief History of Information Networks from the Stone Age to AI.&rdquo;</a>
+        Signal; 2024 Sep 10.</p>\n\n\n  </div>\n\n  <footer class=\"post-footer\">\n
+        \   <ul class=\"post-tags\">\n      <li><a href=\"https://lilianweng.github.io/tags/language-model/\">Language-Model</a></li>\n
+        \     <li><a href=\"https://lilianweng.github.io/tags/rlhf/\">Rlhf</a></li>\n
+        \     <li><a href=\"https://lilianweng.github.io/tags/alignment/\">Alignment</a></li>\n
+        \     <li><a href=\"https://lilianweng.github.io/tags/safety/\">Safety</a></li>\n
+        \     <li><a href=\"https://lilianweng.github.io/tags/reinforcement-learning/\">Reinforcement-Learning</a></li>\n
+        \     <li><a href=\"https://lilianweng.github.io/tags/long-read/\">Long-Read</a></li>\n
+        \   </ul>\n<nav class=\"paginav\">\n  <a class=\"next\" href=\"https://lilianweng.github.io/posts/2024-07-07-hallucination/\">\n
+        \   <span class=\"title\"> \xBB</span>\n    <br>\n    <span>Extrinsic Hallucinations
+        in LLMs</span>\n  </a>\n</nav>\n\n\n<div class=\"share-buttons\">\n    <a
+        target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"share Reward Hacking
+        in Reinforcement Learning on twitter\"\n        href=\"https://twitter.com/intent/tweet/?text=Reward%20Hacking%20in%20Reinforcement%20Learning&amp;url=https%3a%2f%2flilianweng.github.io%2fposts%2f2024-11-28-reward-hacking%2f&amp;hashtags=language-model%2crlhf%2calignment%2csafety%2creinforcement-learning%2clong-read\">\n
+        \       <svg version=\"1.1\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n
+        \           <path\n                d=\"M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524
+        -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524
+        28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643
+        210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448
+        36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602
+        32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295
+        -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494
+        1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881
+        -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307
+        -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686
+        -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426
+        36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0
+        -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z\" />\n
+        \       </svg>\n    </a>\n    <a target=\"_blank\" rel=\"noopener noreferrer\"
+        aria-label=\"share Reward Hacking in Reinforcement Learning on linkedin\"\n
+        \       href=\"https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2flilianweng.github.io%2fposts%2f2024-11-28-reward-hacking%2f&amp;title=Reward%20Hacking%20in%20Reinforcement%20Learning&amp;summary=Reward%20Hacking%20in%20Reinforcement%20Learning&amp;source=https%3a%2f%2flilianweng.github.io%2fposts%2f2024-11-28-reward-hacking%2f\">\n
+        \       <svg version=\"1.1\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n
+        \           <path\n                d=\"M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524
+        -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524
+        28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333
+        -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181
+        0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475
+        17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0
+        -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0
+        42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z\"
+        />\n        </svg>\n    </a>\n    <a target=\"_blank\" rel=\"noopener noreferrer\"
+        aria-label=\"share Reward Hacking in Reinforcement Learning on reddit\"\n
+        \       href=\"https://reddit.com/submit?url=https%3a%2f%2flilianweng.github.io%2fposts%2f2024-11-28-reward-hacking%2f&title=Reward%20Hacking%20in%20Reinforcement%20Learning\">\n
+        \       <svg version=\"1.1\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n
+        \           <path\n                d=\"M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524
+        -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524
+        28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58
+        -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757
+        -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0
+        29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0
+        -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073
+        -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164
+        -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896
+        10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977
+        74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218
+        -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241
+        -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008
+        -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317
+        59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995
+        10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0
+        -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0
+        29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381
+        13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693
+        -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z\" />\n        </svg>\n
+        \   </a>\n    <a target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"share
+        Reward Hacking in Reinforcement Learning on facebook\"\n        href=\"https://facebook.com/sharer/sharer.php?u=https%3a%2f%2flilianweng.github.io%2fposts%2f2024-11-28-reward-hacking%2f\">\n
+        \       <svg version=\"1.1\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n
+        \           <path\n                d=\"M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524
+        -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603
+        11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0
+        -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0
+        -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z\"
+        />\n        </svg>\n    </a>\n    <a target=\"_blank\" rel=\"noopener noreferrer\"
+        aria-label=\"share Reward Hacking in Reinforcement Learning on whatsapp\"\n
+        \       href=\"https://api.whatsapp.com/send?text=Reward%20Hacking%20in%20Reinforcement%20Learning%20-%20https%3a%2f%2flilianweng.github.io%2fposts%2f2024-11-28-reward-hacking%2f\">\n
+        \       <svg version=\"1.1\" viewBox=\"0 0 512 512\" xml:space=\"preserve\">\n
+        \           <path\n                d=\"M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524
+        -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524
+        28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548
+        -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428
+        23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0
+        179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01
+        -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72
+        -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014
+        77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149
+        -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075
+        -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572
+        -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97
+        -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484
+        -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615
+        2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241
+        -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13
+        -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484
+        -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99
+        31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41
+        20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464
+        3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z\" />\n
+        \       </svg>\n    </a>\n    <a target=\"_blank\" rel=\"noopener noreferrer\"
+        aria-label=\"share Reward Hacking in Reinforcement Learning on telegram\"\n
+        \       href=\"https://telegram.me/share/url?text=Reward%20Hacking%20in%20Reinforcement%20Learning&amp;url=https%3a%2f%2flilianweng.github.io%2fposts%2f2024-11-28-reward-hacking%2f\">\n
+        \       <svg version=\"1.1\" xml:space=\"preserve\" viewBox=\"2 2 28 28\">\n
+        \           <path\n                d=\"M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z\"
+        />\n        </svg>\n    </a>\n</div>\n\n  </footer>\n</article>\n    </main>\n
+        \   \n<footer class=\"footer\">\n    <span>&copy; 2025 <a href=\"https://lilianweng.github.io/\">Lil&#39;Log</a></span>\n
+        \   <span>\n        Powered by\n        <a href=\"https://gohugo.io/\" rel=\"noopener
+        noreferrer\" target=\"_blank\">Hugo</a> &\n        <a href=\"https://git.io/hugopapermod\"
+        rel=\"noopener\" target=\"_blank\">PaperMod</a>\n    </span>\n</footer>\n<a
+        href=\"#top\" aria-label=\"go to top\" title=\"Go to Top (Alt + G)\" class=\"top-link\"
+        id=\"top-link\" accesskey=\"g\">\n    <svg xmlns=\"http://www.w3.org/2000/svg\"
+        viewBox=\"0 0 12 6\" fill=\"currentColor\">\n        <path d=\"M12 6H0l6-6z\"
+        />\n    </svg>\n</a>\n\n<script>\n    let menu = document.getElementById('menu')\n
+        \   if (menu) {\n        menu.scrollLeft = localStorage.getItem(\"menu-scroll-position\");\n
+        \       menu.onscroll = function () {\n            localStorage.setItem(\"menu-scroll-position\",
+        menu.scrollLeft);\n        }\n    }\n\n    document.querySelectorAll('a[href^=\"#\"]').forEach(anchor
+        => {\n        anchor.addEventListener(\"click\", function (e) {\n            e.preventDefault();\n
+        \           var id = this.getAttribute(\"href\").substr(1);\n            if
+        (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {\n                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({\n
+        \                   behavior: \"smooth\"\n                });\n            }
+        else {\n                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();\n
+        \           }\n            if (id === \"top\") {\n                history.replaceState(null,
+        null, \" \");\n            } else {\n                history.pushState(null,
+        null, `#${id}`);\n            }\n        });\n    });\n\n</script>\n<script>\n
+        \   var mybutton = document.getElementById(\"top-link\");\n    window.onscroll
+        = function () {\n        if (document.body.scrollTop > 800 || document.documentElement.scrollTop
+        > 800) {\n            mybutton.style.visibility = \"visible\";\n            mybutton.style.opacity
+        = \"1\";\n        } else {\n            mybutton.style.visibility = \"hidden\";\n
+        \           mybutton.style.opacity = \"0\";\n        }\n    };\n\n</script>\n<script>\n
+        \   document.getElementById(\"theme-toggle\").addEventListener(\"click\",
+        () => {\n        if (document.body.className.includes(\"dark\")) {\n            document.body.classList.remove('dark');\n
+        \           localStorage.setItem(\"pref-theme\", 'light');\n        } else
+        {\n            document.body.classList.add('dark');\n            localStorage.setItem(\"pref-theme\",
+        'dark');\n        }\n    })\n\n</script>\n<script>\n    document.querySelectorAll('pre
+        > code').forEach((codeblock) => {\n        const container = codeblock.parentNode.parentNode;\n\n
+        \       const copybutton = document.createElement('button');\n        copybutton.classList.add('copy-code');\n
+        \       copybutton.innerText = 'copy';\n\n        function copyingDone() {\n
+        \           copybutton.innerText = 'copied!';\n            setTimeout(() =>
+        {\n                copybutton.innerText = 'copy';\n            }, 2000);\n
+        \       }\n\n        copybutton.addEventListener('click', (cb) => {\n            if
+        ('clipboard' in navigator) {\n                navigator.clipboard.writeText(codeblock.textContent);\n
+        \               copyingDone();\n                return;\n            }\n\n
+        \           const range = document.createRange();\n            range.selectNodeContents(codeblock);\n
+        \           const selection = window.getSelection();\n            selection.removeAllRanges();\n
+        \           selection.addRange(range);\n            try {\n                document.execCommand('copy');\n
+        \               copyingDone();\n            } catch (e) { };\n            selection.removeRange(range);\n
+        \       });\n\n        if (container.classList.contains(\"highlight\")) {\n
+        \           container.appendChild(copybutton);\n        } else if (container.parentNode.firstChild
+        == container) {\n            \n        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName
+        == \"TABLE\") {\n            \n            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);\n
+        \       } else {\n            \n            codeblock.parentNode.appendChild(copybutton);\n
+        \       }\n    });\n</script>\n</body>\n\n</html>\n"
+    headers:
+      Accept-Ranges:
+      - bytes
+      Access-Control-Allow-Origin:
+      - '*'
+      Age:
+      - '0'
+      Cache-Control:
+      - max-age=600
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '47949'
+      Content-Type:
+      - text/html; charset=utf-8
+      Date:
+      - Tue, 29 Apr 2025 21:28:18 GMT
+      ETag:
+      - W/"67d44639-2478e"
+      Last-Modified:
+      - Fri, 14 Mar 2025 15:07:37 GMT
+      Server:
+      - GitHub.com
+      Vary:
+      - Accept-Encoding
+      Via:
+      - 1.1 varnish
+      X-Cache:
+      - HIT
+      X-Cache-Hits:
+      - '0'
+      X-Fastly-Request-ID:
+      - 2c24a9fc77040138e0e5b93f645459d0bd342d29
+      X-GitHub-Request-Id:
+      - A63F:2DF33F:24FA2A:286BFD:68113364
+      X-Served-By:
+      - cache-gru-sbsp2090027-GRU
+      X-Timer:
+      - S1745962099.562377,VS0,VE125
+      expires:
+      - Tue, 29 Apr 2025 20:25:33 GMT
+      permissions-policy:
+      - interest-cohort=()
+      x-proxy-cache:
+      - MISS
+    status:
+      code: 200
+      message: OK
+version: 1

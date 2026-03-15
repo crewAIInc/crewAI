@@ -1,0 +1,119 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 + 27 using your add_numbers tool. Report the result."}]}], "inferenceConfig":
+      {"stopSequences": ["\nObservation:"]}, "system": [{"text": "You are Calculator.
+      You are a calculator assistant that uses tools to compute results.\nYour personal
+      goal is: Perform calculations using available tools"}], "toolConfig": {"tools":
+      [{"toolSpec": {"name": "add_numbers", "description": "Add two numbers together
+      and return the sum.", "inputSchema": {"json": {"properties": {"a": {"title":
+      "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required":
+      ["a", "b"], "type": "object", "additionalProperties": false}}}}, {"toolSpec":
+      {"name": "structured_output", "description": "Use this tool to provide your
+      final structured response. Call this tool when you have gathered all necessary
+      information and are ready to provide the final answer in the required format.",
+      "inputSchema": {"json": {"description": "Structured output for calculation results.",
+      "properties": {"operation": {"description": "The mathematical operation performed",
+      "title": "Operation", "type": "string"}, "result": {"description": "The result
+      of the calculation", "title": "Result", "type": "integer"}, "explanation": {"description":
+      "Brief explanation of the calculation", "title": "Explanation", "type": "string"}},
+      "required": ["operation", "result", "explanation"], "title": "CalculationResult",
+      "type": "object", "additionalProperties": false}}}}]}}'
+    headers:
+      Content-Length:
+      - '1509'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1161},"output":{"message":{"content":[{"text":"Okay,
+        let''s calculate 15 + 27:"},{"toolUse":{"input":{"a":15,"b":27},"name":"add_numbers","toolUseId":"tooluse_Jv2zf5bNQ1i0SuxqO8Qk5A"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":488,"outputTokens":84,"serverToolUsage":{},"totalTokens":572}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '339'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 01:04:12 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 + 27 using your add_numbers tool. Report the result."}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_Jv2zf5bNQ1i0SuxqO8Qk5A", "name":
+      "add_numbers", "input": {"a": 15, "b": 27}}}]}, {"role": "user", "content":
+      [{"toolResult": {"toolUseId": "tooluse_Jv2zf5bNQ1i0SuxqO8Qk5A", "content": [{"text":
+      "42"}]}}]}], "inferenceConfig": {"stopSequences": ["\nObservation:"]}, "system":
+      [{"text": "You are Calculator. You are a calculator assistant that uses tools
+      to compute results.\nYour personal goal is: Perform calculations using available
+      tools"}], "toolConfig": {"tools": [{"toolSpec": {"name": "add_numbers", "description":
+      "Add two numbers together and return the sum.", "inputSchema": {"json": {"properties":
+      {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
+      "required": ["a", "b"], "type": "object", "additionalProperties": false}}}},
+      {"toolSpec": {"name": "structured_output", "description": "Use this tool to
+      provide your final structured response. Call this tool when you have gathered
+      all necessary information and are ready to provide the final answer in the required
+      format.", "inputSchema": {"json": {"description": "Structured output for calculation
+      results.", "properties": {"operation": {"description": "The mathematical operation
+      performed", "title": "Operation", "type": "string"}, "result": {"description":
+      "The result of the calculation", "title": "Result", "type": "integer"}, "explanation":
+      {"description": "Brief explanation of the calculation", "title": "Explanation",
+      "type": "string"}}, "required": ["operation", "result", "explanation"], "title":
+      "CalculationResult", "type": "object", "additionalProperties": false}}}}]}}'
+    headers:
+      Content-Length:
+      - '1784'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1446},"output":{"message":{"content":[{"toolUse":{"input":{"operation":"Addition","result":42,"explanation":"I
+        added the two numbers 15 and 27 using the add_numbers tool."},"name":"structured_output","toolUseId":"tooluse_oofqrd0wS2WH12IdXEOn3w"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":571,"outputTokens":105,"serverToolUsage":{},"totalTokens":676}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '403'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 01:04:14 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

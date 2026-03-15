@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -66,6 +67,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
       }
       ```
     - `file` (string, 필수): 파일 URL - 파일 크기는 50MB 미만이어야 합니다. (예시: "https://picsum.photos/200/300").
+
   </Accordion>
 
   <Accordion title="box/save_file_from_object">
@@ -75,6 +77,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `file` (string, 필수): 파일 - 파일 데이터를 포함하는 파일 객체를 허용합니다. 파일 크기는 50MB 미만이어야 합니다.
     - `fileName` (string, 필수): 파일명 (예시: "qwerty.png").
     - `folder` (string, 선택): 폴더 - Connect Portal Workflow Settings를 사용하여 사용자가 파일의 폴더 목적지를 선택할 수 있도록 합니다. 비워두면 기본적으로 사용자의 루트 폴더에 저장됩니다.
+
   </Accordion>
 
   <Accordion title="box/get_file_by_id">
@@ -82,6 +85,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `fileId` (string, 필수): 파일 ID - 파일을 나타내는 고유 식별자. (예시: "12345").
+
   </Accordion>
 
   <Accordion title="box/list_files">
@@ -107,6 +111,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         ]
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/create_folder">
@@ -120,6 +125,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "id": "123456"
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/move_folder">
@@ -134,6 +140,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "id": "123456"
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/get_folder_by_id">
@@ -141,6 +148,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `folderId` (string, 필수): 폴더 ID - 폴더를 나타내는 고유 식별자. (예시: "0").
+
   </Accordion>
 
   <Accordion title="box/search_folders">
@@ -166,6 +174,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         ]
       }
       ```
+
   </Accordion>
 
   <Accordion title="box/delete_folder">
@@ -174,6 +183,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `folderId` (string, 필수): 폴더 ID - 폴더를 나타내는 고유 식별자. (예시: "0").
     - `recursive` (boolean, 선택): 재귀적 삭제 - 폴더가 비어 있지 않을 경우, 폴더와 그 모든 내용을 재귀적으로 삭제합니다.
+
   </Accordion>
 </AccordionGroup>
 

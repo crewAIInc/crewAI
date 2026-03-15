@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     )
     from chromadb.utils.embedding_functions.google_embedding_function import (
         GoogleGenerativeAiEmbeddingFunction,
-        GoogleVertexEmbeddingFunction,
     )
     from chromadb.utils.embedding_functions.huggingface_embedding_function import (
         HuggingFaceEmbeddingFunction,
@@ -52,6 +51,9 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
     from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
     from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+    from crewai.rag.embeddings.providers.google.genai_vertex_embedding import (
+        GoogleGenAIVertexEmbeddingFunction,
+    )
     from crewai.rag.embeddings.providers.google.types import (
         GenerativeAiProviderSpec,
         VertexAIProviderSpec,
@@ -91,6 +93,7 @@ PROVIDER_PATHS = {
     "cohere": "crewai.rag.embeddings.providers.cohere.cohere_provider.CohereProvider",
     "custom": "crewai.rag.embeddings.providers.custom.custom_provider.CustomProvider",
     "google-generativeai": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
+    "google": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
     "google-vertex": "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider",
     "huggingface": "crewai.rag.embeddings.providers.huggingface.huggingface_provider.HuggingFaceProvider",
     "instructor": "crewai.rag.embeddings.providers.instructor.instructor_provider.InstructorProvider",
@@ -162,7 +165,7 @@ def build_embedder_from_dict(spec: OpenAIProviderSpec) -> OpenAIEmbeddingFunctio
 @overload
 def build_embedder_from_dict(
     spec: VertexAIProviderSpec,
-) -> GoogleVertexEmbeddingFunction: ...
+) -> GoogleGenAIVertexEmbeddingFunction: ...
 
 
 @overload
@@ -211,6 +214,10 @@ def build_embedder_from_dict(
 
 @overload
 def build_embedder_from_dict(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
+
+
+@overload
+def build_embedder_from_dict(spec: dict[str, Any]) -> EmbeddingFunction[Any]: ...
 
 
 def build_embedder_from_dict(spec):  # type: ignore[no-untyped-def]
@@ -295,7 +302,9 @@ def build_embedder(spec: OpenAIProviderSpec) -> OpenAIEmbeddingFunction: ...
 
 
 @overload
-def build_embedder(spec: VertexAIProviderSpec) -> GoogleVertexEmbeddingFunction: ...
+def build_embedder(
+    spec: VertexAIProviderSpec,
+) -> GoogleGenAIVertexEmbeddingFunction: ...
 
 
 @overload
@@ -334,6 +343,10 @@ def build_embedder(spec: Text2VecProviderSpec) -> Text2VecEmbeddingFunction: ...
 
 @overload
 def build_embedder(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
+
+
+@overload
+def build_embedder(spec: dict[str, Any]) -> EmbeddingFunction[Any]: ...
 
 
 def build_embedder(spec):  # type: ignore[no-untyped-def]

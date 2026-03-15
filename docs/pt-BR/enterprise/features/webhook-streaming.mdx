@@ -14,9 +14,10 @@ O Enterprise Event Streaming permite que você receba atualizações em tempo re
 Ao utilizar a API Kickoff, inclua um objeto `webhooks` em sua requisição, por exemplo:
 
 # Exemplo de uso da API Kickoff com webhooks
+
 ```json
 {
-  "inputs": {"foo": "bar"},
+  "inputs": { "foo": "bar" },
   "webhooks": {
     "events": ["crew_kickoff_started", "llm_call_started"],
     "url": "https://seu.endpoint/webhook",
@@ -36,6 +37,7 @@ Se `realtime` estiver definido como `true`, cada evento será entregue individua
 Cada webhook envia uma lista de eventos:
 
 # Exemplo de evento enviado pelo webhook
+
 ```json
 {
   "events": [
@@ -47,8 +49,8 @@ Cada webhook envia uma lista de eventos:
       "data": {
         "model": "gpt-4",
         "messages": [
-          {"role": "system", "content": "Você é um assistente."},
-          {"role": "user", "content": "Resuma este artigo."}
+          { "role": "system", "content": "Você é um assistente." },
+          { "role": "user", "content": "Resuma este artigo." }
         ]
       }
     }
@@ -73,12 +75,13 @@ O CrewAI oferece suporte a eventos do sistema e eventos personalizados no Enterp
 - `tool_usage_started`
 - `tool_usage_completed`
 - `crew_test_failed`
-- *...e outros*
+- _...e outros_
 
 Os nomes dos eventos correspondem ao event bus interno. Veja o [código fonte no GitHub](https://github.com/crewAIInc/crewAI/tree/main/src/crewai/utilities/events) para a lista completa.
 
 Você pode emitir seus próprios eventos personalizados, e eles serão entregues através do webhook stream juntamente com os eventos do sistema.
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência com integração de webhook ou solução de problemas.
+  Entre em contato com nossa equipe de suporte para assistência com integração
+  de webhook ou solução de problemas.
 </Card>

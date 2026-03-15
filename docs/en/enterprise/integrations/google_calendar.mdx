@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -69,6 +71,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `timeZone` (string, optional): Time zone used in the response. The default is UTC.
     - `groupExpansionMax` (integer, optional): Maximal number of calendar identifiers to be provided for a single group. Maximum: 100
     - `calendarExpansionMax` (integer, optional): Maximal number of calendars for which FreeBusy information is to be provided. Maximum: 50
+
   </Accordion>
 
   <Accordion title="google_calendar/create_event">
@@ -117,6 +120,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
       ```
     - `visibility` (string, optional): Visibility of the event. Options: default, public, private, confidential. Default: default
     - `transparency` (string, optional): Whether the event blocks time on the calendar. Options: opaque, transparent. Default: opaque
+
   </Accordion>
 
   <Accordion title="google_calendar/view_events">
@@ -136,6 +140,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `timeZone` (string, optional): Time zone used in the response.
     - `updatedMin` (string, optional): Lower bound for an event's last modification time (RFC3339) to filter by.
     - `iCalUID` (string, optional): Specifies an event ID in the iCalendar format to be provided in the response.
+
   </Accordion>
 
   <Accordion title="google_calendar/update_event">
@@ -148,6 +153,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `description` (string, optional): Updated event description
     - `start_dateTime` (string, optional): Updated start time
     - `end_dateTime` (string, optional): Updated end time
+
   </Accordion>
 
   <Accordion title="google_calendar/delete_event">
@@ -156,6 +162,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `calendarId` (string, required): Calendar ID
     - `eventId` (string, required): Event ID to delete
+
   </Accordion>
 
   <Accordion title="google_calendar/view_calendar_list">
@@ -167,6 +174,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `showDeleted` (boolean, optional): Whether to include deleted calendar list entries in the result. Default: false
     - `showHidden` (boolean, optional): Whether to show hidden entries. Default: false
     - `minAccessRole` (string, optional): The minimum access role for the user in the returned entries. Options: freeBusyReader, owner, reader, writer
+
   </Accordion>
 </AccordionGroup>
 
@@ -327,22 +335,26 @@ crew.kickoff()
 ### Common Issues
 
 **Authentication Errors**
+
 - Ensure your Google account has the necessary permissions for calendar access
 - Verify that the OAuth connection includes all required scopes for Google Calendar API
 - Check if calendar sharing settings allow the required access level
 
 **Event Creation Issues**
+
 - Verify that time formats are correct (RFC3339 format)
 - Ensure attendee email addresses are properly formatted
 - Check that the target calendar exists and is accessible
 - Verify time zones are correctly specified
 
 **Availability and Time Conflicts**
+
 - Use proper RFC3339 format for time ranges when checking availability
 - Ensure time zones are consistent across all operations
 - Verify that calendar IDs are correct when checking multiple calendars
 
 **Event Updates and Deletions**
+
 - Verify that event IDs are correct and events exist
 - Ensure you have edit permissions for the events
 - Check that calendar ownership allows modifications
@@ -350,5 +362,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Google Calendar integration setup or troubleshooting.
+  Contact our support team for assistance with Google Calendar integration setup
+  or troubleshooting.
 </Card>

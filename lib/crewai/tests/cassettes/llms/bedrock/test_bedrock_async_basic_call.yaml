@@ -1,0 +1,42 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Say hello"}]}], "inferenceConfig":
+      {}}'
+    headers:
+      Content-Length:
+      - '91'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - attempt=1
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":776},"output":{"message":{"content":[{"text":"Hello!
+        How are you today?"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":9,"outputTokens":10,"serverToolUsage":{},"totalTokens":19}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '226'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 08:50:59 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,6 +1,8 @@
 from enum import Enum
+from importlib import import_module
 import os
 from pathlib import Path
+from typing import cast
 from urllib.parse import urlparse
 
 from crewai_tools.rag.base_loader import BaseLoader
@@ -8,6 +10,7 @@ from crewai_tools.rag.chunkers.base_chunker import BaseChunker
 
 
 class DataType(str, Enum):
+    FILE = "file"
     PDF_FILE = "pdf_file"
     TEXT_FILE = "text_file"
     CSV = "csv"
@@ -15,22 +18,14 @@ class DataType(str, Enum):
     XML = "xml"
     DOCX = "docx"
     MDX = "mdx"
-
-    # Database types
     MYSQL = "mysql"
     POSTGRES = "postgres"
-
-    # Repository types
     GITHUB = "github"
     DIRECTORY = "directory"
-
-    # Web types
     WEBSITE = "website"
     DOCS_SITE = "docs_site"
     YOUTUBE_VIDEO = "youtube_video"
     YOUTUBE_CHANNEL = "youtube_channel"
-
-    # Raw types
     TEXT = "text"
 
     def get_chunker(self) -> BaseChunker:
@@ -63,13 +58,11 @@ class DataType(str, Enum):
 
         try:
             module = import_module(module_path)
-            return getattr(module, class_name)()
+            return cast(BaseChunker, getattr(module, class_name)())
         except Exception as e:
             raise ValueError(f"Error loading chunker for {self}: {e}") from e
 
     def get_loader(self) -> BaseLoader:
-        from importlib import import_module
-
         loaders = {
             DataType.PDF_FILE: ("pdf_loader", "PDFLoader"),
             DataType.TEXT_FILE: ("text_loader", "TextFileLoader"),
@@ -98,7 +91,7 @@ class DataType(str, Enum):
         module_path = f"crewai_tools.rag.loaders.{module_name}"
         try:
             module = import_module(module_path)
-            return getattr(module, class_name)()
+            return cast(BaseLoader, getattr(module, class_name)())
         except Exception as e:
             raise ValueError(f"Error loading loader for {self}: {e}") from e
 

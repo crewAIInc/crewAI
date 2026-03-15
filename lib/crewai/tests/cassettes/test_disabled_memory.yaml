@@ -1,0 +1,192 @@
+interactions:
+- request:
+    body: !!binary |
+      CoIMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS2QsKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQ9810eNHhXQ9+HAVmtMCKfRIIl09+oA4aWUsqDlRhc2sgRXhlY3V0aW9uMAE5
+      +Co930BM+BdBcGOix0JM+BdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2YWFh
+      MDFhMjljZDZKMQoHY3Jld19pZBImCiRiOTE0NjE4ZS0yYTRmLTQ0M2YtOGMxOC02ZmUwOGIwZWI1
+      NDRKLgoIdGFza19rZXkSIgogNjM5OTY1MTdmM2YzZjFjOTRkNmJiNjE3YWEwYjFjNGZKMQoHdGFz
+      a19pZBImCiRkOWJkNWU3OS05ZDY4LTRhZGYtOTkzNC0xODk2M2U0MTUxOTN6AhgBhQEAAQAAEp4H
+      ChB0le57njT9IzEQduO+QI5yEgj1ysrTavJaEioMQ3JldyBDcmVhdGVkMAE5WLUSyEJM+BdBKJ8X
+      yEJM+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiBjOTdiNWZlYjVkMWI2NmJiNTkwMDZhYWEwMWEyOWNkNkoxCgdj
+      cmV3X2lkEiYKJDYxYTAyMjBkLWU2YTYtNGNjNy05NWYyLTY3NTYyNjY1YjJiZEocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzAIKC2NyZXdfYWdlbnRzErwC
+      CrkCW3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3IiwgImlkIjogImUw
+      NmU1NzkyLThjOWUtNDQ2NS04Y2Q0LTJkYWFjNjIyZTFkMSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
+      bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
+      YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
+      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr/AQoKY3Jld190YXNrcxLwAQrtAVt7Imtl
+      eSI6ICI2Mzk5NjUxN2YzZjNmMWM5NGQ2YmI2MTdhYTBiMWM0ZiIsICJpZCI6ICIyYmRkZDIxZi0x
+      M2VlLTQ5ZGEtOTMwOS1hY2E2OTJjNjY0YWYiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAi
+      aHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlJlc2VhcmNoZXIiLCAiYWdlbnRf
+      a2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3IiwgInRvb2xzX25hbWVzIjog
+      W119XXoCGAGFAQABAAASjgIKEC8vtdVCqEYqeMOjd4uP75sSCP1CkJi/63HrKgxUYXNrIENyZWF0
+      ZWQwATmYuyvIQkz4F0FAHSzIQkz4F0ouCghjcmV3X2tleRIiCiBjOTdiNWZlYjVkMWI2NmJiNTkw
+      MDZhYWEwMWEyOWNkNkoxCgdjcmV3X2lkEiYKJDYxYTAyMjBkLWU2YTYtNGNjNy05NWYyLTY3NTYy
+      NjY1YjJiZEouCgh0YXNrX2tleRIiCiA2Mzk5NjUxN2YzZjNmMWM5NGQ2YmI2MTdhYTBiMWM0Zkox
+      Cgd0YXNrX2lkEiYKJDJiZGRkMjFmLTEzZWUtNDlkYS05MzA5LWFjYTY5MmM2NjRhZnoCGAGFAQAB
+      AAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1541'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 24 Sep 2024 21:45:11 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
+      an expert in research and you love to learn new things.\nYour personal goal
+      is: You research about math.\nTo give my best complete final answer to the task
+      use the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Research a topic to teach
+      a kid aged 6 about math.\n\nThis is the expect criteria for your final answer:
+      A topic, explanation, angle, and examples.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '902'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7dDZV5HxzvFLtaeW3yh3f43Bx3k\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214307,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: \\n### Topic: Basic Addition\\n\\n###\
+        \ Explanation:\\nAddition is one of the most fundamental concepts in math.\
+        \ It involves combining two or more numbers to find their total. Think of\
+        \ addition as putting things together. When we add, we are simply counting\
+        \ how many items we have in total.\\n\\n### Angle:\\nTo make it easy and fun\
+        \ for a 6-year-old, let's use everyday objects and relatable scenarios. Using\
+        \ toys, fruits, or even fingers can help them visualize and understand the\
+        \ concept better. We'll also use simple and engaging language.\\n\\n### Examples:\\\
+        n\\n1. **Using Toys**:\\n   - Imagine you have 2 toy cars and your friend\
+        \ gives you 3 more toy cars. How many toy cars do you have now? \\n   - **Calculation**:\
+        \ 2 + 3 = 5\\n   - **Explanation**: You can count the toy cars one by one.\
+        \ First, there are 2 cars, then you add 3 more. So, 1, 2, 3, 4, 5. You have\
+        \ 5 toy cars in total.\\n\\n2. **Using Fingers**:\\n   - Hold up 3 fingers\
+        \ on one hand and 2 fingers on the other. Now, count all the fingers you are\
+        \ holding up.\\n   - **Calculation**: 3 + 2 = 5\\n   - **Explanation**: Start\
+        \ counting from 1 to 3 on one hand, then continue from 4 to 5 on the other\
+        \ hand. How many fingers did you count? Five!\\n\\n3. **Using Fruits**:\\\
+        n   - Imagine you have 1 apple and you buy 4 more apples. How many apples\
+        \ do you have now? \\n   - **Calculation**: 1 + 4 = 5\\n   - **Explanation**:\
+        \ Picture having 1 apple first. Then, you add 4 more apples to your first\
+        \ apple. Counting them all together gives you 5 apples.\\n\\n4. **Story Time**:\
+        \ \\n   - **Scenario**: There were 2 birds sitting on a tree. Then, 3 more\
+        \ birds came and joined them. How many birds are there on the tree now?\\\
+        n   - **Calculation**: 2 + 3 = 5\\n   - **Explanation**: First, count the\
+        \ original 2 birds, then add the 3 new birds. In total, 1, 2, 3, 4, 5. Five\
+        \ birds are now sitting on the tree.\\n\\nBy using these examples and making\
+        \ the learning fun and interactive, a child can easily grasp the concept of\
+        \ basic addition through visualization and practical experience.\",\n    \
+        \    \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 181,\n   \
+        \ \"completion_tokens\": 544,\n    \"total_tokens\": 725,\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+        : \"fp_3537616b13\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85f5a988a51cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:45:15 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '8050'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999785'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d45d03d42785ee4b16aca0e37911929d
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -23,15 +23,9 @@ class TestTraceListenerSetup:
     @pytest.fixture(autouse=True)
     def mock_user_data_file_io(self):
         """Mock user data file I/O to prevent file system pollution between tests"""
-        with (
-            patch(
-                "crewai.events.listeners.tracing.utils._load_user_data",
-                return_value={},
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils._save_user_data",
-                return_value=None,
-            ),
+        with patch(
+            "crewai.events.listeners.tracing.utils._load_user_data",
+            return_value={},
         ):
             yield
 
@@ -154,7 +148,7 @@ class TestTraceListenerSetup:
                 "mark_trace_batch_as_failed": mock_mark_failed,
             }
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_trace_listener_collects_crew_events(self):
         """Test that trace listener properly collects events from crew execution"""
 
@@ -191,7 +185,7 @@ class TestTraceListenerSetup:
             assert trace_listener.batch_manager.is_batch_initialized()
             assert trace_listener.batch_manager.current_batch is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_batch_manager_finalizes_batch_clears_buffer(self):
         """Test that batch manager properly finalizes batch and clears buffer"""
 
@@ -257,7 +251,7 @@ class TestTraceListenerSetup:
 
                 assert finalize_mock.call_count >= 1
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_events_collection_batch_manager(self, mock_plus_api_calls):
         """Test that trace listener properly collects events from crew execution"""
 
@@ -318,7 +312,7 @@ class TestTraceListenerSetup:
                     assert hasattr(event, "event_data")
                     assert hasattr(event, "type")
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_trace_listener_disabled_when_env_false(self):
         """Test that trace listener doesn't make HTTP calls when tracing is disabled"""
 
@@ -389,7 +383,7 @@ class TestTraceListenerSetup:
                 Crew(agents=[agent], tasks=[task], verbose=True)
                 assert mock_listener_setup.call_count >= 1
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_trace_listener_setup_correctly_for_flow(self):
         """Test that trace listener is set up correctly when enabled"""
 
@@ -413,7 +407,7 @@ class TestTraceListenerSetup:
                 FlowExample()
                 assert mock_listener_setup.call_count >= 1
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_trace_listener_ephemeral_batch(self):
         """Test that trace listener properly handles ephemeral batches"""
         with (
@@ -449,13 +443,14 @@ class TestTraceListenerSetup:
 
             crew.kickoff()
 
-            wait_for_event_handlers()
-
-            assert trace_listener.batch_manager.is_batch_initialized(), (
+            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
+            assert initialized, (
                 "Batch should have been initialized for unauthenticated user"
             )
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+            wait_for_event_handlers()
+
+    @pytest.mark.vcr()
     def test_trace_listener_with_authenticated_user(self):
         """Test that trace listener properly handles authenticated batches"""
         with patch.dict(
@@ -485,11 +480,12 @@ class TestTraceListenerSetup:
             crew = Crew(agents=[agent], tasks=[task], tracing=True)
             crew.kickoff()
 
-            wait_for_event_handlers()
-
-            assert trace_listener.batch_manager.is_batch_initialized(), (
+            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
+            assert initialized, (
                 "Batch should have been initialized for authenticated user"
             )
+
+            wait_for_event_handlers()
 
     # Helper method to ensure cleanup
     def teardown_method(self):
@@ -523,7 +519,7 @@ class TestTraceListenerSetup:
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_first_time_user_trace_collection_with_timeout(self, mock_plus_api_calls):
         """Test first-time user trace collection logic with timeout behavior"""
 
@@ -596,7 +592,7 @@ class TestTraceListenerSetup:
 
             mock_mark_completed.assert_called_once()
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_first_time_user_trace_collection_user_accepts(self, mock_plus_api_calls):
         """Test first-time user trace collection when user accepts viewing traces"""
 
@@ -657,6 +653,10 @@ class TestTraceListenerSetup:
                 "https://crewai.com/trace/mock-id"
             )
 
+            assert trace_listener.first_time_handler.is_first_time is True
+
+            trace_listener.first_time_handler.collected_events = True
+
             with (
                 patch.object(
                     trace_listener.first_time_handler,
@@ -667,22 +667,16 @@ class TestTraceListenerSetup:
                     trace_listener.first_time_handler, "_display_ephemeral_trace_link"
                 ) as mock_display_link,
             ):
-                assert trace_listener.first_time_handler.is_first_time is True
-
-                trace_listener.first_time_handler.collected_events = True
-
                 crew.kickoff()
                 wait_for_event_handlers()
-
-                trace_listener.first_time_handler.handle_execution_completion()
 
                 mock_init_backend.assert_called_once()
 
                 mock_display_link.assert_called_once()
 
-                mock_mark_completed.assert_called_once()
+            mock_mark_completed.assert_called_once()
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_first_time_user_trace_consolidation_logic(self, mock_plus_api_calls):
         """Test the consolidation logic for first-time users vs regular tracing"""
         with (
@@ -840,3 +834,87 @@ class TestTraceListenerSetup:
                 mock_mark_failed.assert_called_once_with(
                     "test_batch_id_12345", "Internal Server Error"
                 )
+
+    def test_ephemeral_batch_includes_anon_id(self):
+        """Test that ephemeral batch initialization sends anon_id from get_user_id()"""
+        fake_user_id = "abc123def456"
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.get_user_id",
+                return_value=fake_user_id,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+        ):
+            batch_manager = TraceBatchManager()
+
+            mock_response = MagicMock(
+                status_code=201,
+                json=MagicMock(return_value={
+                    "ephemeral_trace_id": "test-trace-id",
+                    "access_code": "TRACE-abc123",
+                }),
+            )
+
+            with patch.object(
+                batch_manager.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=mock_response,
+            ) as mock_init:
+                batch_manager.initialize_batch(
+                    user_context={"privacy_level": "standard"},
+                    execution_metadata={
+                        "execution_type": "crew",
+                        "crew_name": "test_crew",
+                    },
+                    use_ephemeral=True,
+                )
+
+                mock_init.assert_called_once()
+                payload = mock_init.call_args[0][0]
+                assert payload["user_identifier"] == fake_user_id
+                assert "ephemeral_trace_id" in payload
+
+    def test_non_ephemeral_batch_does_not_include_anon_id(self):
+        """Test that non-ephemeral batch initialization does not send anon_id"""
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+        ):
+            batch_manager = TraceBatchManager()
+
+            mock_response = MagicMock(
+                status_code=201,
+                json=MagicMock(return_value={"trace_id": "test-trace-id"}),
+            )
+
+            with patch.object(
+                batch_manager.plus_api,
+                "initialize_trace_batch",
+                return_value=mock_response,
+            ) as mock_init:
+                batch_manager.initialize_batch(
+                    user_context={"privacy_level": "standard"},
+                    execution_metadata={
+                        "execution_type": "crew",
+                        "crew_name": "test_crew",
+                    },
+                    use_ephemeral=False,
+                )
+
+                mock_init.assert_called_once()
+                payload = mock_init.call_args[0][0]
+                assert "user_identifier" not in payload

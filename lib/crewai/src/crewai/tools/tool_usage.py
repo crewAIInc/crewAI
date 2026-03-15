@@ -30,6 +30,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -145,7 +146,8 @@ class ToolUsage:
 
         if (
             isinstance(tool, CrewStructuredTool)
-            and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
+            and sanitize_tool_name(tool.name)
+            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
         ):
             try:
                 return self._use(tool_string=tool_string, tool=tool, calling=calling)
@@ -160,12 +162,73 @@ class ToolUsage:
 
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
 
-    def _use(
+    async def ause(
+        self, calling: ToolCalling | InstructorToolCalling, tool_string: str
+    ) -> str:
+        """Execute a tool asynchronously.
+
+        Args:
+            calling: The tool calling information.
+            tool_string: The raw tool string from the agent.
+
+        Returns:
+            The result of the tool execution as a string.
+        """
+        if isinstance(calling, ToolUsageError):
+            error = calling.message
+            if self.agent and self.agent.verbose:
+                self._printer.print(content=f"\n\n{error}\n", color="red")
+            if self.task:
+                self.task.increment_tools_errors()
+            return error
+
+        try:
+            tool = self._select_tool(calling.tool_name)
+        except Exception as e:
+            error = getattr(e, "message", str(e))
+            if self.task:
+                self.task.increment_tools_errors()
+            if self.agent and self.agent.verbose:
+                self._printer.print(content=f"\n\n{error}\n", color="red")
+            return error
+
+        if (
+            isinstance(tool, CrewStructuredTool)
+            and sanitize_tool_name(tool.name)
+            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
+        ):
+            try:
+                return await self._ause(
+                    tool_string=tool_string, tool=tool, calling=calling
+                )
+            except Exception as e:
+                error = getattr(e, "message", str(e))
+                if self.task:
+                    self.task.increment_tools_errors()
+                if self.agent and self.agent.verbose:
+                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                return error
+
+        return (
+            f"{await self._ause(tool_string=tool_string, tool=tool, calling=calling)}"
+        )
+
+    async def _ause(
         self,
         tool_string: str,
         tool: CrewStructuredTool,
         calling: ToolCalling | InstructorToolCalling,
     ) -> str:
+        """Internal async tool execution implementation.
+
+        Args:
+            tool_string: The raw tool string from the agent.
+            tool: The tool to execute.
+            calling: The tool calling information.
+
+        Returns:
+            The result of the tool execution as a string.
+        """
         if self._check_tool_repeated_usage(calling=calling):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -173,14 +236,16 @@ class ToolUsage:
                 )
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
-                    tool_name=tool.name,
+                    tool_name=sanitize_tool_name(tool.name),
                     attempts=self._run_attempts,
                 )
                 return self._format_result(result=result)
-
             except Exception:
                 if self.task:
                     self.task.increment_tools_errors()
+
+        started_at = time.time()
+        started_event_emitted = False
 
         if self.agent:
             event_data = {
@@ -190,6 +255,238 @@ class ToolUsage:
                 "tool_args": self.action.tool_input,
                 "tool_class": self.action.tool,
                 "agent": self.agent,
+                "run_attempts": self._run_attempts,
+            }
+
+            if self.agent.fingerprint:  # type: ignore
+                event_data.update(self.agent.fingerprint)  # type: ignore
+            if self.task:
+                event_data["task_name"] = self.task.name or self.task.description
+                event_data["task_id"] = str(self.task.id)
+            crewai_event_bus.emit(self, ToolUsageStartedEvent(**event_data))
+            started_event_emitted = True
+
+        from_cache = False
+        result = None  # type: ignore
+        should_retry = False
+        available_tool = None
+        error_event_emitted = False
+
+        try:
+            if self.tools_handler and self.tools_handler.cache:
+                input_str = ""
+                if calling.arguments:
+                    if isinstance(calling.arguments, dict):
+                        input_str = json.dumps(calling.arguments)
+                    else:
+                        input_str = str(calling.arguments)
+
+                result = self.tools_handler.cache.read(
+                    tool=sanitize_tool_name(calling.tool_name), input=input_str
+                )  # type: ignore
+                from_cache = result is not None
+
+            available_tool = next(
+                (
+                    available_tool
+                    for available_tool in self.tools
+                    if sanitize_tool_name(available_tool.name)
+                    == sanitize_tool_name(tool.name)
+                ),
+                None,
+            )
+
+            usage_limit_error = self._check_usage_limit(
+                available_tool, sanitize_tool_name(tool.name)
+            )
+            if usage_limit_error:
+                result = usage_limit_error
+                self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                result = self._format_result(result=result)
+                # Don't return early - fall through to finally block
+            elif result is None:
+                try:
+                    if sanitize_tool_name(calling.tool_name) in [
+                        sanitize_tool_name("Delegate work to coworker"),
+                        sanitize_tool_name("Ask question to coworker"),
+                    ]:
+                        coworker = (
+                            calling.arguments.get("coworker")
+                            if calling.arguments
+                            else None
+                        )
+                        if self.task:
+                            self.task.increment_delegations(coworker)
+
+                    if calling.arguments:
+                        try:
+                            acceptable_args = tool.args_schema.model_json_schema()[
+                                "properties"
+                            ].keys()
+                            arguments = {
+                                k: v
+                                for k, v in calling.arguments.items()
+                                if k in acceptable_args
+                            }
+                            arguments = self._add_fingerprint_metadata(arguments)
+                            result = await tool.ainvoke(input=arguments)
+                        except Exception:
+                            arguments = calling.arguments
+                            arguments = self._add_fingerprint_metadata(arguments)
+                            result = await tool.ainvoke(input=arguments)
+                    else:
+                        arguments = self._add_fingerprint_metadata({})
+                        result = await tool.ainvoke(input=arguments)
+
+                    if self.tools_handler:
+                        should_cache = True
+                        # Check cache_function on original tool (for tools converted via to_structured_tool)
+                        original_tool = getattr(available_tool, "_original_tool", None)
+                        cache_func = None
+                        if original_tool and hasattr(original_tool, "cache_function"):
+                            cache_func = original_tool.cache_function
+                        elif hasattr(available_tool, "cache_function"):
+                            cache_func = available_tool.cache_function
+
+                        if cache_func:
+                            should_cache = cache_func(calling.arguments, result)
+
+                        self.tools_handler.on_tool_use(
+                            calling=calling, output=result, should_cache=should_cache
+                        )
+
+                    self._telemetry.tool_usage(
+                        llm=self.function_calling_llm,
+                        tool_name=sanitize_tool_name(tool.name),
+                        attempts=self._run_attempts,
+                    )
+                    result = self._format_result(result=result)
+                    data = {
+                        "result": result,
+                        "tool_name": sanitize_tool_name(tool.name),
+                        "tool_args": calling.arguments,
+                    }
+
+                    if (
+                        hasattr(available_tool, "result_as_answer")
+                        and available_tool.result_as_answer
+                    ):
+                        result_as_answer = available_tool.result_as_answer
+                        data["result_as_answer"] = result_as_answer
+
+                    if self.agent and hasattr(self.agent, "tools_results"):
+                        self.agent.tools_results.append(data)
+
+                    if available_tool and hasattr(
+                        available_tool, "_increment_usage_count"
+                    ):
+                        # Use _increment_usage_count to sync count to original tool
+                        available_tool._increment_usage_count()
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+                    elif available_tool and hasattr(
+                        available_tool, "current_usage_count"
+                    ):
+                        available_tool.current_usage_count += 1
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+
+                except Exception as e:
+                    self.on_tool_error(tool=tool, tool_calling=calling, e=e)
+                    error_event_emitted = True
+                    self._run_attempts += 1
+                    if self._run_attempts > self._max_parsing_attempts:
+                        self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                        error_message = self._i18n.errors(
+                            "tool_usage_exception"
+                        ).format(
+                            error=e,
+                            tool=sanitize_tool_name(tool.name),
+                            tool_inputs=tool.description,
+                        )
+                        result = ToolUsageError(
+                            f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                        ).message
+                        if self.task:
+                            self.task.increment_tools_errors()
+                        if self.agent and self.agent.verbose:
+                            self._printer.print(
+                                content=f"\n\n{error_message}\n", color="red"
+                            )
+                    else:
+                        if self.task:
+                            self.task.increment_tools_errors()
+                        should_retry = True
+            else:
+                result = self._format_result(result=result)
+
+        finally:
+            if started_event_emitted and not error_event_emitted:
+                self.on_tool_use_finished(
+                    tool=tool,
+                    tool_calling=calling,
+                    from_cache=from_cache,
+                    started_at=started_at,
+                    result=result,
+                )
+
+        # Handle retry after finally block ensures finished event was emitted
+        if should_retry:
+            return await self.ause(calling=calling, tool_string=tool_string)
+
+        return result
+
+    def _use(
+        self,
+        tool_string: str,
+        tool: CrewStructuredTool,
+        calling: ToolCalling | InstructorToolCalling,
+    ) -> str:
+        # Repeated usage check happens before event emission - safe to return early
+        if self._check_tool_repeated_usage(calling=calling):
+            try:
+                result = self._i18n.errors("task_repeated_usage").format(
+                    tool_names=self.tools_names
+                )
+                self._telemetry.tool_repeated_usage(
+                    llm=self.function_calling_llm,
+                    tool_name=sanitize_tool_name(tool.name),
+                    attempts=self._run_attempts,
+                )
+                return self._format_result(result=result)
+
+            except Exception:
+                if self.task:
+                    self.task.increment_tools_errors()
+
+        started_at = time.time()
+        started_event_emitted = False
+
+        if self.agent:
+            event_data = {
+                "agent_key": self.agent.key,
+                "agent_role": self.agent.role,
+                "tool_name": self.action.tool,
+                "tool_args": self.action.tool_input,
+                "tool_class": self.action.tool,
+                "agent": self.agent,
+                "run_attempts": self._run_attempts,
             }
 
             # TODO: Investigate fingerprint attribute availability on BaseAgent/LiteAgent
@@ -199,155 +496,191 @@ class ToolUsage:
                 event_data["task_name"] = self.task.name or self.task.description
                 event_data["task_id"] = str(self.task.id)
             crewai_event_bus.emit(self, ToolUsageStartedEvent(**event_data))
+            started_event_emitted = True
 
-        started_at = time.time()
         from_cache = False
         result = None  # type: ignore
+        should_retry = False
+        available_tool = None
+        error_event_emitted = False
 
-        if self.tools_handler and self.tools_handler.cache:
-            input_str = ""
-            if calling.arguments:
-                if isinstance(calling.arguments, dict):
-                    import json
+        try:
+            if self.tools_handler and self.tools_handler.cache:
+                input_str = ""
+                if calling.arguments:
+                    if isinstance(calling.arguments, dict):
+                        input_str = json.dumps(calling.arguments)
+                    else:
+                        input_str = str(calling.arguments)
 
-                    input_str = json.dumps(calling.arguments)
-                else:
-                    input_str = str(calling.arguments)
+                result = self.tools_handler.cache.read(
+                    tool=sanitize_tool_name(calling.tool_name), input=input_str
+                )  # type: ignore
+                from_cache = result is not None
 
-            result = self.tools_handler.cache.read(
-                tool=calling.tool_name, input=input_str
-            )  # type: ignore
-            from_cache = result is not None
+            available_tool = next(
+                (
+                    available_tool
+                    for available_tool in self.tools
+                    if sanitize_tool_name(available_tool.name)
+                    == sanitize_tool_name(tool.name)
+                ),
+                None,
+            )
 
-        available_tool = next(
-            (
-                available_tool
-                for available_tool in self.tools
-                if available_tool.name == tool.name
-            ),
-            None,
-        )
-
-        usage_limit_error = self._check_usage_limit(available_tool, tool.name)
-        if usage_limit_error:
-            try:
+            usage_limit_error = self._check_usage_limit(
+                available_tool, sanitize_tool_name(tool.name)
+            )
+            if usage_limit_error:
                 result = usage_limit_error
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                return self._format_result(result=result)
-            except Exception:
-                if self.task:
-                    self.task.increment_tools_errors()
-
-        if result is None:
-            try:
-                if calling.tool_name in [
-                    "Delegate work to coworker",
-                    "Ask question to coworker",
-                ]:
-                    coworker = (
-                        calling.arguments.get("coworker") if calling.arguments else None
-                    )
-                    if self.task:
-                        self.task.increment_delegations(coworker)
-
-                if calling.arguments:
-                    try:
-                        acceptable_args = tool.args_schema.model_json_schema()[
-                            "properties"
-                        ].keys()
-                        arguments = {
-                            k: v
-                            for k, v in calling.arguments.items()
-                            if k in acceptable_args
-                        }
-                        # Add fingerprint metadata if available
-                        arguments = self._add_fingerprint_metadata(arguments)
-                        result = tool.invoke(input=arguments)
-                    except Exception:
-                        arguments = calling.arguments
-                        # Add fingerprint metadata if available
-                        arguments = self._add_fingerprint_metadata(arguments)
-                        result = tool.invoke(input=arguments)
-                else:
-                    # Add fingerprint metadata even to empty arguments
-                    arguments = self._add_fingerprint_metadata({})
-                    result = tool.invoke(input=arguments)
-            except Exception as e:
-                self.on_tool_error(tool=tool, tool_calling=calling, e=e)
-                self._run_attempts += 1
-                if self._run_attempts > self._max_parsing_attempts:
-                    self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                    error_message = self._i18n.errors("tool_usage_exception").format(
-                        error=e, tool=tool.name, tool_inputs=tool.description
-                    )
-                    error = ToolUsageError(
-                        f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
-                    ).message
-                    if self.task:
-                        self.task.increment_tools_errors()
-                    if self.agent and self.agent.verbose:
-                        self._printer.print(
-                            content=f"\n\n{error_message}\n", color="red"
+                result = self._format_result(result=result)
+                # Don't return early - fall through to finally block
+            elif result is None:
+                try:
+                    if sanitize_tool_name(calling.tool_name) in [
+                        sanitize_tool_name("Delegate work to coworker"),
+                        sanitize_tool_name("Ask question to coworker"),
+                    ]:
+                        coworker = (
+                            calling.arguments.get("coworker")
+                            if calling.arguments
+                            else None
                         )
-                    return error
+                        if self.task:
+                            self.task.increment_delegations(coworker)
 
-                if self.task:
-                    self.task.increment_tools_errors()
-                return self.use(calling=calling, tool_string=tool_string)
+                    if calling.arguments:
+                        try:
+                            acceptable_args = tool.args_schema.model_json_schema()[
+                                "properties"
+                            ].keys()
+                            arguments = {
+                                k: v
+                                for k, v in calling.arguments.items()
+                                if k in acceptable_args
+                            }
+                            arguments = self._add_fingerprint_metadata(arguments)
+                            result = tool.invoke(input=arguments)
+                        except Exception:
+                            arguments = calling.arguments
+                            arguments = self._add_fingerprint_metadata(arguments)
+                            result = tool.invoke(input=arguments)
+                    else:
+                        arguments = self._add_fingerprint_metadata({})
+                        result = tool.invoke(input=arguments)
 
-            if self.tools_handler:
-                should_cache = True
-                if (
-                    hasattr(available_tool, "cache_function")
-                    and available_tool.cache_function
-                ):
-                    should_cache = available_tool.cache_function(
-                        calling.arguments, result
+                    if self.tools_handler:
+                        should_cache = True
+                        # Check cache_function on original tool (for tools converted via to_structured_tool)
+                        original_tool = getattr(available_tool, "_original_tool", None)
+                        cache_func = None
+                        if original_tool and hasattr(original_tool, "cache_function"):
+                            cache_func = original_tool.cache_function
+                        elif hasattr(available_tool, "cache_function"):
+                            cache_func = available_tool.cache_function
+
+                        if cache_func:
+                            should_cache = cache_func(calling.arguments, result)
+
+                        self.tools_handler.on_tool_use(
+                            calling=calling, output=result, should_cache=should_cache
+                        )
+
+                    self._telemetry.tool_usage(
+                        llm=self.function_calling_llm,
+                        tool_name=sanitize_tool_name(tool.name),
+                        attempts=self._run_attempts,
                     )
+                    result = self._format_result(result=result)
+                    data = {
+                        "result": result,
+                        "tool_name": sanitize_tool_name(tool.name),
+                        "tool_args": calling.arguments,
+                    }
 
-                self.tools_handler.on_tool_use(
-                    calling=calling, output=result, should_cache=should_cache
+                    if (
+                        hasattr(available_tool, "result_as_answer")
+                        and available_tool.result_as_answer
+                    ):
+                        result_as_answer = available_tool.result_as_answer
+                        data["result_as_answer"] = result_as_answer
+
+                    if self.agent and hasattr(self.agent, "tools_results"):
+                        self.agent.tools_results.append(data)
+
+                    if available_tool and hasattr(
+                        available_tool, "_increment_usage_count"
+                    ):
+                        # Use _increment_usage_count to sync count to original tool
+                        available_tool._increment_usage_count()
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+                    elif available_tool and hasattr(
+                        available_tool, "current_usage_count"
+                    ):
+                        available_tool.current_usage_count += 1
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+
+                except Exception as e:
+                    self.on_tool_error(tool=tool, tool_calling=calling, e=e)
+                    error_event_emitted = True
+                    self._run_attempts += 1
+                    if self._run_attempts > self._max_parsing_attempts:
+                        self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                        error_message = self._i18n.errors(
+                            "tool_usage_exception"
+                        ).format(
+                            error=e,
+                            tool=sanitize_tool_name(tool.name),
+                            tool_inputs=tool.description,
+                        )
+                        result = ToolUsageError(
+                            f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                        ).message
+                        if self.task:
+                            self.task.increment_tools_errors()
+                        if self.agent and self.agent.verbose:
+                            self._printer.print(
+                                content=f"\n\n{error_message}\n", color="red"
+                            )
+                    else:
+                        if self.task:
+                            self.task.increment_tools_errors()
+                        should_retry = True
+            else:
+                result = self._format_result(result=result)
+
+        finally:
+            if started_event_emitted and not error_event_emitted:
+                self.on_tool_use_finished(
+                    tool=tool,
+                    tool_calling=calling,
+                    from_cache=from_cache,
+                    started_at=started_at,
+                    result=result,
                 )
-        self._telemetry.tool_usage(
-            llm=self.function_calling_llm,
-            tool_name=tool.name,
-            attempts=self._run_attempts,
-        )
-        result = self._format_result(result=result)
-        data = {
-            "result": result,
-            "tool_name": tool.name,
-            "tool_args": calling.arguments,
-        }
 
-        self.on_tool_use_finished(
-            tool=tool,
-            tool_calling=calling,
-            from_cache=from_cache,
-            started_at=started_at,
-            result=result,
-        )
-
-        if (
-            hasattr(available_tool, "result_as_answer")
-            and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
-        ):
-            result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
-            data["result_as_answer"] = result_as_answer  # type: ignore
-
-        if self.agent and hasattr(self.agent, "tools_results"):
-            self.agent.tools_results.append(data)
-
-        if available_tool and hasattr(available_tool, "current_usage_count"):
-            available_tool.current_usage_count += 1
-            if (
-                hasattr(available_tool, "max_usage_count")
-                and available_tool.max_usage_count is not None
-            ):
-                self._printer.print(
-                    content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                    color="blue",
-                )
+        # Handle retry after finally block ensures finished event was emitted
+        if should_retry:
+            return self.use(calling=calling, tool_string=tool_string)
 
         return result
 
@@ -376,9 +709,10 @@ class ToolUsage:
         if not self.tools_handler:
             return False
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (
-                calling.arguments == last_tool_usage.arguments
-            )
+            return (
+                sanitize_tool_name(calling.tool_name)
+                == sanitize_tool_name(last_tool_usage.tool_name)
+            ) and (calling.arguments == last_tool_usage.arguments)
         return False
 
     @staticmethod
@@ -401,20 +735,19 @@ class ToolUsage:
         return None
 
     def _select_tool(self, tool_name: str) -> Any:
+        sanitized_input = sanitize_tool_name(tool_name)
         order_tools = sorted(
             self.tools,
             key=lambda tool: SequenceMatcher(
-                None, tool.name.lower().strip(), tool_name.lower().strip()
+                None, sanitize_tool_name(tool.name), sanitized_input
             ).ratio(),
             reverse=True,
         )
         for tool in order_tools:
+            sanitized_tool = sanitize_tool_name(tool.name)
             if (
-                tool.name.lower().strip() == tool_name.lower().strip()
-                or SequenceMatcher(
-                    None, tool.name.lower().strip(), tool_name.lower().strip()
-                ).ratio()
-                > 0.85
+                sanitized_tool == sanitized_input
+                or SequenceMatcher(None, sanitized_tool, sanitized_input).ratio() > 0.85
             ):
                 return tool
         if self.task:
@@ -499,7 +832,7 @@ class ToolUsage:
             return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
 
         return ToolCalling(
-            tool_name=tool.name,
+            tool_name=sanitize_tool_name(tool.name),
             arguments=arguments,
         )
 
@@ -563,15 +896,17 @@ class ToolUsage:
         # Attempt 4: Repair JSON
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
-            self._printer.print(
-                content=f"Repaired JSON: {repaired_input}", color="blue"
-            )
+            if self.agent and self.agent.verbose:
+                self._printer.print(
+                    content=f"Repaired JSON: {repaired_input}", color="blue"
+                )
             arguments = json.loads(repaired_input)
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
             error = f"Failed to repair JSON: {e}"
-            self._printer.print(content=error, color="red")
+            if self.agent and self.agent.verbose:
+                self._printer.print(content=error, color="red")
 
         error_message = (
             "Tool input must be a valid dictionary in JSON or Python literal format"
@@ -653,7 +988,7 @@ class ToolUsage:
         event_data = {
             "run_attempts": self._run_attempts,
             "delegations": self.task.delegations if self.task else 0,
-            "tool_name": tool.name,
+            "tool_name": sanitize_tool_name(tool.name),
             "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,
             "agent_key": (

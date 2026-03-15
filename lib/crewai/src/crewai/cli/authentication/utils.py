@@ -1,10 +1,12 @@
+from typing import Any
+
 import jwt
 from jwt import PyJWKClient
 
 
 def validate_jwt_token(
     jwt_token: str, jwks_url: str, issuer: str, audience: str
-) -> dict:
+) -> Any:
     """
     Verify the token's signature and claims using PyJWT.
     :param jwt_token: The JWT (JWS) string to validate.
@@ -24,6 +26,7 @@ def validate_jwt_token(
         _unverified_decoded_token = jwt.decode(
             jwt_token, options={"verify_signature": False}
         )
+
         return jwt.decode(
             jwt_token,
             signing_key.key,

@@ -1,0 +1,319 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: What is 10000 + 20000?
+      Use the sum_numbers tool to calculate this.\n\nThis is the expected criteria
+      for your final answer: The sum of the two numbers\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are Calculator. You are a calculator that adds numbers.\nYour
+      personal goal is: Calculate numbers accurately"}], "role": "user"}, "tools":
+      [{"functionDeclarations": [{"description": "Add two numbers together and return
+      the result", "name": "sum_numbers", "parameters": {"properties": {"a": {"description":
+      "The first number to add", "title": "A", "type": "NUMBER"}, "b": {"description":
+      "The second number to add", "title": "B", "type": "NUMBER"}}, "required": ["a",
+      "b"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '962'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"sum_numbers\",\n
+        \             \"args\": {\n                \"a\": 10000,\n                \"b\":
+        20000\n              }\n            }\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        -0.00059548033667462211\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        127,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 134,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 127\n
+        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash-001\",\n  \"responseId\": \"bLBzabiACaP3-8YP7s-P6QI\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 23 Jan 2026 17:31:24 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=673
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: What is 10000 + 20000?
+      Use the sum_numbers tool to calculate this.\n\nThis is the expected criteria
+      for your final answer: The sum of the two numbers\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"a": 10000, "b": 20000}, "name": "sum_numbers"}}], "role": "model"},
+      {"parts": [{"functionResponse": {"name": "sum_numbers", "response": {"result":
+      30000}}}], "role": "user"}, {"parts": [{"text": "Analyze the tool result. If
+      requirements are met, provide the Final Answer. Otherwise, call the next tool.
+      Deliver only the answer without meta-commentary."}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are Calculator. You are a calculator that adds numbers.\nYour
+      personal goal is: Calculate numbers accurately"}], "role": "user"}, "tools":
+      [{"functionDeclarations": [{"description": "Add two numbers together and return
+      the result", "name": "sum_numbers", "parameters": {"properties": {"a": {"description":
+      "The first number to add", "title": "A", "type": "NUMBER"}, "b": {"description":
+      "The second number to add", "title": "B", "type": "NUMBER"}}, "required": ["a",
+      "b"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1374'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\"\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 171,\n    \"totalTokenCount\": 171,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 171\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n  \"responseId\":
+        \"bLBzaaKgMc-ajrEPk7bIuQ8\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 23 Jan 2026 17:31:25 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=382
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: What is 10000 + 20000?
+      Use the sum_numbers tool to calculate this.\n\nThis is the expected criteria
+      for your final answer: The sum of the two numbers\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"a": 10000, "b": 20000}, "name": "sum_numbers"}}], "role": "model"},
+      {"parts": [{"functionResponse": {"name": "sum_numbers", "response": {"result":
+      30000}}}], "role": "user"}, {"parts": [{"text": "Analyze the tool result. If
+      requirements are met, provide the Final Answer. Otherwise, call the next tool.
+      Deliver only the answer without meta-commentary."}], "role": "user"}, {"parts":
+      [{"text": "\nCurrent Task: What is 10000 + 20000? Use the sum_numbers tool to
+      calculate this.\n\nThis is the expected criteria for your final answer: The
+      sum of the two numbers\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"}], "role": "user"}], "systemInstruction": {"parts": [{"text": "You are
+      Calculator. You are a calculator that adds numbers.\nYour personal goal is:
+      Calculate numbers accurately\n\nYou are Calculator. You are a calculator that
+      adds numbers.\nYour personal goal is: Calculate numbers accurately"}], "role":
+      "user"}, "tools": [{"functionDeclarations": [{"description": "Add two numbers
+      together and return the result", "name": "sum_numbers", "parameters": {"properties":
+      {"a": {"description": "The first number to add", "title": "A", "type": "NUMBER"},
+      "b": {"description": "The second number to add", "title": "B", "type": "NUMBER"}},
+      "required": ["a", "b"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1837'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\"\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 271,\n    \"totalTokenCount\": 271,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 271\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n  \"responseId\":
+        \"bbBzaczHDcW7jrEPgaj1CA\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 23 Jan 2026 17:31:25 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=410
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: What is 10000 + 20000?
+      Use the sum_numbers tool to calculate this.\n\nThis is the expected criteria
+      for your final answer: The sum of the two numbers\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"a": 10000, "b": 20000}, "name": "sum_numbers"}}], "role": "model"},
+      {"parts": [{"functionResponse": {"name": "sum_numbers", "response": {"result":
+      30000}}}], "role": "user"}, {"parts": [{"text": "Analyze the tool result. If
+      requirements are met, provide the Final Answer. Otherwise, call the next tool.
+      Deliver only the answer without meta-commentary."}], "role": "user"}, {"parts":
+      [{"text": "\nCurrent Task: What is 10000 + 20000? Use the sum_numbers tool to
+      calculate this.\n\nThis is the expected criteria for your final answer: The
+      sum of the two numbers\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"}], "role": "user"}, {"parts": [{"text": "\nCurrent Task: What is 10000
+      + 20000? Use the sum_numbers tool to calculate this.\n\nThis is the expected
+      criteria for your final answer: The sum of the two numbers\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nThis is VERY
+      important to you, your job depends on it!"}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are Calculator. You are a calculator that adds numbers.\nYour
+      personal goal is: Calculate numbers accurately\n\nYou are Calculator. You are
+      a calculator that adds numbers.\nYour personal goal is: Calculate numbers accurately\n\nYou
+      are Calculator. You are a calculator that adds numbers.\nYour personal goal
+      is: Calculate numbers accurately"}], "role": "user"}, "tools": [{"functionDeclarations":
+      [{"description": "Add two numbers together and return the result", "name": "sum_numbers",
+      "parameters": {"properties": {"a": {"description": "The first number to add",
+      "title": "A", "type": "NUMBER"}, "b": {"description": "The second number to
+      add", "title": "B", "type": "NUMBER"}}, "required": ["a", "b"], "type": "OBJECT"}}]}],
+      "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2300'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"\\n{\\\"sum_numbers_response\\\":
+        {\\\"result\\\": 30000}}\\n\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        -0.0038021293125654523\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        371,\n    \"candidatesTokenCount\": 19,\n    \"totalTokenCount\": 390,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 371\n
+        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 19\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash-001\",\n  \"responseId\": \"bbBzaauxJ_SgjrEP7onK2Ak\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 23 Jan 2026 17:31:26 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=454
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

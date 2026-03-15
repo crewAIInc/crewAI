@@ -11,7 +11,7 @@ from tests.utils import wait_for_event_handlers
 class TestTraceEnableDisable:
     """Test suite to verify trace sending behavior with VCR cassette recording."""
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_no_http_calls_when_disabled_via_env(self):
         """Test execution when tracing disabled via CREWAI_TRACING_ENABLED=false."""
         with pytest.MonkeyPatch.context() as mp:
@@ -36,7 +36,7 @@ class TestTraceEnableDisable:
 
             assert result is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_no_http_calls_when_disabled_via_tracing_false(self):
         """Test execution when tracing=False explicitly set."""
         with pytest.MonkeyPatch.context() as mp:
@@ -60,7 +60,7 @@ class TestTraceEnableDisable:
 
             assert result is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_trace_calls_when_enabled_via_env(self):
         """Test execution when tracing enabled via CREWAI_TRACING_ENABLED=true."""
         with pytest.MonkeyPatch.context() as mp:
@@ -86,7 +86,7 @@ class TestTraceEnableDisable:
 
             assert result is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_trace_calls_when_enabled_via_tracing_true(self):
         """Test execution when tracing=True explicitly set."""
         with pytest.MonkeyPatch.context() as mp:

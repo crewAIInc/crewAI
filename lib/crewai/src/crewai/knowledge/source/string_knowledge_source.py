@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -9,11 +11,11 @@ class StringKnowledgeSource(BaseKnowledgeSource):
     content: str = Field(...)
     collection_name: str | None = Field(default=None)
 
-    def model_post_init(self, _):
+    def model_post_init(self, _: Any) -> None:
         """Post-initialization method to validate content."""
         self.validate_content()
 
-    def validate_content(self):
+    def validate_content(self) -> None:
         """Validate string content."""
         if not isinstance(self.content, str):
             raise ValueError("StringKnowledgeSource only accepts string content")
@@ -23,6 +25,12 @@ class StringKnowledgeSource(BaseKnowledgeSource):
         new_chunks = self._chunk_text(self.content)
         self.chunks.extend(new_chunks)
         self._save_documents()
+
+    async def aadd(self) -> None:
+        """Add string content asynchronously."""
+        new_chunks = self._chunk_text(self.content)
+        self.chunks.extend(new_chunks)
+        await self._asave_documents()
 
     def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""

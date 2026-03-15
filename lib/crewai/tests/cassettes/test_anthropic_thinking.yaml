@@ -1,0 +1,99 @@
+interactions:
+- request:
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is the weather in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '185'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - Anthropic/Python 0.75.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 0.75.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_014wWkWnKNLNhQcqLxMvUTiK","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"The user is asking me about the current weather in Tokyo. However, I don''t have access to real-time information, including current weather conditions. I should let them know that I can''t provide current weather information and suggest how they could find this information.","signature":"ErkDCkYIChgCKkDiduUddGgXCWIg/nuNkG2kR6wjnlXvLGkU/CcdpCEhz0SCLTHai2HxOEJoGpUn3l7tNL63VeT1Lm88NBGOtGjDEgzSsdRRWuC29+bgbhsaDDgEiJz9iVaYNev8nCIwFTiJycqo+h2kh1Qd3kmN8WkjSGV63I8ywnu37HqI1H38/Xesgnjha0nrr54Z3CF1KqACrVAnAQMmHAbT7ra60xOadlbYdBay8IJqn0m+IjfTpCZv4686souruSCRvCg1FJSgjNlNuQ3kO/XemGwNLtCUwVvWm+PZEYAV+BuYILGLcsKQFcrrODWHobuR+RLkbwCxzWpO5qkldnom+8dqGLZ35KDx7O4XTBB2JjbmEqKEDAxm6lJT/amfs3845BXMt/VFk1JrvjvNSlevIxc7eG/V2hVRF4d8BxTfVIOB5gKGY57fOELYEP5paqWfUY4Ha8+T3ECXuWbYCDIP+d0WW30dRR4+tQq4eCf8tU8CEdJpvOHmLYxaSjGcep2p4c9sJfuIQsOD7WpEQYmx1qyK69BcsasZGRVZhGs3Ov7TfpnwnVs7Vx9brXLjPxaStJpr9nGrGAE="},{"type":"text","text":"I
+        don''t have access to real-time weather data, so I can''t tell you the current weather in Tokyo. \n\nTo get current weather information for Tokyo, you could:\n- Check weather websites like weather.com, accuweather.com, or weather.gov\n- Search \"Tokyo weather\" in any search engine\n- Use a weather app on your phone\n- Visit the Japan Meteorological Agency website (jma.go.jp)\n\nIs there anything else about Tokyo I can help you with?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":43,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":172,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - 9a4b033548b28ea2-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 26 Nov 2025 17:12:50 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - 32982f3d-354e-4063-a1d9-6e3e0361bcfe
+      anthropic-ratelimit-input-tokens-limit:
+      - '30000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '30000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2025-11-26T17:12:47Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '8000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '8000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2025-11-26T17:12:51Z'
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-11-26T17:12:46Z'
+      anthropic-ratelimit-tokens-limit:
+      - '38000'
+      anthropic-ratelimit-tokens-remaining:
+      - '38000'
+      anthropic-ratelimit-tokens-reset:
+      - '2025-11-26T17:12:47Z'
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - req_011CVWsgwRugLxGNv45mLXEL
+      retry-after:
+      - '13'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '4553'
+    status:
+      code: 200
+      message: OK
+version: 1

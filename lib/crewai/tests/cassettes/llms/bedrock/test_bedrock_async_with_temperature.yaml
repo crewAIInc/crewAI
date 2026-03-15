@@ -1,0 +1,41 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Say the word ''test''
+      once"}]}], "inferenceConfig": {"temperature": 0.1}}'
+    headers:
+      Content-Length:
+      - '124'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - attempt=1
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":654},"output":{"message":{"content":[{"text":"test"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":15,"outputTokens":4,"serverToolUsage":{},"totalTokens":19}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '205'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 08:51:02 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

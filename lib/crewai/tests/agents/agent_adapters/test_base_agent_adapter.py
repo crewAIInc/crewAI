@@ -51,6 +51,19 @@ class ConcreteAgentAdapter(BaseAgentAdapter):
         # Dummy implementation for MCP tools
         return []
 
+    def configure_structured_output(self, task: Any) -> None:
+        # Dummy implementation for structured output
+        pass
+
+    async def aexecute_task(
+        self,
+        task: Any,
+        context: str | None = None,
+        tools: list[Any] | None = None,
+    ) -> str:
+        # Dummy async implementation
+        return "Task executed"
+
 
 def test_base_agent_adapter_initialization():
     """Test initialization of the concrete agent adapter."""

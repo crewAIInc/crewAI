@@ -116,29 +116,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BFQepLwSYYzdKLylSFsgcJeg6GTqS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743017091,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to examine the product
-      image to assess the quality of materials, look for any manufacturing defects,
-      and check compliance with standards.\\n\\nAction: Add image to content\\nAction
-      Input: {\\\"image_url\\\": \\\"https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244\\\",
-      \\\"action\\\": \\\"Analyze the quality of materials, manufacturing defects,
-      and compliance with standards.\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 413,\n    \"completion_tokens\":
-      101,\n    \"total_tokens\": 514,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_7e8d90e604\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BFQepLwSYYzdKLylSFsgcJeg6GTqS\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1743017091,\n  \"model\": \"gpt-4o-2024-08-06\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I need to\
+        \ examine the product image to assess the quality of materials, look for any\
+        \ manufacturing defects, and check compliance with standards.\\n\\nAction:\
+        \ Add image to content\\nAction Input: {\\\"image_url\\\": \\\"https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244\\\
+        \", \\\"action\\\": \\\"Analyze the quality of materials, manufacturing defects,\
+        \ and compliance with standards.\\\"}\",\n        \"refusal\": null,\n   \
+        \     \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 413,\n   \
+        \ \"completion_tokens\": 101,\n    \"total_tokens\": 514,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_7e8d90e604\"\n}\n"
     headers:
       CF-RAY:
       - 926907d79dcff1e7-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -183,8 +183,9 @@ interactions:
       - 0s
       x-request-id:
       - req_2399c3355adf16734907c73611a7d330
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       CtgBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSrwEKEgoQY3Jld2FpLnRl
@@ -294,41 +295,42 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BFQetNNvmPgPxhzaKiHYsPqm8aN0i\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743017095,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Observation: The image displays a black
-      leather boot with a pointed toe and a low heel. \\n\\nQuality of Materials:\\n1.
-      The leather appears to be of good quality, displaying a consistent texture and
-      finish, which suggests durability.\\n2. The material has a slight sheen, indicating
-      a possible finishing treatment that enhances the appearance and may offer some
-      protection.\\n\\nManufacturing Defects:\\n1. There are no visible stitching
-      errors; the seams appear straight and clean.\\n2. No apparent glue marks or
-      uneven edges, which indicates good craftsmanship.\\n3. There is a slight distressed
-      effect, but it appears intentional as part of the design rather than a defect.\\n\\nCompliance
-      with Standards:\\n1. The shoe design seems to comply with typical fashion standards,
-      showing a balance of aesthetics and functionality.\\n2. The heel height and
-      shape appear to provide stability, aligning with safety standards for footwear.\\n\\nFinal
-      Answer: The analysis of the product image reveals that the black leather boot
-      is made of high-quality materials with no visible manufacturing defects. The
-      craftsmanship is precise, with clean seams and a well-executed design. The distressed
-      effect appears intentional and part of the aesthetic. The boot seems to comply
-      with fashion and safety standards, offering both style and functionality. No
-      significant issues were found.\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1300,\n    \"completion_tokens\":
-      250,\n    \"total_tokens\": 1550,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_3a5b33c01a\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BFQetNNvmPgPxhzaKiHYsPqm8aN0i\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1743017095,\n  \"model\": \"gpt-4o-2024-08-06\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Observation: The image\
+        \ displays a black leather boot with a pointed toe and a low heel. \\n\\nQuality\
+        \ of Materials:\\n1. The leather appears to be of good quality, displaying\
+        \ a consistent texture and finish, which suggests durability.\\n2. The material\
+        \ has a slight sheen, indicating a possible finishing treatment that enhances\
+        \ the appearance and may offer some protection.\\n\\nManufacturing Defects:\\\
+        n1. There are no visible stitching errors; the seams appear straight and clean.\\\
+        n2. No apparent glue marks or uneven edges, which indicates good craftsmanship.\\\
+        n3. There is a slight distressed effect, but it appears intentional as part\
+        \ of the design rather than a defect.\\n\\nCompliance with Standards:\\n1.\
+        \ The shoe design seems to comply with typical fashion standards, showing\
+        \ a balance of aesthetics and functionality.\\n2. The heel height and shape\
+        \ appear to provide stability, aligning with safety standards for footwear.\\\
+        n\\nFinal Answer: The analysis of the product image reveals that the black\
+        \ leather boot is made of high-quality materials with no visible manufacturing\
+        \ defects. The craftsmanship is precise, with clean seams and a well-executed\
+        \ design. The distressed effect appears intentional and part of the aesthetic.\
+        \ The boot seems to comply with fashion and safety standards, offering both\
+        \ style and functionality. No significant issues were found.\",\n        \"\
+        refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\"\
+        : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n\
+        \    \"prompt_tokens\": 1300,\n    \"completion_tokens\": 250,\n    \"total_tokens\"\
+        : 1550,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n \
+        \     \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_3a5b33c01a\"\n}\n"
     headers:
       CF-RAY:
       - 926907e45f33f1e7-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -373,6 +375,7 @@ interactions:
       - 0s
       x-request-id:
       - req_c5dd144c8ac1bb3bd96ffbba40707b2d
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

@@ -19,6 +19,7 @@ O CrewAI AMP inclui um Construtor Visual de Tarefas no Crew Studio, que simplifi
 ![Task Builder Screenshot](/images/enterprise/crew-studio-interface.png)
 
 O Construtor Visual de Tarefas permite:
+
 - Criação de tarefas via arrastar-e-soltar
 - Visualização de dependências e fluxo de tarefas
 - Testes e validações em tempo real
@@ -28,10 +29,12 @@ O Construtor Visual de Tarefas permite:
 ### Fluxo de Execução de Tarefas
 
 As tarefas podem ser executadas de duas maneiras:
+
 - **Sequencial**: As tarefas são executadas na ordem em que são definidas
 - **Hierárquica**: As tarefas são atribuídas aos agentes com base em seus papéis e especialidades
 
 O fluxo de execução é definido ao criar o crew:
+
 ```python Code
 crew = Crew(
     agents=[agent1, agent2],
@@ -42,25 +45,25 @@ crew = Crew(
 
 ## Atributos da Tarefa
 
-| Atributo                         | Parâmetros        | Tipo                         | Descrição                                                                                                          |
-| :------------------------------- | :---------------- | :--------------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| **Descrição**                    | `description`     | `str`                        | Uma declaração clara e concisa do que a tarefa envolve.                                                            |
-| **Saída Esperada**               | `expected_output` | `str`                        | Uma descrição detalhada de como deve ser o resultado da tarefa concluída.                                          |
-| **Nome** _(opcional)_            | `name`            | `Optional[str]`              | Um identificador de nome para a tarefa.                                                                            |
-| **Agente** _(opcional)_          | `agent`           | `Optional[BaseAgent]`        | O agente responsável por executar a tarefa.                                                                        |
-| **Ferramentas** _(opcional)_     | `tools`           | `List[BaseTool]`             | As ferramentas/recursos que o agente pode usar para esta tarefa.                                                   |
-| **Contexto** _(opcional)_        | `context`         | `Optional[List["Task"]]`     | Outras tarefas cujas saídas serão usadas como contexto para esta tarefa.                                           |
-| **Execução Assíncrona** _(opc.)_ | `async_execution` | `Optional[bool]`             | Se a tarefa deve ser executada de forma assíncrona. O padrão é False.                                              |
-| **Input Humano** _(opcional)_    | `human_input`     | `Optional[bool]`             | Se a tarefa deve ter uma revisão humana da resposta final do agente. O padrão é False.                             |
-| **Markdown** _(opcional)_        | `markdown`        | `Optional[bool]`             | Se a tarefa deve instruir o agente a retornar a resposta final formatada em Markdown. O padrão é False.            |
-| **Config** _(opcional)_          | `config`          | `Optional[Dict[str, Any]]`   | Parâmetros de configuração específicos da tarefa.                                                                  |
-| **Arquivo de Saída** _(opcional)_| `output_file`     | `Optional[str]`              | Caminho do arquivo para armazenar a saída da tarefa.                                                               |
-| **Criar Diretório** _(opcional)_ | `create_directory` | `Optional[bool]`            | Se deve criar o diretório para output_file caso não exista. O padrão é True.                                       |
-| **Saída JSON** _(opcional)_      | `output_json`     | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para estruturar a saída em JSON.                                                                |
-| **Output Pydantic** _(opcional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para a saída da tarefa.                                                                         |
-| **Callback** _(opcional)_        | `callback`        | `Optional[Any]`              | Função/objeto a ser executado após a conclusão da tarefa.                                                          |
-| **Guardrail** _(opcional)_       | `guardrail`       | `Optional[Callable]`             | Função para validar a saída da tarefa antes de prosseguir para a próxima tarefa.                                |
-| **Max Tentativas Guardrail** _(opcional)_ | `guardrail_max_retries` | `Optional[int]`    | Número máximo de tentativas quando a validação do guardrail falha. Padrão é 3.                                   |
+| Atributo                                  | Parâmetros              | Tipo                        | Descrição                                                                                               |
+| :---------------------------------------- | :---------------------- | :-------------------------- | :------------------------------------------------------------------------------------------------------ |
+| **Descrição**                             | `description`           | `str`                       | Uma declaração clara e concisa do que a tarefa envolve.                                                 |
+| **Saída Esperada**                        | `expected_output`       | `str`                       | Uma descrição detalhada de como deve ser o resultado da tarefa concluída.                               |
+| **Nome** _(opcional)_                     | `name`                  | `Optional[str]`             | Um identificador de nome para a tarefa.                                                                 |
+| **Agente** _(opcional)_                   | `agent`                 | `Optional[BaseAgent]`       | O agente responsável por executar a tarefa.                                                             |
+| **Ferramentas** _(opcional)_              | `tools`                 | `List[BaseTool]`            | As ferramentas/recursos que o agente pode usar para esta tarefa.                                        |
+| **Contexto** _(opcional)_                 | `context`               | `Optional[List["Task"]]`    | Outras tarefas cujas saídas serão usadas como contexto para esta tarefa.                                |
+| **Execução Assíncrona** _(opc.)_          | `async_execution`       | `Optional[bool]`            | Se a tarefa deve ser executada de forma assíncrona. O padrão é False.                                   |
+| **Input Humano** _(opcional)_             | `human_input`           | `Optional[bool]`            | Se a tarefa deve ter uma revisão humana da resposta final do agente. O padrão é False.                  |
+| **Markdown** _(opcional)_                 | `markdown`              | `Optional[bool]`            | Se a tarefa deve instruir o agente a retornar a resposta final formatada em Markdown. O padrão é False. |
+| **Config** _(opcional)_                   | `config`                | `Optional[Dict[str, Any]]`  | Parâmetros de configuração específicos da tarefa.                                                       |
+| **Arquivo de Saída** _(opcional)_         | `output_file`           | `Optional[str]`             | Caminho do arquivo para armazenar a saída da tarefa.                                                    |
+| **Criar Diretório** _(opcional)_          | `create_directory`      | `Optional[bool]`            | Se deve criar o diretório para output_file caso não exista. O padrão é True.                            |
+| **Saída JSON** _(opcional)_               | `output_json`           | `Optional[Type[BaseModel]]` | Um modelo Pydantic para estruturar a saída em JSON.                                                     |
+| **Output Pydantic** _(opcional)_          | `output_pydantic`       | `Optional[Type[BaseModel]]` | Um modelo Pydantic para a saída da tarefa.                                                              |
+| **Callback** _(opcional)_                 | `callback`              | `Optional[Any]`             | Função/objeto a ser executado após a conclusão da tarefa.                                               |
+| **Guardrail** _(opcional)_                | `guardrail`             | `Optional[Callable]`        | Função para validar a saída da tarefa antes de prosseguir para a próxima tarefa.                        |
+| **Max Tentativas Guardrail** _(opcional)_ | `guardrail_max_retries` | `Optional[int]`             | Número máximo de tentativas quando a validação do guardrail falha. Padrão é 3.                          |
 
 ## Criando Tarefas
 
@@ -81,7 +84,7 @@ crew.kickoff(inputs={'topic': 'AI Agents'})
 
 Veja um exemplo de configuração de tarefas usando YAML:
 
-```yaml tasks.yaml
+````yaml tasks.yaml
 research_task:
   description: >
     Realize uma pesquisa detalhada sobre {topic}
@@ -101,7 +104,7 @@ reporting_task:
   agent: reporting_analyst
   markdown: true
   output_file: report.md
-```
+````
 
 Para usar essa configuração YAML em seu código, crie uma classe crew que herda de `CrewBase`:
 
@@ -159,7 +162,8 @@ class LatestAiDevelopmentCrew():
 ```
 
 <Note>
-Os nomes usados em seus arquivos YAML (`agents.yaml` e `tasks.yaml`) devem corresponder aos nomes dos métodos no seu código Python.
+  Os nomes usados em seus arquivos YAML (`agents.yaml` e `tasks.yaml`) devem
+  corresponder aos nomes dos métodos no seu código Python.
 </Note>
 
 ### Definição Direta no Código (Alternativa)
@@ -196,7 +200,8 @@ reporting_task = Task(
 ```
 
 <Tip>
-  Especifique diretamente um `agent` para a tarefa ou permita que o processo `hierarchical` do CrewAI decida com base em papéis, disponibilidade, etc.
+  Especifique diretamente um `agent` para a tarefa ou permita que o processo
+  `hierarchical` do CrewAI decida com base em papéis, disponibilidade, etc.
 </Tip>
 
 ## Saída da Tarefa
@@ -209,22 +214,22 @@ Por padrão, o `TaskOutput` incluirá apenas a saída `raw`. Um `TaskOutput` só
 
 ### Atributos do Task Output
 
-| Atributo          | Parâmetros     | Tipo                       | Descrição                                                                                   |
-| :---------------- | :------------- | :------------------------- | :------------------------------------------------------------------------------------------ |
-| **Description**   | `description`  | `str`                      | Descrição da tarefa.                                                                        |
-| **Summary**       | `summary`      | `Optional[str]`            | Resumo da tarefa, gerado automaticamente a partir das primeiras 10 palavras da descrição.   |
-| **Raw**           | `raw`          | `str`                      | Saída bruta da tarefa. Este é o formato padrão da saída.                                    |
-| **Pydantic**      | `pydantic`     | `Optional[BaseModel]`      | Objeto modelo Pydantic representando a saída da tarefa de forma estruturada.                |
-| **JSON Dict**     | `json_dict`    | `Optional[Dict[str, Any]]` | Dicionário representando a saída da tarefa em JSON.                                         |
-| **Agent**         | `agent`        | `str`                      | O agente que executou a tarefa.                                                             |
-| **Output Format** | `output_format`| `OutputFormat`             | O formato da saída da tarefa, podendo ser RAW, JSON e Pydantic. O padrão é RAW.             |
+| Atributo          | Parâmetros      | Tipo                       | Descrição                                                                                 |
+| :---------------- | :-------------- | :------------------------- | :---------------------------------------------------------------------------------------- |
+| **Description**   | `description`   | `str`                      | Descrição da tarefa.                                                                      |
+| **Summary**       | `summary`       | `Optional[str]`            | Resumo da tarefa, gerado automaticamente a partir das primeiras 10 palavras da descrição. |
+| **Raw**           | `raw`           | `str`                      | Saída bruta da tarefa. Este é o formato padrão da saída.                                  |
+| **Pydantic**      | `pydantic`      | `Optional[BaseModel]`      | Objeto modelo Pydantic representando a saída da tarefa de forma estruturada.              |
+| **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | Dicionário representando a saída da tarefa em JSON.                                       |
+| **Agent**         | `agent`         | `str`                      | O agente que executou a tarefa.                                                           |
+| **Output Format** | `output_format` | `OutputFormat`             | O formato da saída da tarefa, podendo ser RAW, JSON e Pydantic. O padrão é RAW.           |
 
 ### Métodos e Propriedades da Tarefa
 
-| Método/Propriedade | Descrição                                                                                       |
-| :----------------- | :--------------------------------------------------------------------------------------------- |
-| **json**           | Retorna a representação da saída da tarefa em JSON como string, se o formato de saída for JSON.|
-| **to_dict**        | Converte as saídas JSON e Pydantic para um dicionário.                                         |
+| Método/Propriedade | Descrição                                                                                            |
+| :----------------- | :--------------------------------------------------------------------------------------------------- |
+| **json**           | Retorna a representação da saída da tarefa em JSON como string, se o formato de saída for JSON.      |
+| **to_dict**        | Converte as saídas JSON e Pydantic para um dicionário.                                               |
 | **str**            | Retorna a representação em string da saída da tarefa, priorizando Pydantic, depois JSON, depois raw. |
 
 ### Acessando Saídas das Tarefas
@@ -280,12 +285,13 @@ formatted_task = Task(
 ```
 
 Quando `markdown=True`, o agente recebe instruções extras para formatar a saída usando:
+
 - `#` para títulos
 - `**texto**` para negrito
 - `*texto*` para itálico
 - `-` ou `*` para bullet points
 - `` `código` `` para código inline
-- ``` ```linguagem ``` para blocos de código
+- ` `linguagem ``` para blocos de código
 
 ### Configuração YAML com Markdown
 
@@ -296,7 +302,7 @@ analysis_task:
   expected_output: >
     Uma análise completa com gráficos e descobertas-chave
   agent: analyst
-  markdown: true  # Habilita formatação em markdown
+  markdown: true # Habilita formatação em markdown
   output_file: analysis.md
 ```
 
@@ -308,7 +314,9 @@ analysis_task:
 - **Compatibilidade Multi-plataforma**: Markdown é universalmente suportado
 
 <Note>
-As instruções de formatação em markdown são adicionadas automaticamente ao prompt da tarefa quando `markdown=True`, então não é necessário detalhar os requisitos de formatação na descrição da tarefa.
+  As instruções de formatação em markdown são adicionadas automaticamente ao
+  prompt da tarefa quando `markdown=True`, então não é necessário detalhar os
+  requisitos de formatação na descrição da tarefa.
 </Note>
 
 ## Dependências de Tarefas e Contexto
@@ -368,6 +376,7 @@ blog_task = Task(
 ### Requisitos da Função Guardrail
 
 1. **Assinatura da Função**:
+
    - Deve aceitar exatamente um parâmetro (a saída da tarefa)
    - Deve retornar uma tupla `(bool, Any)`
    - Type hints são recomendados, mas opcionais
@@ -376,11 +385,10 @@ blog_task = Task(
    - Em caso de sucesso: retorna uma tupla `(True, resultado_validado)`
    - Em caso de falha: retorna uma tupla `(False, "mensagem de erro explicando a falha")`
 
-
-
 ### Melhores Práticas de Tratamento de Erros
 
 1. **Respostas de Erro Estruturadas**:
+
 ```python Code
 from crewai import TaskOutput, LLMGuardrail
 
@@ -396,11 +404,13 @@ def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
 ```
 
 2. **Categorias de Erro**:
+
    - Use códigos de erro específicos
    - Inclua contexto relevante
    - Forneça feedback acionável
 
 3. **Cadeia de Validação**:
+
 ```python Code
 from typing import Any, Dict, List, Tuple, Union
 from crewai import TaskOutput
@@ -427,6 +437,7 @@ def complex_validation(result: TaskOutput) -> Tuple[bool, Any]:
 ### Tratamento dos Resultados do Guardrail
 
 Quando um guardrail retorna `(False, erro)`:
+
 1. O erro é enviado de volta para o agente
 2. O agente tenta corrigir o problema
 3. O processo se repete até:
@@ -434,6 +445,7 @@ Quando um guardrail retorna `(False, erro)`:
    - O número máximo de tentativas ser atingido
 
 Exemplo com manipulação de tentativas:
+
 ```python Code
 from typing import Optional, Tuple, Union
 from crewai import TaskOutput, Task
@@ -459,10 +471,12 @@ task = Task(
 ## Obtendo Saídas Estruturadas e Consistentes das Tarefas
 
 <Note>
-É importante também observar que a saída da última tarefa de um crew se torna a saída final do próprio crew.
+  É importante também observar que a saída da última tarefa de um crew se torna
+  a saída final do próprio crew.
 </Note>
 
 ### Usando `output_pydantic`
+
 A propriedade `output_pydantic` permite que você defina um modelo Pydantic que a saída da tarefa deve seguir. Isso garante que a saída seja não apenas estruturada, mas também validada de acordo com o modelo.
 
 Veja um exemplo de uso do output_pydantic:
@@ -532,18 +546,22 @@ print("Acessando propriedades - Opção 5")
 print("Blog:", result)
 
 ```
+
 Neste exemplo:
-* Um modelo Pydantic Blog é definido com os campos title e content.
-* A tarefa task1 utiliza a propriedade output_pydantic para especificar que sua saída deve seguir o modelo Blog.
-* Após executar o crew, você pode acessar a saída estruturada de várias formas, como mostrado.
+
+- Um modelo Pydantic Blog é definido com os campos title e content.
+- A tarefa task1 utiliza a propriedade output_pydantic para especificar que sua saída deve seguir o modelo Blog.
+- Após executar o crew, você pode acessar a saída estruturada de várias formas, como mostrado.
 
 #### Explicação sobre o acesso à saída
-1. Indexação estilo dicionário: Acesse os campos diretamente usando result["nome_do_campo"]. Isso funciona porque a classe CrewOutput implementa o método __getitem__.
+
+1. Indexação estilo dicionário: Acesse os campos diretamente usando result["nome_do_campo"]. Isso funciona porque a classe CrewOutput implementa o método **getitem**.
 2. Diretamente do modelo Pydantic: Acesse os atributos diretamente do objeto result.pydantic.
 3. Usando o método to_dict(): Converta a saída para um dicionário e acesse os campos.
 4. Imprimindo o objeto inteiro: Simplesmente imprima o objeto result para ver a saída estruturada.
 
 ### Usando `output_json`
+
 A propriedade `output_json` permite definir o formato de saída esperado em JSON. Isso garante que a saída da tarefa seja uma estrutura JSON válida que pode ser facilmente analisada e utilizada na aplicação.
 
 Veja um exemplo de uso do `output_json`:
@@ -603,14 +621,15 @@ print("Blog:", result)
 ```
 
 Neste exemplo:
-* Um modelo Pydantic Blog é definido com os campos title e content, usado para especificar a estrutura do JSON de saída.
-* A tarefa task1 utiliza a propriedade output_json para indicar que espera uma saída JSON que segue o modelo Blog.
-* Após executar o crew, você pode acessar a saída estruturada em JSON conforme demonstrado.
+
+- Um modelo Pydantic Blog é definido com os campos title e content, usado para especificar a estrutura do JSON de saída.
+- A tarefa task1 utiliza a propriedade output_json para indicar que espera uma saída JSON que segue o modelo Blog.
+- Após executar o crew, você pode acessar a saída estruturada em JSON conforme demonstrado.
 
 #### Explicação sobre o acesso à saída
 
-1. Acessando propriedades via indexação de dicionário: Você pode acessar os campos diretamente usando result["nome_do_campo"]. Isso é possível pois a classe CrewOutput implementa o método __getitem__, permitindo tratar a saída como um dicionário. Nesse caso, estamos acessando title e content do resultado.
-2. Imprimindo o objeto Blog inteiro: Ao imprimir result, você obterá a representação em string do objeto CrewOutput. Como o método __str__ é implementado para retornar a saída em JSON, isso exibirá toda a saída como uma string formatada representando o objeto Blog.
+1. Acessando propriedades via indexação de dicionário: Você pode acessar os campos diretamente usando result["nome_do_campo"]. Isso é possível pois a classe CrewOutput implementa o método **getitem**, permitindo tratar a saída como um dicionário. Nesse caso, estamos acessando title e content do resultado.
+2. Imprimindo o objeto Blog inteiro: Ao imprimir result, você obterá a representação em string do objeto CrewOutput. Como o método **str** é implementado para retornar a saída em JSON, isso exibirá toda a saída como uma string formatada representando o objeto Blog.
 
 ---
 
@@ -827,8 +846,6 @@ task = Task(
 )
 ```
 
-
-
 ```python Code
 @CrewBase
 class InternalCrew:
@@ -872,6 +889,7 @@ task = Task(
 ### Casos Comuns de Uso
 
 #### Validação de Formato de Dados
+
 ```python Code
 def validate_email_format(result: str) -> Tuple[bool, Union[str, str]]:
     """Garante que a saída contenha um e-mail válido."""
@@ -883,6 +901,7 @@ def validate_email_format(result: str) -> Tuple[bool, Union[str, str]]:
 ```
 
 #### Filtragem de Conteúdo
+
 ```python Code
 def filter_sensitive_info(result: str) -> Tuple[bool, Union[str, str]]:
     """Remove ou valida informações sensíveis."""
@@ -894,6 +913,7 @@ def filter_sensitive_info(result: str) -> Tuple[bool, Union[str, str]]:
 ```
 
 #### Transformação de Dados
+
 ```python Code
 def normalize_phone_number(result: str) -> Tuple[bool, Union[str, str]]:
     """Garante que números de telefone estejam em formato consistente."""
@@ -908,6 +928,7 @@ def normalize_phone_number(result: str) -> Tuple[bool, Union[str, str]]:
 ### Recursos Avançados
 
 #### Encadeando Múltiplas Validações
+
 ```python Code
 def chain_validations(*validators):
     """Encadeia múltiplos validadores."""
@@ -932,6 +953,7 @@ task = Task(
 ```
 
 #### Lógica Customizada de Retentativas
+
 ```python Code
 task = Task(
     description="Gerar dados",
@@ -987,7 +1009,7 @@ analysis_task:
     Um relatório financeiro abrangente com insights trimestrais
   agent: financial_analyst
   output_file: reports/quarterly/q4_2024_analysis.pdf
-  create_directory: true  # Criar automaticamente o diretório 'reports/quarterly/'
+  create_directory: true # Criar automaticamente o diretório 'reports/quarterly/'
 
 audit_task:
   description: >
@@ -996,18 +1018,20 @@ audit_task:
     Um relatório de auditoria de conformidade
   agent: auditor
   output_file: audit/compliance_report.md
-  create_directory: false  # O diretório já deve existir
+  create_directory: false # O diretório já deve existir
 ```
 
 ### Casos de Uso
 
 **Criação Automática de Diretórios (`create_directory=True`):**
+
 - Ambientes de desenvolvimento e prototipagem
 - Geração dinâmica de relatórios com pastas baseadas em datas
 - Fluxos de trabalho automatizados onde a estrutura de diretórios pode variar
 - Aplicações multi-tenant com pastas específicas do usuário
 
 **Gerenciamento Manual de Diretórios (`create_directory=False`):**
+
 - Ambientes de produção com controles rígidos do sistema de arquivos
 - Aplicações sensíveis à segurança onde diretórios devem ser pré-configurados
 - Sistemas com requisitos específicos de permissão

@@ -31,7 +31,8 @@ You can configure users and roles in Settings → Roles.
     Go to <b>Settings → Roles</b> in CrewAI AMP.
   </Step>
   <Step title="Choose a role type">
-    Use a predefined role (<b>Owner</b>, <b>Member</b>) or click <b>Create role</b> to define a custom one.
+    Use a predefined role (<b>Owner</b>, <b>Member</b>) or click{" "}
+    <b>Create role</b> to define a custom one.
   </Step>
   <Step title="Assign to members">
     Select users and assign the role. You can change this anytime.
@@ -40,10 +41,10 @@ You can configure users and roles in Settings → Roles.
 
 ### Configuration summary
 
-| Area | Where to configure | Options |
-|:---|:---|:---|
-| Users & Roles | Settings → Roles | Predefined: Owner, Member; Custom roles |
-| Automation visibility | Automation → Settings → Visibility | Private; Whitelist users/roles |
+| Area                  | Where to configure                 | Options                                 |
+| :-------------------- | :--------------------------------- | :-------------------------------------- |
+| Users & Roles         | Settings → Roles                   | Predefined: Owner, Member; Custom roles |
+| Automation visibility | Automation → Settings → Visibility | Private; Whitelist users/roles          |
 
 ## Automation‑level Access Control
 
@@ -70,26 +71,30 @@ You can configure automation‑level access control in Automation → Settings �
     Navigate to <b>Automation → Settings → Visibility</b>.
   </Step>
   <Step title="Set visibility">
-    Choose <b>Private</b> to restrict access. The organization owner always retains access.
+    Choose <b>Private</b> to restrict access. The organization owner always
+    retains access.
   </Step>
   <Step title="Whitelist access">
-    Add specific users and roles allowed to view, run, and access logs/metrics/settings.
+    Add specific users and roles allowed to view, run, and access
+    logs/metrics/settings.
   </Step>
   <Step title="Save and verify">
-    Save changes, then confirm that non‑whitelisted users cannot view or run the automation.
+    Save changes, then confirm that non‑whitelisted users cannot view or run the
+    automation.
   </Step>
 </Steps>
 
 ### Private visibility: access outcomes
 
-| Action | Owner | Whitelisted user/role | Not whitelisted |
-|:---|:---|:---|:---|
-| View automation | ✓ | ✓ | ✗ |
-| Run automation/API | ✓ | ✓ | ✗ |
-| Access logs/metrics/settings | ✓ | ✓ | ✗ |
+| Action                       | Owner | Whitelisted user/role | Not whitelisted |
+| :--------------------------- | :---- | :-------------------- | :-------------- |
+| View automation              | ✓     | ✓                     | ✗               |
+| Run automation/API           | ✓     | ✓                     | ✗               |
+| Access logs/metrics/settings | ✓     | ✓                     | ✗               |
 
 <Tip>
-The organization owner always has access. In private mode, only whitelisted users and roles can view, run, and access logs/metrics/settings.
+  The organization owner always has access. In private mode, only whitelisted
+  users and roles can view, run, and access logs/metrics/settings.
 </Tip>
 
 <Frame>

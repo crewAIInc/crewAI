@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Literal
+import re
+from typing import Any, Final, Literal
 import uuid
 
 from pydantic import (
@@ -34,6 +35,11 @@ from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
+
+
+_SLUG_RE: Final[re.Pattern[str]] = re.compile(
+    r"^(?:crewai-amp:)?[a-zA-Z0-9][a-zA-Z0-9_-]*(?:#[\w-]+)?$"
+)
 
 
 PlatformApp = Literal[
@@ -197,7 +203,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     )
     mcps: list[str | MCPServerConfig] | None = Field(
         default=None,
-        description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
+        description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
+    )
+    memory: Any = Field(
+        default=None,
+        description=(
+            "Enable agent memory. Pass True for default Memory(), "
+            "or a Memory/MemoryScope/MemorySlice instance for custom configuration. "
+            "If not set, falls back to crew memory."
+        ),
     )
 
     @model_validator(mode="before")
@@ -265,17 +279,19 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if not mcps:
             return mcps
 
-        validated_mcps = []
+        validated_mcps: list[str | MCPServerConfig] = []
         for mcp in mcps:
             if isinstance(mcp, str):
-                if mcp.startswith(("https://", "crewai-amp:")):
+                if mcp.startswith("https://"):
+                    validated_mcps.append(mcp)
+                elif _SLUG_RE.match(mcp):
                     validated_mcps.append(mcp)
                 else:
                     raise ValueError(
-                        f"Invalid MCP reference: {mcp}. "
-                        "String references must start with 'https://' or 'crewai-amp:'"
+                        f"Invalid MCP reference: {mcp!r}. "
+                        "String references must be an 'https://' URL or a valid "
+                        "slug (e.g. 'notion', 'notion#search', 'crewai-amp:notion')."
                     )
-
             elif isinstance(mcp, (MCPServerConfig)):
                 validated_mcps.append(mcp)
             else:
@@ -329,6 +345,17 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self._token_process = TokenProcess()
         return self
 
+    @model_validator(mode="after")
+    def resolve_memory(self) -> Self:
+        """Resolve memory field: True creates a default Memory(), instance is used as-is."""
+        if self.memory is True:
+            from crewai.memory.unified_memory import Memory
+
+            self.memory = Memory()
+        elif self.memory is False:
+            self.memory = None
+        return self
+
     @property
     def key(self) -> str:
         source = [
@@ -346,6 +373,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         tools: list[BaseTool] | None = None,
     ) -> str:
         pass
+
+    @abstractmethod
+    async def aexecute_task(
+        self,
+        task: Any,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
+    ) -> str:
+        """Execute a task asynchronously."""
 
     @abstractmethod
     def create_agent_executor(self, tools: list[BaseTool] | None = None) -> None:
@@ -448,7 +484,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
-        self.create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -458,7 +493,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            self.create_agent_executor()
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         pass

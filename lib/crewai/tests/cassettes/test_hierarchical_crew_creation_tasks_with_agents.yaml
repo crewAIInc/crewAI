@@ -75,21 +75,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cGCrFQBV98D4Ssp80RuBIRGPj1\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214248,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To ensure that the paragraph
-      about AI is amazing and meets the specified criteria, I should delegate this
-      task to the Senior Writer, providing them with all the necessary details and
-      context.\\n\\nAction: Delegate work to coworker\\nAction Input: {\\\"task\\\":
-      \\\"Write one amazing paragraph about AI.\\\", \\\"context\\\": \\\"We need
-      a single paragraph with 4 sentences that highlights the transformative power,
-      current applications, future possibilities, and ethical considerations of AI.
-      The paragraph should be engaging, informative, and well-structured.\\\", \\\"coworker\\\":
-      \\\"Senior Writer\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      647,\n    \"completion_tokens\": 112,\n    \"total_tokens\": 759,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7cGCrFQBV98D4Ssp80RuBIRGPj1\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214248,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: To ensure\
+        \ that the paragraph about AI is amazing and meets the specified criteria,\
+        \ I should delegate this task to the Senior Writer, providing them with all\
+        \ the necessary details and context.\\n\\nAction: Delegate work to coworker\\\
+        nAction Input: {\\\"task\\\": \\\"Write one amazing paragraph about AI.\\\"\
+        , \\\"context\\\": \\\"We need a single paragraph with 4 sentences that highlights\
+        \ the transformative power, current applications, future possibilities, and\
+        \ ethical considerations of AI. The paragraph should be engaging, informative,\
+        \ and well-structured.\\\", \\\"coworker\\\": \\\"Senior Writer\\\"}\",\n\
+        \        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 647,\n    \"completion_tokens\": 112,\n    \"total_tokens\": 759,\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n\
+        \  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -97,8 +100,6 @@ interactions:
       - 8c85f43a4b771cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -133,8 +134,9 @@ interactions:
       - 1ms
       x-request-id:
       - req_56f3772fc948167a851d05e805a72832
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       CuEPCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuA8KEgoQY3Jld2FpLnRl
@@ -256,24 +258,27 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cJ2fO4NiyuFobqnbSVHmQyYFUN\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214251,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
-      \ \\nFinal Answer: Artificial Intelligence (AI) is revolutionizing numerous
-      industries by streamlining operations and enhancing decision-making processes
-      through its ability to process massive amounts of data with incredible speed
-      and accuracy. Currently, AI applications span from healthcare diagnostics and
-      autonomous vehicles to personalized shopping experiences and advanced robotics,
-      showcasing its versatility. Looking ahead, AI holds the promise of unlocking
-      new frontiers in scientific research, climate change mitigation, and beyond,
-      potentially transforming society in unimaginable ways. However, these advancements
-      bring ethical considerations to the forefront, such as ensuring fairness, transparency,
-      and accountability, which are essential to foster public trust and harness AI's
-      full potential responsibly.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      255,\n    \"completion_tokens\": 136,\n    \"total_tokens\": 391,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7cJ2fO4NiyuFobqnbSVHmQyYFUN\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214251,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer  \\nFinal Answer: Artificial Intelligence (AI) is revolutionizing\
+        \ numerous industries by streamlining operations and enhancing decision-making\
+        \ processes through its ability to process massive amounts of data with incredible\
+        \ speed and accuracy. Currently, AI applications span from healthcare diagnostics\
+        \ and autonomous vehicles to personalized shopping experiences and advanced\
+        \ robotics, showcasing its versatility. Looking ahead, AI holds the promise\
+        \ of unlocking new frontiers in scientific research, climate change mitigation,\
+        \ and beyond, potentially transforming society in unimaginable ways. However,\
+        \ these advancements bring ethical considerations to the forefront, such as\
+        \ ensuring fairness, transparency, and accountability, which are essential\
+        \ to foster public trust and harness AI's full potential responsibly.\",\n\
+        \        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 255,\n    \"completion_tokens\": 136,\n    \"total_tokens\": 391,\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n\
+        \  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -281,8 +286,6 @@ interactions:
       - 8c85f44c6c7a1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -317,8 +320,9 @@ interactions:
       - 0s
       x-request-id:
       - req_1df3c189f56e4857b42f59a1cb335037
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
       are a seasoned manager with a knack for getting the best out of your team.\nYou
@@ -413,24 +417,27 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cLOK3Rxb8tH8TpLHMyEjH6tI44\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214253,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: Artificial Intelligence (AI) is revolutionizing numerous industries
-      by streamlining operations and enhancing decision-making processes through its
-      ability to process massive amounts of data with incredible speed and accuracy.
-      Currently, AI applications span from healthcare diagnostics and autonomous vehicles
-      to personalized shopping experiences and advanced robotics, showcasing its versatility.
-      Looking ahead, AI holds the promise of unlocking new frontiers in scientific
-      research, climate change mitigation, and beyond, potentially transforming society
-      in unimaginable ways. However, these advancements bring ethical considerations
-      to the forefront, such as ensuring fairness, transparency, and accountability,
-      which are essential to foster public trust and harness AI's full potential responsibly.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 888,\n    \"completion_tokens\":
-      135,\n    \"total_tokens\": 1023,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7cLOK3Rxb8tH8TpLHMyEjH6tI44\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214253,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now know\
+        \ the final answer.\\n\\nFinal Answer: Artificial Intelligence (AI) is revolutionizing\
+        \ numerous industries by streamlining operations and enhancing decision-making\
+        \ processes through its ability to process massive amounts of data with incredible\
+        \ speed and accuracy. Currently, AI applications span from healthcare diagnostics\
+        \ and autonomous vehicles to personalized shopping experiences and advanced\
+        \ robotics, showcasing its versatility. Looking ahead, AI holds the promise\
+        \ of unlocking new frontiers in scientific research, climate change mitigation,\
+        \ and beyond, potentially transforming society in unimaginable ways. However,\
+        \ these advancements bring ethical considerations to the forefront, such as\
+        \ ensuring fairness, transparency, and accountability, which are essential\
+        \ to foster public trust and harness AI's full potential responsibly.\",\n\
+        \        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 888,\n    \"completion_tokens\": 135,\n    \"total_tokens\": 1023,\n   \
+        \ \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n\
+        \  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -438,8 +445,6 @@ interactions:
       - 8c85f45d0c521cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -474,6 +479,7 @@ interactions:
       - 2ms
       x-request-id:
       - req_89c64a4398431575a8d3b2da3c900401
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

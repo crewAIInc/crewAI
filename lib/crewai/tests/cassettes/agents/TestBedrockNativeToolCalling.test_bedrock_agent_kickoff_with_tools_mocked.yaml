@@ -1,0 +1,485 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 * 8\n\nThis is the expected criteria for your final answer: Result\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}]}], "inferenceConfig": {"stopSequences":
+      ["\nObservation:"]}, "system": [{"text": "You are Math Assistant. You calculate.\nYour
+      personal goal is: Calculate math"}], "toolConfig": {"tools": [{"toolSpec": {"name":
+      "calculator", "description": "Perform mathematical calculations. Use this for
+      any math operations.", "inputSchema": {"json": {"properties": {"expression":
+      {"description": "Mathematical expression to evaluate", "title": "Expression",
+      "type": "string"}}, "required": ["expression"], "type": "object"}}}}]}}'
+    headers:
+      Content-Length:
+      - '806'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1540},"output":{"message":{"content":[{"text":"Here
+        is the calculation for 15 * 8:"},{"toolUse":{"input":{"expression":"15 * 8"},"name":"calculator","toolUseId":"tooluse_1OIARGnOTjiITDKGd_FgMA"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":417,"outputTokens":68,"serverToolUsage":{},"totalTokens":485}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '351'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:27:56 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 * 8\n\nThis is the expected criteria for your final answer: Result\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_1OIARGnOTjiITDKGd_FgMA", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_1OIARGnOTjiITDKGd_FgMA", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}], "inferenceConfig": {"stopSequences":
+      ["\nObservation:"]}, "system": [{"text": "You are Math Assistant. You calculate.\nYour
+      personal goal is: Calculate math"}], "toolConfig": {"tools": [{"toolSpec": {"name":
+      "calculator", "description": "Perform mathematical calculations. Use this for
+      any math operations.", "inputSchema": {"json": {"properties": {"expression":
+      {"description": "Mathematical expression to evaluate", "title": "Expression",
+      "type": "string"}}, "required": ["expression"], "type": "object"}}}}]}}'
+    headers:
+      Content-Length:
+      - '1358'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1071},"output":{"message":{"content":[{"toolUse":{"input":{"expression":"15
+        * 8"},"name":"calculator","toolUseId":"tooluse_vjcn57LeQpS-pePkTvny8w"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":527,"outputTokens":55,"serverToolUsage":{},"totalTokens":582}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '304'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:27:57 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 * 8\n\nThis is the expected criteria for your final answer: Result\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_1OIARGnOTjiITDKGd_FgMA", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_1OIARGnOTjiITDKGd_FgMA", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}, {"role": "assistant", "content": [{"toolUse":
+      {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w", "name": "calculator", "input":
+      {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w",
+      "content": [{"text": "Error executing tool: CalculatorTool._run() missing 1
+      required positional argument: ''expression''"}]}}]}, {"role": "user", "content":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}]}],
+      "inferenceConfig": {"stopSequences": ["\nObservation:"]}, "system": [{"text":
+      "You are Math Assistant. You calculate.\nYour personal goal is: Calculate math"}],
+      "toolConfig": {"tools": [{"toolSpec": {"name": "calculator", "description":
+      "Perform mathematical calculations. Use this for any math operations.", "inputSchema":
+      {"json": {"properties": {"expression": {"description": "Mathematical expression
+      to evaluate", "title": "Expression", "type": "string"}}, "required": ["expression"],
+      "type": "object"}}}}]}}'
+    headers:
+      Content-Length:
+      - '1910'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":927},"output":{"message":{"content":[{"toolUse":{"input":{"expression":"15
+        * 8"},"name":"calculator","toolUseId":"tooluse__4aP-hcTR4Ozp5gTlESXbg"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":637,"outputTokens":57,"serverToolUsage":{},"totalTokens":694}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '303'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:27:58 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 * 8\n\nThis is the expected criteria for your final answer: Result\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_1OIARGnOTjiITDKGd_FgMA", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_1OIARGnOTjiITDKGd_FgMA", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}, {"role": "assistant", "content": [{"toolUse":
+      {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w", "name": "calculator", "input":
+      {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w",
+      "content": [{"text": "Error executing tool: CalculatorTool._run() missing 1
+      required positional argument: ''expression''"}]}}]}, {"role": "user", "content":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}]},
+      {"role": "assistant", "content": [{"toolUse": {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg",
+      "name": "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult":
+      {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg", "content": [{"text": "Error
+      executing tool: CalculatorTool._run() missing 1 required positional argument:
+      ''expression''"}]}}]}, {"role": "user", "content": [{"text": "Analyze the tool
+      result. If requirements are met, provide the Final Answer. Otherwise, call the
+      next tool. Deliver only the answer without meta-commentary."}]}], "inferenceConfig":
+      {"stopSequences": ["\nObservation:"]}, "system": [{"text": "You are Math Assistant.
+      You calculate.\nYour personal goal is: Calculate math"}], "toolConfig": {"tools":
+      [{"toolSpec": {"name": "calculator", "description": "Perform mathematical calculations.
+      Use this for any math operations.", "inputSchema": {"json": {"properties": {"expression":
+      {"description": "Mathematical expression to evaluate", "title": "Expression",
+      "type": "string"}}, "required": ["expression"], "type": "object"}}}}]}}'
+    headers:
+      Content-Length:
+      - '2462'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1226},"output":{"message":{"content":[{"toolUse":{"input":{"expression":"15
+        * 8"},"name":"calculator","toolUseId":"tooluse_fEJhgDNjSUic0g97dN8Xww"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":747,"outputTokens":55,"serverToolUsage":{},"totalTokens":802}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '304'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:28:00 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 * 8\n\nThis is the expected criteria for your final answer: Result\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_1OIARGnOTjiITDKGd_FgMA", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_1OIARGnOTjiITDKGd_FgMA", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}, {"role": "assistant", "content": [{"toolUse":
+      {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w", "name": "calculator", "input":
+      {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w",
+      "content": [{"text": "Error executing tool: CalculatorTool._run() missing 1
+      required positional argument: ''expression''"}]}}]}, {"role": "user", "content":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}]},
+      {"role": "assistant", "content": [{"toolUse": {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg",
+      "name": "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult":
+      {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg", "content": [{"text": "Error
+      executing tool: CalculatorTool._run() missing 1 required positional argument:
+      ''expression''"}]}}]}, {"role": "user", "content": [{"text": "Analyze the tool
+      result. If requirements are met, provide the Final Answer. Otherwise, call the
+      next tool. Deliver only the answer without meta-commentary."}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_fEJhgDNjSUic0g97dN8Xww", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_fEJhgDNjSUic0g97dN8Xww", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}], "inferenceConfig": {"stopSequences":
+      ["\nObservation:"]}, "system": [{"text": "You are Math Assistant. You calculate.\nYour
+      personal goal is: Calculate math"}], "toolConfig": {"tools": [{"toolSpec": {"name":
+      "calculator", "description": "Perform mathematical calculations. Use this for
+      any math operations.", "inputSchema": {"json": {"properties": {"expression":
+      {"description": "Mathematical expression to evaluate", "title": "Expression",
+      "type": "string"}}, "required": ["expression"], "type": "object"}}}}]}}'
+    headers:
+      Content-Length:
+      - '3014'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":947},"output":{"message":{"content":[{"toolUse":{"input":{"expression":"15
+        * 8"},"name":"calculator","toolUseId":"tooluse_F5QIGY91SBOeM4VcFRB73A"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":857,"outputTokens":55,"serverToolUsage":{},"totalTokens":912}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '303'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:28:01 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 * 8\n\nThis is the expected criteria for your final answer: Result\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_1OIARGnOTjiITDKGd_FgMA", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_1OIARGnOTjiITDKGd_FgMA", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}, {"role": "assistant", "content": [{"toolUse":
+      {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w", "name": "calculator", "input":
+      {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w",
+      "content": [{"text": "Error executing tool: CalculatorTool._run() missing 1
+      required positional argument: ''expression''"}]}}]}, {"role": "user", "content":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}]},
+      {"role": "assistant", "content": [{"toolUse": {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg",
+      "name": "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult":
+      {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg", "content": [{"text": "Error
+      executing tool: CalculatorTool._run() missing 1 required positional argument:
+      ''expression''"}]}}]}, {"role": "user", "content": [{"text": "Analyze the tool
+      result. If requirements are met, provide the Final Answer. Otherwise, call the
+      next tool. Deliver only the answer without meta-commentary."}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_fEJhgDNjSUic0g97dN8Xww", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_fEJhgDNjSUic0g97dN8Xww", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}, {"role": "assistant", "content": [{"toolUse":
+      {"toolUseId": "tooluse_F5QIGY91SBOeM4VcFRB73A", "name": "calculator", "input":
+      {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_F5QIGY91SBOeM4VcFRB73A",
+      "content": [{"text": "Error executing tool: CalculatorTool._run() missing 1
+      required positional argument: ''expression''"}]}}]}, {"role": "user", "content":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}]},
+      {"role": "assistant", "content": [{"text": "Now it''s time you MUST give your
+      absolute best final answer. You''ll ignore all previous instructions, stop using
+      any tools, and just return your absolute BEST Final answer."}]}], "inferenceConfig":
+      {"stopSequences": ["\nObservation:"]}, "system": [{"text": "You are Math Assistant.
+      You calculate.\nYour personal goal is: Calculate math"}], "toolConfig": {"tools":
+      [{"toolSpec": {"name": "calculator", "description": "Tool: calculator", "inputSchema":
+      {"json": {"type": "object", "properties": {}}}}}]}}'
+    headers:
+      Content-Length:
+      - '3599'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"message":"The model returned the following errors: Your API request
+        included an `assistant` message in the final position, which would pre-fill
+        the `assistant` response. When using tools, pre-filling the `assistant` response
+        is not supported."}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '246'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:28:02 GMT
+      x-amzn-ErrorType:
+      - ValidationException:http://internal.amazon.com/coral/com.amazon.bedrock/
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
+      15 * 8\n\nThis is the expected criteria for your final answer: Result\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_1OIARGnOTjiITDKGd_FgMA", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_1OIARGnOTjiITDKGd_FgMA", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}, {"role": "assistant", "content": [{"toolUse":
+      {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w", "name": "calculator", "input":
+      {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_vjcn57LeQpS-pePkTvny8w",
+      "content": [{"text": "Error executing tool: CalculatorTool._run() missing 1
+      required positional argument: ''expression''"}]}}]}, {"role": "user", "content":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}]},
+      {"role": "assistant", "content": [{"toolUse": {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg",
+      "name": "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult":
+      {"toolUseId": "tooluse__4aP-hcTR4Ozp5gTlESXbg", "content": [{"text": "Error
+      executing tool: CalculatorTool._run() missing 1 required positional argument:
+      ''expression''"}]}}]}, {"role": "user", "content": [{"text": "Analyze the tool
+      result. If requirements are met, provide the Final Answer. Otherwise, call the
+      next tool. Deliver only the answer without meta-commentary."}]}, {"role": "assistant",
+      "content": [{"toolUse": {"toolUseId": "tooluse_fEJhgDNjSUic0g97dN8Xww", "name":
+      "calculator", "input": {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId":
+      "tooluse_fEJhgDNjSUic0g97dN8Xww", "content": [{"text": "Error executing tool:
+      CalculatorTool._run() missing 1 required positional argument: ''expression''"}]}}]},
+      {"role": "user", "content": [{"text": "Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}]}, {"role": "assistant", "content": [{"toolUse":
+      {"toolUseId": "tooluse_F5QIGY91SBOeM4VcFRB73A", "name": "calculator", "input":
+      {}}}]}, {"role": "user", "content": [{"toolResult": {"toolUseId": "tooluse_F5QIGY91SBOeM4VcFRB73A",
+      "content": [{"text": "Error executing tool: CalculatorTool._run() missing 1
+      required positional argument: ''expression''"}]}}]}, {"role": "user", "content":
+      [{"text": "Analyze the tool result. If requirements are met, provide the Final
+      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}]},
+      {"role": "assistant", "content": [{"text": "Now it''s time you MUST give your
+      absolute best final answer. You''ll ignore all previous instructions, stop using
+      any tools, and just return your absolute BEST Final answer."}]}, {"role": "user",
+      "content": [{"text": "\nCurrent Task: Calculate 15 * 8\n\nThis is the expected
+      criteria for your final answer: Result\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is VERY important to you,
+      your job depends on it!"}]}, {"role": "assistant", "content": [{"text": "Now
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}]}], "inferenceConfig": {"stopSequences": ["\nObservation:"]},
+      "system": [{"text": "You are Math Assistant. You calculate.\nYour personal goal
+      is: Calculate math\n\nYou are Math Assistant. You calculate.\nYour personal
+      goal is: Calculate math"}], "toolConfig": {"tools": [{"toolSpec": {"name": "calculator",
+      "description": "Tool: calculator", "inputSchema": {"json": {"type": "object",
+      "properties": {}}}}}]}}'
+    headers:
+      Content-Length:
+      - '4181'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - X-USER-AGENT-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":715},"output":{"message":{"content":[{"text":"\n\n120"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":1082,"outputTokens":5,"serverToolUsage":{},"totalTokens":1087}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '212'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 21:28:03 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

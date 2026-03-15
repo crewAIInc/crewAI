@@ -1,0 +1,99 @@
+interactions:
+- request:
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is the weather in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '185'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01Ged4AFM7p6Az1EJwCupJgN","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"The user is asking about the current weather in Tokyo. However, I don''t have access to real-time information, including current weather data. My knowledge was last updated in April 2024, and I cannot browse the internet or access live weather services.\n\nI should let the user know that I cannot provide current weather information and suggest how they could find this information themselves.","signature":"ErAECkYIChgCKkARlc1jMnFpY90f5dF4HEfZoRXOHn40AvF41rtOlyk1YjT2ekk5lwSKy5CoXaRkNa3ZbAnovMN6Qn1zGdp+aL3xEgyN7xr0O1qknyiEY9oaDNbekyF2Hjrg5YPO/CIwfnR0HRKZLDsaoekhW7AQLBTlR/SVHooc2M4THNxfHj2LD3B/6QDFg+2yEms30JyhKpcDcHPgZqwvor8Hsl22v70u1UxYvsKYS84LpMKVnnR3eoYvrP90s2g11eoybDPl/NUisMrYx/pSL5AG57qIvREYMcPz4r3VmGmE6+FUOzqMVWQRYmXQ1zaSzdNpr5ELAXPQGON33DyPbOtm8yqzw1j0X0qEvW/FwGgsN049hZSZdZsPLIvxQz1dW83cVK7ncHAJzUHVvmnwOgZyW9DW4cBZprnUM45wzxOuprfPl4mV2rXN9bm9Wpl+4G/kzhYabOECMP07aj7m+qvSXDIo2elMPMHPKx8VixFwIetJC2vi2Sa1tFO9g3xIInItWBQUZytwOp/HaPO/AqoXWDoAR3HVqgPHkzoEhiIpuwwWYOxh7ShtYUCpiUtj3Dzg0yF1lQrdMiN6EbTS1hrj1wcwysZMI0iUursu/N+lh2ujIrZOGNzre5hojSURYwucdGGoQtB65eHnMstCdOH2ht8m881mJ8l7tDHNfnlUD1wsrkT2s99d1Fb5brj/yxiKD9JheDL/xsICEUko6uw+4Getixj8jdwEsY4caVoYAQ=="},{"type":"text","text":"I
+        don''t have access to real-time weather information. To get the current weather in Tokyo, you could:\n\n1. **Search online**: Google \"Tokyo weather\" for immediate results\n2. **Weather websites/apps**: Check weather.com, AccuWeather, or Weather Underground\n3. **Local sources**: The Japan Meteorological Agency (jma.go.jp) provides official forecasts\n\nIs there anything else about Tokyo I can help you with, such as general climate information or what weather to expect during different seasons?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":43,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":199,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 08 Dec 2025 23:16:46 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-12-08T23:16:42Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '18'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '5323'
+    status:
+      code: 200
+      message: OK
+version: 1

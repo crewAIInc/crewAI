@@ -10,7 +10,9 @@ mode: "wide"
 CrewAI's MCP DSL (Domain Specific Language) integration provides the **simplest way** to connect your agents to MCP (Model Context Protocol) servers. Just add an `mcps` field to your agent and CrewAI handles all the complexity automatically.
 
 <Info>
-This is the **recommended approach** for most MCP use cases. For advanced scenarios requiring manual connection management, see [MCPServerAdapter](/en/mcp/overview#advanced-mcpserveradapter).
+  This is the **recommended approach** for most MCP use cases. For advanced
+  scenarios requiring manual connection management, see
+  [MCPServerAdapter](/en/mcp/overview#advanced-mcpserveradapter).
 </Info>
 
 ## Basic Usage
@@ -319,6 +321,7 @@ agent = Agent(
 ### Common Issues
 
 **No tools discovered:**
+
 ```python
 # Check your MCP server URL and authentication
 # Verify the server is running and accessible
@@ -326,6 +329,7 @@ mcps=["https://mcp.example.com/mcp?api_key=valid_key"]
 ```
 
 **Connection timeouts:**
+
 ```python
 # Server may be slow or overloaded
 # CrewAI will log warnings and continue with other servers
@@ -333,6 +337,7 @@ mcps=["https://mcp.example.com/mcp?api_key=valid_key"]
 ```
 
 **Authentication failures:**
+
 ```python
 # Verify API keys and credentials
 # Check server documentation for required parameters

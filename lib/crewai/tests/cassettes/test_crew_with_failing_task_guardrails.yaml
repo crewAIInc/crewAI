@@ -182,57 +182,60 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Am40qBAFJtuaFsOlTsBHFCoYUvLhN\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736018532,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.  \\nFinal
-      Answer: \\n\\n# Report on Artificial Intelligence (AI)\\n\\n## Introduction\\nArtificial
-      Intelligence (AI) is a rapidly evolving technology that simulates human intelligence
-      processes by machines, particularly computer systems. AI has a profound impact
-      on various sectors, enhancing efficiency, improving decision-making, and leading
-      to groundbreaking innovations. This report highlights three key points regarding
-      the significance and implications of AI technology.\\n\\n## Key Point 1: Transformative
-      Potential in Various Industries\\nAI's transformative potential is evident across
-      multiple industries, including healthcare, finance, transportation, and agriculture.
-      In healthcare, AI algorithms can analyze complex medical data, leading to improved
-      diagnostics, personalized medicine, and predictive analytics, thereby enhancing
-      patient outcomes. The financial sector employs AI for risk management, fraud
-      detection, and automated trading, which increases operational efficiency and
-      minimizes human error. In transportation, AI is integral to the development
-      of autonomous vehicles and smart traffic systems, optimizing routes and reducing
-      congestion. Furthermore, agriculture benefits from AI applications through precision
-      farming, which maximizes yield while minimizing environmental impact.\\n\\n##
-      Key Point 2: Ethical Considerations and Challenges\\nAs AI technologies become
-      more pervasive, ethical considerations arise regarding their implementation
-      and use. Concerns include data privacy, algorithmic bias, and the displacement
-      of jobs due to automation. Ensuring that AI systems are transparent, fair, and
-      accountable is crucial in addressing these issues. Organizations must develop
-      comprehensive guidelines and regulatory frameworks to mitigate bias in AI algorithms
-      and protect user data. Moreover, addressing the social implications of AI, such
-      as potential job displacement, is essential, necessitating investment in workforce
-      retraining and education to prepare for an AI-driven economy.\\n\\n## Key Point
-      3: Future Directions and Developments\\nLooking ahead, the future of AI promises
-      continued advancements and integration into everyday life. Emerging trends include
-      the development of explainable AI (XAI), enhancing interpretability and understanding
-      of AI decision-making processes. Advances in natural language processing (NLP)
-      will facilitate better human-computer interactions, allowing for more intuitive
-      applications. Additionally, as AI technology becomes increasingly sophisticated,
-      its role in addressing global challenges, such as climate change and healthcare
-      disparities, is expected to expand. Stakeholders must collaborate to ensure
-      that these developments align with ethical standards and societal needs, fostering
-      a responsible AI future.\\n\\n## Conclusion\\nArtificial Intelligence stands
-      at the forefront of technological innovation, with the potential to revolutionize
-      industries and address complex global challenges. However, it is imperative
-      to navigate the ethical considerations and challenges it poses. By fostering
-      responsible AI development, we can harness its transformative power while ensuring
-      equitability and transparency for future generations.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 170,\n    \"completion_tokens\":
-      524,\n    \"total_tokens\": 694,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Am40qBAFJtuaFsOlTsBHFCoYUvLhN\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1736018532,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer.  \\nFinal Answer: \\n\\n# Report on Artificial Intelligence (AI)\\\
+        n\\n## Introduction\\nArtificial Intelligence (AI) is a rapidly evolving technology\
+        \ that simulates human intelligence processes by machines, particularly computer\
+        \ systems. AI has a profound impact on various sectors, enhancing efficiency,\
+        \ improving decision-making, and leading to groundbreaking innovations. This\
+        \ report highlights three key points regarding the significance and implications\
+        \ of AI technology.\\n\\n## Key Point 1: Transformative Potential in Various\
+        \ Industries\\nAI's transformative potential is evident across multiple industries,\
+        \ including healthcare, finance, transportation, and agriculture. In healthcare,\
+        \ AI algorithms can analyze complex medical data, leading to improved diagnostics,\
+        \ personalized medicine, and predictive analytics, thereby enhancing patient\
+        \ outcomes. The financial sector employs AI for risk management, fraud detection,\
+        \ and automated trading, which increases operational efficiency and minimizes\
+        \ human error. In transportation, AI is integral to the development of autonomous\
+        \ vehicles and smart traffic systems, optimizing routes and reducing congestion.\
+        \ Furthermore, agriculture benefits from AI applications through precision\
+        \ farming, which maximizes yield while minimizing environmental impact.\\\
+        n\\n## Key Point 2: Ethical Considerations and Challenges\\nAs AI technologies\
+        \ become more pervasive, ethical considerations arise regarding their implementation\
+        \ and use. Concerns include data privacy, algorithmic bias, and the displacement\
+        \ of jobs due to automation. Ensuring that AI systems are transparent, fair,\
+        \ and accountable is crucial in addressing these issues. Organizations must\
+        \ develop comprehensive guidelines and regulatory frameworks to mitigate bias\
+        \ in AI algorithms and protect user data. Moreover, addressing the social\
+        \ implications of AI, such as potential job displacement, is essential, necessitating\
+        \ investment in workforce retraining and education to prepare for an AI-driven\
+        \ economy.\\n\\n## Key Point 3: Future Directions and Developments\\nLooking\
+        \ ahead, the future of AI promises continued advancements and integration\
+        \ into everyday life. Emerging trends include the development of explainable\
+        \ AI (XAI), enhancing interpretability and understanding of AI decision-making\
+        \ processes. Advances in natural language processing (NLP) will facilitate\
+        \ better human-computer interactions, allowing for more intuitive applications.\
+        \ Additionally, as AI technology becomes increasingly sophisticated, its role\
+        \ in addressing global challenges, such as climate change and healthcare disparities,\
+        \ is expected to expand. Stakeholders must collaborate to ensure that these\
+        \ developments align with ethical standards and societal needs, fostering\
+        \ a responsible AI future.\\n\\n## Conclusion\\nArtificial Intelligence stands\
+        \ at the forefront of technological innovation, with the potential to revolutionize\
+        \ industries and address complex global challenges. However, it is imperative\
+        \ to navigate the ethical considerations and challenges it poses. By fostering\
+        \ responsible AI development, we can harness its transformative power while\
+        \ ensuring equitability and transparency for future generations.\",\n    \
+        \    \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 170,\n   \
+        \ \"completion_tokens\": 524,\n    \"total_tokens\": 694,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -240,8 +243,6 @@ interactions:
       - 8fcd9890790e0133-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -284,8 +285,9 @@ interactions:
       - 0s
       x-request-id:
       - req_08d237d56b0168a0f4512417380485db
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
@@ -417,57 +419,60 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Am40yJsMPHsTOmn9Obwyx2caqoJ1R\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736018540,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer:  \\nREPORT:  \\n\\n# Report on Artificial Intelligence (AI)\\n\\n##
-      Introduction\\nArtificial Intelligence (AI) is a rapidly evolving technology
-      that simulates human intelligence processes by machines, particularly computer
-      systems. AI has a profound impact on various sectors, enhancing efficiency,
-      improving decision-making, and leading to groundbreaking innovations. This report
-      highlights three key points regarding the significance and implications of AI
-      technology.\\n\\n## Key Point 1: Transformative Potential in Various Industries\\nAI's
-      transformative potential is evident across multiple industries, including healthcare,
-      finance, transportation, and agriculture. In healthcare, AI algorithms can analyze
-      complex medical data, leading to improved diagnostics, personalized medicine,
-      and predictive analytics, thereby enhancing patient outcomes. The financial
-      sector employs AI for risk management, fraud detection, and automated trading,
-      which increases operational efficiency and minimizes human error. In transportation,
-      AI is integral to the development of autonomous vehicles and smart traffic systems,
-      optimizing routes and reducing congestion. Furthermore, agriculture benefits
-      from AI applications through precision farming, which maximizes yield while
-      minimizing environmental impact.\\n\\n## Key Point 2: Ethical Considerations
-      and Challenges\\nAs AI technologies become more pervasive, ethical considerations
-      arise regarding their implementation and use. Concerns include data privacy,
-      algorithmic bias, and the displacement of jobs due to automation. Ensuring that
-      AI systems are transparent, fair, and accountable is crucial in addressing these
-      issues. Organizations must develop comprehensive guidelines and regulatory frameworks
-      to mitigate bias in AI algorithms and protect user data. Moreover, addressing
-      the social implications of AI, such as potential job displacement, is essential,
-      necessitating investment in workforce retraining and education to prepare for
-      an AI-driven economy.\\n\\n## Key Point 3: Future Directions and Developments\\nLooking
-      ahead, the future of AI promises continued advancements and integration into
-      everyday life. Emerging trends include the development of explainable AI (XAI),
-      enhancing interpretability and understanding of AI decision-making processes.
-      Advances in natural language processing (NLP) will facilitate better human-computer
-      interactions, allowing for more intuitive applications. Additionally, as AI
-      technology becomes increasingly sophisticated, its role in addressing global
-      challenges, such as climate change and healthcare disparities, is expected to
-      expand. Stakeholders must collaborate to ensure that these developments align
-      with ethical standards and societal needs, fostering a responsible AI future.\\n\\n##
-      Conclusion\\nArtificial Intelligence stands at the forefront of technological
-      innovation, with the potential to revolutionize industries and address complex
-      global challenges. However, it is imperative to navigate the ethical considerations
-      and challenges it poses. By fostering responsible AI development, we can harness
-      its transformative power while ensuring equitability and transparency for future
-      generations.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      725,\n    \"completion_tokens\": 526,\n    \"total_tokens\": 1251,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Am40yJsMPHsTOmn9Obwyx2caqoJ1R\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1736018540,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer:  \\nREPORT:  \\n\\n# Report on Artificial Intelligence\
+        \ (AI)\\n\\n## Introduction\\nArtificial Intelligence (AI) is a rapidly evolving\
+        \ technology that simulates human intelligence processes by machines, particularly\
+        \ computer systems. AI has a profound impact on various sectors, enhancing\
+        \ efficiency, improving decision-making, and leading to groundbreaking innovations.\
+        \ This report highlights three key points regarding the significance and implications\
+        \ of AI technology.\\n\\n## Key Point 1: Transformative Potential in Various\
+        \ Industries\\nAI's transformative potential is evident across multiple industries,\
+        \ including healthcare, finance, transportation, and agriculture. In healthcare,\
+        \ AI algorithms can analyze complex medical data, leading to improved diagnostics,\
+        \ personalized medicine, and predictive analytics, thereby enhancing patient\
+        \ outcomes. The financial sector employs AI for risk management, fraud detection,\
+        \ and automated trading, which increases operational efficiency and minimizes\
+        \ human error. In transportation, AI is integral to the development of autonomous\
+        \ vehicles and smart traffic systems, optimizing routes and reducing congestion.\
+        \ Furthermore, agriculture benefits from AI applications through precision\
+        \ farming, which maximizes yield while minimizing environmental impact.\\\
+        n\\n## Key Point 2: Ethical Considerations and Challenges\\nAs AI technologies\
+        \ become more pervasive, ethical considerations arise regarding their implementation\
+        \ and use. Concerns include data privacy, algorithmic bias, and the displacement\
+        \ of jobs due to automation. Ensuring that AI systems are transparent, fair,\
+        \ and accountable is crucial in addressing these issues. Organizations must\
+        \ develop comprehensive guidelines and regulatory frameworks to mitigate bias\
+        \ in AI algorithms and protect user data. Moreover, addressing the social\
+        \ implications of AI, such as potential job displacement, is essential, necessitating\
+        \ investment in workforce retraining and education to prepare for an AI-driven\
+        \ economy.\\n\\n## Key Point 3: Future Directions and Developments\\nLooking\
+        \ ahead, the future of AI promises continued advancements and integration\
+        \ into everyday life. Emerging trends include the development of explainable\
+        \ AI (XAI), enhancing interpretability and understanding of AI decision-making\
+        \ processes. Advances in natural language processing (NLP) will facilitate\
+        \ better human-computer interactions, allowing for more intuitive applications.\
+        \ Additionally, as AI technology becomes increasingly sophisticated, its role\
+        \ in addressing global challenges, such as climate change and healthcare disparities,\
+        \ is expected to expand. Stakeholders must collaborate to ensure that these\
+        \ developments align with ethical standards and societal needs, fostering\
+        \ a responsible AI future.\\n\\n## Conclusion\\nArtificial Intelligence stands\
+        \ at the forefront of technological innovation, with the potential to revolutionize\
+        \ industries and address complex global challenges. However, it is imperative\
+        \ to navigate the ethical considerations and challenges it poses. By fostering\
+        \ responsible AI development, we can harness its transformative power while\
+        \ ensuring equitability and transparency for future generations.\",\n    \
+        \    \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 725,\n   \
+        \ \"completion_tokens\": 526,\n    \"total_tokens\": 1251,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -475,8 +480,6 @@ interactions:
       - 8fcd98c269880133-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -513,8 +516,9 @@ interactions:
       - 0s
       x-request-id:
       - req_de480c9e17954e77dece1b2fe013a0d0
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
@@ -647,60 +651,65 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Am4176wzYnk3HmSTkkakM4yl6xVYS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736018549,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer:  \\n\\n# Report on Artificial Intelligence (AI)\\n\\n## Introduction\\nArtificial
-      Intelligence (AI) is a revolutionary technology designed to simulate human intelligence
-      processes, enabling machines to perform tasks that typically require human cognition.
-      Its rapid development has brought forth significant changes across various sectors,
-      improving operational efficiencies, enhancing decision-making, and fostering
-      innovation. This report outlines three key points regarding the impact and implications
-      of AI technology.\\n\\n## Key Point 1: Transformative Potential in Various Industries\\nAI's
-      transformative potential is observable across numerous sectors including healthcare,
-      finance, transportation, and agriculture. In the healthcare sector, AI algorithms
-      are increasingly used to analyze vast amounts of medical data, which sharpens
-      diagnostics, facilitates personalized treatment plans, and enhances predictive
-      analytics, thus leading to better patient care. In finance, AI contributes to
-      risk assessment, fraud detection, and automated trading, heightening efficiency
-      and reducing the risk of human error. The transportation industry leverages
-      AI technologies for developments in autonomous vehicles and smart transportation
-      systems that optimize routes and alleviate traffic congestion. Furthermore,
-      agriculture benefits from AI by applying precision farming techniques that optimize
-      yield and mitigate environmental effects.\\n\\n## Key Point 2: Ethical Considerations
-      and Challenges\\nWith the increasing deployment of AI technologies, numerous
-      ethical considerations surface, particularly relating to privacy, algorithmic
-      fairness, and the displacement of jobs. Addressing issues such as data security,
-      bias in AI algorithms, and the societal impact of automation is paramount. Organizations
-      are encouraged to develop stringent guidelines and regulatory measures aimed
-      at minimizing bias and ensuring that AI systems uphold values of transparency
-      and accountability. Additionally, the implications of job displacement necessitate
-      strategies for workforce retraining and educational reforms to adequately prepare
-      the workforce for an economy increasingly shaped by AI technologies.\\n\\n##
-      Key Point 3: Future Directions and Developments\\nThe future of AI is poised
-      for remarkable advancements, with trends indicating a growing integration into
-      daily life and widespread applications. The emergence of explainable AI (XAI)
-      aims to enhance the transparency and interpretability of AI decision-making
-      processes, fostering trust and understanding among users. Improvements in natural
-      language processing (NLP) are likely to lead to more seamless and intuitive
-      human-computer interactions. Furthermore, AI's potential to address global challenges,
-      including climate change and disparities in healthcare access, is becoming increasingly
-      significant. Collaborative efforts among stakeholders will be vital to ensuring
-      that AI advancements are ethical and responsive to societal needs, paving the
-      way for a responsible and equitable AI landscape.\\n\\n## Conclusion\\nAI technology
-      is at the forefront of innovation, with the capacity to transform industries
-      and tackle pressing global issues. As we navigate through the complexities and
-      ethical challenges posed by AI, it is crucial to prioritize responsible development
-      and implementation. By harnessing AI's transformative capabilities with a focus
-      on equity and transparency, we can pave the way for a promising future that
-      benefits all.\\n\\nEND REPORT\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      730,\n    \"completion_tokens\": 571,\n    \"total_tokens\": 1301,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Am4176wzYnk3HmSTkkakM4yl6xVYS\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1736018549,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer:  \\n\\n# Report on Artificial Intelligence (AI)\\\
+        n\\n## Introduction\\nArtificial Intelligence (AI) is a revolutionary technology\
+        \ designed to simulate human intelligence processes, enabling machines to\
+        \ perform tasks that typically require human cognition. Its rapid development\
+        \ has brought forth significant changes across various sectors, improving\
+        \ operational efficiencies, enhancing decision-making, and fostering innovation.\
+        \ This report outlines three key points regarding the impact and implications\
+        \ of AI technology.\\n\\n## Key Point 1: Transformative Potential in Various\
+        \ Industries\\nAI's transformative potential is observable across numerous\
+        \ sectors including healthcare, finance, transportation, and agriculture.\
+        \ In the healthcare sector, AI algorithms are increasingly used to analyze\
+        \ vast amounts of medical data, which sharpens diagnostics, facilitates personalized\
+        \ treatment plans, and enhances predictive analytics, thus leading to better\
+        \ patient care. In finance, AI contributes to risk assessment, fraud detection,\
+        \ and automated trading, heightening efficiency and reducing the risk of human\
+        \ error. The transportation industry leverages AI technologies for developments\
+        \ in autonomous vehicles and smart transportation systems that optimize routes\
+        \ and alleviate traffic congestion. Furthermore, agriculture benefits from\
+        \ AI by applying precision farming techniques that optimize yield and mitigate\
+        \ environmental effects.\\n\\n## Key Point 2: Ethical Considerations and Challenges\\\
+        nWith the increasing deployment of AI technologies, numerous ethical considerations\
+        \ surface, particularly relating to privacy, algorithmic fairness, and the\
+        \ displacement of jobs. Addressing issues such as data security, bias in AI\
+        \ algorithms, and the societal impact of automation is paramount. Organizations\
+        \ are encouraged to develop stringent guidelines and regulatory measures aimed\
+        \ at minimizing bias and ensuring that AI systems uphold values of transparency\
+        \ and accountability. Additionally, the implications of job displacement necessitate\
+        \ strategies for workforce retraining and educational reforms to adequately\
+        \ prepare the workforce for an economy increasingly shaped by AI technologies.\\\
+        n\\n## Key Point 3: Future Directions and Developments\\nThe future of AI\
+        \ is poised for remarkable advancements, with trends indicating a growing\
+        \ integration into daily life and widespread applications. The emergence of\
+        \ explainable AI (XAI) aims to enhance the transparency and interpretability\
+        \ of AI decision-making processes, fostering trust and understanding among\
+        \ users. Improvements in natural language processing (NLP) are likely to lead\
+        \ to more seamless and intuitive human-computer interactions. Furthermore,\
+        \ AI's potential to address global challenges, including climate change and\
+        \ disparities in healthcare access, is becoming increasingly significant.\
+        \ Collaborative efforts among stakeholders will be vital to ensuring that\
+        \ AI advancements are ethical and responsive to societal needs, paving the\
+        \ way for a responsible and equitable AI landscape.\\n\\n## Conclusion\\nAI\
+        \ technology is at the forefront of innovation, with the capacity to transform\
+        \ industries and tackle pressing global issues. As we navigate through the\
+        \ complexities and ethical challenges posed by AI, it is crucial to prioritize\
+        \ responsible development and implementation. By harnessing AI's transformative\
+        \ capabilities with a focus on equity and transparency, we can pave the way\
+        \ for a promising future that benefits all.\\n\\nEND REPORT\",\n        \"\
+        refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 730,\n   \
+        \ \"completion_tokens\": 571,\n    \"total_tokens\": 1301,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -708,8 +717,6 @@ interactions:
       - 8fcd98f9fc060133-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -746,8 +753,9 @@ interactions:
       - 0s
       x-request-id:
       - req_cab0502e7d8a8564e56d8f741cf451ec
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
@@ -883,61 +891,65 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Am41EaJaKZSumZe8ph2I32d6QNbTP\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736018556,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: \\n\\nREPORT: \\n\\n# Report on Artificial Intelligence (AI)\\n\\n##
-      Introduction\\nArtificial Intelligence (AI) is a revolutionary technology designed
-      to simulate human intelligence processes, enabling machines to perform tasks
-      that typically require human cognition. Its rapid development has brought forth
-      significant changes across various sectors, improving operational efficiencies,
-      enhancing decision-making, and fostering innovation. This report outlines three
-      key points regarding the impact and implications of AI technology.\\n\\n## Key
-      Point 1: Transformative Potential in Various Industries\\nAI's transformative
-      potential is observable across numerous sectors including healthcare, finance,
-      transportation, and agriculture. In the healthcare sector, AI algorithms are
-      increasingly used to analyze vast amounts of medical data, which sharpens diagnostics,
-      facilitates personalized treatment plans, and enhances predictive analytics,
-      thus leading to better patient care. In finance, AI contributes to risk assessment,
-      fraud detection, and automated trading, heightening efficiency and reducing
-      the risk of human error. The transportation industry leverages AI technologies
-      for developments in autonomous vehicles and smart transportation systems that
-      optimize routes and alleviate traffic congestion. Furthermore, agriculture benefits
-      from AI by applying precision farming techniques that optimize yield and mitigate
-      environmental effects.\\n\\n## Key Point 2: Ethical Considerations and Challenges\\nWith
-      the increasing deployment of AI technologies, numerous ethical considerations
-      surface, particularly relating to privacy, algorithmic fairness, and the displacement
-      of jobs. Addressing issues such as data security, bias in AI algorithms, and
-      the societal impact of automation is paramount. Organizations are encouraged
-      to develop stringent guidelines and regulatory measures aimed at minimizing
-      bias and ensuring that AI systems uphold values of transparency and accountability.
-      Additionally, the implications of job displacement necessitate strategies for
-      workforce retraining and educational reforms to adequately prepare the workforce
-      for an economy increasingly shaped by AI technologies.\\n\\n## Key Point 3:
-      Future Directions and Developments\\nThe future of AI is poised for remarkable
-      advancements, with trends indicating a growing integration into daily life and
-      widespread applications. The emergence of explainable AI (XAI) aims to enhance
-      the transparency and interpretability of AI decision-making processes, fostering
-      trust and understanding among users. Improvements in natural language processing
-      (NLP) are likely to lead to more seamless and intuitive human-computer interactions.
-      Furthermore, AI's potential to address global challenges, including climate
-      change and disparities in healthcare access, is becoming increasingly significant.
-      Collaborative efforts among stakeholders will be vital to ensuring that AI advancements
-      are ethical and responsive to societal needs, paving the way for a responsible
-      and equitable AI landscape.\\n\\n## Conclusion\\nAI technology is at the forefront
-      of innovation, with the capacity to transform industries and tackle pressing
-      global issues. As we navigate through the complexities and ethical challenges
-      posed by AI, it is crucial to prioritize responsible development and implementation.
-      By harnessing AI's transformative capabilities with a focus on equity and transparency,
-      we can pave the way for a promising future that benefits all.\\n\\nEND REPORT\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 774,\n    \"completion_tokens\":
-      574,\n    \"total_tokens\": 1348,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Am41EaJaKZSumZe8ph2I32d6QNbTP\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1736018556,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: \\n\\nREPORT: \\n\\n# Report on Artificial Intelligence\
+        \ (AI)\\n\\n## Introduction\\nArtificial Intelligence (AI) is a revolutionary\
+        \ technology designed to simulate human intelligence processes, enabling machines\
+        \ to perform tasks that typically require human cognition. Its rapid development\
+        \ has brought forth significant changes across various sectors, improving\
+        \ operational efficiencies, enhancing decision-making, and fostering innovation.\
+        \ This report outlines three key points regarding the impact and implications\
+        \ of AI technology.\\n\\n## Key Point 1: Transformative Potential in Various\
+        \ Industries\\nAI's transformative potential is observable across numerous\
+        \ sectors including healthcare, finance, transportation, and agriculture.\
+        \ In the healthcare sector, AI algorithms are increasingly used to analyze\
+        \ vast amounts of medical data, which sharpens diagnostics, facilitates personalized\
+        \ treatment plans, and enhances predictive analytics, thus leading to better\
+        \ patient care. In finance, AI contributes to risk assessment, fraud detection,\
+        \ and automated trading, heightening efficiency and reducing the risk of human\
+        \ error. The transportation industry leverages AI technologies for developments\
+        \ in autonomous vehicles and smart transportation systems that optimize routes\
+        \ and alleviate traffic congestion. Furthermore, agriculture benefits from\
+        \ AI by applying precision farming techniques that optimize yield and mitigate\
+        \ environmental effects.\\n\\n## Key Point 2: Ethical Considerations and Challenges\\\
+        nWith the increasing deployment of AI technologies, numerous ethical considerations\
+        \ surface, particularly relating to privacy, algorithmic fairness, and the\
+        \ displacement of jobs. Addressing issues such as data security, bias in AI\
+        \ algorithms, and the societal impact of automation is paramount. Organizations\
+        \ are encouraged to develop stringent guidelines and regulatory measures aimed\
+        \ at minimizing bias and ensuring that AI systems uphold values of transparency\
+        \ and accountability. Additionally, the implications of job displacement necessitate\
+        \ strategies for workforce retraining and educational reforms to adequately\
+        \ prepare the workforce for an economy increasingly shaped by AI technologies.\\\
+        n\\n## Key Point 3: Future Directions and Developments\\nThe future of AI\
+        \ is poised for remarkable advancements, with trends indicating a growing\
+        \ integration into daily life and widespread applications. The emergence of\
+        \ explainable AI (XAI) aims to enhance the transparency and interpretability\
+        \ of AI decision-making processes, fostering trust and understanding among\
+        \ users. Improvements in natural language processing (NLP) are likely to lead\
+        \ to more seamless and intuitive human-computer interactions. Furthermore,\
+        \ AI's potential to address global challenges, including climate change and\
+        \ disparities in healthcare access, is becoming increasingly significant.\
+        \ Collaborative efforts among stakeholders will be vital to ensuring that\
+        \ AI advancements are ethical and responsive to societal needs, paving the\
+        \ way for a responsible and equitable AI landscape.\\n\\n## Conclusion\\nAI\
+        \ technology is at the forefront of innovation, with the capacity to transform\
+        \ industries and tackle pressing global issues. As we navigate through the\
+        \ complexities and ethical challenges posed by AI, it is crucial to prioritize\
+        \ responsible development and implementation. By harnessing AI's transformative\
+        \ capabilities with a focus on equity and transparency, we can pave the way\
+        \ for a promising future that benefits all.\\n\\nEND REPORT\",\n        \"\
+        refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 774,\n   \
+        \ \"completion_tokens\": 574,\n    \"total_tokens\": 1348,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -945,8 +957,6 @@ interactions:
       - 8fcd9928eaa40133-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -983,6 +993,7 @@ interactions:
       - 0s
       x-request-id:
       - req_d3d0e47180363d07d988cb5ab639597c
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

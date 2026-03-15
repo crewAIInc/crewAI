@@ -54,6 +54,7 @@ uv add crewai-tools
         "customfield_10001": "value"
       }
       ```
+
   </Accordion>
 
   <Accordion title="jira/update_issue">
@@ -69,6 +70,7 @@ uv add crewai-tools
       - Opções: `description`, `descriptionJSON`
     - `description` (string, opcional): Descrição - Descrição detalhada da issue. Este campo aparece apenas se 'descriptionType' = 'description'.
     - `additionalFields` (string, opcional): Campos Adicionais - Especifique outros campos em formato JSON.
+
   </Accordion>
 
   <Accordion title="jira/get_issue_by_key">
@@ -76,6 +78,7 @@ uv add crewai-tools
 
     **Parâmetros:**
     - `issueKey` (string, obrigatório): Chave da Issue (exemplo: "TEST-1234").
+
   </Accordion>
 
   <Accordion title="jira/filter_issues">
@@ -102,6 +105,7 @@ uv add crewai-tools
       ```
       Operadores disponíveis: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`
     - `limit` (string, opcional): Limitar resultados - Limite máximo de issues retornados. Padrão para 10 se estiver em branco.
+
   </Accordion>
 
   <Accordion title="jira/search_by_jql">
@@ -115,12 +119,14 @@ uv add crewai-tools
         "pageCursor": "cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="jira/update_issue_any">
     **Descrição:** Atualiza qualquer issue no Jira. Use DESCRIBE_ACTION_SCHEMA para obter o schema de propriedades dessa função.
 
     **Parâmetros:** Nenhum parâmetro específico - use JIRA_DESCRIBE_ACTION_SCHEMA primeiro para obter o schema esperado.
+
   </Accordion>
 
   <Accordion title="jira/describe_action_schema">
@@ -130,6 +136,7 @@ uv add crewai-tools
     - `issueTypeId` (string, obrigatório): ID do Tipo de Issue.
     - `projectKey` (string, obrigatório): Chave do projeto.
     - `operation` (string, obrigatório): Tipo de Operação, por exemplo CREATE_ISSUE ou UPDATE_ISSUE.
+
   </Accordion>
 
   <Accordion title="jira/get_projects">
@@ -142,6 +149,7 @@ uv add crewai-tools
         "pageCursor": "cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="jira/get_issue_types_by_project">
@@ -149,12 +157,14 @@ uv add crewai-tools
 
     **Parâmetros:**
     - `project` (string, obrigatório): Chave do projeto.
+
   </Accordion>
 
   <Accordion title="jira/get_issue_types">
     **Descrição:** Obtém todos os tipos de issues no Jira.
 
     **Parâmetros:** Nenhum obrigatório.
+
   </Accordion>
 
   <Accordion title="jira/get_issue_status_by_project">
@@ -162,6 +172,7 @@ uv add crewai-tools
 
     **Parâmetros:**
     - `project` (string, obrigatório): Chave do projeto.
+
   </Accordion>
 
   <Accordion title="jira/get_all_assignees_by_project">
@@ -169,6 +180,7 @@ uv add crewai-tools
 
     **Parâmetros:**
     - `project` (string, obrigatório): Chave do projeto.
+
   </Accordion>
 </AccordionGroup>
 
@@ -337,31 +349,37 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Permissão**
+
 - Certifique-se de que sua conta Jira tem as permissões necessárias nos projetos alvo
 - Verifique se a conexão OAuth inclui os escopos necessários da API Jira
 - Confira se você possui permissões de criar/editar issues nos projetos especificados
 
 **Chaves de Projeto ou Issue Inválidas**
+
 - Confira o formato das chaves dos projetos e issues (ex: "PROJ-123")
 - Verifique se os projetos existem e são acessíveis pela sua conta
 - Certifique-se de que chaves de issues referenciam issues existentes
 
 **Problemas de Tipo ou Status de Issue**
+
 - Use JIRA_GET_ISSUE_TYPES_BY_PROJECT para obter tipos válidos de issue para um projeto
 - Use JIRA_GET_ISSUE_STATUS_BY_PROJECT para obter status válidos
 - Certifique-se de que tipos e status de issue estão disponíveis no projeto alvo
 
 **Problemas com Queries JQL**
+
 - Teste as queries JQL na busca de issues do Jira antes de utilizar em chamadas de API
 - Certifique-se de que os nomes dos campos em JQL estejam corretos e existam em sua instância do Jira
 - Use a sintaxe correta de JQL para queries complexas
 
 **Problemas com Campos Customizados e Schemas**
+
 - Use JIRA_DESCRIBE_ACTION_SCHEMA para obter o schema correto para tipos de issues complexas
 - Certifique-se de que os IDs dos campos customizados estão corretos (ex: "customfield_10001")
 - Verifique se esses campos estão disponíveis no projeto e tipo de issue alvo
 
 **Problemas de Fórmulas de Filtro**
+
 - Garanta que as fórmulas de filtro sigam a estrutura JSON correta para forma normal disjuntiva
 - Use apenas campos válidos conforme configuração do seu Jira
 - Teste filtros simples antes de construir queries complexas com múltiplas condições
@@ -369,5 +387,6 @@ crew.kickoff()
 ### Obtenha Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nosso time de suporte para obter assistência na configuração ou solução de problemas da integração Jira.
+  Entre em contato com nosso time de suporte para obter assistência na
+  configuração ou solução de problemas da integração Jira.
 </Card>

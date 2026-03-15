@@ -1,0 +1,202 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are First Agent. First backstory\nYour personal goal is: First goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Process initial data\n\nTrigger Payload: Initial context data\n\nThis is the expected criteria for your final answer: Initial analysis\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '835'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjDsJ4gpfk66Eu5qizidiZKnmxNO4\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894131,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: The initial context data provided is essential for processing and analyzing the foundation of the task. To conduct a thorough initial analysis, I will consider all elements contained within the data payload, including but not limited to raw data specifics, metadata, context indicators, timestamps, and any accompanying notes or instructions.\\n\\nThe initial data must be carefully reviewed to identify patterns, anomalies, or key indicators that will influence further processing steps. This includes validating data integrity, checking for completeness, and understanding the inherent structure. Additionally, noting any potential biases or\
+        \ limitations within the data is critical to ensure accurate downstream outcomes.\\n\\nWithout specific data content in the trigger payload, the initial analysis focuses on preparing a robust framework for incoming data, setting criteria for quality checks, defining preprocessing techniques (like normalization, cleaning, or transformation), and establishing a baseline for comparison against future data inputs.\\n\\nTherefore, the initial analysis consists of:\\n\\n- Confirming the data source and authenticity.\\n- Verifying data completeness and consistency.\\n- Identifying key variables and their relevance to the task.\\n- Outlining preprocessing steps required for effective utilization.\\n- Recognizing potential challenges or missing elements in the data.\\n- Setting up protocols for ongoing data evaluation and updates.\\n\\nThis structured approach ensures the data is primed for effective utilization in subsequent stages of the project, guaranteeing reliability and accuracy in\
+        \ all forthcoming outputs.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 162,\n    \"completion_tokens\": 278,\n    \"total_tokens\": 440,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_9766e549b2\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:22:16 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '4164'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '4177'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Second Agent. Second backstory\nYour personal goal is: Second goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Process secondary data\n\nThis is the expected criteria for your final answer: Secondary analysis\nyou MUST return the actual complete content as the final answer, not a summary.\n\nThis is the context you''re working with:\nThe initial context data provided is essential for processing and analyzing the foundation of the task. To conduct a thorough initial analysis, I will consider all elements contained within the data payload, including but not limited to raw data specifics, metadata, context indicators, timestamps, and any
+      accompanying notes or instructions.\n\nThe initial data must be carefully reviewed to identify patterns, anomalies, or key indicators that will influence further processing steps. This includes validating data integrity, checking for completeness, and understanding the inherent structure. Additionally, noting any potential biases or limitations within the data is critical to ensure accurate downstream outcomes.\n\nWithout specific data content in the trigger payload, the initial analysis focuses on preparing a robust framework for incoming data, setting criteria for quality checks, defining preprocessing techniques (like normalization, cleaning, or transformation), and establishing a baseline for comparison against future data inputs.\n\nTherefore, the initial analysis consists of:\n\n- Confirming the data source and authenticity.\n- Verifying data completeness and consistency.\n- Identifying key variables and their relevance to the task.\n- Outlining preprocessing steps required for
+      effective utilization.\n- Recognizing potential challenges or missing elements in the data.\n- Setting up protocols for ongoing data evaluation and updates.\n\nThis structured approach ensures the data is primed for effective utilization in subsequent stages of the project, guaranteeing reliability and accuracy in all forthcoming outputs.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2493'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjDsOJ6MWWXZEbLgjLPx5nfBqMyQj\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894136,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: \\n\\nSecondary analysis involves the use of existing data collected for a primary purpose but analyzed anew to address different research questions or to build upon the original findings. The process requires a systematic approach to ensure accuracy, validity, and relevance in the new context.\\n\\nThe secondary analysis framework based on the initial context data includes the following stages:\\n\\n1. **Confirming Data Source and Authenticity:**  \\n   - Verify the origin of the dataset, ensuring it comes from a credible and authorized source.  \\n   - Review accompanying metadata and documentation to authenticate the data’s provenance\
+        \ and usage rights.  \\n   - Check timestamps and versioning to confirm data recency and alignment with the intended analysis timeframe.\\n\\n2. **Verifying Data Completeness and Consistency:**  \\n   - Assess the dataset for missing values, gaps, or incomplete records that could compromise analysis integrity.  \\n   - Ensure internal consistency across variables such as matching identifiers, correlated timestamps, and coherent data types.  \\n   - Conduct integrity checks to detect duplicates, outliers, or aberrant patterns suggestive of data corruption or entry errors.\\n\\n3. **Identifying Key Variables and Their Relevance:**  \\n   - Extract and catalog variables pertinent to the current analytical goals, referencing the original data schema and variable definitions.  \\n   - Determine the operational definitions and measurement units to understand each variable’s scope and limitations.  \\n   - Prioritize variables based on their relevance to the secondary research questions,\
+        \ highlighting those critical for hypothesis testing or exploratory insights.\\n\\n4. **Outlining Preprocessing Steps for Effective Utilization:**  \\n   - Design a preprocessing pipeline that includes cleaning (removing or imputing missing data), normalization (scaling variables), and transformation (deriving new variables or encoding categorical data).  \\n   - Address potential biases introduced during primary data collection or coding schemes to improve fairness and accuracy.  \\n   - Document preprocessing procedures transparently to maintain reproducibility and facilitate peer review.\\n\\n5. **Recognizing Potential Challenges or Missing Elements:**  \\n   - Identify data limitations such as restricted variable scope, outdated measurement methodologies, or contextual changes since the original data capture.  \\n   - Acknowledge any ethical concerns, confidentiality issues, or usage restrictions that may impact analysis or dissemination.  \\n   - Prepare for challenges in aligning\
+        \ secondary data with newly acquired datasets or meta-analyses, including differences in granularity or sampling frameworks.\\n\\n6. **Setting Up Protocols for Ongoing Data Evaluation and Updates:**  \\n   - Establish procedures for continuous monitoring of data quality, enabling detection of anomalies or drift over time.  \\n   - Define update workflows for incorporating new or corrected data, maintaining version control and audit trails.  \\n   - Implement validation steps to periodically reassess assumptions and analytical models against evolving data landscapes.\\n\\nBy applying this detailed and structured secondary analysis approach to the provided initial context data payload, the analysis ensures thorough vetting, relevant variable extraction, meticulous preprocessing, and awareness of limitations and challenges. This guarantees that downstream analytical outputs are reliable, valid, and contextualized appropriately for subsequent interpretation or decision-making.\",\n \
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 428,\n    \"completion_tokens\": 617,\n    \"total_tokens\": 1045,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_24710c7f06\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:22:25 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '8751'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '8787'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

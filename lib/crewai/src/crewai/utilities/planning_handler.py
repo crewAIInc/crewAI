@@ -15,9 +15,12 @@ logger = logging.getLogger(__name__)
 class PlanPerTask(BaseModel):
     """Represents a plan for a specific task."""
 
-    task: str = Field(..., description="The task for which the plan is created")
+    task_number: int = Field(
+        description="The 1-indexed task number this plan corresponds to",
+        ge=1,
+    )
+    task: str = Field(description="The task for which the plan is created")
     plan: str = Field(
-        ...,
         description="The step by step plan on how the agents can execute their tasks using the available tools with mastery",
     )
 

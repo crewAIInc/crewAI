@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -62,6 +63,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `name` (string, 선택): 고객의 전체 이름
     - `description` (string, 선택): 내부 참조용 고객 설명
     - `metadataCreateCustomer` (object, 선택): 추가 메타데이터를 key-value 쌍으로 입력 (예: `{"field1": 1, "field2": 2}`)
+
   </Accordion>
 
   <Accordion title="stripe/get_customer_by_id">
@@ -69,6 +71,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `idGetCustomer` (string, 필수): 조회할 Stripe 고객 ID
+
   </Accordion>
 
   <Accordion title="stripe/get_customers">
@@ -79,6 +82,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `createdAfter` (string, 선택): 이 날짜 이후 생성된 고객 필터링 (유닉스 타임스탬프)
     - `createdBefore` (string, 선택): 이 날짜 이전 생성된 고객 필터링 (유닉스 타임스탬프)
     - `limitGetCustomers` (string, 선택): 반환할 최대 고객 수 (기본값 10)
+
   </Accordion>
 
   <Accordion title="stripe/update_customer">
@@ -90,6 +94,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `name` (string, 선택): 업데이트할 고객 이름
     - `description` (string, 선택): 업데이트할 고객 설명
     - `metadataUpdateCustomer` (object, 선택): 업데이트할 메타데이터를 key-value 쌍으로 입력
+
   </Accordion>
 </AccordionGroup>
 
@@ -103,6 +108,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `customerIdCreateSubscription` (string, 필수): 구독이 생성될 고객 ID
     - `plan` (string, 필수): 구독을 위한 플랜 ID - 사용자가 플랜을 선택할 수 있도록 Connect Portal Workflow Settings를 사용하세요
     - `metadataCreateSubscription` (object, 선택): 구독에 대한 추가 메타데이터
+
   </Accordion>
 
   <Accordion title="stripe/get_subscriptions">
@@ -112,6 +118,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `customerIdGetSubscriptions` (string, 선택): 고객 ID로 구독을 필터링
     - `subscriptionStatus` (string, 선택): 구독 상태별 필터링 - 옵션: incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid
     - `limitGetSubscriptions` (string, 선택): 반환할 구독의 최대 개수(기본값은 10)
+
   </Accordion>
 </AccordionGroup>
 
@@ -125,6 +132,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `productName` (string, 필수): 제품 이름
     - `description` (string, 선택): 제품 설명
     - `metadataProduct` (object, 선택): 키-값 쌍으로 구성된 추가 제품 메타데이터
+
   </Accordion>
 
   <Accordion title="stripe/get_product_by_id">
@@ -132,6 +140,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `productId` (string, 필수): 조회할 Stripe 제품 ID
+
   </Accordion>
 
   <Accordion title="stripe/get_products">
@@ -141,6 +150,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `createdAfter` (string, 선택): 이 날짜 이후 생성된 제품만 필터링 (Unix 타임스탬프)
     - `createdBefore` (string, 선택): 이 날짜 이전 생성된 제품만 필터링 (Unix 타임스탬프)
     - `limitGetProducts` (string, 선택): 반환할 최대 제품 수 (기본값 10)
+
   </Accordion>
 </AccordionGroup>
 
@@ -154,6 +164,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `balanceTransactionType` (string, 선택 사항): 거래 유형별 필터 - 옵션: charge, refund, payment, payment_refund
     - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
       - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+
   </Accordion>
 
   <Accordion title="stripe/get_plans">
@@ -163,6 +174,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `isPlanActive` (boolean, 선택 사항): 플랜 상태별 필터 - true는 활성 플랜, false는 비활성 플랜
     - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
       - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+
   </Accordion>
 </AccordionGroup>
 

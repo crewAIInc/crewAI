@@ -10,17 +10,18 @@ requires-python = ">=3.10, <3.14"
 classifiers = ["Private :: Do Not Upload"]
 private = true
 dependencies = [
-    "click>=8.3.0",
-    "toml>=0.10.2",
-    "openai>=1.0.0",
-    "python-dotenv>=1.1.1",
-    "pygithub>=1.59.1",
+    "click~=8.1.7",
+    "toml~=0.10.2",
+    "openai~=1.83.0",
+    "python-dotenv~=1.1.1",
+    "pygithub~=1.59.1",
     "rich>=13.9.4",
 ]
 
 [project.scripts]
 bump-version = "crewai_devtools.cli:bump"
 tag = "crewai_devtools.cli:tag"
+release = "crewai_devtools.cli:release"
 devtools = "crewai_devtools.cli:main"
 
 [build-system]

@@ -20,37 +20,61 @@ Deep-dive guides walk through setup and sample workflows for each integration:
     <a href="/en/enterprise/guides/gmail-trigger">Enable crews when emails arrive or threads update.</a>
   </Card>
 
-  <Card title="Google Calendar Trigger" icon="calendar-days">
-    <a href="/en/enterprise/guides/google-calendar-trigger">React to calendar events as they are created, updated, or cancelled.</a>
-  </Card>
+{" "}
+<Card title="Google Calendar Trigger" icon="calendar-days">
+  <a href="/en/enterprise/guides/google-calendar-trigger">
+    React to calendar events as they are created, updated, or cancelled.
+  </a>
+</Card>
 
-  <Card title="Google Drive Trigger" icon="folder-open">
-    <a href="/en/enterprise/guides/google-drive-trigger">Handle Drive file uploads, edits, and deletions.</a>
-  </Card>
+{" "}
+<Card title="Google Drive Trigger" icon="folder-open">
+  <a href="/en/enterprise/guides/google-drive-trigger">
+    Handle Drive file uploads, edits, and deletions.
+  </a>
+</Card>
 
-  <Card title="Outlook Trigger" icon="envelope-open">
-    <a href="/en/enterprise/guides/outlook-trigger">Automate responses to new Outlook messages and calendar updates.</a>
-  </Card>
+{" "}
+<Card title="Outlook Trigger" icon="envelope-open">
+  <a href="/en/enterprise/guides/outlook-trigger">
+    Automate responses to new Outlook messages and calendar updates.
+  </a>
+</Card>
 
-  <Card title="OneDrive Trigger" icon="cloud">
-    <a href="/en/enterprise/guides/onedrive-trigger">Audit file activity and sharing changes in OneDrive.</a>
-  </Card>
+{" "}
+<Card title="OneDrive Trigger" icon="cloud">
+  <a href="/en/enterprise/guides/onedrive-trigger">
+    Audit file activity and sharing changes in OneDrive.
+  </a>
+</Card>
 
-  <Card title="Microsoft Teams Trigger" icon="comments">
-    <a href="/en/enterprise/guides/microsoft-teams-trigger">Kick off workflows when new Teams chats start.</a>
-  </Card>
+{" "}
+<Card title="Microsoft Teams Trigger" icon="comments">
+  <a href="/en/enterprise/guides/microsoft-teams-trigger">
+    Kick off workflows when new Teams chats start.
+  </a>
+</Card>
 
-  <Card title="HubSpot Trigger" icon="hubspot">
-    <a href="/en/enterprise/guides/hubspot-trigger">Launch automations from HubSpot workflows and lifecycle events.</a>
-  </Card>
+{" "}
+<Card title="HubSpot Trigger" icon="hubspot">
+  <a href="/en/enterprise/guides/hubspot-trigger">
+    Launch automations from HubSpot workflows and lifecycle events.
+  </a>
+</Card>
 
-  <Card title="Salesforce Trigger" icon="salesforce">
-    <a href="/en/enterprise/guides/salesforce-trigger">Connect Salesforce processes to CrewAI for CRM automation.</a>
-  </Card>
+{" "}
+<Card title="Salesforce Trigger" icon="salesforce">
+  <a href="/en/enterprise/guides/salesforce-trigger">
+    Connect Salesforce processes to CrewAI for CRM automation.
+  </a>
+</Card>
 
-  <Card title="Slack Trigger" icon="slack">
-    <a href="/en/enterprise/guides/slack-trigger">Start crews directly from Slack slash commands.</a>
-  </Card>
+{" "}
+<Card title="Slack Trigger" icon="slack">
+  <a href="/en/enterprise/guides/slack-trigger">
+    Start crews directly from Slack slash commands.
+  </a>
+</Card>
 
   <Card title="Zapier Trigger" icon="bolt">
     <a href="/en/enterprise/guides/zapier-trigger">Bridge CrewAI with thousands of Zapier-supported apps.</a>
@@ -76,7 +100,10 @@ To access and manage your automation triggers:
 2. Click on the **Triggers** tab to view all available trigger integrations
 
 <Frame caption="Example of available automation triggers for a Gmail deployment">
-  <img src="/images/enterprise/list-available-triggers.png" alt="List of available automation triggers" />
+  <img
+    src="/images/enterprise/list-available-triggers.png"
+    alt="List of available automation triggers"
+  />
 </Frame>
 
 This view shows all the trigger integrations available for your deployment, along with their current connection status.
@@ -86,7 +113,10 @@ This view shows all the trigger integrations available for your deployment, alon
 Each trigger can be easily enabled or disabled using the toggle switch:
 
 <Frame caption="Enable or disable triggers with toggle">
-  <img src="/images/enterprise/trigger-selected.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/trigger-selected.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 - **Enabled (blue toggle)**: The trigger is active and will automatically execute your deployment when the specified events occur
@@ -99,7 +129,10 @@ Simply click the toggle to change the trigger state. Changes take effect immedia
 Track the performance and history of your triggered executions:
 
 <Frame caption="List of executions triggered by automation">
-  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="List of executions triggered by automation"
+  />
 </Frame>
 
 ## Building Trigger-Driven Automations
@@ -130,6 +163,7 @@ crewai triggers list
 ```
 
 This command displays all triggers available based on your connected integrations, showing:
+
 - Integration name and connection status
 - Available trigger types
 - Trigger names and descriptions
@@ -149,6 +183,7 @@ crewai triggers run microsoft_onedrive/file_changed
 ```
 
 This command:
+
 - Executes your crew locally
 - Passes a complete, realistic trigger payload
 - Simulates exactly how your crew will be called in production
@@ -160,7 +195,6 @@ This command:
   - After deployment, your crew will be executed with the actual trigger payload
   - If your crew expects parameters that aren't in the trigger payload, execution may fail
 </Warning>
-
 
 ### Triggers with Crew
 
@@ -193,10 +227,12 @@ class MyAutomatedCrew:
 The crew will automatically receive and can access the trigger payload through the standard CrewAI context mechanisms.
 
 <Note>
-  Crew and Flow inputs can include `crewai_trigger_payload`. CrewAI automatically injects this payload:
-  - Tasks: appended to the first task's description by default ("Trigger Payload: {crewai_trigger_payload}")
-  - Control via `allow_crewai_trigger_context`: set `True` to always inject, `False` to never inject
-  - Flows: any `@start()` method that accepts a `crewai_trigger_payload` parameter will receive it
+  Crew and Flow inputs can include `crewai_trigger_payload`. CrewAI
+  automatically injects this payload: - Tasks: appended to the first task's
+  description by default ("Trigger Payload: {crewai_trigger_payload}") - Control
+  via `allow_crewai_trigger_context`: set `True` to always inject, `False` to
+  never inject - Flows: any `@start()` method that accepts a
+  `crewai_trigger_payload` parameter will receive it
 </Note>
 
 ### Integration with Flows
@@ -264,17 +300,20 @@ def delegate_to_crew(self, crewai_trigger_payload: dict = None):
 ## Troubleshooting
 
 **Trigger not firing:**
+
 - Verify the trigger is enabled in your deployment's Triggers tab
 - Check integration connection status under Tools & Integrations
 - Ensure all required environment variables are properly configured
 
 **Execution failures:**
+
 - Check the execution logs for error details
 - Use `crewai triggers run <trigger_name>` to test locally and see the exact payload structure
 - Verify your crew can handle the `crewai_trigger_payload` parameter
 - Ensure your crew doesn't expect parameters that aren't included in the trigger payload
 
 **Development issues:**
+
 - Always test with `crewai triggers run <trigger>` before deploying to see the complete payload
 - Remember that `crewai run` does NOT simulate trigger calls—use `crewai triggers run` instead
 - Use `crewai triggers list` to verify which triggers are available for your connected integrations

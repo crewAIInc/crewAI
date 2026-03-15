@@ -64,7 +64,7 @@ class TestAnthropicInterceptorIntegration:
 
         assert llm.interceptor is interceptor
 
-    @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+    @pytest.mark.vcr()
     def test_anthropic_call_with_interceptor_tracks_requests(self) -> None:
         """Test that interceptor tracks Anthropic API requests."""
         interceptor = AnthropicTestInterceptor()
@@ -164,7 +164,7 @@ class TestAnthropicLoggingInterceptor:
         assert llm.interceptor is interceptor
         assert isinstance(llm.interceptor, AnthropicLoggingInterceptor)
 
-    @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+    @pytest.mark.vcr()
     def test_logging_interceptor_tracks_details(self) -> None:
         """Test that logging interceptor tracks request/response details."""
         interceptor = AnthropicLoggingInterceptor()
@@ -257,7 +257,7 @@ class TestAnthropicHeaderInterceptor:
         assert "X-Custom-Client" in modified_request.headers
         assert modified_request.headers["X-Custom-Client"] == "crewai-interceptor"
 
-    @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+    @pytest.mark.vcr()
     def test_header_interceptor_with_real_call(self) -> None:
         """Test that header interceptor works with real Anthropic API call."""
         interceptor = AnthropicHeaderInterceptor(workspace_id="ws-999", user_id="u-888")

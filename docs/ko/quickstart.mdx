@@ -58,6 +58,7 @@ mode: "wide"
         your ability to turn complex data into clear and concise reports, making
         it easy for others to understand and act on the information you provide.
     ```
+
   </Step>
   <Step title="`tasks.yaml` 파일 수정하기">
     ```yaml tasks.yaml
@@ -81,6 +82,7 @@ mode: "wide"
       agent: reporting_analyst
       output_file: report.md
     ```
+
   </Step>
   <Step title="`crew.py` 파일 수정하기">
     ```python crew.py
@@ -136,6 +138,7 @@ mode: "wide"
           verbose=True,
         )
     ```
+
   </Step>
   <Step title="[선택 사항] crew 실행 전/후 함수 추가">
     ```python crew.py
@@ -160,6 +163,7 @@ mode: "wide"
 
       # ... remaining code
     ```
+
   </Step>
   <Step title="crew에 커스텀 입력값 전달하기">
   예를 들어, crew에 `topic` 입력값을 넘겨 연구 및 보고서 출력을 맞춤화할 수 있습니다.
@@ -178,6 +182,7 @@ mode: "wide"
       }
       LatestAiDevelopmentCrew().crew().kickoff(inputs=inputs)
     ```
+
   </Step>
   <Step title="환경 변수 설정">
   crew를 실행하기 전에 `.env` 파일에 아래 키가 환경 변수로 설정되어 있는지 확인하세요:
@@ -211,22 +216,22 @@ mode: "wide"
   <Step title="엔터프라이즈 대안: Crew Studio에서 생성">
   CrewAI AMP 사용자는 코드를 작성하지 않고도 동일한 crew를 생성할 수 있습니다:
 
-  1. CrewAI AMP 계정에 로그인하세요([app.crewai.com](https://app.crewai.com)에서 무료 계정 만들기)
-  2. Crew Studio 열기
-  3. 구현하려는 자동화 내용을 입력하세요
-  4. 미션을 시각적으로 생성하고 순차적으로 연결하세요
-  5. 입력값을 구성하고 "Download Code" 또는 "Deploy"를 클릭하세요
+1. CrewAI AMP 계정에 로그인하세요([app.crewai.com](https://app.crewai.com)에서 무료 계정 만들기)
+2. Crew Studio 열기
+3. 구현하려는 자동화 내용을 입력하세요
+4. 미션을 시각적으로 생성하고 순차적으로 연결하세요
+5. 입력값을 구성하고 "Download Code" 또는 "Deploy"를 클릭하세요
 
-  ![Crew Studio Quickstart](/images/enterprise/crew-studio-interface.png)
+![Crew Studio Quickstart](/images/enterprise/crew-studio-interface.png)
 
   <Card title="CrewAI AMP 체험하기" icon="rocket" href="https://app.crewai.com">
-    CrewAI AMP에서 무료 계정을 시작하세요
+    CrewAI AOP에서 무료 계정을 시작하세요
   </Card>
   </Step>
   <Step title="최종 보고서 확인하기">
   콘솔에서 출력 결과를 확인할 수 있으며 프로젝트 루트에 `report.md` 파일로 최종 보고서가 생성됩니다.
 
-  보고서 예시는 다음과 같습니다:
+보고서 예시는 다음과 같습니다:
 
   <CodeGroup>
     ```markdown output/report.md
@@ -289,6 +294,7 @@ mode: "wide"
     ## 8. Conclusion
     The emergence of AI agents is undeniably reshaping the workplace landscape in 5. With their ability to automate tasks, enhance efficiency, and improve decision-making, AI agents are critical in driving operational success. Organizations must embrace and adapt to AI developments to thrive in an increasingly digital business environment.
     ```
+
   </CodeGroup>
   </Step>
 </Steps>
@@ -297,6 +303,7 @@ mode: "wide"
 축하합니다!
 
 crew 프로젝트 설정이 완료되었으며, 이제 자신만의 agentic workflow 구축을 바로 시작하실 수 있습니다!
+
 </Check>
 
 ### 명명 일관성에 대한 참고
@@ -308,34 +315,37 @@ YAML 파일(`agents.yaml` 및 `tasks.yaml`)에서 사용하는 이름은 Python 
 #### 예시 참조
 
 <Tip>
-  `agents.yaml` (`email_summarizer`) 파일에서 에이전트 이름과 `crew.py` (`email_summarizer`) 파일에서 메서드 이름이 동일하게 사용되는 점에 주목하세요.
+  `agents.yaml` (`email_summarizer`) 파일에서 에이전트 이름과 `crew.py`
+  (`email_summarizer`) 파일에서 메서드 이름이 동일하게 사용되는 점에 주목하세요.
 </Tip>
 
 ```yaml agents.yaml
 email_summarizer:
-    role: >
-      Email Summarizer
-    goal: >
-      Summarize emails into a concise and clear summary
-    backstory: >
-      You will create a 5 bullet point summary of the report
-    llm: provider/model-id  # Add your choice of model here
+  role: >
+    Email Summarizer
+  goal: >
+    Summarize emails into a concise and clear summary
+  backstory: >
+    You will create a 5 bullet point summary of the report
+  llm: provider/model-id # Add your choice of model here
 ```
 
 <Tip>
-  `tasks.yaml` (`email_summarizer_task`) 파일에서 태스크 이름과 `crew.py` (`email_summarizer_task`) 파일에서 메서드 이름이 동일하게 사용되는 점에 주목하세요.
+  `tasks.yaml` (`email_summarizer_task`) 파일에서 태스크 이름과 `crew.py`
+  (`email_summarizer_task`) 파일에서 메서드 이름이 동일하게 사용되는 점에
+  주목하세요.
 </Tip>
 
 ```yaml tasks.yaml
 email_summarizer_task:
-    description: >
-      Summarize the email into a 5 bullet point summary
-    expected_output: >
-      A 5 bullet point summary of the email
-    agent: email_summarizer
-    context:
-      - reporting_task
-      - research_task
+  description: >
+    Summarize the email into a 5 bullet point summary
+  expected_output: >
+    A 5 bullet point summary of the email
+  agent: email_summarizer
+  context:
+    - reporting_task
+    - research_task
 ```
 
 ## Crew 배포하기
@@ -354,18 +364,16 @@ CLI를 사용하여 [CrewAI AMP](http://app.crewai.com)에 crew를 배포하는 
 ></iframe>
 
 <CardGroup cols={2}>
-  <Card
-    title="Enterprise에 배포"
-    icon="rocket"
-    href="http://app.crewai.com"
-  >
-    CrewAI AMP로 시작하여 몇 번의 클릭만으로 production 환경에 crew를 배포하세요.
+  <Card title="Enterprise에 배포" icon="rocket" href="http://app.crewai.com">
+    CrewAI AOP로 시작하여 몇 번의 클릭만으로 production 환경에 crew를
+    배포하세요.
   </Card>
   <Card
     title="커뮤니티 참여하기"
     icon="comments"
     href="https://community.crewai.com"
   >
-    오픈 소스 커뮤니티에 참여하여 아이디어를 나누고, 프로젝트를 공유하며, 다른 CrewAI 개발자들과 소통하세요.
+    오픈 소스 커뮤니티에 참여하여 아이디어를 나누고, 프로젝트를 공유하며, 다른
+    CrewAI 개발자들과 소통하세요.
   </Card>
 </CardGroup>

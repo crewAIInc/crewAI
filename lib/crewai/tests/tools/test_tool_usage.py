@@ -10,7 +10,9 @@ from crewai import Agent, Task
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import (
     ToolSelectionErrorEvent,
+    ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
 from crewai.tools import BaseTool
@@ -107,25 +109,20 @@ def test_tool_usage_render():
 
     rendered = tool_usage._render()
 
-    # Updated checks to match the actual output
-    assert "Tool Name: Random Number Generator" in rendered
+    # Check that the rendered output contains the expected tool information
+    assert "Tool Name: random_number_generator" in rendered
     assert "Tool Arguments:" in rendered
-    assert (
-        "'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}"
-        in rendered
-    )
-    assert (
-        "'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}"
-        in rendered
-    )
     assert (
         "Tool Description: Generates a random number within a specified range"
         in rendered
     )
-    assert (
-        "Tool Name: Random Number Generator\nTool Arguments: {'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}, 'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}}\nTool Description: Generates a random number within a specified range"
-        in rendered
-    )
+
+    # Check that the JSON schema format is used (proper JSON schema types)
+    assert '"min_value"' in rendered
+    assert '"max_value"' in rendered
+    assert '"type": "integer"' in rendered
+    assert '"description": "The minimum value of the range (inclusive)"' in rendered
+    assert '"description": "The maximum value of the range (inclusive)"' in rendered
 
 
 def test_validate_tool_input_booleans_and_none():
@@ -493,7 +490,7 @@ def test_tool_selection_error_event_direct():
     assert event.agent_role == "test_role"
     assert event.tool_name == "Non Existent Tool"
     assert event.tool_args == {}
-    assert "Tool Name: Test Tool" in event.tool_class
+    assert "Tool Name: test_tool" in event.tool_class
     assert "A test tool" in event.tool_class
     assert "don't exist" in event.error
 
@@ -508,7 +505,7 @@ def test_tool_selection_error_event_direct():
     assert event.agent_role == "test_role"
     assert event.tool_name == ""
     assert event.tool_args == {}
-    assert "Test Tool" in event.tool_class
+    assert "test_tool" in event.tool_class
     assert "forgot the Action name" in event.error
 
 
@@ -564,15 +561,22 @@ def test_tool_validate_input_error_event():
         patch("json_repair.repair_json", side_effect=Exception("Failed to repair")),
     ):
         received_events = []
+        condition = threading.Condition()
 
         @crewai_event_bus.on(ToolValidateInputErrorEvent)
         def event_handler(source, event):
-            received_events.append(event)
+            with condition:
+                received_events.append(event)
+                condition.notify()
 
         # Test invalid input
         invalid_input = "invalid json {[}"
         with pytest.raises(Exception):  # noqa: B017
             tool_usage._validate_tool_input(invalid_input)
+
+        with condition:
+            if not received_events:
+                condition.wait(timeout=5)
 
         # Verify event was emitted
         assert len(received_events) == 1, "Expected one event to be emitted"
@@ -652,7 +656,7 @@ def test_tool_usage_finished_event_with_result():
     # Verify event attributes
     assert event.agent_key == "test_agent_key"
     assert event.agent_role == "test_agent_role"
-    assert event.tool_name == "Test Tool"
+    assert event.tool_name == "test_tool"
     assert event.tool_args == {"arg1": "value1"}
     assert event.tool_class == "TestTool"
     assert event.run_attempts == 1  # Default value from ToolUsage
@@ -732,7 +736,7 @@ def test_tool_usage_finished_event_with_cached_result():
     # Verify event attributes
     assert event.agent_key == "test_agent_key"
     assert event.agent_role == "test_agent_role"
-    assert event.tool_name == "Test Tool"
+    assert event.tool_name == "test_tool"
     assert event.tool_args == {"arg1": "value1"}
     assert event.tool_class == "TestTool"
     assert event.run_attempts == 1  # Default value from ToolUsage
@@ -742,3 +746,78 @@ def test_tool_usage_finished_event_with_cached_result():
     assert isinstance(event.started_at, datetime.datetime)
     assert isinstance(event.finished_at, datetime.datetime)
     assert event.type == "tool_usage_finished"
+
+
+def test_tool_error_does_not_emit_finished_event():
+    from crewai.tools.tool_calling import ToolCalling
+
+    class FailingTool(BaseTool):
+        name: str = "Failing Tool"
+        description: str = "A tool that always fails"
+
+        def _run(self, **kwargs) -> str:
+            raise ValueError("Intentional failure")
+
+    failing_tool = FailingTool().to_structured_tool()
+
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+    mock_agent.i18n.tools.return_value = {"name": "Add Image"}
+    mock_agent.i18n.errors.return_value = "Error: {error}"
+    mock_agent.i18n.slice.return_value = "Available tools: {tool_names}"
+
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task"
+    mock_task.id = "test-task-id"
+
+    mock_action = MagicMock()
+    mock_action.tool = "failing_tool"
+    mock_action.tool_input = "{}"
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        tools=[failing_tool],
+        task=mock_task,
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=mock_action,
+    )
+
+    started_events = []
+    error_events = []
+    finished_events = []
+    error_received = threading.Event()
+
+    @crewai_event_bus.on(ToolUsageStartedEvent)
+    def on_started(source, event):
+        if event.tool_name == "failing_tool":
+            started_events.append(event)
+
+    @crewai_event_bus.on(ToolUsageErrorEvent)
+    def on_error(source, event):
+        if event.tool_name == "failing_tool":
+            error_events.append(event)
+            error_received.set()
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def on_finished(source, event):
+        if event.tool_name == "failing_tool":
+            finished_events.append(event)
+
+    tool_calling = ToolCalling(tool_name="failing_tool", arguments={})
+    tool_usage.use(calling=tool_calling, tool_string="Action: failing_tool")
+
+    assert error_received.wait(timeout=5), "Timeout waiting for error event"
+    crewai_event_bus.flush()
+
+    assert len(started_events) >= 1, "Expected at least one ToolUsageStartedEvent"
+    assert len(error_events) >= 1, "Expected at least one ToolUsageErrorEvent"
+    assert len(finished_events) == 0, (
+        "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
+    )

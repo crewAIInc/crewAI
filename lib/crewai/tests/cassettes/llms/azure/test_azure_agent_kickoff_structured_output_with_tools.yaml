@@ -1,0 +1,172 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Calculator. You are
+      a calculator assistant that uses tools to compute results.\nYour personal goal
+      is: Perform calculations using available tools"}, {"role": "user", "content":
+      "\nCurrent Task: Calculate 15 + 27 using your add_numbers tool. Report the result."}],
+      "stream": false, "response_format": {"type": "json_schema", "json_schema": {"name":
+      "CalculationResult", "schema": {"description": "Structured output for calculation
+      results.", "properties": {"operation": {"description": "The mathematical operation
+      performed", "title": "Operation", "type": "string"}, "result": {"description":
+      "The result of the calculation", "title": "Result", "type": "integer"}, "explanation":
+      {"description": "Brief explanation of the calculation", "title": "Explanation",
+      "type": "string"}}, "required": ["operation", "result", "explanation"], "title":
+      "CalculationResult", "type": "object", "additionalProperties": false}, "description":
+      "Schema for CalculationResult", "strict": true}}, "stop": ["\nObservation:"],
+      "tool_choice": "auto", "tools": [{"function": {"name": "add_numbers", "description":
+      "Add two numbers together and return the sum.", "parameters": {"properties":
+      {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
+      "required": ["a", "b"], "type": "object", "additionalProperties": false}}, "type":
+      "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1397'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{},"finish_reason":"tool_calls","index":0,"logprobs":null,"message":{"annotations":[],"content":null,"refusal":null,"role":"assistant","tool_calls":[{"function":{"arguments":"{\"a\":15,\"b\":27}","name":"add_numbers"},"id":"call_xvUi7xS7jtnRyG6NIhRvbb5r","type":"function"}]}}],"created":1769734374,"id":"chatcmpl-D3X2kUbUq9WXlKVGu2D7h6pWVCx0E","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":19,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":194,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":213}}
+
+        '
+    headers:
+      Content-Length:
+      - '1051'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 00:52:53 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-4o-mini
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Calculator. You are
+      a calculator assistant that uses tools to compute results.\nYour personal goal
+      is: Perform calculations using available tools"}, {"role": "user", "content":
+      "\nCurrent Task: Calculate 15 + 27 using your add_numbers tool. Report the result."},
+      {"role": "assistant", "content": "", "tool_calls": [{"id": "call_xvUi7xS7jtnRyG6NIhRvbb5r",
+      "type": "function", "function": {"name": "add_numbers", "arguments": "{\"a\":15,\"b\":27}"}}]},
+      {"role": "tool", "tool_call_id": "call_xvUi7xS7jtnRyG6NIhRvbb5r", "content":
+      "42"}], "stream": false, "response_format": {"type": "json_schema", "json_schema":
+      {"name": "CalculationResult", "schema": {"description": "Structured output for
+      calculation results.", "properties": {"operation": {"description": "The mathematical
+      operation performed", "title": "Operation", "type": "string"}, "result": {"description":
+      "The result of the calculation", "title": "Result", "type": "integer"}, "explanation":
+      {"description": "Brief explanation of the calculation", "title": "Explanation",
+      "type": "string"}}, "required": ["operation", "result", "explanation"], "title":
+      "CalculationResult", "type": "object", "additionalProperties": false}, "description":
+      "Schema for CalculationResult", "strict": true}}, "stop": ["\nObservation:"],
+      "tool_choice": "auto", "tools": [{"function": {"name": "add_numbers", "description":
+      "Add two numbers together and return the sum.", "parameters": {"properties":
+      {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
+      "required": ["a", "b"], "type": "object", "additionalProperties": false}}, "type":
+      "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1669'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"{\"operation\":\"addition\",\"result\":42,\"explanation\":\"The
+        sum of 15 and 27 is calculated as 15 + 27 = 42.\"}","refusal":null,"role":"assistant"}}],"created":1769734375,"id":"chatcmpl-D3X2lupVq0RsIVdaZc2XqZpm4EmSW","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":39,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":221,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":260}}
+
+        '
+    headers:
+      Content-Length:
+      - '1327'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 00:52:55 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-4o-mini
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

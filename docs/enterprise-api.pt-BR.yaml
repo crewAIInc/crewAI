@@ -35,7 +35,7 @@ info:
 
     1. **Descubra os inputs** usando `GET /inputs`
     2. **Inicie a execução** usando `POST /kickoff`
-    3. **Monitore o progresso** usando `GET /status/{kickoff_id}`
+    3. **Monitore o progresso** usando `GET /{kickoff_id}/status`
   version: 1.0.0
   contact:
     name: CrewAI Suporte
@@ -56,7 +56,7 @@ paths:
         Retorna a lista de parâmetros de entrada que sua crew espera.
       operationId: getRequiredInputs
       responses:
-        '200':
+        "200":
           description: Inputs requeridos obtidos com sucesso
           content:
             application/json:
@@ -69,12 +69,12 @@ paths:
                       type: string
                     description: Nomes dos parâmetros de entrada
                     example: ["budget", "interests", "duration", "age"]
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/ServerError'
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/ServerError"
 
   /kickoff:
     post:
@@ -104,7 +104,7 @@ paths:
                     age: "35"
 
       responses:
-        '200':
+        "200":
           description: Execução iniciada com sucesso
           content:
             application/json:
@@ -115,12 +115,12 @@ paths:
                     type: string
                     format: uuid
                     example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '500':
-          $ref: '#/components/responses/ServerError'
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/ServerError"
 
-  /status/{kickoff_id}:
+  /{kickoff_id}/status:
     get:
       summary: Obter Status da Execução
       description: |
@@ -136,25 +136,25 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Status recuperado com sucesso
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/ExecutionRunning'
-                  - $ref: '#/components/schemas/ExecutionCompleted'
-                  - $ref: '#/components/schemas/ExecutionError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
+                  - $ref: "#/components/schemas/ExecutionRunning"
+                  - $ref: "#/components/schemas/ExecutionCompleted"
+                  - $ref: "#/components/schemas/ExecutionError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
           description: Kickoff ID não encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          $ref: '#/components/responses/ServerError'
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/ServerError"
 
   /resume:
     post:
@@ -234,7 +234,7 @@ paths:
                   taskWebhookUrl: "https://api.example.com/webhooks/task"
                   crewWebhookUrl: "https://api.example.com/webhooks/crew"
       responses:
-        '200':
+        "200":
           description: Execution resumed successfully
           content:
             application/json:
@@ -261,28 +261,28 @@ paths:
                   value:
                     status: "retrying"
                     message: "Task will be retried with your feedback"
-        '400':
+        "400":
           description: Invalid request body or execution not in pending state
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "Invalid Request"
                 message: "Execution is not in pending human input state"
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
           description: Execution ID or Task ID not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "Not Found"
                 message: "Execution ID not found"
-        '500':
-          $ref: '#/components/responses/ServerError'
+        "500":
+          $ref: "#/components/responses/ServerError"
 
 components:
   securitySchemes:
@@ -324,7 +324,7 @@ components:
             tasks:
               type: array
               items:
-                $ref: '#/components/schemas/TaskResult'
+                $ref: "#/components/schemas/TaskResult"
         execution_time:
           type: number
 
@@ -380,16 +380,16 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     NotFoundError:
       description: Recurso não encontrado
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     ServerError:
       description: Erro interno do servidor
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"

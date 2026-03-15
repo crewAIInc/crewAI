@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -64,6 +65,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `updatedAtMin` (string, opcional): Retorna somente clientes atualizados após esta data (ISO ou timestamp Unix)
     - `updatedAtMax` (string, opcional): Retorna somente clientes atualizados antes desta data (ISO ou timestamp Unix)
     - `limit` (string, opcional): Número máximo de clientes a retornar (padrão 250)
+
   </Accordion>
 
   <Accordion title="shopify/search_customers">
@@ -72,6 +74,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `filterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com operadores específicos de campo
     - `limit` (string, opcional): Número máximo de clientes a retornar (padrão 250)
+
   </Accordion>
 
   <Accordion title="shopify/create_customer">
@@ -93,6 +96,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `note` (string, opcional): Observação sobre o cliente
     - `sendEmailInvite` (boolean, opcional): Se deve enviar convite por e-mail
     - `metafields` (object, opcional): Metacampos adicionais em formato JSON
+
   </Accordion>
 
   <Accordion title="shopify/update_customer">
@@ -115,6 +119,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `note` (string, opcional): Observação sobre o cliente
     - `sendEmailInvite` (boolean, opcional): Se deve enviar convite por e-mail
     - `metafields` (object, opcional): Metacampos adicionais em formato JSON
+
   </Accordion>
 </AccordionGroup>
 
@@ -131,6 +136,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `updatedAtMin` (string, opcional): Retorna somente pedidos atualizados após esta data (ISO ou timestamp Unix)
     - `updatedAtMax` (string, opcional): Retorna somente pedidos atualizados antes desta data (ISO ou timestamp Unix)
     - `limit` (string, opcional): Número máximo de pedidos a retornar (padrão 250)
+
   </Accordion>
 
   <Accordion title="shopify/create_order">
@@ -144,6 +150,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `financialStatus` (string, opcional): Status financeiro - Opções: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
     - `inventoryBehaviour` (string, opcional): Comportamento de inventário - Opções: bypass, decrement_ignoring_policy, decrement_obeying_policy
     - `note` (string, opcional): Observação do pedido
+
   </Accordion>
 
   <Accordion title="shopify/update_order">
@@ -158,6 +165,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `financialStatus` (string, opcional): Status financeiro - Opções: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
     - `inventoryBehaviour` (string, opcional): Comportamento de inventário - Opções: bypass, decrement_ignoring_policy, decrement_obeying_policy
     - `note` (string, opcional): Observação do pedido
+
   </Accordion>
 
   <Accordion title="shopify/get_abandoned_carts">
@@ -170,6 +178,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `createdAtMin` (string, opcional): Retorna somente carrinhos criados após esta data (ISO ou timestamp Unix)
     - `createdAtMax` (string, opcional): Retorna somente carrinhos criados antes desta data (ISO ou timestamp Unix)
     - `limit` (string, opcional): Número máximo de carrinhos a retornar (padrão 250)
+
   </Accordion>
 </AccordionGroup>
 
@@ -190,6 +199,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `updatedAtMin` (string, opcional): Retorna somente produtos atualizados após esta data (ISO ou timestamp Unix)
     - `updatedAtMax` (string, opcional): Retorna somente produtos atualizados antes desta data (ISO ou timestamp Unix)
     - `limit` (string, opcional): Número máximo de produtos a retornar (padrão 250)
+
   </Accordion>
 
   <Accordion title="shopify/create_product">
@@ -206,6 +216,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `imageUrl` (string, opcional): URL da imagem do produto
     - `isPublished` (boolean, opcional): Se o produto está publicado
     - `publishToPointToSale` (boolean, opcional): Se deve publicar no ponto de venda
+
   </Accordion>
 
   <Accordion title="shopify/update_product">
@@ -223,6 +234,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `imageUrl` (string, opcional): URL da imagem do produto
     - `isPublished` (boolean, opcional): Se o produto está publicado
     - `publishToPointToSale` (boolean, opcional): Se deve publicar no ponto de venda
+
   </Accordion>
 </AccordionGroup>
 
@@ -234,6 +246,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `productFilterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com suporte a campos como id, title, vendor, status, handle, tag, created_at, updated_at, published_at
+
   </Accordion>
 
   <Accordion title="shopify/create_product_graphql">
@@ -247,6 +260,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `tags` (string, opcional): Tags do produto como array ou lista separada por vírgula
     - `media` (object, opcional): Objetos de mídia com texto alternativo, tipo de conteúdo e URL de origem
     - `additionalFields` (object, opcional): Campos adicionais do produto como status, requiresSellingPlan, giftCard
+
   </Accordion>
 
   <Accordion title="shopify/update_product_graphql">
@@ -261,6 +275,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `tags` (string, opcional): Tags do produto como array ou lista separada por vírgula
     - `media` (object, opcional): Objetos de mídia atualizados com texto alternativo, tipo de conteúdo e URL de origem
     - `additionalFields` (object, opcional): Campos adicionais do produto como status, requiresSellingPlan, giftCard
+
   </Accordion>
 </AccordionGroup>
 
@@ -388,5 +403,6 @@ crew.kickoff()
 ### Precisa de Ajuda?
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência na configuração ou resolução de problemas de integração com o Shopify.
+  Entre em contato com nossa equipe de suporte para assistência na configuração
+  ou resolução de problemas de integração com o Shopify.
 </Card>

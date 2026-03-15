@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -107,6 +108,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         }
       }
       ```
+
   </Accordion>
 
   <Accordion title="notion/update_page">
@@ -141,6 +143,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         }
       }
       ```
+
   </Accordion>
 
   <Accordion title="notion/get_page_by_id">
@@ -148,6 +151,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `pageId` (string, obrigatório): Page ID - Especifique o ID da Página a ser buscada. (exemplo: "59833787-2cf9-4fdf-8782-e53db20768a5").
+
   </Accordion>
 
   <Accordion title="notion/archive_page">
@@ -155,6 +159,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `pageId` (string, obrigatório): Page ID - Especifique o ID da Página a ser arquivada. (exemplo: "59833787-2cf9-4fdf-8782-e53db20768a5").
+
   </Accordion>
 
   <Accordion title="notion/search_pages">
@@ -180,6 +185,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
       }
       ```
       Campos disponíveis: `query`, `filter.value`, `direction`, `page_size`
+
   </Accordion>
 
   <Accordion title="notion/get_page_content">
@@ -187,6 +193,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `blockId` (string, obrigatório): Page ID - Especifique o ID de um Bloco ou Página para receber todos os seus blocos filhos na ordem correta. (exemplo: "59833787-2cf9-4fdf-8782-e53db20768a5").
+
   </Accordion>
 
   <Accordion title="notion/update_block">
@@ -274,6 +281,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         }
       }
       ```
+
   </Accordion>
 
   <Accordion title="notion/get_block_by_id">
@@ -281,6 +289,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `blockId` (string, obrigatório): Block ID - Especifique o ID do Bloco a ser buscado. (exemplo: "9bc30ad4-9373-46a5-84ab-0a7845ee52e6").
+
   </Accordion>
 
   <Accordion title="notion/delete_block">
@@ -288,6 +297,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `blockId` (string, obrigatório): Block ID - Especifique o ID do Bloco a ser excluído. (exemplo: "9bc30ad4-9373-46a5-84ab-0a7845ee52e6").
+
   </Accordion>
 </AccordionGroup>
 
@@ -452,41 +462,49 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Permissão**
+
 - Certifique-se de que sua conta Notion possui acesso de edição ao workspace desejado
 - Verifique se a conexão OAuth inclui os escopos necessários para a API do Notion
 - Confira se as páginas e bancos de dados estão compartilhados com a integração autenticada
 
 **IDs de Página e Bloco Inválidos**
+
 - Revise os IDs de página e bloco para garantir que estejam no formato UUID correto
 - Garanta que as páginas e blocos referenciados existem e são acessíveis
 - Verifique se os IDs da página ou banco de dados pai são válidos ao criar novas páginas
 
 **Problemas com Schema de Propriedades**
+
 - Assegure que as propriedades da página correspondem ao schema do banco de dados ao criar páginas em bancos de dados
 - Verifique se os nomes e tipos das propriedades estão corretos para o banco de dados alvo
 - Confirme que as propriedades obrigatórias estão incluídas ao criar ou atualizar páginas
 
 **Estrutura dos Blocos de Conteúdo**
+
 - Assegure que o conteúdo dos blocos segue as especificações de rich text do Notion
 - Verifique se estruturas aninhadas de blocos estão devidamente formatadas
 - Confira se URLs de mídias são acessíveis e estão corretamente formatadas
 
 **Problemas de Pesquisa e Filtros**
+
 - Certifique-se de que as queries de pesquisa estão devidamente formatadas e não estão vazias
 - Use nomes de campos válidos em fórmulas de filtro: `query`, `filter.value`, `direction`, `page_size`
 - Teste pesquisas simples antes de construir condições de filtro mais complexas
 
 **Relacionamentos Pai-Filho**
+
 - Verifique se a página ou banco de dados pai existe antes de criar páginas filhas
 - Assegure que existam permissões apropriadas para o container pai
 - Confirme que os schemas do banco permitem definir as propriedades desejadas
 
 **Rich Text e Conteúdo de Mídia**
+
 - Assegure que URLs para imagens externas, PDFs e bookmarks sejam acessíveis
 - Verifique se a formatação rich text segue as especificações da API do Notion
 - Confira se os tipos de linguagem nos blocos de código são suportados pelo Notion
 
 **Operações de Arquivamento e Exclusão**
+
 - Entenda a diferença entre arquivar (reversível) e excluir (permanente)
 - Certifique-se de ter permissões para arquivar ou excluir o conteúdo desejado
 - Tenha cuidado com operações em massa que possam afetar múltiplas páginas ou blocos
@@ -494,5 +512,6 @@ crew.kickoff()
 ### Obtendo Ajuda
 
 <Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nosso time de suporte para auxílio na configuração ou solução de problemas com a integração Notion.
+  Entre em contato com nosso time de suporte para auxílio na configuração ou
+  solução de problemas com a integração Notion.
 </Card>

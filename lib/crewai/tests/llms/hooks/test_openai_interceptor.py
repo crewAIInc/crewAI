@@ -55,7 +55,7 @@ class TestOpenAIInterceptorIntegration:
 
         assert llm.interceptor is interceptor
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_openai_call_with_interceptor_tracks_requests(self) -> None:
         """Test that interceptor tracks OpenAI API requests."""
         interceptor = OpenAITestInterceptor()
@@ -152,7 +152,7 @@ class TestOpenAILoggingInterceptor:
         assert llm.interceptor is interceptor
         assert isinstance(llm.interceptor, LoggingInterceptor)
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_logging_interceptor_tracks_details(self) -> None:
         """Test that logging interceptor tracks request/response details."""
         interceptor = LoggingInterceptor()
@@ -241,7 +241,7 @@ class TestOpenAIAuthInterceptor:
         assert "X-Organization-ID" in modified_request.headers
         assert modified_request.headers["X-Organization-ID"] == "test-org"
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_auth_interceptor_with_real_call(self) -> None:
         """Test that auth interceptor works with real OpenAI API call."""
         interceptor = AuthInterceptor(api_key="custom-123", org_id="org-789")

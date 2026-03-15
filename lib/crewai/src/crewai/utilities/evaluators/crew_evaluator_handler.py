@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
@@ -36,7 +36,13 @@ class CrewEvaluator:
         iteration: The current iteration of the evaluation.
     """
 
-    def __init__(self, crew: Crew, eval_llm: InstanceOf[BaseLLM]) -> None:
+    def __init__(
+        self,
+        crew: Crew,
+        eval_llm: InstanceOf[BaseLLM] | str | None = None,
+        openai_model_name: str | None = None,
+        llm: InstanceOf[BaseLLM] | str | None = None,
+    ) -> None:
         self.crew = crew
         self.llm = eval_llm
         self.tasks_scores: defaultdict[int, list[float]] = defaultdict(list)
@@ -86,7 +92,9 @@ class CrewEvaluator:
         """
         self.iteration = iteration
 
-    def print_crew_evaluation_result(self) -> None:
+    def print_crew_evaluation_result(
+        self, token_usage: list[dict[str, Any]] | None = None
+    ) -> None:
         """
         Prints the evaluation result of the crew in a table.
         A Crew with 2 tasks using the command crewai test -n 3
@@ -204,7 +212,7 @@ class CrewEvaluator:
                 CrewTestResultEvent(
                     quality=quality_score,
                     execution_duration=current_task.execution_duration,
-                    model=self.llm.model,
+                    model=getattr(self.llm, "model", str(self.llm)),
                     crew_name=self.crew.name,
                     crew=self.crew,
                 ),
