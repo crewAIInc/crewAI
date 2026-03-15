@@ -1,18 +1,18 @@
+"""CrewAI+ API client."""
+
 import os
 from typing import Any
 from urllib.parse import urljoin
 
 import httpx
 
-from crewai.cli.config import Settings
-from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai.cli.version import get_crewai_version
+from crewai.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai.settings import Settings
+from crewai.version import get_crewai_version
 
 
 class PlusAPI:
-    """
-    This class exposes methods for working with the CrewAI+ API.
-    """
+    """Client for working with the CrewAI+ API."""
 
     TOOLS_RESOURCE = "/crewai_plus/api/v1/tools"
     ORGANIZATIONS_RESOURCE = "/crewai_plus/api/v1/me/organizations"

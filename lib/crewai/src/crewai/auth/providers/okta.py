@@ -1,7 +1,11 @@
-from crewai.cli.authentication.providers.base_provider import BaseProvider
+"""Okta OAuth2 provider."""
+
+from crewai.auth.providers.base_provider import BaseProvider
 
 
 class OktaProvider(BaseProvider):
+    """Okta OAuth2 provider implementation."""
+
     def get_authorize_url(self) -> str:
         return f"{self._oauth2_base_url()}/v1/device/authorize"
 

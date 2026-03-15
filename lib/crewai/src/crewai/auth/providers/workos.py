@@ -1,25 +1,25 @@
-from crewai.cli.authentication.providers.base_provider import BaseProvider
+"""WorkOS OAuth2 provider."""
+
+from crewai.auth.providers.base_provider import BaseProvider
 
 
-class Auth0Provider(BaseProvider):
+class WorkosProvider(BaseProvider):
+    """WorkOS OAuth2 provider implementation."""
+
     def get_authorize_url(self) -> str:
-        return f"https://{self._get_domain()}/oauth/device/code"
+        return f"https://{self._get_domain()}/oauth2/device_authorization"
 
     def get_token_url(self) -> str:
-        return f"https://{self._get_domain()}/oauth/token"
+        return f"https://{self._get_domain()}/oauth2/token"
 
     def get_jwks_url(self) -> str:
-        return f"https://{self._get_domain()}/.well-known/jwks.json"
+        return f"https://{self._get_domain()}/oauth2/jwks"
 
     def get_issuer(self) -> str:
-        return f"https://{self._get_domain()}/"
+        return f"https://{self._get_domain()}"
 
     def get_audience(self) -> str:
-        if self.settings.audience is None:
-            raise ValueError(
-                "Audience is required. Please set it in the configuration."
-            )
-        return self.settings.audience
+        return self.settings.audience or ""
 
     def get_client_id(self) -> str:
         if self.settings.client_id is None:

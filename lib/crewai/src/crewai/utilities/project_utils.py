@@ -1,45 +1,25 @@
+"""Project utility functions for discovering crews, flows, and tools."""
+
 from functools import reduce
 import importlib.util
 from inspect import getmro, isclass, isfunction, ismethod
 import os
 from pathlib import Path
-import shutil
 import sys
 from typing import Any, cast, get_type_hints
 
-import click
 from rich.console import Console
 import tomli
 
-from crewai.cli.config import Settings
-from crewai.cli.constants import ENV_VARS
 from crewai.crew import Crew
 from crewai.flow import Flow
+from crewai.settings import Settings
 
 
 if sys.version_info >= (3, 11):
     import tomllib
 
 console = Console()
-
-
-def copy_template(
-    src: Path, dst: Path, name: str, class_name: str, folder_name: str
-) -> None:
-    """Copy a file from src to dst."""
-    with open(src, "r") as file:
-        content = file.read()
-
-    # Interpolate the content
-    content = content.replace("{{name}}", name)
-    content = content.replace("{{crew_name}}", class_name)
-    content = content.replace("{{folder_name}}", folder_name)
-
-    # Write the interpolated content to the new file
-    with open(dst, "w") as file:
-        file.write(content)
-
-    click.secho(f"  - Created {dst}", fg="green")
 
 
 def read_toml(file_path: str = "pyproject.toml") -> dict[str, Any]:
@@ -49,6 +29,7 @@ def read_toml(file_path: str = "pyproject.toml") -> dict[str, Any]:
 
 
 def parse_toml(content: str) -> dict[str, Any]:
+    """Parse a TOML string and return it as a dictionary."""
     if sys.version_info >= (3, 11):
         return tomllib.loads(content)
     return tomli.loads(content)
@@ -104,7 +85,6 @@ def _get_project_attribute(
             style="bold red",
         )
     except Exception as e:
-        # Handle TOML decode errors for Python 3.11+
         if sys.version_info >= (3, 11) and isinstance(e, tomllib.TOMLDecodeError):
             console.print(
                 f"Error: {pyproject_path} is not a valid TOML file.", style="bold red"
@@ -128,164 +108,18 @@ def _get_nested_value(data: dict[str, Any], keys: list[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 
-def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
-    """Fetch the environment variables from a .env file and return them as a dictionary."""
-    try:
-        # Read the .env file
-        with open(env_file_path, "r") as f:
-            env_content = f.read()
-
-        # Parse the .env file content to a dictionary
-        env_dict = {}
-        for line in env_content.splitlines():
-            if line.strip() and not line.strip().startswith("#"):
-                key, value = line.split("=", 1)
-                env_dict[key.strip()] = value.strip()
-
-        return env_dict
-
-    except FileNotFoundError:
-        console.print(f"Error: {env_file_path} not found.", style="bold red")
-    except Exception as e:
-        console.print(f"Error reading the .env file: {e}", style="bold red")
-
-    return {}
-
-
-def tree_copy(source: Path, destination: Path) -> None:
-    """Copies the entire directory structure from the source to the destination."""
-    for item in os.listdir(source):
-        source_item = os.path.join(source, item)
-        destination_item = os.path.join(destination, item)
-        if os.path.isdir(source_item):
-            shutil.copytree(source_item, destination_item)
-        else:
-            shutil.copy2(source_item, destination_item)
-
-
-def tree_find_and_replace(directory: Path, find: str, replace: str) -> None:
-    """Recursively searches through a directory, replacing a target string in
-    both file contents and filenames with a specified replacement string.
-    """
-    for path, dirs, files in os.walk(os.path.abspath(directory), topdown=False):
-        for filename in files:
-            filepath = os.path.join(path, filename)
-
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as file:
-                contents = file.read()
-            with open(filepath, "w") as file:
-                file.write(contents.replace(find, replace))
-
-            if find in filename:
-                new_filename = filename.replace(find, replace)
-                new_filepath = os.path.join(path, new_filename)
-                os.rename(filepath, new_filepath)
-
-        for dirname in dirs:
-            if find in dirname:
-                new_dirname = dirname.replace(find, replace)
-                new_dirpath = os.path.join(path, new_dirname)
-                old_dirpath = os.path.join(path, dirname)
-                os.rename(old_dirpath, new_dirpath)
-
-
-def load_env_vars(folder_path: Path) -> dict[str, Any]:
-    """
-    Loads environment variables from a .env file in the specified folder path.
-
-    Args:
-    - folder_path (Path): The path to the folder containing the .env file.
-
-    Returns:
-    - dict: A dictionary of environment variables.
-    """
-    env_file_path = folder_path / ".env"
-    env_vars = {}
-    if env_file_path.exists():
-        with open(env_file_path, "r") as file:
-            for line in file:
-                key, _, value = line.strip().partition("=")
-                if key and value:
-                    env_vars[key] = value
-    return env_vars
-
-
-def update_env_vars(
-    env_vars: dict[str, Any], provider: str, model: str
-) -> dict[str, Any] | None:
-    """
-    Updates environment variables with the API key for the selected provider and model.
-
-    Args:
-    - env_vars (dict): Environment variables dictionary.
-    - provider (str): Selected provider.
-    - model (str): Selected model.
-
-    Returns:
-    - None
-    """
-    provider_config = cast(
-        list[str],
-        ENV_VARS.get(
-            provider,
-            [
-                click.prompt(
-                    f"Enter the environment variable name for your {provider.capitalize()} API key",
-                    type=str,
-                )
-            ],
-        ),
-    )
-
-    api_key_var = provider_config[0]
-
-    if api_key_var not in env_vars:
-        try:
-            env_vars[api_key_var] = click.prompt(
-                f"Enter your {provider.capitalize()} API key", type=str, hide_input=True
-            )
-        except click.exceptions.Abort:
-            click.secho("Operation aborted by the user.", fg="red")
-            return None
-    else:
-        click.secho(f"API key already exists for {provider.capitalize()}.", fg="yellow")
-
-    env_vars["MODEL"] = model
-    click.secho(f"Selected model: {model}", fg="green")
-    return env_vars
-
-
-def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
-    """
-    Writes environment variables to a .env file in the specified folder.
-
-    Args:
-    - folder_path (Path): The path to the folder where the .env file will be written.
-    - env_vars (dict): A dictionary of environment variables to write.
-    """
-    env_file_path = folder_path / ".env"
-    with open(env_file_path, "w") as file:
-        for key, value in env_vars.items():
-            file.write(f"{key.upper()}={value}\n")
-
-
 def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
     """Get the crew instances from a file."""
     crew_instances = []
     try:
-        import importlib.util
-
-        # Add the current directory to sys.path to ensure imports resolve correctly
         current_dir = os.getcwd()
         if current_dir not in sys.path:
             sys.path.insert(0, current_dir)
 
-        # If we're not in src directory but there's a src directory, add it to path
         src_dir = os.path.join(current_dir, "src")
         if os.path.isdir(src_dir) and src_dir not in sys.path:
             sys.path.insert(0, src_dir)
 
-        # Search in both current directory and src directory if it exists
         search_paths = [".", "src"] if os.path.isdir("src") else ["."]
 
         for search_path in search_paths:
@@ -316,7 +150,6 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                                     )
                                     continue
 
-                            # If we found crew instances, break out of the loop
                             if crew_instances:
                                 break
 
@@ -334,7 +167,6 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                             )
                         continue
 
-            # If we found crew instances in this search path, break out of the search paths loop
             if crew_instances:
                 break
 
@@ -352,6 +184,7 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
 
 
 def get_crew_instance(module_attr: Any) -> Crew | None:
+    """Get a Crew instance from a module attribute."""
     if (
         callable(module_attr)
         and hasattr(module_attr, "is_crew_class")
@@ -372,6 +205,7 @@ def get_crew_instance(module_attr: Any) -> Crew | None:
 
 
 def fetch_crews(module_attr: Any) -> list[Crew]:
+    """Fetch crew instances from a module attribute."""
     crew_instances: list[Crew] = []
 
     if crew_instance := get_crew_instance(module_attr):
@@ -386,7 +220,7 @@ def fetch_crews(module_attr: Any) -> list[Crew]:
     return crew_instances
 
 
-def get_flow_instance(module_attr: Any) -> Flow | None:
+def get_flow_instance(module_attr: Any) -> Flow[Any] | None:
     """Check if a module attribute is a user-defined Flow subclass and return an instance.
 
     Args:
@@ -413,13 +247,12 @@ _SKIP_DIRS = frozenset(
 )
 
 
-def get_flows(flow_path: str = "main.py") -> list[Flow]:
+def get_flows(flow_path: str = "main.py") -> list[Flow[Any]]:
     """Get the flow instances from project files.
 
     Walks the project directory looking for files matching ``flow_path``
     (default ``main.py``), loads each module, and extracts Flow subclass
-    instances.  Directories that are clearly not user source code (virtual
-    environments, ``.git``, etc.) are pruned to avoid noisy import errors.
+    instances.
 
     Args:
         flow_path: Filename to search for (default ``main.py``).
@@ -427,7 +260,7 @@ def get_flows(flow_path: str = "main.py") -> list[Flow]:
     Returns:
         A list of discovered Flow instances.
     """
-    flow_instances: list[Flow] = []
+    flow_instances: list[Flow[Any]] = []
     try:
         current_dir = os.getcwd()
         if current_dir not in sys.path:
@@ -486,6 +319,7 @@ def get_flows(flow_path: str = "main.py") -> list[Flow]:
 
 
 def is_valid_tool(obj: Any) -> bool:
+    """Check if an object is a valid CrewAI tool."""
     from crewai.tools.base_tool import Tool
 
     if isclass(obj):
@@ -498,12 +332,12 @@ def is_valid_tool(obj: Any) -> bool:
 
 
 def extract_available_exports(dir_path: str = "src") -> list[dict[str, Any]]:
-    """
-    Extract available tool classes from the project's __init__.py files.
+    """Extract available tool classes from the project's __init__.py files.
+
     Only includes classes that inherit from BaseTool or functions decorated with @tool.
 
     Returns:
-        list: A list of valid tool class names or ["BaseTool"] if none found
+        A list of valid tool class names or ["BaseTool"] if none found.
     """
     try:
         init_files = Path(dir_path).glob("**/__init__.py")
@@ -530,6 +364,7 @@ def extract_available_exports(dir_path: str = "src") -> list[dict[str, Any]]:
 def build_env_with_tool_repository_credentials(
     repository_handle: str,
 ) -> dict[str, Any]:
+    """Build environment variables with tool repository credentials."""
     repository_handle = repository_handle.upper().replace("-", "_")
     settings = Settings()
 
@@ -545,9 +380,7 @@ def build_env_with_tool_repository_credentials(
 
 
 def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
-    """
-    Load and validate tools from a given __init__.py file.
-    """
+    """Load and validate tools from a given __init__.py file."""
     spec = importlib.util.spec_from_file_location("temp_module", init_file)
 
     if not spec or not spec.loader:
@@ -583,9 +416,7 @@ def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
 
 
 def _print_no_tools_warning() -> None:
-    """
-    Display warning and usage instructions if no tools were found.
-    """
+    """Display warning and usage instructions if no tools were found."""
     console.print(
         "\n[bold yellow]Warning: No valid tools were exposed in your __init__.py file![/bold yellow]"
     )

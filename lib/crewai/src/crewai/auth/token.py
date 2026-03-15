@@ -1,8 +1,10 @@
-from crewai.cli.shared.token_manager import TokenManager
+"""Authentication token retrieval."""
+
+from crewai.auth.token_manager import TokenManager
 
 
 class AuthError(Exception):
-    pass
+    """Raised when authentication fails."""
 
 
 def get_auth_token() -> str:

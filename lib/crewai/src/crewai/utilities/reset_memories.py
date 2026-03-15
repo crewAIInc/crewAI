@@ -1,12 +1,15 @@
+"""Memory reset utilities for CrewAI crews and flows."""
+
 import subprocess
+from typing import Any
 
 import click
 
-from crewai.cli.utils import get_crews, get_flows
 from crewai.flow import Flow
+from crewai.utilities.project_utils import get_crews, get_flows
 
 
-def _reset_flow_memory(flow: Flow) -> None:
+def _reset_flow_memory(flow: Flow[Any]) -> None:
     """Reset memory for a single flow instance.
 
     Handles Memory, MemoryScope (both have .reset()), and MemorySlice

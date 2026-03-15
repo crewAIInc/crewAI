@@ -1,6 +1,6 @@
 """Wrapper for the reset-memories command.
 
-Delegates to ``crewai.cli.reset_memories_command`` when the full crewai
+Delegates to ``crewai.utilities.reset_memories`` when the full crewai
 package is installed, otherwise prints a helpful error message.
 """
 
@@ -17,7 +17,7 @@ def reset_memories_command(
     all: bool,
 ) -> None:
     try:
-        from crewai.cli.reset_memories_command import (
+        from crewai.utilities.reset_memories import (
             reset_memories_command as _reset,
         )
     except ImportError:

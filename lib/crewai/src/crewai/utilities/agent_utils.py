@@ -19,8 +19,8 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.cli.config import Settings
 from crewai.llms.base_llm import BaseLLM
+from crewai.settings import Settings
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -1047,8 +1047,8 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
         if callable(_create_plus_client_hook):
             client = _create_plus_client_hook()
         else:
-            from crewai.cli.authentication.token import get_auth_token
-            from crewai.cli.plus_api import PlusAPI
+            from crewai.auth.token import get_auth_token
+            from crewai.plus_api import PlusAPI
 
             client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()

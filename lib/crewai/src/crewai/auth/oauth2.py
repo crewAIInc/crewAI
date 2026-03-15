@@ -1,3 +1,5 @@
+"""OAuth2 authentication for the CrewAI platform."""
+
 import time
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 import webbrowser
@@ -6,9 +8,9 @@ import httpx
 from pydantic import BaseModel, Field
 from rich.console import Console
 
-from crewai.cli.authentication.utils import validate_jwt_token
-from crewai.cli.config import Settings
-from crewai.cli.shared.token_manager import TokenManager
+from crewai.auth.token_manager import TokenManager
+from crewai.auth.utils import validate_jwt_token
+from crewai.settings import Settings
 
 
 console = Console()
@@ -17,6 +19,8 @@ TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
 class Oauth2Settings(BaseModel):
+    """OAuth2 provider configuration."""
+
     provider: str = Field(
         description="OAuth2 provider used for authentication (e.g., workos, okta, auth0)."
     )
@@ -38,7 +42,6 @@ class Oauth2Settings(BaseModel):
     @classmethod
     def from_settings(cls: type[TOauth2Settings]) -> TOauth2Settings:
         """Create an Oauth2Settings instance from the CLI settings."""
-
         settings = Settings()
 
         return cls(
@@ -51,23 +54,25 @@ class Oauth2Settings(BaseModel):
 
 
 if TYPE_CHECKING:
-    from crewai.cli.authentication.providers.base_provider import BaseProvider
+    from crewai.auth.providers.base_provider import BaseProvider
 
 
 class ProviderFactory:
+    """Factory for creating OAuth2 providers from settings."""
+
     @classmethod
     def from_settings(
         cls: type["ProviderFactory"],  # noqa: UP037
         settings: Oauth2Settings | None = None,
     ) -> "BaseProvider":  # noqa: UP037
+        """Create a provider instance from settings."""
         settings = settings or Oauth2Settings.from_settings()
 
         import importlib
 
         module = importlib.import_module(
-            f"crewai.cli.authentication.providers.{settings.provider.lower()}"
+            f"crewai.auth.providers.{settings.provider.lower()}"
         )
-        # Converts from snake_case to CamelCase to obtain the provider class name.
         provider = getattr(
             module,
             f"{''.join(word.capitalize() for word in settings.provider.split('_'))}Provider",
@@ -77,6 +82,8 @@ class ProviderFactory:
 
 
 class AuthenticationCommand:
+    """Handles authentication with the CrewAI platform."""
+
     def __init__(self) -> None:
         self.token_manager = TokenManager()
         self.oauth2_provider = ProviderFactory.from_settings()
@@ -92,7 +99,6 @@ class AuthenticationCommand:
 
     def _get_device_code(self) -> dict[str, Any]:
         """Get the device code to authenticate the user."""
-
         device_code_payload = {
             "client_id": self.oauth2_provider.get_client_id(),
             "scope": " ".join(self.oauth2_provider.get_oauth_scopes()),
@@ -108,7 +114,6 @@ class AuthenticationCommand:
 
     def _display_auth_instructions(self, device_code_data: dict[str, str]) -> None:
         """Display the authentication instructions to the user."""
-
         verification_uri = device_code_data.get(
             "verification_uri_complete", device_code_data.get("verification_uri", "")
         )
@@ -119,7 +124,6 @@ class AuthenticationCommand:
 
     def _poll_for_token(self, device_code_data: dict[str, Any]) -> None:
         """Polls the server for the token until it is received, or max attempts are reached."""
-
         token_payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": device_code_data["device_code"],
@@ -143,7 +147,7 @@ class AuthenticationCommand:
                     style="bold green",
                 )
 
-                self._login_to_tool_repository()
+                self._post_login()
 
                 console.print("\n[bold green]Welcome to CrewAI AMP![/bold green]\n")
                 return
@@ -162,7 +166,6 @@ class AuthenticationCommand:
 
     def _validate_and_save_token(self, token_data: dict[str, Any]) -> None:
         """Validates the JWT token and saves the token to the token manager."""
-
         jwt_token = token_data["access_token"]
         issuer = self.oauth2_provider.get_issuer()
         jwt_token_data = {
@@ -177,39 +180,5 @@ class AuthenticationCommand:
         expires_at = decoded_token.get("exp", 0)
         self.token_manager.save_tokens(jwt_token, expires_at)
 
-    def _login_to_tool_repository(self) -> None:
-        """Login to the tool repository."""
-
-        from crewai_cli.tools.main import ToolCommand
-
-        try:
-            console.print(
-                "Now logging you in to the Tool Repository... ",
-                style="bold blue",
-                end="",
-            )
-
-            ToolCommand().login()
-
-            console.print(
-                "Success!\n",
-                style="bold green",
-            )
-
-            settings = Settings()
-
-            console.print(
-                f"You are now authenticated to the tool repository for organization [bold cyan]'{settings.org_name if settings.org_name else settings.org_uuid}'[/bold cyan]",
-                style="green",
-            )
-        except Exception:
-            console.print(
-                "\n[bold yellow]Warning:[/bold yellow] Authentication with the Tool Repository failed.",
-                style="yellow",
-            )
-            console.print(
-                "Other features will work normally, but you may experience limitations "
-                "with downloading and publishing tools."
-                "\nRun [bold]crewai login[/bold] to try logging in again.\n",
-                style="yellow",
-            )
+    def _post_login(self) -> None:
+        """Hook called after successful login. Override in subclasses for additional behavior."""

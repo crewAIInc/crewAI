@@ -1,3 +1,5 @@
+"""CrewAI constants."""
+
 from typing import Any
 
 

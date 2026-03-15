@@ -1,3 +1,5 @@
+"""CrewAI platform settings management."""
+
 import json
 from logging import getLogger
 from pathlib import Path
@@ -6,14 +8,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from crewai.cli.constants import (
+from crewai.auth.token_manager import TokenManager
+from crewai.constants import (
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
     DEFAULT_CREWAI_ENTERPRISE_URL,
 )
-from crewai.cli.shared.token_manager import TokenManager
 
 
 logger = getLogger(__name__)
@@ -22,8 +24,7 @@ DEFAULT_CONFIG_PATH = Path.home() / ".config" / "crewai" / "settings.json"
 
 
 def get_writable_config_path() -> Path | None:
-    """
-    Find a writable location for the config file with fallback options.
+    """Find a writable location for the config file with fallback options.
 
     Tries in order:
     1. Default: ~/.config/crewai/settings.json
@@ -32,12 +33,12 @@ def get_writable_config_path() -> Path | None:
     4. In-memory only (returns None)
 
     Returns:
-        Path object for writable config location, or None if no writable location found
+        Path object for writable config location, or None if no writable location found.
     """
     fallback_paths = [
-        DEFAULT_CONFIG_PATH,  # Default location
-        Path(tempfile.gettempdir()) / "crewai_settings.json",  # Temporary directory
-        Path.cwd() / "crewai_settings.json",  # Current working directory
+        DEFAULT_CONFIG_PATH,
+        Path(tempfile.gettempdir()) / "crewai_settings.json",
+        Path.cwd() / "crewai_settings.json",
     ]
 
     for config_path in fallback_paths:
@@ -46,7 +47,7 @@ def get_writable_config_path() -> Path | None:
             test_file = config_path.parent / ".crewai_write_test"
             try:
                 test_file.write_text("test")
-                test_file.unlink()  # Clean up test file
+                test_file.unlink()
                 logger.info(f"Using config path: {config_path}")
                 return config_path
             except Exception:  # noqa: S112
@@ -58,7 +59,6 @@ def get_writable_config_path() -> Path | None:
     return None
 
 
-# Settings that are related to the user's account
 USER_SETTINGS_KEYS = [
     "tool_repository_username",
     "tool_repository_password",
@@ -66,7 +66,6 @@ USER_SETTINGS_KEYS = [
     "org_uuid",
 ]
 
-# Settings that are related to the CLI
 CLI_SETTINGS_KEYS = [
     "enterprise_base_url",
     "oauth2_provider",
@@ -76,7 +75,6 @@ CLI_SETTINGS_KEYS = [
     "oauth2_extra",
 ]
 
-# Default values for CLI settings
 DEFAULT_CLI_SETTINGS = {
     "enterprise_base_url": DEFAULT_CREWAI_ENTERPRISE_URL,
     "oauth2_provider": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
@@ -86,13 +84,11 @@ DEFAULT_CLI_SETTINGS = {
     "oauth2_extra": {},
 }
 
-# Readonly settings - cannot be set by the user
 READONLY_SETTINGS_KEYS = [
     "org_name",
     "org_uuid",
 ]
 
-# Hidden settings - not displayed by the 'list' command and cannot be set by the user
 HIDDEN_SETTINGS_KEYS = [
     "config_path",
     "tool_repository_username",
@@ -101,8 +97,10 @@ HIDDEN_SETTINGS_KEYS = [
 
 
 class Settings(BaseModel):
+    """CrewAI platform settings."""
+
     enterprise_base_url: str | None = Field(
-        default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
+        default=DEFAULT_CREWAI_ENTERPRISE_URL,
         description="Base URL of the CrewAI AMP instance",
     )
     tool_repository_username: str | None = Field(
@@ -121,22 +119,22 @@ class Settings(BaseModel):
 
     oauth2_provider: str = Field(
         description="OAuth2 provider used for authentication (e.g., workos, okta, auth0).",
-        default=DEFAULT_CLI_SETTINGS["oauth2_provider"],
+        default=CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
     )
 
     oauth2_audience: str | None = Field(
         description="OAuth2 audience value, typically used to identify the target API or resource.",
-        default=DEFAULT_CLI_SETTINGS["oauth2_audience"],
+        default=CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
     )
 
     oauth2_client_id: str = Field(
-        default=DEFAULT_CLI_SETTINGS["oauth2_client_id"],
+        default=CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
         description="OAuth2 client ID issued by the provider, used during authentication requests.",
     )
 
     oauth2_domain: str = Field(
         description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.",
-        default=DEFAULT_CLI_SETTINGS["oauth2_domain"],
+        default=CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
     )
 
     oauth2_extra: dict[str, Any] = Field(
@@ -145,14 +143,12 @@ class Settings(BaseModel):
     )
 
     def __init__(self, config_path: Path | None = None, **data: dict[str, Any]) -> None:
-        """Load Settings from config path with fallback support"""
+        """Load Settings from config path with fallback support."""
         if config_path is None:
             config_path = get_writable_config_path()
 
-        # If config_path is None, we're in memory-only mode
         if config_path is None:
             merged_data = {**data}
-            # Dummy path for memory-only mode
             super().__init__(config_path=Path("/dev/null"), **merged_data)
             return
 
@@ -160,7 +156,6 @@ class Settings(BaseModel):
             config_path.parent.mkdir(parents=True, exist_ok=True)
         except Exception:
             merged_data = {**data}
-            # Dummy path for memory-only mode
             super().__init__(config_path=Path("/dev/null"), **merged_data)
             return
 
@@ -176,19 +171,19 @@ class Settings(BaseModel):
         super().__init__(config_path=config_path, **merged_data)
 
     def clear_user_settings(self) -> None:
-        """Clear all user settings"""
+        """Clear all user settings."""
         self._reset_user_settings()
         self.dump()
 
     def reset(self) -> None:
-        """Reset all settings to default values"""
+        """Reset all settings to default values."""
         self._reset_user_settings()
         self._reset_cli_settings()
         self._clear_auth_tokens()
         self.dump()
 
     def dump(self) -> None:
-        """Save current settings to settings.json"""
+        """Save current settings to settings.json."""
         if str(self.config_path) == "/dev/null":
             return
 
@@ -207,15 +202,15 @@ class Settings(BaseModel):
             pass
 
     def _reset_user_settings(self) -> None:
-        """Reset all user settings to default values"""
+        """Reset all user settings to default values."""
         for key in USER_SETTINGS_KEYS:
             setattr(self, key, None)
 
     def _reset_cli_settings(self) -> None:
-        """Reset all CLI settings to default values"""
+        """Reset all CLI settings to default values."""
         for key in CLI_SETTINGS_KEYS:
             setattr(self, key, DEFAULT_CLI_SETTINGS.get(key))
 
     def _clear_auth_tokens(self) -> None:
-        """Clear all authentication tokens"""
+        """Clear all authentication tokens."""
         TokenManager().clear_tokens()

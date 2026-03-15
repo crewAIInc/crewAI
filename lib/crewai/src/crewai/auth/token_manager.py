@@ -1,3 +1,5 @@
+"""Manages encrypted token storage."""
+
 from datetime import datetime
 import json
 import os

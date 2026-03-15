@@ -1,9 +1,13 @@
+"""Base OAuth2 provider interface."""
+
 from abc import ABC, abstractmethod
 
-from crewai.cli.authentication.main import Oauth2Settings
+from crewai.auth.oauth2 import Oauth2Settings
 
 
 class BaseProvider(ABC):
+    """Abstract base class for OAuth2 providers."""
+
     def __init__(self, settings: Oauth2Settings):
         self.settings = settings
 
@@ -26,8 +30,9 @@ class BaseProvider(ABC):
     def get_client_id(self) -> str: ...
 
     def get_required_fields(self) -> list[str]:
-        """Returns which provider-specific fields inside the "extra" dict will be required"""
+        """Returns which provider-specific fields inside the "extra" dict will be required."""
         return []
 
     def get_oauth_scopes(self) -> list[str]:
+        """Returns the OAuth scopes to request."""
         return ["openid", "profile", "email"]

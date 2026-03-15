@@ -1,4 +1,4 @@
-"""Version utilities for CrewAI CLI."""
+"""Version utilities for CrewAI."""
 
 from collections.abc import Mapping
 from datetime import datetime, timedelta
@@ -26,7 +26,7 @@ def _get_cache_file() -> Path:
 
 
 def get_crewai_version() -> str:
-    """Get the version number of CrewAI running the CLI."""
+    """Get the version number of the installed CrewAI package."""
     return importlib.metadata.version("crewai")
 
 

@@ -1,9 +1,13 @@
+"""Entra ID (Azure AD) OAuth2 provider."""
+
 from typing import cast
 
-from crewai.cli.authentication.providers.base_provider import BaseProvider
+from crewai.auth.providers.base_provider import BaseProvider
 
 
 class EntraIdProvider(BaseProvider):
+    """Entra ID (Azure AD) OAuth2 provider implementation."""
+
     def get_authorize_url(self) -> str:
         return f"{self._base_url()}/oauth2/v2.0/devicecode"
 

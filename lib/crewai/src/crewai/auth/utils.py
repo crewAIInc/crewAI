@@ -1,3 +1,5 @@
+"""JWT token validation utilities."""
+
 from typing import Any
 
 import jwt
@@ -7,18 +9,20 @@ from jwt import PyJWKClient
 def validate_jwt_token(
     jwt_token: str, jwks_url: str, issuer: str, audience: str
 ) -> Any:
-    """
-    Verify the token's signature and claims using PyJWT.
-    :param jwt_token: The JWT (JWS) string to validate.
-    :param jwks_url: The URL of the JWKS endpoint.
-    :param issuer: The expected issuer of the token.
-    :param audience: The expected audience of the token.
-    :return: The decoded token.
-    :raises Exception: If the token is invalid for any reason (e.g., signature mismatch,
-                       expired, incorrect issuer/audience, JWKS fetching error,
-                       missing required claims).
-    """
+    """Verify the token's signature and claims using PyJWT.
 
+    Args:
+        jwt_token: The JWT (JWS) string to validate.
+        jwks_url: The URL of the JWKS endpoint.
+        issuer: The expected issuer of the token.
+        audience: The expected audience of the token.
+
+    Returns:
+        The decoded token.
+
+    Raises:
+        Exception: If the token is invalid for any reason.
+    """
     try:
         jwk_client = PyJWKClient(jwks_url)
         signing_key = jwk_client.get_signing_key_from_jwt(jwt_token)

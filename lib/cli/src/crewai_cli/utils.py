@@ -246,7 +246,7 @@ def is_valid_tool(obj: Any) -> bool:
     Falls back to crewai's ``is_valid_tool`` when available.
     """
     try:
-        from crewai.cli.utils import is_valid_tool as _core_is_valid_tool
+        from crewai.utilities.project_utils import is_valid_tool as _core_is_valid_tool
 
         return _core_is_valid_tool(obj)
     except ImportError:
