@@ -152,6 +152,44 @@ x = 10
     assert result == "No result variable found."
 
 
+@patch("crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run")
+def test_unsafe_mode_installs_libraries_without_shell(
+    subprocess_run_mock, printer_mock, docker_unavailable_mock
+):
+    """Test that library installation uses subprocess.run with shell=False, not os.system."""
+    tool = CodeInterpreterTool(unsafe_mode=True)
+    code = "result = 1"
+    libraries_used = ["numpy", "pandas"]
+
+    tool.run(code=code, libraries_used=libraries_used)
+
+    assert subprocess_run_mock.call_count == 2
+    for call, library in zip(subprocess_run_mock.call_args_list, libraries_used):
+        args, kwargs = call
+        # Must be list form (no shell expansion possible)
+        assert args[0] == ["pip", "install", library]
+        # shell= must not be True (defaults to False)
+        assert kwargs.get("shell", False) is False
+
+
+@patch("crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run")
+def test_unsafe_mode_library_name_with_shell_metacharacters_does_not_invoke_shell(
+    subprocess_run_mock, printer_mock, docker_unavailable_mock
+):
+    """Test that a malicious library name cannot inject shell commands."""
+    tool = CodeInterpreterTool(unsafe_mode=True)
+    code = "result = 1"
+    malicious_library = "numpy; rm -rf /"
+
+    tool.run(code=code, libraries_used=[malicious_library])
+
+    subprocess_run_mock.assert_called_once()
+    args, kwargs = subprocess_run_mock.call_args
+    # The entire malicious string is passed as a single argument — no shell parsing
+    assert args[0] == ["pip", "install", malicious_library]
+    assert kwargs.get("shell", False) is False
+
+
 def test_unsafe_mode_running_unsafe_code(printer_mock, docker_unavailable_mock):
     """Test behavior when no result variable is set."""
     tool = CodeInterpreterTool(unsafe_mode=True)
