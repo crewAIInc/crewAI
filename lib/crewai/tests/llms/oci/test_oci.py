@@ -376,6 +376,50 @@ def test_oci_cohere_completion_formats_tool_calls(
     }
 
 
+def test_oci_cohere_request_excludes_trailing_tool_messages_from_chat_history(
+    patch_oci_module, oci_unit_values: dict[str, object]
+):
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
+
+    llm = OCICompletion(
+        model=str(oci_unit_values["cohere_model"]),
+        compartment_id=str(oci_unit_values["compartment_id"]),
+    )
+
+    chat_history, tool_results, message_text = llm._build_cohere_chat_history(
+        [
+            {"role": "user", "content": "First question"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "function": {"name": "lookup_a", "arguments": '{"query":"a"}'},
+                    },
+                    {
+                        "id": "call_2",
+                        "function": {"name": "lookup_b", "arguments": '{"query":"b"}'},
+                    },
+                ],
+            },
+            {"role": "tool", "tool_call_id": "call_1", "name": "lookup_a", "content": "A"},
+            {"role": "tool", "tool_call_id": "call_2", "name": "lookup_b", "content": "B"},
+        ]
+    )
+
+    assert len(chat_history) == 2
+    assert chat_history[0].message == "First question"
+    assert len(chat_history[1].tool_calls) == 2
+    assert tool_results is not None
+    assert len(tool_results) == 2
+    assert tool_results[0].call.name == "lookup_a"
+    assert tool_results[1].call.name == "lookup_b"
+    assert message_text == ""
+
+
 def test_oci_completion_returns_tool_calls_for_executor(
     patch_oci_module, oci_response_factories, oci_unit_values: dict[str, object]
 ):

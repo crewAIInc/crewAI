@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.utilities.oci import create_oci_client_kwargs, get_oci_module
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
@@ -36,75 +37,8 @@ _OCI_TOOL_RESULT_GUIDANCE = (
 
 
 def _get_oci_module() -> Any:
-    try:
-        import oci  # type: ignore[import-untyped]
-    except ImportError:
-        raise ImportError(
-            'OCI native provider not available, to install: uv add "crewai[oci]"'
-        ) from None
-    return oci
-
-
-def create_oci_client_kwargs(
-    *,
-    auth_type: str,
-    service_endpoint: str | None,
-    auth_file_location: str,
-    auth_profile: str,
-) -> dict[str, Any]:
-    """Build OCI SDK client kwargs for the supported auth modes.
-
-    The native provider is used from both sync and thread-offloaded async paths,
-    so we centralize client construction here instead of duplicating auth logic
-    across `call`, `acall`, and streaming code paths.
-    """
-    oci = _get_oci_module()
-    client_kwargs: dict[str, Any] = {
-        "config": {},
-        "service_endpoint": service_endpoint,
-        "retry_strategy": oci.retry.DEFAULT_RETRY_STRATEGY,
-        "timeout": (10, 240),
-    }
-
-    auth_type_upper = auth_type.upper()
-
-    if auth_type_upper == "API_KEY":
-        client_kwargs["config"] = oci.config.from_file(
-            file_location=auth_file_location,
-            profile_name=auth_profile,
-        )
-    elif auth_type_upper == "SECURITY_TOKEN":
-        config = oci.config.from_file(
-            file_location=auth_file_location,
-            profile_name=auth_profile,
-        )
-        key_file = config["key_file"]
-        security_token_file = config["security_token_file"]
-        private_key = oci.signer.load_private_key_from_file(key_file, None)
-        with open(security_token_file, encoding="utf-8") as file:
-            security_token = file.read()
-        client_kwargs["config"] = config
-        client_kwargs["signer"] = oci.auth.signers.SecurityTokenSigner(
-            security_token, private_key
-        )
-    elif auth_type_upper == "INSTANCE_PRINCIPAL":
-        client_kwargs["signer"] = (
-            oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
-        )
-    elif auth_type_upper == "RESOURCE_PRINCIPAL":
-        client_kwargs["signer"] = oci.auth.signers.get_resource_principals_signer()
-    else:
-        valid_types = [
-            "API_KEY",
-            "SECURITY_TOKEN",
-            "INSTANCE_PRINCIPAL",
-            "RESOURCE_PRINCIPAL",
-        ]
-        raise ValueError(
-            f"Invalid OCI auth_type '{auth_type}'. Valid values: {valid_types}"
-        )
-
-    return client_kwargs
+    """Backward-compatible module-local alias used by tests and patches."""
+    return get_oci_module()
 
 
 class OCICompletion(BaseLLM):
@@ -181,6 +115,8 @@ class OCICompletion(BaseLLM):
                 service_endpoint=self.service_endpoint,
                 auth_file_location=self.auth_file_location,
                 auth_profile=self.auth_profile,
+                timeout=(10, 240),
+                oci_module=self._oci,
             )
             self.client = self._oci.generative_ai_inference.GenerativeAiInferenceClient(
                 **client_kwargs
@@ -383,8 +319,17 @@ class OCICompletion(BaseLLM):
         """
         models = self._oci.generative_ai_inference.models
         chat_history: list[Any] = []
+        trailing_tool_count = 0
+        for message in reversed(messages):
+            if str(message.get("role", "")).lower() != "tool":
+                break
+            trailing_tool_count += 1
 
-        for message in messages[:-1]:
+        history_messages = (
+            messages[:-trailing_tool_count] if trailing_tool_count else messages[:-1]
+        )
+
+        for message in history_messages:
             role = str(message.get("role", "user")).lower()
             content = message.get("content", "")
             if self._message_has_multimodal_content(content):
@@ -472,7 +417,7 @@ class OCICompletion(BaseLLM):
                         "parameters": parameters,
                     }
 
-            for message in messages:
+            for message in messages[-trailing_tool_count:]:
                 if str(message.get("role", "")).lower() != "tool":
                     continue
                 tool_call_id = message.get("tool_call_id")
@@ -1464,18 +1409,20 @@ class OCICompletion(BaseLLM):
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> list[str | Any]:
-        return [
-            await self.acall(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
-            for messages in messages_batch
-        ]
+        return await asyncio.gather(
+            *[
+                self.acall(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+                for messages in messages_batch
+            ]
+        )
 
     def _chat(self, chat_details: Any) -> Any:
         # The OCI SDK client is shared across sync + thread-offloaded async calls.

@@ -13,6 +13,7 @@ from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
 
 from crewai.rag.embeddings.providers.oci.types import OCIProviderConfig
+from crewai.utilities.oci import create_oci_client_kwargs, get_oci_module
 
 
 CUSTOM_ENDPOINT_PREFIX = "ocid1.generativeaiendpoint"
@@ -20,68 +21,8 @@ DEFAULT_OCI_REGION = "us-chicago-1"
 
 
 def _get_oci_module() -> Any:
-    try:
-        import oci  # type: ignore[import-untyped]
-    except ImportError as e:
-        raise ImportError(
-            "oci is required for OCI embeddings. Install it with: uv add 'crewai[oci]'"
-        ) from e
-    return oci
-
-
-def create_oci_client_kwargs(
-    *,
-    auth_type: str,
-    service_endpoint: str | None,
-    auth_file_location: str,
-    auth_profile: str,
-    timeout: tuple[int, int],
-) -> dict[str, Any]:
-    """Build OCI SDK client kwargs for embedding requests."""
-    oci = _get_oci_module()
-    client_kwargs: dict[str, Any] = {
-        "config": {},
-        "service_endpoint": service_endpoint,
-        "retry_strategy": oci.retry.DEFAULT_RETRY_STRATEGY,
-        "timeout": timeout,
-    }
-
-    auth_type_upper = auth_type.upper()
-    if auth_type_upper == "API_KEY":
-        client_kwargs["config"] = oci.config.from_file(
-            file_location=auth_file_location,
-            profile_name=auth_profile,
-        )
-    elif auth_type_upper == "SECURITY_TOKEN":
-        config = oci.config.from_file(
-            file_location=auth_file_location,
-            profile_name=auth_profile,
-        )
-        private_key = oci.signer.load_private_key_from_file(config["key_file"], None)
-        with open(config["security_token_file"], encoding="utf-8") as file:
-            security_token = file.read()
-        client_kwargs["config"] = config
-        client_kwargs["signer"] = oci.auth.signers.SecurityTokenSigner(
-            security_token, private_key
-        )
-    elif auth_type_upper == "INSTANCE_PRINCIPAL":
-        client_kwargs["signer"] = (
-            oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
-        )
-    elif auth_type_upper == "RESOURCE_PRINCIPAL":
-        client_kwargs["signer"] = oci.auth.signers.get_resource_principals_signer()
-    else:
-        valid_types = [
-            "API_KEY",
-            "SECURITY_TOKEN",
-            "INSTANCE_PRINCIPAL",
-            "RESOURCE_PRINCIPAL",
-        ]
-        raise ValueError(
-            f"Invalid OCI auth_type '{auth_type}'. Valid values: {valid_types}"
-        )
-
-    return client_kwargs
+    """Backward-compatible module-local alias used by tests and patches."""
+    return get_oci_module()
 
 
 class OCIEmbeddingFunction(EmbeddingFunction[Documents]):
@@ -104,6 +45,7 @@ class OCIEmbeddingFunction(EmbeddingFunction[Documents]):
                 auth_file_location=kwargs.get("auth_file_location", "~/.oci/config"),
                 auth_profile=kwargs.get("auth_profile", "DEFAULT"),
                 timeout=kwargs.get("timeout", (10, 120)),
+                oci_module=_get_oci_module(),
             )
             self._client = (
                 _get_oci_module().generative_ai_inference.GenerativeAiInferenceClient(
@@ -245,7 +187,10 @@ class OCIEmbeddingFunction(EmbeddingFunction[Documents]):
         *,
         mime_type: str = "image/png",
     ) -> list[float]:
-        return [float(value) for value in self.embed_image_batch([image], mime_type=mime_type)[0]]
+        return [
+            float(value)
+            for value in self.embed_image_batch([image], mime_type=mime_type)[0]
+        ]
 
     def embed_image_batch(
         self,
