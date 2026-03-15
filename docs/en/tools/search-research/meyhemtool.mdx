@@ -1,0 +1,70 @@
+---
+title: Meyhem Search & Discover
+description: AI-powered web search and MCP server / OpenClaw skill discovery for agents. No API key required.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `MeyhemSearchTool` & `MeyhemDiscoverTool`
+
+## Description
+
+Meyhem provides two tools for CrewAI agents:
+
+- **MeyhemSearchTool** — AI-powered web search optimized for agents, with ranked results and optional page content.
+- **MeyhemDiscoverTool** — Find the best MCP server or OpenClaw skill for a task across 22,000+ capabilities.
+
+Both tools require **no API key** and are free to use. Powered by [Meyhem](https://api.rhdxm.com).
+
+## Installation
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Example
+
+```python Code
+from crewai_tools import MeyhemSearchTool, MeyhemDiscoverTool
+
+search = MeyhemSearchTool()
+discover = MeyhemDiscoverTool()
+```
+
+### Custom Configuration
+
+```python Code
+search = MeyhemSearchTool(agent_id="my-research-agent")
+discover = MeyhemDiscoverTool()
+result = discover.run(task="query a postgres database", ecosystem="mcp")
+```
+
+## Parameters
+
+### MeyhemSearchTool
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `query` | `str` | Search query (required) |
+| `max_results` | `int` | Maximum results to return (default: 10) |
+| `include_content` | `bool` | Include page content in results (default: false) |
+| `freshness` | `str` | Cache freshness: `realtime`, `hour`, `day`, `week` |
+
+### MeyhemDiscoverTool
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `task` | `str` | What capability do you need? (required) |
+| `max_results` | `int` | Maximum results to return (default: 5) |
+| `ecosystem` | `str` | Filter: `mcp`, `openclaw`, or omit for all |
+
+## Steps to Get Started
+
+<Steps>
+    <Step title="Package Installation">
+        Confirm that the `crewai[tools]` package is installed in your Python environment.
+    </Step>
+    <Step title="Start Using">
+        No API key or environment configuration needed. Import and use immediately.
+    </Step>
+</Steps>
