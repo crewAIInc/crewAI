@@ -105,6 +105,9 @@ a2a = [
 file-processing = [
     "crewai-files",
 ]
+joy = [
+    "joy-trust>=1.0.0",
+]
 
 
 [project.scripts]
