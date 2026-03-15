@@ -9,6 +9,11 @@ from datetime import datetime
 from crew_trader_pro.crew import CrewTraderPro
 from dotenv import load_dotenv
 from crew_trader_pro.app.tools.technical_analyst_tools import TechnicalAnalystTools, BarStatus, EmaAlignment, SlopeState
+from crew_trader_pro.app.schemas.technical_analyst import (
+    LearningBridge, LastRecommendation, PnlFeedback,
+    TradingAction, DecisionOutcome, PerformanceStatus, TradeResult
+)
+import uuid
 
 load_dotenv()
 # 过滤警告
@@ -19,7 +24,6 @@ app = FastAPI(title="CrewTraderPro_Server")
 
 @app.get("/")
 def health_check():
-    self = TechnicalAnalystTools().generate_input()  # 测试工具类是否能正常初始化
     return {
         "status": "online",
         "service": "CrewTraderPro Trading Server",
@@ -75,24 +79,56 @@ def start_server():
 
 # --- 3. 原有的 CrewAI 逻辑 (保留并微调) ---
 
+def _build_default_learning_bridge() -> LearningBridge:
+    """构建默认的 LearningBridge（首次运行无历史数据时使用）"""
+    return LearningBridge(
+        last_recommendation=LastRecommendation(
+            timestamp=datetime.now(),
+            your_signal=TradingAction.NEUTRAL,
+            decision_outcome=DecisionOutcome.APPROVED,
+            reason="首次运行，无历史推荐记录",
+            market_performance_after="N/A",
+            market_performance=PerformanceStatus.NEUTRAL,
+        ),
+        recent_pnl_feedback=[],
+        evolution_instruction="首次运行，按标准策略执行",
+    )
+
 def run():
     """
     Run the crew locally.
     """
-    # 模拟输入，后续将被 MarketDataService 替换
-    inputs = {
-        'symbol': 'BTC/USDT',
-        'current_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
+    symbol = "ETH/USDT"
+    request_id = str(uuid.uuid4())
 
     print(f"\n[Local Run] 🚀 正在执行交易决策流...")
+    print(f"[Local Run] Symbol: {symbol} | Request ID: {request_id}")
+
     try:
-        # 这里实例化你的 Crew 类
-        result = CrewTraderPro().crew().kickoff(inputs=inputs)
-        return result
+        # 1. 调用工具获取技术分析输入
+        tools = TechnicalAnalystTools()
+        learning_bridge = _build_default_learning_bridge()
+        technical_input = tools.generate_input(
+            symbol=symbol,
+            request_id=request_id,
+            learning_bridge=learning_bridge,
+        )
+        print(f"[Local Run] ✅ 技术分析数据生成完成")
+
+        # 2. 将结构化数据传入 Crew
+        inputs = {
+            "symbol": symbol,
+            "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "technical_input": technical_input.model_dump(mode="json"),
+        }
+
+        print("inputs:", inputs)  # ✅ 输出输入数据，方便调试
+        return None
+        # result = CrewTraderPro().crew().kickoff(inputs=inputs)
+        # return result
     except Exception as e:
         print(f"❌ 执行失败: {e}")
-        # 在服务端模式下建议 logging 而不是 raise
+        raise
 
 def train():
     # ... 保留原逻辑 ...

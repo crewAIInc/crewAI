@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+.venv
+.git
+.gitignore
+*.md
+.env
+report.md
+knowledge/
+doc/

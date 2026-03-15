@@ -1,7 +1,7 @@
 import ccxt
 import pandas as pd
-import pandas_ta as ta
-from datetime import datetime
+import ta
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from ..schemas.technical_analyst import (
     TechnicalAnalystInput, SystemHeader, MarketSnapshot, Candle,
@@ -24,7 +24,7 @@ class TechnicalAnalystTools:
         try:
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
             df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-            df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True).dt.tz_convert('Asia/Tokyo')
             return df
         except Exception as e:
             print(f"Error fetching OHLCV for {symbol} {timeframe}: {e}")
@@ -51,15 +51,37 @@ class TechnicalAnalystTools:
 
     def calculate_indicators_m15(self, df: pd.DataFrame) -> M15BarAnalysis:
         """计算 15 分钟级别的核心指标"""
+        # ── 1. 集中计算所有指标列，避免快照丢列 ──
         # EMA
-        df['ema_20'] = ta.ema(df['close'], length=20)
-        df['ema_50'] = ta.ema(df['close'], length=50)
-        df['ema_200'] = ta.ema(df['close'], length=200)
-        
+        df['ema_20'] = ta.trend.EMAIndicator(df['close'], window=20).ema_indicator()
+        df['ema_50'] = ta.trend.EMAIndicator(df['close'], window=50).ema_indicator()
+        df['ema_200'] = ta.trend.EMAIndicator(df['close'], window=200).ema_indicator()
+
+        # RSI
+        df['RSI_14'] = ta.momentum.RSIIndicator(df['close'], window=14).rsi()
+
+        # MACD
+        macd_ind = ta.trend.MACD(df['close'], window_slow=26, window_fast=12, window_sign=9)
+        df['MACD'] = macd_ind.macd()
+        df['MACD_signal'] = macd_ind.macd_signal()
+
+        # ADX
+        df['ADX_14'] = ta.trend.ADXIndicator(df['high'], df['low'], df['close'], window=14).adx()
+
+        # Bollinger Bands
+        bb_ind = ta.volatility.BollingerBands(df['close'], window=20, window_dev=2)
+        df['BB_upper'] = bb_ind.bollinger_hband()
+        df['BB_middle'] = bb_ind.bollinger_mavg()
+        df['BB_lower'] = bb_ind.bollinger_lband()
+
+        # ATR
+        df['ATR_14'] = ta.volatility.AverageTrueRange(df['high'], df['low'], df['close'], window=14).average_true_range()
+
+        # ── 2. 所有列就绪后再取快照 ──
         last = df.iloc[-1]
         prev = df.iloc[-2]
-        
-        # EMA 排列
+
+        # ── 3. EMA 排列 ──
         alignment = EmaAlignment.TANGLED
         if last['ema_20'] > last['ema_50'] > last['ema_200']:
             alignment = EmaAlignment.PERFECT_BULLISH if last['close'] > last['ema_20'] else EmaAlignment.BULLISH_WEAK
@@ -81,24 +103,18 @@ class TechnicalAnalystTools:
             ema_slope=slope
         )
 
-        # 动能 (RSI, MACD, ADX)
-        df.ta.rsi(length=14, append=True)
-        df.ta.macd(append=True)
-        df.ta.adx(append=True)
-        
-        last = df.iloc[-1]
-        
+        # ── 4. 动能指标 ──
         rsi_val = last['RSI_14']
         rsi_state = RsiState.NEUTRAL_LOW
         if rsi_val > 70: rsi_state = RsiState.OVERBOUGHT
         elif rsi_val > 50: rsi_state = RsiState.NEUTRAL_HIGH
         elif rsi_val < 30: rsi_state = RsiState.OVERSOLD
 
-        macd_state = MacdState.ABOVE_ZERO if last['MACD_12_26_9'] > 0 else MacdState.BELOW_ZERO
-        # 简单金叉死叉逻辑 (需要对比前值)
-        if last['MACD_12_26_9'] > last['MACDs_12_26_9'] and prev['MACD_12_26_9'] <= prev['MACDs_12_26_9']:
+        macd_state = MacdState.ABOVE_ZERO if last['MACD'] > 0 else MacdState.BELOW_ZERO
+        # 金叉死叉逻辑
+        if last['MACD'] > last['MACD_signal'] and prev['MACD'] <= prev['MACD_signal']:
             macd_state = MacdState.BULLISH_GOLDEN_CROSS
-        elif last['MACD_12_26_9'] < last['MACDs_12_26_9'] and prev['MACD_12_26_9'] >= prev['MACDs_12_26_9']:
+        elif last['MACD'] < last['MACD_signal'] and prev['MACD'] >= prev['MACD_signal']:
             macd_state = MacdState.BEARISH_DEATH_CROSS
 
         adx_val = last['ADX_14']
@@ -110,33 +126,29 @@ class TechnicalAnalystTools:
             rsi_14=round(rsi_val, 2),
             rsi_state=rsi_state,
             macd_state=macd_state,
-            divergence=DivergenceType.NONE, # 背离需要更复杂的逻辑，暂设为 None
+            divergence=DivergenceType.NONE,
             adx=round(adx_val, 2),
             trend_strength=trend_str
         )
 
-        # 波动率 (BB, ATR)
-        df.ta.bbands(append=True)
-        df.ta.atr(append=True)
-        
-        last = df.iloc[-1]
-        bb_width = (last['BBU_5_2.0'] - last['BBL_5_2.0']) / last['BBM_5_2.0']
-        prev_bb_width = (prev['BBU_5_2.0'] - prev['BBL_5_2.0']) / prev['BBM_5_2.0']
+        # ── 5. 波动率指标 ──
+        bb_width = (last['BB_upper'] - last['BB_lower']) / last['BB_middle']
+        prev_bb_width = (prev['BB_upper'] - prev['BB_lower']) / prev['BB_middle']
         
         bb_state = BbState.STABLE
         if bb_width > prev_bb_width * 1.1: bb_state = BbState.EXPANDING
         elif bb_width < prev_bb_width * 0.9: bb_state = BbState.SQUEEZING
 
         # 波动率排名 (简单对比最近 100 根线的 ATR 均值)
-        avg_atr = df['ATRr_14'].tail(100).mean()
+        avg_atr = df['ATR_14'].tail(100).mean()
         vol_rank = VolatilityRank.NORMAL
-        if last['ATRr_14'] > avg_atr * 1.3: vol_rank = VolatilityRank.HIGH
-        elif last['ATRr_14'] < avg_atr * 0.7: vol_rank = VolatilityRank.LOW
+        if last['ATR_14'] > avg_atr * 1.3: vol_rank = VolatilityRank.HIGH
+        elif last['ATR_14'] < avg_atr * 0.7: vol_rank = VolatilityRank.LOW
 
         volatility = VolatilityIndicators(
             bb_state=bb_state,
             bb_width=round(bb_width, 4),
-            atr=round(last['ATRr_14'], 2),
+            atr=round(last['ATR_14'], 2),
             volatility_rank=vol_rank
         )
 
@@ -152,11 +164,11 @@ class TechnicalAnalystTools:
         last_w1 = df_w1.iloc[-1]
         
         # 计算日线 RSI
-        df_d1.ta.rsi(length=14, append=True)
+        df_d1['RSI_14'] = ta.momentum.RSIIndicator(df_d1['close'], window=14).rsi()
         d1_rsi = df_d1.iloc[-1]['RSI_14']
         
         # 日线趋势
-        ema_200 = ta.ema(df_d1['close'], length=200).iloc[-1]
+        ema_200 = ta.trend.EMAIndicator(df_d1['close'], window=200).ema_indicator().iloc[-1]
         d1_trend = BarStatus.BULLISH if last_d1['close'] > ema_200 else BarStatus.BEARISH
         
         # 周线支撑 (简单取最近 20 周最低)

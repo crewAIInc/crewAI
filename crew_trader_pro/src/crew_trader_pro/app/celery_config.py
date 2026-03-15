@@ -20,5 +20,9 @@ celery_app.conf.beat_schedule = {
 
 # 必须导入任务文件，否则 Worker 找不到任务定义
 celery_app.conf.update(
-    imports=['crew_trader_pro.app.tasks.print_one']
+    imports=['crew_trader_pro.app.tasks.print_one'],
+    result_serializer='json',         # 结果用 JSON 序列化
+    accept_content=['json'],          # 只接受 JSON
+    result_expires=timedelta(hours=24),  # 结果在 Redis 中保留 24 小时
+    task_track_started=True,          # 跟踪任务开始状态
 )
