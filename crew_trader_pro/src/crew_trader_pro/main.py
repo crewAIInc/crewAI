@@ -8,6 +8,8 @@ from fastapi import FastAPI
 from datetime import datetime
 from crew_trader_pro.crew import CrewTraderPro
 from dotenv import load_dotenv
+from crew_trader_pro.app.tools.technical_analyst_tools import TechnicalAnalystTools, BarStatus, EmaAlignment, SlopeState
+
 load_dotenv()
 # 过滤警告
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
@@ -17,6 +19,7 @@ app = FastAPI(title="CrewTraderPro_Server")
 
 @app.get("/")
 def health_check():
+    self = TechnicalAnalystTools().generate_input()  # 测试工具类是否能正常初始化
     return {
         "status": "online",
         "service": "CrewTraderPro Trading Server",
