@@ -106,7 +106,8 @@ file-processing = [
     "crewai-files",
 ]
 joy = [
-    "joy-trust>=1.0.0",
+    # Joy trust verification uses httpx (already a core dependency)
+    # This extra exists for discoverability - no additional packages needed
 ]
 
 

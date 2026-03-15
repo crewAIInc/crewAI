@@ -3,7 +3,13 @@
 This module integrates CrewAI with Joy, an open trust network for AI agents.
 It enables crews to verify agent trustworthiness before delegation.
 
-Install with: pip install joy-trust
+Usage:
+    from crewai.trust import JoyVerifier
+
+    verifier = JoyVerifier(min_trust_score=0.5)
+    if verifier.should_trust("ag_xxx"):
+        # Safe to delegate
+        pass
 
 Environment Variables:
     JOY_API_URL: Joy API endpoint (default: https://joy-connect.fly.dev)
@@ -97,7 +103,7 @@ class JoyVerifier:
             except ImportError:
                 raise ImportError(
                     "httpx is required for Joy integration. "
-                    "Install with: pip install joy-trust"
+                    "Install with: pip install httpx"
                 )
         return self._client
 
@@ -157,6 +163,9 @@ class JoyVerifier:
 
             return result
 
+        except ImportError:
+            # Re-raise ImportError so users know to install dependencies
+            raise
         except Exception as e:
             logger.error(f"Trust verification failed for {agent_id}: {e}")
             return VerificationResult(
@@ -243,12 +252,20 @@ class JoyVerifier:
 
             results = []
             for agent in agents:
+                trust_score = float(agent.get("trust_score", 0))
+                verified = bool(agent.get("verified", False))
+
+                # Apply same trust criteria as verify_agent
+                is_trusted = trust_score >= self.min_trust_score
+                if self.require_verified and not verified:
+                    is_trusted = False
+
                 result = VerificationResult(
-                    is_trusted=float(agent.get("trust_score", 0)) >= self.min_trust_score,
+                    is_trusted=is_trusted,
                     agent_id=agent.get("id", ""),
-                    trust_score=float(agent.get("trust_score", 0)),
+                    trust_score=trust_score,
                     vouch_count=int(agent.get("vouch_count", 0)),
-                    verified=bool(agent.get("verified", False)),
+                    verified=verified,
                     capabilities=agent.get("capabilities", []),
                 )
                 if result.is_trusted:
@@ -256,6 +273,9 @@ class JoyVerifier:
 
             return results
 
+        except ImportError:
+            # Re-raise ImportError so users know to install dependencies
+            raise
         except Exception as e:
             logger.error(f"Agent discovery failed: {e}")
             return []
