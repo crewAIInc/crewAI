@@ -1,5 +1,6 @@
 """Factory functions for creating RAG clients from configuration."""
 
+import importlib
 from typing import cast
 
 from crewai.rag.config.optional_imports.protocols import (
@@ -8,7 +9,18 @@ from crewai.rag.config.optional_imports.protocols import (
 )
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.core.base_client import BaseClient
-from crewai.utilities.import_utils import require
+
+
+def _import_rag_factory(module_path: str, purpose: str) -> object:
+    """Import an optional RAG factory module with a clear install hint."""
+    try:
+        return importlib.import_module(module_path)
+    except ImportError as exc:
+        package_name = module_path.split(".")[0]
+        raise ImportError(
+            f"{purpose} requires the optional dependency '{module_path}'.\n"
+            f"Install it with: uv add {package_name}"
+        ) from exc
 
 
 def create_client(config: RagConfigType) -> BaseClient:
@@ -27,7 +39,7 @@ def create_client(config: RagConfigType) -> BaseClient:
     if config.provider == "chromadb":
         chromadb_mod = cast(
             ChromaFactoryModule,
-            require(
+            _import_rag_factory(
                 "crewai.rag.chromadb.factory",
                 purpose="The 'chromadb' provider",
             ),
@@ -37,7 +49,7 @@ def create_client(config: RagConfigType) -> BaseClient:
     if config.provider == "qdrant":
         qdrant_mod = cast(
             QdrantFactoryModule,
-            require(
+            _import_rag_factory(
                 "crewai.rag.qdrant.factory",
                 purpose="The 'qdrant' provider",
             ),
