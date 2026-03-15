@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -35,12 +36,17 @@ class FileWriterTool(BaseTool):
 
             filepath = os.path.join(directory, filename)
 
-            # Prevent path traversal: the resolved path must stay within the
-            # resolved directory. This blocks ../sequences, absolute paths in
+            # Prevent path traversal: the resolved path must be strictly inside
+            # the resolved directory. This blocks ../sequences, absolute paths in
             # filename, and symlink escapes regardless of how directory is set.
-            real_directory = os.path.realpath(directory)
-            real_filepath = os.path.realpath(filepath)
-            if not real_filepath.startswith(real_directory + os.sep) and real_filepath != real_directory:
+            # is_relative_to() does a proper path-component comparison that is
+            # safe on case-insensitive filesystems and avoids the "// " edge case
+            # that plagues startswith(real_directory + os.sep).
+            # We also reject the case where filepath resolves to the directory
+            # itself, since that is not a valid file target.
+            real_directory = Path(directory).resolve()
+            real_filepath = Path(filepath).resolve()
+            if not real_filepath.is_relative_to(real_directory) or real_filepath == real_directory:
                 return "Error: Invalid file path — the filename must not escape the target directory."
 
             if kwargs.get("directory"):
