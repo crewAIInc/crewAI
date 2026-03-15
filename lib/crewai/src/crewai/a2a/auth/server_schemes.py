@@ -17,6 +17,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal
 
+import httpx
 import jwt
 from jwt import PyJWKClient
 from pydantic import (
@@ -197,59 +198,10 @@ class EnterpriseTokenAuth(ServerAuthScheme):
         Args:
             token: The bearer token to authenticate.
 
-        Returns:
-            AuthenticatedUser on successful authentication.
-
         Raises:
-            HTTPException: If authentication fails.
+            NotImplementedError
         """
-        integration_token = self._verify_enterprise_token(token)
-        if integration_token is None:
-            raise HTTPException(
-                status_code=HTTP_401_UNAUTHORIZED,
-                detail="Invalid or missing authentication credentials",
-            )
-
-        return AuthenticatedUser(
-            token=token,
-            scheme="enterprise",
-            claims={"integration_token": integration_token},
-        )
-
-    @staticmethod
-    def _verify_enterprise_token(auth_token: str) -> str | None:
-        """Verify enterprise token via PlusAPI.
-
-        Args:
-            auth_token: The token to verify.
-
-        Returns:
-            The integration token if valid, None otherwise.
-        """
-        try:
-            from crewai.cli.plus_api import PlusAPI
-
-            plus_api = PlusAPI(auth_token)
-            response = plus_api.verify_enterprise_token(auth_token)  # type: ignore[attr-defined]
-
-            if response.status_code == 200:
-                verified_response_json: dict[str, Any] = response.json()
-                integration_token: str | None = verified_response_json.get(
-                    "integration_token"
-                )
-                return integration_token
-
-            logger.error(
-                "Enterprise token verification failed",
-                extra={"status_code": response.status_code, "response": response.text},
-            )
-        except Exception as e:
-            logger.error(
-                "Error verifying enterprise token",
-                extra={"error": str(e)},
-            )
-
-        return None
+        raise NotImplementedError
 
 
 class OIDCAuth(ServerAuthScheme):
@@ -625,7 +577,6 @@ class OAuth2ServerAuth(ServerAuthScheme):
 
     async def _authenticate_introspection(self, token: str) -> AuthenticatedUser:
         """Authenticate using OAuth2 token introspection (RFC 7662)."""
-        import httpx
 
         if not self.introspection_url:
             raise HTTPException(
