@@ -301,6 +301,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
                 )
         return validated_mcps
 
+    @field_validator("role", "goal", "backstory")
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        """Ensure that role, goal, and backstory are not empty or whitespace-only."""
+        if not v or v.strip() == "":
+            raise ValueError("Field must be a non-empty string")
+        return v
+
     @model_validator(mode="after")
     def validate_and_set_attributes(self) -> Self:
         # Validate required fields

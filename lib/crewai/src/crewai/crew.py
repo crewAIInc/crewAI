@@ -593,10 +593,19 @@ class Crew(FlowTrackable, BaseModel):
 
         Returns:
             A task instance.
+
+        Raises:
+            ValueError: If no agent with the specified role is found.
         """
-        task_agent = next(
-            agt for agt in self.agents if agt.role == task_config["agent"]
-        )
+        agent_role = task_config["agent"]
+        try:
+            task_agent = next(agt for agt in self.agents if agt.role == agent_role)
+        except StopIteration:
+            available_roles = [agt.role for agt in self.agents]
+            raise ValueError(
+                f"Agent with role '{agent_role}' not found in crew. "
+                f"Available roles: {', '.join(available_roles)}"
+            )
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
