@@ -90,9 +90,7 @@ print(result)
     assert "sandbox escape" in str(exc_info.value)
 
 
-def test_restricted_sandbox_running_with_blocked_modules(
-    printer_mock, docker_unavailable_mock
-):
+def test_restricted_sandbox_running_with_blocked_modules():
     """Test that restricted modules cannot be imported when using the deprecated sandbox directly."""
     tool = CodeInterpreterTool()
     restricted_modules = SandboxPython.BLOCKED_MODULES
@@ -109,9 +107,7 @@ result = "Import succeeded"
         assert f"An error occurred: Importing '{module}' is not allowed" in result
 
 
-def test_restricted_sandbox_running_with_blocked_builtins(
-    printer_mock, docker_unavailable_mock
-):
+def test_restricted_sandbox_running_with_blocked_builtins():
     """Test that restricted builtins are not available when using the deprecated sandbox directly."""
     tool = CodeInterpreterTool()
     restricted_builtins = SandboxPython.UNSAFE_BUILTINS
