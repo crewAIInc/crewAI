@@ -214,6 +214,30 @@ def convert_tools_to_openai_schema(
     return openai_tools, available_functions, tool_name_mapping
 
 
+def extract_task_section(text: str) -> str:
+    """Extract the ## Task body from a structured enriched instruction.
+
+    For structured descriptions (e.g. with ## Task and ## Instructions sections),
+    extracts just the task body so the caller sees the requirements without
+    duplicating tool/verification instructions.
+
+    Falls back to the full text (up to 2000 chars, with a truncation marker)
+    for plain inputs.
+    """
+    for marker in ("\n## Task\n", "\n## Task:", "## Task\n"):
+        idx = text.find(marker)
+        if idx >= 0:
+            start = idx + len(marker)
+            for end_marker in ("\n---\n", "\n## "):
+                end = text.find(end_marker, start)
+                if end > 0:
+                    return text[start:end].strip()
+            return text[start : start + 2000].strip()
+    if len(text) > 2000:
+        return text[:2000] + "\n... [truncated]"
+    return text
+
+
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
     """Check if the maximum number of iterations has been reached.
 

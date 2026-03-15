@@ -32,6 +32,7 @@ from crewai.utilities.agent_utils import (
     check_native_tool_support,
     enforce_rpm_limit,
     execute_single_native_tool_call,
+    extract_task_section,
     format_message_for_llm,
     is_tool_call_list,
     process_llm_response,
@@ -235,35 +236,6 @@ class StepExecutor:
             tools_section=tools_section,
         )
 
-    def _extract_task_section(self, task_description: str) -> str:
-        """Extract the most relevant portion of the task description.
-
-        For structured descriptions (e.g. harbor_agent-style with ## Task
-        and ## Instructions sections), extracts just the task body so the
-        executor sees the requirements without duplicating tool/verification
-        instructions that are already in the system prompt.
-
-        For plain descriptions, returns the full text (up to 2000 chars).
-        """
-        # Try to extract between "## Task" and the next "---" separator
-        # or next "##" heading — this isolates the task spec from env/tool noise.
-        for marker in ("\n## Task\n", "\n## Task:", "## Task\n"):
-            idx = task_description.find(marker)
-            if idx >= 0:
-                start = idx + len(marker)
-                # End at the first horizontal rule or next top-level ## section
-                for end_marker in ("\n---\n", "\n## "):
-                    end = task_description.find(end_marker, start)
-                    if end > 0:
-                        return task_description[start:end].strip()
-                # No end marker — take up to 2000 chars
-                return task_description[start : start + 2000].strip()
-
-        # No structured format — use the full description, reasonably truncated
-        if len(task_description) > 2000:
-            return task_description[:2000] + "\n... [truncated]"
-        return task_description
-
     def _build_user_prompt(self, todo: TodoItem, context: StepExecutionContext) -> str:
         """Build the user prompt for this specific step."""
         parts: list[str] = []
@@ -273,7 +245,7 @@ class StepExecutor:
         # We extract only the task body (not tool instructions or verification
         # sections) to avoid duplicating directives already in the system prompt.
         if context.task_description:
-            task_section = self._extract_task_section(context.task_description)
+            task_section = extract_task_section(context.task_description)
             if task_section:
                 parts.append(
                     self._i18n.retrieve(

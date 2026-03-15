@@ -1658,15 +1658,15 @@ class TestObserverResponseParsing:
         assert result.replan_reason == "step timed out"
 
     def test_parse_unparseable_falls_back_gracefully(self):
-        """Totally unparseable response falls back to default."""
+        """Totally unparseable response falls back to default failure."""
         from crewai.agents.planner_observer import PlannerObserver
         from crewai.utilities.planning_types import StepObservation
 
         result = PlannerObserver._parse_observation_response(12345)
 
         assert isinstance(result, StepObservation)
-        assert result.step_completed_successfully is True
-        assert result.remaining_plan_still_valid is True
+        assert result.step_completed_successfully is False
+        assert result.remaining_plan_still_valid is False
 
     def test_observe_parses_json_string_from_llm(self):
         """End-to-end: observer.observe() correctly parses a JSON string from llm.call()."""

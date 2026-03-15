@@ -22,6 +22,7 @@ from crewai.events.types.observation_events import (
     StepObservationFailedEvent,
     StepObservationStartedEvent,
 )
+from crewai.utilities.agent_utils import extract_task_section
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_types import StepObservation, TodoItem
@@ -192,22 +193,6 @@ class PlannerObserver:
                 needs_full_replan=False,
             )
 
-    def _extract_task_section(self, text: str) -> str:
-        """Extract the ## Task body from a structured enriched instruction.
-
-        Falls back to the full text (capped at 2000 chars) for plain inputs.
-        """
-        for marker in ("\n## Task\n", "\n## Task:", "## Task\n"):
-            idx = text.find(marker)
-            if idx >= 0:
-                start = idx + len(marker)
-                for end_marker in ("\n---\n", "\n## "):
-                    end = text.find(end_marker, start)
-                    if end > 0:
-                        return text[start:end].strip()
-                return text[start : start + 2000].strip()
-        return text[:2000] if len(text) > 2000 else text
-
     def apply_refinements(
         self,
         observation: StepObservation,
@@ -231,7 +216,9 @@ class PlannerObserver:
         todo_by_step: dict[int, TodoItem] = {t.step_number: t for t in remaining_todos}
         for refinement in observation.suggested_refinements:
             if refinement.step_number in todo_by_step and refinement.new_description:
-                todo_by_step[refinement.step_number].description = refinement.new_description
+                todo_by_step[
+                    refinement.step_number
+                ].description = refinement.new_description
 
         return remaining_todos
 
@@ -256,7 +243,7 @@ class PlannerObserver:
             # Standalone kickoff path — no Task object, but we have the raw input.
             # Extract just the ## Task section so the observer sees the actual goal,
             # not the full enriched instruction with env/tools/verification noise.
-            task_desc = self._extract_task_section(self.kickoff_input)
+            task_desc = extract_task_section(self.kickoff_input)
             task_goal = "Complete the task successfully"
 
         system_prompt = self._i18n.retrieve("planning", "observation_system_prompt")
@@ -329,7 +316,9 @@ class PlannerObserver:
             if text.startswith("```"):
                 lines = text.split("\n")
                 # Strip first and last lines (``` markers)
-                inner = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+                inner = "\n".join(
+                    lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
+                )
                 try:
                     return StepObservation.model_validate_json(inner.strip())
                 except Exception:  # noqa: S110
@@ -345,12 +334,12 @@ class PlannerObserver:
         # Last resort — log what we got so it's diagnosable
         logger.warning(
             "Could not parse observation response (type=%s). "
-            "Falling back to default success observation. Preview: %.200s",
+            "Falling back to default failure observation. Preview: %.200s",
             type(response).__name__,
             str(response),
         )
         return StepObservation(
-            step_completed_successfully=True,
+            step_completed_successfully=False,
             key_information_learned=str(response) if response else "",
-            remaining_plan_still_valid=True,
+            remaining_plan_still_valid=False,
         )

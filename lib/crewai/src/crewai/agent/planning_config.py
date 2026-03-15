@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+from crewai.llms.base_llm import BaseLLM
 
 
 class PlanningConfig(BaseModel):
@@ -128,7 +130,7 @@ class PlanningConfig(BaseModel):
             "whether to continue or replan. None means no per-step timeout."
         ),
     )
-    llm: str | Any | None = Field(
+    llm: str | BaseLLM | None = Field(
         default=None,
         description="LLM to use for planning. Uses agent's LLM if None.",
     )

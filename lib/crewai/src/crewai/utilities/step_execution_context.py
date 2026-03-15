@@ -41,7 +41,7 @@ class StepExecutionContext:
         return self.dependency_results.get(step_number)
 
 
-@dataclass
+@dataclass(frozen=True)
 class StepResult:
     """Result returned by a StepExecutor after executing a single todo.
 
