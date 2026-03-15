@@ -27,6 +27,11 @@ run_crew = "crew_trader_pro.main:run"
 train = "crew_trader_pro.main:train"
 replay = "crew_trader_pro.main:replay"
 test = "crew_trader_pro.main:test"
+
+# 添加你的 FastAPI 启动命令
+# 格式为: 命令名 = "包名.文件名:函数名"
+start_api = "crew_trader_pro.main:start_server"
+
 # 你自定义的触发逻辑
 run_with_trigger = "crew_trader_pro.main:run_with_trigger"
 

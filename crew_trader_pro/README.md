@@ -20,6 +20,19 @@ crewai install
 ```
 ### Customizing
 
+Web Server 启动
+
+```bash
+# 注入启动脚本添加 start_api = "crew_trader_pro.main:start_server"
+uv sync
+
+uv run start_api
+```
+
+
+
+
+
 **Add your `OPENAI_API_KEY` into the `.env` file**
 
 - Modify `src/crew_trader_pro/config/agents.yaml` to define your agents
