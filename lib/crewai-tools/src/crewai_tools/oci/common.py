@@ -3,6 +3,11 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from crewai.utilities.oci import (
+    create_oci_client_kwargs as shared_create_oci_client_kwargs,
+    get_oci_module as shared_get_oci_module,
+)
+
 
 DEFAULT_OCI_REGION = "us-chicago-1"
 
@@ -10,13 +15,12 @@ DEFAULT_OCI_REGION = "us-chicago-1"
 def get_oci_module() -> Any:
     """Import the OCI SDK lazily so optional dependencies stay optional."""
     try:
-        import oci  # type: ignore[import-untyped]
+        return shared_get_oci_module()
     except ImportError:
         raise ImportError(
             "`oci` package not found, please install the optional dependency with "
             "`uv add 'crewai-tools[oci]'`"
         ) from None
-    return oci
 
 
 def create_oci_client_kwargs(
@@ -28,50 +32,14 @@ def create_oci_client_kwargs(
     timeout: tuple[int, int] = (10, 120),
 ) -> dict[str, Any]:
     """Build standard OCI SDK client kwargs shared by the tool integrations."""
-    oci = get_oci_module()
-    client_kwargs: dict[str, Any] = {
-        "config": {},
-        "service_endpoint": service_endpoint,
-        "retry_strategy": oci.retry.DEFAULT_RETRY_STRATEGY,
-        "timeout": timeout,
-    }
-
-    auth_type_upper = auth_type.upper()
-    if auth_type_upper == "API_KEY":
-        client_kwargs["config"] = oci.config.from_file(
-            file_location=auth_file_location,
-            profile_name=auth_profile,
-        )
-    elif auth_type_upper == "SECURITY_TOKEN":
-        config = oci.config.from_file(
-            file_location=auth_file_location,
-            profile_name=auth_profile,
-        )
-        private_key = oci.signer.load_private_key_from_file(config["key_file"], None)
-        with open(config["security_token_file"], encoding="utf-8") as file:
-            security_token = file.read()
-        client_kwargs["config"] = config
-        client_kwargs["signer"] = oci.auth.signers.SecurityTokenSigner(
-            security_token, private_key
-        )
-    elif auth_type_upper == "INSTANCE_PRINCIPAL":
-        client_kwargs["signer"] = (
-            oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
-        )
-    elif auth_type_upper == "RESOURCE_PRINCIPAL":
-        client_kwargs["signer"] = oci.auth.signers.get_resource_principals_signer()
-    else:
-        valid_types = [
-            "API_KEY",
-            "SECURITY_TOKEN",
-            "INSTANCE_PRINCIPAL",
-            "RESOURCE_PRINCIPAL",
-        ]
-        raise ValueError(
-            f"Invalid OCI auth_type '{auth_type}'. Valid values: {valid_types}"
-        )
-
-    return client_kwargs
+    return shared_create_oci_client_kwargs(
+        auth_type=auth_type,
+        auth_profile=auth_profile,
+        auth_file_location=auth_file_location,
+        service_endpoint=service_endpoint,
+        timeout=timeout,
+        oci_module=get_oci_module(),
+    )
 
 
 def parse_object_storage_path(file_path: str) -> tuple[str | None, str, str]:

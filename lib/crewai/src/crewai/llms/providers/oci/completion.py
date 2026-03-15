@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
+import inspect
 import json
 import logging
 import os
@@ -34,6 +35,11 @@ _OCI_TOOL_RESULT_GUIDANCE = (
     "raw JSON or tool call syntax. If you need additional information, you may "
     "call another tool."
 )
+_OCI_RESERVED_REQUEST_KWARGS = {
+    "tool_choice",
+    "parallel_tool_calls",
+    "tool_result_guidance",
+}
 
 
 def _get_oci_module() -> Any:
@@ -557,6 +563,23 @@ class OCICompletion(BaseLLM):
             "Unrecognized OCI tool_choice. Expected str, bool, or function mapping."
         )
 
+    def _allowed_passthrough_request_keys(self, request_cls: type[Any]) -> set[str]:
+        """Return request attributes that can safely be forwarded to the OCI SDK."""
+        attribute_map = getattr(request_cls, "attribute_map", None)
+        if isinstance(attribute_map, Mapping):
+            return {str(key) for key in attribute_map}
+
+        swagger_types = getattr(request_cls, "swagger_types", None)
+        if isinstance(swagger_types, Mapping):
+            return {str(key) for key in swagger_types}
+
+        signature = inspect.signature(request_cls)
+        return {
+            name
+            for name, parameter in signature.parameters.items()
+            if name != "self" and parameter.kind is not inspect.Parameter.VAR_KEYWORD
+        }
+
     def _build_chat_request(
         self,
         messages: list[LLMMessage],
@@ -632,14 +655,29 @@ class OCICompletion(BaseLLM):
                 is_include_usage=True
             )
 
-        passthrough_params = dict(self.additional_params)
-        passthrough_params.pop("tool_choice", None)
-        passthrough_params.pop("parallel_tool_calls", None)
-        passthrough_params.pop("tool_result_guidance", None)
-        request_kwargs.update(passthrough_params)
-
         if self.oci_provider == "cohere":
+            allowed_passthrough_keys = self._allowed_passthrough_request_keys(
+                models.CohereChatRequest
+            )
+            passthrough_params = {
+                key: value
+                for key, value in self.additional_params.items()
+                if key not in _OCI_RESERVED_REQUEST_KWARGS
+                and key in allowed_passthrough_keys
+            }
+            request_kwargs.update(passthrough_params)
             return models.CohereChatRequest(**request_kwargs)
+
+        allowed_passthrough_keys = self._allowed_passthrough_request_keys(
+            models.GenericChatRequest
+        )
+        passthrough_params = {
+            key: value
+            for key, value in self.additional_params.items()
+            if key not in _OCI_RESERVED_REQUEST_KWARGS
+            and key in allowed_passthrough_keys
+        }
+        request_kwargs.update(passthrough_params)
         return models.GenericChatRequest(**request_kwargs)
 
     def _extract_text(self, response: Any) -> str:
@@ -971,7 +1009,9 @@ class OCICompletion(BaseLLM):
                 from_agent=from_agent,
             )
             if tool_result is None:
-                continue
+                tool_result = (
+                    f"Tool '{function_name}' failed or returned no result."
+                )
 
             next_messages.append(
                 {
@@ -1117,15 +1157,13 @@ class OCICompletion(BaseLLM):
             serving_mode=self._build_serving_mode(),
             chat_request=chat_request,
         )
-        response = self._chat(chat_details)
-
         full_response = ""
         tool_calls_by_index: dict[int, dict[str, Any]] = {}
         usage_data: dict[str, int] = {}
         response_metadata: dict[str, Any] = {}
         response_id = uuid.uuid4().hex
 
-        for event in response.data.events():
+        for event in self._stream_chat_events(chat_details):
             event_data = self._parse_stream_event(event)
             if not event_data:
                 continue
@@ -1410,6 +1448,12 @@ class OCICompletion(BaseLLM):
         # Serialize access so sync/async calls cannot race on the same client.
         with self._client_lock:
             return self.client.chat(chat_details)
+
+    def _stream_chat_events(self, chat_details: Any) -> Any:
+        """Yield streaming events while holding the shared OCI client lock."""
+        with self._client_lock:
+            response = self.client.chat(chat_details)
+            yield from response.data.events()
 
     def supports_function_calling(self) -> bool:
         return True

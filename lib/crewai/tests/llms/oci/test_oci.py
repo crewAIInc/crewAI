@@ -155,6 +155,24 @@ def test_oci_completion_call_normalizes_messages_once(
     assert normalize_call_count == 1
 
 
+def test_oci_completion_filters_unknown_passthrough_params(
+    patch_oci_module, oci_unit_values: dict[str, object]
+):
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
+
+    llm = OCICompletion(
+        model=str(oci_unit_values["generic_model"]),
+        compartment_id=str(oci_unit_values["compartment_id"]),
+        unsupported_param="should-not-pass-through",
+    )
+
+    request = llm._build_chat_request([{"role": "user", "content": "hello"}])
+
+    assert not hasattr(request, "unsupported_param")
+
+
 def test_oci_completion_uses_region_to_build_endpoint(
     monkeypatch: pytest.MonkeyPatch,
     patch_oci_module,
@@ -511,6 +529,54 @@ def test_oci_completion_returns_tool_calls_for_executor(
     assert result[0]["function"]["arguments"] == '{"city":"Paris"}'
 
 
+def test_oci_completion_emits_tool_message_when_tool_execution_returns_none(
+    patch_oci_module, oci_unit_values: dict[str, object], monkeypatch: pytest.MonkeyPatch
+):
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
+
+    llm = OCICompletion(
+        model=str(oci_unit_values["generic_tool_model"]),
+        compartment_id=str(oci_unit_values["compartment_id"]),
+    )
+
+    captured_messages: list[dict[str, object]] = []
+
+    def fake_call_impl(**kwargs):
+        captured_messages.extend(kwargs["messages"])
+        return "done"
+
+    monkeypatch.setattr(llm, "_call_impl", fake_call_impl)
+    monkeypatch.setattr(llm, "_handle_tool_execution", lambda **_kwargs: None)
+
+    result = llm._handle_tool_calls(
+        normalized_messages=[{"role": "user", "content": "hi"}],
+        tools=None,
+        callbacks=None,
+        available_functions={"missing_tool": lambda: None},
+        from_task=None,
+        from_agent=None,
+        tool_depth=0,
+        response_model=None,
+        tool_calls=[
+            {
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "missing_tool", "arguments": "{}"},
+            }
+        ],
+    )
+
+    assert result == "done"
+    assert captured_messages[-1] == {
+        "role": "tool",
+        "tool_call_id": "call_1",
+        "name": "missing_tool",
+        "content": "Tool 'missing_tool' failed or returned no result.",
+    }
+
+
 def test_oci_completion_supports_generic_tool_controls(
     patch_oci_module, oci_unit_values: dict[str, object]
 ):
@@ -670,6 +736,40 @@ def test_oci_completion_executes_tool_calls_recursively(
     second_request = fake_client.chat.call_args_list[1].args[0]
     assert second_request.chat_request.messages[1].tool_calls[0].name == "get_weather"
     assert second_request.chat_request.messages[2].tool_call_id == "call_123"
+
+
+def test_oci_stream_chat_events_holds_client_lock_while_iterating(
+    patch_oci_module, oci_unit_values: dict[str, object]
+):
+    lock_states: list[bool] = []
+    lock_ref: object | None = None
+
+    def iter_events():
+        assert lock_ref is not None
+        lock_states.append(lock_ref.locked())
+        yield MagicMock()
+        lock_states.append(lock_ref.locked())
+        yield MagicMock()
+
+    fake_client = MagicMock()
+    fake_client.chat.return_value = MagicMock(
+        data=MagicMock(events=lambda: iter_events())
+    )
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        fake_client
+    )
+
+    llm = OCICompletion(
+        model=str(oci_unit_values["generic_tool_model"]),
+        compartment_id=str(oci_unit_values["compartment_id"]),
+    )
+    lock_ref = llm._client_lock
+
+    events = list(llm._stream_chat_events(MagicMock()))
+
+    assert len(events) == 2
+    assert lock_states == [True, True]
+    assert llm._client_lock.locked() is False
 
 
 @pytest.mark.asyncio
