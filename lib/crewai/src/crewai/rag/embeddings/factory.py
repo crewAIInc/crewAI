@@ -70,6 +70,10 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
     from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
     from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+    from crewai.rag.embeddings.providers.oci.embedding_callable import (
+        OCIEmbeddingFunction,
+    )
+    from crewai.rag.embeddings.providers.oci.types import OCIProviderSpec
     from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
     from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
     from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
@@ -100,6 +104,7 @@ PROVIDER_PATHS = {
     "jina": "crewai.rag.embeddings.providers.jina.jina_provider.JinaProvider",
     "ollama": "crewai.rag.embeddings.providers.ollama.ollama_provider.OllamaProvider",
     "onnx": "crewai.rag.embeddings.providers.onnx.onnx_provider.ONNXProvider",
+    "oci": "crewai.rag.embeddings.providers.oci.oci_provider.OCIProvider",
     "openai": "crewai.rag.embeddings.providers.openai.openai_provider.OpenAIProvider",
     "openclip": "crewai.rag.embeddings.providers.openclip.openclip_provider.OpenCLIPProvider",
     "roboflow": "crewai.rag.embeddings.providers.roboflow.roboflow_provider.RoboflowProvider",
@@ -214,6 +219,10 @@ def build_embedder_from_dict(
 
 @overload
 def build_embedder_from_dict(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
+
+
+@overload
+def build_embedder_from_dict(spec: OCIProviderSpec) -> OCIEmbeddingFunction: ...
 
 
 @overload

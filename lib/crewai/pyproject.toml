@@ -87,6 +87,9 @@ litellm = [
 bedrock = [
     "boto3~=1.40.45",
 ]
+oci = [
+    "oci>=2.161.0",
+]
 google-genai = [
     "google-genai~=1.65.0",
 ]

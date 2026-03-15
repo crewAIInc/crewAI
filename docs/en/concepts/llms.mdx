@@ -772,6 +772,227 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="Oracle Cloud Infrastructure (OCI)">
+    CrewAI provides native integration with OCI Generative AI for generic chat models, OpenAI-hosted OCI models, Google-hosted OCI models, Meta-hosted OCI models, and dedicated inference endpoints.
+
+    **Recommended Cohere Models (verified in OCI on March 10, 2026):**
+    - `cohere.command-a-reasoning` for reasoning-heavy text workflows
+    - `cohere.command-a-03-2025` for general text generation and streaming
+    - `cohere.command-a-vision` for the top Cohere multimodal tier once OCI Cohere vision formatting is enabled in CrewAI
+
+    **Recommended Regions for Cohere in OCI:**
+    - `eu-frankfurt-1`
+    - `us-ashburn-1`
+    - `eu-paris-1`
+    - `uk-london-1`
+    - `ap-mumbai-1`
+
+    ```toml Code
+    # Required
+    OCI_COMPARTMENT_ID=ocid1.compartment.oc1..exampleuniqueID
+
+    # Optional when not passing service_endpoint directly
+    OCI_REGION=eu-frankfurt-1
+
+    # Authentication options
+    OCI_AUTH_TYPE=API_KEY
+    OCI_AUTH_PROFILE=DEFAULT
+    OCI_AUTH_FILE_LOCATION=~/.oci/config
+
+    # Optional explicit endpoint override
+    OCI_SERVICE_ENDPOINT=https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com
+    ```
+
+    **Basic Usage:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="oci/cohere.command-a-reasoning",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+        auth_type="API_KEY",
+        auth_profile="DEFAULT",
+        temperature=0,
+        max_tokens=512,
+    )
+    ```
+
+    **Provider Routing Examples:**
+    ```python Code
+    from crewai import LLM
+
+    meta_llm = LLM(
+        model="oci/meta.llama-3.3-70b-instruct",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    )
+
+    gemini_llm = LLM(
+        model="oci/google.gemini-2.5-flash",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    )
+
+    openai_llm = LLM(
+        model="oci/openai.gpt-4o-mini",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    )
+    ```
+
+    **Async Usage:**
+    ```python Code
+    import asyncio
+    from crewai import LLM
+
+    llm = LLM(
+        model="oci/cohere.command-a-03-2025",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    )
+
+    async def main():
+        result = await llm.acall("Summarize Oracle Cloud in one sentence.")
+        print(result)
+
+    asyncio.run(main())
+    ```
+
+    **Streaming Usage:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="oci/cohere.command-a-03-2025",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+        stream=True,
+        temperature=0,
+    )
+
+    result = llm.call("Reply with exactly three words about Oracle Cloud.")
+    print(result)
+    ```
+
+    **Multimodal Usage:**
+    ```python Code
+    from crewai import LLM
+    from crewai_files import ImageFile
+
+    llm = LLM(
+        model="oci/google.gemini-2.5-flash",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    )
+
+    response = llm.call(
+        [
+            {
+                "role": "user",
+                "content": "Describe this architecture diagram.",
+                "files": {
+                    "diagram": ImageFile(source="./architecture.png"),
+                },
+            }
+        ]
+    )
+
+    print(response)
+    ```
+
+    **Structured Outputs:**
+    ```python Code
+    from pydantic import BaseModel
+    from crewai import LLM
+
+    class OCIAnswer(BaseModel):
+        topic: str
+        summary: str
+
+    llm = LLM(
+        model="oci/cohere.command-a-reasoning",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+        temperature=0,
+    )
+
+    response = llm.call(
+        "Return a short JSON summary about Oracle Cloud.",
+        response_model=OCIAnswer,
+    )
+    print(response.summary)
+    ```
+
+    **Agent + Tool Usage:**
+    ```python Code
+    from crewai import Agent, LLM
+    from crewai.tools import tool
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="OCI Calculator",
+        goal="Use tools to solve arithmetic problems",
+        backstory="You are a precise calculator assistant.",
+        llm=LLM(
+            model="oci/cohere.command-a-03-2025",
+            compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+            temperature=0,
+        ),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        "Use the add_numbers tool to calculate 15 + 27. Return only the final result."
+    )
+    print(result.raw)
+    ```
+
+    **Dedicated Endpoint Usage:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="oci/ocid1.generativeaiendpoint.oc1.eu-frankfurt-1.exampleuniqueID",
+        compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    )
+    ```
+
+    **Supported Authentication Types:**
+    - `API_KEY`
+    - `SECURITY_TOKEN`
+    - `INSTANCE_PRINCIPAL`
+    - `RESOURCE_PRINCIPAL`
+
+    **Features:**
+    - Native function calling support
+    - Structured outputs with JSON schema response formats
+    - Async `acall()` support
+    - Streaming responses for OCI chat models
+    - Multimodal generic chat inputs for text, images, documents, video, and audio
+    - Stop sequences support
+    - Dedicated endpoint routing
+    - Generic chat support for OCI-hosted OpenAI, Google, and Meta models
+    - Cohere-specific OCI chat formatting for text models
+    - OCI embeddings in CrewAI RAG via the `oci` embedding provider
+    - CrewAI-managed OCI retrieval via `/en/tools/cloud-storage/ociknowledgebasetool`
+
+    **Current Limitations:**
+    - Cohere multimodal and vision-specific formatting is not implemented yet
+
+    **`langchain-oci` Sample Coverage in CrewAI:**
+    - `01-getting-started`: native OCI auth, provider routing, and streaming examples above
+    - `02-vision-and-multimodal`: supported through CrewAI file attachments on OCI multimodal models
+    - `03-building-ai-agents`: maps directly to CrewAI `Agent` usage with an OCI-backed `LLM`
+    - `04-tool-calling-mastery`: supported through CrewAI tools and OCI native function calling
+    - `05-structured-output`: supported through `response_model`
+    - `07-async-for-production`: supported through `acall()`
+    - `09-provider-deep-dive`: covered by provider-prefixed model routing and dedicated endpoint support
+    - `10-embeddings`: covered by the OCI embedding provider for text and image embeddings, plus [`OCIKnowledgeBaseTool`](/en/tools/cloud-storage/ociknowledgebasetool) for CrewAI-managed retrieval
+
+    **Install:**
+    ```bash
+    uv add "crewai[oci]"
+    ```
+  </Accordion>
+
   <Accordion title="Amazon SageMaker">
     ```toml Code
     AWS_ACCESS_KEY_ID=<your-access-key>

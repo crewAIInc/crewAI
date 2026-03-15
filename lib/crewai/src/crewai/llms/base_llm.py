@@ -7,7 +7,8 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator
+import asyncio
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
@@ -151,6 +152,7 @@ class BaseLLM(ABC):
             "successful_requests": 0,
             "cached_prompt_tokens": 0,
         }
+        self.last_response_metadata: dict[str, Any] | None = None
 
     @property
     def provider(self) -> str:
@@ -236,6 +238,45 @@ class BaseLLM(ABC):
             TimeoutError: If the LLM request times out.
             RuntimeError: If the LLM request fails for other reasons.
         """
+        raise NotImplementedError
+
+    async def abatch(
+        self,
+        messages_batch: list[str | list[LLMMessage]],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> list[str | Any]:
+        """Execute multiple async LLM calls concurrently."""
+        return await asyncio.gather(
+            *[
+                self.acall(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+                for messages in messages_batch
+            ]
+        )
+
+    async def astream(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """Optional async chunked streaming interface for native providers."""
         raise NotImplementedError
 
     def _convert_tools_for_interference(
