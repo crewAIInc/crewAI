@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from unittest.mock import MagicMock
 
 import pytest
@@ -741,20 +742,35 @@ def test_oci_completion_executes_tool_calls_recursively(
 def test_oci_stream_chat_events_holds_client_lock_while_iterating(
     patch_oci_module, oci_unit_values: dict[str, object]
 ):
-    lock_states: list[bool] = []
-    lock_ref: object | None = None
+    call_sequence: list[str] = []
+    second_call_attempted = threading.Event()
+    second_call_thread: threading.Thread | None = None
 
     def iter_events():
-        assert lock_ref is not None
-        lock_states.append(lock_ref.locked())
+        nonlocal second_call_thread
+        call_sequence.append("stream-event-1")
+
+        def run_second_call() -> None:
+            second_call_attempted.set()
+            llm._chat(MagicMock())
+            call_sequence.append("second-chat-complete")
+
+        second_call_thread = threading.Thread(target=run_second_call)
+        second_call_thread.start()
+
         yield MagicMock()
-        lock_states.append(lock_ref.locked())
+
+        assert second_call_attempted.wait(timeout=1)
+        assert "second-chat-complete" not in call_sequence
+
+        call_sequence.append("stream-event-2")
         yield MagicMock()
 
     fake_client = MagicMock()
-    fake_client.chat.return_value = MagicMock(
-        data=MagicMock(events=lambda: iter_events())
-    )
+    fake_client.chat.side_effect = [
+        MagicMock(data=MagicMock(events=lambda: iter_events())),
+        MagicMock(),
+    ]
     patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
         fake_client
     )
@@ -763,13 +779,17 @@ def test_oci_stream_chat_events_holds_client_lock_while_iterating(
         model=str(oci_unit_values["generic_tool_model"]),
         compartment_id=str(oci_unit_values["compartment_id"]),
     )
-    lock_ref = llm._client_lock
 
     events = list(llm._stream_chat_events(MagicMock()))
+    assert second_call_thread is not None
+    second_call_thread.join(timeout=1)
 
     assert len(events) == 2
-    assert lock_states == [True, True]
-    assert llm._client_lock.locked() is False
+    assert call_sequence == [
+        "stream-event-1",
+        "stream-event-2",
+        "second-chat-complete",
+    ]
 
 
 @pytest.mark.asyncio

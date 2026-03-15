@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
+from contextlib import contextmanager
 import inspect
 import json
 import logging
@@ -127,7 +128,9 @@ class OCICompletion(BaseLLM):
             self.client = self._oci.generative_ai_inference.GenerativeAiInferenceClient(
                 **client_kwargs
             )
-        self._client_lock = threading.Lock()
+        self._client_condition = threading.Condition()
+        self._next_client_ticket = 0
+        self._active_client_ticket = 0
         self.last_response_metadata = None
 
     def _infer_provider(self, model: str) -> str:
@@ -1446,14 +1449,30 @@ class OCICompletion(BaseLLM):
     def _chat(self, chat_details: Any) -> Any:
         # The OCI SDK client is shared across sync + thread-offloaded async calls.
         # Serialize access so sync/async calls cannot race on the same client.
-        with self._client_lock:
+        with self._ordered_client_access():
             return self.client.chat(chat_details)
 
     def _stream_chat_events(self, chat_details: Any) -> Any:
         """Yield streaming events while holding the shared OCI client lock."""
-        with self._client_lock:
+        with self._ordered_client_access():
             response = self.client.chat(chat_details)
             yield from response.data.events()
+
+    @contextmanager
+    def _ordered_client_access(self) -> Any:
+        """Serialize shared OCI client access in call-arrival order."""
+        with self._client_condition:
+            ticket = self._next_client_ticket
+            self._next_client_ticket += 1
+            while ticket != self._active_client_ticket:
+                self._client_condition.wait()
+
+        try:
+            yield
+        finally:
+            with self._client_condition:
+                self._active_client_ticket += 1
+                self._client_condition.notify_all()
 
     def supports_function_calling(self) -> bool:
         return True
