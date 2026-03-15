@@ -18,11 +18,42 @@ Environment Variables:
 """
 
 import os
+import re
 import logging
 from dataclasses import dataclass
 from typing import Optional, List, Any
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
+
+# Joy agent IDs follow pattern: ag_ followed by 24 hex characters
+AGENT_ID_PATTERN = re.compile(r"^ag_[a-f0-9]{24}$")
+
+
+def _validate_agent_id(agent_id: str) -> str:
+    """Validate and sanitize agent ID to prevent injection attacks.
+
+    Args:
+        agent_id: The agent ID to validate
+
+    Returns:
+        The validated agent ID
+
+    Raises:
+        ValueError: If the agent ID format is invalid
+    """
+    if not agent_id or not isinstance(agent_id, str):
+        raise ValueError("Agent ID must be a non-empty string")
+
+    agent_id = agent_id.strip().lower()
+
+    if not AGENT_ID_PATTERN.match(agent_id):
+        raise ValueError(
+            f"Invalid agent ID format: {agent_id!r}. "
+            "Expected format: ag_ followed by 24 hex characters"
+        )
+
+    return agent_id
 
 
 class TrustVerificationError(Exception):
@@ -134,7 +165,8 @@ class JoyVerifier:
             TrustVerificationError: If verification fails
         """
         try:
-            data = self._request("GET", f"/agents/{agent_id}")
+            validated_id = _validate_agent_id(agent_id)
+            data = self._request("GET", f"/agents/{quote(validated_id, safe='')}")
 
             trust_score = float(data.get("trust_score", 0))
             vouch_count = int(data.get("vouch_count", 0))
