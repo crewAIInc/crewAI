@@ -51,6 +51,13 @@ ACTIONABLE_STATES: frozenset[TaskState] = frozenset(
     }
 )
 
+PENDING_STATES: frozenset[TaskState] = frozenset(
+    {
+        TaskState.submitted,
+        TaskState.working,
+    }
+)
+
 
 class TaskStateResult(TypedDict):
     """Result dictionary from processing A2A task state."""
@@ -271,6 +278,9 @@ def process_task_state(
             error=error_msg,
             history=new_messages,
         )
+
+    if a2a_task.status.state in PENDING_STATES:
+        return None
 
     return None
 

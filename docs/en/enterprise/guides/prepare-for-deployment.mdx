@@ -256,6 +256,12 @@ Before deployment, ensure you have:
 1. **LLM API keys** ready (OpenAI, Anthropic, Google, etc.)
 2. **Tool API keys** if using external tools (Serper, etc.)
 
+<Info>
+  If your project depends on packages from a **private PyPI registry**, you'll also need to configure
+  registry authentication credentials as environment variables. See the
+  [Private Package Registries](/en/enterprise/guides/private-package-registry) guide for details.
+</Info>
+
 <Tip>
   Test your project locally with the same environment variables before deploying
   to catch configuration issues early.

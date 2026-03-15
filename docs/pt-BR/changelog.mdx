@@ -4,6 +4,282 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="14 mar 2026">
+  ## v1.10.2rc2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Remover bloqueios exclusivos de operações de armazenamento somente leitura
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2rc1
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="13 mar 2026">
+  ## v1.10.2rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar comando de lançamento e acionar publicação no PyPI
+
+  ### Correções de Bugs
+  - Corrigir bloqueio seguro entre processos e threads para I/O não protegido
+  - Propagar contextvars através de todos os limites de thread e executor
+  - Propagar ContextVars para threads de tarefas assíncronas
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2a1
+
+  ## Contribuidores
+
+  @danglies007, @greysonlalonde
+
+</Update>
+
+<Update label="11 mar 2026">
+  ## v1.10.2a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2a1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Adicionar suporte para busca de ferramentas, salvamento de tokens e injeção dinâmica de ferramentas apropriadas durante a execução para Anthropics.
+  - Introduzir mais ferramentas de Busca Brave.
+  - Criar ação para lançamentos noturnos.
+
+  ### Correções de Bugs
+  - Corrigir LockException durante a execução concorrente de múltiplos processos.
+  - Resolver problemas com a agrupação de resultados de ferramentas paralelas em uma única mensagem de usuário.
+  - Abordar resoluções de ferramentas MCP e eliminar todas as conexões mutáveis compartilhadas.
+  - Atualizar o manuseio de parâmetros LLM na função human_feedback.
+  - Adicionar métodos de lista/dicionário ausentes a LockedListProxy e LockedDictProxy.
+  - Propagar o contexto de contextvars para as threads de chamada de ferramentas paralelas.
+  - Atualizar a dependência gitpython para >=3.1.41 para resolver a vulnerabilidade de travessia de diretórios CVE.
+
+  ### Refatoração
+  - Refatorar classes de memória para serem serializáveis.
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.10.1.
+
+  ## Contribuidores
+
+  @akaKuruma, @github-actions[bot], @giulio-leone, @greysonlalonde, @joaomdmoura, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha
+
+</Update>
+
+<Update label="04 mar 2026">
+  ## v1.10.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Atualizar Gemini GenAI
+
+  ### Correções de Bugs
+  - Ajustar o valor do listener do executor para evitar recursão
+  - Agrupar partes da resposta da função paralela em um único objeto Content no Gemini
+  - Exibir a saída de pensamento dos modelos de pensamento no Gemini
+  - Carregar ferramentas MCP e da plataforma quando as ferramentas do agente forem None
+  - Suportar ambientes Jupyter com loops de eventos em A2A
+  - Usar ID anônimo para rastreamentos efêmeros
+  - Passar condicionalmente o cabeçalho plus
+  - Ignorar o registro do manipulador de sinal em threads não principais para telemetria
+  - Injetar erros de ferramentas como observações e resolver colisões de nomes
+  - Atualizar pypdf de 4.x para 6.7.4 para resolver alertas do Dependabot
+  - Resolver alertas de segurança críticos e altos do Dependabot
+
+  ### Documentação
+  - Sincronizar a documentação da ferramenta Composio entre locais
+
+  ## Contribuidores
+
+  @giulio-leone, @greysonlalonde, @haxzie, @joaomdmoura, @lorenzejay, @mattatcha, @mplachta, @nicoferdi96
+
+</Update>
+
+<Update label="27 fev 2026">
+  ## v1.10.1a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Implementar suporte a invocação assíncrona em métodos de callback de etapas
+  - Implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.0
+
+  ### Refatoração
+  - Refatorar métodos de callback de etapas para suportar invocação assíncrona
+  - Refatorar para implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Correções de Bugs
+  - Corrigir branch para notas de lançamento
+
+  ## Contribuidores
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="27 fev 2026">
+  ## v1.10.1a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1a1)
+
+  ## O que Mudou
+
+  ### Refatoração
+  - Refatorar métodos de callback de etapas para suportar invocação assíncrona
+  - Implementar carregamento sob demanda para dependências pesadas no módulo de Memória
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.0
+
+  ### Correções de Bugs
+  - Criar branch para notas de lançamento
+
+  ## Contribuidores
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="26 fev 2026">
+  ## v1.10.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.0)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar a resolução da ferramenta MCP e eventos relacionados
+  - Atualizar a versão do lancedb e adicionar pacotes lance-namespace
+  - Aprimorar a análise e validação de argumentos JSON no CrewAgentExecutor e BaseTool
+  - Migrar o cliente HTTP da CLI de requests para httpx
+  - Adicionar documentação versionada
+  - Adicionar detecção de versões removidas para notas de versão
+  - Implementar tratamento de entrada do usuário em Flows
+  - Aprimorar a funcionalidade de auto-loop HITL nos testes de integração de feedback humano
+  - Adicionar started_event_id e definir no eventbus
+  - Atualizar automaticamente tools.specs
+
+  ### Correções de Bugs
+  - Validar kwargs da ferramenta mesmo quando vazios para evitar TypeError crípticos
+  - Preservar tipos nulos nos esquemas de parâmetros da ferramenta para LLM
+  - Mapear output_pydantic/output_json para saída estruturada nativa
+  - Garantir que callbacks sejam executados/aguardados se forem promessas
+  - Capturar o nome do método no contexto da exceção
+  - Preservar tipo enum no resultado do roteador; melhorar tipos
+  - Corrigir fluxos cíclicos que quebram silenciosamente quando o ID de persistência é passado nas entradas
+  - Corrigir o formato da flag da CLI de --skip-provider para --skip_provider
+  - Garantir que o fluxo de chamada da ferramenta OpenAI seja finalizado
+  - Resolver ponteiros $ref de esquema complexos nas ferramentas MCP
+  - Impor additionalProperties=false nos esquemas
+  - Rejeitar nomes de scripts reservados para pastas de equipe
+  - Resolver condição de corrida no teste de emissão de eventos de guardrail
+
+  ### Documentação
+  - Adicionar nota de dependência litellm para provedores de LLM não nativos
+  - Esclarecer o modelo de segurança NL2SQL e orientações de fortalecimento
+  - Adicionar 96 ações ausentes em 9 integrações
+
+  ### Refatoração
+  - Refatorar crew para provider
+  - Extrair HITL para padrão de provider
+  - Melhorar tipagem e registro de hooks
+
+  ## Contribuidores
+
+  @dependabot[bot], @github-actions[bot], @github-code-quality[bot], @greysonlalonde, @heitorado, @hobostay, @joaomdmoura, @johnvan7, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha, @mplachta, @nicoferdi96, @theCyberTech, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="26 jan 2026">
+  ## v1.9.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.9.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte a saídas estruturadas e response_format em vários provedores
+  - Adicionar ID de resposta às respostas de streaming
+  - Adicionar ordenação de eventos com hierarquias pai-filho
+  - Adicionar suporte à autenticação SSO Keycloak
+  - Adicionar capacidades de manipulação de arquivos multimodais
+  - Adicionar suporte nativo à API de respostas OpenAI
+  - Adicionar utilitários de execução de tarefas A2A
+  - Adicionar configuração de servidor A2A e geração de cartão de agente
+  - Aprimorar sistema de eventos e expandir opções de transporte
+  - Melhorar mecanismos de chamada de ferramentas
+
+  ### Correções de Bugs
+  - Aprimorar armazenamento de arquivos com cache de memória de fallback quando aiocache não está disponível
+  - Garantir que lista de documentos não esteja vazia
+  - Tratar sequências de parada do Bedrock adequadamente
+  - Adicionar suporte à chave de API do Google Vertex
+  - Aprimorar detecção de palavras de parada do modelo Azure
+  - Melhorar tratamento de erros para HumanFeedbackPending na execução de fluxo
+  - Corrigir desvinculação de tarefa do span de execução
+
+  ### Documentação
+  - Adicionar documentação de manipulação nativa de arquivos
+  - Adicionar documentação da API de respostas OpenAI
+  - Adicionar orientação de implementação de cartão de agente
+  - Refinar documentação A2A
+  - Atualizar changelog para v1.8.0
+
+  ### Contribuidores
+  @Anaisdg, @GininDenis, @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @koushiv777, @lorenzejay, @nicoferdi96, @vinibrsl
+
+</Update>
+
+<Update label="15 jan 2026">
+  ## v1.8.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.8.1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar utilitários de execução de tarefas A2A
+  - Adicionar configuração de servidor A2A e geração de cartão de agente
+  - Adicionar mecanismos de transporte adicionais
+  - Adicionar suporte à integração Galileo
+
+  ### Correções de Bugs
+  - Melhorar compatibilidade do modelo Azure
+  - Expandir profundidade de inspeção de frame para detectar parent_flow
+  - Resolver problemas de gerenciamento de span de execução de tarefas
+  - Aprimorar tratamento de erros para cenários de feedback humano durante execução de fluxo
+
+  ### Documentação
+  - Adicionar documentação de cartão de agente A2A
+  - Adicionar documentação de recurso de redação de PII
+
+  ### Contribuidores
+  @Anaisdg, @GininDenis, @greysonlalonde, @joaomdmoura, @koushiv777, @lorenzejay, @vinibrsl
+
+</Update>
+
 <Update label="08 jan 2026">
   ## v1.8.0
 

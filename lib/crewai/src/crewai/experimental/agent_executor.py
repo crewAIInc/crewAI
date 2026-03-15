@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Coroutine
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 from datetime import datetime
+import inspect
 import json
 import threading
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -18,6 +22,7 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserError,
 )
+from crewai.core.providers.human_input import get_provider
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled_in_context,
@@ -31,11 +36,25 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, listen, or_, router, start
+from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
 )
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    get_after_tool_call_hooks,
+    get_before_tool_call_hooks,
+)
+from crewai.hooks.types import (
+    AfterLLMCallHookCallable,
+    AfterLLMCallHookType,
+    BeforeLLMCallHookCallable,
+    BeforeLLMCallHookType,
+)
+from crewai.tools.base_tool import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
@@ -50,6 +69,7 @@ from crewai.utilities.agent_utils import (
     has_reached_max_iterations,
     is_context_length_exceeded,
     is_inside_event_loop,
+    parse_tool_call_args,
     process_llm_response,
     track_delegation_if_needed,
 )
@@ -68,8 +88,6 @@ if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
     from crewai.task import Task
-    from crewai.tools.base_tool import BaseTool
-    from crewai.tools.structured_tool import CrewStructuredTool
     from crewai.tools.tool_types import ToolResult
     from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
@@ -185,8 +203,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         self._instance_id = str(uuid4())[:8]
 
-        self.before_llm_call_hooks: list[Callable] = []
-        self.after_llm_call_hooks: list[Callable] = []
+        self.before_llm_call_hooks: list[
+            BeforeLLMCallHookType | BeforeLLMCallHookCallable
+        ] = []
+        self.after_llm_call_hooks: list[
+            AfterLLMCallHookType | AfterLLMCallHookCallable
+        ] = []
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
@@ -200,6 +222,71 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
             )
         self._state = AgentReActState()
+
+    @property
+    def messages(self) -> list[LLMMessage]:
+        """Delegate to state for ExecutorContext conformance."""
+        return self._state.messages
+
+    @messages.setter
+    def messages(self, value: list[LLMMessage]) -> None:
+        """Delegate to state for ExecutorContext conformance."""
+        if self._flow_initialized and hasattr(self, "_state_lock"):
+            with self._state_lock:
+                self._state.messages = value
+        else:
+            self._state.messages = value
+
+    @property
+    def ask_for_human_input(self) -> bool:
+        """Delegate to state for ExecutorContext conformance."""
+        return self._state.ask_for_human_input
+
+    @ask_for_human_input.setter
+    def ask_for_human_input(self, value: bool) -> None:
+        """Delegate to state for ExecutorContext conformance."""
+        self._state.ask_for_human_input = value
+
+    def _invoke_loop(self) -> AgentFinish:
+        """Invoke the agent loop and return the result.
+
+        Required by ExecutorContext protocol.
+        """
+        self._state.iterations = 0
+        self._state.is_finished = False
+        self._state.current_answer = None
+
+        self.kickoff()
+
+        answer = self._state.current_answer
+        if not isinstance(answer, AgentFinish):
+            raise RuntimeError("Agent loop did not produce a final answer")
+        return answer
+
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Invoke the agent loop asynchronously and return the result.
+
+        Required by AsyncExecutorContext protocol.
+        """
+        self._state.iterations = 0
+        self._state.is_finished = False
+        self._state.current_answer = None
+
+        await self.akickoff()
+
+        answer = self._state.current_answer
+        if not isinstance(answer, AgentFinish):
+            raise RuntimeError("Agent loop did not produce a final answer")
+        return answer
+
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format feedback as a message for the LLM.
+
+        Required by ExecutorContext protocol.
+        """
+        return format_message_for_llm(
+            self._i18n.slice("feedback_instructions").format(feedback=feedback)
+        )
 
     def _ensure_flow_initialized(self) -> None:
         """Ensure Flow.__init__() has been called.
@@ -216,6 +303,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             super().__init__(
                 suppress_flow_events=True,
                 tracing=current_tracing if current_tracing else None,
+                max_method_calls=self.max_iter * 10,
             )
             self._flow_initialized = True
 
@@ -235,7 +323,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     def _setup_native_tools(self) -> None:
         """Convert tools to OpenAI schema format for native function calling."""
         if self.original_tools:
-            self._openai_tools, self._available_functions = (
+            self._openai_tools, self._available_functions, self._tool_name_mapping = (
                 convert_tools_to_openai_schema(self.original_tools)
             )
 
@@ -292,17 +380,19 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Flow initialization is deferred to prevent event emission during agent setup.
         Returns the temporary state until invoke() is called.
         """
+        if self._flow_initialized and hasattr(self, "_state_lock"):
+            return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
         return self._state
-
-    @property
-    def messages(self) -> list[LLMMessage]:
-        """Compatibility property for mixin - returns state messages."""
-        return self._state.messages
 
     @property
     def iterations(self) -> int:
         """Compatibility property for mixin - returns state iterations."""
         return self._state.iterations
+
+    @iterations.setter
+    def iterations(self, value: int) -> None:
+        """Set state iterations."""
+        self._state.iterations = value
 
     @start()
     def initialize_reasoning(self) -> Literal["initialized"]:
@@ -315,7 +405,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 self._setup_native_tools()
         return "initialized"
 
-    @listen("force_final_answer")
+    @listen("max_iterations_exceeded")
     def force_final_answer(self) -> Literal["agent_finished"]:
         """Force agent to provide final answer when max iterations exceeded."""
         formatted_answer = handle_max_iterations_exceeded(
@@ -325,6 +415,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             messages=list(self.state.messages),
             llm=self.llm,
             callbacks=self.callbacks,
+            verbose=self.agent.verbose,
         )
 
         self.state.current_answer = formatted_answer
@@ -348,9 +439,19 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 printer=self._printer,
                 from_task=self.task,
                 from_agent=self.agent,
-                response_model=None,
+                response_model=self.response_model,
                 executor_context=self,
+                verbose=self.agent.verbose,
             )
+
+            # If response is structured output (BaseModel), store it directly
+            if isinstance(answer, BaseModel):
+                self.state.current_answer = AgentFinish(
+                    thought="",
+                    output=answer,
+                    text=str(answer),
+                )
+                return "parsed"
 
             # Parse the LLM response
             formatted_answer = process_llm_response(answer, self.use_stop_words)
@@ -385,19 +486,18 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 return "context_error"
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
     @listen("continue_reasoning_native")
-    def call_llm_native_tools(
-        self,
-    ) -> Literal["native_tool_calls", "native_finished", "context_error"]:
+    def call_llm_native_tools(self) -> None:
         """Execute LLM call with native function calling.
 
         Always calls the LLM so it can read reflection prompts and decide
         whether to provide a final answer or request more tools.
 
-        Returns routing decision based on whether tool calls or final answer.
+        Note: This is a listener, not a router. The route_native_tool_result
+        router fires after this to determine the next step based on state.
         """
         try:
             # Clear pending tools - LLM will decide what to do next after reading
@@ -418,16 +518,26 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 available_functions=None,
                 from_task=self.task,
                 from_agent=self.agent,
-                response_model=None,
+                response_model=self.response_model,
                 executor_context=self,
+                verbose=self.agent.verbose,
             )
 
             # Check if the response is a list of tool calls
             if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
                 # Store tool calls for sequential processing
                 self.state.pending_tool_calls = list(answer)
+                return  # Router will check pending_tool_calls
 
-                return "native_tool_calls"
+            if isinstance(answer, BaseModel):
+                self.state.current_answer = AgentFinish(
+                    thought="",
+                    output=answer,
+                    text=answer.model_dump_json(),
+                )
+                self._invoke_step_callback(self.state.current_answer)
+                self._append_message_to_state(answer.model_dump_json())
+                return  # Router will check current_answer
 
             # Text response - this is the final answer
             if isinstance(answer, str):
@@ -438,8 +548,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
                 self._invoke_step_callback(self.state.current_answer)
                 self._append_message_to_state(answer)
-
-                return "native_finished"
+                return  # Router will check current_answer
 
             # Unexpected response type, treat as final answer
             self.state.current_answer = AgentFinish(
@@ -449,16 +558,15 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
             self._invoke_step_callback(self.state.current_answer)
             self._append_message_to_state(str(answer))
-
-            return "native_finished"
+            # Router will check current_answer
 
         except Exception as e:
             if is_context_length_exceeded(e):
                 self._last_context_error = e
-                return "context_error"
+                return  # Router will check _last_context_error
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
     @router(call_llm_and_parse)
@@ -468,25 +576,39 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             return "execute_tool"
         return "agent_finished"
 
+    @router(call_llm_native_tools)
+    def route_native_tool_result(
+        self,
+    ) -> Literal["native_tool_calls", "native_finished", "context_error"]:
+        """Route based on LLM response for native tool calling.
+
+        Checks state set by call_llm_native_tools to determine next step.
+        This router is needed because only router return values trigger
+        downstream listeners.
+        """
+        if self._last_context_error is not None:
+            return "context_error"
+        if self.state.pending_tool_calls:
+            return "native_tool_calls"
+        return "native_finished"
+
     @listen("execute_tool")
     def execute_tool_action(self) -> Literal["tool_completed", "tool_result_is_final"]:
         """Execute the tool action and handle the result."""
 
+        action = cast(AgentAction, self.state.current_answer)
+
+        fingerprint_context = {}
+        if (
+            self.agent
+            and hasattr(self.agent, "security_config")
+            and hasattr(self.agent.security_config, "fingerprint")
+        ):
+            fingerprint_context = {
+                "agent_fingerprint": str(self.agent.security_config.fingerprint)
+            }
+
         try:
-            action = cast(AgentAction, self.state.current_answer)
-
-            # Extract fingerprint context for tool execution
-            fingerprint_context = {}
-            if (
-                self.agent
-                and hasattr(self.agent, "security_config")
-                and hasattr(self.agent.security_config, "fingerprint")
-            ):
-                fingerprint_context = {
-                    "agent_fingerprint": str(self.agent.security_config.fingerprint)
-                }
-
-            # Execute the tool
             tool_result = execute_tool_and_check_finality(
                 agent_action=action,
                 fingerprint_context=fingerprint_context,
@@ -500,24 +622,19 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 function_calling_llm=self.function_calling_llm,
                 crew=self.crew,
             )
+        except Exception as e:
+            if self.agent and self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in tool execution: {e}", color="red"
+                )
+            if self.task:
+                self.task.increment_tools_errors()
 
-            # Handle agent action and append observation to messages
-            result = self._handle_agent_action(action, tool_result)
-            self.state.current_answer = result
+            error_observation = f"\nObservation: Error executing tool: {e}"
+            action.text += error_observation
+            action.result = str(e)
+            self._append_message_to_state(action.text)
 
-            # Invoke step callback if configured
-            self._invoke_step_callback(result)
-
-            # Append result message to conversation state
-            if hasattr(result, "text"):
-                self._append_message_to_state(result.text)
-
-            # Check if tool result became a final answer (result_as_answer flag)
-            if isinstance(result, AgentFinish):
-                self.state.is_finished = True
-                return "tool_result_is_final"
-
-            # Inject post-tool reasoning prompt to enforce analysis
             reasoning_prompt = self._i18n.slice("post_tool_reasoning")
             reasoning_message: LLMMessage = {
                 "role": "user",
@@ -527,12 +644,26 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
             return "tool_completed"
 
-        except Exception as e:
-            error_text = Text()
-            error_text.append("❌ Error in tool execution: ", style="red bold")
-            error_text.append(str(e), style="red")
-            self._console.print(error_text)
-            raise
+        result = self._handle_agent_action(action, tool_result)
+        self.state.current_answer = result
+
+        self._invoke_step_callback(result)
+
+        if hasattr(result, "text"):
+            self._append_message_to_state(result.text)
+
+        if isinstance(result, AgentFinish):
+            self.state.is_finished = True
+            return "tool_result_is_final"
+
+        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+        reasoning_message_post: LLMMessage = {
+            "role": "user",
+            "content": reasoning_prompt,
+        }
+        self.state.messages.append(reasoning_message_post)
+
+        return "tool_completed"
 
     @listen("native_tool_calls")
     def execute_native_tool(
@@ -550,9 +681,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         if not self.state.pending_tool_calls:
             return "native_tool_completed"
 
+        pending_tool_calls = list(self.state.pending_tool_calls)
+        self.state.pending_tool_calls.clear()
+
         # Group all tool calls into a single assistant message
         tool_calls_to_report = []
-        for tool_call in self.state.pending_tool_calls:
+        for tool_call in pending_tool_calls:
             info = extract_tool_call_info(tool_call)
             if not info:
                 continue
@@ -577,146 +711,103 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 "content": None,
                 "tool_calls": tool_calls_to_report,
             }
+            if all(type(tc).__qualname__ == "Part" for tc in pending_tool_calls):
+                assistant_message["raw_tool_call_parts"] = list(pending_tool_calls)
             self.state.messages.append(assistant_message)
 
-        # Now execute each tool
-        while self.state.pending_tool_calls:
-            tool_call = self.state.pending_tool_calls.pop(0)
-            info = extract_tool_call_info(tool_call)
-            if not info:
-                continue
+        runnable_tool_calls = [
+            tool_call
+            for tool_call in pending_tool_calls
+            if extract_tool_call_info(tool_call) is not None
+        ]
+        should_parallelize = self._should_parallelize_native_tool_calls(
+            runnable_tool_calls
+        )
 
-            call_id, func_name, func_args = info
-
-            # Parse arguments
-            if isinstance(func_args, str):
-                try:
-                    args_dict = json.loads(func_args)
-                except json.JSONDecodeError:
-                    args_dict = {}
-            else:
-                args_dict = func_args
-
-            # Get agent_key for event tracking
-            agent_key = (
-                getattr(self.agent, "key", "unknown") if self.agent else "unknown"
-            )
-
-            # Find original tool by matching sanitized name (needed for cache_function and result_as_answer)
-            original_tool = None
-            for tool in self.original_tools or []:
-                if sanitize_tool_name(tool.name) == func_name:
-                    original_tool = tool
-                    break
-
-            # Check if tool has reached max usage count
-            max_usage_reached = False
-            if original_tool:
-                if (
-                    hasattr(original_tool, "max_usage_count")
-                    and original_tool.max_usage_count is not None
-                    and original_tool.current_usage_count
-                    >= original_tool.max_usage_count
-                ):
-                    max_usage_reached = True
-
-            # Check cache before executing
-            from_cache = False
-            input_str = json.dumps(args_dict) if args_dict else ""
-            if self.tools_handler and self.tools_handler.cache:
-                cached_result = self.tools_handler.cache.read(
-                    tool=func_name, input=input_str
+        execution_results: list[dict[str, Any]] = []
+        if should_parallelize:
+            max_workers = min(8, len(runnable_tool_calls))
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                future_to_idx = {
+                    pool.submit(
+                        contextvars.copy_context().run,
+                        self._execute_single_native_tool_call,
+                        tool_call,
+                    ): idx
+                    for idx, tool_call in enumerate(runnable_tool_calls)
+                }
+                ordered_results: list[dict[str, Any] | None] = [None] * len(
+                    runnable_tool_calls
                 )
-                if cached_result is not None:
-                    result = (
-                        str(cached_result)
-                        if not isinstance(cached_result, str)
-                        else cached_result
-                    )
-                    from_cache = True
-
-            # Emit tool usage started event
-            started_at = datetime.now()
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageStartedEvent(
-                    tool_name=func_name,
-                    tool_args=args_dict,
-                    from_agent=self.agent,
-                    from_task=self.task,
-                    agent_key=agent_key,
-                ),
-            )
-
-            track_delegation_if_needed(func_name, args_dict, self.task)
-
-            # Execute the tool (only if not cached and not at max usage)
-            if not from_cache and not max_usage_reached:
-                result = "Tool not found"
-                if func_name in self._available_functions:
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
                     try:
-                        tool_func = self._available_functions[func_name]
-                        raw_result = tool_func(**args_dict)
-
-                        # Add to cache after successful execution (before string conversion)
-                        if self.tools_handler and self.tools_handler.cache:
-                            should_cache = True
-                            if (
-                                original_tool
-                                and hasattr(original_tool, "cache_function")
-                                and original_tool.cache_function
-                            ):
-                                should_cache = original_tool.cache_function(
-                                    args_dict, raw_result
-                                )
-                            if should_cache:
-                                self.tools_handler.cache.add(
-                                    tool=func_name, input=input_str, output=raw_result
-                                )
-
-                        # Convert to string for message
-                        result = (
-                            str(raw_result)
-                            if not isinstance(raw_result, str)
-                            else raw_result
-                        )
+                        ordered_results[idx] = future.result()
                     except Exception as e:
-                        result = f"Error executing tool: {e}"
-                        if self.task:
-                            self.task.increment_tools_errors()
-                        # Emit tool usage error event
-                        crewai_event_bus.emit(
-                            self,
-                            event=ToolUsageErrorEvent(
-                                tool_name=func_name,
-                                tool_args=args_dict,
-                                from_agent=self.agent,
-                                from_task=self.task,
-                                agent_key=agent_key,
-                                error=e,
-                            ),
-                        )
-            elif max_usage_reached:
-                # Return error message when max usage limit is reached
-                result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+                        tool_call = runnable_tool_calls[idx]
+                        info = extract_tool_call_info(tool_call)
+                        call_id = info[0] if info else "unknown"
+                        func_name = info[1] if info else "unknown"
+                        ordered_results[idx] = {
+                            "call_id": call_id,
+                            "func_name": func_name,
+                            "result": f"Error executing tool: {e}",
+                            "from_cache": False,
+                            "original_tool": None,
+                        }
+                execution_results = [
+                    result for result in ordered_results if result is not None
+                ]
+        else:
+            # Execute sequentially so result_as_answer tools can short-circuit
+            # immediately without running remaining calls.
+            for tool_call in runnable_tool_calls:
+                execution_result = self._execute_single_native_tool_call(tool_call)
+                call_id = cast(str, execution_result["call_id"])
+                func_name = cast(str, execution_result["func_name"])
+                result = cast(str, execution_result["result"])
+                from_cache = cast(bool, execution_result["from_cache"])
+                original_tool = execution_result["original_tool"]
 
-            # Emit tool usage finished event
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageFinishedEvent(
-                    output=result,
-                    tool_name=func_name,
-                    tool_args=args_dict,
-                    from_agent=self.agent,
-                    from_task=self.task,
-                    agent_key=agent_key,
-                    started_at=started_at,
-                    finished_at=datetime.now(),
-                ),
-            )
+                tool_message: LLMMessage = {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "name": func_name,
+                    "content": result,
+                }
+                self.state.messages.append(tool_message)
 
-            # Append tool result message
-            tool_message: LLMMessage = {
+                # Log the tool execution
+                if self.agent and self.agent.verbose:
+                    cache_info = " (from cache)" if from_cache else ""
+                    self._printer.print(
+                        content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
+                        color="green",
+                    )
+
+                if (
+                    original_tool
+                    and hasattr(original_tool, "result_as_answer")
+                    and original_tool.result_as_answer
+                ):
+                    self.state.current_answer = AgentFinish(
+                        thought="Tool result is the final answer",
+                        output=result,
+                        text=result,
+                    )
+                    self.state.is_finished = True
+                    return "tool_result_is_final"
+
+            return "native_tool_completed"
+
+        for execution_result in execution_results:
+            call_id = cast(str, execution_result["call_id"])
+            func_name = cast(str, execution_result["func_name"])
+            result = cast(str, execution_result["result"])
+            from_cache = cast(bool, execution_result["from_cache"])
+            original_tool = execution_result["original_tool"]
+
+            tool_message = {
                 "role": "tool",
                 "tool_call_id": call_id,
                 "name": func_name,
@@ -746,16 +837,250 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 self.state.is_finished = True
                 return "tool_result_is_final"
 
-        # Add reflection prompt once after all tools in the batch
-        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
-
-        reasoning_message: LLMMessage = {
-            "role": "user",
-            "content": reasoning_prompt,
-        }
-        self.state.messages.append(reasoning_message)
-
         return "native_tool_completed"
+
+    def _should_parallelize_native_tool_calls(self, tool_calls: list[Any]) -> bool:
+        """Determine if native tool calls are safe to run in parallel."""
+        if len(tool_calls) <= 1:
+            return False
+
+        for tool_call in tool_calls:
+            info = extract_tool_call_info(tool_call)
+            if not info:
+                continue
+            _, func_name, _ = info
+
+            mapping = getattr(self, "_tool_name_mapping", None)
+            original_tool: BaseTool | None = None
+            if mapping and func_name in mapping:
+                mapped = mapping[func_name]
+                if isinstance(mapped, BaseTool):
+                    original_tool = mapped
+            if original_tool is None:
+                for tool in self.original_tools or []:
+                    if sanitize_tool_name(tool.name) == func_name:
+                        original_tool = tool
+                        break
+
+            if not original_tool:
+                continue
+
+            if getattr(original_tool, "result_as_answer", False):
+                return False
+            if getattr(original_tool, "max_usage_count", None) is not None:
+                return False
+
+        return True
+
+    def _execute_single_native_tool_call(self, tool_call: Any) -> dict[str, Any]:
+        """Execute a single native tool call and return metadata/result."""
+        info = extract_tool_call_info(tool_call)
+        if not info:
+            call_id = (
+                getattr(tool_call, "id", None)
+                or (tool_call.get("id") if isinstance(tool_call, dict) else None)
+                or "unknown"
+            )
+            return {
+                "call_id": call_id,
+                "func_name": "unknown",
+                "result": "Error: Invalid native tool call format",
+                "from_cache": False,
+                "original_tool": None,
+            }
+
+        call_id, func_name, func_args = info
+
+        # Parse arguments
+        parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+        if parse_error is not None:
+            return parse_error
+        args_dict: dict[str, Any] = parsed_args or {}
+
+        # Get agent_key for event tracking
+        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+
+        original_tool: BaseTool | None = None
+        mapping = getattr(self, "_tool_name_mapping", None)
+        if mapping and func_name in mapping:
+            mapped = mapping[func_name]
+            if isinstance(mapped, BaseTool):
+                original_tool = mapped
+        if original_tool is None:
+            for tool in self.original_tools or []:
+                if sanitize_tool_name(tool.name) == func_name:
+                    original_tool = tool
+                    break
+
+        # Check if tool has reached max usage count
+        max_usage_reached = False
+        if (
+            original_tool
+            and original_tool.max_usage_count is not None
+            and original_tool.current_usage_count >= original_tool.max_usage_count
+        ):
+            max_usage_reached = True
+
+        # Check cache before executing
+        from_cache = False
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if self.tools_handler and self.tools_handler.cache:
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
+            if cached_result is not None:
+                result = (
+                    str(cached_result)
+                    if not isinstance(cached_result, str)
+                    else cached_result
+                )
+                from_cache = True
+
+        # Emit tool usage started event
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                agent_key=agent_key,
+            ),
+        )
+        error_event_emitted = False
+
+        track_delegation_if_needed(func_name, args_dict, self.task)
+
+        structured_tool: CrewStructuredTool | None = None
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
+
+        hook_blocked = False
+        before_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+        )
+        before_hooks = get_before_tool_call_hooks()
+        try:
+            for hook in before_hooks:
+                hook_result = hook(before_hook_context)
+                if hook_result is False:
+                    hook_blocked = True
+                    break
+        except Exception as hook_error:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in before_tool_call hook: {hook_error}",
+                    color="red",
+                )
+
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+        elif not from_cache and not max_usage_reached:
+            result = "Tool not found"
+            if func_name in self._available_functions:
+                try:
+                    tool_func = self._available_functions[func_name]
+                    raw_result = tool_func(**args_dict)
+
+                    # Add to cache after successful execution (before string conversion)
+                    if self.tools_handler and self.tools_handler.cache:
+                        should_cache = True
+                        if original_tool:
+                            should_cache = original_tool.cache_function(
+                                args_dict, raw_result
+                            )
+                        if should_cache:
+                            self.tools_handler.cache.add(
+                                tool=func_name, input=input_str, output=raw_result
+                            )
+
+                    # Convert to string for message
+                    result = (
+                        str(raw_result)
+                        if not isinstance(raw_result, str)
+                        else raw_result
+                    )
+                except Exception as e:
+                    result = f"Error executing tool: {e}"
+                    if self.task:
+                        self.task.increment_tools_errors()
+                    # Emit tool usage error event
+                    crewai_event_bus.emit(
+                        self,
+                        event=ToolUsageErrorEvent(
+                            tool_name=func_name,
+                            tool_args=args_dict,
+                            from_agent=self.agent,
+                            from_task=self.task,
+                            agent_key=agent_key,
+                            error=e,
+                        ),
+                    )
+                    error_event_emitted = True
+        elif max_usage_reached and original_tool:
+            # Return error message when max usage limit is reached
+            result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+
+        # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
+        after_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+            tool_result=result,
+        )
+        after_hooks = get_after_tool_call_hooks()
+        try:
+            for after_hook in after_hooks:
+                after_hook_result = after_hook(after_hook_context)
+                if after_hook_result is not None:
+                    result = after_hook_result
+                    after_hook_context.tool_result = result
+        except Exception as hook_error:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in after_tool_call hook: {hook_error}",
+                    color="red",
+                )
+
+        if not error_event_emitted:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageFinishedEvent(
+                    output=result,
+                    tool_name=func_name,
+                    tool_args=args_dict,
+                    from_agent=self.agent,
+                    from_task=self.task,
+                    agent_key=agent_key,
+                    started_at=started_at,
+                    finished_at=datetime.now(),
+                ),
+            )
+
+        return {
+            "call_id": call_id,
+            "func_name": func_name,
+            "result": result,
+            "from_cache": from_cache,
+            "original_tool": original_tool,
+        }
 
     def _extract_tool_name(self, tool_call: Any) -> str:
         """Extract tool name from various tool call formats."""
@@ -778,20 +1103,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self.state.iterations += 1
         return "initialized"
 
-    @listen("initialized")
+    @listen(or_("initialized", "tool_completed", "native_tool_completed"))
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
+        if self._flow_initialized:
+            self._discard_or_listener(FlowMethodName("continue_iteration"))
         return "check_iteration"
 
     @router(or_(initialize_reasoning, continue_iteration))
     def check_max_iterations(
         self,
     ) -> Literal[
-        "force_final_answer", "continue_reasoning", "continue_reasoning_native"
+        "max_iterations_exceeded", "continue_reasoning", "continue_reasoning_native"
     ]:
         """Check if max iterations reached before proceeding with reasoning."""
         if has_reached_max_iterations(self.state.iterations, self.max_iter):
-            return "force_final_answer"
+            return "max_iterations_exceeded"
         if self.state.use_native_tools:
             return "continue_reasoning_native"
         return "continue_reasoning"
@@ -833,12 +1160,17 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     @listen("parser_error")
     def recover_from_parser_error(self) -> Literal["initialized"]:
         """Recover from output parser errors and retry."""
+        if not self._last_parser_error:
+            self.state.iterations += 1
+            return "initialized"
+
         formatted_answer = handle_output_parser_exception(
             e=self._last_parser_error,
             messages=list(self.state.messages),
             iterations=self.state.iterations,
             log_error_after=self.log_error_after,
             printer=self._printer,
+            verbose=self.agent.verbose,
         )
 
         if formatted_answer:
@@ -858,6 +1190,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             llm=self.llm,
             callbacks=self.callbacks,
             i18n=self._i18n,
+            verbose=self.agent.verbose,
         )
 
         self.state.iterations += 1
@@ -933,9 +1266,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             if self.state.ask_for_human_input:
                 formatted_answer = self._handle_human_feedback(formatted_answer)
 
-            self._create_short_term_memory(formatted_answer)
-            self._create_long_term_memory(formatted_answer)
-            self._create_external_memory(formatted_answer)
+            self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
 
@@ -949,7 +1280,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
@@ -1016,11 +1347,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
 
             if self.state.ask_for_human_input:
-                formatted_answer = self._handle_human_feedback(formatted_answer)
+                formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
-            self._create_short_term_memory(formatted_answer)
-            self._create_long_term_memory(formatted_answer)
-            self._create_external_memory(formatted_answer)
+            self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
 
@@ -1034,7 +1363,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
@@ -1083,7 +1412,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             formatted_answer: Current agent response.
         """
         if self.step_callback:
-            self.step_callback(formatted_answer)
+            cb_result = self.step_callback(formatted_answer)
+            if inspect.iscoroutine(cb_result):
+                asyncio.run(cb_result)
 
     def _append_message_to_state(
         self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
@@ -1230,12 +1561,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Returns:
             Final answer after feedback.
         """
-        human_feedback = self._ask_human_input(formatted_answer.output)
+        provider = get_provider()
+        return provider.handle_feedback(formatted_answer, self)
 
-        if self._is_training_mode():
-            return self._handle_training_feedback(formatted_answer, human_feedback)
+    async def _ahandle_human_feedback(
+        self, formatted_answer: AgentFinish
+    ) -> AgentFinish:
+        """Process human feedback asynchronously and refine answer.
 
-        return self._handle_regular_feedback(formatted_answer, human_feedback)
+        Args:
+            formatted_answer: Initial agent result.
+
+        Returns:
+            Final answer after feedback.
+        """
+        provider = get_provider()
+        return await provider.handle_feedback_async(formatted_answer, self)
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
@@ -1244,96 +1585,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             True if in training mode.
         """
         return bool(self.crew and self.crew._train)
-
-    def _handle_training_feedback(
-        self, initial_answer: AgentFinish, feedback: str
-    ) -> AgentFinish:
-        """Process training feedback and generate improved answer.
-
-        Args:
-            initial_answer: Initial agent output.
-            feedback: Training feedback.
-
-        Returns:
-            Improved answer.
-        """
-        self._handle_crew_training_output(initial_answer, feedback)
-        self.state.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-
-        # Re-run flow for improved answer
-        self.state.iterations = 0
-        self.state.is_finished = False
-        self.state.current_answer = None
-
-        self.kickoff()
-
-        # Get improved answer from state
-        improved_answer = self.state.current_answer
-        if not isinstance(improved_answer, AgentFinish):
-            raise RuntimeError(
-                "Training feedback iteration did not produce final answer"
-            )
-
-        self._handle_crew_training_output(improved_answer)
-        self.state.ask_for_human_input = False
-        return improved_answer
-
-    def _handle_regular_feedback(
-        self, current_answer: AgentFinish, initial_feedback: str
-    ) -> AgentFinish:
-        """Process regular feedback iteratively until user is satisfied.
-
-        Args:
-            current_answer: Current agent output.
-            initial_feedback: Initial user feedback.
-
-        Returns:
-            Final answer after iterations.
-        """
-        feedback = initial_feedback
-        answer = current_answer
-
-        while self.state.ask_for_human_input:
-            if feedback.strip() == "":
-                self.state.ask_for_human_input = False
-            else:
-                answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
-
-        return answer
-
-    def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
-        """Process a single feedback iteration and generate updated response.
-
-        Args:
-            feedback: User feedback.
-
-        Returns:
-            Updated agent response.
-        """
-        self.state.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-
-        # Re-run flow
-        self.state.iterations = 0
-        self.state.is_finished = False
-        self.state.current_answer = None
-
-        self.kickoff()
-
-        # Get answer from state
-        answer = self.state.current_answer
-        if not isinstance(answer, AgentFinish):
-            raise RuntimeError("Feedback iteration did not produce final answer")
-
-        return answer
 
     @classmethod
     def __get_pydantic_core_schema__(

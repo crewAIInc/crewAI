@@ -148,6 +148,16 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
   </Accordion>
 
+  <Accordion title="microsoft_excel/get_table_data">
+    **Descrição:** Obter dados de uma tabela específica em uma planilha do Excel.
+
+    **Parâmetros:**
+    - `file_id` (string, obrigatório): O ID do arquivo Excel.
+    - `worksheet_name` (string, obrigatório): Nome da planilha.
+    - `table_name` (string, obrigatório): Nome da tabela.
+
+  </Accordion>
+
   <Accordion title="microsoft_excel/create_chart">
     **Descrição:** Criar um gráfico em uma planilha do Excel.
 
@@ -173,6 +183,15 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
   <Accordion title="microsoft_excel/get_used_range">
     **Descrição:** Obter o intervalo usado de uma planilha do Excel (contém todos os dados).
+
+    **Parâmetros:**
+    - `file_id` (string, obrigatório): O ID do arquivo Excel.
+    - `worksheet_name` (string, obrigatório): Nome da planilha.
+
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_used_range_metadata">
+    **Descrição:** Obter os metadados do intervalo usado (apenas dimensões, sem dados) de uma planilha do Excel.
 
     **Parâmetros:**
     - `file_id` (string, obrigatório): O ID do arquivo Excel.

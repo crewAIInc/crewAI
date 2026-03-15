@@ -272,3 +272,100 @@ class TestEmbeddingFactory:
         mock_build_from_provider.assert_called_once_with(mock_provider)
         assert result == mock_embedding_function
         mock_import.assert_not_called()
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_google_vertex_with_genai_model(self, mock_import):
+        """Test routing to Google Vertex provider with new genai model."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "google-vertex",
+            "config": {
+                "api_key": "test-google-api-key",
+                "model_name": "gemini-embedding-001",
+            },
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider"
+        )
+        mock_provider_class.assert_called_once()
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["api_key"] == "test-google-api-key"
+        assert call_kwargs["model_name"] == "gemini-embedding-001"
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_google_vertex_with_legacy_model(self, mock_import):
+        """Test routing to Google Vertex provider with legacy textembedding-gecko model."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "google-vertex",
+            "config": {
+                "project_id": "my-gcp-project",
+                "region": "us-central1",
+                "model_name": "textembedding-gecko",
+            },
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider"
+        )
+        mock_provider_class.assert_called_once()
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["project_id"] == "my-gcp-project"
+        assert call_kwargs["region"] == "us-central1"
+        assert call_kwargs["model_name"] == "textembedding-gecko"
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_google_vertex_with_location(self, mock_import):
+        """Test routing to Google Vertex provider with location parameter."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "google-vertex",
+            "config": {
+                "project_id": "my-gcp-project",
+                "location": "europe-west1",
+                "model_name": "gemini-embedding-001",
+                "task_type": "RETRIEVAL_DOCUMENT",
+                "output_dimensionality": 768,
+            },
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider"
+        )
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["project_id"] == "my-gcp-project"
+        assert call_kwargs["location"] == "europe-west1"
+        assert call_kwargs["model_name"] == "gemini-embedding-001"
+        assert call_kwargs["task_type"] == "RETRIEVAL_DOCUMENT"
+        assert call_kwargs["output_dimensionality"] == 768

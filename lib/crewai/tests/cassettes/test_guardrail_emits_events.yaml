@@ -1,684 +1,684 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test Backstory\nYour personal goal is: Test Goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Gather information about available books on the First World War\n\nThis is the expected criteria for your final answer: A list of available books on the First World War\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal"},{"role":"user","content":"\nCurrent Task: Gather
+      information about available books on the First World War\n\nThis is the expected
+      criteria for your final answer: A list of available books on the First World
+      War\nyou MUST return the actual complete content as the final answer, not a
+      summary.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '866'
+      - '465'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYgCMDtJgyyp33WkN0RtsJ9aI3zOA\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381398,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: \\n\\nList of available books on the First World War:\\n\\n1. \\\"The Guns of August\\\" by Barbara W. Tuchman  \\n   - A detailed narrative of the first month of World War I, focusing on the political and military events that set the stage for the conflict.\\n\\n2. \\\"The First World War\\\" by John Keegan  \\n   - A comprehensive analysis of the causes, battles, and consequences of WWI by one of the foremost military historians.\\n\\n3. \\\"A World Undone: The Story of the Great War, 1914 to 1918\\\" by G.J. Meyer  \\n   - An accessible and detailed account covering the entire war, including social and political impacts.\\n\\n4. \\\
-        \"The Sleepwalkers: How Europe Went to War in 1914\\\" by Christopher Clark  \\n   - Explores the complex political landscape and decisions that led to the outbreak of the war.\\n\\n5. \\\"The Pity of War: Explaining World War I\\\" by Niall Ferguson  \\n   - Offers a controversial interpretation of the war’s causes and outcomes.\\n\\n6. \\\"World War I: A Very Short Introduction\\\" by Michael Howard  \\n   - A brief but thorough overview of WWI, including its military and political aspects.\\n\\n7. \\\"Goodbye to All That\\\" by Robert Graves  \\n   - A personal memoir of a British officer’s experiences during the war, highlighting the human side.\\n\\n8. \\\"Storm of Steel\\\" by Ernst Jünger  \\n   - A German soldier’s firsthand account of combat on the Western Front.\\n\\n9. \\\"The War That Ended Peace: The Road to 1914\\\" by Margaret MacMillan  \\n   - Focuses on the lead-up to WWI and the political tensions that culminated in the conflict.\\n\\n10. \\\"The First World War:\
-        \ An Illustrated History\\\" by Hew Strachan  \\n    - Combines detailed research with rich illustrations to provide a comprehensive history of the war.\\n\\nThese books provide a range of perspectives, from military history and political analysis to personal memoirs and social impact, offering comprehensive information about the First World War.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 170,\n    \"completion_tokens\": 433,\n    \"total_tokens\": 603,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-DDGADaYtAf39e4orQQyF7DAeZbQLX\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052769,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Here is a list of available books on
+        the First World War:\\n\\n1. \\\"The Guns of August\\\" by Barbara W. Tuchman\\n2.
+        \\\"A World Undone: The Story of the Great War, 1914 to 1918\\\" by G.J. Meyer\\n3.
+        \\\"The First World War\\\" by John Keegan\\n4. \\\"The Sleepwalkers: How
+        Europe Went to War in 1914\\\" by Christopher Clark\\n5. \\\"To End All Wars:
+        A Story of Loyalty and Rebellion, 1914-1918\\\" by Adam Hochschild\\n6. \\\"The
+        Pity of War\\\" by Niall Ferguson\\n7. \\\"Catastrophe 1914: Europe Goes to
+        War\\\" by Max Hastings\\n8. \\\"World War I: The Definitive Visual History\\\"
+        by R.G. Grant\\n9. \\\"The War That Ended Peace: The Road to 1914\\\" by Margaret
+        MacMillan\\n10. \\\"Paris 1919: Six Months That Changed the World\\\" by Margaret
+        MacMillan\\n\\nThese books cover various aspects of the First World War, including
+        its causes, key battles, political consequences, and personal experiences.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        84,\n    \"completion_tokens\": 240,\n    \"total_tokens\": 324,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a391f2cee0\"\n}\n"
     headers:
       CF-RAY:
-      - REDACTED-RAY
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:23:24 GMT
+      - Wed, 25 Feb 2026 20:52:52 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=REDACTED; path=/; expires=Wed, 05-Nov-25 22:53:24 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '5778'
+      - '3002'
       openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '5803'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199808'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 57ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_REDACTED
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Guardrail Agent. You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.\nYour personal goal is: Validate the output of the task\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\":
-      [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"\n        Ensure the following task result complies with the given guardrail.\n\n        Task result:\n        List of available books on the First World War:\n\n1. \"The Guns of August\" by Barbara W. Tuchman  \n   - A detailed narrative of the first month of World War I, focusing on the political and
-      military events that set the stage for the conflict.\n\n2. \"The First World War\" by John Keegan  \n   - A comprehensive analysis of the causes, battles, and consequences of WWI by one of the foremost military historians.\n\n3. \"A World Undone: The Story of the Great War, 1914 to 1918\" by G.J. Meyer  \n   - An accessible and detailed account covering the entire war, including social and political impacts.\n\n4. \"The Sleepwalkers: How Europe Went to War in 1914\" by Christopher Clark  \n   - Explores the complex political landscape and decisions that led to the outbreak of the war.\n\n5. \"The Pity of War: Explaining World War I\" by Niall Ferguson  \n   - Offers a controversial interpretation of the war’s causes and outcomes.\n\n6. \"World War I: A Very Short Introduction\" by Michael Howard  \n   - A brief but thorough overview of WWI, including its military and political aspects.\n\n7. \"Goodbye to All That\" by Robert Graves  \n   - A personal memoir of a British officer’s experiences
-      during the war, highlighting the human side.\n\n8. \"Storm of Steel\" by Ernst Jünger  \n   - A German soldier’s firsthand account of combat on the Western Front.\n\n9. \"The War That Ended Peace: The Road to 1914\" by Margaret MacMillan  \n   - Focuses on the lead-up to WWI and the political tensions that culminated in the conflict.\n\n10. \"The First World War: An Illustrated History\" by Hew Strachan  \n    - Combines detailed research with rich illustrations to provide a comprehensive history of the war.\n\nThese books provide a range of perspectives, from military history and political analysis to personal memoirs and social impact, offering comprehensive information about the First World War.\n\n        Guardrail:\n        Ensure the authors are from Italy\n\n        Your task:\n        - Confirm if the Task result complies with the guardrail.\n        - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).\n        -
-      Focus only on identifying issues — do not propose corrections.\n        - If the Task result complies with the guardrail, saying that is valid\n        "}],"model":"gpt-4.1-mini"}'
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\"},{\"role\":\"user\",\"content\":\"\\nCurrent Task: \\n        Ensure
+      the following task result complies with the given guardrail.\\n\\n        Task
+      result:\\n        Here is a list of available books on the First World War:\\n\\n1.
+      \\\"The Guns of August\\\" by Barbara W. Tuchman\\n2. \\\"A World Undone: The
+      Story of the Great War, 1914 to 1918\\\" by G.J. Meyer\\n3. \\\"The First World
+      War\\\" by John Keegan\\n4. \\\"The Sleepwalkers: How Europe Went to War in
+      1914\\\" by Christopher Clark\\n5. \\\"To End All Wars: A Story of Loyalty and
+      Rebellion, 1914-1918\\\" by Adam Hochschild\\n6. \\\"The Pity of War\\\" by
+      Niall Ferguson\\n7. \\\"Catastrophe 1914: Europe Goes to War\\\" by Max Hastings\\n8.
+      \\\"World War I: The Definitive Visual History\\\" by R.G. Grant\\n9. \\\"The
+      War That Ended Peace: The Road to 1914\\\" by Margaret MacMillan\\n10. \\\"Paris
+      1919: Six Months That Changed the World\\\" by Margaret MacMillan\\n\\nThese
+      books cover various aspects of the First World War, including its causes, key
+      battles, political consequences, and personal experiences.\\n\\n        Guardrail:\\n
+      \       Ensure the authors are from Italy\\n\\n        Your task:\\n        -
+      Confirm if the Task result complies with the guardrail.\\n        - If not,
+      provide clear feedback explaining what is wrong (e.g., by how much it violates
+      the rule, or what specific part fails).\\n        - Focus only on identifying
+      issues \u2014 do not propose corrections.\\n        - If the Task result complies
+      with the guardrail, saying that is valid\\n        \\n\\nProvide your complete
+      response:\"}],\"model\":\"gpt-4.1-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"properties\":{\"valid\":{\"description\":\"Whether
+      the task output complies with the guardrail\",\"title\":\"Valid\",\"type\":\"boolean\"},\"feedback\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"A
+      feedback about the task output if it is not valid\",\"title\":\"Feedback\"}},\"required\":[\"valid\",\"feedback\"],\"title\":\"LLMGuardrailResult\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"LLMGuardrailResult\",\"strict\":true}},\"stream\":false}"
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '4210'
+      - '2271'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=REDACTED; _cfuvid=REDACTED
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.109.1
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-CYgCSORvqXRvHk9WrMZInBh6xp6DI\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381404,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\n  \\\"valid\\\": false,\\n  \\\"feedback\\\": \\\"None of the listed authors are from Italy; all authors mentioned are from various other countries such as the United States, United Kingdom, Germany, and Canada. This does not comply with the guardrail which requires authors to be from Italy.\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 878,\n    \"completion_tokens\": 60,\n    \"total_tokens\": 938,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n    \
-        \  \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
-    headers:
-      CF-RAY:
-      - REDACTED-RAY
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 05 Nov 2025 22:23:25 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
-      openai-processing-ms:
-      - '920'
-      openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '931'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-requests:
-      - '500'
-      x-ratelimit-limit-tokens:
-      - '200000'
-      x-ratelimit-remaining-requests:
-      - '499'
-      x-ratelimit-remaining-tokens:
-      - '199013'
-      x-ratelimit-reset-requests:
-      - 120ms
-      x-ratelimit-reset-tokens:
-      - 296ms
-      x-request-id:
-      - req_REDACTED
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
-      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"{\n  \"valid\": false,\n  \"feedback\": \"None of the listed authors are from Italy; all authors mentioned are from various other countries such as the United States, United Kingdom, Germany, and Canada. This does not comply with the guardrail which requires authors to be from Italy.\"\n}"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '2020'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=REDACTED; _cfuvid=REDACTED
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
-      x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-helper-method:
-      - chat.completions.parse
+      - beta.chat.completions.parse
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYgCTfEoC2Q5aZFEAXbsW4zQq0Ihu\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381405,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"valid\\\":false,\\\"feedback\\\":\\\"The output indicates that none of the authors mentioned are from Italy, while the guardrail requires authors to be from Italy. Therefore, the output does not comply with the guardrail.\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 397,\n    \"completion_tokens\": 44,\n    \"total_tokens\": 441,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
-        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-DDGAImuBOpJTAf2UGXPUCFcRcYXua\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052774,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"valid\\\":false,\\\"feedback\\\":\\\"None
+        of the authors listed are from Italy. The guardrail requires that the authors
+        be from Italy, but all the authors mentioned, such as Barbara W. Tuchman,
+        G.J. Meyer, John Keegan, Christopher Clark, Adam Hochschild, Niall Ferguson,
+        Max Hastings, R.G. Grant, and Margaret MacMillan, are not Italian. Therefore,
+        the task result does not comply with the guardrail.\\\"}\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        500,\n    \"completion_tokens\": 93,\n    \"total_tokens\": 593,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_d96d8e3578\"\n}\n"
     headers:
       CF-RAY:
-      - REDACTED-RAY
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:23:26 GMT
+      - Wed, 25 Feb 2026 20:52:56 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1214'
+      - '1401'
       openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '1251'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199670'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 99ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_REDACTED
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test Backstory\nYour personal goal is: Test Goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Gather information about available books on the First World War\n\nThis is the expected criteria for your final answer: A list of available books on the First World War\nyou MUST return the actual complete content as the final answer, not a summary.\n\nThis is the context you''re working with:\n### Previous attempt failed validation: The output indicates that none of the authors mentioned are from Italy, while the guardrail requires authors to be from Italy. Therefore, the output does not comply with the guardrail.\n\n\n### Previous
-      result:\nList of available books on the First World War:\n\n1. \"The Guns of August\" by Barbara W. Tuchman  \n   - A detailed narrative of the first month of World War I, focusing on the political and military events that set the stage for the conflict.\n\n2. \"The First World War\" by John Keegan  \n   - A comprehensive analysis of the causes, battles, and consequences of WWI by one of the foremost military historians.\n\n3. \"A World Undone: The Story of the Great War, 1914 to 1918\" by G.J. Meyer  \n   - An accessible and detailed account covering the entire war, including social and political impacts.\n\n4. \"The Sleepwalkers: How Europe Went to War in 1914\" by Christopher Clark  \n   - Explores the complex political landscape and decisions that led to the outbreak of the war.\n\n5. \"The Pity of War: Explaining World War I\" by Niall Ferguson  \n   - Offers a controversial interpretation of the war’s causes and outcomes.\n\n6. \"World War I: A Very Short Introduction\" by Michael
-      Howard  \n   - A brief but thorough overview of WWI, including its military and political aspects.\n\n7. \"Goodbye to All That\" by Robert Graves  \n   - A personal memoir of a British officer’s experiences during the war, highlighting the human side.\n\n8. \"Storm of Steel\" by Ernst Jünger  \n   - A German soldier’s firsthand account of combat on the Western Front.\n\n9. \"The War That Ended Peace: The Road to 1914\" by Margaret MacMillan  \n   - Focuses on the lead-up to WWI and the political tensions that culminated in the conflict.\n\n10. \"The First World War: An Illustrated History\" by Hew Strachan  \n    - Combines detailed research with rich illustrations to provide a comprehensive history of the war.\n\nThese books provide a range of perspectives, from military history and political analysis to personal memoirs and social impact, offering comprehensive information about the First World War.\n\n\nTry again, making sure to address the validation error.\n\nBegin! This is VERY
-      important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal"},{"role":"user","content":"\nCurrent Task: Gather
+      information about available books on the First World War\n\nThis is the expected
+      criteria for your final answer: A list of available books on the First World
+      War\nyou MUST return the actual complete content as the final answer, not a
+      summary.\n\nProvide your complete response:"},{"role":"assistant","content":"Here
+      is a list of available books on the First World War:\n\n1. \"The Guns of August\"
+      by Barbara W. Tuchman\n2. \"A World Undone: The Story of the Great War, 1914
+      to 1918\" by G.J. Meyer\n3. \"The First World War\" by John Keegan\n4. \"The
+      Sleepwalkers: How Europe Went to War in 1914\" by Christopher Clark\n5. \"To
+      End All Wars: A Story of Loyalty and Rebellion, 1914-1918\" by Adam Hochschild\n6.
+      \"The Pity of War\" by Niall Ferguson\n7. \"Catastrophe 1914: Europe Goes to
+      War\" by Max Hastings\n8. \"World War I: The Definitive Visual History\" by
+      R.G. Grant\n9. \"The War That Ended Peace: The Road to 1914\" by Margaret MacMillan\n10.
+      \"Paris 1919: Six Months That Changed the World\" by Margaret MacMillan\n\nThese
+      books cover various aspects of the First World War, including its causes, key
+      battles, political consequences, and personal experiences."},{"role":"system","content":"You
+      are Test Agent. Test Backstory\nYour personal goal is: Test Goal"},{"role":"user","content":"\nCurrent
+      Task: Gather information about available books on the First World War\n\nThis
+      is the expected criteria for your final answer: A list of available books on
+      the First World War\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is the context you''re working with:\n### Previous
+      attempt failed validation: None of the authors listed are from Italy. The guardrail
+      requires that the authors be from Italy, but all the authors mentioned, such
+      as Barbara W. Tuchman, G.J. Meyer, John Keegan, Christopher Clark, Adam Hochschild,
+      Niall Ferguson, Max Hastings, R.G. Grant, and Margaret MacMillan, are not Italian.
+      Therefore, the task result does not comply with the guardrail.\n\n\n### Previous
+      result:\nHere is a list of available books on the First World War:\n\n1. \"The
+      Guns of August\" by Barbara W. Tuchman\n2. \"A World Undone: The Story of the
+      Great War, 1914 to 1918\" by G.J. Meyer\n3. \"The First World War\" by John
+      Keegan\n4. \"The Sleepwalkers: How Europe Went to War in 1914\" by Christopher
+      Clark\n5. \"To End All Wars: A Story of Loyalty and Rebellion, 1914-1918\" by
+      Adam Hochschild\n6. \"The Pity of War\" by Niall Ferguson\n7. \"Catastrophe
+      1914: Europe Goes to War\" by Max Hastings\n8. \"World War I: The Definitive
+      Visual History\" by R.G. Grant\n9. \"The War That Ended Peace: The Road to 1914\"
+      by Margaret MacMillan\n10. \"Paris 1919: Six Months That Changed the World\"
+      by Margaret MacMillan\n\nThese books cover various aspects of the First World
+      War, including its causes, key battles, political consequences, and personal
+      experiences.\n\n\nTry again, making sure to address the validation error.\n\nProvide
+      your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '3139'
+      - '3185'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=REDACTED; _cfuvid=REDACTED
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYgCUFGx7P3dG6mkKENsAdMSjbDP2\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381406,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: List of available books on the First World War by Italian authors or published in Italy:\\n\\n1. \\\"La Grande Guerra\\\" by Alessandro Barbero  \\n   - A comprehensive history of the First World War with a focus on Italy’s involvement and the impact on Italian society and politics.\\n\\n2. \\\"La guerra bianca: Come gli Italiani hanno combattuto la Prima guerra mondiale\\\" by Alessandro Barbero  \\n   - Explores the harsh conditions of mountain warfare endured by Italian soldiers, with vivid descriptions of battles and daily life on the Alpine front.\\n\\n3. \\\"La Prima Guerra Mondiale\\\" by Paolo Mieli  \\n   - Provides a broad overview\
-        \ of the war, including Italy's role and the broader European context, combining historical facts with cultural insights.\\n\\n4. \\\"1915-1918: La guerra italiana sul fronte interno\\\" by Giovanni De Luna  \\n   - Focuses on the social and political effects of the war within Italy, examining public opinion, propaganda, and the home front.\\n\\n5. \\\"Il Giorno della Vittoria: 4 Novembre 1918\\\" by Paolo Gaspari  \\n   - Detailed analysis of Italy’s final victories and the aftermath of the war, including the political and social changes that followed.\\n\\n6. \\\"La Guerra prima della Grande Guerra\\\" by Alessandro Barbero  \\n   - Discusses the international tensions preceding the First World War with an Italian perspective on diplomatic and military developments.\\n\\n7. \\\"La guerra dimenticata: Il fronte orientale, 1915-1917\\\" by Luca Micheletti  \\n   - Covers Italy’s campaigns on the Eastern Front, less frequently discussed in general histories of the war, providing new\
-        \ insights into Italy’s military efforts.\\n\\n8. \\\"Tornare a casa. Grande Guerra 1914-1918\\\" by Marco Balzano  \\n   - A novelized account based on testimonies and letters from Italian soldiers, blending historical documentation with personal narrative.\\n\\n9. \\\"I cento giorni: La battaglia finale della Grande Guerra\\\" by Giuseppe Cultrera  \\n   - Concentrates on the decisive Italian military operations in the war’s final phase, highlighting strategy and key personalities.\\n\\n10. \\\"La Grande Guerra sul Carso\\\" by Mario Isnenghi  \\n    - Focuses specifically on the Carso front, a crucial and brutal theater of war for Italian forces, combining military history with human stories.\\n\\nThese titles emphasize the Italian experience of the First World War, authored by prominent Italian historians and writers, thus fulfilling the requirement for Italian authorship and perspective.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\"\
-        : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 654,\n    \"completion_tokens\": 516,\n    \"total_tokens\": 1170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-DDGAKo0MLHbMnvDBrDJ43r7OO4uh8\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052776,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Here is a list of available books on
+        the First World War by Italian authors:\\n\\n1. \\\"La Grande Guerra\\\" by
+        Alessandro Barbero  \\n2. \\\"Il grande nulla: La prima guerra mondiale\\\"
+        by Emilio Gentile  \\n3. \\\"La guerra italiana 1915-1918\\\" by Paolo Piccione
+        \ \\n4. \\\"La prima guerra mondiale\\\" by Andrea di Robilant  \\n5. \\\"1914-1918:
+        La guerra e la memoria\\\" edited by Paolo G. Minuto  \\n\\nThese books provide
+        various perspectives on the First World War from Italian historians and authors.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        763,\n    \"completion_tokens\": 117,\n    \"total_tokens\": 880,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a391f2cee0\"\n}\n"
     headers:
       CF-RAY:
-      - REDACTED-RAY
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:23:34 GMT
+      - Wed, 25 Feb 2026 20:52:58 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '7917'
+      - '1725'
       openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '7943'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199255'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 223ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_REDACTED
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Guardrail Agent. You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.\nYour personal goal is: Validate the output of the task\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\":
-      [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"\n        Ensure the following task result complies with the given guardrail.\n\n        Task result:\n        List of available books on the First World War by Italian authors or published in Italy:\n\n1. \"La Grande Guerra\" by Alessandro Barbero  \n   - A comprehensive history of the First World War
-      with a focus on Italy’s involvement and the impact on Italian society and politics.\n\n2. \"La guerra bianca: Come gli Italiani hanno combattuto la Prima guerra mondiale\" by Alessandro Barbero  \n   - Explores the harsh conditions of mountain warfare endured by Italian soldiers, with vivid descriptions of battles and daily life on the Alpine front.\n\n3. \"La Prima Guerra Mondiale\" by Paolo Mieli  \n   - Provides a broad overview of the war, including Italy''s role and the broader European context, combining historical facts with cultural insights.\n\n4. \"1915-1918: La guerra italiana sul fronte interno\" by Giovanni De Luna  \n   - Focuses on the social and political effects of the war within Italy, examining public opinion, propaganda, and the home front.\n\n5. \"Il Giorno della Vittoria: 4 Novembre 1918\" by Paolo Gaspari  \n   - Detailed analysis of Italy’s final victories and the aftermath of the war, including the political and social changes that followed.\n\n6. \"La Guerra
-      prima della Grande Guerra\" by Alessandro Barbero  \n   - Discusses the international tensions preceding the First World War with an Italian perspective on diplomatic and military developments.\n\n7. \"La guerra dimenticata: Il fronte orientale, 1915-1917\" by Luca Micheletti  \n   - Covers Italy’s campaigns on the Eastern Front, less frequently discussed in general histories of the war, providing new insights into Italy’s military efforts.\n\n8. \"Tornare a casa. Grande Guerra 1914-1918\" by Marco Balzano  \n   - A novelized account based on testimonies and letters from Italian soldiers, blending historical documentation with personal narrative.\n\n9. \"I cento giorni: La battaglia finale della Grande Guerra\" by Giuseppe Cultrera  \n   - Concentrates on the decisive Italian military operations in the war’s final phase, highlighting strategy and key personalities.\n\n10. \"La Grande Guerra sul Carso\" by Mario Isnenghi  \n    - Focuses specifically on the Carso front, a crucial and
-      brutal theater of war for Italian forces, combining military history with human stories.\n\nThese titles emphasize the Italian experience of the First World War, authored by prominent Italian historians and writers, thus fulfilling the requirement for Italian authorship and perspective.\n\n        Guardrail:\n        Ensure the authors are from Italy\n\n        Your task:\n        - Confirm if the Task result complies with the guardrail.\n        - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).\n        - Focus only on identifying issues — do not propose corrections.\n        - If the Task result complies with the guardrail, saying that is valid\n        "}],"model":"gpt-4.1-mini"}'
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\"},{\"role\":\"user\",\"content\":\"\\nCurrent Task: \\n        Ensure
+      the following task result complies with the given guardrail.\\n\\n        Task
+      result:\\n        Here is a list of available books on the First World War by
+      Italian authors:\\n\\n1. \\\"La Grande Guerra\\\" by Alessandro Barbero  \\n2.
+      \\\"Il grande nulla: La prima guerra mondiale\\\" by Emilio Gentile  \\n3. \\\"La
+      guerra italiana 1915-1918\\\" by Paolo Piccione  \\n4. \\\"La prima guerra mondiale\\\"
+      by Andrea di Robilant  \\n5. \\\"1914-1918: La guerra e la memoria\\\" edited
+      by Paolo G. Minuto  \\n\\nThese books provide various perspectives on the First
+      World War from Italian historians and authors.\\n\\n        Guardrail:\\n        Ensure
+      the authors are from Italy\\n\\n        Your task:\\n        - Confirm if the
+      Task result complies with the guardrail.\\n        - If not, provide clear feedback
+      explaining what is wrong (e.g., by how much it violates the rule, or what specific
+      part fails).\\n        - Focus only on identifying issues \u2014 do not propose
+      corrections.\\n        - If the Task result complies with the guardrail, saying
+      that is valid\\n        \\n\\nProvide your complete response:\"}],\"model\":\"gpt-4.1-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"properties\":{\"valid\":{\"description\":\"Whether
+      the task output complies with the guardrail\",\"title\":\"Valid\",\"type\":\"boolean\"},\"feedback\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"A
+      feedback about the task output if it is not valid\",\"title\":\"Feedback\"}},\"required\":[\"valid\",\"feedback\"],\"title\":\"LLMGuardrailResult\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"LLMGuardrailResult\",\"strict\":true}},\"stream\":false}"
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '4782'
+      - '1896'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=REDACTED; _cfuvid=REDACTED
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYgCc8ZK4YyFBqgK1P1mOpdaCPfC7\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381414,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\n  \\\"valid\\\": true,\\n  \\\"feedback\\\": null\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 962,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 976,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-DDGAMhqLQH0xSQdFBe8xOEyjBIa59\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052778,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"valid\\\":true,\\\"feedback\\\":null}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        377,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 386,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_d96d8e3578\"\n}\n"
     headers:
       CF-RAY:
-      - REDACTED-RAY
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:23:35 GMT
+      - Wed, 25 Feb 2026 20:52:58 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '395'
-      openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
       - '420'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-requests:
-      - '500'
-      x-ratelimit-limit-tokens:
-      - '200000'
-      x-ratelimit-remaining-requests:
-      - '499'
-      x-ratelimit-remaining-tokens:
-      - '198710'
-      x-ratelimit-reset-requests:
-      - 120ms
-      x-ratelimit-reset-tokens:
-      - 386ms
-      x-request-id:
-      - req_REDACTED
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
-      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"{\n  \"valid\": true,\n  \"feedback\": null\n}"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '1777'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=REDACTED; _cfuvid=REDACTED
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-helper-method:
-      - chat.completions.parse
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.109.1
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-CYgCdfjTW26WehWv9HjK3NHOT5e4l\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381415,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"valid\\\":true,\\\"feedback\\\":null}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 351,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 360,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
-    headers:
-      CF-RAY:
-      - REDACTED-RAY
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 05 Nov 2025 22:23:35 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
-      openai-processing-ms:
-      - '424'
       openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '450'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199730'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 81ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_REDACTED
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test Backstory\nYour personal goal is: Test Goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Test task\n\nThis is the expected criteria for your final answer: Output\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal"},{"role":"user","content":"\nCurrent Task: Gather
+      information about available books on the First World War\n\nThis is the expected
+      criteria for your final answer: A list of available books on the First World
+      War\nyou MUST return the actual complete content as the final answer, not a
+      summary.\n\nProvide your complete response:"},{"role":"assistant","content":"Here
+      is a list of available books on the First World War:\n\n1. \"The Guns of August\"
+      by Barbara W. Tuchman\n2. \"A World Undone: The Story of the Great War, 1914
+      to 1918\" by G.J. Meyer\n3. \"The First World War\" by John Keegan\n4. \"The
+      Sleepwalkers: How Europe Went to War in 1914\" by Christopher Clark\n5. \"To
+      End All Wars: A Story of Loyalty and Rebellion, 1914-1918\" by Adam Hochschild\n6.
+      \"The Pity of War\" by Niall Ferguson\n7. \"Catastrophe 1914: Europe Goes to
+      War\" by Max Hastings\n8. \"World War I: The Definitive Visual History\" by
+      R.G. Grant\n9. \"The War That Ended Peace: The Road to 1914\" by Margaret MacMillan\n10.
+      \"Paris 1919: Six Months That Changed the World\" by Margaret MacMillan\n\nThese
+      books cover various aspects of the First World War, including its causes, key
+      battles, political consequences, and personal experiences."},{"role":"system","content":"You
+      are Test Agent. Test Backstory\nYour personal goal is: Test Goal"},{"role":"user","content":"\nCurrent
+      Task: Gather information about available books on the First World War\n\nThis
+      is the expected criteria for your final answer: A list of available books on
+      the First World War\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is the context you''re working with:\n### Previous
+      attempt failed validation: None of the authors listed are from Italy. The guardrail
+      requires that the authors be from Italy, but all the authors mentioned, such
+      as Barbara W. Tuchman, G.J. Meyer, John Keegan, Christopher Clark, Adam Hochschild,
+      Niall Ferguson, Max Hastings, R.G. Grant, and Margaret MacMillan, are not Italian.
+      Therefore, the task result does not comply with the guardrail.\n\n\n### Previous
+      result:\nHere is a list of available books on the First World War:\n\n1. \"The
+      Guns of August\" by Barbara W. Tuchman\n2. \"A World Undone: The Story of the
+      Great War, 1914 to 1918\" by G.J. Meyer\n3. \"The First World War\" by John
+      Keegan\n4. \"The Sleepwalkers: How Europe Went to War in 1914\" by Christopher
+      Clark\n5. \"To End All Wars: A Story of Loyalty and Rebellion, 1914-1918\" by
+      Adam Hochschild\n6. \"The Pity of War\" by Niall Ferguson\n7. \"Catastrophe
+      1914: Europe Goes to War\" by Max Hastings\n8. \"World War I: The Definitive
+      Visual History\" by R.G. Grant\n9. \"The War That Ended Peace: The Road to 1914\"
+      by Margaret MacMillan\n10. \"Paris 1919: Six Months That Changed the World\"
+      by Margaret MacMillan\n\nThese books cover various aspects of the First World
+      War, including its causes, key battles, political consequences, and personal
+      experiences.\n\n\nTry again, making sure to address the validation error.\n\nProvide
+      your complete response:"},{"role":"assistant","content":"Here is a list of available
+      books on the First World War by Italian authors:\n\n1. \"La Grande Guerra\"
+      by Alessandro Barbero  \n2. \"Il grande nulla: La prima guerra mondiale\" by
+      Emilio Gentile  \n3. \"La guerra italiana 1915-1918\" by Paolo Piccione  \n4.
+      \"La prima guerra mondiale\" by Andrea di Robilant  \n5. \"1914-1918: La guerra
+      e la memoria\" edited by Paolo G. Minuto  \n\nThese books provide various perspectives
+      on the First World War from Italian historians and authors."},{"role":"system","content":"You
+      are Test Agent. Test Backstory\nYour personal goal is: Test Goal"},{"role":"user","content":"\nCurrent
+      Task: Test task\n\nThis is the expected criteria for your final answer: Output\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nProvide
+      your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '770'
+      - '4036'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=REDACTED; _cfuvid=REDACTED
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYgCdUkawcuGKhJQYVfLlwbbDwljX\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381415,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: Output\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 167,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-DDGAMOb5FXfsZwEhCqnUP11VAcuqF\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772052778,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Output\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 948,\n    \"completion_tokens\":
+        1,\n    \"total_tokens\": 949,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a391f2cee0\"\n}\n"
     headers:
       CF-RAY:
-      - REDACTED-RAY
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:23:36 GMT
+      - Wed, 25 Feb 2026 20:52:59 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '441'
+      - '347'
       openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '462'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199832'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 50ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_REDACTED
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

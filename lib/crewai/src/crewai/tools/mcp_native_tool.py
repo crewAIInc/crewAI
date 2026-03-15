@@ -1,48 +1,49 @@
 """Native MCP tool wrapper for CrewAI agents.
 
-This module provides a tool wrapper that reuses existing MCP client sessions
-for better performance and connection management.
+This module provides a tool wrapper that creates a fresh MCP client for every
+invocation, ensuring safe parallel execution even when the same tool is called
+concurrently by the executor.
 """
 
 import asyncio
+from collections.abc import Callable
+import contextvars
 from typing import Any
 
 from crewai.tools import BaseTool
 
 
 class MCPNativeTool(BaseTool):
-    """Native MCP tool that reuses client sessions.
+    """Native MCP tool that creates a fresh client per invocation.
 
-    This tool wrapper is used when agents connect to MCP servers using
-    structured configurations. It reuses existing client sessions for
-    better performance and proper connection lifecycle management.
-
-    Unlike MCPToolWrapper which connects on-demand, this tool uses
-    a shared MCP client instance that maintains a persistent connection.
+    A ``client_factory`` callable produces an independent ``MCPClient`` +
+    transport for every ``_run_async`` call.  This guarantees that parallel
+    invocations -- whether of the *same* tool or *different* tools from the
+    same server -- never share mutable connection state (which would cause
+    anyio cancel-scope errors).
     """
 
     def __init__(
         self,
-        mcp_client: Any,
+        client_factory: Callable[[], Any],
         tool_name: str,
         tool_schema: dict[str, Any],
         server_name: str,
+        original_tool_name: str | None = None,
     ) -> None:
         """Initialize native MCP tool.
 
         Args:
-            mcp_client: MCPClient instance with active session.
-            tool_name: Original name of the tool on the MCP server.
+            client_factory: Zero-arg callable that returns a new MCPClient.
+            tool_name: Name of the tool (may be prefixed).
             tool_schema: Schema information for the tool.
             server_name: Name of the MCP server for prefixing.
+            original_tool_name: Original name of the tool on the MCP server.
         """
-        # Create tool name with server prefix to avoid conflicts
         prefixed_name = f"{server_name}_{tool_name}"
 
-        # Handle args_schema properly - BaseTool expects a BaseModel subclass
         args_schema = tool_schema.get("args_schema")
 
-        # Only pass args_schema if it's provided
         kwargs = {
             "name": prefixed_name,
             "description": tool_schema.get(
@@ -55,16 +56,9 @@ class MCPNativeTool(BaseTool):
 
         super().__init__(**kwargs)
 
-        # Set instance attributes after super().__init__
-        self._mcp_client = mcp_client
-        self._original_tool_name = tool_name
+        self._client_factory = client_factory
+        self._original_tool_name = original_tool_name or tool_name
         self._server_name = server_name
-        # self._logger = logging.getLogger(__name__)
-
-    @property
-    def mcp_client(self) -> Any:
-        """Get the MCP client instance."""
-        return self._mcp_client
 
     @property
     def original_tool_name(self) -> str:
@@ -91,9 +85,10 @@ class MCPNativeTool(BaseTool):
 
                 import concurrent.futures
 
+                ctx = contextvars.copy_context()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     coro = self._run_async(**kwargs)
-                    future = executor.submit(asyncio.run, coro)
+                    future = executor.submit(ctx.run, asyncio.run, coro)
                     return future.result()
             except RuntimeError:
                 return asyncio.run(self._run_async(**kwargs))
@@ -106,51 +101,26 @@ class MCPNativeTool(BaseTool):
     async def _run_async(self, **kwargs) -> str:
         """Async implementation of tool execution.
 
+        A fresh ``MCPClient`` is created for every invocation so that
+        concurrent calls never share transport or session state.
+
         Args:
             **kwargs: Arguments to pass to the MCP tool.
 
         Returns:
             Result from the MCP tool execution.
         """
-        # Note: Since we use asyncio.run() which creates a new event loop each time,
-        # Always reconnect on-demand because asyncio.run() creates new event loops per call
-        # All MCP transport context managers (stdio, streamablehttp_client, sse_client)
-        # use anyio.create_task_group() which can't span different event loops
-        if self._mcp_client.connected:
-            await self._mcp_client.disconnect()
-
-        await self._mcp_client.connect()
+        client = self._client_factory()
+        await client.connect()
 
         try:
-            result = await self._mcp_client.call_tool(self.original_tool_name, kwargs)
-
-        except Exception as e:
-            error_str = str(e).lower()
-            if (
-                "not connected" in error_str
-                or "connection" in error_str
-                or "send" in error_str
-            ):
-                await self._mcp_client.disconnect()
-                await self._mcp_client.connect()
-                # Retry the call
-                result = await self._mcp_client.call_tool(
-                    self.original_tool_name, kwargs
-                )
-            else:
-                raise
-
+            result = await client.call_tool(self.original_tool_name, kwargs)
         finally:
-            # Always disconnect after tool call to ensure clean context manager lifecycle
-            # This prevents "exit cancel scope in different task" errors
-            # All transport context managers must be exited in the same event loop they were entered
-            await self._mcp_client.disconnect()
+            await client.disconnect()
 
-        # Extract result content
         if isinstance(result, str):
             return result
 
-        # Handle various result formats
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:
                 content_item = result.content[0]

@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+from typing import Any
 from unittest.mock import patch, MagicMock
 import openai
 import pytest
@@ -511,10 +512,13 @@ def test_openai_streaming_with_response_model():
         mock_chunk1 = MagicMock()
         mock_chunk1.type = "content.delta"
         mock_chunk1.delta = '{"answer": "test", '
+        mock_chunk1.id = "response-1"
 
+        # Second chunk
         mock_chunk2 = MagicMock()
         mock_chunk2.type = "content.delta"
         mock_chunk2.delta = '"confidence": 0.95}'
+        mock_chunk2.id = "response-2"
 
         # Create mock final completion with parsed result
         mock_parsed = TestResponse(answer="test", confidence=0.95)
@@ -537,7 +541,9 @@ def test_openai_streaming_with_response_model():
         result = llm.call("Test question", response_model=TestResponse)
 
         assert result is not None
-        assert isinstance(result, str)
+        assert isinstance(result, TestResponse)
+        assert result.answer == "test"
+        assert result.confidence == 0.95
 
         assert mock_stream.called
         call_kwargs = mock_stream.call_args[1]
@@ -1392,3 +1398,560 @@ def test_openai_responses_api_both_auto_chains_work_together():
     assert params.get("previous_response_id") == "resp_123"
     assert "reasoning.encrypted_content" in params["include"]
     assert len(params["input"]) == 2  # Reasoning item + message
+
+
+# =============================================================================
+# Agent Kickoff Structured Output Tests
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_openai_agent_kickoff_structured_output_without_tools():
+    """
+    Test that agent kickoff returns structured output without tools.
+    This tests native structured output handling for OpenAI models.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnalysisResult(BaseModel):
+        """Structured output for analysis results."""
+
+        topic: str = Field(description="The topic analyzed")
+        key_points: list[str] = Field(description="Key insights from the analysis")
+        summary: str = Field(description="Brief summary of findings")
+
+    agent = Agent(
+        role="Analyst",
+        goal="Provide structured analysis on topics",
+        backstory="You are an expert analyst who provides clear, structured insights.",
+        llm=LLM(model="gpt-4o-mini"),
+        tools=[],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Analyze the benefits of remote work briefly. Keep it concise.",
+        response_format=AnalysisResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, AnalysisResult), f"Expected AnalysisResult but got {type(result.pydantic)}"
+    assert result.pydantic.topic, "Topic should not be empty"
+    assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
+    assert result.pydantic.summary, "Summary should not be empty"
+
+
+@pytest.mark.vcr()
+def test_openai_agent_kickoff_structured_output_with_tools():
+    """
+    Test that agent kickoff returns structured output after using tools.
+    This tests post-tool-call structured output handling for OpenAI models.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        """Structured output for calculation results."""
+
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="gpt-4o-mini"),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        response_format=CalculationResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult), f"Expected CalculationResult but got {type(result.pydantic)}"
+    assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
+    assert result.pydantic.operation, "Operation should not be empty"
+    assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+# =============================================================================
+# Stop Words with Structured Output Tests
+# =============================================================================
+
+
+def test_openai_stop_words_not_applied_to_structured_output():
+    """
+    Test that stop words are NOT applied when response_model is provided.
+    This ensures JSON responses containing stop word patterns (like "Observation:")
+    are not truncated, which would cause JSON validation to fail.
+    """
+    from pydantic import BaseModel, Field
+
+    class ResearchResult(BaseModel):
+        """Research result that may contain stop word patterns in string fields."""
+
+        finding: str = Field(description="The research finding")
+        observation: str = Field(description="Observation about the finding")
+
+    # Create OpenAI completion instance with stop words configured
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        stop=["Observation:", "Final Answer:"],  # Common stop words
+    )
+
+    # JSON response that contains a stop word pattern in a string field
+    # Without the fix, this would be truncated at "Observation:" breaking the JSON
+    json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
+
+    # Test the _validate_structured_output method directly with content containing stop words
+    # This simulates what happens when the API returns JSON with stop word patterns
+    result = llm._validate_structured_output(json_response, ResearchResult)
+
+    # Should successfully parse the full JSON without truncation
+    assert isinstance(result, ResearchResult)
+    assert result.finding == "The data shows growth"
+    # The observation field should contain the full text including "Observation:"
+    assert "Observation:" in result.observation
+
+
+def test_openai_stop_words_still_applied_to_regular_responses():
+    """
+    Test that stop words ARE still applied for regular (non-structured) responses.
+    This ensures the fix didn't break normal stop word behavior.
+    """
+    # Create OpenAI completion instance with stop words configured
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        stop=["Observation:", "Final Answer:"],
+    )
+
+    # Response that contains a stop word - should be truncated
+    response_with_stop_word = "I need to search for more information.\n\nAction: search\nObservation: Found results"
+
+    # Test the _apply_stop_words method directly
+    result = llm._apply_stop_words(response_with_stop_word)
+
+    # Response should be truncated at the stop word
+    assert "Observation:" not in result
+    assert "Found results" not in result
+    assert "I need to search for more information" in result
+
+
+def test_openai_structured_output_preserves_json_with_stop_word_patterns():
+    """
+    Test that structured output validation preserves JSON content
+    even when string fields contain stop word patterns.
+    """
+    from pydantic import BaseModel, Field
+
+    class AgentObservation(BaseModel):
+        """Model with fields that might contain stop word-like text."""
+
+        action_taken: str = Field(description="What action was taken")
+        observation_result: str = Field(description="The observation result")
+        final_answer: str = Field(description="The final answer")
+
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        stop=["Observation:", "Final Answer:", "Action:"],
+    )
+
+    # JSON that contains all the stop word patterns as part of the content
+    json_with_stop_patterns = '''{
+        "action_taken": "Action: Searched the database",
+        "observation_result": "Observation: Found 5 relevant results",
+        "final_answer": "Final Answer: The data shows positive growth"
+    }'''
+
+    # This should NOT be truncated since it's structured output
+    result = llm._validate_structured_output(json_with_stop_patterns, AgentObservation)
+
+    assert isinstance(result, AgentObservation)
+    assert "Action:" in result.action_taken
+    assert "Observation:" in result.observation_result
+    assert "Final Answer:" in result.final_answer
+
+
+
+@pytest.mark.vcr()
+def test_openai_completions_cached_prompt_tokens():
+    """
+    Test that the Chat Completions API correctly extracts and tracks
+    cached_prompt_tokens from prompt_tokens_details.cached_tokens.
+    Sends the same large prompt twice so the second call hits the cache.
+    """
+    # Build a large system prompt to trigger prompt caching (>1024 tokens)
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = OpenAICompletion(model="gpt-4.1")
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_cached_prompt_tokens():
+    """
+    Test that the Responses API correctly extracts and tracks
+    cached_prompt_tokens from input_tokens_details.cached_tokens.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = OpenAICompletion(model="gpt-4.1", api="responses")
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_streaming_cached_prompt_tokens():
+    """
+    Test that streaming Chat Completions API correctly extracts and tracks
+    cached_prompt_tokens.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = OpenAICompletion(model="gpt-4.1", stream=True)
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_completions_cached_prompt_tokens_with_tools():
+    """
+    Test that the Chat Completions API correctly tracks cached_prompt_tokens
+    when tools are used. The large system prompt should be cached across calls.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+                "additionalProperties": False,
+            },
+        }
+    ]
+
+    llm = OpenAICompletion(model="gpt-4.1")
+
+    # First call with tool: creates the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call with same system prompt + tools: should hit the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Paris?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_cached_prompt_tokens_with_tools():
+    """
+    Test that the Responses API correctly tracks cached_prompt_tokens
+    when function tools are used.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+            },
+        }
+    ]
+
+    llm = OpenAICompletion(model="gpt-4.1", api='response')
+
+    # First call with tool
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call: same system prompt + tools should hit cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Paris?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.successful_requests == 2
+    assert usage.cached_prompt_tokens > 0
+def test_openai_streaming_returns_tool_calls_without_available_functions():
+    """Test that streaming returns tool calls list when available_functions is None.
+
+    This mirrors the non-streaming path where tool_calls are returned for
+    the executor to handle. Reproduces the bug where streaming with tool
+    calls would return empty text instead of tool_calls when
+    available_functions was not provided (as the crew executor does).
+    """
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+
+    mock_chunk_1 = MagicMock()
+    mock_chunk_1.choices = [MagicMock()]
+    mock_chunk_1.choices[0].delta = MagicMock()
+    mock_chunk_1.choices[0].delta.content = None
+    mock_chunk_1.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_1.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_1.choices[0].delta.tool_calls[0].id = "call_abc123"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.name = "calculator"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.arguments = '{"expr'
+    mock_chunk_1.choices[0].finish_reason = None
+    mock_chunk_1.usage = None
+    mock_chunk_1.id = "chatcmpl-1"
+
+    mock_chunk_2 = MagicMock()
+    mock_chunk_2.choices = [MagicMock()]
+    mock_chunk_2.choices[0].delta = MagicMock()
+    mock_chunk_2.choices[0].delta.content = None
+    mock_chunk_2.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_2.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_2.choices[0].delta.tool_calls[0].id = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.name = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.arguments = 'ession": "1+1"}'
+    mock_chunk_2.choices[0].finish_reason = None
+    mock_chunk_2.usage = None
+    mock_chunk_2.id = "chatcmpl-1"
+
+    mock_chunk_3 = MagicMock()
+    mock_chunk_3.choices = [MagicMock()]
+    mock_chunk_3.choices[0].delta = MagicMock()
+    mock_chunk_3.choices[0].delta.content = None
+    mock_chunk_3.choices[0].delta.tool_calls = None
+    mock_chunk_3.choices[0].finish_reason = "tool_calls"
+    mock_chunk_3.usage = MagicMock()
+    mock_chunk_3.usage.prompt_tokens = 10
+    mock_chunk_3.usage.completion_tokens = 5
+    mock_chunk_3.id = "chatcmpl-1"
+
+    with patch.object(
+        llm.client.chat.completions, "create", return_value=iter([mock_chunk_1, mock_chunk_2, mock_chunk_3])
+    ):
+        result = llm.call(
+            messages=[{"role": "user", "content": "Calculate 1+1"}],
+            tools=[{
+                "type": "function",
+                "function": {
+                    "name": "calculator",
+                    "description": "Calculate expression",
+                    "parameters": {"type": "object", "properties": {"expression": {"type": "string"}}},
+                },
+            }],
+            available_functions=None,
+        )
+
+    assert isinstance(result, list), f"Expected list of tool calls, got {type(result)}: {result}"
+    assert len(result) == 1
+    assert result[0]["function"]["name"] == "calculator"
+    assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
+    assert result[0]["id"] == "call_abc123"
+    assert result[0]["type"] == "function"
+
+
+@pytest.mark.asyncio
+async def test_openai_async_streaming_returns_tool_calls_without_available_functions():
+    """Test that async streaming returns tool calls list when available_functions is None.
+
+    Same as the sync test but for the async path (_ahandle_streaming_completion).
+    """
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+
+    mock_chunk_1 = MagicMock()
+    mock_chunk_1.choices = [MagicMock()]
+    mock_chunk_1.choices[0].delta = MagicMock()
+    mock_chunk_1.choices[0].delta.content = None
+    mock_chunk_1.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_1.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_1.choices[0].delta.tool_calls[0].id = "call_abc123"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.name = "calculator"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.arguments = '{"expr'
+    mock_chunk_1.choices[0].finish_reason = None
+    mock_chunk_1.usage = None
+    mock_chunk_1.id = "chatcmpl-1"
+
+    mock_chunk_2 = MagicMock()
+    mock_chunk_2.choices = [MagicMock()]
+    mock_chunk_2.choices[0].delta = MagicMock()
+    mock_chunk_2.choices[0].delta.content = None
+    mock_chunk_2.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_2.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_2.choices[0].delta.tool_calls[0].id = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.name = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.arguments = 'ession": "1+1"}'
+    mock_chunk_2.choices[0].finish_reason = None
+    mock_chunk_2.usage = None
+    mock_chunk_2.id = "chatcmpl-1"
+
+    mock_chunk_3 = MagicMock()
+    mock_chunk_3.choices = [MagicMock()]
+    mock_chunk_3.choices[0].delta = MagicMock()
+    mock_chunk_3.choices[0].delta.content = None
+    mock_chunk_3.choices[0].delta.tool_calls = None
+    mock_chunk_3.choices[0].finish_reason = "tool_calls"
+    mock_chunk_3.usage = MagicMock()
+    mock_chunk_3.usage.prompt_tokens = 10
+    mock_chunk_3.usage.completion_tokens = 5
+    mock_chunk_3.id = "chatcmpl-1"
+
+    class MockAsyncStream:
+        """Async iterator that mimics OpenAI's async streaming response."""
+
+        def __init__(self, chunks: list[Any]) -> None:
+            self._chunks = chunks
+            self._index = 0
+
+        def __aiter__(self) -> "MockAsyncStream":
+            return self
+
+        async def __anext__(self) -> Any:
+            if self._index >= len(self._chunks):
+                raise StopAsyncIteration
+            chunk = self._chunks[self._index]
+            self._index += 1
+            return chunk
+
+    async def mock_create(**kwargs: Any) -> MockAsyncStream:
+        return MockAsyncStream([mock_chunk_1, mock_chunk_2, mock_chunk_3])
+
+    with patch.object(
+        llm.async_client.chat.completions, "create", side_effect=mock_create
+    ):
+        result = await llm.acall(
+            messages=[{"role": "user", "content": "Calculate 1+1"}],
+            tools=[{
+                "type": "function",
+                "function": {
+                    "name": "calculator",
+                    "description": "Calculate expression",
+                    "parameters": {"type": "object", "properties": {"expression": {"type": "string"}}},
+                },
+            }],
+            available_functions=None,
+        )
+
+    assert isinstance(result, list), f"Expected list of tool calls, got {type(result)}: {result}"
+    assert len(result) == 1
+    assert result[0]["function"]["name"] == "calculator"
+    assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
+    assert result[0]["id"] == "call_abc123"
+    assert result[0]["type"] == "function"

@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from crewai.events.event_listener import event_listener
-from crewai.hooks.types import AfterToolCallHookType, BeforeToolCallHookType
+from crewai.hooks.types import (
+    AfterToolCallHookCallable,
+    AfterToolCallHookType,
+    BeforeToolCallHookCallable,
+    BeforeToolCallHookType,
+)
 from crewai.utilities.printer import Printer
 
 
@@ -112,12 +117,12 @@ class ToolCallHookContext:
 
 
 # Global hook registries
-_before_tool_call_hooks: list[BeforeToolCallHookType] = []
-_after_tool_call_hooks: list[AfterToolCallHookType] = []
+_before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
+_after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
 
 
 def register_before_tool_call_hook(
-    hook: BeforeToolCallHookType,
+    hook: BeforeToolCallHookType | BeforeToolCallHookCallable,
 ) -> None:
     """Register a global before_tool_call hook.
 
@@ -154,7 +159,7 @@ def register_before_tool_call_hook(
 
 
 def register_after_tool_call_hook(
-    hook: AfterToolCallHookType,
+    hook: AfterToolCallHookType | AfterToolCallHookCallable,
 ) -> None:
     """Register a global after_tool_call hook.
 
@@ -184,7 +189,9 @@ def register_after_tool_call_hook(
     _after_tool_call_hooks.append(hook)
 
 
-def get_before_tool_call_hooks() -> list[BeforeToolCallHookType]:
+def get_before_tool_call_hooks() -> list[
+    BeforeToolCallHookType | BeforeToolCallHookCallable
+]:
     """Get all registered global before_tool_call hooks.
 
     Returns:
@@ -193,7 +200,9 @@ def get_before_tool_call_hooks() -> list[BeforeToolCallHookType]:
     return _before_tool_call_hooks.copy()
 
 
-def get_after_tool_call_hooks() -> list[AfterToolCallHookType]:
+def get_after_tool_call_hooks() -> list[
+    AfterToolCallHookType | AfterToolCallHookCallable
+]:
     """Get all registered global after_tool_call hooks.
 
     Returns:
@@ -203,7 +212,7 @@ def get_after_tool_call_hooks() -> list[AfterToolCallHookType]:
 
 
 def unregister_before_tool_call_hook(
-    hook: BeforeToolCallHookType,
+    hook: BeforeToolCallHookType | BeforeToolCallHookCallable,
 ) -> bool:
     """Unregister a specific global before_tool_call hook.
 
@@ -229,7 +238,7 @@ def unregister_before_tool_call_hook(
 
 
 def unregister_after_tool_call_hook(
-    hook: AfterToolCallHookType,
+    hook: AfterToolCallHookType | AfterToolCallHookCallable,
 ) -> bool:
     """Unregister a specific global after_tool_call hook.
 

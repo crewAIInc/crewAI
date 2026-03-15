@@ -1,3 +1,5 @@
+from collections.abc import Callable
+import contextvars
 from contextvars import ContextVar, Token
 from datetime import datetime
 import getpass
@@ -17,6 +19,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+from crewai.utilities.lock_store import lock as store_lock
 from crewai.utilities.paths import db_storage_path
 from crewai.utilities.serialization import to_serializable
 
@@ -25,6 +28,35 @@ logger = logging.getLogger(__name__)
 
 
 _tracing_enabled: ContextVar[bool | None] = ContextVar("_tracing_enabled", default=None)
+
+_first_time_trace_hook: ContextVar[Callable[[], bool] | None] = ContextVar(
+    "_first_time_trace_hook", default=None
+)
+
+_suppress_tracing_messages: ContextVar[bool] = ContextVar(
+    "_suppress_tracing_messages", default=False
+)
+
+
+def set_suppress_tracing_messages(suppress: bool) -> object:
+    """Set whether to suppress tracing-related console messages.
+
+    Args:
+        suppress: True to suppress messages, False to show them.
+
+    Returns:
+        A token that can be used to restore the previous value.
+    """
+    return _suppress_tracing_messages.set(suppress)
+
+
+def should_suppress_tracing_messages() -> bool:
+    """Check if tracing messages should be suppressed.
+
+    Returns:
+        True if messages should be suppressed, False otherwise.
+    """
+    return _suppress_tracing_messages.get()
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
@@ -107,12 +139,25 @@ def _load_user_data() -> dict[str, Any]:
     return {}
 
 
-def _save_user_data(data: dict[str, Any]) -> None:
+def _user_data_lock_name() -> str:
+    """Return a stable lock name for the user data file."""
+    return f"file:{os.path.realpath(_user_data_file())}"
+
+
+def update_user_data(updates: dict[str, Any]) -> None:
+    """Atomically read-modify-write the user data file.
+
+    Args:
+        updates: Key-value pairs to merge into the existing user data.
+    """
     try:
-        p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
+        with store_lock(_user_data_lock_name()):
+            data = _load_user_data()
+            data.update(updates)
+            p = _user_data_file()
+            p.write_text(json.dumps(data, indent=2))
     except (OSError, PermissionError) as e:
-        logger.warning(f"Failed to save user data: {e}")
+        logger.warning(f"Failed to update user data: {e}")
 
 
 def has_user_declined_tracing() -> bool:
@@ -327,24 +372,30 @@ def _get_generic_system_id() -> str | None:
     return None
 
 
-def get_user_id() -> str:
-    """Stable, anonymized user identifier with caching."""
-    data = _load_user_data()
-
-    if "user_id" in data:
-        return cast(str, data["user_id"])
-
+def _generate_user_id() -> str:
+    """Compute an anonymized user identifier from username and machine ID."""
     try:
         username = getpass.getuser()
     except Exception:
         username = "unknown"
 
     seed = f"{username}|{_get_machine_id()}"
-    uid = hashlib.sha256(seed.encode()).hexdigest()
+    return hashlib.sha256(seed.encode()).hexdigest()
 
-    data["user_id"] = uid
-    _save_user_data(data)
-    return uid
+
+def get_user_id() -> str:
+    """Stable, anonymized user identifier with caching."""
+    with store_lock(_user_data_lock_name()):
+        data = _load_user_data()
+
+        if "user_id" in data:
+            return cast(str, data["user_id"])
+
+        uid = _generate_user_id()
+        data["user_id"] = uid
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
+        return uid
 
 
 def is_first_execution() -> bool:
@@ -359,20 +410,23 @@ def mark_first_execution_done(user_consented: bool = False) -> None:
     Args:
         user_consented: Whether the user consented to trace collection.
     """
-    data = _load_user_data()
-    if data.get("first_execution_done", False):
-        return
+    with store_lock(_user_data_lock_name()):
+        data = _load_user_data()
+        if data.get("first_execution_done", False):
+            return
 
-    data.update(
-        {
-            "first_execution_done": True,
-            "first_execution_at": datetime.now().timestamp(),
-            "user_id": get_user_id(),
-            "machine_id": _get_machine_id(),
-            "trace_consent": user_consented,
-        }
-    )
-    _save_user_data(data)
+        uid = data.get("user_id") or _generate_user_id()
+        data.update(
+            {
+                "first_execution_done": True,
+                "first_execution_at": datetime.now().timestamp(),
+                "user_id": uid,
+                "machine_id": _get_machine_id(),
+                "trace_consent": user_consented,
+            }
+        )
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
 
 
 def safe_serialize_to_dict(obj: Any, exclude: set[str] | None = None) -> dict[str, Any]:
@@ -407,10 +461,13 @@ def truncate_messages(
 def should_auto_collect_first_time_traces() -> bool:
     """True if we should auto-collect traces for first-time user.
 
-
     Returns:
         True if first-time user AND telemetry not disabled AND tracing not explicitly enabled, False otherwise.
     """
+    hook = _first_time_trace_hook.get()
+    if hook is not None:
+        return hook()
+
     if _is_test_environment():
         return False
 
@@ -430,6 +487,9 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
     Returns True if user wants to see traces, False otherwise.
     """
     if _is_test_environment():
+        return False
+
+    if should_suppress_tracing_messages():
         return False
 
     try:
@@ -473,7 +533,8 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
                 # Handle all input-related errors silently
                 result[0] = False
 
-        input_thread = threading.Thread(target=get_input, daemon=True)
+        ctx = contextvars.copy_context()
+        input_thread = threading.Thread(target=ctx.run, args=(get_input,), daemon=True)
         input_thread.start()
         input_thread.join(timeout=timeout_seconds)
 

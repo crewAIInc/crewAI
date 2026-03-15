@@ -132,6 +132,74 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `companyName` (string, opcional): Nome da empresa do contato.
 
   </Accordion>
+
+  <Accordion title="microsoft_outlook/get_message">
+    **Descrição:** Obter uma mensagem de email específica por ID.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem. Obter pela ação get_messages.
+    - `select` (string, opcional): Lista separada por vírgulas de propriedades a retornar. Exemplo: "id,subject,body,from,receivedDateTime". Padrão: "id,subject,body,from,toRecipients,receivedDateTime".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/reply_to_email">
+    **Descrição:** Responder a uma mensagem de email.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem a responder. Obter pela ação get_messages.
+    - `comment` (string, obrigatório): O conteúdo da mensagem de resposta. Pode ser texto simples ou HTML. A mensagem original será citada abaixo deste conteúdo.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/forward_email">
+    **Descrição:** Encaminhar uma mensagem de email.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem a encaminhar. Obter pela ação get_messages.
+    - `to_recipients` (array, obrigatório): Array de endereços de email dos destinatários. Exemplo: ["john@example.com", "jane@example.com"].
+    - `comment` (string, opcional): Mensagem opcional a incluir acima do conteúdo encaminhado. Pode ser texto simples ou HTML.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/mark_message_read">
+    **Descrição:** Marcar uma mensagem como lida ou não lida.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem. Obter pela ação get_messages.
+    - `is_read` (boolean, obrigatório): Definir como true para marcar como lida, false para marcar como não lida.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_message">
+    **Descrição:** Excluir uma mensagem de email.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem a excluir. Obter pela ação get_messages.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/update_event">
+    **Descrição:** Atualizar um evento de calendário existente.
+
+    **Parâmetros:**
+    - `event_id` (string, obrigatório): O identificador único do evento. Obter pela ação get_calendar_events.
+    - `subject` (string, opcional): Novo assunto/título do evento.
+    - `start_time` (string, opcional): Nova hora de início no formato ISO 8601 (ex: "2024-01-20T10:00:00"). OBRIGATÓRIO: Também deve fornecer start_timezone ao usar este campo.
+    - `start_timezone` (string, opcional): Fuso horário da hora de início. OBRIGATÓRIO ao atualizar start_time. Exemplos: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `end_time` (string, opcional): Nova hora de término no formato ISO 8601. OBRIGATÓRIO: Também deve fornecer end_timezone ao usar este campo.
+    - `end_timezone` (string, opcional): Fuso horário da hora de término. OBRIGATÓRIO ao atualizar end_time. Exemplos: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `location` (string, opcional): Novo local do evento.
+    - `body` (string, opcional): Novo corpo/descrição do evento. Suporta formatação HTML.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_event">
+    **Descrição:** Excluir um evento de calendário.
+
+    **Parâmetros:**
+    - `event_id` (string, obrigatório): O identificador único do evento a excluir. Obter pela ação get_calendar_events.
+
+  </Accordion>
 </AccordionGroup>
 
 ## Exemplos de Uso

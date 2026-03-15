@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -95,16 +95,14 @@ class TestAsyncAgentExecutor:
             ),
         ):
             with patch.object(executor, "_show_start_logs"):
-                with patch.object(executor, "_create_short_term_memory"):
-                    with patch.object(executor, "_create_long_term_memory"):
-                        with patch.object(executor, "_create_external_memory"):
-                            result = await executor.ainvoke(
-                                {
-                                    "input": "test input",
-                                    "tool_names": "",
-                                    "tools": "",
-                                }
-                            )
+                with patch.object(executor, "_save_to_memory"):
+                    result = await executor.ainvoke(
+                        {
+                            "input": "test input",
+                            "tool_names": "",
+                            "tools": "",
+                        }
+                    )
 
         assert result == {"output": expected_output}
 
@@ -235,8 +233,13 @@ class TestAsyncAgentExecutor:
         mock_crew: MagicMock, mock_tools_handler: MagicMock
     ) -> None:
         """Test that multiple ainvoke calls can run concurrently."""
+        max_concurrent = 0
+        current_concurrent = 0
+        lock = asyncio.Lock()
 
         async def create_and_run_executor(executor_id: int) -> dict[str, Any]:
+            nonlocal max_concurrent, current_concurrent
+
             executor = CrewAgentExecutor(
                 llm=mock_llm,
                 task=mock_task,
@@ -252,7 +255,13 @@ class TestAsyncAgentExecutor:
             )
 
             async def delayed_response(*args: Any, **kwargs: Any) -> str:
-                await asyncio.sleep(0.05)
+                nonlocal max_concurrent, current_concurrent
+                async with lock:
+                    current_concurrent += 1
+                    max_concurrent = max(max_concurrent, current_concurrent)
+                await asyncio.sleep(0.01)
+                async with lock:
+                    current_concurrent -= 1
                 return f"Thought: Done\nFinal Answer: Result from executor {executor_id}"
 
             with patch(
@@ -262,30 +271,64 @@ class TestAsyncAgentExecutor:
             ):
                 with patch.object(executor, "_show_start_logs"):
                     with patch.object(executor, "_show_logs"):
-                        with patch.object(executor, "_create_short_term_memory"):
-                            with patch.object(executor, "_create_long_term_memory"):
-                                with patch.object(executor, "_create_external_memory"):
-                                    return await executor.ainvoke(
-                                        {
-                                            "input": f"test {executor_id}",
-                                            "tool_names": "",
-                                            "tools": "",
-                                        }
-                                    )
+                        with patch.object(executor, "_save_to_memory"):
+                            return await executor.ainvoke(
+                                {
+                                    "input": f"test {executor_id}",
+                                    "tool_names": "",
+                                    "tools": "",
+                                }
+                            )
 
-        import time
-
-        start = time.time()
         results = await asyncio.gather(
             create_and_run_executor(1),
             create_and_run_executor(2),
             create_and_run_executor(3),
         )
-        elapsed = time.time() - start
 
         assert len(results) == 3
         assert all("output" in r for r in results)
-        assert elapsed < 0.15, f"Expected concurrent execution, took {elapsed}s"
+        assert max_concurrent > 1, f"Expected concurrent execution, max concurrent was {max_concurrent}"
+
+
+class TestInvokeStepCallback:
+    """Tests for _invoke_step_callback with sync and async callbacks."""
+
+    def test_invoke_step_callback_with_sync_callback(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Test that a sync step callback is called normally."""
+        callback = Mock()
+        executor.step_callback = callback
+        answer = AgentFinish(thought="thinking", output="test", text="final")
+
+        executor._invoke_step_callback(answer)
+
+        callback.assert_called_once_with(answer)
+
+    def test_invoke_step_callback_with_async_callback(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Test that an async step callback is awaited via asyncio.run."""
+        async_callback = AsyncMock()
+        executor.step_callback = async_callback
+        answer = AgentFinish(thought="thinking", output="test", text="final")
+
+        with patch("crewai.agents.crew_agent_executor.asyncio.run") as mock_run:
+            executor._invoke_step_callback(answer)
+
+            async_callback.assert_called_once_with(answer)
+            mock_run.assert_called_once()
+
+    def test_invoke_step_callback_with_none(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Test that no error is raised when step_callback is None."""
+        executor.step_callback = None
+        answer = AgentFinish(thought="thinking", output="test", text="final")
+
+        # Should not raise
+        executor._invoke_step_callback(answer)
 
 
 class TestAsyncLLMResponseHelper:

@@ -17,7 +17,7 @@ from openai.types.responses import Response
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -382,23 +382,35 @@ class OpenAICompletion(BaseLLM):
         Returns:
             Completion response or tool call result.
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages = self._format_messages(messages)
+                formatted_messages = self._format_messages(messages)
 
-            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            if self.api == "responses":
-                return self._call_responses(
+                if self.api == "responses":
+                    return self._call_responses(
+                        messages=formatted_messages,
+                        tools=tools,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+
+                return self._call_completions(
                     messages=formatted_messages,
                     tools=tools,
                     available_functions=available_functions,
@@ -407,22 +419,13 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
-            return self._call_completions(
-                messages=formatted_messages,
-                tools=tools,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"OpenAI API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"OpenAI API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     def _call_completions(
         self,
@@ -479,20 +482,30 @@ class OpenAICompletion(BaseLLM):
         Returns:
             Completion response or tool call result.
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages = self._format_messages(messages)
+                formatted_messages = self._format_messages(messages)
 
-            if self.api == "responses":
-                return await self._acall_responses(
+                if self.api == "responses":
+                    return await self._acall_responses(
+                        messages=formatted_messages,
+                        tools=tools,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+
+                return await self._acall_completions(
                     messages=formatted_messages,
                     tools=tools,
                     available_functions=available_functions,
@@ -501,22 +514,13 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
-            return await self._acall_completions(
-                messages=formatted_messages,
-                tools=tools,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"OpenAI API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"OpenAI API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     async def _acall_completions(
         self,
@@ -693,14 +697,14 @@ class OpenAICompletion(BaseLLM):
         if response_model or self.response_format:
             format_model = response_model or self.response_format
             if isinstance(format_model, type) and issubclass(format_model, BaseModel):
-                schema = format_model.model_json_schema()
-                schema["additionalProperties"] = False
+                schema_output = generate_model_description(format_model)
+                json_schema = schema_output.get("json_schema", {})
                 params["text"] = {
                     "format": {
                         "type": "json_schema",
-                        "name": format_model.__name__,
-                        "strict": True,
-                        "schema": schema,
+                        "name": json_schema.get("name", format_model.__name__),
+                        "strict": json_schema.get("strict", True),
+                        "schema": json_schema.get("schema", {}),
                     }
                 }
             elif isinstance(format_model, dict):
@@ -848,7 +852,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -865,6 +868,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -979,7 +984,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -996,6 +1000,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1047,8 +1053,12 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
 
         stream = self.client.responses.create(**params)
+        response_id_stream = None
 
         for event in stream:
+            if event.type == "response.created":
+                response_id_stream = event.response.id
+
             if event.type == "response.output_text.delta":
                 delta_text = event.delta or ""
                 full_response += delta_text
@@ -1056,6 +1066,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=delta_text,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=response_id_stream,
                 )
 
             elif event.type == "response.function_call_arguments.delta":
@@ -1083,11 +1094,7 @@ class OpenAICompletion(BaseLLM):
                     if reasoning_items:
                         self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
-                    usage = {
-                        "prompt_tokens": event.response.usage.input_tokens,
-                        "completion_tokens": event.response.usage.output_tokens,
-                        "total_tokens": event.response.usage.total_tokens,
-                    }
+                    usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
         # If parse_tool_outputs is enabled, return structured result
@@ -1126,8 +1133,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1143,6 +1148,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1170,8 +1177,12 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
 
         stream = await self.async_client.responses.create(**params)
+        response_id_stream = None
 
         async for event in stream:
+            if event.type == "response.created":
+                response_id_stream = event.response.id
+
             if event.type == "response.output_text.delta":
                 delta_text = event.delta or ""
                 full_response += delta_text
@@ -1179,6 +1190,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=delta_text,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=response_id_stream,
                 )
 
             elif event.type == "response.function_call_arguments.delta":
@@ -1206,11 +1218,7 @@ class OpenAICompletion(BaseLLM):
                     if reasoning_items:
                         self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
-                    usage = {
-                        "prompt_tokens": event.response.usage.input_tokens,
-                        "completion_tokens": event.response.usage.output_tokens,
-                        "total_tokens": event.response.usage.total_tokens,
-                    }
+                    usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
         # If parse_tool_outputs is enabled, return structured result
@@ -1249,8 +1257,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1266,6 +1272,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1294,11 +1302,18 @@ class OpenAICompletion(BaseLLM):
     def _extract_responses_token_usage(self, response: Response) -> dict[str, Any]:
         """Extract token usage from Responses API response."""
         if response.usage:
-            return {
+            result = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
+            # Extract cached prompt tokens from input_tokens_details
+            input_details = getattr(response.usage, "input_tokens_details", None)
+            if input_details:
+                result["cached_prompt_tokens"] = (
+                    getattr(input_details, "cached_tokens", 0) or 0
+                )
+            return result
         return {"total_tokens": 0}
 
     def _extract_builtin_tool_outputs(self, response: Response) -> ResponsesAPIResult:
@@ -1509,25 +1524,30 @@ class OpenAICompletion(BaseLLM):
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to OpenAI function calling format."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
+        from crewai.utilities.pydantic_schema_utils import (
+            force_additional_properties_false,
+        )
 
         openai_tools = []
 
         for tool in tools:
             name, description, parameters = safe_tool_conversion(tool, "OpenAI")
 
-            openai_tool = {
+            openai_tool: dict[str, Any] = {
                 "type": "function",
                 "function": {
                     "name": name,
                     "description": description,
+                    "strict": True,
                 },
             }
 
             if parameters:
-                if isinstance(parameters, dict):
-                    openai_tool["function"]["parameters"] = parameters  # type: ignore
-                else:
-                    openai_tool["function"]["parameters"] = dict(parameters)
+                params_dict = (
+                    parameters if isinstance(parameters, dict) else dict(parameters)
+                )
+                params_dict = force_additional_properties_false(params_dict)
+                openai_tool["function"]["parameters"] = params_dict
 
             openai_tools.append(openai_tool)
         return openai_tools
@@ -1560,15 +1580,14 @@ class OpenAICompletion(BaseLLM):
 
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
-                    structured_json = parsed_object.model_dump_json()
                     self._emit_call_completed_event(
-                        response=structured_json,
+                        response=parsed_object.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_json
+                    return parsed_object
 
             response: ChatCompletion = self.client.chat.completions.create(**params)
 
@@ -1614,7 +1633,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1631,6 +1649,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1675,6 +1695,99 @@ class OpenAICompletion(BaseLLM):
 
         return content
 
+    def _finalize_streaming_response(
+        self,
+        full_response: str,
+        tool_calls: dict[int, dict[str, Any]],
+        usage_data: dict[str, int],
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str | list[dict[str, Any]]:
+        """Finalize a streaming response with usage tracking, tool call handling, and events.
+
+        Args:
+            full_response: The accumulated text response from the stream.
+            tool_calls: Accumulated tool calls from the stream, keyed by index.
+            usage_data: Token usage data from the stream.
+            params: The completion parameters containing messages.
+            available_functions: Available functions for tool calling.
+            from_task: Task that initiated the call.
+            from_agent: Agent that initiated the call.
+
+        Returns:
+            Tool calls list when tools were invoked without available_functions,
+            tool execution result when available_functions is provided,
+            or the text response string.
+        """
+        self._track_token_usage_internal(usage_data)
+
+        if tool_calls and not available_functions:
+            tool_calls_list = [
+                {
+                    "id": call_data["id"],
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                    "index": call_data["index"],
+                }
+                for call_data in tool_calls.values()
+            ]
+            self._emit_call_completed_event(
+                response=tool_calls_list,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return tool_calls_list
+
+        if tool_calls and available_functions:
+            for call_data in tool_calls.values():
+                function_name = call_data["name"]
+                arguments = call_data["arguments"]
+
+                if not function_name or not arguments:
+                    continue
+
+                if function_name not in available_functions:
+                    logging.warning(
+                        f"Function '{function_name}' not found in available functions"
+                    )
+                    continue
+
+                try:
+                    function_args = json.loads(arguments)
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse streamed tool arguments: {e}")
+                    continue
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if result is not None:
+                    return result
+
+        full_response = self._apply_stop_words(full_response)
+
+        self._emit_call_completed_event(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
+        return full_response
+
     def _handle_streaming_completion(
         self,
         params: dict[str, Any],
@@ -1682,7 +1795,7 @@ class OpenAICompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | list[dict[str, Any]] | BaseModel:
         """Handle streaming chat completion."""
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
@@ -1699,6 +1812,8 @@ class OpenAICompletion(BaseLLM):
                 **parse_params, response_format=response_model
             ) as stream:
                 for chunk in stream:
+                    response_id_stream = chunk.id if hasattr(chunk, "id") else None
+
                     if chunk.type == "content.delta":
                         delta_content = chunk.delta
                         if delta_content:
@@ -1706,6 +1821,7 @@ class OpenAICompletion(BaseLLM):
                                 chunk=delta_content,
                                 from_task=from_task,
                                 from_agent=from_agent,
+                                response_id=response_id_stream,
                             )
 
                 final_completion = stream.get_final_completion()
@@ -1715,15 +1831,14 @@ class OpenAICompletion(BaseLLM):
                     if final_completion.choices:
                         parsed_result = final_completion.choices[0].message.parsed
                         if parsed_result:
-                            structured_json = parsed_result.model_dump_json()
                             self._emit_call_completed_event(
-                                response=structured_json,
+                                response=parsed_result.model_dump_json(),
                                 call_type=LLMCallType.LLM_CALL,
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=params["messages"],
                             )
-                            return structured_json
+                            return parsed_result
 
             logging.error("Failed to get parsed result from stream")
             return ""
@@ -1735,6 +1850,10 @@ class OpenAICompletion(BaseLLM):
         usage_data = {"total_tokens": 0}
 
         for completion_chunk in completion_stream:
+            response_id_stream = (
+                completion_chunk.id if hasattr(completion_chunk, "id") else None
+            )
+
             if hasattr(completion_chunk, "usage") and completion_chunk.usage:
                 usage_data = self._extract_openai_token_usage(completion_chunk)
                 continue
@@ -1751,6 +1870,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=chunk_delta.content,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=response_id_stream,
                 )
 
             if chunk_delta.tool_calls:
@@ -1789,56 +1909,23 @@ class OpenAICompletion(BaseLLM):
                             "index": tool_calls[tool_index]["index"],
                         },
                         call_type=LLMCallType.TOOL_CALL,
+                        response_id=response_id_stream,
                     )
 
-        self._track_token_usage_internal(usage_data)
-
-        if tool_calls and available_functions:
-            for call_data in tool_calls.values():
-                function_name = call_data["name"]
-                arguments = call_data["arguments"]
-
-                # Skip if function name is empty or arguments are empty
-                if not function_name or not arguments:
-                    continue
-
-                # Check if function exists in available functions
-                if function_name not in available_functions:
-                    logging.warning(
-                        f"Function '{function_name}' not found in available functions"
-                    )
-                    continue
-
-                try:
-                    function_args = json.loads(arguments)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse streamed tool arguments: {e}")
-                    continue
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
-
-        full_response = self._apply_stop_words(full_response)
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
+        result = self._finalize_streaming_response(
+            full_response=full_response,
+            tool_calls=tool_calls,
+            usage_data=usage_data,
+            params=params,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
-            messages=params["messages"],
         )
-
-        return self._invoke_after_llm_call_hooks(
-            params["messages"], full_response, from_agent
-        )
+        if isinstance(result, str):
+            return self._invoke_after_llm_call_hooks(
+                params["messages"], result, from_agent
+            )
+        return result
 
     async def _ahandle_completion(
         self,
@@ -1868,15 +1955,14 @@ class OpenAICompletion(BaseLLM):
 
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
-                    structured_json = parsed_object.model_dump_json()
                     self._emit_call_completed_event(
-                        response=structured_json,
+                        response=parsed_object.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_json
+                    return parsed_object
 
             response: ChatCompletion = await self.async_client.chat.completions.create(
                 **params
@@ -1924,7 +2010,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1941,6 +2026,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1987,7 +2074,7 @@ class OpenAICompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | list[dict[str, Any]] | BaseModel:
         """Handle async streaming chat completion."""
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
@@ -2000,6 +2087,8 @@ class OpenAICompletion(BaseLLM):
             accumulated_content = ""
             usage_data = {"total_tokens": 0}
             async for chunk in completion_stream:
+                response_id_stream = chunk.id if hasattr(chunk, "id") else None
+
                 if hasattr(chunk, "usage") and chunk.usage:
                     usage_data = self._extract_openai_token_usage(chunk)
                     continue
@@ -2016,23 +2105,23 @@ class OpenAICompletion(BaseLLM):
                         chunk=delta.content,
                         from_task=from_task,
                         from_agent=from_agent,
+                        response_id=response_id_stream,
                     )
 
             self._track_token_usage_internal(usage_data)
 
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)
-                structured_json = parsed_object.model_dump_json()
 
                 self._emit_call_completed_event(
-                    response=structured_json,
+                    response=parsed_object.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
 
-                return structured_json
+                return parsed_object
             except Exception as e:
                 logging.error(f"Failed to parse structured output from stream: {e}")
                 self._emit_call_completed_event(
@@ -2051,6 +2140,8 @@ class OpenAICompletion(BaseLLM):
         usage_data = {"total_tokens": 0}
 
         async for chunk in stream:
+            response_id_stream = chunk.id if hasattr(chunk, "id") else None
+
             if hasattr(chunk, "usage") and chunk.usage:
                 usage_data = self._extract_openai_token_usage(chunk)
                 continue
@@ -2067,6 +2158,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=chunk_delta.content,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=response_id_stream,
                 )
 
             if chunk_delta.tool_calls:
@@ -2105,52 +2197,18 @@ class OpenAICompletion(BaseLLM):
                             "index": tool_calls[tool_index]["index"],
                         },
                         call_type=LLMCallType.TOOL_CALL,
+                        response_id=response_id_stream,
                     )
 
-        self._track_token_usage_internal(usage_data)
-
-        if tool_calls and available_functions:
-            for call_data in tool_calls.values():
-                function_name = call_data["name"]
-                arguments = call_data["arguments"]
-
-                if not function_name or not arguments:
-                    continue
-
-                if function_name not in available_functions:
-                    logging.warning(
-                        f"Function '{function_name}' not found in available functions"
-                    )
-                    continue
-
-                try:
-                    function_args = json.loads(arguments)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse streamed tool arguments: {e}")
-                    continue
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
-
-        full_response = self._apply_stop_words(full_response)
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
+        return self._finalize_streaming_response(
+            full_response=full_response,
+            tool_calls=tool_calls,
+            usage_data=usage_data,
+            params=params,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
-            messages=params["messages"],
         )
-
-        return full_response
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -2205,11 +2263,18 @@ class OpenAICompletion(BaseLLM):
         """Extract token usage from OpenAI ChatCompletion or ChatCompletionChunk response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            return {
+            result = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
+            # Extract cached prompt tokens from prompt_tokens_details
+            prompt_details = getattr(usage, "prompt_tokens_details", None)
+            if prompt_details:
+                result["cached_prompt_tokens"] = (
+                    getattr(prompt_details, "cached_tokens", 0) or 0
+                )
+            return result
         return {"total_tokens": 0}
 
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:

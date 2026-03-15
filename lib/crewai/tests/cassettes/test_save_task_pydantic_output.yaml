@@ -1,12 +1,29 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Give me an integer score between 1-5 for the following title: ''The impact of AI in the future of work''\n\nThis is the expected criteria for your final answer: The score of the title.\nyou MUST return the actual complete content as the final answer, not a summary.\nEnsure your final answer strictly adheres to the following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\": \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
-      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\nEnsure your final answer strictly adheres
+      to the following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
+      \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
+      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo
+      not include the OpenAPI schema in the final output. Ensure the final output
+      does not include any code block markers like ```json or ```python.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
       connection:
       - keep-alive
       content-length:
@@ -15,20 +32,18 @@ interactions:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
       - 1.109.1
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -39,11 +54,25 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYg0PI2q4kRtIkqoIwCl9TVmZiD0o\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762380657,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: The title \\\"The impact of AI in the future of work\\\" is clear, relevant, and concise. It accurately reflects a significant and current topic that is likely to attract interest. However, it could be more specific about the type of impact or scope to make it more compelling. Overall, it is a strong and effective title.\\n\\nFinal Answer: {\\n  \\\"score\\\": 4\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 294,\n    \"completion_tokens\": 80,\n    \"total_tokens\": 374,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
-        \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-CYg0PI2q4kRtIkqoIwCl9TVmZiD0o\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1762380657,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Thought: The title \\\"The impact of
+        AI in the future of work\\\" is clear, relevant, and concise. It accurately
+        reflects a significant and current topic that is likely to attract interest.
+        However, it could be more specific about the type of impact or scope to make
+        it more compelling. Overall, it is a strong and effective title.\\n\\nFinal
+        Answer: {\\n  \\\"score\\\": 4\\n}\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 294,\n    \"completion_tokens\":
+        80,\n    \"total_tokens\": 374,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
     headers:
       CF-RAY:
-      - REDACTED-RAY
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
@@ -53,26 +82,25 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=REDACTED; path=/; expires=Wed, 05-Nov-25 22:40:59 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - SET-COOKIE-XXX
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-hortuttj2f3qtmxyik2zxf4q
+      - OPENAI-ORG-XXX
       openai-processing-ms:
       - '1476'
       openai-project:
-      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -80,29 +108,32 @@ interactions:
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199687'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 93ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_REDACTED
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"trace_id": "c682f49d-bb6b-49d9-84b7-06e1881d37cd", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "1.4.1", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-15T21:20:09.431751+00:00"}, "ephemeral_trace_id": "c682f49d-bb6b-49d9-84b7-06e1881d37cd"}'
+    body: '{"trace_id": "c682f49d-bb6b-49d9-84b7-06e1881d37cd", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.4.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-15T21:20:09.431751+00:00"},
+      "ephemeral_trace_id": "c682f49d-bb6b-49d9-84b7-06e1881d37cd"}'
     headers:
       Accept:
       - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
       Connection:
       - keep-alive
       Content-Length:
@@ -110,11 +141,13 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - CrewAI-CLI/1.4.1
+      - X-USER-AGENT-XXX
       X-Crewai-Organization-Id:
       - 73c2b193-f579-422c-84c7-76a39a1da77f
       X-Crewai-Version:
       - 1.4.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
     method: POST
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
   response:
@@ -132,36 +165,168 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
-        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
-        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
+      - CSP-FILTERED
       etag:
-      - W/"e8d1e903c8c6ec2f765163c0c03bed79"
+      - ETAG-XXX
       expires:
       - '0'
       permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
+      - PERMISSIONS-POLICY-XXX
       pragma:
       - no-cache
       referrer-policy:
-      - strict-origin-when-cross-origin
+      - REFERRER-POLICY-XXX
       strict-transport-security:
-      - max-age=63072000; includeSubDomains
+      - STS-XXX
       vary:
       - Accept
       x-content-type-options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       x-frame-options:
-      - SAMEORIGIN
+      - X-FRAME-OPTIONS-XXX
       x-permitted-cross-domain-policies:
-      - none
+      - X-PERMITTED-XXX
       x-request-id:
-      - 5ea5f513-c359-4a92-a84a-08ad44d9857b
+      - X-REQUEST-ID-XXX
       x-runtime:
-      - '0.044665'
+      - X-RUNTIME-XXX
       x-xss-protection:
-      - 1; mode=block
+      - X-XSS-PROTECTION-XXX
     status:
       code: 201
       message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title"},{"role":"user","content":"\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\nFormat your final answer according to the
+      following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
+      \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
+      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nIMPORTANT:
+      Preserve the original content exactly as-is. Do NOT rewrite, paraphrase, or
+      modify the meaning of the content. Only structure it to match the schema format.\n\nDo
+      not include the OpenAPI schema in the final output. Ensure the final output
+      does not include any code block markers like ```json or ```python.\n\nProvide
+      your complete response:"},{"role":"system","content":"You are Scorer. You''re
+      an expert scorer, specialized in scoring titles.\nYour personal goal is: Score
+      the title"},{"role":"user","content":"\nCurrent Task: Give me an integer score
+      between 1-5 for the following title: ''The impact of AI in the future of work''\n\nThis
+      is the expected criteria for your final answer: The score of the title.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\nFormat
+      your final answer according to the following OpenAPI schema: {\n  \"properties\":
+      {\n    \"score\": {\n      \"title\": \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\":
+      [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\":
+      false\n}\n\nIMPORTANT: Preserve the original content exactly as-is. Do NOT rewrite,
+      paraphrase, or modify the meaning of the content. Only structure it to match
+      the schema format.\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"score":{"title":"Score","type":"integer"}},"required":["score"],"title":"ScoreOutput","type":"object","additionalProperties":false},"name":"ScoreOutput","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2541'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DDE0GSLDtGruDzwtl2bwlAXUmvmHG\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1772044464,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"score\\\":4}\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        513,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 518,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a391f2cee0\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 25 Feb 2026 18:34:25 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '530'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 version: 1

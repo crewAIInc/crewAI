@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import click
 from dotenv import load_dotenv
@@ -14,7 +15,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
 
-from crewai_devtools.prompts import RELEASE_NOTES_PROMPT
+from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
 
 
 load_dotenv()
@@ -191,6 +192,248 @@ def update_pyproject_dependencies(file_path: Path, new_version: str) -> bool:
     return False
 
 
+def add_docs_version(docs_json_path: Path, version: str) -> bool:
+    """Add a new version to the Mintlify docs.json versioning config.
+
+    Copies the current default version's tabs into a new version entry,
+    sets the new version as default, and marks the previous default as
+    non-default. Operates on all languages.
+
+    Args:
+        docs_json_path: Path to docs/docs.json.
+        version: Version string (e.g., "1.10.1b1").
+
+    Returns:
+        True if docs.json was updated, False otherwise.
+    """
+    import json
+
+    if not docs_json_path.exists():
+        return False
+
+    data = json.loads(docs_json_path.read_text())
+    version_label = f"v{version}"
+    updated = False
+
+    for lang in data.get("navigation", {}).get("languages", []):
+        versions = lang.get("versions", [])
+        if not versions:
+            continue
+
+        # Skip if this version already exists for this language
+        if any(v.get("version") == version_label for v in versions):
+            continue
+
+        # Find the current default and copy its tabs
+        default_version = next(
+            (v for v in versions if v.get("default")),
+            versions[0],
+        )
+
+        new_version = {
+            "version": version_label,
+            "default": True,
+            "tabs": default_version.get("tabs", []),
+        }
+
+        # Remove default flag from old default
+        default_version.pop("default", None)
+
+        # Insert new version at the beginning
+        versions.insert(0, new_version)
+        updated = True
+
+    if not updated:
+        return False
+
+    docs_json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return True
+
+
+_PT_BR_MONTHS = {
+    1: "jan",
+    2: "fev",
+    3: "mar",
+    4: "abr",
+    5: "mai",
+    6: "jun",
+    7: "jul",
+    8: "ago",
+    9: "set",
+    10: "out",
+    11: "nov",
+    12: "dez",
+}
+
+_CHANGELOG_LOCALES: dict[str, dict[str, str]] = {
+    "en": {
+        "link_text": "View release on GitHub",
+        "language_name": "English",
+    },
+    "pt-BR": {
+        "link_text": "Ver release no GitHub",
+        "language_name": "Brazilian Portuguese",
+    },
+    "ko": {
+        "link_text": "GitHub 릴리스 보기",
+        "language_name": "Korean",
+    },
+}
+
+
+def translate_release_notes(
+    release_notes: str,
+    lang: str,
+    client: OpenAI,
+) -> str:
+    """Translate release notes into the target language using OpenAI.
+
+    Args:
+        release_notes: English release notes markdown.
+        lang: Language code (e.g., "pt-BR", "ko").
+        client: OpenAI client instance.
+
+    Returns:
+        Translated release notes, or original on failure.
+    """
+    locale_cfg = _CHANGELOG_LOCALES.get(lang)
+    if not locale_cfg:
+        return release_notes
+
+    language_name = locale_cfg["language_name"]
+    prompt = TRANSLATE_RELEASE_NOTES_PROMPT.substitute(
+        language=language_name,
+        release_notes=release_notes,
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"You are a professional translator. Translate technical documentation into {language_name}.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+        return response.choices[0].message.content or release_notes
+    except Exception as e:
+        console.print(
+            f"[yellow]Warning:[/yellow] Could not translate to {language_name}: {e}"
+        )
+        return release_notes
+
+
+def _format_changelog_date(lang: str) -> str:
+    """Format today's date for a changelog entry in the given language."""
+    from datetime import datetime
+
+    now = datetime.now()
+    if lang == "ko":
+        return f"{now.year}년 {now.month}월 {now.day}일"
+    if lang == "pt-BR":
+        return f"{now.day:02d} {_PT_BR_MONTHS[now.month]} {now.year}"
+    return now.strftime("%b %d, %Y")
+
+
+def update_changelog(
+    changelog_path: Path,
+    version: str,
+    release_notes: str,
+    lang: str = "en",
+) -> bool:
+    """Prepend a new release entry to a docs changelog file.
+
+    Args:
+        changelog_path: Path to the changelog.mdx file.
+        version: Version string (e.g., "1.9.3").
+        release_notes: Markdown release notes content.
+        lang: Language code for localized date/link text.
+
+    Returns:
+        True if changelog was updated, False otherwise.
+    """
+    if not changelog_path.exists():
+        return False
+
+    locale_cfg = _CHANGELOG_LOCALES.get(lang, _CHANGELOG_LOCALES["en"])
+    date_label = _format_changelog_date(lang)
+    link_text = locale_cfg["link_text"]
+
+    # Indent each non-empty line with 2 spaces to match <Update> block format
+    indented_lines = []
+    for line in release_notes.splitlines():
+        if line.strip():
+            indented_lines.append(f"  {line}")
+        else:
+            indented_lines.append("")
+    indented_notes = "\n".join(indented_lines)
+
+    entry = (
+        f'<Update label="{date_label}">\n'
+        f"  ## v{version}\n"
+        f"\n"
+        f"  [{link_text}]"
+        f"(https://github.com/crewAIInc/crewAI/releases/tag/{version})\n"
+        f"\n"
+        f"{indented_notes}\n"
+        f"\n"
+        f"</Update>"
+    )
+
+    content = changelog_path.read_text()
+
+    # Insert after the frontmatter closing ---
+    parts = content.split("---", 2)
+    if len(parts) >= 3:
+        new_content = (
+            parts[0]
+            + "---"
+            + parts[1]
+            + "---\n"
+            + entry
+            + "\n\n"
+            + parts[2].lstrip("\n")
+        )
+    else:
+        new_content = entry + "\n\n" + content
+
+    changelog_path.write_text(new_content)
+    return True
+
+
+def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
+    """Update crewai dependency versions in CLI template pyproject.toml files.
+
+    Handles both pinned (==) and minimum (>=) version specifiers,
+    as well as extras like [tools].
+
+    Args:
+        templates_dir: Path to the CLI templates directory.
+        new_version: New version string.
+
+    Returns:
+        List of paths that were updated.
+    """
+    import re
+
+    updated = []
+    for pyproject in templates_dir.rglob("pyproject.toml"):
+        content = pyproject.read_text()
+        new_content = re.sub(
+            r'"crewai(\[tools\])?(==|>=)[^"]*"',
+            lambda m: f'"crewai{(m.group(1) or "")!s}=={new_version}"',
+            content,
+        )
+        if new_content != content:
+            pyproject.write_text(new_content)
+            updated.append(pyproject)
+
+    return updated
+
+
 def find_version_files(base_path: Path) -> list[Path]:
     """Find all __init__.py files that contain __version__.
 
@@ -312,6 +555,408 @@ def get_github_contributors(commit_range: str) -> list[str]:
         return []
 
 
+# ---------------------------------------------------------------------------
+# Shared workflow helpers
+# ---------------------------------------------------------------------------
+
+
+def _poll_pr_until_merged(branch_name: str, label: str) -> None:
+    """Poll a GitHub PR until it is merged. Exit if closed without merging."""
+    console.print(f"[cyan]Waiting for {label} to be merged...[/cyan]")
+    while True:
+        time.sleep(10)
+        try:
+            state = run_command(
+                [
+                    "gh",
+                    "pr",
+                    "view",
+                    branch_name,
+                    "--json",
+                    "state",
+                    "--jq",
+                    ".state",
+                ]
+            )
+        except subprocess.CalledProcessError:
+            state = ""
+
+        if state == "MERGED":
+            break
+
+        if state == "CLOSED":
+            console.print(f"[red]✗[/red] {label} was closed without merging")
+            sys.exit(1)
+
+        console.print(f"[dim]Still waiting for {label} to merge...[/dim]")
+
+    console.print(f"[green]✓[/green] {label} merged")
+
+
+def _update_all_versions(
+    cwd: Path,
+    lib_dir: Path,
+    version: str,
+    packages: list[Path],
+    dry_run: bool,
+) -> list[Path]:
+    """Bump __version__, pyproject deps, template deps, and run uv sync."""
+    updated_files: list[Path] = []
+
+    for pkg in packages:
+        version_files = find_version_files(pkg)
+        for vfile in version_files:
+            if dry_run:
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would update: {vfile.relative_to(cwd)}"
+                )
+            else:
+                if update_version_in_file(vfile, version):
+                    console.print(f"[green]✓[/green] Updated: {vfile.relative_to(cwd)}")
+                    updated_files.append(vfile)
+                else:
+                    console.print(
+                        f"[red]✗[/red] Failed to update: {vfile.relative_to(cwd)}"
+                    )
+
+        pyproject = pkg / "pyproject.toml"
+        if pyproject.exists():
+            if dry_run:
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would update dependencies in: {pyproject.relative_to(cwd)}"
+                )
+            else:
+                if update_pyproject_dependencies(pyproject, version):
+                    console.print(
+                        f"[green]✓[/green] Updated dependencies in: {pyproject.relative_to(cwd)}"
+                    )
+                    updated_files.append(pyproject)
+
+    if not updated_files and not dry_run:
+        console.print(
+            "[yellow]Warning:[/yellow] No __version__ attributes found to update"
+        )
+
+    # Update CLI template pyproject.toml files
+    templates_dir = lib_dir / "crewai" / "src" / "crewai" / "cli" / "templates"
+    if templates_dir.exists():
+        if dry_run:
+            for tpl in templates_dir.rglob("pyproject.toml"):
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would update template: {tpl.relative_to(cwd)}"
+                )
+        else:
+            tpl_updated = update_template_dependencies(templates_dir, version)
+            for tpl in tpl_updated:
+                console.print(
+                    f"[green]✓[/green] Updated template: {tpl.relative_to(cwd)}"
+                )
+                updated_files.append(tpl)
+
+    if not dry_run:
+        console.print("\nSyncing workspace...")
+        run_command(["uv", "sync"])
+        console.print("[green]✓[/green] Workspace synced")
+    else:
+        console.print("[dim][DRY RUN][/dim] Would run: uv sync")
+
+    return updated_files
+
+
+def _generate_release_notes(
+    version: str,
+    tag_name: str,
+    no_edit: bool,
+) -> tuple[str, OpenAI, bool]:
+    """Generate, display, and optionally edit release notes.
+
+    Returns:
+        Tuple of (release_notes, openai_client, is_prerelease).
+    """
+    release_notes = f"Release {version}"
+    commits = ""
+
+    with console.status("[cyan]Generating release notes..."):
+        try:
+            prev_bump_commit = run_command(
+                [
+                    "git",
+                    "log",
+                    "--grep=^feat: bump versions to",
+                    "--format=%H",
+                    "-n",
+                    "2",
+                ]
+            )
+            commits_list = prev_bump_commit.strip().split("\n")
+
+            if len(commits_list) > 1:
+                prev_commit = commits_list[1]
+                commit_range = f"{prev_commit}..HEAD"
+                commits = run_command(
+                    ["git", "log", commit_range, "--pretty=format:%s"]
+                )
+
+                commit_lines = [
+                    line
+                    for line in commits.split("\n")
+                    if not line.startswith("feat: bump versions to")
+                ]
+                commits = "\n".join(commit_lines)
+            else:
+                commit_range, commits = get_commits_from_last_tag(tag_name, version)
+
+        except subprocess.CalledProcessError:
+            commit_range, commits = get_commits_from_last_tag(tag_name, version)
+
+        github_contributors = get_github_contributors(commit_range)
+
+        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        if commits.strip():
+            contributors_section = ""
+            if github_contributors:
+                contributors_section = f"\n\n## Contributors\n\n{', '.join([f'@{u}' for u in github_contributors])}"
+
+            prompt = RELEASE_NOTES_PROMPT.substitute(
+                version=version,
+                commits=commits,
+                contributors_section=contributors_section,
+            )
+
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that generates clear, concise release notes.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.7,
+            )
+
+            release_notes = response.choices[0].message.content or f"Release {version}"
+
+    console.print("[green]✓[/green] Generated release notes")
+
+    if commits.strip():
+        try:
+            console.print()
+            md = Markdown(release_notes, justify="left")
+            console.print(
+                Panel(
+                    md,
+                    title="[bold cyan]Generated Release Notes[/bold cyan]",
+                    border_style="cyan",
+                    padding=(1, 2),
+                )
+            )
+        except Exception as e:
+            console.print(
+                f"[yellow]Warning:[/yellow] Could not render release notes: {e}"
+            )
+            console.print("Using default release notes")
+
+    if not no_edit:
+        if Confirm.ask(
+            "\n[bold]Would you like to edit the release notes?[/bold]", default=True
+        ):
+            edited_notes = click.edit(release_notes)
+            if edited_notes is not None:
+                release_notes = edited_notes.strip()
+                console.print("\n[green]✓[/green] Release notes updated")
+            else:
+                console.print("\n[green]✓[/green] Using original release notes")
+        else:
+            console.print(
+                "\n[green]✓[/green] Using generated release notes without editing"
+            )
+    else:
+        console.print(
+            "\n[green]✓[/green] Using generated release notes without editing"
+        )
+
+    is_prerelease = any(
+        indicator in version.lower()
+        for indicator in ["a", "b", "rc", "alpha", "beta", "dev"]
+    )
+
+    return release_notes, openai_client, is_prerelease
+
+
+def _update_docs_and_create_pr(
+    cwd: Path,
+    version: str,
+    release_notes: str,
+    openai_client: OpenAI,
+    is_prerelease: bool,
+    dry_run: bool,
+) -> str | None:
+    """Update changelogs and docs version switcher, create PR if needed.
+
+    Returns:
+        The docs branch name if a PR was created, None otherwise.
+    """
+    docs_json_path = cwd / "docs" / "docs.json"
+    changelog_langs = ["en", "pt-BR", "ko"]
+
+    if not dry_run:
+        docs_files_staged: list[str] = []
+
+        for lang in changelog_langs:
+            cl_path = cwd / "docs" / lang / "changelog.mdx"
+            if lang == "en":
+                notes_for_lang = release_notes
+            else:
+                console.print(f"[dim]Translating release notes to {lang}...[/dim]")
+                notes_for_lang = translate_release_notes(
+                    release_notes, lang, openai_client
+                )
+            if update_changelog(cl_path, version, notes_for_lang, lang=lang):
+                console.print(f"[green]✓[/green] Updated {cl_path.relative_to(cwd)}")
+                docs_files_staged.append(str(cl_path))
+            else:
+                console.print(
+                    f"[yellow]Warning:[/yellow] Changelog not found at {cl_path.relative_to(cwd)}"
+                )
+
+        if not is_prerelease:
+            if add_docs_version(docs_json_path, version):
+                console.print(
+                    f"[green]✓[/green] Added v{version} to docs version switcher"
+                )
+                docs_files_staged.append(str(docs_json_path))
+            else:
+                console.print(
+                    f"[yellow]Warning:[/yellow] docs.json not found at {docs_json_path.relative_to(cwd)}"
+                )
+
+        if docs_files_staged:
+            docs_branch = f"docs/changelog-v{version}"
+            run_command(["git", "checkout", "-b", docs_branch])
+            for f in docs_files_staged:
+                run_command(["git", "add", f])
+            run_command(
+                [
+                    "git",
+                    "commit",
+                    "-m",
+                    f"docs: update changelog and version for v{version}",
+                ]
+            )
+            console.print("[green]✓[/green] Committed docs updates")
+
+            run_command(["git", "push", "-u", "origin", docs_branch])
+            console.print(f"[green]✓[/green] Pushed branch {docs_branch}")
+
+            pr_url = run_command(
+                [
+                    "gh",
+                    "pr",
+                    "create",
+                    "--base",
+                    "main",
+                    "--title",
+                    f"docs: update changelog and version for v{version}",
+                    "--body",
+                    "",
+                ]
+            )
+            console.print("[green]✓[/green] Created docs PR")
+            console.print(f"[cyan]PR URL:[/cyan] {pr_url}")
+            return docs_branch
+
+        return None
+    for lang in changelog_langs:
+        cl_path = cwd / "docs" / lang / "changelog.mdx"
+        translated = " (translated)" if lang != "en" else ""
+        console.print(
+            f"[dim][DRY RUN][/dim] Would update {cl_path.relative_to(cwd)}{translated}"
+        )
+    if not is_prerelease:
+        console.print(
+            f"[dim][DRY RUN][/dim] Would add v{version} to docs version switcher"
+        )
+    else:
+        console.print("[dim][DRY RUN][/dim] Skipping docs version (pre-release)")
+    console.print(
+        f"[dim][DRY RUN][/dim] Would create branch docs/changelog-v{version}, PR, and wait for merge"
+    )
+    return None
+
+
+def _create_tag_and_release(
+    tag_name: str,
+    release_notes: str,
+    is_prerelease: bool,
+) -> None:
+    """Create git tag, push it, and create a GitHub release."""
+    with console.status(f"[cyan]Creating tag {tag_name}..."):
+        try:
+            run_command(["git", "tag", "-a", tag_name, "-m", release_notes])
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]✗[/red] Created tag {tag_name}: {e}")
+            sys.exit(1)
+    console.print(f"[green]✓[/green] Created tag {tag_name}")
+
+    with console.status(f"[cyan]Pushing tag {tag_name}..."):
+        try:
+            run_command(["git", "push", "origin", tag_name])
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]✗[/red] Pushed tag {tag_name}: {e}")
+            sys.exit(1)
+    console.print(f"[green]✓[/green] Pushed tag {tag_name}")
+
+    with console.status("[cyan]Creating GitHub Release..."):
+        try:
+            gh_cmd = [
+                "gh",
+                "release",
+                "create",
+                tag_name,
+                "--title",
+                tag_name,
+                "--notes",
+                release_notes,
+            ]
+            if is_prerelease:
+                gh_cmd.append("--prerelease")
+
+            run_command(gh_cmd)
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]✗[/red] Created GitHub Release: {e}")
+            sys.exit(1)
+
+    release_type = "prerelease" if is_prerelease else "release"
+    console.print(f"[green]✓[/green] Created GitHub {release_type} for {tag_name}")
+
+
+def _trigger_pypi_publish(tag_name: str) -> None:
+    """Trigger the PyPI publish GitHub Actions workflow."""
+    with console.status("[cyan]Triggering PyPI publish workflow..."):
+        try:
+            run_command(
+                [
+                    "gh",
+                    "workflow",
+                    "run",
+                    "publish.yml",
+                    "-f",
+                    f"release_tag={tag_name}",
+                ]
+            )
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]✗[/red] Triggered PyPI publish workflow: {e}")
+            sys.exit(1)
+    console.print("[green]✓[/green] Triggered PyPI publish workflow")
+
+
+# ---------------------------------------------------------------------------
+# CLI commands
+# ---------------------------------------------------------------------------
+
+
 @click.group()
 def cli() -> None:
     """Development tools for version bumping and git automation."""
@@ -336,7 +981,6 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
         no_commit: Don't commit changes (just update files).
     """
     try:
-        # Check prerequisites
         check_gh_installed()
 
         cwd = Path.cwd()
@@ -356,50 +1000,7 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
             console.print(f"  - {pkg.name}")
 
         console.print(f"\nUpdating version to {version}...")
-        updated_files = []
-
-        for pkg in packages:
-            version_files = find_version_files(pkg)
-            for vfile in version_files:
-                if dry_run:
-                    console.print(
-                        f"[dim][DRY RUN][/dim] Would update: {vfile.relative_to(cwd)}"
-                    )
-                else:
-                    if update_version_in_file(vfile, version):
-                        console.print(
-                            f"[green]✓[/green] Updated: {vfile.relative_to(cwd)}"
-                        )
-                        updated_files.append(vfile)
-                    else:
-                        console.print(
-                            f"[red]✗[/red] Failed to update: {vfile.relative_to(cwd)}"
-                        )
-
-            pyproject = pkg / "pyproject.toml"
-            if pyproject.exists():
-                if dry_run:
-                    console.print(
-                        f"[dim][DRY RUN][/dim] Would update dependencies in: {pyproject.relative_to(cwd)}"
-                    )
-                else:
-                    if update_pyproject_dependencies(pyproject, version):
-                        console.print(
-                            f"[green]✓[/green] Updated dependencies in: {pyproject.relative_to(cwd)}"
-                        )
-                        updated_files.append(pyproject)
-
-        if not updated_files and not dry_run:
-            console.print(
-                "[yellow]Warning:[/yellow] No __version__ attributes found to update"
-            )
-
-        if not dry_run:
-            console.print("\nSyncing workspace...")
-            run_command(["uv", "sync"])
-            console.print("[green]✓[/green] Workspace synced")
-        else:
-            console.print("[dim][DRY RUN][/dim] Would run: uv sync")
+        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
 
         if no_commit:
             console.print("\nSkipping git operations (--no-commit flag set)")
@@ -537,158 +1138,21 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                     sys.exit(1)
             console.print("[green]✓[/green] main branch up to date")
 
-        release_notes = f"Release {version}"
-        commits = ""
+        release_notes, openai_client, is_prerelease = _generate_release_notes(
+            version, tag_name, no_edit
+        )
 
-        with console.status("[cyan]Generating release notes..."):
-            try:
-                prev_bump_commit = run_command(
-                    [
-                        "git",
-                        "log",
-                        "--grep=^feat: bump versions to",
-                        "--format=%H",
-                        "-n",
-                        "2",
-                    ]
-                )
-                commits_list = prev_bump_commit.strip().split("\n")
-
-                if len(commits_list) > 1:
-                    prev_commit = commits_list[1]
-                    commit_range = f"{prev_commit}..HEAD"
-                    commits = run_command(
-                        ["git", "log", commit_range, "--pretty=format:%s"]
-                    )
-
-                    commit_lines = [
-                        line
-                        for line in commits.split("\n")
-                        if not line.startswith("feat: bump versions to")
-                    ]
-                    commits = "\n".join(commit_lines)
-                else:
-                    commit_range, commits = get_commits_from_last_tag(tag_name, version)
-
-            except subprocess.CalledProcessError:
-                commit_range, commits = get_commits_from_last_tag(tag_name, version)
-
-            github_contributors = get_github_contributors(commit_range)
-
-            if commits.strip():
-                client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-                contributors_section = ""
-                if github_contributors:
-                    contributors_section = f"\n\n## Contributors\n\n{', '.join([f'@{u}' for u in github_contributors])}"
-
-                prompt = RELEASE_NOTES_PROMPT.substitute(
-                    version=version,
-                    commits=commits,
-                    contributors_section=contributors_section,
-                )
-
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a helpful assistant that generates clear, concise release notes.",
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=0.7,
-                )
-
-                release_notes = (
-                    response.choices[0].message.content or f"Release {version}"
-                )
-
-        console.print("[green]✓[/green] Generated release notes")
-
-        if commits.strip():
-            try:
-                console.print()
-                md = Markdown(release_notes, justify="left")
-                console.print(
-                    Panel(
-                        md,
-                        title="[bold cyan]Generated Release Notes[/bold cyan]",
-                        border_style="cyan",
-                        padding=(1, 2),
-                    )
-                )
-            except Exception as e:
-                console.print(
-                    f"[yellow]Warning:[/yellow] Could not generate release notes with OpenAI: {e}"
-                )
-                console.print("Using default release notes")
-
-        if not no_edit:
-            if Confirm.ask(
-                "\n[bold]Would you like to edit the release notes?[/bold]", default=True
-            ):
-                edited_notes = click.edit(release_notes)
-                if edited_notes is not None:
-                    release_notes = edited_notes.strip()
-                    console.print("\n[green]✓[/green] Release notes updated")
-                else:
-                    console.print("\n[green]✓[/green] Using original release notes")
-            else:
-                console.print(
-                    "\n[green]✓[/green] Using generated release notes without editing"
-                )
-        else:
-            console.print(
-                "\n[green]✓[/green] Using generated release notes without editing"
-            )
+        docs_branch = _update_docs_and_create_pr(
+            cwd, version, release_notes, openai_client, is_prerelease, dry_run
+        )
+        if docs_branch:
+            _poll_pr_until_merged(docs_branch, "docs PR")
+            run_command(["git", "checkout", "main"])
+            run_command(["git", "pull"])
+            console.print("[green]✓[/green] main branch updated with docs changes")
 
         if not dry_run:
-            with console.status(f"[cyan]Creating tag {tag_name}..."):
-                try:
-                    run_command(["git", "tag", "-a", tag_name, "-m", release_notes])
-                except subprocess.CalledProcessError as e:
-                    console.print(f"[red]✗[/red] Created tag {tag_name}: {e}")
-                    sys.exit(1)
-            console.print(f"[green]✓[/green] Created tag {tag_name}")
-
-            with console.status(f"[cyan]Pushing tag {tag_name}..."):
-                try:
-                    run_command(["git", "push", "origin", tag_name])
-                except subprocess.CalledProcessError as e:
-                    console.print(f"[red]✗[/red] Pushed tag {tag_name}: {e}")
-                    sys.exit(1)
-            console.print(f"[green]✓[/green] Pushed tag {tag_name}")
-
-            is_prerelease = any(
-                indicator in version.lower()
-                for indicator in ["a", "b", "rc", "alpha", "beta", "dev"]
-            )
-
-            with console.status("[cyan]Creating GitHub Release..."):
-                try:
-                    gh_cmd = [
-                        "gh",
-                        "release",
-                        "create",
-                        tag_name,
-                        "--title",
-                        tag_name,
-                        "--notes",
-                        release_notes,
-                    ]
-                    if is_prerelease:
-                        gh_cmd.append("--prerelease")
-
-                    run_command(gh_cmd)
-                except subprocess.CalledProcessError as e:
-                    console.print(f"[red]✗[/red] Created GitHub Release: {e}")
-                    sys.exit(1)
-
-            release_type = "prerelease" if is_prerelease else "release"
-            console.print(
-                f"[green]✓[/green] Created GitHub {release_type} for {tag_name}"
-            )
+            _create_tag_and_release(tag_name, release_notes, is_prerelease)
 
         console.print(
             f"\n[green]✓[/green] Packages @ [bold]{version}[/bold] tagged successfully!"
@@ -704,8 +1168,140 @@ def tag(dry_run: bool, no_edit: bool) -> None:
         sys.exit(1)
 
 
+@click.command()
+@click.argument("version")
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be done without making changes"
+)
+@click.option("--no-edit", is_flag=True, help="Skip editing release notes")
+def release(version: str, dry_run: bool, no_edit: bool) -> None:
+    """Full release: bump versions, tag, and publish a GitHub release.
+
+    Combines bump and tag into a single workflow. Creates a version bump PR,
+    waits for it to be merged, then generates release notes, updates docs,
+    creates the tag, and publishes a GitHub release.
+
+    Args:
+        version: New version to set (e.g., 1.0.0, 1.0.0a1).
+        dry_run: Show what would be done without making changes.
+        no_edit: Skip editing release notes.
+    """
+    try:
+        check_gh_installed()
+
+        cwd = Path.cwd()
+        lib_dir = cwd / "lib"
+
+        if not dry_run:
+            console.print("Checking git status...")
+            check_git_clean()
+            console.print("[green]✓[/green] Working directory is clean")
+        else:
+            console.print("[dim][DRY RUN][/dim] Would check git status")
+
+        packages = get_packages(lib_dir)
+
+        console.print(f"\nFound {len(packages)} package(s) to update:")
+        for pkg in packages:
+            console.print(f"  - {pkg.name}")
+
+        # --- Phase 1: Bump versions ---
+        console.print(
+            f"\n[bold cyan]Phase 1: Bumping versions to {version}[/bold cyan]"
+        )
+
+        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
+
+        branch_name = f"feat/bump-version-{version}"
+        if not dry_run:
+            console.print(f"\nCreating branch {branch_name}...")
+            run_command(["git", "checkout", "-b", branch_name])
+            console.print("[green]✓[/green] Branch created")
+
+            console.print("\nCommitting changes...")
+            run_command(["git", "add", "."])
+            run_command(["git", "commit", "-m", f"feat: bump versions to {version}"])
+            console.print("[green]✓[/green] Changes committed")
+
+            console.print("\nPushing branch...")
+            run_command(["git", "push", "-u", "origin", branch_name])
+            console.print("[green]✓[/green] Branch pushed")
+
+            console.print("\nCreating pull request...")
+            bump_pr_url = run_command(
+                [
+                    "gh",
+                    "pr",
+                    "create",
+                    "--base",
+                    "main",
+                    "--title",
+                    f"feat: bump versions to {version}",
+                    "--body",
+                    "",
+                ]
+            )
+            console.print("[green]✓[/green] Pull request created")
+            console.print(f"[cyan]PR URL:[/cyan] {bump_pr_url}")
+
+            _poll_pr_until_merged(branch_name, "bump PR")
+        else:
+            console.print(f"[dim][DRY RUN][/dim] Would create branch: {branch_name}")
+            console.print(
+                f"[dim][DRY RUN][/dim] Would commit: feat: bump versions to {version}"
+            )
+            console.print(
+                "[dim][DRY RUN][/dim] Would push branch, create PR, and wait for merge"
+            )
+
+        # --- Phase 2: Tag and release ---
+        console.print(
+            f"\n[bold cyan]Phase 2: Tagging and releasing {version}[/bold cyan]"
+        )
+
+        tag_name = version
+
+        if not dry_run:
+            with console.status("[cyan]Checking out main branch..."):
+                run_command(["git", "checkout", "main"])
+            console.print("[green]✓[/green] On main branch")
+
+            with console.status("[cyan]Pulling latest changes..."):
+                run_command(["git", "pull"])
+            console.print("[green]✓[/green] main branch up to date")
+
+        release_notes, openai_client, is_prerelease = _generate_release_notes(
+            version, tag_name, no_edit
+        )
+
+        docs_branch = _update_docs_and_create_pr(
+            cwd, version, release_notes, openai_client, is_prerelease, dry_run
+        )
+        if docs_branch:
+            _poll_pr_until_merged(docs_branch, "docs PR")
+            run_command(["git", "checkout", "main"])
+            run_command(["git", "pull"])
+            console.print("[green]✓[/green] main branch updated with docs changes")
+
+        if not dry_run:
+            _create_tag_and_release(tag_name, release_notes, is_prerelease)
+            _trigger_pypi_publish(tag_name)
+
+        console.print(f"\n[green]✓[/green] Release [bold]{version}[/bold] complete!")
+
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]Error running command:[/red] {e}")
+        if e.stderr:
+            console.print(e.stderr)
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
+
+
 cli.add_command(bump)
 cli.add_command(tag)
+cli.add_command(release)
 
 
 def main() -> None:

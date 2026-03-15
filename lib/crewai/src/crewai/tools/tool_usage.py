@@ -270,6 +270,7 @@ class ToolUsage:
         result = None  # type: ignore
         should_retry = False
         available_tool = None
+        error_event_emitted = False
 
         try:
             if self.tools_handler and self.tools_handler.cache:
@@ -384,6 +385,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -396,6 +399,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -404,6 +409,7 @@ class ToolUsage:
 
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
+                    error_event_emitted = True
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
@@ -431,7 +437,7 @@ class ToolUsage:
                 result = self._format_result(result=result)
 
         finally:
-            if started_event_emitted:
+            if started_event_emitted and not error_event_emitted:
                 self.on_tool_use_finished(
                     tool=tool,
                     tool_calling=calling,
@@ -496,6 +502,7 @@ class ToolUsage:
         result = None  # type: ignore
         should_retry = False
         available_tool = None
+        error_event_emitted = False
 
         try:
             if self.tools_handler and self.tools_handler.cache:
@@ -610,6 +617,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -622,6 +631,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -630,6 +641,7 @@ class ToolUsage:
 
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
+                    error_event_emitted = True
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
@@ -657,7 +669,7 @@ class ToolUsage:
                 result = self._format_result(result=result)
 
         finally:
-            if started_event_emitted:
+            if started_event_emitted and not error_event_emitted:
                 self.on_tool_use_finished(
                     tool=tool,
                     tool_calling=calling,
@@ -884,15 +896,17 @@ class ToolUsage:
         # Attempt 4: Repair JSON
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
-            self._printer.print(
-                content=f"Repaired JSON: {repaired_input}", color="blue"
-            )
+            if self.agent and self.agent.verbose:
+                self._printer.print(
+                    content=f"Repaired JSON: {repaired_input}", color="blue"
+                )
             arguments = json.loads(repaired_input)
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
             error = f"Failed to repair JSON: {e}"
-            self._printer.print(content=error, color="red")
+            if self.agent and self.agent.verbose:
+                self._printer.print(content=error, color="red")
 
         error_message = (
             "Tool input must be a valid dictionary in JSON or Python literal format"

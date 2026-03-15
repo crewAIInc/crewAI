@@ -1,0 +1,86 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Analyze the benefits
+      of remote work briefly. Keep it concise.\n\nProvide your complete response:"}],
+      "role": "user"}], "systemInstruction": {"parts": [{"text": "You are Analyst.
+      You are an expert analyst who provides clear, structured insights.\nYour personal
+      goal is: Provide structured analysis on topics"}], "role": "user"}, "generationConfig":
+      {"stopSequences": ["\nObservation:"], "responseMimeType": "application/json",
+      "responseJsonSchema": {"description": "Structured output for analysis results.",
+      "properties": {"topic": {"description": "The topic analyzed", "title": "Topic",
+      "type": "string"}, "key_points": {"description": "Key insights from the analysis",
+      "items": {"type": "string"}, "title": "Key Points", "type": "array"}, "summary":
+      {"description": "Brief summary of findings", "title": "Summary", "type": "string"}},
+      "required": ["topic", "key_points", "summary"], "title": "AnalysisResult", "type":
+      "object", "additionalProperties": false, "propertyOrdering": ["topic", "key_points",
+      "summary"]}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1068'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"{\\n  \\\"topic\\\": \\\"Benefits
+        of Remote Work\\\",\\n  \\\"key_points\\\": [\\n    \\\"Increased Flexibility:
+        Employees can manage their schedules and work from anywhere.\\\",\\n    \\\"Cost
+        Savings: Reduced expenses for both employees (commuting, office attire) and
+        employers (office space).\\\",\\n    \\\"Improved Work-Life Balance: Better
+        integration of personal and professional life can reduce stress.\\\",\\n    \\\"Expanded
+        Talent Pool: Companies can hire from a wider geographic area.\\\",\\n    \\\"Higher
+        Productivity: Studies suggest that remote workers can be more focused and
+        productive.\\\"\\n  ],\\n  \\\"summary\\\": \\\"Remote work offers significant
+        advantages, including increased flexibility, cost savings, better work-life
+        balance, access to a broader talent pool, and potentially higher productivity
+        for employees and employers.\\\"\\n}\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        -0.17009115219116211\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        49,\n    \"candidatesTokenCount\": 160,\n    \"totalTokenCount\": 209,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 49\n
+        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 160\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash-001\",\n  \"responseId\": \"0gV8ae20E67fjMcPodGM8Q4\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 30 Jan 2026 01:13:55 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1517
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

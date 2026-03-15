@@ -98,6 +98,26 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `file_id` (string, required): The ID of the document to delete.
 
   </Accordion>
+
+  <Accordion title="microsoft_word/copy_document">
+    **Description:** Copy a document to a new location in OneDrive.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the document to copy
+    - `name` (string, optional): New name for the copied document
+    - `parent_id` (string, optional): The ID of the destination folder (defaults to root)
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/move_document">
+    **Description:** Move a document to a new location in OneDrive.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the document to move
+    - `parent_id` (string, required): The ID of the destination folder
+    - `name` (string, optional): New name for the moved document
+
+  </Accordion>
 </AccordionGroup>
 
 ## Usage Examples

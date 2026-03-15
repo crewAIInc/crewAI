@@ -104,6 +104,7 @@ class TestA2AStreamingIntegration:
             message=test_message,
             new_messages=new_messages,
             agent_card=agent_card,
+            endpoint=agent_card.url,
         )
 
         assert isinstance(result, dict)
@@ -225,6 +226,7 @@ class TestA2APushNotificationHandler:
             result_store=mock_store,
             polling_timeout=30.0,
             polling_interval=1.0,
+            endpoint=mock_agent_card.url,
         )
 
         mock_store.wait_for_result.assert_called_once_with(
@@ -287,6 +289,7 @@ class TestA2APushNotificationHandler:
             result_store=mock_store,
             polling_timeout=5.0,
             polling_interval=0.5,
+            endpoint=mock_agent_card.url,
         )
 
         assert result["status"] == TaskState.failed
@@ -317,6 +320,7 @@ class TestA2APushNotificationHandler:
             message=test_msg,
             new_messages=new_messages,
             agent_card=mock_agent_card,
+            endpoint=mock_agent_card.url,
         )
 
         assert result["status"] == TaskState.failed

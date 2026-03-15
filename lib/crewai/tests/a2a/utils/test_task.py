@@ -43,6 +43,7 @@ def mock_context() -> MagicMock:
     context.context_id = "test-context-456"
     context.get_user_input.return_value = "Test user message"
     context.message = MagicMock(spec=Message)
+    context.message.parts = []
     context.current_task = None
     return context
 

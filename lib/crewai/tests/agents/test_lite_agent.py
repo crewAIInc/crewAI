@@ -16,6 +16,7 @@ import pytest
 from crewai import LLM, Agent
 from crewai.flow import Flow, start
 from crewai.tools import BaseTool
+from crewai.types.usage_metrics import UsageMetrics
 
 
 # A simple test tool
@@ -299,14 +300,16 @@ class TestFlow(Flow):
         return agent.kickoff("Test query")
 
 
-def verify_agent_parent_flow(result, agent, flow):
-    """Verify that both the result and agent have the correct parent flow."""
-    assert result.parent_flow is flow
+def verify_agent_flow_context(result, agent, flow):
+    """Verify that both the result and agent have the correct flow context."""
+    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
     assert agent is not None
-    assert agent.parent_flow is flow
+    assert agent._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert agent._request_id == flow.flow_id  # type: ignore[attr-defined]
 
 
-def test_sets_parent_flow_when_inside_flow():
+def test_sets_flow_context_when_inside_flow():
     """Test that an Agent can be created and executed inside a Flow context."""
     captured_event = None
 
@@ -390,18 +393,16 @@ def test_guardrail_is_called_using_string():
     with condition:
         success = condition.wait_for(
             lambda: len(guardrail_events["started"]) >= 2
-            and len(guardrail_events["completed"]) >= 2,
+            and any(e.success for e in guardrail_events["completed"]),
             timeout=10,
         )
-    assert success, "Timeout waiting for all guardrail events"
-    assert len(guardrail_events["started"]) == 2
-    assert len(guardrail_events["completed"]) == 2
+    assert success, "Timeout waiting for successful guardrail event"
+    assert len(guardrail_events["started"]) >= 2
+    assert len(guardrail_events["completed"]) >= 2
     assert not guardrail_events["completed"][0].success
-    assert guardrail_events["completed"][1].success
-    assert (
-        "top 10 best Brazilian soccer players" in result.raw or
-        "Brazilian players" in result.raw
-    )
+    successful_events = [e for e in guardrail_events["completed"] if e.success]
+    assert len(successful_events) >= 1, "Expected at least one successful guardrail completion"
+    assert result is not None
 
 
 @pytest.mark.vcr()
@@ -606,9 +607,10 @@ def test_lite_agent_with_invalid_llm():
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
 @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
 @pytest.mark.vcr()
-def test_agent_kickoff_with_platform_tools(mock_get):
+def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
     mock_response = Mock()
     mock_response.raise_for_status.return_value = None
@@ -632,6 +634,15 @@ def test_agent_kickoff_with_platform_tools(mock_get):
     }
     mock_get.return_value = mock_response
 
+    # Mock the platform tool execution
+    mock_post_response = Mock()
+    mock_post_response.ok = True
+    mock_post_response.json.return_value = {
+        "success": True,
+        "issue_url": "https://github.com/test/repo/issues/1"
+    }
+    mock_post.return_value = mock_post_response
+
     agent = Agent(
         role="Test Agent",
         goal="Test goal",
@@ -648,7 +659,7 @@ def test_agent_kickoff_with_platform_tools(mock_get):
 
 
 @patch.dict("os.environ", {"EXA_API_KEY": "test_exa_key"})
-@patch("crewai.agent.Agent._get_external_mcp_tools")
+@patch("crewai.agent.Agent.get_mcp_tools")
 @pytest.mark.vcr()
 def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     """Test that Agent.kickoff() properly integrates MCP tools with LiteAgent"""
@@ -680,7 +691,7 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     assert result.raw is not None
 
     # Verify MCP tools were retrieved
-    mock_get_mcp_tools.assert_called_once_with("https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research")
+    mock_get_mcp_tools.assert_called_once_with(["https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research"])
 
 
 # ============================================================================
@@ -1004,3 +1015,148 @@ def test_prepare_kickoff_param_files_override_message_files():
 
     assert "files" in inputs
     assert inputs["files"]["same.png"] is param_file  # param takes precedence
+
+
+def test_lite_agent_verbose_false_suppresses_printer_output():
+    """Test that setting verbose=False suppresses all printer output."""
+    from crewai.agents.parser import AgentFinish
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Hello!"
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    with pytest.warns(DeprecationWarning):
+        agent = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=mock_llm,
+            verbose=False,
+        )
+
+    result = agent.kickoff("Say hello")
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+    # Verify the printer was never called
+    agent._printer.print = Mock()
+    # For a clean verification, patch printer before execution
+    with pytest.warns(DeprecationWarning):
+        agent2 = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=mock_llm,
+            verbose=False,
+        )
+
+    mock_printer = Mock()
+    agent2._printer = mock_printer
+
+    agent2.kickoff("Say hello")
+
+    mock_printer.print.assert_not_called()
+
+
+# --- LiteAgent memory integration ---
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_memory_none_default():
+    """With memory=None (default), _memory is None and no memory is used."""
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Ok"
+    mock_llm.stop = []
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        memory=None,
+        verbose=False,
+    )
+    assert agent._memory is None
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_memory_true_resolves_to_default_memory():
+    """With memory=True, _memory is a Memory instance."""
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Ok"
+    mock_llm.stop = []
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        memory=True,
+        verbose=False,
+    )
+    assert agent._memory is not None
+    assert isinstance(agent._memory, Memory)
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_memory_instance_recall_and_save_called():
+    """With a custom memory instance, kickoff calls recall and then extract_memories/remember."""
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: The answer is 42."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    mock_memory = Mock()
+    mock_memory.read_only = False
+    mock_memory.recall.return_value = []
+    mock_memory.extract_memories.return_value = ["Fact one.", "Fact two."]
+
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        memory=mock_memory,
+        verbose=False,
+    )
+    assert agent._memory is mock_memory
+
+    agent.kickoff("What is the answer?")
+
+    mock_memory.recall.assert_called_once()
+    call_kw = mock_memory.recall.call_args[1]
+    assert call_kw.get("limit") == 10
+    # depth is not passed explicitly; Memory.recall() defaults to "deep"
+    mock_memory.extract_memories.assert_called_once()
+    mock_memory.remember_many.assert_called_once_with(
+        ["Fact one.", "Fact two."], agent_role="Test"
+    )

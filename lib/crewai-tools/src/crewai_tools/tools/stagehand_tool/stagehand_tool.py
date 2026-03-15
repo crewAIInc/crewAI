@@ -1,10 +1,11 @@
 import asyncio
+import contextvars
 import json
 import os
 import re
 from typing import Any
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -137,6 +138,23 @@ class StagehandTool(BaseTool):
     - 'observe': For finding elements in a specific area
     """
     args_schema: type[BaseModel] = StagehandToolSchema
+    package_dependencies: list[str] = Field(
+        default_factory=lambda: ["stagehand<=0.5.9"]
+    )
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="BROWSERBASE_API_KEY",
+                description="API key for Browserbase services",
+                required=False,
+            ),
+            EnvVar(
+                name="BROWSERBASE_PROJECT_ID",
+                description="Project ID for Browserbase services",
+                required=False,
+            ),
+        ]
+    )
 
     # Stagehand configuration
     api_key: str | None = None
@@ -605,9 +623,12 @@ class StagehandTool(BaseTool):
                 # We're in an existing event loop, use it
                 import concurrent.futures
 
+                ctx = contextvars.copy_context()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run, self._async_run(instruction, url, command_type)
+                        ctx.run,
+                        asyncio.run,
+                        self._async_run(instruction, url, command_type),
                     )
                     result = future.result()
             else:
@@ -691,11 +712,12 @@ class StagehandTool(BaseTool):
                             if loop.is_running():
                                 import concurrent.futures
 
+                                ctx = contextvars.copy_context()
                                 with (
                                     concurrent.futures.ThreadPoolExecutor() as executor
                                 ):
                                     future = executor.submit(
-                                        asyncio.run, self._async_close()
+                                        ctx.run, asyncio.run, self._async_close()
                                     )
                                     future.result()
                             else:

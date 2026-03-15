@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from concurrent.futures import Future
+import contextvars
 from copy import copy as shallow_copy
 import datetime
 from hashlib import md5
@@ -31,6 +33,8 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.context import reset_current_task_id, set_current_task_id
+from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -496,6 +500,7 @@ class Task(BaseModel):
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
+        self.start_time = datetime.datetime.now()
         return self._execute_core(agent, context, tools)
 
     @property
@@ -520,10 +525,11 @@ class Task(BaseModel):
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
+        ctx = contextvars.copy_context()
         threading.Thread(
             daemon=True,
-            target=self._execute_task_async,
-            args=(agent, context, tools, future),
+            target=ctx.run,
+            args=(self._execute_task_async, agent, context, tools, future),
         ).start()
         return future
 
@@ -536,6 +542,7 @@ class Task(BaseModel):
     ) -> None:
         """Execute the task asynchronously with context handling."""
         try:
+            self.start_time = datetime.datetime.now()
             result = self._execute_core(agent, context, tools)
             future.set_result(result)
         except Exception as e:
@@ -548,6 +555,7 @@ class Task(BaseModel):
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task asynchronously using native async/await."""
+        self.start_time = datetime.datetime.now()
         return await self._aexecute_core(agent, context, tools)
 
     async def _aexecute_core(
@@ -557,6 +565,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task asynchronously."""
+        task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -565,8 +574,6 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
-            self.start_time = datetime.datetime.now()
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -579,16 +586,31 @@ class Task(BaseModel):
                 tools=tools,
             )
 
-            if not self._guardrails and not self._guardrail:
+            self._post_agent_execution(agent)
+
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            elif not self._guardrails and not self._guardrail:
+                raw = result
                 pydantic_output, json_output = self._export_output(result)
             else:
+                raw = result
                 pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
@@ -618,11 +640,15 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
 
             if self.callback:
-                self.callback(self.output)
+                cb_result = self.callback(self.output)
+                if inspect.isawaitable(cb_result):
+                    await cb_result
 
             crew = self.agent.crew  # type: ignore[union-attr]
             if crew and crew.task_callback and crew.task_callback != self.callback:
-                crew.task_callback(self.output)
+                cb_result = crew.task_callback(self.output)
+                if inspect.isawaitable(cb_result):
+                    await cb_result
 
             if self.output_file:
                 content = (
@@ -644,6 +670,7 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
 
     def _execute_core(
         self,
@@ -652,6 +679,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -660,8 +688,6 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
-            self.start_time = datetime.datetime.now()
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -674,16 +700,31 @@ class Task(BaseModel):
                 tools=tools,
             )
 
-            if not self._guardrails and not self._guardrail:
+            self._post_agent_execution(agent)
+
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            elif not self._guardrails and not self._guardrail:
+                raw = result
                 pydantic_output, json_output = self._export_output(result)
             else:
+                raw = result
                 pydantic_output, json_output = None, None
 
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
@@ -714,11 +755,15 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
 
             if self.callback:
-                self.callback(self.output)
+                cb_result = self.callback(self.output)
+                if inspect.iscoroutine(cb_result):
+                    asyncio.run(cb_result)
 
             crew = self.agent.crew  # type: ignore[union-attr]
             if crew and crew.task_callback and crew.task_callback != self.callback:
-                crew.task_callback(self.output)
+                cb_result = crew.task_callback(self.output)
+                if inspect.iscoroutine(cb_result):
+                    asyncio.run(cb_result)
 
             if self.output_file:
                 content = (
@@ -740,6 +785,10 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
+
+    def _post_agent_execution(self, agent: BaseAgent) -> None:
+        pass
 
     def prompt(self) -> str:
         """Generates the task prompt with optional markdown formatting.
@@ -767,10 +816,11 @@ class Task(BaseModel):
             if files:
                 supported_types: list[str] = []
                 if self.agent.llm and self.agent.llm.supports_multimodal():
-                    provider = getattr(self.agent.llm, "provider", None) or getattr(
-                        self.agent.llm, "model", "openai"
+                    provider: str = str(
+                        getattr(self.agent.llm, "provider", None)
+                        or getattr(self.agent.llm, "model", "openai")
                     )
-                    api = getattr(self.agent.llm, "api", None)
+                    api: str | None = getattr(self.agent.llm, "api", None)
                     supported_types = get_supported_content_types(provider, api)
 
                 def is_auto_injected(content_type: str) -> bool:
@@ -862,6 +912,11 @@ Follow these guidelines:
         except ValueError as e:
             raise ValueError(f"Error interpolating description: {e!s}") from e
 
+        self.description = process_content(self.description, {"task": self})
+        self._original_expected_output = process_content(
+            self._original_expected_output, {"task": self}
+        )
+
         try:
             self.expected_output = interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
@@ -887,10 +942,11 @@ Follow these guidelines:
             try:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
-                _printer.print(
-                    f"An error occurred while parsing crew chat messages: {e}",
-                    color="red",
-                )
+                if self.agent and self.agent.verbose:
+                    _printer.print(
+                        f"An error occurred while parsing crew chat messages: {e}",
+                        color="red",
+                    )
                 raise
 
             conversation_history = "\n".join(
@@ -1132,11 +1188,12 @@ Follow these guidelines:
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
-            printer = Printer()
-            printer.print(
-                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
-                color="yellow",
-            )
+            if agent and agent.verbose:
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    color="yellow",
+                )
 
             # Regenerate output from agent
             result = agent.execute_task(
@@ -1229,11 +1286,12 @@ Follow these guidelines:
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
-            printer = Printer()
-            printer.print(
-                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
-                color="yellow",
-            )
+            if agent and agent.verbose:
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    color="yellow",
+                )
 
             result = await agent.aexecute_task(
                 task=self,

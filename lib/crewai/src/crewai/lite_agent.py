@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from functools import wraps
 import inspect
 import json
+import time
+from types import MethodType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -30,6 +33,8 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
+    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
+
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -45,9 +50,19 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionStartedEvent,
 )
 from crewai.events.types.logging_events import AgentLogsExecutionEvent
+from crewai.events.types.memory_events import (
+    MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
+    MemoryRetrievalStartedEvent,
+)
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.hooks.llm_hooks import get_after_llm_call_hooks, get_before_llm_call_hooks
-from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
+from crewai.hooks.types import (
+    AfterLLMCallHookCallable,
+    AfterLLMCallHookType,
+    BeforeLLMCallHookCallable,
+    BeforeLLMCallHookType,
+)
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
@@ -72,16 +87,91 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
-    generate_model_description,
 )
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.types import LLMMessage
+
+
+def _kickoff_with_a2a_support(
+    agent: LiteAgent,
+    original_kickoff: Callable[..., LiteAgentOutput],
+    messages: str | list[LLMMessage],
+    response_format: type[BaseModel] | None,
+    input_files: dict[str, FileInput] | None,
+    extension_registry: Any,
+) -> LiteAgentOutput:
+    """Wrap kickoff with A2A delegation using Task adapter.
+
+    Args:
+        agent: The LiteAgent instance.
+        original_kickoff: The original kickoff method.
+        messages: Input messages.
+        response_format: Optional response format.
+        input_files: Optional input files.
+        extension_registry: A2A extension registry.
+
+    Returns:
+        LiteAgentOutput from either local execution or A2A delegation.
+    """
+    from crewai.a2a.utils.response_model import get_a2a_agents_and_response_model
+    from crewai.a2a.wrapper import _execute_task_with_a2a
+    from crewai.task import Task
+
+    a2a_agents, agent_response_model = get_a2a_agents_and_response_model(agent.a2a)
+
+    if not a2a_agents:
+        return original_kickoff(messages, response_format, input_files)
+
+    if isinstance(messages, str):
+        description = messages
+    else:
+        content = next(
+            (m["content"] for m in reversed(messages) if m["role"] == "user"),
+            None,
+        )
+        description = content if isinstance(content, str) else ""
+
+    if not description:
+        return original_kickoff(messages, response_format, input_files)
+
+    fake_task = Task(
+        description=description,
+        agent=agent,
+        expected_output="Result from A2A delegation",
+        input_files=input_files or {},
+    )
+
+    def task_to_kickoff_adapter(
+        self: Any, task: Task, context: str | None, tools: list[Any] | None
+    ) -> str:
+        result = original_kickoff(messages, response_format, input_files)
+        return result.raw
+
+    result_str = _execute_task_with_a2a(
+        self=agent,  # type: ignore[arg-type]
+        a2a_agents=a2a_agents,
+        original_fn=task_to_kickoff_adapter,
+        task=fake_task,
+        agent_response_model=agent_response_model,
+        context=None,
+        tools=None,
+        extension_registry=extension_registry,
+    )
+
+    return LiteAgentOutput(
+        raw=result_str,
+        pydantic=None,
+        agent_role=agent.role,
+        usage_metrics=None,
+        messages=[],
+    )
 
 
 class LiteAgent(FlowTrackable, BaseModel):
@@ -154,6 +244,21 @@ class LiteAgent(FlowTrackable, BaseModel):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
+    a2a: (
+        list[A2AConfig | A2AServerConfig | A2AClientConfig]
+        | A2AConfig
+        | A2AServerConfig
+        | A2AClientConfig
+        | None
+    ) = Field(
+        default=None,
+        description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. "
+        "Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of configurations.",
+    )
+    memory: bool | Any | None = Field(
+        default=None,
+        description="If True, use default Memory(). If Memory/MemoryScope/MemorySlice, use it for recall and remember.",
+    )
     tools_results: list[dict[str, Any]] = Field(
         default_factory=list, description="Results of the tools used by the agent."
     )
@@ -170,12 +275,13 @@ class LiteAgent(FlowTrackable, BaseModel):
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
-    _before_llm_call_hooks: list[BeforeLLMCallHookType] = PrivateAttr(
-        default_factory=get_before_llm_call_hooks
+    _before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
+        PrivateAttr(default_factory=get_before_llm_call_hooks)
     )
-    _after_llm_call_hooks: list[AfterLLMCallHookType] = PrivateAttr(
-        default_factory=get_after_llm_call_hooks
+    _after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = (
+        PrivateAttr(default_factory=get_after_llm_call_hooks)
     )
+    _memory: Any = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def emit_deprecation_warning(self) -> Self:
@@ -210,6 +316,52 @@ class LiteAgent(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
+    def setup_a2a_support(self) -> Self:
+        """Setup A2A extensions and server methods if a2a config exists."""
+        if self.a2a:
+            from crewai.a2a.config import A2AClientConfig, A2AConfig
+            from crewai.a2a.extensions.registry import (
+                create_extension_registry_from_config,
+            )
+            from crewai.a2a.utils.agent_card import inject_a2a_server_methods
+
+            configs = self.a2a if isinstance(self.a2a, list) else [self.a2a]
+            client_configs = [
+                config
+                for config in configs
+                if isinstance(config, (A2AConfig, A2AClientConfig))
+            ]
+
+            extension_registry = (
+                create_extension_registry_from_config(client_configs)
+                if client_configs
+                else create_extension_registry_from_config([])
+            )
+            extension_registry.inject_all_tools(self)  # type: ignore[arg-type]
+            inject_a2a_server_methods(self)  # type: ignore[arg-type]
+
+            original_kickoff = self.kickoff
+
+            @wraps(original_kickoff)
+            def kickoff_with_a2a(
+                messages: str | list[LLMMessage],
+                response_format: type[BaseModel] | None = None,
+                input_files: dict[str, FileInput] | None = None,
+            ) -> LiteAgentOutput:
+                return _kickoff_with_a2a_support(
+                    self,
+                    original_kickoff,
+                    messages,
+                    response_format,
+                    input_files,
+                    extension_registry,
+                )
+
+            object.__setattr__(self, "kickoff", MethodType(kickoff_with_a2a, self))
+
+        return self
+
+    @model_validator(mode="after")
     def ensure_guardrail_is_callable(self) -> Self:
         if callable(self.guardrail):
             self._guardrail = self.guardrail
@@ -225,6 +377,19 @@ class LiteAgent(FlowTrackable, BaseModel):
                 cast(object, LLMGuardrail(description=self.guardrail, llm=self.llm)),
             )
 
+        return self
+
+    @model_validator(mode="after")
+    def resolve_memory(self) -> Self:
+        """Resolve memory field to _memory: default Memory() when True, else user instance or None."""
+        if self.memory is True:
+            from crewai.memory.unified_memory import Memory
+
+            object.__setattr__(self, "_memory", Memory())
+        elif self.memory is not None and self.memory is not False:
+            object.__setattr__(self, "_memory", self.memory)
+        else:
+            object.__setattr__(self, "_memory", None)
         return self
 
     @field_validator("guardrail", mode="before")
@@ -280,12 +445,16 @@ class LiteAgent(FlowTrackable, BaseModel):
         return self.role
 
     @property
-    def before_llm_call_hooks(self) -> list[BeforeLLMCallHookType]:
+    def before_llm_call_hooks(
+        self,
+    ) -> list[BeforeLLMCallHookType | BeforeLLMCallHookCallable]:
         """Get the before_llm_call hooks for this agent."""
         return self._before_llm_call_hooks
 
     @property
-    def after_llm_call_hooks(self) -> list[AfterLLMCallHookType]:
+    def after_llm_call_hooks(
+        self,
+    ) -> list[AfterLLMCallHookType | AfterLLMCallHookCallable]:
         """Get the after_llm_call hooks for this agent."""
         return self._after_llm_call_hooks
 
@@ -319,6 +488,20 @@ class LiteAgent(FlowTrackable, BaseModel):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        # Inject memory tools once if memory is configured (mirrors Agent._prepare_kickoff)
+        if self._memory is not None:
+            from crewai.tools.memory_tools import create_memory_tools
+            from crewai.utilities.string_utils import sanitize_tool_name
+
+            existing_names = {sanitize_tool_name(t.name) for t in self._parsed_tools}
+            memory_tools = [
+                mt
+                for mt in create_memory_tools(self._memory)
+                if sanitize_tool_name(mt.name) not in existing_names
+            ]
+            if memory_tools:
+                self._parsed_tools = self._parsed_tools + parse_tools(memory_tools)
+
         # Create agent info for event emission
         agent_info = {
             "id": self.id,
@@ -338,17 +521,19 @@ class LiteAgent(FlowTrackable, BaseModel):
             self._messages = self._format_messages(
                 messages, response_format=response_format, input_files=input_files
             )
+            self._inject_memory_context()
 
             return self._execute_core(
                 agent_info=agent_info, response_format=response_format
             )
 
         except Exception as e:
-            self._printer.print(
-                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                color="red",
-            )
-            handle_unknown_error(self._printer, e)
+            if self.verbose:
+                self._printer.print(
+                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                    color="red",
+                )
+            handle_unknown_error(self._printer, e, verbose=self.verbose)
             # Emit error event
             crewai_event_bus.emit(
                 self,
@@ -358,6 +543,77 @@ class LiteAgent(FlowTrackable, BaseModel):
                 ),
             )
             raise e
+
+    def _get_last_user_content(self) -> str:
+        """Get the last user message content from _messages for recall/input."""
+        for msg in reversed(self._messages):
+            if msg.get("role") == "user":
+                content = msg.get("content")
+                return content if isinstance(content, str) else ""
+        return ""
+
+    def _inject_memory_context(self) -> None:
+        """Recall relevant memories and append to the system message. No-op if _memory is None."""
+        if self._memory is None:
+            return
+        query = self._get_last_user_content()
+        crewai_event_bus.emit(
+            self,
+            event=MemoryRetrievalStartedEvent(
+                task_id=None,
+                source_type="lite_agent",
+            ),
+        )
+        start_time = time.time()
+        memory_block = ""
+        try:
+            matches = self._memory.recall(query, limit=10)
+            if matches:
+                memory_block = "Relevant memories:\n" + "\n".join(
+                    f"- {m.record.content}" for m in matches
+                )
+            if memory_block:
+                formatted = self.i18n.slice("memory").format(memory=memory_block)
+                if self._messages and self._messages[0].get("role") == "system":
+                    existing_content = self._messages[0].get("content", "")
+                    if not isinstance(existing_content, str):
+                        existing_content = ""
+                    self._messages[0]["content"] = existing_content + "\n\n" + formatted
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalCompletedEvent(
+                    task_id=None,
+                    memory_content=memory_block,
+                    retrieval_time_ms=(time.time() - start_time) * 1000,
+                    source_type="lite_agent",
+                ),
+            )
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalFailedEvent(
+                    task_id=None,
+                    source_type="lite_agent",
+                    error=str(e),
+                ),
+            )
+
+    def _save_to_memory(self, output_text: str) -> None:
+        """Extract discrete memories from the run and remember each. No-op if _memory is None or read-only."""
+        if self._memory is None or self._memory.read_only:
+            return
+        input_str = self._get_last_user_content() or "User request"
+        try:
+            raw = f"Input: {input_str}\nAgent: {self.role}\nResult: {output_text}"
+            extracted = self._memory.extract_memories(raw)
+            if extracted:
+                self._memory.remember_many(extracted, agent_role=self.role)
+        except Exception as e:
+            if self.verbose:
+                self._printer.print(
+                    content=f"Failed to save to memory: {e}",
+                    color="yellow",
+                )
 
     def _execute_core(
         self, agent_info: dict[str, Any], response_format: type[BaseModel] | None = None
@@ -373,11 +629,20 @@ class LiteAgent(FlowTrackable, BaseModel):
         )
 
         # Execute the agent using invoke loop
-        agent_finish = self._invoke_loop()
+        active_response_format = response_format or self.response_format
+        agent_finish = self._invoke_loop(response_model=active_response_format)
+        if self._memory is not None:
+            output_text = (
+                agent_finish.output.model_dump_json()
+                if isinstance(agent_finish.output, BaseModel)
+                else agent_finish.output
+            )
+            self._save_to_memory(output_text)
         formatted_result: BaseModel | None = None
 
-        active_response_format = response_format or self.response_format
-        if active_response_format:
+        if isinstance(agent_finish.output, BaseModel):
+            formatted_result = agent_finish.output
+        elif active_response_format:
             try:
                 model_schema = generate_model_description(active_response_format)
                 schema = json.dumps(model_schema, indent=2)
@@ -396,10 +661,11 @@ class LiteAgent(FlowTrackable, BaseModel):
                 if isinstance(result, BaseModel):
                     formatted_result = result
             except ConverterError as e:
-                self._printer.print(
-                    content=f"Failed to parse output into response format after retries: {e.message}",
-                    color="yellow",
-                )
+                if self.verbose:
+                    self._printer.print(
+                        content=f"Failed to parse output into response format after retries: {e.message}",
+                        color="yellow",
+                    )
 
         # Calculate token usage metrics
         if isinstance(self.llm, BaseLLM):
@@ -408,8 +674,13 @@ class LiteAgent(FlowTrackable, BaseModel):
             usage_metrics = self._token_process.get_summary()
 
         # Create output
+        raw_output = (
+            agent_finish.output.model_dump_json()
+            if isinstance(agent_finish.output, BaseModel)
+            else agent_finish.output
+        )
         output = LiteAgentOutput(
-            raw=agent_finish.output,
+            raw=raw_output,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
@@ -586,9 +857,14 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         return formatted_messages
 
-    def _invoke_loop(self) -> AgentFinish:
+    def _invoke_loop(
+        self, response_model: type[BaseModel] | None = None
+    ) -> AgentFinish:
         """
         Run the agent's thought process until it reaches a conclusion or max iterations.
+
+        Args:
+            response_model: Optional Pydantic model for native structured output.
 
         Returns:
             AgentFinish: The final result of the agent execution.
@@ -605,6 +881,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
+                        verbose=self.verbose,
                     )
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
@@ -617,12 +894,22 @@ class LiteAgent(FlowTrackable, BaseModel):
                         printer=self._printer,
                         from_agent=self,
                         executor_context=self,
+                        response_model=response_model,
+                        verbose=self.verbose,
                     )
 
                 except Exception as e:
                     raise e
 
-                formatted_answer = process_llm_response(answer, self.use_stop_words)
+                if isinstance(answer, BaseModel):
+                    formatted_answer = AgentFinish(
+                        thought="", output=answer, text=answer.model_dump_json()
+                    )
+                    break
+
+                formatted_answer = process_llm_response(
+                    cast(str, answer), self.use_stop_words
+                )
 
                 if isinstance(formatted_answer, AgentAction):
                     try:
@@ -645,17 +932,19 @@ class LiteAgent(FlowTrackable, BaseModel):
                     )
 
                 self._append_message(formatted_answer.text, role="assistant")
-            except OutputParserError as e:  # noqa: PERF203
-                self._printer.print(
-                    content="Failed to parse LLM output. Retrying...",
-                    color="yellow",
-                )
+            except OutputParserError as e:
+                if self.verbose:
+                    self._printer.print(
+                        content="Failed to parse LLM output. Retrying...",
+                        color="yellow",
+                    )
                 formatted_answer = handle_output_parser_exception(
                     e=e,
                     messages=self._messages,
                     iterations=self._iterations,
                     log_error_after=3,
                     printer=self._printer,
+                    verbose=self.verbose,
                 )
 
             except Exception as e:
@@ -670,9 +959,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
                         i18n=self.i18n,
+                        verbose=self.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.verbose)
                 raise e
 
             finally:
@@ -702,3 +992,21 @@ class LiteAgent(FlowTrackable, BaseModel):
     ) -> None:
         """Append a message to the message list with the given role."""
         self._messages.append(format_message_for_llm(text, role=role))
+
+
+try:
+    from crewai.a2a.config import (
+        A2AClientConfig as _A2AClientConfig,
+        A2AConfig as _A2AConfig,
+        A2AServerConfig as _A2AServerConfig,
+    )
+
+    LiteAgent.model_rebuild(
+        _types_namespace={
+            "A2AConfig": _A2AConfig,
+            "A2AClientConfig": _A2AClientConfig,
+            "A2AServerConfig": _A2AServerConfig,
+        }
+    )
+except ImportError:
+    pass

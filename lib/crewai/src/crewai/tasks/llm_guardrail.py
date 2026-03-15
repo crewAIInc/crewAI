@@ -1,11 +1,22 @@
+import asyncio
+from collections.abc import Coroutine
+import inspect
 from typing import Any
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeIs
 
 from crewai.agent import Agent
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
+
+
+def _is_coroutine(
+    obj: LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput],
+) -> TypeIs[Coroutine[Any, Any, LiteAgentOutput]]:
+    """Check if obj is a coroutine for type narrowing."""
+    return inspect.iscoroutine(obj)
 
 
 class LLMGuardrailResult(BaseModel):
@@ -62,7 +73,10 @@ class LLMGuardrail:
         - If the Task result complies with the guardrail, saying that is valid
         """
 
-        return agent.kickoff(query, response_format=LLMGuardrailResult)
+        kickoff_result = agent.kickoff(query, response_format=LLMGuardrailResult)
+        if _is_coroutine(kickoff_result):
+            return asyncio.run(kickoff_result)
+        return kickoff_result
 
     def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
         """Validates the output of a task based on specified criteria.

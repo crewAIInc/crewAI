@@ -62,7 +62,10 @@ class Converter(OutputConverter):
                     ],
                     response_model=self.model,
                 )
-                result = self.model.model_validate_json(response)
+                if isinstance(response, BaseModel):
+                    result = response
+                else:
+                    result = self.model.model_validate_json(response)
             else:
                 response = self.llm.call(
                     [
@@ -205,10 +208,11 @@ def convert_to_model(
         )
 
     except Exception as e:
-        Printer().print(
-            content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
-            color="red",
-        )
+        if agent and getattr(agent, "verbose", True):
+            Printer().print(
+                content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
+                color="red",
+            )
         return result
 
 
@@ -262,10 +266,11 @@ def handle_partial_json(
         except ValidationError:
             raise
         except Exception as e:
-            Printer().print(
-                content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
-                color="red",
-            )
+            if agent and getattr(agent, "verbose", True):
+                Printer().print(
+                    content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
+                    color="red",
+                )
 
     return convert_with_instructions(
         result=result,
@@ -323,10 +328,11 @@ def convert_with_instructions(
     )
 
     if isinstance(exported_result, ConverterError):
-        Printer().print(
-            content=f"Failed to convert result to model: {exported_result}",
-            color="red",
-        )
+        if agent and getattr(agent, "verbose", True):
+            Printer().print(
+                content=f"Failed to convert result to model: {exported_result}",
+                color="red",
+            )
         return result
 
     return exported_result

@@ -178,3 +178,39 @@ class TestTriggeredByScope:
         except ValueError:
             pass
         assert get_triggering_event_id() is None
+
+
+def test_agent_scope_preserved_after_tool_error_event() -> None:
+    from crewai.events import crewai_event_bus
+    from crewai.events.types.tool_usage_events import (
+        ToolUsageErrorEvent,
+        ToolUsageStartedEvent,
+    )
+
+    push_event_scope("crew-1", "crew_kickoff_started")
+    push_event_scope("task-1", "task_started")
+    push_event_scope("agent-1", "agent_execution_started")
+
+    crewai_event_bus.emit(
+        None,
+        ToolUsageStartedEvent(
+            tool_name="test_tool",
+            tool_args={},
+            agent_key="test_agent",
+        )
+    )
+
+    crewai_event_bus.emit(
+        None,
+        ToolUsageErrorEvent(
+            tool_name="test_tool",
+            tool_args={},
+            agent_key="test_agent",
+            error=ValueError("test error"),
+        )
+    )
+
+    crewai_event_bus.flush()
+
+    assert get_current_parent_id() == "agent-1"
+

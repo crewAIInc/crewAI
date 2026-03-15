@@ -1647,3 +1647,409 @@ class TestFlowAkickoff:
 
         assert execution_order == ["begin", "route", "path_a"]
         assert result == "path_a_result"
+
+
+def test_cyclic_flow_or_listeners_fire_every_iteration():
+    """Test that or_() listeners reset between cycle iterations through a router.
+
+    Regression test for a bug where _fired_or_listeners was not cleared when
+    cycles loop through a router/listener instead of a @start method, causing
+    or_() listeners to permanently suppress after the first iteration.
+
+    Pattern: router classifies → routes to ONE of several handlers → or_()
+    merge downstream → cycle back. Only one handler fires per iteration, but
+    the or_() merge must still fire every time.
+    """
+    execution_order = []
+
+    class CyclicOrFlow(Flow):
+        iteration = 0
+        max_iterations = 3
+
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(or_(begin, "loop_back"))
+        def route(self):
+            self.iteration += 1
+            execution_order.append(f"route_{self.iteration}")
+            if self.iteration <= self.max_iterations:
+                # Alternate between handlers on each iteration
+                return "type_a" if self.iteration % 2 == 1 else "type_b"
+            return "done"
+
+        @listen("type_a")
+        def handler_a(self):
+            execution_order.append(f"handler_a_{self.iteration}")
+
+        @listen("type_b")
+        def handler_b(self):
+            execution_order.append(f"handler_b_{self.iteration}")
+
+        # This or_() listener must fire on EVERY iteration, not just the first
+        @listen(or_(handler_a, handler_b))
+        def merge(self):
+            execution_order.append(f"merge_{self.iteration}")
+
+        @listen(merge)
+        def loop_back(self):
+            execution_order.append(f"loop_back_{self.iteration}")
+
+    flow = CyclicOrFlow()
+    flow.kickoff()
+
+    # merge must have fired once per iteration (3 times total)
+    merge_events = [e for e in execution_order if e.startswith("merge_")]
+    assert len(merge_events) == 3, (
+        f"or_() listener 'merge' should fire every iteration, "
+        f"got {len(merge_events)} fires: {execution_order}"
+    )
+
+    # loop_back must have also fired every iteration
+    loop_back_events = [e for e in execution_order if e.startswith("loop_back_")]
+    assert len(loop_back_events) == 3, (
+        f"'loop_back' should fire every iteration, "
+        f"got {len(loop_back_events)} fires: {execution_order}"
+    )
+
+    # Verify alternating handlers
+    handler_a_events = [e for e in execution_order if e.startswith("handler_a_")]
+    handler_b_events = [e for e in execution_order if e.startswith("handler_b_")]
+    assert len(handler_a_events) == 2  # iterations 1 and 3
+    assert len(handler_b_events) == 1  # iteration 2
+
+
+def test_cyclic_flow_multiple_or_listeners_fire_every_iteration():
+    """Test that multiple or_() listeners all reset between cycle iterations.
+
+    Mirrors a real-world pattern: a router classifies messages, handlers process
+    them, then both a 'send' step (or_ on handlers) and a 'store' step (or_ on
+    router outputs) must fire on every loop iteration.
+    """
+    execution_order = []
+
+    class MultiOrCyclicFlow(Flow):
+        iteration = 0
+        max_iterations = 3
+
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(or_(begin, "capture"))
+        def classify(self):
+            self.iteration += 1
+            execution_order.append(f"classify_{self.iteration}")
+            if self.iteration <= self.max_iterations:
+                return "type_a"
+            return "exit"
+
+        @listen("type_a")
+        def handle_type_a(self):
+            execution_order.append(f"handle_a_{self.iteration}")
+
+        # or_() listener on router output strings — must fire every iteration
+        @listen(or_("type_a", "type_b", "type_c"))
+        def store(self):
+            execution_order.append(f"store_{self.iteration}")
+
+        # or_() listener on handler methods — must fire every iteration
+        @listen(or_(handle_type_a,))
+        def send(self):
+            execution_order.append(f"send_{self.iteration}")
+
+        @listen("send")
+        def capture(self):
+            execution_order.append(f"capture_{self.iteration}")
+
+    flow = MultiOrCyclicFlow()
+    flow.kickoff()
+
+    for method in ["store", "send", "capture"]:
+        events = [e for e in execution_order if e.startswith(f"{method}_")]
+        assert len(events) == 3, (
+            f"'{method}' should fire every iteration, "
+            f"got {len(events)} fires: {execution_order}"
+        )
+
+
+def test_cyclic_flow_works_with_persist_and_id_input():
+    """Cyclic router flows must complete all iterations when persistence is
+    enabled and 'id' is passed in inputs.
+
+    Regression test: passing ``inputs={"id": ...}`` with a persistence backend
+    previously caused ``_is_execution_resuming`` to be set even though
+    ``_completed_methods`` was empty.  The flag was never cleared during
+    execution, so on the second cycle iteration the resumption path in
+    ``_execute_single_listener`` short-circuited the router with ``(None, None)``
+    and the flow silently terminated after a single iteration.
+    """
+    from uuid import uuid4
+
+    from crewai.flow.persistence import SQLiteFlowPersistence
+
+    execution_order: list[str] = []
+
+    class PersistCyclicFlow(Flow):
+        iteration: int = 0
+        max_iterations: int = 3
+
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(or_(begin, "capture"))
+        def classify(self):
+            self.iteration += 1
+            execution_order.append(f"classify_{self.iteration}")
+            if self.iteration <= self.max_iterations:
+                return "type_a"
+            return "exit"
+
+        @listen("type_a")
+        def handle(self):
+            execution_order.append(f"handle_{self.iteration}")
+
+        @listen(or_(handle,))
+        def send(self):
+            execution_order.append(f"send_{self.iteration}")
+
+        @listen("send")
+        def capture(self):
+            execution_order.append(f"capture_{self.iteration}")
+
+        @listen("exit")
+        def finish(self):
+            execution_order.append("finish")
+
+    persistence = SQLiteFlowPersistence()
+    flow = PersistCyclicFlow(persistence=persistence)
+    flow.kickoff(inputs={"id": str(uuid4())})
+
+    assert "finish" in execution_order, (
+        f"Flow should have reached 'finish', got: {execution_order}"
+    )
+    # The router fires max_iterations+1 times (3 cycles + the final "exit")
+    classify_events = [e for e in execution_order if e.startswith("classify_")]
+    assert len(classify_events) == 4, (
+        f"'classify' should fire 4 times (3 cycles + exit), "
+        f"got {len(classify_events)}: {execution_order}"
+    )
+    # The other methods fire once per "type_a" cycle
+    for method in ["handle", "send", "capture"]:
+        events = [e for e in execution_order if e.startswith(f"{method}_")]
+        assert len(events) == 3, (
+            f"'{method}' should fire 3 times, "
+            f"got {len(events)}: {execution_order}"
+        )
+
+
+@pytest.mark.timeout(5)
+def test_self_listening_method_does_not_loop():
+    """A method whose @listen label matches its own name must not loop forever.
+
+    Without the guard, 'process' re-triggers itself on every completion,
+    running indefinitely (timeout → FAIL).  The fix caps method calls
+    and raises RecursionError (PASS).
+    """
+
+    class SelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "process"
+
+        @router(begin)
+        def route(self):
+            return "process"
+
+        @listen("process")
+        def process(self):
+            pass
+
+    flow = SelfListenFlow()
+    with pytest.raises(RecursionError, match="infinite loop"):
+        flow.kickoff()
+
+
+def test_or_condition_self_listen_fires_once():
+    """or_() with a self-referencing label only fires once due to or_() guard."""
+    call_count = 0
+
+    class OrSelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "process"
+
+        @router(begin)
+        def route(self):
+            return "process"
+
+        @listen(or_("other_trigger", "process"))
+        def process(self):
+            nonlocal call_count
+            call_count += 1
+
+    flow = OrSelfListenFlow()
+    flow.kickoff()
+    assert call_count == 1
+
+class ListState(BaseModel):
+    items: list = []
+
+
+class DictState(BaseModel):
+    data: dict = {}
+
+
+class _ListFlow(Flow[ListState]):
+    @start()
+    def populate(self):
+        self.state.items = [3, 1, 4, 1, 5, 9, 2, 6]
+
+
+class _DictFlow(Flow[DictState]):
+    @start()
+    def populate(self):
+        self.state.data = {"a": 1, "b": 2, "c": 3}
+
+
+def _make_list_flow():
+    flow = _ListFlow()
+    flow.kickoff()
+    return flow
+
+
+def _make_dict_flow():
+    flow = _DictFlow()
+    flow.kickoff()
+    return flow
+
+
+def test_locked_list_proxy_index():
+    flow = _make_list_flow()
+    assert flow.state.items.index(4) == 2
+    assert flow.state.items.index(1, 2) == 3
+
+
+def test_locked_list_proxy_index_missing_raises():
+    flow = _make_list_flow()
+    with pytest.raises(ValueError):
+        flow.state.items.index(999)
+
+
+def test_locked_list_proxy_count():
+    flow = _make_list_flow()
+    assert flow.state.items.count(1) == 2
+    assert flow.state.items.count(999) == 0
+
+
+def test_locked_list_proxy_sort():
+    flow = _make_list_flow()
+    flow.state.items.sort()
+    assert list(flow.state.items) == [1, 1, 2, 3, 4, 5, 6, 9]
+
+
+def test_locked_list_proxy_sort_reverse():
+    flow = _make_list_flow()
+    flow.state.items.sort(reverse=True)
+    assert list(flow.state.items) == [9, 6, 5, 4, 3, 2, 1, 1]
+
+
+def test_locked_list_proxy_sort_key():
+    flow = _make_list_flow()
+    flow.state.items.sort(key=lambda x: -x)
+    assert list(flow.state.items) == [9, 6, 5, 4, 3, 2, 1, 1]
+
+
+def test_locked_list_proxy_reverse():
+    flow = _make_list_flow()
+    original = list(flow.state.items)
+    flow.state.items.reverse()
+    assert list(flow.state.items) == list(reversed(original))
+
+
+def test_locked_list_proxy_copy():
+    flow = _make_list_flow()
+    copied = flow.state.items.copy()
+    assert copied == [3, 1, 4, 1, 5, 9, 2, 6]
+    assert isinstance(copied, list)
+    copied.append(999)
+    assert 999 not in flow.state.items
+
+
+def test_locked_list_proxy_add():
+    flow = _make_list_flow()
+    result = flow.state.items + [10, 11]
+    assert result == [3, 1, 4, 1, 5, 9, 2, 6, 10, 11]
+    assert len(flow.state.items) == 8
+
+
+def test_locked_list_proxy_radd():
+    flow = _make_list_flow()
+    result = [0] + flow.state.items
+    assert result[0] == 0
+    assert len(result) == 9
+
+
+def test_locked_list_proxy_iadd():
+    flow = _make_list_flow()
+    flow.state.items += [10]
+    assert 10 in flow.state.items
+    # Verify no deadlock: mutations must still work after +=
+    flow.state.items.append(99)
+    assert 99 in flow.state.items
+
+
+def test_locked_list_proxy_mul():
+    flow = _make_list_flow()
+    result = flow.state.items * 2
+    assert len(result) == 16
+
+
+def test_locked_list_proxy_rmul():
+    flow = _make_list_flow()
+    result = 2 * flow.state.items
+    assert len(result) == 16
+
+
+def test_locked_list_proxy_reversed():
+    flow = _make_list_flow()
+    original = list(flow.state.items)
+    assert list(reversed(flow.state.items)) == list(reversed(original))
+
+
+def test_locked_dict_proxy_copy():
+    flow = _make_dict_flow()
+    copied = flow.state.data.copy()
+    assert copied == {"a": 1, "b": 2, "c": 3}
+    assert isinstance(copied, dict)
+    copied["z"] = 99
+    assert "z" not in flow.state.data
+
+
+def test_locked_dict_proxy_or():
+    flow = _make_dict_flow()
+    result = flow.state.data | {"d": 4}
+    assert result == {"a": 1, "b": 2, "c": 3, "d": 4}
+    assert "d" not in flow.state.data
+
+
+def test_locked_dict_proxy_ror():
+    flow = _make_dict_flow()
+    result = {"z": 0} | flow.state.data
+    assert result == {"z": 0, "a": 1, "b": 2, "c": 3}
+
+
+def test_locked_dict_proxy_ior():
+    flow = _make_dict_flow()
+    flow.state.data |= {"d": 4}
+    assert flow.state.data["d"] == 4
+    # Verify no deadlock: mutations must still work after |=
+    flow.state.data["e"] = 5
+    assert flow.state.data["e"] == 5
+
+
+def test_locked_dict_proxy_reversed():
+    flow = _make_dict_flow()
+    assert list(reversed(flow.state.data)) == ["c", "b", "a"]

@@ -7,11 +7,15 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Generator
+from contextlib import contextmanager
+import contextvars
 from datetime import datetime
 import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
+import uuid
 
 from pydantic import BaseModel
 
@@ -22,6 +26,7 @@ from crewai.events.types.llm_events import (
     LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
+    LLMThinkingChunkEvent,
 )
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
@@ -49,6 +54,32 @@ if TYPE_CHECKING:
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+
+_current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_current_call_id", default=None
+)
+
+
+@contextmanager
+def llm_call_context() -> Generator[str, None, None]:
+    """Context manager that establishes an LLM call scope with a unique call_id."""
+    call_id = str(uuid.uuid4())
+    token = _current_call_id.set(call_id)
+    try:
+        yield call_id
+    finally:
+        _current_call_id.reset(token)
+
+
+def get_current_call_id() -> str:
+    """Get current call_id from context"""
+    call_id = _current_call_id.get()
+    if call_id is None:
+        logging.warning(
+            "LLM event emitted outside call context - generating fallback call_id"
+        )
+        return str(uuid.uuid4())
+    return call_id
 
 
 class BaseLLM(ABC):
@@ -338,9 +369,6 @@ class BaseLLM(ABC):
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
 
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -351,6 +379,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -374,6 +403,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -384,9 +414,6 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call failed event."""
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMCallFailedEvent(
@@ -394,6 +421,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -404,6 +432,7 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Emit stream chunk event.
 
@@ -413,10 +442,8 @@ class BaseLLM(ABC):
             from_agent: The agent that initiated the call.
             tool_call: Tool call information if this is a tool call chunk.
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
+            response_id: Unique ID for a particular LLM response, chunks have same response_id.
         """
-        if not hasattr(crewai_event_bus, "emit"):
-            raise ValueError("crewai_event_bus does not have an emit method") from None
-
         crewai_event_bus.emit(
             self,
             event=LLMStreamChunkEvent(
@@ -425,6 +452,34 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 call_type=call_type,
+                response_id=response_id,
+                call_id=get_current_call_id(),
+            ),
+        )
+
+    def _emit_thinking_chunk_event(
+        self,
+        chunk: str,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        """Emit thinking/reasoning chunk event from a thinking model.
+
+        Args:
+            chunk: The thinking text content.
+            from_task: The task that initiated the call.
+            from_agent: The agent that initiated the call.
+            response_id: Unique ID for a particular LLM response.
+        """
+        crewai_event_bus.emit(
+            self,
+            event=LLMThinkingChunkEvent(
+                chunk=chunk,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_id=response_id,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -494,7 +549,7 @@ class BaseLLM(ABC):
                 from_agent=from_agent,
             )
 
-            return result
+            return str(result) if not isinstance(result, str) else result
 
         except Exception as e:
             error_msg = f"Error executing function '{function_name}': {e!s}"
@@ -734,22 +789,25 @@ class BaseLLM(ABC):
             task=None,
             crew=None,
         )
+        verbose = getattr(from_agent, "verbose", True) if from_agent else True
         printer = Printer()
 
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
-                    printer.print(
-                        content="LLM call blocked by before_llm_call hook",
-                        color="yellow",
-                    )
+                    if verbose:
+                        printer.print(
+                            content="LLM call blocked by before_llm_call hook",
+                            color="yellow",
+                        )
                     return False
         except Exception as e:
-            printer.print(
-                content=f"Error in before_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in before_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         return True
 
@@ -802,6 +860,7 @@ class BaseLLM(ABC):
             crew=None,
             response=response,
         )
+        verbose = getattr(from_agent, "verbose", True) if from_agent else True
         printer = Printer()
         modified_response = response
 
@@ -812,9 +871,10 @@ class BaseLLM(ABC):
                     modified_response = result
                     hook_context.response = modified_response
         except Exception as e:
-            printer.print(
-                content=f"Error in after_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in after_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         return modified_response

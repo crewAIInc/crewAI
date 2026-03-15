@@ -1,3 +1,4 @@
+import contextvars
 import json
 from pathlib import Path
 import platform
@@ -80,7 +81,10 @@ def run_chat() -> None:
 
     # Start loading indicator
     loading_complete = threading.Event()
-    loading_thread = threading.Thread(target=show_loading, args=(loading_complete,))
+    ctx = contextvars.copy_context()
+    loading_thread = threading.Thread(
+        target=ctx.run, args=(show_loading, loading_complete)
+    )
     loading_thread.start()
 
     try:

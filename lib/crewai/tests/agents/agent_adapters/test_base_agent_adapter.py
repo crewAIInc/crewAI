@@ -51,6 +51,10 @@ class ConcreteAgentAdapter(BaseAgentAdapter):
         # Dummy implementation for MCP tools
         return []
 
+    def configure_structured_output(self, task: Any) -> None:
+        # Dummy implementation for structured output
+        pass
+
     async def aexecute_task(
         self,
         task: Any,

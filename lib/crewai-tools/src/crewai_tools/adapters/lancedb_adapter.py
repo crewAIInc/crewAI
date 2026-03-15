@@ -1,7 +1,9 @@
 from collections.abc import Callable
+import os
 from pathlib import Path
 from typing import Any
 
+from crewai.utilities.lock_store import lock as store_lock
 from lancedb import (  # type: ignore[import-untyped]
     DBConnection as LanceDBConnection,
     connect as lancedb_connect,
@@ -33,10 +35,12 @@ class LanceDBAdapter(Adapter):
 
     _db: LanceDBConnection = PrivateAttr()
     _table: LanceDBTable = PrivateAttr()
+    _lock_name: str = PrivateAttr(default="")
 
     def model_post_init(self, __context: Any) -> None:
         self._db = lancedb_connect(self.uri)
         self._table = self._db.open_table(self.table_name)
+        self._lock_name = f"lancedb:{os.path.realpath(str(self.uri))}"
 
         super().model_post_init(__context)
 
@@ -56,4 +60,5 @@ class LanceDBAdapter(Adapter):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        self._table.add(*args, **kwargs)
+        with store_lock(self._lock_name):
+            self._table.add(*args, **kwargs)

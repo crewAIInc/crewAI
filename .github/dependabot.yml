@@ -5,7 +5,12 @@
 
 version: 2
 updates:
-  - package-ecosystem: uv # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: uv
+    directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"

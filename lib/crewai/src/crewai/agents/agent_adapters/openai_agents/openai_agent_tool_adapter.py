@@ -16,6 +16,7 @@ from crewai.agents.agent_adapters.openai_agents.protocols import (
 )
 from crewai.tools import BaseTool
 from crewai.utilities.import_utils import require
+from crewai.utilities.pydantic_schema_utils import force_additional_properties_false
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -135,7 +136,9 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
         for tool in tools:
             schema: dict[str, Any] = tool.args_schema.model_json_schema()
 
-            schema.update({"additionalProperties": False, "type": "object"})
+            schema = force_additional_properties_false(schema)
+
+            schema.update({"type": "object"})
 
             openai_tool: OpenAIFunctionTool = cast(
                 OpenAIFunctionTool,

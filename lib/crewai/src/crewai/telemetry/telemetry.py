@@ -173,6 +173,12 @@ class Telemetry:
 
         self._original_handlers: dict[int, Any] = {}
 
+        if threading.current_thread() is not threading.main_thread():
+            logger.debug(
+                "Skipping signal handler registration: not running in main thread"
+            )
+            return
+
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
         if hasattr(signal, "SIGHUP"):
@@ -903,7 +909,7 @@ class Telemetry:
                         {
                             "id": str(task.id),
                             "description": task.description,
-                            "output": task.output.raw_output,
+                            "output": task.output.raw if task.output else "",
                         }
                         for task in crew.tasks
                     ]
@@ -922,6 +928,9 @@ class Telemetry:
             key: The attribute key.
             value: The attribute value.
         """
+
+        if span is None:
+            return
 
         def _operation() -> None:
             return span.set_attribute(key, value)

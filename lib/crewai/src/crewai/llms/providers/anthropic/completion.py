@@ -3,13 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeGuard, cast
 
-from anthropic.types import ThinkingBlock
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -22,8 +21,14 @@ if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
 
 try:
-    from anthropic import Anthropic, AsyncAnthropic
-    from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
+    from anthropic import Anthropic, AsyncAnthropic, transform_schema
+    from anthropic.types import (
+        Message,
+        TextBlock,
+        ThinkingBlock,
+        ToolUseBlock,
+    )
+    from anthropic.types.beta import BetaMessage, BetaTextBlock, BetaToolUseBlock
     import httpx
 except ImportError:
     raise ImportError(
@@ -31,7 +36,67 @@ except ImportError:
     ) from None
 
 
-ANTHROPIC_FILES_API_BETA = "files-api-2025-04-14"
+TOOL_SEARCH_TOOL_TYPES: Final[tuple[str, ...]] = (
+    "tool_search_tool_regex_20251119",
+    "tool_search_tool_bm25_20251119",
+)
+
+ANTHROPIC_FILES_API_BETA: Final = "files-api-2025-04-14"
+ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
+
+NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
+    tuple[
+        Literal["claude-sonnet-4-5"],
+        Literal["claude-sonnet-4.5"],
+        Literal["claude-opus-4-5"],
+        Literal["claude-opus-4.5"],
+        Literal["claude-opus-4-1"],
+        Literal["claude-opus-4.1"],
+        Literal["claude-haiku-4-5"],
+        Literal["claude-haiku-4.5"],
+    ]
+] = (
+    "claude-sonnet-4-5",
+    "claude-sonnet-4.5",
+    "claude-opus-4-5",
+    "claude-opus-4.5",
+    "claude-opus-4-1",
+    "claude-opus-4.1",
+    "claude-haiku-4-5",
+    "claude-haiku-4.5",
+)
+
+
+def _supports_native_structured_outputs(model: str) -> bool:
+    """Check if the model supports native structured outputs.
+
+    Native structured outputs are only available for Claude 4.5 models
+    (Sonnet 4.5, Opus 4.5, Opus 4.1, Haiku 4.5).
+    Other models require the tool-based fallback approach.
+
+    Args:
+        model: The model name/identifier.
+
+    Returns:
+        True if the model supports native structured outputs.
+    """
+    model_lower = model.lower()
+    return any(prefix in model_lower for prefix in NATIVE_STRUCTURED_OUTPUT_MODELS)
+
+
+def _is_pydantic_model_class(obj: Any) -> TypeGuard[type[BaseModel]]:
+    """Check if an object is a Pydantic model class.
+
+    This distinguishes between Pydantic model classes that support structured
+    outputs (have model_json_schema) and plain dicts like {"type": "json_object"}.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if obj is a Pydantic model class.
+    """
+    return isinstance(obj, type) and issubclass(obj, BaseModel)
 
 
 def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
@@ -62,6 +127,22 @@ class AnthropicThinkingConfig(BaseModel):
     budget_tokens: int | None = None
 
 
+class AnthropicToolSearchConfig(BaseModel):
+    """Configuration for Anthropic's server-side tool search.
+
+    When enabled, tools marked with defer_loading=True are not loaded into
+    context immediately. Instead, Claude uses the tool search tool to
+    dynamically discover and load relevant tools on-demand.
+
+    Attributes:
+        type: The tool search variant to use.
+            - "regex": Claude constructs regex patterns to search tool names/descriptions.
+            - "bm25": Claude uses natural language queries to search tools.
+    """
+
+    type: Literal["regex", "bm25"] = "bm25"
+
+
 class AnthropicCompletion(BaseLLM):
     """Anthropic native completion implementation.
 
@@ -84,6 +165,8 @@ class AnthropicCompletion(BaseLLM):
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         thinking: AnthropicThinkingConfig | None = None,
+        response_format: type[BaseModel] | None = None,
+        tool_search: AnthropicToolSearchConfig | bool | None = None,
         **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
@@ -101,6 +184,12 @@ class AnthropicCompletion(BaseLLM):
             stream: Enable streaming responses
             client_params: Additional parameters for the Anthropic client
             interceptor: HTTP interceptor for modifying requests/responses at transport level.
+            response_format: Pydantic model for structured output. When provided, responses
+                will be validated against this model schema.
+            tool_search: Enable Anthropic's server-side tool search. When True, uses "bm25"
+                variant by default. Pass an AnthropicToolSearchConfig to choose "regex" or
+                "bm25". When enabled, tools are automatically marked with defer_loading=True
+                and a tool search tool is injected into the tools list.
             **kwargs: Additional parameters
         """
         super().__init__(
@@ -131,6 +220,14 @@ class AnthropicCompletion(BaseLLM):
         self.stop_sequences = stop_sequences or []
         self.thinking = thinking
         self.previous_thinking_blocks: list[ThinkingBlock] = []
+        self.response_format = response_format
+        # Tool search config
+        if tool_search is True:
+            self.tool_search = AnthropicToolSearchConfig()
+        elif isinstance(tool_search, AnthropicToolSearchConfig):
+            self.tool_search = tool_search
+        else:
+            self.tool_search = None
         # Model-specific settings
         self.is_claude_3 = "claude-3" in model.lower()
         self.supports_tools = True
@@ -207,55 +304,60 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            # Emit call started event
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                # Emit call started event
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            # Format messages for Anthropic
-            formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages
-            )
+                # Format messages for Anthropic
+                formatted_messages, system_message = (
+                    self._format_messages_for_anthropic(messages)
+                )
 
-            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            # Prepare completion parameters
-            completion_params = self._prepare_completion_params(
-                formatted_messages, system_message, tools
-            )
+                # Prepare completion parameters
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, system_message, tools, available_functions
+                )
 
-            # Handle streaming vs non-streaming
-            if self.stream:
-                return self._handle_streaming_completion(
+                effective_response_model = response_model or self.response_format
+
+                # Handle streaming vs non-streaming
+                if self.stream:
+                    return self._handle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return self._handle_completion(
                     completion_params,
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
-            return self._handle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"Anthropic API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"Anthropic API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     async def acall(
         self,
@@ -276,58 +378,63 @@ class AnthropicCompletion(BaseLLM):
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
+            response_model: Optional response model.
 
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages
-            )
+                formatted_messages, system_message = (
+                    self._format_messages_for_anthropic(messages)
+                )
 
-            completion_params = self._prepare_completion_params(
-                formatted_messages, system_message, tools
-            )
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, system_message, tools, available_functions
+                )
 
-            if self.stream:
-                return await self._ahandle_streaming_completion(
+                effective_response_model = response_model or self.response_format
+
+                if self.stream:
+                    return await self._ahandle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return await self._ahandle_completion(
                     completion_params,
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
-            return await self._ahandle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"Anthropic API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"Anthropic API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     def _prepare_completion_params(
         self,
         messages: list[LLMMessage],
         system_message: str | None = None,
         tools: list[dict[str, Any]] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Anthropic messages API.
 
@@ -335,6 +442,8 @@ class AnthropicCompletion(BaseLLM):
             messages: Formatted messages for Anthropic
             system_message: Extracted system message
             tools: Tool definitions
+            available_functions: Available functions for tool calling. When provided
+                with a single tool, tool_choice is automatically set to force tool use.
 
         Returns:
             Parameters dictionary for Anthropic API
@@ -360,7 +469,26 @@ class AnthropicCompletion(BaseLLM):
 
         # Handle tools for Claude 3+
         if tools and self.supports_tools:
-            params["tools"] = self._convert_tools_for_interference(tools)
+            converted_tools = self._convert_tools_for_interference(tools)
+
+            # When tool_search is enabled and there are 2+ regular tools,
+            # inject the search tool and mark regular tools with defer_loading.
+            # With only 1 tool there's nothing to search — skip tool search
+            # entirely so the normal forced tool_choice optimisation still works.
+            regular_tools = [
+                t
+                for t in converted_tools
+                if t.get("type", "") not in TOOL_SEARCH_TOOL_TYPES
+            ]
+            if self.tool_search is not None and len(regular_tools) >= 2:
+                converted_tools = self._apply_tool_search(converted_tools)
+
+            params["tools"] = converted_tools
+
+            if available_functions and len(regular_tools) == 1:
+                tool_name = regular_tools[0].get("name")
+                if tool_name and tool_name in available_functions:
+                    params["tool_choice"] = {"type": "tool", "name": tool_name}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
@@ -377,6 +505,12 @@ class AnthropicCompletion(BaseLLM):
         anthropic_tools = []
 
         for tool in tools:
+            # Pass through tool search tool definitions unchanged
+            tool_type = tool.get("type", "")
+            if tool_type in TOOL_SEARCH_TOOL_TYPES:
+                anthropic_tools.append(tool)
+                continue
+
             if "input_schema" in tool and "name" in tool and "description" in tool:
                 anthropic_tools.append(tool)
                 continue
@@ -389,15 +523,15 @@ class AnthropicCompletion(BaseLLM):
                 logging.error(f"Error converting tool to Anthropic format: {e}")
                 raise e
 
-            anthropic_tool = {
+            anthropic_tool: dict[str, Any] = {
                 "name": name,
                 "description": description,
             }
 
             if parameters and isinstance(parameters, dict):
-                anthropic_tool["input_schema"] = parameters  # type: ignore[assignment]
+                anthropic_tool["input_schema"] = parameters
             else:
-                anthropic_tool["input_schema"] = {  # type: ignore[assignment]
+                anthropic_tool["input_schema"] = {
                     "type": "object",
                     "properties": {},
                     "required": [],
@@ -406,6 +540,55 @@ class AnthropicCompletion(BaseLLM):
             anthropic_tools.append(anthropic_tool)
 
         return anthropic_tools
+
+    def _apply_tool_search(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Inject tool search tool and mark regular tools with defer_loading.
+
+        When tool_search is enabled, this method:
+        1. Adds the appropriate tool search tool definition (regex or bm25)
+        2. Marks all regular tools with defer_loading=True so they are only
+           loaded when Claude discovers them via search
+
+        Args:
+            tools: Converted tool definitions in Anthropic format.
+
+        Returns:
+            Updated tools list with tool search tool prepended and
+            regular tools marked as deferred.
+        """
+        if self.tool_search is None:
+            return tools
+
+        # Check if a tool search tool is already present (user passed one manually)
+        has_search_tool = any(
+            t.get("type", "") in TOOL_SEARCH_TOOL_TYPES for t in tools
+        )
+
+        result: list[dict[str, Any]] = []
+
+        if not has_search_tool:
+            # Map config type to API type identifier
+            type_map = {
+                "regex": "tool_search_tool_regex_20251119",
+                "bm25": "tool_search_tool_bm25_20251119",
+            }
+            tool_type = type_map[self.tool_search.type]
+            # Tool search tool names follow the convention: tool_search_tool_{variant}
+            tool_name = f"tool_search_tool_{self.tool_search.type}"
+            result.append({"type": tool_type, "name": tool_name})
+
+        for tool in tools:
+            # Don't modify tool search tools
+            if tool.get("type", "") in TOOL_SEARCH_TOOL_TYPES:
+                result.append(tool)
+                continue
+
+            # Mark regular tools as deferred if not already set
+            if "defer_loading" not in tool:
+                tool = {**tool, "defer_loading": True}
+            result.append(tool)
+
+        return result
 
     def _extract_thinking_block(
         self, content_block: Any
@@ -565,22 +748,40 @@ class AnthropicCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming message completion."""
-        if response_model:
-            structured_tool = {
-                "name": "structured_output",
-                "description": "Returns structured data according to the schema",
-                "input_schema": response_model.model_json_schema(),
-            }
-
-            params["tools"] = [structured_tool]
-            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
-
         uses_file_api = _contains_file_id_reference(params.get("messages", []))
+        betas: list[str] = []
+        use_native_structured_output = False
+
+        if uses_file_api:
+            betas.append(ANTHROPIC_FILES_API_BETA)
+
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
+            if _supports_native_structured_outputs(self.model):
+                use_native_structured_output = True
+                betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
+                }
+            else:
+                structured_tool = {
+                    "name": "structured_output",
+                    "description": "Output the structured response",
+                    "input_schema": schema,
+                }
+                params["tools"] = [structured_tool]
+                params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
         try:
-            if uses_file_api:
-                params["betas"] = [ANTHROPIC_FILES_API_BETA]
-                response = self.client.beta.messages.create(**params)
+            if betas:
+                params["betas"] = betas
+                response = self.client.beta.messages.create(
+                    **params, extra_body=extra_body
+                )
             else:
                 response = self.client.messages.create(**params)
 
@@ -593,27 +794,41 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
-        if response_model and response.content:
-            tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
-            ]
-            if tool_uses and tool_uses[0].name == "structured_output":
-                structured_data = tool_uses[0].input
-                structured_json = json.dumps(structured_data)
-                self._emit_call_completed_event(
-                    response=structured_json,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                )
-
-                return structured_json
+        if _is_pydantic_model_class(response_model) and response.content:
+            if use_native_structured_output:
+                for block in response.content:
+                    if isinstance(block, (TextBlock, BetaTextBlock)):
+                        structured_data = response_model.model_validate_json(block.text)
+                        self._emit_call_completed_event(
+                            response=structured_data.model_dump_json(),
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params["messages"],
+                        )
+                        return structured_data
+            else:
+                for block in response.content:
+                    if (
+                        isinstance(block, (ToolUseBlock, BetaToolUseBlock))
+                        and block.name == "structured_output"
+                    ):
+                        structured_data = response_model.model_validate(block.input)
+                        self._emit_call_completed_event(
+                            response=structured_data.model_dump_json(),
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params["messages"],
+                        )
+                        return structured_data
 
         # Check if Claude wants to use tools
         if response.content:
             tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -630,15 +845,11 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                # Handle tool use conversation flow internally
-                return self._handle_tool_use_conversation(
-                    response,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
         content = ""
         thinking_blocks: list[ThinkingBlock] = []
@@ -678,17 +889,31 @@ class AnthropicCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle streaming message completion."""
-        if response_model:
-            structured_tool = {
-                "name": "structured_output",
-                "description": "Returns structured data according to the schema",
-                "input_schema": response_model.model_json_schema(),
-            }
+        betas: list[str] = []
+        use_native_structured_output = False
 
-            params["tools"] = [structured_tool]
-            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
+            if _supports_native_structured_outputs(self.model):
+                use_native_structured_output = True
+                betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
+                }
+            else:
+                structured_tool = {
+                    "name": "structured_output",
+                    "description": "Output the structured response",
+                    "input_schema": schema,
+                }
+                params["tools"] = [structured_tool]
+                params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
         full_response = ""
 
@@ -696,11 +921,22 @@ class AnthropicCompletion(BaseLLM):
         # (the SDK sets it internally)
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
+        if betas:
+            stream_params["betas"] = betas
+
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
-        # Make streaming API call
-        with self.client.messages.stream(**stream_params) as stream:
+        stream_context = (
+            self.client.beta.messages.stream(**stream_params, extra_body=extra_body)
+            if betas
+            else self.client.messages.stream(**stream_params)
+        )
+        with stream_context as stream:
+            response_id = None
             for event in stream:
+                if hasattr(event, "message") and hasattr(event.message, "id"):
+                    response_id = event.message.id
+
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
                     full_response += text_delta
@@ -708,6 +944,7 @@ class AnthropicCompletion(BaseLLM):
                         chunk=text_delta,
                         from_task=from_task,
                         from_agent=from_agent,
+                        response_id=response_id,
                     )
 
                 if event.type == "content_block_start":
@@ -734,6 +971,7 @@ class AnthropicCompletion(BaseLLM):
                                 "index": block_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id,
                         )
                 elif event.type == "content_block_delta":
                     if event.delta.type == "input_json_delta":
@@ -757,9 +995,10 @@ class AnthropicCompletion(BaseLLM):
                                     "index": block_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id,
                             )
 
-            final_message: Message = stream.get_final_message()
+            final_message = stream.get_final_message()
 
         thinking_blocks: list[ThinkingBlock] = []
         if final_message.content:
@@ -774,52 +1013,52 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
-        if response_model and final_message.content:
-            tool_uses = [
-                block
-                for block in final_message.content
-                if isinstance(block, ToolUseBlock)
-            ]
-            if tool_uses and tool_uses[0].name == "structured_output":
-                structured_data = tool_uses[0].input
-                structured_json = json.dumps(structured_data)
-
+        if _is_pydantic_model_class(response_model):
+            if use_native_structured_output:
+                structured_data = response_model.model_validate_json(full_response)
                 self._emit_call_completed_event(
-                    response=structured_json,
+                    response=structured_data.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
-
-                return structured_json
+                return structured_data
+            for block in final_message.content:
+                if (
+                    isinstance(block, ToolUseBlock)
+                    and block.name == "structured_output"
+                ):
+                    structured_data = response_model.model_validate(block.input)
+                    self._emit_call_completed_event(
+                        response=structured_data.model_dump_json(),
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_data
 
         if final_message.content:
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
-                # If no available_functions, return tool calls for executor to handle
                 if not available_functions:
                     return list(tool_uses)
 
-                # Handle tool use conversation flow internally
-                return self._handle_tool_use_conversation(
-                    final_message,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                # Execute first tool and return result directly
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
-        # Apply stop words to full response
         full_response = self._apply_stop_words(full_response)
 
-        # Emit completion event and return full response
         self._emit_call_completed_event(
             response=full_response,
             call_type=LLMCallType.LLM_CALL,
@@ -834,7 +1073,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _execute_tools_and_collect_results(
         self,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -842,7 +1081,7 @@ class AnthropicCompletion(BaseLLM):
         """Execute tools and collect results in Anthropic format.
 
         Args:
-            tool_uses: List of tool use blocks from Claude's response
+            tool_uses: List of tool use blocks from Claude's response (regular or beta API)
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
@@ -875,10 +1114,45 @@ class AnthropicCompletion(BaseLLM):
 
         return tool_results
 
+    def _execute_first_tool(
+        self,
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> Any | None:
+        """Execute the first tool from the tool_uses list and return its result.
+
+        This is used when available_functions is provided, to directly execute
+        the tool and return its result (matching OpenAI behavior for use cases
+        like reasoning_handler).
+
+        Args:
+            tool_uses: List of tool use blocks from Claude's response
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            The result of the first tool execution, or None if execution failed
+        """
+        tool_use = tool_uses[0]
+        function_name = tool_use.name
+        function_args = cast(dict[str, Any], tool_use.input)
+
+        return self._handle_tool_execution(
+            function_name=function_name,
+            function_args=function_args,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+        )
+
+    # TODO: we drop this
     def _handle_tool_use_conversation(
         self,
-        initial_response: Message,
-        tool_uses: list[ToolUseBlock],
+        initial_response: Message | BetaMessage,
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
@@ -995,22 +1269,40 @@ class AnthropicCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming async message completion."""
-        if response_model:
-            structured_tool = {
-                "name": "structured_output",
-                "description": "Returns structured data according to the schema",
-                "input_schema": response_model.model_json_schema(),
-            }
-
-            params["tools"] = [structured_tool]
-            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
-
         uses_file_api = _contains_file_id_reference(params.get("messages", []))
+        betas: list[str] = []
+        use_native_structured_output = False
+
+        if uses_file_api:
+            betas.append(ANTHROPIC_FILES_API_BETA)
+
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
+            if _supports_native_structured_outputs(self.model):
+                use_native_structured_output = True
+                betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
+                }
+            else:
+                structured_tool = {
+                    "name": "structured_output",
+                    "description": "Output the structured response",
+                    "input_schema": schema,
+                }
+                params["tools"] = [structured_tool]
+                params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
         try:
-            if uses_file_api:
-                params["betas"] = [ANTHROPIC_FILES_API_BETA]
-                response = await self.async_client.beta.messages.create(**params)
+            if betas:
+                params["betas"] = betas
+                response = await self.async_client.beta.messages.create(
+                    **params, extra_body=extra_body
+                )
             else:
                 response = await self.async_client.messages.create(**params)
 
@@ -1023,27 +1315,41 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
-        if response_model and response.content:
-            tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
-            ]
-            if tool_uses and tool_uses[0].name == "structured_output":
-                structured_data = tool_uses[0].input
-                structured_json = json.dumps(structured_data)
+        if _is_pydantic_model_class(response_model) and response.content:
+            if use_native_structured_output:
+                for block in response.content:
+                    if isinstance(block, (TextBlock, BetaTextBlock)):
+                        structured_data = response_model.model_validate_json(block.text)
+                        self._emit_call_completed_event(
+                            response=structured_data.model_dump_json(),
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params["messages"],
+                        )
+                        return structured_data
+            else:
+                for block in response.content:
+                    if (
+                        isinstance(block, ToolUseBlock)
+                        and block.name == "structured_output"
+                    ):
+                        structured_data = response_model.model_validate(block.input)
+                        self._emit_call_completed_event(
+                            response=structured_data.model_dump_json(),
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params["messages"],
+                        )
+                        return structured_data
 
-                self._emit_call_completed_event(
-                    response=structured_json,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                )
-
-                return structured_json
-
+        # Handle both ToolUseBlock (regular API) and BetaToolUseBlock (beta API features)
         if response.content:
             tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -1058,14 +1364,11 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                return await self._ahandle_tool_use_conversation(
-                    response,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
         content = ""
         if response.content:
@@ -1095,26 +1398,54 @@ class AnthropicCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle async streaming message completion."""
-        if response_model:
-            structured_tool = {
-                "name": "structured_output",
-                "description": "Returns structured data according to the schema",
-                "input_schema": response_model.model_json_schema(),
-            }
+        betas: list[str] = []
+        use_native_structured_output = False
 
-            params["tools"] = [structured_tool]
-            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
+            if _supports_native_structured_outputs(self.model):
+                use_native_structured_output = True
+                betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
+                }
+            else:
+                structured_tool = {
+                    "name": "structured_output",
+                    "description": "Output the structured response",
+                    "input_schema": schema,
+                }
+                params["tools"] = [structured_tool]
+                params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
         full_response = ""
 
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
+        if betas:
+            stream_params["betas"] = betas
+
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
-        async with self.async_client.messages.stream(**stream_params) as stream:
+        stream_context = (
+            self.async_client.beta.messages.stream(
+                **stream_params, extra_body=extra_body
+            )
+            if betas
+            else self.async_client.messages.stream(**stream_params)
+        )
+        async with stream_context as stream:
+            response_id = None
             async for event in stream:
+                if hasattr(event, "message") and hasattr(event.message, "id"):
+                    response_id = event.message.id
+
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
                     full_response += text_delta
@@ -1122,6 +1453,7 @@ class AnthropicCompletion(BaseLLM):
                         chunk=text_delta,
                         from_task=from_task,
                         from_agent=from_agent,
+                        response_id=response_id,
                     )
 
                 if event.type == "content_block_start":
@@ -1148,6 +1480,7 @@ class AnthropicCompletion(BaseLLM):
                                 "index": block_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id,
                         )
                 elif event.type == "content_block_delta":
                     if event.delta.type == "input_json_delta":
@@ -1171,53 +1504,56 @@ class AnthropicCompletion(BaseLLM):
                                     "index": block_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id,
                             )
 
-            final_message: Message = await stream.get_final_message()
+            final_message = await stream.get_final_message()
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
-        if response_model and final_message.content:
-            tool_uses = [
-                block
-                for block in final_message.content
-                if isinstance(block, ToolUseBlock)
-            ]
-            if tool_uses and tool_uses[0].name == "structured_output":
-                structured_data = tool_uses[0].input
-                structured_json = json.dumps(structured_data)
-
+        if _is_pydantic_model_class(response_model):
+            if use_native_structured_output:
+                structured_data = response_model.model_validate_json(full_response)
                 self._emit_call_completed_event(
-                    response=structured_json,
+                    response=structured_data.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
-
-                return structured_json
+                return structured_data
+            for block in final_message.content:
+                if (
+                    isinstance(block, ToolUseBlock)
+                    and block.name == "structured_output"
+                ):
+                    structured_data = response_model.model_validate(block.input)
+                    self._emit_call_completed_event(
+                        response=structured_data.model_dump_json(),
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_data
 
         if final_message.content:
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
-                # If no available_functions, return tool calls for executor to handle
                 if not available_functions:
                     return list(tool_uses)
 
-                return await self._ahandle_tool_use_conversation(
-                    final_message,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
         full_response = self._apply_stop_words(full_response)
 
@@ -1233,8 +1569,8 @@ class AnthropicCompletion(BaseLLM):
 
     async def _ahandle_tool_use_conversation(
         self,
-        initial_response: Message,
-        tool_uses: list[ToolUseBlock],
+        initial_response: Message | BetaMessage,
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
@@ -1342,16 +1678,20 @@ class AnthropicCompletion(BaseLLM):
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
     @staticmethod
-    def _extract_anthropic_token_usage(response: Message) -> dict[str, Any]:
+    def _extract_anthropic_token_usage(
+        response: Message | BetaMessage,
+    ) -> dict[str, Any]:
         """Extract token usage from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
             input_tokens = getattr(usage, "input_tokens", 0)
             output_tokens = getattr(usage, "output_tokens", 0)
+            cache_read_tokens = getattr(usage, "cache_read_input_tokens", 0) or 0
             return {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "total_tokens": input_tokens + output_tokens,
+                "cached_prompt_tokens": cache_read_tokens,
             }
         return {"total_tokens": 0}
 

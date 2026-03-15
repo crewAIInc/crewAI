@@ -351,7 +351,7 @@ def test_publish_api_error(
     mock_response = MagicMock()
     mock_response.status_code = 500
     mock_response.json.return_value = {"error": "Internal Server Error"}
-    mock_response.ok = False
+    mock_response.is_success = False
     mock_publish.return_value = mock_response
 
     with raises(SystemExit):

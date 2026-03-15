@@ -107,6 +107,86 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `join_web_url` (string, obrigatório): A URL de participação na web da reunião a pesquisar.
 
   </Accordion>
+
+  <Accordion title="microsoft_teams/search_online_meetings_by_meeting_id">
+    **Descrição:** Pesquisar reuniões online por ID externo da reunião.
+
+    **Parâmetros:**
+    - `join_meeting_id` (string, obrigatório): O ID da reunião (código numérico) que os participantes usam para entrar. É o joinMeetingId exibido nos convites da reunião, não o meeting id da API Graph.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_meeting">
+    **Descrição:** Obter detalhes de uma reunião online específica.
+
+    **Parâmetros:**
+    - `meeting_id` (string, obrigatório): O ID da reunião na API Graph (string alfanumérica longa). Obter pelas ações create_meeting ou search_online_meetings. Diferente do joinMeetingId numérico.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_team_members">
+    **Descrição:** Obter membros de uma equipe específica.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `top` (integer, opcional): Número máximo de membros a recuperar por página (1-999). Padrão: 100.
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior. Quando a resposta incluir @odata.nextLink, extraia o valor do parâmetro $skiptoken e passe aqui para obter a próxima página de resultados.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/create_channel">
+    **Descrição:** Criar um novo canal em uma equipe.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `display_name` (string, obrigatório): Nome do canal exibido no Teams. Deve ser único na equipe. Máx 50 caracteres.
+    - `description` (string, opcional): Descrição opcional explicando o propósito do canal. Visível nos detalhes do canal. Máx 1024 caracteres.
+    - `membership_type` (string, opcional): Visibilidade do canal. Opções: standard, private. "standard" = visível para todos os membros da equipe, "private" = visível apenas para membros adicionados especificamente. Padrão: standard.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_message_replies">
+    **Descrição:** Obter respostas a uma mensagem específica em um canal.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `channel_id` (string, obrigatório): O identificador único do canal. Obter pela ação get_channels.
+    - `message_id` (string, obrigatório): O identificador único da mensagem pai. Obter pela ação get_messages.
+    - `top` (integer, opcional): Número máximo de respostas a recuperar por página (1-50). Padrão: 50.
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior. Quando a resposta incluir @odata.nextLink, extraia o valor do parâmetro $skiptoken e passe aqui para obter a próxima página de resultados.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/reply_to_message">
+    **Descrição:** Responder a uma mensagem em um canal do Teams.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `channel_id` (string, obrigatório): O identificador único do canal. Obter pela ação get_channels.
+    - `message_id` (string, obrigatório): O identificador único da mensagem a responder. Obter pela ação get_messages.
+    - `message` (string, obrigatório): O conteúdo da resposta. Para HTML, inclua tags de formatação. Para texto, use apenas texto simples.
+    - `content_type` (string, opcional): Formato do conteúdo. Opções: html, text. "text" para texto simples, "html" para texto rico com formatação. Padrão: text.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/update_meeting">
+    **Descrição:** Atualizar uma reunião online existente.
+
+    **Parâmetros:**
+    - `meeting_id` (string, obrigatório): O identificador único da reunião. Obter pelas ações create_meeting ou search_online_meetings.
+    - `subject` (string, opcional): Novo título da reunião.
+    - `startDateTime` (string, opcional): Nova hora de início no formato ISO 8601 com fuso horário. Exemplo: "2024-01-20T10:00:00-08:00".
+    - `endDateTime` (string, opcional): Nova hora de término no formato ISO 8601 com fuso horário.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/delete_meeting">
+    **Descrição:** Excluir uma reunião online.
+
+    **Parâmetros:**
+    - `meeting_id` (string, obrigatório): O identificador único da reunião a excluir. Obter pelas ações create_meeting ou search_online_meetings.
+
+  </Accordion>
 </AccordionGroup>
 
 ## Exemplos de Uso

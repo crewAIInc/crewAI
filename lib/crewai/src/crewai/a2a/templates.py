@@ -38,3 +38,18 @@ You MUST now:
 DO NOT send another request - the task is already done.
 </REMOTE_AGENT_STATUS>
 """
+
+REMOTE_AGENT_RESPONSE_NOTICE: Final[str] = """
+<REMOTE_AGENT_STATUS>
+STATUS: RESPONSE_RECEIVED
+The remote agent has responded. Their response is in the conversation history above.
+
+You MUST now:
+1. Set is_a2a=false (the remote task is complete and cannot receive more messages)
+2. Provide YOUR OWN response to the original task based on the information received
+
+IMPORTANT: Your response should be addressed to the USER who gave you the original task.
+Report what the remote agent told you in THIRD PERSON (e.g., "The remote agent said..." or "I learned that...").
+Do NOT address the remote agent directly or use "you" to refer to them.
+</REMOTE_AGENT_STATUS>
+"""
