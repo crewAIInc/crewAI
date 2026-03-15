@@ -144,8 +144,16 @@ def scoped_tool(temp_env):
     return FileWriterTool(base_dir=temp_env["temp_dir"])
 
 
+def test_base_dir_schema_has_no_directory_field(temp_env):
+    """When base_dir is set, the LLM schema has no directory field."""
+    from crewai_tools.tools.file_writer_tool.file_writer_tool import ScopedFileWriterToolInput
+    tool = FileWriterTool(base_dir=temp_env["temp_dir"])
+    assert tool.args_schema is ScopedFileWriterToolInput
+    assert "directory" not in tool.args_schema.model_fields
+
+
 def test_base_dir_allows_write_inside(scoped_tool, temp_env):
-    """No directory arg — writes directly into base_dir."""
+    """LLM supplies only filename — file lands in base_dir."""
     result = scoped_tool._run(
         filename=temp_env["test_file"],
         content=temp_env["test_content"],
@@ -153,18 +161,6 @@ def test_base_dir_allows_write_inside(scoped_tool, temp_env):
     )
     assert "successfully written" in result
     assert read_file(get_test_path(temp_env["test_file"], temp_env["temp_dir"])) == temp_env["test_content"]
-
-
-def test_base_dir_allows_relative_subdir(scoped_tool, temp_env):
-    """directory arg is treated as a subdirectory of base_dir."""
-    result = scoped_tool._run(
-        filename="file.txt",
-        directory="subdir",
-        content="nested content",
-        overwrite=True,
-    )
-    assert "successfully written" in result
-    assert os.path.exists(os.path.join(temp_env["temp_dir"], "subdir", "file.txt"))
 
 
 def test_base_dir_blocks_traversal_in_filename(scoped_tool, temp_env):
@@ -176,20 +172,9 @@ def test_base_dir_blocks_traversal_in_filename(scoped_tool, temp_env):
     assert "Access denied" in result
 
 
-def test_base_dir_blocks_traversal_in_directory(scoped_tool, temp_env):
+def test_base_dir_blocks_absolute_filename(scoped_tool, temp_env):
     result = scoped_tool._run(
-        filename="pwned.txt",
-        directory="../../etc/cron.d",
-        content="should not be written",
-        overwrite=True,
-    )
-    assert "Access denied" in result
-
-
-def test_base_dir_blocks_absolute_directory(scoped_tool, temp_env):
-    result = scoped_tool._run(
-        filename="passwd",
-        directory="/etc",
+        filename="/etc/passwd",
         content="should not be written",
         overwrite=True,
     )
@@ -200,8 +185,7 @@ def test_base_dir_blocks_symlink_escape(scoped_tool, temp_env):
     link = os.path.join(temp_env["temp_dir"], "escape")
     os.symlink("/etc", link)
     result = scoped_tool._run(
-        filename="crontab",
-        directory="escape",
+        filename="escape/crontab",
         content="should not be written",
         overwrite=True,
     )

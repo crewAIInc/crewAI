@@ -23,6 +23,13 @@ class FileWriterToolInput(BaseModel):
     content: str
 
 
+class ScopedFileWriterToolInput(BaseModel):
+    """Input when base_dir is set — the LLM supplies only filename and content."""
+    filename: str
+    overwrite: str | bool = False
+    content: str
+
+
 class FileWriterTool(BaseTool):
     name: str = "File Writer Tool"
     description: str = (
@@ -45,11 +52,10 @@ class FileWriterTool(BaseTool):
         super().__init__(**kwargs)
         self.base_dir = os.path.realpath(base_dir) if base_dir is not None else None
         if base_dir is not None:
+            self.args_schema = ScopedFileWriterToolInput
             self.description = (
-                f"A tool to write files within {base_dir}. "
-                "Accepts filename and content. "
-                "Optionally accepts a subdirectory (relative to the base directory) and overwrite flag. "
-                "Paths outside the base directory will be rejected."
+                f"A tool to write files into {base_dir}. "
+                "Accepts a filename, content, and an optional overwrite flag."
             )
             self._generate_description()
 
@@ -64,15 +70,14 @@ class FileWriterTool(BaseTool):
 
     def _run(self, **kwargs: Any) -> str:
         try:
-            directory = kwargs.get("directory") or ""
             filename = kwargs["filename"]
 
-            # When base_dir is set, directory is relative to it.
-            # When not set, directory is used as-is (absolute or cwd-relative).
             if self.base_dir is not None:
-                filepath = os.path.join(self.base_dir, directory, filename)
+                # Developer controls the directory; LLM only supplies filename.
+                filepath = os.path.join(self.base_dir, filename)
             else:
-                filepath = os.path.join(directory or "./", filename)
+                directory = kwargs.get("directory") or "./"
+                filepath = os.path.join(directory, filename)
 
             validated = self._validate_path(filepath)
             if validated is None:
