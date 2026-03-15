@@ -137,61 +137,36 @@ def test_file_exists_error_handling(tool, temp_env, overwrite):
     assert read_file(path) == "Pre-existing content"
 
 
-# --- base_dir containment ---
+# --- Path traversal prevention ---
 
-@pytest.fixture
-def scoped_tool(temp_env):
-    return FileWriterTool(base_dir=temp_env["temp_dir"])
-
-
-def test_base_dir_schema_has_no_directory_field(temp_env):
-    """When base_dir is set, the LLM schema has no directory field."""
-    from crewai_tools.tools.file_writer_tool.file_writer_tool import ScopedFileWriterToolInput
-    tool = FileWriterTool(base_dir=temp_env["temp_dir"])
-    assert tool.args_schema is ScopedFileWriterToolInput
-    assert "directory" not in tool.args_schema.model_fields
-
-
-def test_base_dir_allows_write_inside(scoped_tool, temp_env):
-    """LLM supplies only filename — file lands in base_dir."""
-    result = scoped_tool._run(
-        filename=temp_env["test_file"],
-        content=temp_env["test_content"],
-        overwrite=True,
-    )
-    assert "successfully written" in result
-    assert read_file(get_test_path(temp_env["test_file"], temp_env["temp_dir"])) == temp_env["test_content"]
-
-
-def test_base_dir_blocks_traversal_in_filename(scoped_tool, temp_env):
-    result = scoped_tool._run(
+def test_blocks_traversal_in_filename(tool, temp_env):
+    result = tool._run(
         filename="../outside.txt",
+        directory=temp_env["temp_dir"],
         content="should not be written",
         overwrite=True,
     )
-    assert "Access denied" in result
+    assert "Error" in result
+    assert not os.path.exists(os.path.join(temp_env["temp_dir"], "../outside.txt"))
 
 
-def test_base_dir_blocks_absolute_filename(scoped_tool, temp_env):
-    result = scoped_tool._run(
+def test_blocks_absolute_path_in_filename(tool, temp_env):
+    result = tool._run(
         filename="/etc/passwd",
+        directory=temp_env["temp_dir"],
         content="should not be written",
         overwrite=True,
     )
-    assert "Access denied" in result
+    assert "Error" in result
 
 
-def test_base_dir_blocks_symlink_escape(scoped_tool, temp_env):
+def test_blocks_symlink_escape(tool, temp_env):
     link = os.path.join(temp_env["temp_dir"], "escape")
     os.symlink("/etc", link)
-    result = scoped_tool._run(
+    result = tool._run(
         filename="escape/crontab",
+        directory=temp_env["temp_dir"],
         content="should not be written",
         overwrite=True,
     )
-    assert "Access denied" in result
-
-
-def test_base_dir_description_mentions_directory(temp_env):
-    tool = FileWriterTool(base_dir=temp_env["temp_dir"])
-    assert temp_env["temp_dir"] in tool.description
+    assert "Error" in result
