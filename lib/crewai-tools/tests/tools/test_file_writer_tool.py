@@ -140,33 +140,54 @@ def test_file_exists_error_handling(tool, temp_env, overwrite):
 # --- Path traversal prevention ---
 
 def test_blocks_traversal_in_filename(tool, temp_env):
-    result = tool._run(
-        filename="../outside.txt",
-        directory=temp_env["temp_dir"],
-        content="should not be written",
-        overwrite=True,
-    )
-    assert "Error" in result
-    assert not os.path.exists(os.path.join(temp_env["temp_dir"], "../outside.txt"))
+    # Create a sibling "outside" directory so we can assert nothing was written there.
+    outside_dir = tempfile.mkdtemp()
+    outside_file = os.path.join(outside_dir, "outside.txt")
+    try:
+        result = tool._run(
+            filename=f"../{os.path.basename(outside_dir)}/outside.txt",
+            directory=temp_env["temp_dir"],
+            content="should not be written",
+            overwrite=True,
+        )
+        assert "Error" in result
+        assert not os.path.exists(outside_file)
+    finally:
+        shutil.rmtree(outside_dir, ignore_errors=True)
 
 
 def test_blocks_absolute_path_in_filename(tool, temp_env):
-    result = tool._run(
-        filename="/etc/passwd",
-        directory=temp_env["temp_dir"],
-        content="should not be written",
-        overwrite=True,
-    )
-    assert "Error" in result
+    # Use a temp file outside temp_dir as the absolute target so we don't
+    # depend on /etc/passwd existing or being writable on the host.
+    outside_dir = tempfile.mkdtemp()
+    outside_file = os.path.join(outside_dir, "target.txt")
+    try:
+        result = tool._run(
+            filename=outside_file,
+            directory=temp_env["temp_dir"],
+            content="should not be written",
+            overwrite=True,
+        )
+        assert "Error" in result
+        assert not os.path.exists(outside_file)
+    finally:
+        shutil.rmtree(outside_dir, ignore_errors=True)
 
 
 def test_blocks_symlink_escape(tool, temp_env):
+    # Symlink inside temp_dir pointing to a separate temp "outside" directory.
+    outside_dir = tempfile.mkdtemp()
+    outside_file = os.path.join(outside_dir, "target.txt")
     link = os.path.join(temp_env["temp_dir"], "escape")
-    os.symlink("/etc", link)
-    result = tool._run(
-        filename="escape/crontab",
-        directory=temp_env["temp_dir"],
-        content="should not be written",
-        overwrite=True,
-    )
-    assert "Error" in result
+    os.symlink(outside_dir, link)
+    try:
+        result = tool._run(
+            filename="escape/target.txt",
+            directory=temp_env["temp_dir"],
+            content="should not be written",
+            overwrite=True,
+        )
+        assert "Error" in result
+        assert not os.path.exists(outside_file)
+    finally:
+        shutil.rmtree(outside_dir, ignore_errors=True)
