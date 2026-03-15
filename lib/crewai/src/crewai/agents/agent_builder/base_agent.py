@@ -22,6 +22,7 @@ from typing_extensions import Self
 from crewai.agent.internal.meta import AgentMeta
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
+from crewai.agents.loop_detector import LoopDetector
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
@@ -211,6 +212,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "Enable agent memory. Pass True for default Memory(), "
             "or a Memory/MemoryScope/MemorySlice instance for custom configuration. "
             "If not set, falls back to crew memory."
+        ),
+    )
+    loop_detector: LoopDetector | None = Field(
+        default=None,
+        description=(
+            "Optional loop detection middleware. When set, monitors agent tool calls "
+            "for repetitive patterns and intervenes to break loops. "
+            "Pass a LoopDetector instance to configure window_size, "
+            "repetition_threshold, and on_loop behavior."
         ),
     )
 
