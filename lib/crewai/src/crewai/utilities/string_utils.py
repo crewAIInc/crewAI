@@ -67,8 +67,9 @@ def slugify(text: str, separator: str = "_") -> str:
     text = text.lower()
     text = _QUOTE_PATTERN.sub("", text)
     text = _DISALLOWED_CHARS_PATTERN.sub(separator, text)
-    text = _DUPLICATE_SEPARATOR_PATTERN.sub(separator, text)
-    return text.strip("-_")
+    escaped_sep = re.escape(separator)
+    text = re.sub(f"(?:{escaped_sep}){{2,}}", separator, text)
+    return text.strip(separator)
 
 
 def interpolate_only(
