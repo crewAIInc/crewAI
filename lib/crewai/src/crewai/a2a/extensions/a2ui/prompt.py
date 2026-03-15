@@ -6,6 +6,7 @@ import json
 
 from crewai.a2a.extensions.a2ui.catalog import STANDARD_CATALOG_COMPONENTS
 from crewai.a2a.extensions.a2ui.schema import load_schema
+from crewai.a2a.extensions.a2ui.server_extension import A2UI_EXTENSION_URI
 
 
 def build_a2ui_system_prompt(
@@ -20,7 +21,7 @@ def build_a2ui_system_prompt(
 
     Args:
         catalog_id: Catalog identifier to reference. Defaults to the
-            standard catalog for A2UI v0.8.
+            standard catalog version derived from ``A2UI_EXTENSION_URI``.
         allowed_components: Subset of component names to expose.  When
             ``None``, all standard catalog components are available.
 
@@ -33,7 +34,7 @@ def build_a2ui_system_prompt(
         else STANDARD_CATALOG_COMPONENTS
     )
 
-    catalog_label = catalog_id or "standard (v0.8)"
+    catalog_label = catalog_id or f"standard ({A2UI_EXTENSION_URI.rsplit('/', 1)[-1]})"
 
     resolved_schema = load_schema("server_to_client_with_standard_catalog")
     schema_json = json.dumps(resolved_schema, indent=2)
