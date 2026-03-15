@@ -1,0 +1,121 @@
+{
+  "metadata": {
+    "symbol": "BTCUSDT",
+    "timestamp": "2026-03-09 22:45:00"
+  },
+  "recent_price_action": {
+    "5m_history": [
+      {"t": "22:40", "o": 68700, "h": 68800, "l": 68650, "c": 68750, "v": 120.5, "bar_type": "Bullish_Marubozu"}, 
+      {"t": "22:35", "o": 68600, "h": 68720, "l": 68580, "c": 68700, "v": 95.2, "bar_type": "Doji"},
+      {"t": "22:30", "o": 68650, "h": 68680, "l": 68550, "c": 68600, "v": 88.7, "bar_type": "Bearish_Pinbar"}
+    ],
+    "15m_history": [
+      {"t": "22:30", "o": 68400, "h": 68800, "l": 68400, "c": 68750, "v": 350.1, "volume_status": "High_Volume_Breakout"},
+      {"t": "22:15", "o": 68450, "h": 68500, "l": 68350, "c": 68400, "v": 210.5, "volume_status": "Decreasing_Volume"},
+      {"t": "22:00", "o": 68300, "h": 68450, "l": 68250, "c": 68450, "v": 150.2, "volume_status": "Normal"},
+      {"t": "21:45", "o": 68500, "h": 68550, "l": 68200, "c": 68300, "v": 480.8, "volume_status": "Panic_Selling"}
+    ]
+  },
+  "technical_indicators": {
+    "15m_1000bar_core": {
+      "ema_cluster": {
+        "values": {"ema_20": 68250, "ema_50": 67900, "ema_200": 66500},
+        "alignment": "Perfect_Bullish", 
+        "price_position": "Retesting_EMA20" 
+      },
+      "momentum": {
+        "rsi_14": 62.5,
+        "rsi_logic": "Neutral_High",
+        "macd_state": "Bullish_Golden_Cross",
+        "divergence": "None",
+        "adx_strength": "Strong_Trend"
+      },
+      "volatility": {
+        "bb_width": 0.045,
+        "bb_state": "Squeeze_Breaking_Out",
+        "atr_relative": "High_Volatility"
+      }
+    },
+    "high_timeframe_context": {
+      "1d_trend": {
+        "market_phase": "Bull_Market_Correction",
+        "rsi_level": "Healthy",
+        "fib_support": "Above_0.618"
+      },
+      "3d_trend": {
+        "macro_bias": "Extreme_Bullish",
+        "structure": "Higher_High"
+      }
+    }
+  },
+  "feedback_loop": {
+    "error_logs": ["Previous loss: Entry at RSI 85 led to liquidation."],
+    "correction_bias": "Wait_For_Pullback"
+  }
+}
+
+
+A. K线形态 (bar_type)
+作用：让 AI 识别单根蜡烛图的情绪。
+
+限定状态值：
+
+Bullish_Marubozu (强阳线)、Bearish_Marubozu (强阴线)
+
+Doji (十字星 - 犹豫)
+
+Bullish_Pinbar (下影线长 - 支撑强)、Bearish_Pinbar (上影线长 - 压力大)
+
+Engulfing (吞没形态 - 反转信号)
+
+B. 均线排列 (alignment)
+作用：决定大方向是做多还是做空。
+
+限定状态值：
+
+Perfect_Bullish (20>50>200 - 极度看涨)
+
+Bullish_Weak (价格在均线上方但均线纠缠)
+
+Perfect_Bearish (20<50<200 - 极度看跌)
+
+Bearish_Weak (价格在均线下方但均线纠缠)
+
+Trend_Reversing (均线开始交叉)
+
+C. 指标逻辑 (rsi_logic / macd_state)
+作用：防止 AI 仅看数字，而是看数字所处的环境。
+
+限定状态值：
+
+Oversold_Recovery (超卖回升)、Overbought_Pullback (超买回调)
+
+Neutral_High (50-70区间)、Neutral_Low (30-50区间)
+
+Bullish_Golden_Cross (金叉)、Bearish_Death_Cross (死叉)
+
+D. 背离识别 (divergence)
+作用：最高级的转折信号。
+
+限定状态值：
+
+None (无背离)
+
+Bullish_Regular (底背离 - 价格新低但指标不新低)
+
+Bearish_Regular (顶背离 - 价格新高但指标不新高)
+
+Hidden_Bullish (隐藏底背离 - 趋势持续信号)
+
+E. 波动状态 (bb_state)
+作用：预测暴风雨前的宁静。
+
+限定状态值：
+
+Squeezing (极度缩口 - 蓄力中)
+
+Squeeze_Breaking_Out (缩口突破 - 暴发行情开始)
+
+Expanding (张口中 - 波动剧烈)
+
+Mean_Reverting (回归中 - 动能衰竭)
