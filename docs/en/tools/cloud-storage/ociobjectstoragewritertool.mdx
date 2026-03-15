@@ -1,0 +1,36 @@
+---
+title: "OCI Object Storage Writer Tool"
+description: "Write files to Oracle Cloud Infrastructure Object Storage"
+icon: "cloud-arrow-up"
+mode: "wide"
+---
+
+# `OCIObjectStorageWriterTool`
+
+Use `OCIObjectStorageWriterTool` to upload text content to Oracle Cloud Infrastructure Object Storage from a CrewAI workflow.
+
+## Installation
+
+```bash
+uv pip install 'crewai-tools[oci]'
+```
+
+## Usage
+
+```python
+from crewai import Agent
+from crewai_tools import OCIObjectStorageWriterTool
+
+oci_writer = OCIObjectStorageWriterTool(namespace_name="my-namespace")
+
+agent = Agent(
+    role="Cloud Writer",
+    goal="Persist generated reports in OCI",
+    tools=[oci_writer],
+)
+```
+
+## Path Formats
+
+- `oci://bucket/path/to/file.txt`
+- `oci://namespace@bucket/path/to/file.txt`

@@ -7,6 +7,15 @@ from crewai_tools.aws.bedrock.knowledge_base.retriever_tool import (
 )
 from crewai_tools.aws.s3.reader_tool import S3ReaderTool
 from crewai_tools.aws.s3.writer_tool import S3WriterTool
+from crewai_tools.oci.agents.invoke_agent_tool import OCIGenAIInvokeAgentTool
+from crewai_tools.oci.knowledge_base.retriever_tool import OCIKnowledgeBaseTool
+from crewai_tools.oci.object_storage.reader_tool import OCIObjectStorageReaderTool
+from crewai_tools.oci.object_storage.writer_tool import OCIObjectStorageWriterTool
+from crewai_tools.oracle_db.knowledge_base.retriever_tool import (
+    OracleHybridSearchTool,
+    OracleTextSearchTool,
+    OracleVectorSearchTool,
+)
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
@@ -262,7 +271,14 @@ __all__ = [
     "MultiOnTool",
     "MySQLSearchTool",
     "NL2SQLTool",
+    "OCIGenAIInvokeAgentTool",
+    "OCIKnowledgeBaseTool",
+    "OCIObjectStorageReaderTool",
+    "OCIObjectStorageWriterTool",
     "OCRTool",
+    "OracleHybridSearchTool",
+    "OracleTextSearchTool",
+    "OracleVectorSearchTool",
     "OxylabsAmazonProductScraperTool",
     "OxylabsAmazonSearchScraperTool",
     "OxylabsGoogleSearchScraperTool",

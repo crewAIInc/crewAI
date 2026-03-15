@@ -1,0 +1,38 @@
+---
+title: "OCI Object Storage Reader Tool"
+description: "Read files from Oracle Cloud Infrastructure Object Storage"
+icon: "cloud"
+mode: "wide"
+---
+
+# `OCIObjectStorageReaderTool`
+
+Use `OCIObjectStorageReaderTool` to read text files from Oracle Cloud Infrastructure Object Storage inside a CrewAI workflow.
+
+## Installation
+
+```bash
+uv pip install 'crewai-tools[oci]'
+```
+
+## Usage
+
+```python
+from crewai import Agent
+from crewai_tools import OCIObjectStorageReaderTool
+
+oci_reader = OCIObjectStorageReaderTool(namespace_name="my-namespace")
+
+agent = Agent(
+    role="Cloud Reader",
+    goal="Fetch cloud-hosted files",
+    tools=[oci_reader],
+)
+```
+
+## Path Formats
+
+- `oci://bucket/path/to/file.txt`
+- `oci://namespace@bucket/path/to/file.txt`
+
+If the namespace is omitted, the tool will use `namespace_name`, `OCI_OBJECT_STORAGE_NAMESPACE`, or fetch the namespace from OCI automatically.

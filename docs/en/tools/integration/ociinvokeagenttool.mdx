@@ -1,0 +1,43 @@
+---
+title: "OCI Generative AI Agent Tool"
+description: "Invoke Oracle Cloud Infrastructure Generative AI agent endpoints from CrewAI"
+icon: "cloud"
+mode: "wide"
+---
+
+# `OCIGenAIInvokeAgentTool`
+
+`OCIGenAIInvokeAgentTool` lets CrewAI agents call Oracle Cloud Infrastructure Generative AI agent endpoints directly.
+
+## Installation
+
+```bash
+uv pip install 'crewai-tools[oci]'
+```
+
+## Usage
+
+```python
+from crewai import Agent
+from crewai_tools import OCIGenAIInvokeAgentTool
+
+oci_agent_tool = OCIGenAIInvokeAgentTool(
+    agent_endpoint_id="ocid1.genaiagentendpoint.oc1..exampleuniqueID"
+)
+
+agent = Agent(
+    role="Oracle AI Specialist",
+    goal="Delegate managed Oracle AI tasks",
+    tools=[oci_agent_tool],
+)
+```
+
+## Environment Variables
+
+```bash
+OCI_AGENT_ENDPOINT_ID=ocid1.genaiagentendpoint.oc1..exampleuniqueID
+OCI_AUTH_TYPE=API_KEY
+OCI_AUTH_PROFILE=DEFAULT
+OCI_AUTH_FILE_LOCATION=~/.oci/config
+OCI_AGENT_RUNTIME_ENDPOINT=https://agent-runtime.generativeai.eu-frankfurt-1.oci.oraclecloud.com
+```

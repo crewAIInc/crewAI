@@ -1,0 +1,111 @@
+---
+title: "OCI Knowledge Base Tool"
+description: "Build and query a CrewAI-managed knowledge base powered by OCI embeddings"
+icon: "database"
+mode: "wide"
+---
+
+# `OCIKnowledgeBaseTool`
+
+The `OCIKnowledgeBaseTool` gives your agents a CrewAI-managed retrieval tool powered by OCI embedding models. It uses CrewAI's native `RagTool` stack and defaults to OCI embeddings, so you can load documents, directories, or URLs and query them semantically from your crews.
+
+This is the closest CrewAI-native OCI equivalent to the Bedrock knowledge-base workflow. Unlike Amazon Bedrock Knowledge Bases, the index is managed inside CrewAI's RAG system rather than an OCI managed retrieval service.
+
+## Installation
+
+```bash
+uv add "crewai[oci]"
+uv add "crewai-tools[oci]"
+```
+
+## Example
+
+```python
+from crewai import Agent
+from crewai_tools import OCIKnowledgeBaseTool
+
+kb_tool = OCIKnowledgeBaseTool(
+    knowledge_source="./oracle-architecture.pdf",
+    compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    region="eu-frankfurt-1",
+)
+
+agent = Agent(
+    role="OCI Research Analyst",
+    goal="Answer architecture questions with the indexed OCI knowledge base",
+    tools=[kb_tool],
+    verbose=True,
+)
+```
+
+## Add Sources Dynamically
+
+```python
+from crewai_tools import OCIKnowledgeBaseTool
+
+kb_tool = OCIKnowledgeBaseTool(
+    compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    region="eu-frankfurt-1",
+)
+
+kb_tool.add("./runbooks/networking.md")
+kb_tool.add("./runbooks/security/")
+kb_tool.add("https://docs.oracle.com/en-us/iaas/Content/home.htm")
+```
+
+## Configuration
+
+The tool defaults to this embedding configuration:
+
+```python
+{
+    "embedding_model": {
+        "provider": "oci",
+        "config": {
+            "model_name": "cohere.embed-english-v3.0",
+            "compartment_id": "ocid1.compartment.oc1..exampleuniqueID",
+            "region": "eu-frankfurt-1",
+            "auth_type": "API_KEY",
+            "auth_profile": "DEFAULT",
+            "auth_file_location": "~/.oci/config",
+        }
+    }
+}
+```
+
+You can override the vector database layer with standard `RagTool` config:
+
+```python
+from crewai_tools import OCIKnowledgeBaseTool
+
+kb_tool = OCIKnowledgeBaseTool(
+    compartment_id="ocid1.compartment.oc1..exampleuniqueID",
+    config={
+        "vectordb": {
+            "provider": "qdrant",
+            "config": {
+                "url": "http://localhost:6333",
+                "api_key": "qdrant-key",
+            },
+        }
+    },
+)
+```
+
+## Environment Variables
+
+```bash
+OCI_COMPARTMENT_ID=ocid1.compartment.oc1..exampleuniqueID
+OCI_REGION=eu-frankfurt-1
+OCI_AUTH_TYPE=API_KEY
+OCI_AUTH_PROFILE=DEFAULT
+OCI_AUTH_FILE_LOCATION=~/.oci/config
+OCI_EMBED_MODEL=cohere.embed-english-v3.0
+```
+
+## Notes
+
+- Uses CrewAI's native RAG stack, not an OCI managed knowledge-base service
+- Supports any source type that `RagTool` can ingest
+- Defaults to OCI embeddings, but you can still override the `config` field for advanced vector store configuration
+- For direct OCI text or image embedding workflows with `cohere.embed-v4.0`, use the CrewAI OCI embedding provider outside of `OCIKnowledgeBaseTool`

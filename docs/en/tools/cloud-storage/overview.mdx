@@ -18,12 +18,24 @@ These tools enable your agents to interact with cloud services, access cloud sto
     Write and upload files to Amazon S3 storage.
   </Card>
 
+  <Card title="OCI Object Storage Reader" icon="cloud" href="/en/tools/cloud-storage/ociobjectstoragereadertool">
+    Read files and data from Oracle Cloud Infrastructure Object Storage.
+  </Card>
+
+  <Card title="OCI Object Storage Writer" icon="cloud-arrow-up" href="/en/tools/cloud-storage/ociobjectstoragewritertool">
+    Write files to Oracle Cloud Infrastructure Object Storage.
+  </Card>
+
   <Card title="Bedrock Invoke Agent" icon="aws" href="/en/tools/integration/bedrockinvokeagenttool">
     Invoke Amazon Bedrock agents for AI-powered tasks.
   </Card>
 
   <Card title="Bedrock KB Retriever" icon="database" href="/en/tools/cloud-storage/bedrockkbretriever">
     Retrieve information from Amazon Bedrock knowledge bases.
+  </Card>
+
+  <Card title="OCI Knowledge Base Tool" icon="database" href="/en/tools/cloud-storage/ociknowledgebasetool">
+    Query a CrewAI-managed knowledge base powered by OCI embeddings.
   </Card>
 </CardGroup>
 
@@ -36,16 +48,27 @@ These tools enable your agents to interact with cloud services, access cloud sto
 - **Scalable Operations**: Leverage cloud infrastructure for processing
 
 ```python
-from crewai_tools import S3ReaderTool, S3WriterTool, BedrockInvokeAgentTool
+from crewai_tools import (
+    BedrockInvokeAgentTool,
+    OCIKnowledgeBaseTool,
+    OCIObjectStorageReaderTool,
+    OCIObjectStorageWriterTool,
+    S3ReaderTool,
+    S3WriterTool,
+)
 
 # Create cloud tools
 s3_reader = S3ReaderTool()
 s3_writer = S3WriterTool()
+oci_reader = OCIObjectStorageReaderTool(namespace_name="my-namespace")
+oci_writer = OCIObjectStorageWriterTool(namespace_name="my-namespace")
+oci_kb = OCIKnowledgeBaseTool(knowledge_source="./oracle-architecture.pdf")
 bedrock_agent = BedrockInvokeAgentTool()
 
 # Add to your agent
 agent = Agent(
     role="Cloud Operations Specialist",
-    tools=[s3_reader, s3_writer, bedrock_agent],
+    tools=[s3_reader, s3_writer, oci_reader, oci_writer, oci_kb, bedrock_agent],
     goal="Manage cloud resources and AI services"
 )
+```

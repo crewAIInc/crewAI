@@ -140,6 +140,12 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+oci = [
+    "oci>=2.161.0",
+]
+oracle = [
+    "oracledb>=2.5.1",
+]
 
 
 [build-system]

@@ -21,12 +21,16 @@ Integration tools let your agents hand off work to other automation platforms an
   <Card title="Bedrock Invoke Agent Tool" icon="aws" href="/en/tools/integration/bedrockinvokeagenttool">
     Call Amazon Bedrock Agents from your crews, reuse AWS guardrails, and stream responses back into the workflow.
   </Card>
+
+  <Card title="OCI Generative AI Agent Tool" icon="cloud" href="/en/tools/integration/ociinvokeagenttool">
+    Call Oracle Cloud Infrastructure Generative AI agent endpoints directly from your crews.
+  </Card>
 </CardGroup>
 
 ## **Common Use Cases**
 
 - **Chain automations**: Kick off an existing CrewAI deployment from within another crew or flow
-- **Enterprise hand-off**: Route tasks to Bedrock Agents that already encapsulate company logic and guardrails
+- **Enterprise hand-off**: Route tasks to Bedrock or OCI managed agents that already encapsulate company logic and guardrails
 - **Hybrid workflows**: Combine CrewAI reasoning with downstream systems that expose their own agent APIs
 - **Long-running jobs**: Poll external automations and merge the final results back into the current run
 
@@ -34,7 +38,7 @@ Integration tools let your agents hand off work to other automation platforms an
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import InvokeCrewAIAutomationTool
+from crewai_tools import InvokeCrewAIAutomationTool, OCIGenAIInvokeAgentTool
 from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
 
 # External automation
@@ -51,11 +55,16 @@ knowledge_router = BedrockInvokeAgentTool(
     agent_alias_id="prod",
 )
 
+# Managed agent on OCI
+oracle_router = OCIGenAIInvokeAgentTool(
+    agent_endpoint_id="ocid1.genaiagentendpoint.oc1..exampleuniqueID",
+)
+
 automation_strategist = Agent(
     role="Automation Strategist",
     goal="Orchestrate external automations and summarise their output",
     backstory="You coordinate enterprise workflows and know when to delegate tasks to specialised services.",
-    tools=[analysis_automation, knowledge_router],
+    tools=[analysis_automation, knowledge_router, oracle_router],
     verbose=True,
 )
 
@@ -71,6 +80,6 @@ Crew(agents=[automation_strategist], tasks=[execute_playbook]).kickoff()
 
 - **Secure credentials**: Store API keys and bearer tokens in environment variables or a secrets manager
 - **Plan for latency**: External automations may take longer—set appropriate polling intervals and timeouts
-- **Reuse sessions**: Bedrock Agents support session IDs so you can maintain context across multiple tool calls
+- **Reuse sessions**: Bedrock and OCI agent tools support session IDs so you can maintain context across multiple tool calls
 - **Validate responses**: Normalise remote output (JSON, text, status codes) before forwarding it to downstream tasks
 - **Monitor usage**: Track audit logs in CrewAI Platform or AWS CloudWatch to stay ahead of quota limits and failures
