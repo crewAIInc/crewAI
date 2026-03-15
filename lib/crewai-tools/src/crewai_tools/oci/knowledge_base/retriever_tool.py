@@ -29,6 +29,7 @@ class OCIKnowledgeBaseToolSchema(FixedOCIKnowledgeBaseToolSchema):
 
 
 class OCIKnowledgeBaseTool(RagTool):
+    """RAG tool preconfigured to use OCI embeddings as the backing embedder."""
     name: str = "OCI Knowledge Base Tool"
     description: str = (
         "A CrewAI-managed knowledge base tool powered by OCI embeddings."
@@ -49,6 +50,8 @@ class OCIKnowledgeBaseTool(RagTool):
         config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
+        # Keep the OCI embedder config serializable so the underlying RagTool can
+        # build or rebuild the embedder through CrewAI's standard provider factory.
         oci_embedding_config: dict[str, str] = {
             "model_name": cast(
                 str,
@@ -101,6 +104,7 @@ class OCIKnowledgeBaseTool(RagTool):
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:
+        """Optionally add a source, then delegate retrieval to the base RagTool."""
         if knowledge_source is not None:
             self.add(knowledge_source)
         return super()._run(

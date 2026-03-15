@@ -8,6 +8,7 @@ DEFAULT_OCI_REGION = "eu-frankfurt-1"
 
 
 def get_oci_module() -> Any:
+    """Import the OCI SDK lazily so optional dependencies stay optional."""
     try:
         import oci  # type: ignore[import-untyped]
     except ImportError:
@@ -26,7 +27,7 @@ def create_oci_client_kwargs(
     service_endpoint: str | None = None,
     timeout: tuple[int, int] = (10, 120),
 ) -> dict[str, Any]:
-    """Create standard OCI client kwargs for CrewAI tools."""
+    """Build standard OCI SDK client kwargs shared by the tool integrations."""
     oci = get_oci_module()
     client_kwargs: dict[str, Any] = {
         "config": {},
@@ -96,4 +97,5 @@ def parse_object_storage_path(file_path: str) -> tuple[str | None, str, str]:
 
 
 def get_region() -> str:
+    """Return the default OCI region for tools that support region fallbacks."""
     return os.getenv("OCI_REGION", DEFAULT_OCI_REGION)

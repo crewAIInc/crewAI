@@ -37,7 +37,7 @@ def create_oci_client_kwargs(
     auth_profile: str,
     timeout: tuple[int, int],
 ) -> dict[str, Any]:
-    """Create authenticated OCI client kwargs."""
+    """Build OCI SDK client kwargs for embedding requests."""
     oci = _get_oci_module()
     client_kwargs: dict[str, Any] = {
         "config": {},
@@ -143,6 +143,7 @@ class OCIEmbeddingFunction(EmbeddingFunction[Documents]):
         return config
 
     def _get_serving_mode(self) -> Any:
+        """Resolve either an on-demand model id or a dedicated endpoint id."""
         oci = _get_oci_module()
         model_name = self._config.get("model_name")
         if not model_name:
@@ -160,6 +161,11 @@ class OCIEmbeddingFunction(EmbeddingFunction[Documents]):
     def _build_request(
         self, inputs: list[str], *, input_type: str | None = None
     ) -> Any:
+        """Build a single OCI embedding request payload.
+
+        The same endpoint handles text and image embeddings. `input_type` lets
+        callers override the default text mode when building multimodal requests.
+        """
         oci = _get_oci_module()
         compartment_id = self._config.get("compartment_id") or os.getenv(
             "OCI_COMPARTMENT_ID"
@@ -193,12 +199,14 @@ class OCIEmbeddingFunction(EmbeddingFunction[Documents]):
         return oci.generative_ai_inference.models.EmbedTextDetails(**request_kwargs)
 
     def _batch_inputs(self, input: list[str]) -> Iterator[list[str]]:
+        """Chunk large embedding jobs to stay within OCI request limits."""
         batch_size = self._config.get("batch_size", 96)
         for index in range(0, len(input), batch_size):
             yield input[index : index + batch_size]
 
     @staticmethod
     def _to_data_uri(image: str | bytes | Path, mime_type: str = "image/png") -> str:
+        """Normalize image inputs into the data-URI form OCI expects."""
         if isinstance(image, Path):
             resolved_mime = mimetypes.guess_type(image.name)[0] or mime_type
             data = image.read_bytes()
@@ -245,6 +253,7 @@ class OCIEmbeddingFunction(EmbeddingFunction[Documents]):
         *,
         mime_type: str = "image/png",
     ) -> Embeddings:
+        """Embed one or more images through OCI's IMAGE input mode."""
         embeddings: Embeddings = []
         for image in images:
             data_uri = self._to_data_uri(image, mime_type=mime_type)

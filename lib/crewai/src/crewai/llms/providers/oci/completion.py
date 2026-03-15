@@ -52,7 +52,12 @@ def create_oci_client_kwargs(
     auth_file_location: str,
     auth_profile: str,
 ) -> dict[str, Any]:
-    """Create authenticated OCI client kwargs."""
+    """Build OCI SDK client kwargs for the supported auth modes.
+
+    The native provider is used from both sync and thread-offloaded async paths,
+    so we centralize client construction here instead of duplicating auth logic
+    across `call`, `acall`, and streaming code paths.
+    """
     oci = _get_oci_module()
     client_kwargs: dict[str, Any] = {
         "config": {},
@@ -229,6 +234,12 @@ class OCICompletion(BaseLLM):
         return False
 
     def _build_generic_content(self, content: Any) -> list[Any]:
+        """Translate CrewAI message content into OCI generic content objects.
+
+        CrewAI accepts OpenAI-style multimodal payloads. OCI expects strongly
+        typed SDK content objects, so this method is the normalization boundary
+        between the two representations.
+        """
         models = self._oci.generative_ai_inference.models
         if isinstance(content, str):
             return [models.TextContent(text=content or ".")]
@@ -303,6 +314,7 @@ class OCICompletion(BaseLLM):
         return processed_content or [models.TextContent(text=".")]
 
     def _build_generic_messages(self, messages: list[LLMMessage]) -> list[Any]:
+        """Map CrewAI conversation messages into OCI generic chat messages."""
         models = self._oci.generative_ai_inference.models
         role_map = {
             "user": models.UserMessage,
@@ -349,6 +361,9 @@ class OCICompletion(BaseLLM):
             self._tool_result_guidance_enabled()
             and any(str(message.get("role", "")).lower() == "tool" for message in messages)
         ):
+            # OCI generic models do not automatically know that the tool phase has
+            # ended. Appending a final system hint keeps the model focused on
+            # synthesizing the tool results instead of trying to emit more tool JSON.
             oci_messages.append(
                 models.SystemMessage(
                     content=[models.TextContent(text=_OCI_TOOL_RESULT_GUIDANCE)]
@@ -357,7 +372,15 @@ class OCICompletion(BaseLLM):
 
         return oci_messages
 
-    def _build_cohere_chat_history(self, messages: list[LLMMessage]) -> tuple[list[Any], list[Any] | None, str]:
+    def _build_cohere_chat_history(
+        self, messages: list[LLMMessage]
+    ) -> tuple[list[Any], list[Any] | None, str]:
+        """Translate CrewAI messages into Cohere's split history/tool-results shape.
+
+        OCI's Cohere API does not accept the same unified message structure as
+        OCI's generic chat API. Tool outputs for the latest turn are provided via
+        `tool_results`, while older turns remain in `chat_history`.
+        """
         models = self._oci.generative_ai_inference.models
         chat_history: list[Any] = []
 
@@ -595,6 +618,7 @@ class OCICompletion(BaseLLM):
         *,
         is_stream: bool = False,
     ) -> Any:
+        """Build the provider-specific OCI chat request for the current model."""
         models = self._oci.generative_ai_inference.models
 
         if self.oci_provider == "cohere":
@@ -694,6 +718,7 @@ class OCICompletion(BaseLLM):
         return "".join(part.text for part in content if getattr(part, "text", None))
 
     def _extract_tool_calls(self, response: Any) -> list[dict[str, Any]]:
+        """Normalize provider-specific tool calls back into CrewAI's shape."""
         chat_response = response.data.chat_response
         raw_tool_calls: list[Any] = []
         if self.oci_provider == "cohere":
@@ -779,6 +804,12 @@ class OCICompletion(BaseLLM):
         return metadata
 
     def _parse_stream_event(self, event: Any) -> dict[str, Any]:
+        """Convert OCI SSE event payloads into plain dicts.
+
+        The SDK surfaces event payloads as strings or mapping-like objects
+        depending on provider/model family, so the streaming parser works against
+        a single normalized representation.
+        """
         event_data = getattr(event, "data", None)
         if not event_data:
             return {}
@@ -941,6 +972,12 @@ class OCICompletion(BaseLLM):
         response_model: type[BaseModel] | None,
         tool_calls: list[dict[str, Any]],
     ) -> str | BaseModel | list[dict[str, Any]]:
+        """Execute one round of tool calls and recurse until the model finishes.
+
+        OCI returns native tool-call payloads, but CrewAI owns the actual tool
+        execution loop. We append assistant/tool messages back into the transcript
+        so the next OCI call sees the full conversation state.
+        """
         if tool_calls and not available_functions:
             self._emit_call_completed_event(
                 response=tool_calls,
@@ -1112,6 +1149,11 @@ class OCICompletion(BaseLLM):
         tool_depth: int,
         response_model: type[BaseModel] | None,
     ) -> str | BaseModel | list[dict[str, Any]]:
+        """Handle OCI streaming while reconstructing final text/tool state.
+
+        OCI streams partial tool-call fragments, so we accumulate them by index
+        and only hand them to CrewAI once the stream completes.
+        """
         normalized_messages = self._normalize_messages(messages)
         chat_request = self._build_chat_request(
             normalized_messages,
@@ -1246,6 +1288,12 @@ class OCICompletion(BaseLLM):
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
+        """Yield raw text chunks from OCI without triggering tool recursion.
+
+        This is the lowest-level public streaming primitive for the provider.
+        `astream()` wraps it for async callers, while `call(stream=True)` uses the
+        higher-level `_stream_call_impl()` path that also handles tool calls.
+        """
         normalized_messages = self._normalize_messages(messages)
         chat_request = self._build_chat_request(
             normalized_messages,
@@ -1291,6 +1339,7 @@ class OCICompletion(BaseLLM):
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
+        """Expose the sync OCI SSE stream through an async generator facade."""
         loop = asyncio.get_running_loop()
         queue: asyncio.Queue[str | None] = asyncio.Queue()
         error_holder: list[BaseException] = []

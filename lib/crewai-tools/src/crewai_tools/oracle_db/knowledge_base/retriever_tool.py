@@ -17,6 +17,7 @@ from crewai_tools.oracle_db.common import (
 
 
 def _generate_accum_query(query: str, fuzzy: bool = False) -> str:
+    """Translate plain text into a simple Oracle Text ACCUM expression."""
     words = re.split(r"\W+", query)
     tokens = [word for word in words if word]
     if fuzzy:
@@ -29,6 +30,7 @@ class OracleSearchToolInput(BaseModel):
 
 
 class OracleToolBase(BaseTool):
+    """Shared Oracle connection/result helpers for retrieval-style tools."""
     model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
 
     client: Any | None = Field(default=None, exclude=True)
@@ -57,6 +59,7 @@ class OracleToolBase(BaseTool):
         )
 
     def _result_json(self, results: list[dict[str, Any]]) -> str:
+        """Return a stable JSON envelope for tool responses."""
         if results:
             return json.dumps({"results": results}, indent=2)
         return json.dumps({"message": "No results found for the given query."}, indent=2)
@@ -103,6 +106,7 @@ class OracleVectorSearchTool(OracleToolBase):
             self.embedder = build_embedder(self.embedding_model)
 
     def _embed_query(self, query: str) -> array.array[float]:
+        """Build a float32 vector compatible with Oracle VECTOR columns."""
         if self.embedder is None:
             raise ValueError(
                 "OracleVectorSearchTool requires either embedder or embedding_model."
@@ -116,6 +120,7 @@ class OracleVectorSearchTool(OracleToolBase):
         return array.array("f", [float(value) for value in embedding])
 
     def _run(self, query: str) -> str:
+        """Run plain vector similarity search against an Oracle VECTOR column."""
         table_name = validate_identifier(self.table_name, field_name="table_name")
         text_column = validate_identifier(self.text_column, field_name="text_column")
         embedding_column = validate_identifier(
@@ -148,7 +153,9 @@ class OracleVectorSearchTool(OracleToolBase):
             f"FETCH FIRST {number_of_results} ROWS ONLY"
         )
 
-        with oracle_connection_context(self.client, **self._connection_kwargs()) as connection:
+        with oracle_connection_context(
+            self.client, **self._connection_kwargs()
+        ) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(sql, query_embedding=self._embed_query(query))
                 columns = [column[0].lower() for column in cursor.description]
@@ -210,6 +217,7 @@ class OracleTextSearchTool(OracleToolBase):
     )
 
     def _run(self, query: str) -> str:
+        """Run Oracle Text retrieval using CONTAINS/SCORE against the table."""
         table_name = validate_identifier(self.table_name, field_name="table_name")
         text_column = validate_identifier(self.text_column, field_name="text_column")
         metadata_columns = [
@@ -219,7 +227,9 @@ class OracleTextSearchTool(OracleToolBase):
         ]
         number_of_results = max(1, self.number_of_results)
 
-        search_text = query if self.operator_search else _generate_accum_query(query, self.fuzzy)
+        search_text = (
+            query if self.operator_search else _generate_accum_query(query, self.fuzzy)
+        )
         if not search_text:
             return self._result_json([])
 
@@ -231,7 +241,9 @@ class OracleTextSearchTool(OracleToolBase):
             f"ORDER BY score DESC FETCH FIRST {number_of_results} ROWS ONLY"
         )
 
-        with oracle_connection_context(self.client, **self._connection_kwargs()) as connection:
+        with oracle_connection_context(
+            self.client, **self._connection_kwargs()
+        ) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(sql, query=search_text)
                 columns = [column[0].lower() for column in cursor.description]
@@ -281,6 +293,7 @@ class OracleHybridSearchTool(OracleToolBase):
     )
 
     def _build_search_params(self, query: str) -> dict[str, Any]:
+        """Assemble the JSON payload consumed by DBMS_HYBRID_VECTOR.SEARCH."""
         search_params = dict(self.params or {})
         search_params["hybrid_index_name"] = validate_identifier(
             self.hybrid_index_name, field_name="hybrid_index_name"
@@ -313,6 +326,7 @@ class OracleHybridSearchTool(OracleToolBase):
         return search_params
 
     def _run(self, query: str) -> str:
+        """Run hybrid retrieval through a prebuilt Oracle hybrid vector index."""
         table_name = validate_identifier(self.table_name, field_name="table_name")
         text_column = validate_identifier(self.text_column, field_name="text_column")
         metadata_column = None
@@ -335,8 +349,11 @@ class OracleHybridSearchTool(OracleToolBase):
         fetch_columns_sql = ", ".join(fetch_columns)
         row_sql = f"SELECT {fetch_columns_sql} FROM {table_name} WHERE rowid = :1"  # noqa: S608
 
-        with oracle_connection_context(self.client, **self._connection_kwargs()) as connection:
+        with oracle_connection_context(
+            self.client, **self._connection_kwargs()
+        ) as connection:
             with connection.cursor() as cursor:
+                # Oracle expects a JSON string here rather than a bound Python dict.
                 cursor.execute(
                     "SELECT DBMS_HYBRID_VECTOR.SEARCH(json(:search_params))",
                     search_params=json.dumps(search_params),
@@ -346,6 +363,7 @@ class OracleHybridSearchTool(OracleToolBase):
                     return self._result_json([])
                 raw_payload = raw[0][0]
                 if hasattr(raw_payload, "read"):
+                    # Some Oracle drivers return the JSON document as a LOB.
                     raw_payload = raw_payload.read()
                 rowids = json.loads(raw_payload)
 
