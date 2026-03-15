@@ -209,6 +209,12 @@ class JoyVerifier:
         """
         result = self.verify_agent(agent_id)
 
+        # Surface API errors instead of masking them as "not trusted"
+        if result.error:
+            raise TrustVerificationError(
+                f"Trust verification failed for {agent_id}: {result.error}"
+            )
+
         if not result.is_trusted:
             raise TrustVerificationError(
                 f"Agent {agent_id} not trusted: "
