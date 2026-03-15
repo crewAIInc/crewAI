@@ -605,7 +605,7 @@ class Crew(FlowTrackable, BaseModel):
             raise ValueError(
                 f"Agent with role '{agent_role}' not found in crew. "
                 f"Available roles: {', '.join(available_roles)}"
-            )
+            ) from None
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
