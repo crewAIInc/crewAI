@@ -93,7 +93,7 @@ class StepExecutor:
         tools_handler: ToolsHandler | None = None,
         task: Task | None = None,
         crew: Crew | None = None,
-        function_calling_llm: BaseLLM | Any | None = None,
+        function_calling_llm: BaseLLM | None = None,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
         i18n: I18N | None = None,
