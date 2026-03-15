@@ -128,7 +128,7 @@ class Task(BaseModel):
         description="Callback to be executed after the task is completed.", default=None
     )
     agent: BaseAgent | None = Field(
-        description="Agent responsible for execution the task.", default=None
+        description="Agent responsible for executing the task.", default=None
     )
     context: list[Task] | None | _NotSpecified = Field(
         description="Other tasks that will have their output used as context for this task.",
@@ -159,7 +159,7 @@ class Task(BaseModel):
         default=True,
     )
     output: TaskOutput | None = Field(
-        description="Task output, it's final result after being executed", default=None
+        description="Task output, its final result after being executed", default=None
     )
     tools: list[BaseTool] | None = Field(
         default_factory=list,
