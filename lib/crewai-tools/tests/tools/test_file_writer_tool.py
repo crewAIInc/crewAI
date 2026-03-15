@@ -135,3 +135,78 @@ def test_file_exists_error_handling(tool, temp_env, overwrite):
 
     assert "already exists and overwrite option was not passed" in result
     assert read_file(path) == "Pre-existing content"
+
+
+# --- base_dir containment ---
+
+@pytest.fixture
+def scoped_tool(temp_env):
+    return FileWriterTool(base_dir=temp_env["temp_dir"])
+
+
+def test_base_dir_allows_write_inside(scoped_tool, temp_env):
+    result = scoped_tool._run(
+        filename=temp_env["test_file"],
+        directory=temp_env["temp_dir"],
+        content=temp_env["test_content"],
+        overwrite=True,
+    )
+    assert "successfully written" in result
+    assert read_file(get_test_path(temp_env["test_file"], temp_env["temp_dir"])) == temp_env["test_content"]
+
+
+def test_base_dir_blocks_traversal_in_filename(scoped_tool, temp_env):
+    result = scoped_tool._run(
+        filename="../outside.txt",
+        directory=temp_env["temp_dir"],
+        content="should not be written",
+        overwrite=True,
+    )
+    assert "Access denied" in result
+
+
+def test_base_dir_blocks_traversal_in_directory(scoped_tool, temp_env):
+    result = scoped_tool._run(
+        filename="pwned.txt",
+        directory=os.path.join(temp_env["temp_dir"], "../../etc/cron.d"),
+        content="should not be written",
+        overwrite=True,
+    )
+    assert "Access denied" in result
+
+
+def test_base_dir_blocks_absolute_path_outside(scoped_tool, temp_env):
+    result = scoped_tool._run(
+        filename="passwd",
+        directory="/etc",
+        content="should not be written",
+        overwrite=True,
+    )
+    assert "Access denied" in result
+
+
+def test_base_dir_blocks_symlink_escape(scoped_tool, temp_env):
+    link = os.path.join(temp_env["temp_dir"], "escape")
+    os.symlink("/etc", link)
+    result = scoped_tool._run(
+        filename="crontab",
+        directory=link,
+        content="should not be written",
+        overwrite=True,
+    )
+    assert "Access denied" in result
+
+
+def test_base_dir_allows_nested_subdir(scoped_tool, temp_env):
+    result = scoped_tool._run(
+        filename="file.txt",
+        directory=os.path.join(temp_env["temp_dir"], "subdir"),
+        content="nested content",
+        overwrite=True,
+    )
+    assert "successfully written" in result
+
+
+def test_base_dir_description_mentions_directory(temp_env):
+    tool = FileWriterTool(base_dir=temp_env["temp_dir"])
+    assert temp_env["temp_dir"] in tool.description
