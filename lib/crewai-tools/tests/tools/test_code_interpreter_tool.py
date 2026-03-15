@@ -171,6 +171,14 @@ result = eval("5/1")
     assert 5.0 == result
 
 
+@pytest.mark.xfail(
+    reason=(
+        "run_code_in_restricted_sandbox is known to be vulnerable to sandbox "
+        "escape via object introspection. This test encodes the desired secure "
+        "behavior (no escape possible) and will start passing once the "
+        "vulnerability is fixed or the function is removed."
+    )
+)
 def test_sandbox_escape_vulnerability_demonstration(printer_mock):
     """Demonstrate that the restricted sandbox is vulnerable to escape attacks.
     
@@ -201,8 +209,10 @@ for cls in ().__class__.__bases__[0].__subclasses__():
     # The deprecated sandbox is vulnerable to this attack
     result = tool.run_code_in_restricted_sandbox(escape_code)
     
-    # This demonstrates the vulnerability - the attacker can escape
-    assert result == "SANDBOX_ESCAPED", (
+    # Desired behavior: the restricted sandbox should prevent this escape.
+    # If this assertion fails, run_code_in_restricted_sandbox remains vulnerable.
+    assert result != "SANDBOX_ESCAPED", (
         "The restricted sandbox was bypassed via object introspection. "
-        "This is why Docker is now required for safe code execution."
+        "This indicates run_code_in_restricted_sandbox is still vulnerable and "
+        "is why Docker is now required for safe code execution."
     )
