@@ -290,3 +290,6 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTools",
 ]
+
+from crewai_tools.tools.meyhem_tool.meyhem_tool import MeyhemSearchTool
+from crewai_tools.tools.meyhem_tool.meyhem_tool import MeyhemDiscoverTool
