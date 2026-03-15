@@ -1429,15 +1429,6 @@ def execute_single_native_tool_call(
             original_tool = tool
             break
 
-    # Check max usage count
-    max_usage_reached = False
-    if (
-        original_tool
-        and original_tool.max_usage_count is not None
-        and original_tool.current_usage_count >= original_tool.max_usage_count
-    ):
-        max_usage_reached = True
-
     # Check cache
     from_cache = False
     input_str = json.dumps(args_dict) if args_dict else ""
@@ -1496,7 +1487,7 @@ def execute_single_native_tool_call(
     error_event_emitted = False
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
-    elif not from_cache and not max_usage_reached:
+    elif not from_cache:
         if func_name in available_functions:
             try:
                 tool_func = available_functions[func_name]
@@ -1533,11 +1524,6 @@ def execute_single_native_tool_call(
                     ),
                 )
                 error_event_emitted = True
-    elif max_usage_reached and original_tool:
-        result = (
-            f"Tool '{func_name}' has reached its usage limit of "
-            f"{original_tool.max_usage_count} times and cannot be used anymore."
-        )
 
     # After hooks
     after_hook_context = ToolCallHookContext(
