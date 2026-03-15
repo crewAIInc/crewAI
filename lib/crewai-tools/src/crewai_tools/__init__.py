@@ -1,3 +1,6 @@
+
+from crewai_tools.tools.meyhem_tool.meyhem_tool import MeyhemDiscoverTool
+from crewai_tools.tools.meyhem_tool.meyhem_tool import MeyhemSearchTool
 from crewai_tools.adapters.enterprise_adapter import EnterpriseActionTool
 from crewai_tools.adapters.mcp_adapter import MCPServerAdapter
 from crewai_tools.adapters.zapier_adapter import ZapierActionTool
@@ -258,6 +261,8 @@ __all__ = [
     "MDXSearchTool",
     "MergeAgentHandlerTool",
     "MongoDBVectorSearchConfig",
+    "MeyhemDiscoverTool",
+    "MeyhemSearchTool",
     "MongoDBVectorSearchTool",
     "MultiOnTool",
     "MySQLSearchTool",
