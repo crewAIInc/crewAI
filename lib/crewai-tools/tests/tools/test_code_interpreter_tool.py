@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import patch
 
 from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
@@ -167,7 +168,7 @@ def test_unsafe_mode_installs_libraries_without_shell(
     for call, library in zip(subprocess_run_mock.call_args_list, libraries_used):
         args, kwargs = call
         # Must be list form (no shell expansion possible)
-        assert args[0] == ["pip", "install", library]
+        assert args[0] == [sys.executable, "-m", "pip", "install", library]
         # shell= must not be True (defaults to False)
         assert kwargs.get("shell", False) is False
 
@@ -186,7 +187,7 @@ def test_unsafe_mode_library_name_with_shell_metacharacters_does_not_invoke_shel
     subprocess_run_mock.assert_called_once()
     args, kwargs = subprocess_run_mock.call_args
     # The entire malicious string is passed as a single argument — no shell parsing
-    assert args[0] == ["pip", "install", malicious_library]
+    assert args[0] == [sys.executable, "-m", "pip", "install", malicious_library]
     assert kwargs.get("shell", False) is False
 
 
