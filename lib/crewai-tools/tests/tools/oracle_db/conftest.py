@@ -50,23 +50,12 @@ def oracle_connection_mock() -> MagicMock:
 def oracle_live_config() -> dict[str, Any]:
     default_wallet_dir = None
     for candidate in (
-        os.path.expanduser("~/.oracle-wallet/deepresearch"),
         os.path.expanduser("~/.langchain-oracle-wallet"),
         os.path.expanduser("~/.oracle-wallet"),
     ):
         if os.path.exists(os.path.join(candidate, "tnsnames.ora")):
             default_wallet_dir = candidate
             break
-
-    default_dsn = None
-    if default_wallet_dir:
-        wallet_name = os.path.basename(default_wallet_dir)
-        if wallet_name == "deepresearch":
-            default_dsn = "deepresearch_high"
-        elif wallet_name == ".langchain-oracle-wallet":
-            default_dsn = "deepresearch_high"
-        elif wallet_name == ".oracle-wallet":
-            default_dsn = "locuscheck_high"
 
     password = os.getenv(
         "ORACLE_DB_PASSWORD",
@@ -76,7 +65,7 @@ def oracle_live_config() -> dict[str, Any]:
     return {
         "user": os.getenv("ORACLE_DB_USER", os.getenv("ORACLE_USER", "ADMIN")),
         "password": password,
-        "dsn": os.getenv("ORACLE_DB_DSN", os.getenv("ORACLE_DSN", default_dsn)),
+        "dsn": os.getenv("ORACLE_DB_DSN", os.getenv("ORACLE_DSN")),
         "config_dir": os.getenv("ORACLE_DB_CONFIG_DIR", default_wallet_dir),
         "wallet_location": os.getenv("ORACLE_DB_WALLET_LOCATION", default_wallet_dir),
         "wallet_password": os.getenv(
@@ -158,7 +147,7 @@ def oracle_live_vector_tool_kwargs(oracle_live_config: dict[str, Any]) -> dict[s
         "config": {
             "model_name": os.getenv("OCI_EMBED_MODEL_NAME", "cohere.embed-v4.0"),
             "compartment_id": os.getenv("OCI_COMPARTMENT_ID"),
-            "auth_profile": os.getenv("OCI_AUTH_PROFILE", "API_KEY_AUTH"),
+            "auth_profile": os.getenv("OCI_AUTH_PROFILE", "DEFAULT"),
             "auth_file_location": os.getenv(
                 "OCI_AUTH_FILE_LOCATION", os.path.expanduser("~/.oci/config")
             ),
@@ -310,8 +299,7 @@ def oracle_hybrid_live_resources(oracle_live_connection):
         try:
             # Oracle Hybrid Vector Index creation uses the database-side vectorizer
             # registered in DBMS_VECTOR_CHAIN. That is distinct from OCI GenAI
-            # embedding models available via API_KEY_AUTH (for example
-            # cohere.embed-v4.0 in us-chicago-1).
+            # embedding models available through the configured OCI profile.
             #
             # On Autonomous Database 26ai, this hybrid-index path depends on a
             # supported in-database embedding/vectorizer model being installed in

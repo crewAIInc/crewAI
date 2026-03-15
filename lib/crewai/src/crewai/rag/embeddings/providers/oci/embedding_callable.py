@@ -16,7 +16,7 @@ from crewai.rag.embeddings.providers.oci.types import OCIProviderConfig
 
 
 CUSTOM_ENDPOINT_PREFIX = "ocid1.generativeaiendpoint"
-DEFAULT_OCI_REGION = "eu-frankfurt-1"
+DEFAULT_OCI_REGION = "us-chicago-1"
 
 
 def _get_oci_module() -> Any:

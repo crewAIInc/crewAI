@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 CUSTOM_ENDPOINT_PREFIX = "ocid1.generativeaiendpoint"
-DEFAULT_OCI_REGION = "eu-frankfurt-1"
+DEFAULT_OCI_REGION = "us-chicago-1"
 _OCI_SCHEMA_NAME_PATTERN = re.compile(r"[^a-zA-Z0-9_-]")
 _OCI_TOOL_RESULT_GUIDANCE = (
     "You have received tool results above. Respond to the user with a helpful, "

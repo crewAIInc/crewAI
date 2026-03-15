@@ -781,18 +781,15 @@ In this section, you'll find detailed examples that help you select, configure, 
     - `cohere.command-a-vision` for the top Cohere multimodal tier once OCI Cohere vision formatting is enabled in CrewAI
 
     **Recommended Regions for Cohere in OCI:**
-    - `eu-frankfurt-1`
-    - `us-ashburn-1`
-    - `eu-paris-1`
-    - `uk-london-1`
-    - `ap-mumbai-1`
+    - choose any subscribed OCI region where the target model is available
+    - common examples include `us-chicago-1`, `us-ashburn-1`, `uk-london-1`, and `eu-paris-1`
 
     ```toml Code
     # Required
     OCI_COMPARTMENT_ID=ocid1.compartment.oc1..exampleuniqueID
 
     # Optional when not passing service_endpoint directly
-    OCI_REGION=eu-frankfurt-1
+    OCI_REGION=<your-oci-region>
 
     # Authentication options
     OCI_AUTH_TYPE=API_KEY
@@ -800,7 +797,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     OCI_AUTH_FILE_LOCATION=~/.oci/config
 
     # Optional explicit endpoint override
-    OCI_SERVICE_ENDPOINT=https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com
+    OCI_SERVICE_ENDPOINT=https://inference.generativeai.<your-oci-region>.oci.oraclecloud.com
     ```
 
     **Basic Usage:**
@@ -950,7 +947,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="oci/ocid1.generativeaiendpoint.oc1.eu-frankfurt-1.exampleuniqueID",
+        model="oci/ocid1.generativeaiendpoint.oc1.<your-oci-region>.exampleuniqueID",
         compartment_id="ocid1.compartment.oc1..exampleuniqueID",
     )
     ```

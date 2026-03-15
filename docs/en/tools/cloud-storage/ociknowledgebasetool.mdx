@@ -27,7 +27,7 @@ from crewai_tools import OCIKnowledgeBaseTool
 kb_tool = OCIKnowledgeBaseTool(
     knowledge_source="./oracle-architecture.pdf",
     compartment_id="ocid1.compartment.oc1..exampleuniqueID",
-    region="eu-frankfurt-1",
+    region="<your-oci-region>",
 )
 
 agent = Agent(
@@ -45,7 +45,7 @@ from crewai_tools import OCIKnowledgeBaseTool
 
 kb_tool = OCIKnowledgeBaseTool(
     compartment_id="ocid1.compartment.oc1..exampleuniqueID",
-    region="eu-frankfurt-1",
+    region="<your-oci-region>",
 )
 
 kb_tool.add("./runbooks/networking.md")
@@ -64,7 +64,7 @@ The tool defaults to this embedding configuration:
         "config": {
             "model_name": "cohere.embed-english-v3.0",
             "compartment_id": "ocid1.compartment.oc1..exampleuniqueID",
-            "region": "eu-frankfurt-1",
+            "region": "<your-oci-region>",
             "auth_type": "API_KEY",
             "auth_profile": "DEFAULT",
             "auth_file_location": "~/.oci/config",
@@ -96,7 +96,7 @@ kb_tool = OCIKnowledgeBaseTool(
 
 ```bash
 OCI_COMPARTMENT_ID=ocid1.compartment.oc1..exampleuniqueID
-OCI_REGION=eu-frankfurt-1
+OCI_REGION=<your-oci-region>
 OCI_AUTH_TYPE=API_KEY
 OCI_AUTH_PROFILE=DEFAULT
 OCI_AUTH_FILE_LOCATION=~/.oci/config

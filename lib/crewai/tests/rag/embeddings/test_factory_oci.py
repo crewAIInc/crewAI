@@ -66,7 +66,7 @@ def test_build_embedder_oci(mock_import):
         "config": {
             "model_name": "cohere.embed-english-v3.0",
             "compartment_id": "ocid1.compartment.oc1..test",
-            "region": "eu-frankfurt-1",
+            "region": "us-chicago-1",
             "auth_profile": "DEFAULT",
         },
     }
@@ -79,7 +79,7 @@ def test_build_embedder_oci(mock_import):
     call_kwargs = mock_provider_class.call_args.kwargs
     assert call_kwargs["model_name"] == "cohere.embed-english-v3.0"
     assert call_kwargs["compartment_id"] == "ocid1.compartment.oc1..test"
-    assert call_kwargs["region"] == "eu-frankfurt-1"
+    assert call_kwargs["region"] == "us-chicago-1"
 
 
 def test_oci_embedding_function_batches_requests(monkeypatch):
@@ -102,7 +102,7 @@ def test_oci_embedding_function_batches_requests(monkeypatch):
     embedder = OCIEmbeddingFunction(
         model_name="cohere.embed-english-v3.0",
         compartment_id="ocid1.compartment.oc1..test",
-        region="eu-frankfurt-1",
+        region="us-chicago-1",
         batch_size=2,
     )
 

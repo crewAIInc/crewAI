@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 
-DEFAULT_OCI_REGION = "eu-frankfurt-1"
+DEFAULT_OCI_REGION = "us-chicago-1"
 
 
 def get_oci_module() -> Any:

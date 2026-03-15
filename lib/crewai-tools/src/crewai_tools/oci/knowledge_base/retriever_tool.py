@@ -61,7 +61,7 @@ class OCIKnowledgeBaseTool(RagTool):
                 str,
                 compartment_id or os.getenv("OCI_COMPARTMENT_ID", ""),
             ),
-            "region": cast(str, region or os.getenv("OCI_REGION", "eu-frankfurt-1")),
+            "region": cast(str, region or os.getenv("OCI_REGION", "us-chicago-1")),
             "auth_type": auth_type,
             "auth_profile": cast(
                 str,
