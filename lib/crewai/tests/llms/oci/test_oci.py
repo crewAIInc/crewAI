@@ -103,6 +103,58 @@ def test_oci_completion_call_uses_chat_api(
     )
 
 
+def test_oci_completion_treats_none_content_as_empty_text(
+    patch_oci_module, oci_unit_values: dict[str, object]
+):
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
+
+    llm = OCICompletion(
+        model=str(oci_unit_values["generic_model"]),
+        compartment_id=str(oci_unit_values["compartment_id"]),
+    )
+
+    content = llm._build_generic_content(None)
+
+    assert content[0].text == "."
+
+
+def test_oci_completion_call_normalizes_messages_once(
+    patch_oci_module,
+    oci_response_factories,
+    oci_unit_values: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    fake_client = MagicMock()
+    fake_client.chat.return_value = oci_response_factories["chat"]("Hello from OCI")
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        fake_client
+    )
+
+    llm = OCICompletion(
+        model=str(oci_unit_values["generic_model"]),
+        compartment_id=str(oci_unit_values["compartment_id"]),
+    )
+
+    normalize_call_count = 0
+    original_normalize_messages = llm._normalize_messages
+
+    def counting_normalize(messages):
+        nonlocal normalize_call_count
+        normalize_call_count += 1
+        return original_normalize_messages(messages)
+
+    monkeypatch.setattr(llm, "_normalize_messages", counting_normalize)
+
+    result = llm.call(
+        [{"role": "user", "content": str(oci_unit_values["chat_prompt"])}]
+    )
+
+    assert result == "Hello from OCI"
+    assert normalize_call_count == 1
+
+
 def test_oci_completion_uses_region_to_build_endpoint(
     monkeypatch: pytest.MonkeyPatch,
     patch_oci_module,

@@ -146,6 +146,8 @@ class OCICompletion(BaseLLM):
         return self._format_messages(messages)
 
     def _coerce_text(self, content: Any) -> str:
+        if content is None:
+            return ""
         if isinstance(content, str):
             return content
         if isinstance(content, list):
@@ -1034,7 +1036,9 @@ class OCICompletion(BaseLLM):
         tool_depth: int,
         response_model: type[BaseModel] | None,
     ) -> str | BaseModel | list[dict[str, Any]]:
-        normalized_messages = self._normalize_messages(messages)
+        normalized_messages = (
+            messages if isinstance(messages, list) else self._normalize_messages(messages)
+        )
         chat_request = self._build_chat_request(
             normalized_messages,
             tools=tools,
@@ -1099,7 +1103,9 @@ class OCICompletion(BaseLLM):
         OCI streams partial tool-call fragments, so we accumulate them by index
         and only hand them to CrewAI once the stream completes.
         """
-        normalized_messages = self._normalize_messages(messages)
+        normalized_messages = (
+            messages if isinstance(messages, list) else self._normalize_messages(messages)
+        )
         chat_request = self._build_chat_request(
             normalized_messages,
             tools=tools,
@@ -1397,31 +1403,6 @@ class OCICompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
-        )
-
-    async def abatch(
-        self,
-        messages_batch: list[str | list[LLMMessage]],
-        tools: list[dict[str, BaseTool]] | None = None,
-        callbacks: list[Any] | None = None,
-        available_functions: dict[str, Any] | None = None,
-        from_task: Task | None = None,
-        from_agent: Agent | None = None,
-        response_model: type[BaseModel] | None = None,
-    ) -> list[str | Any]:
-        return await asyncio.gather(
-            *[
-                self.acall(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    response_model=response_model,
-                )
-                for messages in messages_batch
-            ]
         )
 
     def _chat(self, chat_details: Any) -> Any:
