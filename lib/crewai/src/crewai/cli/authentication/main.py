@@ -180,7 +180,7 @@ class AuthenticationCommand:
     def _login_to_tool_repository(self) -> None:
         """Login to the tool repository."""
 
-        from crewai.cli.tools.main import ToolCommand
+        from crewai_cli.tools.main import ToolCommand
 
         try:
             console.print(

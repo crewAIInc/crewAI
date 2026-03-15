@@ -13,10 +13,16 @@ from crewai.cli.constants import (
 
 class TestAuthenticationCommand:
     def setup_method(self):
-        self.auth_command = AuthenticationCommand()
+        # Mock Settings so we always use default constants regardless of local config.
+        with patch("crewai.cli.authentication.main.Settings") as mock_settings:
+            instance = mock_settings.return_value
+            instance.oauth2_provider = "workos"
+            instance.oauth2_domain = CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN
+            instance.oauth2_client_id = CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID
+            instance.oauth2_audience = CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE
+            instance.oauth2_extra = {}
+            self.auth_command = AuthenticationCommand()
 
-    # TODO: these expectations are reading from the actual settings, we should mock them.
-    # E.g. if you change the client_id locally, this test will fail.
     @pytest.mark.parametrize(
         "user_provider,expected_urls",
         [
@@ -156,7 +162,7 @@ class TestAuthenticationCommand:
         else:
             mock_save_tokens.assert_called_once_with("test_access_token", 0)
 
-    @patch("crewai.cli.tools.main.ToolCommand")
+    @patch("crewai_cli.tools.main.ToolCommand")
     @patch("crewai.cli.authentication.main.Settings")
     @patch("crewai.cli.authentication.main.console.print")
     def test_login_to_tool_repository_success(
@@ -189,7 +195,7 @@ class TestAuthenticationCommand:
         ]
         mock_console_print.assert_has_calls(expected_calls)
 
-    @patch("crewai.cli.tools.main.ToolCommand")
+    @patch("crewai_cli.tools.main.ToolCommand")
     @patch("crewai.cli.authentication.main.console.print")
     def test_login_to_tool_repository_error(
         self, mock_console_print, mock_tool_command
