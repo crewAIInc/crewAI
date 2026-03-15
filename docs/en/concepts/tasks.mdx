@@ -52,7 +52,7 @@ crew = Crew(
 | **Name** _(optional)_                  | `name`                  | `Optional[str]`             | A name identifier for the task.                                                                                 |
 | **Agent** _(optional)_                 | `agent`                 | `Optional[BaseAgent]`       | The agent responsible for executing the task.                                                                   |
 | **Tools** _(optional)_                 | `tools`                 | `List[BaseTool]`            | The tools/resources the agent is limited to use for this task.                                                  |
-| **Context** _(optional)_               | `context`               | `Optional[List["Task"]]`    | Other tasks whose outputs will be used as context for this task.                                                |
+| **Context** _(optional)_               | `context`               | `Optional[List[Task]]`    | Other tasks whose outputs will be used as context for this task.                                                |
 | **Async Execution** _(optional)_       | `async_execution`       | `Optional[bool]`            | Whether the task should be executed asynchronously. Defaults to False.                                          |
 | **Human Input** _(optional)_           | `human_input`           | `Optional[bool]`            | Whether the task should have a human review the final answer of the agent. Defaults to False.                   |
 | **Markdown** _(optional)_              | `markdown`              | `Optional[bool]`            | Whether the task should instruct the agent to return the final answer formatted in Markdown. Defaults to False. |
