@@ -6,6 +6,8 @@ from typing import Any, TypedDict
 
 from typing_extensions import Unpack
 
+from crewai.utilities.lock_store import lock as store_lock
+
 
 class LogEntry(TypedDict, total=False):
     """TypedDict for log entry kwargs with optional fields for flexibility."""
@@ -90,33 +92,36 @@ class FileHandler:
             ValueError: If logging fails.
         """
         try:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            log_entry = {"timestamp": now, **kwargs}
+            with store_lock(f"file:{os.path.realpath(self._path)}"):
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                log_entry = {"timestamp": now, **kwargs}
 
-            if self._path.endswith(".json"):
-                # Append log in JSON format
-                try:
-                    # Try reading existing content to avoid overwriting
-                    with open(self._path, encoding="utf-8") as read_file:
-                        existing_data = json.load(read_file)
-                        existing_data.append(log_entry)
-                except (json.JSONDecodeError, FileNotFoundError):
-                    # If no valid JSON or file doesn't exist, start with an empty list
-                    existing_data = [log_entry]
+                if self._path.endswith(".json"):
+                    # Append log in JSON format
+                    try:
+                        # Try reading existing content to avoid overwriting
+                        with open(self._path, encoding="utf-8") as read_file:
+                            existing_data = json.load(read_file)
+                            existing_data.append(log_entry)
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        # If no valid JSON or file doesn't exist, start with an empty list
+                        existing_data = [log_entry]
 
-                with open(self._path, "w", encoding="utf-8") as write_file:
-                    json.dump(existing_data, write_file, indent=4)
-                    write_file.write("\n")
+                    with open(self._path, "w", encoding="utf-8") as write_file:
+                        json.dump(existing_data, write_file, indent=4)
+                        write_file.write("\n")
 
-            else:
-                # Append log in plain text format
-                message = (
-                    f"{now}: "
-                    + ", ".join([f'{key}="{value}"' for key, value in kwargs.items()])
-                    + "\n"
-                )
-                with open(self._path, "a", encoding="utf-8") as file:
-                    file.write(message)
+                else:
+                    # Append log in plain text format
+                    message = (
+                        f"{now}: "
+                        + ", ".join(
+                            [f'{key}="{value}"' for key, value in kwargs.items()]
+                        )
+                        + "\n"
+                    )
+                    with open(self._path, "a", encoding="utf-8") as file:
+                        file.write(message)
 
         except Exception as e:
             raise ValueError(f"Failed to log message: {e!s}") from e
@@ -153,8 +158,9 @@ class PickleHandler:
         Args:
           data: The data to be saved to the file.
         """
-        with open(self.file_path, "wb") as f:
-            pickle.dump(obj=data, file=f)
+        with store_lock(f"file:{os.path.realpath(self.file_path)}"):
+            with open(self.file_path, "wb") as f:
+                pickle.dump(obj=data, file=f)
 
     def load(self) -> Any:
         """Load the data from the specified file using pickle.
@@ -162,13 +168,17 @@ class PickleHandler:
         Returns:
             The data loaded from the file.
         """
-        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
-            return {}  # Return an empty dictionary if the file does not exist or is empty
+        with store_lock(f"file:{os.path.realpath(self.file_path)}"):
+            if (
+                not os.path.exists(self.file_path)
+                or os.path.getsize(self.file_path) == 0
+            ):
+                return {}
 
-        with open(self.file_path, "rb") as file:
-            try:
-                return pickle.load(file)  # noqa: S301
-            except EOFError:
-                return {}  # Return an empty dictionary if the file is empty or corrupted
-            except Exception:
-                raise  # Raise any other exceptions that occur during loading
+            with open(self.file_path, "rb") as file:
+                try:
+                    return pickle.load(file)  # noqa: S301
+                except EOFError:
+                    return {}
+                except Exception:
+                    raise

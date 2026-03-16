@@ -11,6 +11,7 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
@@ -22,10 +23,10 @@ from crewai.mcp.config import (
     MCPServerSSE,
     MCPServerStdio,
 )
-from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -227,7 +228,9 @@ class MCPToolResolver:
 
         server_params = {"url": server_url}
         server_name = self._extract_server_name(server_url)
-        sanitized_specific_tool = sanitize_tool_name(specific_tool) if specific_tool else None
+        sanitized_specific_tool = (
+            sanitize_tool_name(specific_tool) if specific_tool else None
+        )
 
         try:
             tool_schemas = self._get_mcp_tool_schemas(server_params)
@@ -353,9 +356,10 @@ class MCPToolResolver:
                 asyncio.get_running_loop()
                 import concurrent.futures
 
+                ctx = contextvars.copy_context()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run, _setup_client_and_list_tools()
+                        ctx.run, asyncio.run, _setup_client_and_list_tools()
                     )
                     tools_list = future.result()
             except RuntimeError:

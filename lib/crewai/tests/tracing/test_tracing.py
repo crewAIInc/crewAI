@@ -23,15 +23,9 @@ class TestTraceListenerSetup:
     @pytest.fixture(autouse=True)
     def mock_user_data_file_io(self):
         """Mock user data file I/O to prevent file system pollution between tests"""
-        with (
-            patch(
-                "crewai.events.listeners.tracing.utils._load_user_data",
-                return_value={},
-            ),
-            patch(
-                "crewai.events.listeners.tracing.utils._save_user_data",
-                return_value=None,
-            ),
+        with patch(
+            "crewai.events.listeners.tracing.utils._load_user_data",
+            return_value={},
         ):
             yield
 

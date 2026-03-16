@@ -110,11 +110,13 @@ class QdrantVectorSearchTool(BaseTool):
             self.custom_embedding_fn(query)
             if self.custom_embedding_fn
             else (
-                lambda: __import__("openai")
-                .Client(api_key=os.getenv("OPENAI_API_KEY"))
-                .embeddings.create(input=[query], model="text-embedding-3-large")
-                .data[0]
-                .embedding
+                lambda: (
+                    __import__("openai")
+                    .Client(api_key=os.getenv("OPENAI_API_KEY"))
+                    .embeddings.create(input=[query], model="text-embedding-3-large")
+                    .data[0]
+                    .embedding
+                )
             )()
         )
         results = self.client.query_points(
