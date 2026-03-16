@@ -1064,6 +1064,59 @@ def test_agent_use_trained_data(crew_training_handler):
     )
 
 
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_with_custom_filename(crew_training_handler):
+    """Test that _use_trained_data respects a custom filename when provided."""
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler.return_value.load.return_value = {
+        agent.role: {
+            "suggestions": [
+                "The result of the math operation must be right.",
+                "Result must be better than 1.",
+            ]
+        }
+    }
+
+    custom_filename = "my_custom_trained.pkl"
+    result = agent._use_trained_data(
+        task_prompt=task_prompt, trained_agents_data_file=custom_filename
+    )
+
+    assert (
+        result == "What is 1 + 1?\n\nYou MUST follow these instructions: \n"
+        " - The result of the math operation must be right.\n - Result must be better than 1."
+    )
+    crew_training_handler.assert_has_calls(
+        [mock.call(custom_filename), mock.call().load()]
+    )
+
+
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_defaults_without_custom_filename(crew_training_handler):
+    """Test that _use_trained_data falls back to the default file when no custom filename is given."""
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler.return_value.load.return_value = {}
+
+    result = agent._use_trained_data(task_prompt=task_prompt)
+
+    assert result == task_prompt
+    crew_training_handler.assert_has_calls(
+        [mock.call("trained_agents_data.pkl"), mock.call().load()]
+    )
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",

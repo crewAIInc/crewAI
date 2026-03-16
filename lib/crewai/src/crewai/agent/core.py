@@ -1010,9 +1010,19 @@ class Agent(BaseAgent):
 
         return task_prompt
 
-    def _use_trained_data(self, task_prompt: str) -> str:
-        """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+    def _use_trained_data(
+        self, task_prompt: str, trained_agents_data_file: str | None = None
+    ) -> str:
+        """Use trained data for the agent task prompt to improve output.
+
+        Args:
+            task_prompt: The task prompt to augment.
+            trained_agents_data_file: Optional path to the trained agents data
+                file. Falls back to the default ``TRAINED_AGENTS_DATA_FILE``
+                when not provided.
+        """
+        filename = trained_agents_data_file or TRAINED_AGENTS_DATA_FILE
+        if data := CrewTrainingHandler(filename).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
