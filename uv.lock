@@ -1286,6 +1286,7 @@ source = { editable = "lib/crewai-tools" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "crewai" },
+    { name = "defusedxml" },
     { name = "docker" },
     { name = "pymupdf" },
     { name = "python-docx" },
@@ -1423,6 +1424,7 @@ requires-dist = [
     { name = "crewai", editable = "lib/crewai" },
     { name = "cryptography", marker = "extra == 'snowflake'", specifier = ">=43.0.3" },
     { name = "databricks-sdk", marker = "extra == 'databricks-sdk'", specifier = ">=0.46.0" },
+    { name = "defusedxml", specifier = ">=0.7.1,<0.8" },
     { name = "docker", specifier = "~=7.1.0" },
     { name = "exa-py", marker = "extra == 'exa-py'", specifier = ">=1.8.7" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
