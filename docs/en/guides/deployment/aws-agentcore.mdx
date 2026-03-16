@@ -1,0 +1,144 @@
+---
+title: Deploy to AWS with AgentCore
+description: Deploy CrewAI crews as production services on Amazon Bedrock AgentCore with streaming, thread-safety, and managed scaling.
+icon: aws
+mode: "wide"
+---
+
+# Deploy to AWS with AgentCore
+
+`AgentCoreRuntime` wraps any CrewAI `Crew` as an ASGI web service that runs on [Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/). It exposes `POST /invocations` (run the crew) and `GET /ping` (health check), streams results via Server-Sent Events, and handles concurrent requests with thread-safe crew isolation.
+
+## Installation
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[bedrock]'
+```
+
+## Quick Start
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.runtime import AgentCoreRuntime
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Answer questions thoroughly",
+    backstory="You are a meticulous research analyst.",
+)
+
+task = Task(
+    description="{input}",
+    expected_output="A thorough answer to the question.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+
+# One-liner: starts uvicorn on port 8080
+AgentCoreRuntime.serve(crew)
+```
+
+That's it. AgentCore handles scaling, networking, and infrastructure.
+
+## How It Works
+
+1. **`AgentCoreRuntime.serve(crew)`** creates a `BedrockAgentCoreApp` (ASGI) and starts uvicorn
+2. **Incoming requests** hit `POST /invocations` with a JSON payload containing inputs
+3. **Thread safety** — each request gets `crew.copy()` so concurrent requests don't share state
+4. **Streaming** — results stream back as Server-Sent Events (SSE) by default
+5. **Health checks** — `GET /ping` returns 200 for load balancer probes
+
+## Request Format
+
+Send a POST to `/invocations` with crew inputs:
+
+```json
+{
+  "input": "What are the latest trends in AI?",
+  "context": "Focus on enterprise applications"
+}
+```
+
+The payload keys are passed directly as `crew.kickoff(inputs={...})`.
+
+## Configuration
+
+```python Code
+from crewai_tools.aws.bedrock.runtime import AgentCoreRuntime
+
+# With options
+runtime = AgentCoreRuntime(
+    crew=crew,
+    stream=True,     # SSE streaming (default: True)
+    port=8080,       # Server port (default: 8080)
+    debug=False,     # Debug logging (default: False)
+)
+runtime.run()
+```
+
+| Parameter | Type | Default | Description |
+| :-------- | :--- | :------ | :---------- |
+| `crew` | `Crew` | required | The CrewAI crew to serve |
+| `stream` | `bool` | `True` | Enable SSE streaming responses |
+| `port` | `int` | `8080` | Server port |
+| `host` | `str` | `None` | Bind address (None = uvicorn default) |
+| `debug` | `bool` | `False` | Enable debug logging |
+
+## Entrypoint File
+
+Create an `entrypoint.py` at the root of your project:
+
+```python Code
+# entrypoint.py
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.runtime import AgentCoreRuntime
+
+# Define your crew
+agent = Agent(role="Analyst", goal="Analyze data", backstory="Expert analyst.")
+task = Task(description="{input}", expected_output="Analysis results.", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+
+# Serve
+AgentCoreRuntime.serve(crew)
+```
+
+## Adding AgentCore Tools
+
+Combine runtime deployment with AgentCore cloud tools for a fully managed stack:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.browser import create_browser_toolkit
+from crewai_tools.aws.bedrock.code_interpreter import create_code_interpreter_toolkit
+from crewai_tools.aws.bedrock.runtime import AgentCoreRuntime
+
+browser_toolkit, browser_tools = create_browser_toolkit(region="us-west-2")
+ci_toolkit, code_tools = create_code_interpreter_toolkit(region="us-west-2")
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Research topics online and analyze findings with code",
+    backstory="Expert researcher with coding skills.",
+    tools=browser_tools + code_tools,
+)
+
+task = Task(
+    description="{input}",
+    expected_output="Research findings with supporting analysis.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+AgentCoreRuntime.serve(crew)
+```
+
+## Advantages over Self-Managed Deployment
+
+| | AgentCore | Self-managed (Lambda, ECS, EC2) |
+| :--- | :--- | :--- |
+| **Setup** | One-liner `serve(crew)` | Dockerfile, networking, IAM, load balancer |
+| **Scaling** | Managed auto-scaling | Configure scaling policies manually |
+| **Streaming** | Built-in SSE | Implement SSE + API Gateway yourself |
+| **Thread safety** | Automatic `crew.copy()` | Handle concurrency yourself |
+| **Health checks** | Built-in `/ping` | Configure health check endpoints |

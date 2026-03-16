@@ -131,6 +131,13 @@
                         ]
                       },
                       {
+                        "group": "Deployment",
+                        "icon": "rocket",
+                        "pages": [
+                          "en/guides/deployment/aws-agentcore"
+                        ]
+                      },
+                      {
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
@@ -587,6 +594,13 @@
                         "pages": [
                           "en/guides/advanced/customizing-prompts",
                           "en/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "Deployment",
+                        "icon": "rocket",
+                        "pages": [
+                          "en/guides/deployment/aws-agentcore"
                         ]
                       },
                       {
