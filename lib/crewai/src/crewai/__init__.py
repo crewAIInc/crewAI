@@ -42,7 +42,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.10.2rc2"
+__version__ = "1.11.0rc1"
 _telemetry_submitted = False
 
 
