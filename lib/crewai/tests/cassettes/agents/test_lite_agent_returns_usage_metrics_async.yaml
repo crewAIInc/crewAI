@@ -4,9 +4,8 @@ interactions:
       are a helpful research assistant who can search for information about the population
       of Tokyo.\nYour personal goal is: Find information about the population of Tokyo"},{"role":"user","content":"\nCurrent
       Task: What is the population of Tokyo? Return your structured output in JSON
-      format with the following fields: summary, confidence\n\nThis is VERY important
-      to you, your job depends on it!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
-      the web for information about a topic.","parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object"}}}]}'
+      format with the following fields: summary, confidence"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
+      the web for information about a topic.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -19,7 +18,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '746'
+      - '731'
       content-type:
       - application/json
       host:
@@ -46,21 +45,21 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tWuVq6ppHxdHXbHiTqbMxcevRfD\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105828,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8D4JDqMxPuYnTOxDOpdk9Go6k6Bw\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849231,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_OiYZ9WMTDha7FNJEZyo9rc1j\",\n            \"type\":
+        \           \"id\": \"call_E14u3bOYOCdaeKXCyR0FAM1d\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"search_web\",\n
         \             \"arguments\": \"{\\\"query\\\":\\\"current population of Tokyo
         2023\\\"}\"\n            }\n          }\n        ],\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        124,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 144,\n    \"prompt_tokens_details\":
+        110,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 130,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_842ff35899\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -69,11 +68,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:17:08 GMT
+      - Wed, 11 Feb 2026 22:33:51 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -89,13 +86,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '657'
+      - '564'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '739'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -120,14 +117,11 @@ interactions:
       are a helpful research assistant who can search for information about the population
       of Tokyo.\nYour personal goal is: Find information about the population of Tokyo"},{"role":"user","content":"\nCurrent
       Task: What is the population of Tokyo? Return your structured output in JSON
-      format with the following fields: summary, confidence\n\nThis is VERY important
-      to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_OiYZ9WMTDha7FNJEZyo9rc1j","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"current
-      population of Tokyo 2023\"}"}}]},{"role":"tool","tool_call_id":"call_OiYZ9WMTDha7FNJEZyo9rc1j","content":"Tokyo''s
+      format with the following fields: summary, confidence"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_E14u3bOYOCdaeKXCyR0FAM1d","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"current
+      population of Tokyo 2023\"}"}}]},{"role":"tool","tool_call_id":"call_E14u3bOYOCdaeKXCyR0FAM1d","name":"search_web","content":"Tokyo''s
       population in 2023 was approximately 21 million people in the city proper, and
-      37 million in the greater metropolitan area."},{"role":"user","content":"Analyze
-      the tool result. If requirements are met, provide the Final Answer. Otherwise,
-      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
-      the web for information about a topic.","parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object"}}}]}'
+      37 million in the greater metropolitan area."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
+      the web for information about a topic.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -140,7 +134,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1341'
+      - '1162'
       content-type:
       - application/json
       cookie:
@@ -169,19 +163,19 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tWv4vUNd0xdFfxXVtTzHtH7hXo2\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105829,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8D4Jx8mYvSKFIeuAnSRA4IEewplp\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849231,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\n  \\\"summary\\\": {\\n    \\\"city_proper_population\\\":
-        21000000,\\n    \\\"greater_metropolitan_population\\\": 37000000\\n  },\\n
-        \ \\\"confidence\\\": \\\"high\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\":
+        \"assistant\",\n        \"content\": \"{\\n  \\\"summary\\\": {\\n    \\\"population_city_proper\\\":
+        21000000,\\n    \\\"population_metropolitan_area\\\": 37000000\\n  },\\n  \\\"confidence\\\":
+        \\\"High\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 215,\n    \"completion_tokens\":
-        41,\n    \"total_tokens\": 256,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 166,\n    \"completion_tokens\":
+        41,\n    \"total_tokens\": 207,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_842ff35899\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -190,7 +184,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:17:10 GMT
+      - Wed, 11 Feb 2026 22:33:52 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -208,13 +202,131 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1088'
+      - '881'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '1351'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
+      are a helpful research assistant who can search for information about the population
+      of Tokyo.\nYour personal goal is: Find information about the population of Tokyo"},{"role":"user","content":"\nCurrent
+      Task: What is the population of Tokyo? Return your structured output in JSON
+      format with the following fields: summary, confidence"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_E14u3bOYOCdaeKXCyR0FAM1d","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"current
+      population of Tokyo 2023\"}"}}]},{"role":"tool","tool_call_id":"call_E14u3bOYOCdaeKXCyR0FAM1d","name":"search_web","content":"Tokyo''s
+      population in 2023 was approximately 21 million people in the city proper, and
+      37 million in the greater metropolitan area."},{"role":"assistant","content":"{\n  \"summary\":
+      {\n    \"population_city_proper\": 21000000,\n    \"population_metropolitan_area\":
+      37000000\n  },\n  \"confidence\": \"High\"\n}"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
+      the web for information about a topic.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1343'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8D4KaPnLxlNrJD105G2LhQSZXj9P\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849232,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\n  \\\"summary\\\": {\\n    \\\"population_city_proper\\\":
+        21000000,\\n    \\\"population_metropolitan_area\\\": 37000000\\n  },\\n  \\\"confidence\\\":
+        \\\"High\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 210,\n    \"completion_tokens\":
+        41,\n    \"total_tokens\": 251,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 22:33:53 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '860'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
