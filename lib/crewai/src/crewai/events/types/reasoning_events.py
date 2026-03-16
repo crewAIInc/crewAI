@@ -9,7 +9,7 @@ class ReasoningEvent(BaseEvent):
     type: str
     attempt: int = 1
     agent_role: str
-    task_id: str
+    task_id: str | None = None
     task_name: str | None = None
     from_task: Any | None = None
     agent_id: str | None = None

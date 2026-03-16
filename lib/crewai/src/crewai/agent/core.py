@@ -23,6 +23,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -192,13 +193,23 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    reasoning: bool = Field(
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+    )
+    planning: bool = Field(
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
     )
+    reasoning: bool = Field(
+        default=False,
+        description="[DEPRECATED: Use planning_config instead] Whether the agent should reflect and create a plan before executing a task.",
+        deprecated=True,
+    )
     max_reasoning_attempts: int | None = Field(
         default=None,
-        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        description="[DEPRECATED: Use planning_config.max_attempts instead] Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        deprecated=True,
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -265,7 +276,25 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        # Handle backward compatibility: convert reasoning=True to planning_config
+        if self.reasoning and self.planning_config is None:
+            import warnings
+
+            warnings.warn(
+                "The 'reasoning' parameter is deprecated. Use 'planning_config=PlanningConfig()' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.planning_config = PlanningConfig(
+                max_attempts=self.max_reasoning_attempts,
+            )
+
         return self
+
+    @property
+    def planning_enabled(self) -> bool:
+        """Check if planning is enabled for this agent."""
+        return self.planning_config is not None or self.planning
 
     def _setup_agent_executor(self) -> None:
         if not self.cache_handler:
@@ -335,7 +364,11 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
+        # Only call handle_reasoning for legacy CrewAgentExecutor
+        # For AgentExecutor, planning is handled in AgentExecutor.generate_plan()
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(self, task)
+
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -577,7 +610,10 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(
+                self, task
+            )  # we need this till CrewAgentExecutor migrates to AgentExecutor
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -1423,17 +1459,19 @@ class Agent(BaseAgent):
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
-    def _execute_and_build_output(
+    def _build_output_from_result(
         self,
+        result: dict[str, Any],
         executor: AgentExecutor,
-        inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent and build the output object.
+        """Build a LiteAgentOutput from an executor result dict.
+
+        Shared logic used by both sync and async execution paths.
 
         Args:
+            result: The result dictionary from executor.invoke / invoke_async.
             executor: The executor instance.
-            inputs: Input dictionary for execution.
             response_format: Optional response format.
 
         Returns:
@@ -1441,8 +1479,6 @@ class Agent(BaseAgent):
         """
         import json
 
-        # Execute the agent (this is called from sync path, so invoke returns dict)
-        result = cast(dict[str, Any], executor.invoke(inputs))
         output = result.get("output", "")
 
         # Handle response format conversion
@@ -1490,13 +1526,29 @@ class Agent(BaseAgent):
             else str(raw_output)
         )
 
+        todo_results = LiteAgentOutput.from_todo_items(executor.state.todos.items)
+
         return LiteAgentOutput(
             raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
+            messages=list(executor.state.messages),
+            plan=executor.state.plan,
+            todos=todo_results,
+            replan_count=executor.state.replan_count,
+            last_replan_reason=executor.state.last_replan_reason,
         )
+
+    def _execute_and_build_output(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent synchronously and build the output object."""
+        result = cast(dict[str, Any], executor.invoke(inputs))
+        return self._build_output_from_result(result, executor, response_format)
 
     async def _execute_and_build_output_async(
         self,
@@ -1504,77 +1556,9 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent asynchronously and build the output object.
-
-        This is the async version of _execute_and_build_output that uses
-        invoke_async() for native async execution within event loops.
-
-        Args:
-            executor: The executor instance.
-            inputs: Input dictionary for execution.
-            response_format: Optional response format.
-
-        Returns:
-            LiteAgentOutput with raw output, formatted result, and metrics.
-        """
-        import json
-
-        # Execute the agent asynchronously
+        """Execute the agent asynchronously and build the output object."""
         result = await executor.invoke_async(inputs)
-        output = result.get("output", "")
-
-        # Handle response format conversion
-        formatted_result: BaseModel | None = None
-        raw_output: str
-
-        if isinstance(output, BaseModel):
-            formatted_result = output
-            raw_output = output.model_dump_json()
-        elif response_format:
-            raw_output = str(output) if not isinstance(output, str) else output
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
-
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
-
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
-        else:
-            raw_output = str(output) if not isinstance(output, str) else output
-
-        # Get token usage metrics
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
-
-        raw_str = (
-            raw_output
-            if isinstance(raw_output, str)
-            else raw_output.model_dump_json()
-            if isinstance(raw_output, BaseModel)
-            else str(raw_output)
-        )
-
-        return LiteAgentOutput(
-            raw=raw_str,
-            pydantic=formatted_result,
-            agent_role=self.role,
-            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
-        )
+        return self._build_output_from_result(result, executor, response_format)
 
     def _process_kickoff_guardrail(
         self,
