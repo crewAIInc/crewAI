@@ -11,7 +11,9 @@ Implements adaptive-depth retrieval with:
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 from datetime import datetime
+import logging
 from typing import Any
 from uuid import uuid4
 
@@ -27,6 +29,9 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_texts,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class RecallState(BaseModel):
@@ -124,7 +129,14 @@ class RecallFlow(Flow[RecallState]):
 
         if len(tasks) <= 1:
             for emb, sc in tasks:
-                scope, results = _search_one(emb, sc)
+                try:
+                    scope, results = _search_one(emb, sc)
+                except Exception:
+                    logger.warning(
+                        "Storage search failed in recall flow, skipping scope",
+                        exc_info=True,
+                    )
+                    continue
                 if results:
                     top_composite, _ = compute_composite_score(
                         results[0][0], results[0][1], self._config
@@ -139,10 +151,21 @@ class RecallFlow(Flow[RecallState]):
         else:
             with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as pool:
                 futures = {
-                    pool.submit(_search_one, emb, sc): (emb, sc) for emb, sc in tasks
+                    pool.submit(contextvars.copy_context().run, _search_one, emb, sc): (
+                        emb,
+                        sc,
+                    )
+                    for emb, sc in tasks
                 }
                 for future in as_completed(futures):
-                    scope, results = future.result()
+                    try:
+                        scope, results = future.result()
+                    except Exception:
+                        logger.warning(
+                            "Storage search failed in recall flow, skipping scope",
+                            exc_info=True,
+                        )
+                        continue
                     if results:
                         top_composite, _ = compute_composite_score(
                             results[0][0], results[0][1], self._config
@@ -241,13 +264,17 @@ class RecallFlow(Flow[RecallState]):
         if analysis and analysis.suggested_scopes:
             candidates = [s for s in analysis.suggested_scopes if s]
         else:
-            candidates = self._storage.list_scopes(scope_prefix)
+            try:
+                candidates = self._storage.list_scopes(scope_prefix)
+            except Exception:
+                logger.warning(
+                    "Storage list_scopes failed in filter_and_chunk, "
+                    "falling back to scope prefix",
+                    exc_info=True,
+                )
+                candidates = []
         if not candidates:
-            info = self._storage.get_scope_info(scope_prefix)
-            if info.record_count > 0:
-                candidates = [scope_prefix]
-            else:
-                candidates = [scope_prefix]
+            candidates = [scope_prefix]
         self.state.candidate_scopes = candidates[:20]
         return self.state.candidate_scopes
 
@@ -326,7 +353,7 @@ class RecallFlow(Flow[RecallState]):
     @router(re_search)
     def re_decide_depth(self) -> str:
         """Re-evaluate depth after re-search. Same logic as decide_depth."""
-        return self.decide_depth()
+        return self.decide_depth()  # type: ignore[call-arg]
 
     @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:

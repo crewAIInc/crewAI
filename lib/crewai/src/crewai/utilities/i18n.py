@@ -104,6 +104,7 @@ class I18N(BaseModel):
             "errors",
             "tools",
             "reasoning",
+            "planning",
             "hierarchical_manager_agent",
             "memory",
         ],

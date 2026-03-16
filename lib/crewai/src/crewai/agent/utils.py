@@ -28,13 +28,20 @@ if TYPE_CHECKING:
 
 
 def handle_reasoning(agent: Agent, task: Task) -> None:
-    """Handle the reasoning process for an agent before task execution.
+    """Handle the reasoning/planning process for an agent before task execution.
+
+    This function checks if planning is enabled for the agent and, if so,
+    creates a plan that gets appended to the task description.
+
+    Note: This function is used by CrewAgentExecutor (legacy path).
+    For AgentExecutor, planning is handled in AgentExecutor.generate_plan().
 
     Args:
         agent: The agent performing the task.
         task: The task to execute.
     """
-    if not agent.reasoning:
+    # Check if planning is enabled using the planning_enabled property
+    if not getattr(agent, "planning_enabled", False):
         return
 
     try:
@@ -43,13 +50,13 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
             AgentReasoningOutput,
         )
 
-        reasoning_handler = AgentReasoning(task=task, agent=agent)
-        reasoning_output: AgentReasoningOutput = (
-            reasoning_handler.handle_agent_reasoning()
+        planning_handler = AgentReasoning(agent=agent, task=task)
+        planning_output: AgentReasoningOutput = (
+            planning_handler.handle_agent_reasoning()
         )
-        task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
+        task.description += f"\n\nPlanning:\n{planning_output.plan.plan}"
     except Exception as e:
-        agent._logger.log("error", f"Error during reasoning process: {e!s}")
+        agent._logger.log("error", f"Error during planning: {e!s}")
 
 
 def build_task_prompt_with_schema(task: Task, task_prompt: str, i18n: I18N) -> str:

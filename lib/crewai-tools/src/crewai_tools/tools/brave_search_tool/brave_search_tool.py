@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 import os
 import time
@@ -10,8 +9,8 @@ from pydantic import BaseModel, Field
 from pydantic.types import StringConstraints
 import requests
 
-from crewai_tools.tools.brave_search_tool.schemas import WebSearchParams
 from crewai_tools.tools.brave_search_tool.base import _save_results_to_file
+from crewai_tools.tools.brave_search_tool.schemas import WebSearchParams
 
 
 load_dotenv()

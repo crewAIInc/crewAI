@@ -21,6 +21,7 @@ dependencies = [
 [project.scripts]
 bump-version = "crewai_devtools.cli:bump"
 tag = "crewai_devtools.cli:tag"
+release = "crewai_devtools.cli:release"
 devtools = "crewai_devtools.cli:main"
 
 [build-system]

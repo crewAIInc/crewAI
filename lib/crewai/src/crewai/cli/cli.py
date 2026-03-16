@@ -682,18 +682,11 @@ def traces_enable():
     from rich.console import Console
     from rich.panel import Panel
 
-    from crewai.events.listeners.tracing.utils import (
-        _load_user_data,
-        _save_user_data,
-    )
+    from crewai.events.listeners.tracing.utils import update_user_data
 
     console = Console()
 
-    # Update user data to enable traces
-    user_data = _load_user_data()
-    user_data["trace_consent"] = True
-    user_data["first_execution_done"] = True
-    _save_user_data(user_data)
+    update_user_data({"trace_consent": True, "first_execution_done": True})
 
     panel = Panel(
         "✅ Trace collection has been enabled!\n\n"
@@ -712,18 +705,11 @@ def traces_disable():
     from rich.console import Console
     from rich.panel import Panel
 
-    from crewai.events.listeners.tracing.utils import (
-        _load_user_data,
-        _save_user_data,
-    )
+    from crewai.events.listeners.tracing.utils import update_user_data
 
     console = Console()
 
-    # Update user data to disable traces
-    user_data = _load_user_data()
-    user_data["trace_consent"] = False
-    user_data["first_execution_done"] = True
-    _save_user_data(user_data)
+    update_user_data({"trace_consent": False, "first_execution_done": True})
 
     panel = Panel(
         "❌ Trace collection has been disabled!\n\n"

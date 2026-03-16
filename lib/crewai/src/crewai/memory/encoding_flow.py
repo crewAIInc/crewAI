@@ -11,7 +11,9 @@ Orchestrates the encoding side of memory in a single Flow with 5 steps:
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 from datetime import datetime
+import logging
 import math
 from typing import Any
 from uuid import uuid4
@@ -27,6 +29,8 @@ from crewai.memory.analyze import (
 )
 from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
 
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # State models
@@ -173,9 +177,11 @@ class EncodingFlow(Flow[EncodingState]):
         if not active:
             return
 
-        def _search_one(item: ItemState) -> list[tuple[MemoryRecord, float]]:
+        def _search_one(
+            item: ItemState,
+        ) -> list[tuple[MemoryRecord, float]]:
             scope_prefix = item.scope if item.scope and item.scope.strip("/") else None
-            return self._storage.search(
+            return self._storage.search(  # type: ignore[no-any-return]
                 item.embedding,
                 scope_prefix=scope_prefix,
                 categories=None,
@@ -185,16 +191,37 @@ class EncodingFlow(Flow[EncodingState]):
 
         if len(active) == 1:
             _, item = active[0]
-            raw = _search_one(item)
+            try:
+                raw = _search_one(item)
+            except Exception:
+                logger.warning(
+                    "Storage search failed in parallel_find_similar, "
+                    "treating item as new",
+                    exc_info=True,
+                )
+                raw = []
             item.similar_records = [r for r, _ in raw]
             item.top_similarity = float(raw[0][1]) if raw else 0.0
         else:
             with ThreadPoolExecutor(max_workers=min(len(active), 8)) as pool:
                 futures = [
-                    (i, item, pool.submit(_search_one, item)) for i, item in active
+                    (
+                        i,
+                        item,
+                        pool.submit(contextvars.copy_context().run, _search_one, item),
+                    )
+                    for i, item in active
                 ]
                 for _, item, future in futures:
-                    raw = future.result()
+                    try:
+                        raw = future.result()
+                    except Exception:
+                        logger.warning(
+                            "Storage search failed in parallel_find_similar, "
+                            "treating item as new",
+                            exc_info=True,
+                        )
+                        raw = []
                     item.similar_records = [r for r, _ in raw]
                     item.top_similarity = float(raw[0][1]) if raw else 0.0
 
@@ -256,6 +283,7 @@ class EncodingFlow(Flow[EncodingState]):
                     # Group B: consolidation only
                     self._apply_defaults(item)
                     consol_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_consolidation,
                         item.content,
                         list(item.similar_records),
@@ -264,6 +292,7 @@ class EncodingFlow(Flow[EncodingState]):
                 elif not fields_provided and not has_similar:
                     # Group C: field resolution only
                     save_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_save,
                         item.content,
                         existing_scopes,
@@ -273,6 +302,7 @@ class EncodingFlow(Flow[EncodingState]):
                 else:
                     # Group D: both in parallel
                     save_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_save,
                         item.content,
                         existing_scopes,
@@ -280,6 +310,7 @@ class EncodingFlow(Flow[EncodingState]):
                         self._llm,
                     )
                     consol_futures[i] = pool.submit(
+                        contextvars.copy_context().run,
                         analyze_for_consolidation,
                         item.content,
                         list(item.similar_records),
@@ -316,8 +347,8 @@ class EncodingFlow(Flow[EncodingState]):
                     item.plan = ConsolidationPlan(actions=[], insert_new=True)
 
             # Collect consolidation results
-            for i, future in consol_futures.items():
-                items[i].plan = future.result()
+            for i, consol_future in consol_futures.items():
+                items[i].plan = consol_future.result()
         finally:
             pool.shutdown(wait=False)
 
@@ -422,40 +453,36 @@ class EncodingFlow(Flow[EncodingState]):
                     )
                 )
 
-        # All storage mutations under one lock so no other pipeline can
-        # interleave and cause version conflicts. The lock is reentrant
-        # (RLock) so the individual storage methods re-acquire it safely.
         updated_records: dict[str, MemoryRecord] = {}
-        with self._storage.write_lock:
-            if dedup_deletes:
-                self._storage.delete(record_ids=list(dedup_deletes))
-                self.state.records_deleted += len(dedup_deletes)
+        if dedup_deletes:
+            self._storage.delete(record_ids=list(dedup_deletes))
+            self.state.records_deleted += len(dedup_deletes)
 
-            for rid, (_item_idx, new_content) in dedup_updates.items():
-                existing = all_similar.get(rid)
-                if existing is not None:
-                    new_emb = update_emb_map.get(rid, [])
-                    updated = MemoryRecord(
-                        id=existing.id,
-                        content=new_content,
-                        scope=existing.scope,
-                        categories=existing.categories,
-                        metadata=existing.metadata,
-                        importance=existing.importance,
-                        created_at=existing.created_at,
-                        last_accessed=now,
-                        embedding=new_emb if new_emb else existing.embedding,
-                    )
-                    self._storage.update(updated)
-                    self.state.records_updated += 1
-                    updated_records[rid] = updated
+        for rid, (_item_idx, new_content) in dedup_updates.items():
+            existing = all_similar.get(rid)
+            if existing is not None:
+                new_emb = update_emb_map.get(rid, [])
+                updated = MemoryRecord(
+                    id=existing.id,
+                    content=new_content,
+                    scope=existing.scope,
+                    categories=existing.categories,
+                    metadata=existing.metadata,
+                    importance=existing.importance,
+                    created_at=existing.created_at,
+                    last_accessed=now,
+                    embedding=new_emb if new_emb else existing.embedding,
+                )
+                self._storage.update(updated)
+                self.state.records_updated += 1
+                updated_records[rid] = updated
 
-            if to_insert:
-                records = [r for _, r in to_insert]
-                self._storage.save(records)
-                self.state.records_inserted += len(records)
-                for idx, record in to_insert:
-                    items[idx].result_record = record
+        if to_insert:
+            records = [r for _, r in to_insert]
+            self._storage.save(records)
+            self.state.records_inserted += len(records)
+            for idx, record in to_insert:
+                items[idx].result_record = record
 
         # Set result_record for non-insert items (after lock, using updated_records)
         for _i, item in enumerate(items):
