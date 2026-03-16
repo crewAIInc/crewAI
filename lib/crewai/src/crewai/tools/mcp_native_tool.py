@@ -7,6 +7,7 @@ concurrently by the executor.
 
 import asyncio
 from collections.abc import Callable
+import contextvars
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -84,9 +85,10 @@ class MCPNativeTool(BaseTool):
 
                 import concurrent.futures
 
+                ctx = contextvars.copy_context()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     coro = self._run_async(**kwargs)
-                    future = executor.submit(asyncio.run, coro)
+                    future = executor.submit(ctx.run, asyncio.run, coro)
                     return future.result()
             except RuntimeError:
                 return asyncio.run(self._run_async(**kwargs))

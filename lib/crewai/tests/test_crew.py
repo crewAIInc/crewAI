@@ -1101,7 +1101,7 @@ def test_single_task_with_async_execution():
 
     result = crew.kickoff()
     assert result.raw.startswith(
-        "- Ethical implications of AI in law enforcement and surveillance."
+        "- Impact of autonomous AI agents on future workplace automation"
     )
 
 

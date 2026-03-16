@@ -442,9 +442,7 @@ def get_flows(flow_path: str = "main.py") -> list[Flow]:
         for search_path in search_paths:
             for root, dirs, files in os.walk(search_path):
                 dirs[:] = [
-                    d
-                    for d in dirs
-                    if d not in _SKIP_DIRS and not d.startswith(".")
+                    d for d in dirs if d not in _SKIP_DIRS and not d.startswith(".")
                 ]
                 if flow_path in files and "cli/templates" not in root:
                     file_os_path = os.path.join(root, flow_path)
@@ -464,9 +462,7 @@ def get_flows(flow_path: str = "main.py") -> list[Flow]:
                             for attr_name in dir(module):
                                 module_attr = getattr(module, attr_name)
                                 try:
-                                    if flow_instance := get_flow_instance(
-                                        module_attr
-                                    ):
+                                    if flow_instance := get_flow_instance(module_attr):
                                         flow_instances.append(flow_instance)
                                 except Exception:  # noqa: S112
                                     continue
