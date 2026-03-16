@@ -1,0 +1,36 @@
+research_kline:
+  description: >
+    1. 调用 Short-term Kline Analyzer 工具。
+    2. 参数设置：symbol={symbol}, intervals={intervals}, lookback=200。
+    3. 分析返回的 JSON 数据，特别是各个周期的 levels 和 summary。
+    4. 判断当前价格相对于日内高低点的位置，识别是否存在超买或超卖趋势。
+  expected_output: >
+    一份包含当前价格、关键点位（支撑/阻力）、趋势方向的技术分析简报。
+  agent: kline_analyzer
+
+sentiment_news:
+  description: >
+    1. 调用 News and Sentiment Aggregator 工具。
+    2. 参数设置：symbol={symbol}, time_range={time_range}。
+    3. 解读 sentiment 字段（polarity 和 strength）以及 fear_greed_index。
+    4. 筛选出对价格影响最大的 3 条新闻标题。
+  expected_output: >
+    市场情绪总结：极性（正/负）、强度、关键影响事件、恐慌/贪婪状态。
+  agent: news_sentiment_analyst
+
+decision_report:
+  description: >
+    1. 汇总 research_kline 的结论。
+    2. 汇总 sentiment_news 的结论。
+    3. 结合当前时间，分析是否存在“技术面+情绪面”的共振。
+    4. 给出最终建议：买入、卖出或持有。
+  expected_output: >
+    最终投资建议书。格式要求：
+    - 决策建议：(例：分批买入)
+    - 止损价位：(例：94500)
+    - 核心逻辑：(分点列出技术与情绪依据)
+    - 风险预警：(当前不确定因素)
+  agent: chief_decision_maker
+  context:
+    - research_kline
+    - sentiment_news

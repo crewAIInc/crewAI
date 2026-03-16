@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+celery[redis]
+ccxt
+pandas_ta
+sqlalchemy
+psycopg2-binary  # 如果使用 PostgreSQL
+pinecone-client  # 向量数据库
+pydantic
+python-dotenv

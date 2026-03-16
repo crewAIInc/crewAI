@@ -162,6 +162,7 @@ members = [
     "lib/crewai-tools",
     "lib/devtools",
     "lib/crewai-files",
+    "crew_trader_pro",  # <--- 确保包含你的项目文件夹
 ]
 
 
