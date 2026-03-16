@@ -417,6 +417,70 @@ def strip_null_from_types(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def _strip_schema_metadata(d: Any) -> Any:
+    """Recursively remove provider-specific metadata from a JSON schema.
+
+    Strips ``title``, ``default``, and ``additionalProperties`` keys from all
+    nested dicts so that the resulting schema is accepted by any LLM provider
+    (Bedrock, Gemini, Anthropic, OpenAI, etc.).
+
+    Args:
+        d: The dictionary/list to clean.
+
+    Returns:
+        The cleaned dictionary/list.
+    """
+    if isinstance(d, dict):
+        for key in ("title", "default", "additionalProperties"):
+            d.pop(key, None)
+        for v in d.values():
+            _strip_schema_metadata(v)
+    elif isinstance(d, list):
+        for item in d:
+            _strip_schema_metadata(item)
+    return d
+
+
+def generate_tool_parameters_schema(
+    model: type[BaseModel],
+) -> dict[str, Any]:
+    """Generate a provider-agnostic JSON schema for tool parameters.
+
+    Unlike :func:`generate_model_description`, this function does **not** apply
+    OpenAI-specific transformations such as ``additionalProperties: false``,
+    forcing all properties into ``required``, or adding ``title`` to nested
+    objects.  The result is a clean schema that works with Bedrock, Gemini,
+    Anthropic, and OpenAI alike.
+
+    Steps:
+        1. Obtain Pydantic's JSON schema.
+        2. Resolve ``$ref`` / ``$defs`` inline.
+        3. Strip ``null`` from optional-field type unions.
+        4. Recursively remove ``title``, ``default``, and
+           ``additionalProperties`` keys.
+
+    Args:
+        model: A Pydantic model class (typically the tool's ``args_schema``).
+
+    Returns:
+        A plain JSON-schema ``dict`` suitable for the ``parameters`` key of a
+        tool/function definition.
+    """
+    schema = model.model_json_schema(ref_template="#/$defs/{model}")
+
+    # Inline all $ref definitions
+    schema = resolve_refs(schema)
+    schema.pop("$defs", None)
+
+    # Strip null variants for optional fields (the partial fix from #4579)
+    schema = strip_null_from_types(schema)
+
+    # Remove provider-specific / cosmetic keys
+    schema = _strip_schema_metadata(schema)
+
+    return schema
+
+
 def generate_model_description(
     model: type[BaseModel],
     *,
