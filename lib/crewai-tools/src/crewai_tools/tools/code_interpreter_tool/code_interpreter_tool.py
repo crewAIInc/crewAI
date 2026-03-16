@@ -8,6 +8,7 @@ potentially unsafe operations and importing restricted modules.
 import importlib.util
 import os
 import subprocess
+import sys
 from types import ModuleType
 from typing import Any, ClassVar, TypedDict
 
@@ -321,7 +322,7 @@ class CodeInterpreterTool(BaseTool):
         """
         if self._check_docker_available():
             return self.run_code_in_docker(code, libraries_used)
-        
+
         error_msg = (
             "Docker is required for safe code execution but is not available. "
             "The restricted sandbox fallback has been removed due to security vulnerabilities "
@@ -411,7 +412,7 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            os.system(f"pip install {library}")  # noqa: S605
+            subprocess.run([sys.executable, "-m", "pip", "install", library], check=False)  # noqa: S603
 
         # Execute the code
         try:
