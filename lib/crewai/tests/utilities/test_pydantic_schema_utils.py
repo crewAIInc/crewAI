@@ -25,6 +25,7 @@ from crewai.utilities.pydantic_schema_utils import (
     ensure_all_properties_required,
     ensure_type_in_schemas,
     force_additional_properties_false,
+    generate_tool_parameters_schema,
     resolve_refs,
     strip_null_from_types,
     strip_unsupported_formats,
@@ -882,3 +883,121 @@ class TestEndToEndMCPSchema:
         )
         assert obj.filters.date_from == datetime.date(2025, 1, 1)
         assert obj.filters.categories == ["news", "tech"]
+
+
+# ---------------------------------------------------------------------------
+# Tests for generate_tool_parameters_schema (provider-agnostic tool schemas)
+# ---------------------------------------------------------------------------
+
+class TestGenerateToolParametersSchema:
+    """Verify that generate_tool_parameters_schema produces clean, provider-agnostic
+    JSON schemas suitable for Bedrock, Gemini, Anthropic, **and** OpenAI."""
+
+    def test_no_additional_properties_key(self) -> None:
+        """Schema must not contain additionalProperties (Bedrock/Gemini reject it)."""
+
+        class SimpleInput(BaseModel):
+            query: str
+
+        schema = generate_tool_parameters_schema(SimpleInput)
+        assert "additionalProperties" not in schema
+
+    def test_optional_fields_not_forced_required(self) -> None:
+        """Optional fields should NOT be forced into the required array.
+
+        generate_model_description forces all fields required (OpenAI strict mode).
+        The tool-parameters variant must preserve the original required array.
+        """
+        from typing import Optional
+
+        class MixedInput(BaseModel):
+            query: str
+            page: Optional[int] = None
+
+        schema = generate_tool_parameters_schema(MixedInput)
+        required = schema.get("required", [])
+        assert "query" in required
+        assert "page" not in required
+
+    def test_nested_objects_have_no_title(self) -> None:
+        """Nested object schemas must not carry a 'title' key (Gemini rejects it)."""
+
+        class Address(BaseModel):
+            city: str
+            zip_code: str
+
+        class Person(BaseModel):
+            name: str
+            address: Address
+
+        schema = generate_tool_parameters_schema(Person)
+
+        # Top-level title removed
+        assert "title" not in schema
+
+        # Nested object title removed
+        addr_schema = schema["properties"]["address"]
+        assert "title" not in addr_schema
+
+    def test_refs_resolved_inline(self) -> None:
+        """$ref and $defs should be fully resolved (no leftover references)."""
+
+        class Inner(BaseModel):
+            value: int
+
+        class Outer(BaseModel):
+            inner: Inner
+
+        schema = generate_tool_parameters_schema(Outer)
+        assert "$defs" not in schema
+        assert "$ref" not in str(schema)
+
+    def test_null_stripped_from_optional_types(self) -> None:
+        """Optional fields should have null stripped from anyOf/type arrays."""
+        from typing import Optional
+
+        class OptInput(BaseModel):
+            name: Optional[str] = None
+
+        schema = generate_tool_parameters_schema(OptInput)
+        name_prop = schema["properties"]["name"]
+        # Should be simplified to {"type": "string"}, not anyOf with null
+        assert name_prop.get("type") == "string"
+        assert "anyOf" not in name_prop
+
+    def test_default_values_stripped(self) -> None:
+        """Default values should be removed from the schema."""
+        from pydantic import Field
+
+        class WithDefaults(BaseModel):
+            count: int = Field(default=10, description="Item count")
+
+        schema = generate_tool_parameters_schema(WithDefaults)
+        count_prop = schema["properties"]["count"]
+        assert "default" not in count_prop
+
+    def test_preserves_descriptions(self) -> None:
+        """Field descriptions must be preserved."""
+        from pydantic import Field
+
+        class Described(BaseModel):
+            query: str = Field(description="Search query")
+
+        schema = generate_tool_parameters_schema(Described)
+        assert schema["properties"]["query"]["description"] == "Search query"
+
+    def test_preserves_property_types(self) -> None:
+        """Basic property types must be correctly represented."""
+
+        class TypedInput(BaseModel):
+            name: str
+            count: int
+            score: float
+            active: bool
+
+        schema = generate_tool_parameters_schema(TypedInput)
+        props = schema["properties"]
+        assert props["name"]["type"] == "string"
+        assert props["count"]["type"] == "integer"
+        assert props["score"]["type"] == "number"
+        assert props["active"]["type"] == "boolean"
