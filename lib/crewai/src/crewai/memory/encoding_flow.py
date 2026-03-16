@@ -13,6 +13,7 @@ from __future__ import annotations
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 from datetime import datetime
+import logging
 import math
 from typing import Any
 from uuid import uuid4
@@ -28,6 +29,8 @@ from crewai.memory.analyze import (
 )
 from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
 
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # State models
@@ -188,7 +191,15 @@ class EncodingFlow(Flow[EncodingState]):
 
         if len(active) == 1:
             _, item = active[0]
-            raw = _search_one(item)
+            try:
+                raw = _search_one(item)
+            except Exception:
+                logger.warning(
+                    "Storage search failed in parallel_find_similar, "
+                    "treating item as new",
+                    exc_info=True,
+                )
+                raw = []
             item.similar_records = [r for r, _ in raw]
             item.top_similarity = float(raw[0][1]) if raw else 0.0
         else:
@@ -202,7 +213,15 @@ class EncodingFlow(Flow[EncodingState]):
                     for i, item in active
                 ]
                 for _, item, future in futures:
-                    raw = future.result()
+                    try:
+                        raw = future.result()
+                    except Exception:
+                        logger.warning(
+                            "Storage search failed in parallel_find_similar, "
+                            "treating item as new",
+                            exc_info=True,
+                        )
+                        raw = []
                     item.similar_records = [r for r, _ in raw]
                     item.top_similarity = float(raw[0][1]) if raw else 0.0
 

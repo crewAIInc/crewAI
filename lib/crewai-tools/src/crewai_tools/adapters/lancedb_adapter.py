@@ -46,13 +46,12 @@ class LanceDBAdapter(Adapter):
 
     def query(self, question: str) -> str:  # type: ignore[override]
         query = self.embedding_function([question])[0]
-        with store_lock(self._lock_name):
-            results = (
-                self._table.search(query, vector_column_name=self.vector_column_name)
-                .limit(self.top_k)
-                .select([self.text_column_name])
-                .to_list()
-            )
+        results = (
+            self._table.search(query, vector_column_name=self.vector_column_name)
+            .limit(self.top_k)
+            .select([self.text_column_name])
+            .to_list()
+        )
         values = [result[self.text_column_name] for result in results]
         return "\n".join(values)
 

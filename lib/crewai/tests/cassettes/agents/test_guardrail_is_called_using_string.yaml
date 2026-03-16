@@ -1,586 +1,572 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"Top 10 best players in the world?"}],"model":"gpt-4.1-mini"}'
+    body: '{"trace_id": "403d502a-f3c8-41f4-9406-724b66d786f7", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.9.3", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2026-02-12T00:03:10.523894+00:00"}}'
     headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '434'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.9.3
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '55'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 12 Feb 2026 00:03:10 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information.\nYour personal goal is: List
+      the best soccer players"},{"role":"user","content":"\nCurrent Task: Top 5 best
+      soccer players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '657'
+      - '322'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYgg6RljCNiIt8k2QGc94XFOAkw57\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762383242,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: The top 10 best soccer players in the world as of 2024, considering their current form, skill, impact, and achievements, are:\\n\\n1. Lionel Messi – Consistently brilliant with exceptional dribbling, vision, and goal-scoring ability. He continues to influence games at the highest level.\\n2. Kylian Mbappé – Known for his speed, technical skill, and prolific goal-scoring. A key player for both PSG and the French national team.\\n3. Erling Haaland – A powerful and clinical striker, Haaland is renowned for his goal-scoring record and physical presence.\\n4. Kevin De Bruyne – One of the best midfielders globally, known for his precise passing,\
-        \ creativity, and ability to control the tempo.\\n5. Robert Lewandowski – A prolific and experienced striker with remarkable goal-scoring consistency for both club and country.\\n6. Vinícius Júnior – An exciting young talent known for his pace, dribbling skills, and improvement in goal contributions.\\n7. Mohamed Salah – A key winger with outstanding speed, dribbling, and goal-scoring for Liverpool and Egypt.\\n8. Neymar Jr. – Skillful and creative forward, known for flair and playmaking, contributing significantly for PSG and Brazil.\\n9. Jude Bellingham – A rising midfielder known for his work rate, vision, and maturity beyond his years.\\n10. Karim Benzema – Experienced forward with excellent technique, vision, and scoring ability, integral to his team’s success.\\n\\nThis list reflects a holistic view of current performances, influence on the pitch, and overall reputation across leagues and international competitions.\",\n        \"refusal\": null,\n        \"annotations\": []\n\
-        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\": 344,\n    \"total_tokens\": 466,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D8ESkSbB6UY82WuYTCECuUX8bvYCt\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770854590,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"As of 2024, the top 5 best soccer players
+        in the world based on recent performance, skill, and impact are:\\n\\n1. **Lionel
+        Messi**  \\n   - Club: Paris Saint-Germain (PSG) / Inter Miami (as of mid-2023)
+        \ \\n   - Highlights: Multiple Ballon d'Or winner, exceptional dribbling,
+        playmaking, and goal-scoring ability.\\n\\n2. **Kylian Mbapp\xE9**  \\n   -
+        Club: Paris Saint-Germain (PSG)  \\n   - Highlights: Known for incredible
+        speed, agility, and finishing; World Cup winner with France.\\n\\n3. **Erling
+        Haaland**  \\n   - Club: Manchester City  \\n   - Highlights: Prolific goal
+        scorer with a powerful physical presence; Premier League Golden Boot winner.\\n\\n4.
+        **Kevin De Bruyne**  \\n   - Club: Manchester City  \\n   - Highlights: Premier
+        League\u2019s best midfielder, exceptional passing, vision, and creativity.\\n\\n5.
+        **Robert Lewandowski**  \\n   - Club: FC Barcelona  \\n   - Highlights: Consistent
+        goal scorer with excellent positioning and finishing; multiple Bundesliga
+        top scorer titles.\\n\\nThese players have shown extraordinary talent and
+        consistency at the highest level of football competition.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        55,\n    \"completion_tokens\": 249,\n    \"total_tokens\": 304,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
     headers:
       CF-RAY:
-      - 999fee3f8d6a1768-EWR
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:54:06 GMT
+      - Thu, 12 Feb 2026 00:03:14 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=REDACTED; path=/; expires=Wed, 05-Nov-25 23:24:06 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - REDACTED
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '4627'
+      - '3949'
       openai-project:
-      - REDACTED
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '4655'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199859'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 42ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_1a74336d08fd47e4a8e5be8f4bab5e43
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Guardrail Agent. You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.\nYour personal goal is: Validate the output of the task\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\":
-      [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"\n        Ensure the following task result complies with the given guardrail.\n\n        Task result:\n        The top 10 best soccer players in the world as of 2024, considering their current form, skill, impact, and achievements, are:\n\n1. Lionel Messi – Consistently brilliant with exceptional dribbling,
-      vision, and goal-scoring ability. He continues to influence games at the highest level.\n2. Kylian Mbappé – Known for his speed, technical skill, and prolific goal-scoring. A key player for both PSG and the French national team.\n3. Erling Haaland – A powerful and clinical striker, Haaland is renowned for his goal-scoring record and physical presence.\n4. Kevin De Bruyne – One of the best midfielders globally, known for his precise passing, creativity, and ability to control the tempo.\n5. Robert Lewandowski – A prolific and experienced striker with remarkable goal-scoring consistency for both club and country.\n6. Vinícius Júnior – An exciting young talent known for his pace, dribbling skills, and improvement in goal contributions.\n7. Mohamed Salah – A key winger with outstanding speed, dribbling, and goal-scoring for Liverpool and Egypt.\n8. Neymar Jr. – Skillful and creative forward, known for flair and playmaking, contributing significantly for PSG and Brazil.\n9. Jude Bellingham
-      – A rising midfielder known for his work rate, vision, and maturity beyond his years.\n10. Karim Benzema – Experienced forward with excellent technique, vision, and scoring ability, integral to his team’s success.\n\nThis list reflects a holistic view of current performances, influence on the pitch, and overall reputation across leagues and international competitions.\n\n        Guardrail:\n        Only include Brazilian players, both women and men\n\n        Your task:\n        - Confirm if the Task result complies with the guardrail.\n        - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).\n        - Focus only on identifying issues — do not propose corrections.\n        - If the Task result complies with the guardrail, saying that is valid\n        "}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information.\nYour personal goal is: List
+      the best soccer players"},{"role":"user","content":"\nCurrent Task: Top 5 best
+      soccer players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '3906'
+      - '322'
       content-type:
       - application/json
       cookie:
-      - REDACTED
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYggBpP3bR4ePSDzp1Om6beNHOEFX\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762383247,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\n  \\\"valid\\\": false,\\n  \\\"feedback\\\": \\\"The task result does not comply with the guardrail which requires only Brazilian players to be included. The list includes players of various nationalities such as Lionel Messi (Argentina), Kylian Mbappé (France), Erling Haaland (Norway), Kevin De Bruyne (Belgium), Mohamed Salah (Egypt), Jude Bellingham (England), and Karim Benzema (France), which violates the specified guardrail.\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 793,\n    \"completion_tokens\": 98,\n    \"total_tokens\": 891,\n\
-        \    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D8ESo9LGMpNlluL8IkZM6BY6JfWgJ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770854594,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"As of 2024, the top 5 best soccer players
+        in the world, based on recent performances, skills, and impact on the game,
+        are:\\n\\n1. **Lionel Messi**  \\n   - Club: Inter Miami CF  \\n   - National
+        Team: Argentina  \\n   - Achievements: Multiple Ballon d'Or winner, led Argentina
+        to Copa America and World Cup victories, known for extraordinary dribbling,
+        vision, and playmaking.\\n\\n2. **Kylian Mbapp\xE9**  \\n   - Club: Paris
+        Saint-Germain  \\n   - National Team: France  \\n   - Achievements: World
+        Cup winner, known for blistering pace, clinical finishing, and versatility
+        in attack.\\n\\n3. **Erling Haaland**  \\n   - Club: Manchester City  \\n
+        \  - National Team: Norway  \\n   - Achievements: Prolific goal scorer, record-breaking
+        goal tallies in domestic leagues and the Champions League.\\n\\n4. **Kevin
+        De Bruyne**  \\n   - Club: Manchester City  \\n   - National Team: Belgium
+        \ \\n   - Achievements: Elite playmaker with unmatched vision, passing accuracy,
+        and creativity in midfield.\\n\\n5. **Karim Benzema**  \\n   - Club: Al-Ittihad
+        \ \\n   - National Team: France  \\n   - Achievements: Ballon d'Or winner,
+        consistent goal scorer and leader, instrumental in Real Madrid\u2019s recent
+        successes.\\n\\nThese players stand out due to their consistent high-level
+        performances, individual skills, leadership, and contributions to their clubs
+        and national teams.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 55,\n    \"completion_tokens\":
+        305,\n    \"total_tokens\": 360,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
     headers:
       CF-RAY:
-      - 999fee5d3b851768-EWR
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:54:08 GMT
+      - Thu, 12 Feb 2026 00:03:19 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - REDACTED
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1797'
+      - '4300'
       openai-project:
-      - REDACTED
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '1832'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199079'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 276ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_2d2fec0d69a74c988556975d6e729526
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
-      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"{\n  \"valid\": false,\n  \"feedback\": \"The task result does not comply with the guardrail which requires only Brazilian players to be included. The list includes players of various nationalities such as Lionel Messi (Argentina), Kylian Mbappé (France), Erling Haaland (Norway), Kevin De Bruyne (Belgium), Mohamed Salah (Egypt), Jude Bellingham (England), and Karim Benzema (France), which violates the specified guardrail.\"\n}"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information.\nYour personal goal is: List
+      the best soccer players"},{"role":"user","content":"\nCurrent Task: Top 5 best
+      soccer players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '2162'
+      - '322'
       content-type:
       - application/json
       cookie:
-      - REDACTED
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
-      x-stainless-helper-method:
-      - chat.completions.parse
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYggCRsvmGp5b7MPSbokeYzzes7gj\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762383248,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"valid\\\":false,\\\"feedback\\\":\\\"The provided list includes players from multiple nationalities rather than exclusively Brazilian players, thus violating the guardrail that requires only Brazilian players to be listed.\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 435,\n    \"completion_tokens\": 37,\n    \"total_tokens\": 472,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
-        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D8ESt5RfRfyVO5jHIXkhHfMAkFCSo\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770854599,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"As of 2024, the top 5 best soccer players
+        in the world, based on their recent performances, skills, and impact on the
+        game, are:\\n\\n1. **Lionel Messi**  \\n   - Club: Inter Miami (MLS)  \\n
+        \  - Achievements: Multiple Ballon d\u2019Or winner, known for exceptional
+        dribbling, vision, and goal-scoring ability. Continues to influence games
+        at the highest level.\\n\\n2. **Kylian Mbapp\xE9**  \\n   - Club: Paris Saint-Germain
+        (Ligue 1)  \\n   - Achievements: World Cup winner, renowned for incredible
+        pace, technique, and finishing skills. A consistent top scorer and playmaker.\\n\\n3.
+        **Erling Haaland**  \\n   - Club: Manchester City (Premier League)  \\n   -
+        Achievements: Prolific goal scorer, breaking numerous records in the Premier
+        League and Champions League. Known for physicality and clinical finishing.\\n\\n4.
+        **Kevin De Bruyne**  \\n   - Club: Manchester City (Premier League)  \\n   -
+        Achievements: Considered one of the best midfielders in the world due to his
+        vision, passing accuracy, and ability to control the tempo of the game.\\n\\n5.
+        **Robert Lewandowski**  \\n   - Club: FC Barcelona (La Liga)  \\n   - Achievements:
+        One of the best strikers globally, known for his positioning, finishing, and
+        consistency in front of goal.\\n\\nThese players represent the peak of current
+        soccer talent, excelling in different aspects of the game and making significant
+        contributions to their clubs and national teams.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        55,\n    \"completion_tokens\": 321,\n    \"total_tokens\": 376,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
     headers:
       CF-RAY:
-      - 999fee6968891768-EWR
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:54:09 GMT
+      - Thu, 12 Feb 2026 00:03:24 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - REDACTED
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '665'
+      - '4897'
       openai-project:
-      - REDACTED
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '683'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199634'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 109ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_054a5f7245e548d0aab9b4e6d962d180
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"Top 10 best players in the world?"},{"role":"assistant","content":"Thought: I now can give a great answer\nFinal Answer: The top 10 best soccer players in the world as of 2024, considering their current form, skill, impact, and achievements, are:\n\n1. Lionel Messi – Consistently brilliant with exceptional dribbling, vision, and goal-scoring ability. He continues to influence games at the highest
-      level.\n2. Kylian Mbappé – Known for his speed, technical skill, and prolific goal-scoring. A key player for both PSG and the French national team.\n3. Erling Haaland – A powerful and clinical striker, Haaland is renowned for his goal-scoring record and physical presence.\n4. Kevin De Bruyne – One of the best midfielders globally, known for his precise passing, creativity, and ability to control the tempo.\n5. Robert Lewandowski – A prolific and experienced striker with remarkable goal-scoring consistency for both club and country.\n6. Vinícius Júnior – An exciting young talent known for his pace, dribbling skills, and improvement in goal contributions.\n7. Mohamed Salah – A key winger with outstanding speed, dribbling, and goal-scoring for Liverpool and Egypt.\n8. Neymar Jr. – Skillful and creative forward, known for flair and playmaking, contributing significantly for PSG and Brazil.\n9. Jude Bellingham – A rising midfielder known for his work rate, vision, and maturity beyond his
-      years.\n10. Karim Benzema – Experienced forward with excellent technique, vision, and scoring ability, integral to his team’s success.\n\nThis list reflects a holistic view of current performances, influence on the pitch, and overall reputation across leagues and international competitions."},{"role":"user","content":"The provided list includes players from multiple nationalities rather than exclusively Brazilian players, thus violating the guardrail that requires only Brazilian players to be listed."}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information.\nYour personal goal is: List
+      the best soccer players"},{"role":"user","content":"\nCurrent Task: Top 5 best
+      soccer players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '2552'
+      - '322'
       content-type:
       - application/json
       cookie:
-      - REDACTED
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CYggDDIRxeHuCWFRt0nd6ES64FPXp\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762383249,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: The top 10 best Brazilian soccer players in the world as of 2024, based on current form, skill, impact, and achievements, are:\\n\\n1. Vinícius Júnior – A dynamic winger known for his exceptional dribbling, pace, and improving goal-scoring record with Real Madrid.\\n2. Neymar Jr. – A skillful forward with creativity, flair, and experience, still influential for PSG and Brazil.\\n3. Casemiro – A commanding defensive midfielder known for his tackling, positioning, and leadership both at club and national level.\\n4. Alisson Becker – One of the world's top goalkeepers, instrumental for Liverpool and Brazil.\\n5. Marquinhos – A versatile\
-        \ defender known for his composure, tactical awareness, and leadership at PSG and Brazil.\\n6. Rodrygo Goes – Young forward with great technical ability and an increasing impact at Real Madrid.\\n7. Fred – A hard-working midfielder with good passing and stamina, key for Manchester United and Brazil.\\n8. Richarlison – A versatile and energetic forward known for goal-scoring and work ethic, playing for Tottenham Hotspur.\\n9. Gabriel Jesus – A quick and creative striker/winger, recently playing for Arsenal and Brazil.\\n10. Éder Militão – A strong and reliable defender, key at Real Madrid and for the national team.\\n\\nThis list highlights the best Brazilian players actively performing at top global clubs and contributing significantly to Brazil’s national team.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 503,\n    \"completion_tokens\": 305,\n\
-        \    \"total_tokens\": 808,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D8ESyHWtqdPE7jz3JDmi790mBx805\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770854604,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"As of 2024, the top 5 best soccer players
+        in the world, considering their skills, achievements, and influence on the
+        game, are:\\n\\n1. **Lionel Messi**\\n   - Clubs: Paris Saint-Germain (PSG),
+        Inter Miami (MLS)\\n   - Achievements: Multiple Ballon d'Or winner, Copa America
+        champion, extensive record for goals and assists.\\n   - Strengths: Exceptional
+        dribbling, vision, playmaking, and goal-scoring ability.\\n\\n2. **Kylian
+        Mbapp\xE9**\\n   - Club: Paris Saint-Germain (PSG)\\n   - Achievements: FIFA
+        World Cup winner, Ligue 1 top scorer, multiple individual awards.\\n   - Strengths:
+        Incredible pace, finishing, dribbling, and versatility in attack.\\n\\n3.
+        **Erling Haaland**\\n   - Club: Manchester City\\n   - Achievements: Premier
+        League Golden Boot winner, record-breaking goal scorer.\\n   - Strengths:
+        Physicality, clinical finishing, positioning, and speed.\\n\\n4. **Kevin De
+        Bruyne**\\n   - Club: Manchester City\\n   - Achievements: Multiple Premier
+        League titles, UEFA Champions League finalist.\\n   - Strengths: Passing accuracy,
+        vision, creativity, and leadership in midfield.\\n\\n5. **Karim Benzema**\\n
+        \  - Club: Al-Ittihad (Saudi Pro League)\\n   - Achievements: Ballon d'Or
+        winner, UEFA Champions League titles with Real Madrid.\\n   - Strengths: Goal-scoring,
+        link-up play, experience, and technical skill.\\n\\nThese players have consistently
+        demonstrated outstanding performances at the highest levels of club and international
+        soccer.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+        \ \"usage\": {\n    \"prompt_tokens\": 55,\n    \"completion_tokens\": 328,\n
+        \   \"total_tokens\": 383,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
     headers:
       CF-RAY:
-      - 999fee6e0d2c1768-EWR
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Wed, 05 Nov 2025 22:54:14 GMT
+      - Thu, 12 Feb 2026 00:03:29 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - REDACTED
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '4672'
+      - '5110'
       openai-project:
-      - REDACTED
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '4688'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '500'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '499'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199402'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 120ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 179ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_f3c7d0b21ddb475395840b1a9cc7d8b0
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"You are Guardrail Agent. You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.\nYour personal goal is: Validate the output of the task\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\":
-      [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"\n        Ensure the following task result complies with the given guardrail.\n\n        Task result:\n        The top 10 best Brazilian soccer players in the world as of 2024, based on current form, skill, impact, and achievements, are:\n\n1. Vinícius Júnior – A dynamic winger known for his exceptional
-      dribbling, pace, and improving goal-scoring record with Real Madrid.\n2. Neymar Jr. – A skillful forward with creativity, flair, and experience, still influential for PSG and Brazil.\n3. Casemiro – A commanding defensive midfielder known for his tackling, positioning, and leadership both at club and national level.\n4. Alisson Becker – One of the world''s top goalkeepers, instrumental for Liverpool and Brazil.\n5. Marquinhos – A versatile defender known for his composure, tactical awareness, and leadership at PSG and Brazil.\n6. Rodrygo Goes – Young forward with great technical ability and an increasing impact at Real Madrid.\n7. Fred – A hard-working midfielder with good passing and stamina, key for Manchester United and Brazil.\n8. Richarlison – A versatile and energetic forward known for goal-scoring and work ethic, playing for Tottenham Hotspur.\n9. Gabriel Jesus – A quick and creative striker/winger, recently playing for Arsenal and Brazil.\n10. Éder Militão – A strong and reliable
-      defender, key at Real Madrid and for the national team.\n\nThis list highlights the best Brazilian players actively performing at top global clubs and contributing significantly to Brazil’s national team.\n\n        Guardrail:\n        Only include Brazilian players, both women and men\n\n        Your task:\n        - Confirm if the Task result complies with the guardrail.\n        - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).\n        - Focus only on identifying issues — do not propose corrections.\n        - If the Task result complies with the guardrail, saying that is valid\n        "}],"model":"gpt-4.1-mini"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '3738'
-      content-type:
-      - application/json
-      cookie:
-      - REDACTED
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.109.1
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-CYggI89VywRfclipLV163fyaXAAa0\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762383254,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\n  \\\"valid\\\": true,\\n  \\\"feedback\\\": null\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 754,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 768,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
-    headers:
-      CF-RAY:
-      - 999fee8c0eaa1768-EWR
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 05 Nov 2025 22:54:15 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - REDACTED
-      openai-processing-ms:
-      - '362'
-      openai-project:
-      - REDACTED
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '544'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-requests:
-      - '500'
-      x-ratelimit-limit-tokens:
-      - '200000'
-      x-ratelimit-remaining-requests:
-      - '499'
-      x-ratelimit-remaining-tokens:
-      - '199121'
-      x-ratelimit-reset-requests:
-      - 120ms
-      x-ratelimit-reset-tokens:
-      - 263ms
-      x-request-id:
-      - req_46f9e959339c49e89d07f3f1ffa38d75
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
-      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"{\n  \"valid\": true,\n  \"feedback\": null\n}"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '1777'
-      content-type:
-      - application/json
-      cookie:
-      - REDACTED
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-helper-method:
-      - chat.completions.parse
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.109.1
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-CYggJYs1WX8EaUbDwcqPGE583wwRQ\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762383255,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"valid\\\":true,\\\"feedback\\\":null}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 351,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 360,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
-    headers:
-      CF-RAY:
-      - 999fee9009d61768-EWR
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 05 Nov 2025 22:54:15 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - REDACTED
-      openai-processing-ms:
-      - '279'
-      openai-project:
-      - REDACTED
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '300'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-requests:
-      - '500'
-      x-ratelimit-limit-tokens:
-      - '200000'
-      x-ratelimit-remaining-requests:
-      - '499'
-      x-ratelimit-remaining-tokens:
-      - '199730'
-      x-ratelimit-reset-requests:
-      - 120ms
-      x-ratelimit-reset-tokens:
-      - 81ms
-      x-request-id:
-      - req_5f781dd305cb4703954d27847876812f
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

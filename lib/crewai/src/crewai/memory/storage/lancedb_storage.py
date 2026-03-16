@@ -350,12 +350,11 @@ class LanceDBStorage:
         """Return a single record by ID, or None if not found."""
         if self._table is None:
             return None
-        with store_lock(self._lock_name):
-            safe_id = str(record_id).replace("'", "''")
-            rows = self._table.search().where(f"id = '{safe_id}'").limit(1).to_list()
-            if not rows:
-                return None
-            return self._row_to_record(rows[0])
+        safe_id = str(record_id).replace("'", "''")
+        rows = self._table.search().where(f"id = '{safe_id}'").limit(1).to_list()
+        if not rows:
+            return None
+        return self._row_to_record(rows[0])
 
     def search(
         self,
@@ -368,15 +367,14 @@ class LanceDBStorage:
     ) -> list[tuple[MemoryRecord, float]]:
         if self._table is None:
             return []
-        with store_lock(self._lock_name):
-            query = self._table.search(query_embedding)
-            if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
-                like_val = prefix + "%"
-                query = query.where(f"scope LIKE '{like_val}'")
-            results = query.limit(
-                limit * 3 if (categories or metadata_filter) else limit
-            ).to_list()
+        query = self._table.search(query_embedding)
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            like_val = prefix + "%"
+            query = query.where(f"scope LIKE '{like_val}'")
+        results = query.limit(
+            limit * 3 if (categories or metadata_filter) else limit
+        ).to_list()
         out: list[tuple[MemoryRecord, float]] = []
         for row in results:
             record = self._row_to_record(row)
@@ -460,8 +458,6 @@ class LanceDBStorage:
         Uses a full table scan (no vector query) so the limit is applied after
         the scope filter, not to ANN candidates before filtering.
 
-        Caller must hold ``store_lock(self._lock_name)``.
-
         Args:
             scope_prefix: Optional scope path prefix to filter by.
             limit: Maximum number of rows to return (applied after filtering).
@@ -492,8 +488,7 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        with store_lock(self._lock_name):
-            rows = self._scan_rows(scope_prefix, limit=limit + offset)
+        rows = self._scan_rows(scope_prefix, limit=limit + offset)
         records = [self._row_to_record(r) for r in rows]
         records.sort(key=lambda r: r.created_at, reverse=True)
         return records[offset : offset + limit]
@@ -503,11 +498,10 @@ class LanceDBStorage:
         prefix = scope if scope != "/" else ""
         if prefix and not prefix.startswith("/"):
             prefix = "/" + prefix
-        with store_lock(self._lock_name):
-            rows = self._scan_rows(
-                prefix or None,
-                columns=["scope", "categories_str", "created_at"],
-            )
+        rows = self._scan_rows(
+            prefix or None,
+            columns=["scope", "categories_str", "created_at"],
+        )
         if not rows:
             return ScopeInfo(
                 path=scope or "/",
@@ -558,8 +552,7 @@ class LanceDBStorage:
     def list_scopes(self, parent: str = "/") -> list[str]:
         parent = parent.rstrip("/") or ""
         prefix = (parent + "/") if parent else "/"
-        with store_lock(self._lock_name):
-            rows = self._scan_rows(prefix if prefix != "/" else None, columns=["scope"])
+        rows = self._scan_rows(prefix if prefix != "/" else None, columns=["scope"])
         children: set[str] = set()
         for row in rows:
             sc = str(row.get("scope", ""))
@@ -571,8 +564,7 @@ class LanceDBStorage:
         return sorted(children)
 
     def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:
-        with store_lock(self._lock_name):
-            rows = self._scan_rows(scope_prefix, columns=["categories_str"])
+        rows = self._scan_rows(scope_prefix, columns=["categories_str"])
         counts: dict[str, int] = {}
         for row in rows:
             cat_str = row.get("categories_str") or "[]"
@@ -588,8 +580,7 @@ class LanceDBStorage:
         if self._table is None:
             return 0
         if scope_prefix is None or scope_prefix.strip("/") == "":
-            with store_lock(self._lock_name):
-                return int(self._table.count_rows())
+            return int(self._table.count_rows())
         info = self.get_scope_info(scope_prefix)
         return info.record_count
 

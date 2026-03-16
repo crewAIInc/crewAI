@@ -173,13 +173,12 @@ class RAG(Adapter):
         try:
             question_embedding = self._embedding_service.embed_text(question)
 
-            with store_lock(self._lock_name):
-                results = self._collection.query(
-                    query_embeddings=[question_embedding],
-                    n_results=self.top_k,
-                    where=where,
-                    include=["documents", "metadatas", "distances"],
-                )
+            results = self._collection.query(
+                query_embeddings=[question_embedding],
+                n_results=self.top_k,
+                where=where,
+                include=["documents", "metadatas", "distances"],
+            )
 
             if (
                 not results
