@@ -279,7 +279,11 @@ class Telemetry:
             self._add_attribute(span, "python_version", platform.python_version())
             add_crew_attributes(span, crew, self._add_attribute)
             self._add_attribute(span, "crew_process", crew.process)
-            self._add_attribute(span, "crew_memory", crew.memory)
+            # crew.memory can be True/False or a Memory instance.
+            # OpenTelemetry only accepts bool/str/bytes/int/float, so convert
+            # a Memory object to True to avoid "Invalid type" errors.
+            crew_memory_value = crew.memory if isinstance(crew.memory, bool) else bool(crew.memory)
+            self._add_attribute(span, "crew_memory", crew_memory_value)
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
 
