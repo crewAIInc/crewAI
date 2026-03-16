@@ -102,15 +102,14 @@ agent = Agent(
 )
 ```
 
-## Disclosure Levels
+## How Skills Are Loaded
 
-Skills load progressively through three levels:
+Skills load progressively — only the data needed at each stage is read:
 
-| Level            | What's loaded                                     | When               |
+| Stage            | What's loaded                                     | When               |
 | :--------------- | :------------------------------------------------ | :----------------- |
-| `METADATA`       | Name, description, frontmatter fields             | `discover_skills()` |
-| `INSTRUCTIONS`   | Full SKILL.md body text                           | `activate_skill()` |
-| `RESOURCES`      | File listings from scripts/, references/, assets/ | `load_resources()` |
+| Discovery        | Name, description, frontmatter fields             | `discover_skills()` |
+| Activation       | Full SKILL.md body text                           | `activate_skill()` |
 
-During normal agent execution, skills are automatically discovered and activated (promoted to `INSTRUCTIONS`). Use `load_resources()` only when you need to inspect available files programmatically.
+During normal agent execution, skills are automatically discovered and activated. The `scripts/`, `references/`, and `assets/` directories are available on the skill's `path` for agents that need to reference files directly.
 

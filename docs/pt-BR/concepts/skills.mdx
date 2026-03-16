@@ -102,14 +102,13 @@ agent = Agent(
 )
 ```
 
-## Níveis de Divulgação
+## Como as Skills São Carregadas
 
-Skills carregam progressivamente através de três níveis:
+Skills carregam progressivamente — apenas os dados necessários em cada etapa são lidos:
 
-| Nível            | O que é carregado                                  | Quando              |
+| Etapa            | O que é carregado                                  | Quando              |
 | :--------------- | :------------------------------------------------ | :------------------ |
-| `METADATA`       | Nome, descrição, campos do frontmatter             | `discover_skills()` |
-| `INSTRUCTIONS`   | Texto completo do corpo do SKILL.md                | `activate_skill()` |
-| `RESOURCES`      | Listagem de arquivos de scripts/, references/, assets/ | `load_resources()` |
+| Descoberta       | Nome, descrição, campos do frontmatter             | `discover_skills()` |
+| Ativação         | Texto completo do corpo do SKILL.md                | `activate_skill()` |
 
-Durante a execução normal do agente, skills são automaticamente descobertas e ativadas (promovidas para `INSTRUCTIONS`). Use `load_resources()` apenas quando precisar inspecionar arquivos disponíveis programaticamente.
+Durante a execução normal do agente, skills são automaticamente descobertas e ativadas. Os diretórios `scripts/`, `references/` e `assets/` estão disponíveis no `path` da skill para agentes que precisam referenciar arquivos diretamente.
