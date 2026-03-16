@@ -76,6 +76,23 @@ class BrowserSessionManager:
         self._sync_playwrights: dict[str, SyncPlaywright] = {}
         self._creating: dict[str, threading.Event] = {}
 
+    def _build_start_kwargs(self) -> dict[str, Any]:
+        """Build kwargs dict for BrowserClient.start() from session config."""
+        kwargs: dict[str, Any] = {}
+        if self.identifier is not None:
+            kwargs["identifier"] = self.identifier
+        if self.session_timeout_seconds is not None:
+            kwargs["session_timeout_seconds"] = self.session_timeout_seconds
+        if self.viewport is not None:
+            kwargs["viewport"] = self.viewport
+        if self.proxy_configuration is not None:
+            kwargs["proxy_configuration"] = self.proxy_configuration
+        if self.extensions is not None:
+            kwargs["extensions"] = self.extensions
+        if self.profile_configuration is not None:
+            kwargs["profile_configuration"] = self.profile_configuration
+        return kwargs
+
     async def get_async_browser(self, thread_id: str) -> AsyncBrowser:
         """Get or create an async browser for the specified thread.
 
@@ -157,20 +174,7 @@ class BrowserSessionManager:
         )
 
         try:
-            start_kwargs: dict[str, Any] = {}
-            if self.identifier is not None:
-                start_kwargs["identifier"] = self.identifier
-            if self.session_timeout_seconds is not None:
-                start_kwargs["session_timeout_seconds"] = self.session_timeout_seconds
-            if self.viewport is not None:
-                start_kwargs["viewport"] = self.viewport
-            if self.proxy_configuration is not None:
-                start_kwargs["proxy_configuration"] = self.proxy_configuration
-            if self.extensions is not None:
-                start_kwargs["extensions"] = self.extensions
-            if self.profile_configuration is not None:
-                start_kwargs["profile_configuration"] = self.profile_configuration
-            browser_client.start(**start_kwargs)
+            browser_client.start(**self._build_start_kwargs())
 
             ws_url, headers = browser_client.generate_ws_headers()
 
@@ -226,20 +230,7 @@ class BrowserSessionManager:
         )
 
         try:
-            start_kwargs: dict[str, Any] = {}
-            if self.identifier is not None:
-                start_kwargs["identifier"] = self.identifier
-            if self.session_timeout_seconds is not None:
-                start_kwargs["session_timeout_seconds"] = self.session_timeout_seconds
-            if self.viewport is not None:
-                start_kwargs["viewport"] = self.viewport
-            if self.proxy_configuration is not None:
-                start_kwargs["proxy_configuration"] = self.proxy_configuration
-            if self.extensions is not None:
-                start_kwargs["extensions"] = self.extensions
-            if self.profile_configuration is not None:
-                start_kwargs["profile_configuration"] = self.profile_configuration
-            browser_client.start(**start_kwargs)
+            browser_client.start(**self._build_start_kwargs())
 
             ws_url, headers = browser_client.generate_ws_headers()
 
@@ -318,9 +309,21 @@ class BrowserSessionManager:
             with self._lock:
                 self._sync_playwrights[thread_id] = pw
 
-        browser = pw.chromium.connect_over_cdp(
-            endpoint_url=ws_url, headers=headers, timeout=30000
-        )
+        try:
+            browser = pw.chromium.connect_over_cdp(
+                endpoint_url=ws_url, headers=headers, timeout=30000
+            )
+        except Exception:
+            # Remove the dead session and stop the AWS browser session
+            # to avoid leaking a remote session that runs up to 8 hours.
+            with self._lock:
+                self._sync_sessions.pop(thread_id, None)
+                self._sync_playwrights.pop(thread_id, None)
+            try:
+                browser_client.stop()
+            except Exception:
+                logger.debug("Failed to stop browser client during reconnect cleanup", exc_info=True)
+            raise
         logger.info(f"Successfully reconnected sync browser for thread {thread_id}")
 
         with self._lock:
@@ -367,9 +370,21 @@ class BrowserSessionManager:
             with self._lock:
                 self._async_playwrights[thread_id] = pw
 
-        browser = await pw.chromium.connect_over_cdp(
-            endpoint_url=ws_url, headers=headers, timeout=30000
-        )
+        try:
+            browser = await pw.chromium.connect_over_cdp(
+                endpoint_url=ws_url, headers=headers, timeout=30000
+            )
+        except Exception:
+            # Remove the dead session and stop the AWS browser session
+            # to avoid leaking a remote session that runs up to 8 hours.
+            with self._lock:
+                self._async_sessions.pop(thread_id, None)
+                self._async_playwrights.pop(thread_id, None)
+            try:
+                await browser_client.async_stop()
+            except Exception:
+                logger.debug("Failed to stop browser client during reconnect cleanup", exc_info=True)
+            raise
         logger.info(f"Successfully reconnected async browser for thread {thread_id}")
 
         with self._lock:
