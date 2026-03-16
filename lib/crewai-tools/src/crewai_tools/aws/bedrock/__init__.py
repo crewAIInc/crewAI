@@ -6,7 +6,15 @@ from crewai_tools.aws.bedrock.knowledge_base.retriever_tool import (
 )
 
 
+def __getattr__(name: str):
+    if name == "AgentCoreRuntime":
+        from crewai_tools.aws.bedrock.runtime import AgentCoreRuntime
+        return AgentCoreRuntime
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 __all__ = [
+    "AgentCoreRuntime",
     "BedrockInvokeAgentTool",
     "BedrockKBRetrieverTool",
     "create_browser_toolkit",
