@@ -68,6 +68,7 @@ print(result)
 
 The `EXASearchTool` accepts the following parameters during initialization:
 
+- `type` (str, optional): The search type to use. Defaults to `"auto"`. Options: `"auto"`, `"instant"`, `"fast"`, `"deep"`.
 - `content` (bool, optional): Whether to include full page content in results. Defaults to `False`.
 - `summary` (bool, optional): Whether to include AI-generated summaries of each result. Requires `content=True`. Defaults to `False`.
 - `api_key` (str, optional): Your Exa API key. Falls back to the `EXA_API_KEY` environment variable if not provided.
@@ -88,7 +89,8 @@ You can configure the tool with custom parameters for richer results:
 # Get full page content with AI summaries
 exa_tool = EXASearchTool(
     content=True,
-    summary=True
+    summary=True,
+    type="deep"
 )
 
 # Use it in an agent
