@@ -160,7 +160,7 @@ class GeminiCompletion(BaseLLM):
             and float(version_match.group(1)) >= 2.5
         ):
             self.thinking_config = types.ThinkingConfig(
-                include_thoughts=True, thinking_budget=8192
+                include_thoughts=True, thinking_budget=-1
             )
 
     @property
