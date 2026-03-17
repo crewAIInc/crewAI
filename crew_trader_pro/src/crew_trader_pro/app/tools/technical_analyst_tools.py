@@ -1,14 +1,15 @@
+# import logging
 import ccxt
 import pandas as pd
 import ta
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from ..schemas.technical_analyst import (
-    TechnicalAnalystInput, SystemHeader, MarketSnapshot, Candle,
+    TechnicalAnalystInput, SystemHeader, MarketSnapshot, Candle, OrderBookDepth,
     TechnicalIndicators, M15BarAnalysis, EmaCluster, MomentumIndicators,
-    VolatilityIndicators, HtfContext, LearningBridge, BarStatus,
+    VolatilityIndicators, HtfContext, DerivativesContext, LearningBridge, BarStatus,
     EmaAlignment, SlopeState, RsiState, MacdState, DivergenceType,
-    TrendStrength, BbState, VolatilityRank, RunMode
+    TrendStrength, BbState, VolatilityRank, LiquidationRiskLevel, RunMode
 )
 
 class TechnicalAnalystTools:
@@ -17,7 +18,17 @@ class TechnicalAnalystTools:
     """
 
     def __init__(self, exchange_id: str = 'binance'):
-        self.exchange = getattr(ccxt, exchange_id)()
+        self.exchange = getattr(ccxt, exchange_id)({
+            'options': {
+                'defaultType': 'future',  # 永续合约
+            }
+        })
+
+    @staticmethod
+    def _format_pct(value: Optional[float], digits: int = 4) -> str:
+        if value is None:
+            return "N/A"
+        return f"{'+' if value >= 0 else ''}{value:.{digits}f}%"
 
     def fetch_ohlcv_df(self, symbol: str, timeframe: str, limit: int = 1000) -> pd.DataFrame:
         """从交易所获取 K 线数据并转换为 DataFrame"""
@@ -158,71 +169,249 @@ class TechnicalAnalystTools:
             volatility=volatility
         )
 
-    def get_htf_context(self, df_d1: pd.DataFrame, df_w1: pd.DataFrame) -> HtfContext:
-        """获取大周期上下文"""
-        last_d1 = df_d1.iloc[-1]
-        last_w1 = df_w1.iloc[-1]
-        
-        # 计算日线 RSI
-        df_d1['RSI_14'] = ta.momentum.RSIIndicator(df_d1['close'], window=14).rsi()
-        d1_rsi = df_d1.iloc[-1]['RSI_14']
-        
-        # 日线趋势
-        ema_200 = ta.trend.EMAIndicator(df_d1['close'], window=200).ema_indicator().iloc[-1]
-        d1_trend = BarStatus.BULLISH if last_d1['close'] > ema_200 else BarStatus.BEARISH
-        
-        # 周线支撑 (简单取最近 20 周最低)
-        w1_key_support = df_w1['low'].tail(20).min()
-        
+    def get_htf_context(self, df_h4: pd.DataFrame, df_h1: pd.DataFrame) -> HtfContext:
+        """获取大周期上下文（基于 4h + 1h，适合日内交易）"""
+        # 4h 趋势: EMA50 上方=多头
+        ema_50_h4 = ta.trend.EMAIndicator(df_h4['close'], window=50).ema_indicator()
+        last_h4 = df_h4.iloc[-1]
+        h4_trend = BarStatus.BULLISH if last_h4['close'] > ema_50_h4.iloc[-1] else BarStatus.BEARISH
+
+        # 4h RSI
+        df_h4['RSI_14'] = ta.momentum.RSIIndicator(df_h4['close'], window=14).rsi()
+        h4_rsi = df_h4.iloc[-1]['RSI_14']
+
+        # 1h 趋势: EMA20 上方=多头
+        ema_20_h1 = ta.trend.EMAIndicator(df_h1['close'], window=20).ema_indicator()
+        last_h1 = df_h1.iloc[-1]
+        h1_trend = BarStatus.BULLISH if last_h1['close'] > ema_20_h1.iloc[-1] else BarStatus.BEARISH
+
+        # 1h RSI
+        df_h1['RSI_14'] = ta.momentum.RSIIndicator(df_h1['close'], window=14).rsi()
+        h1_rsi = df_h1.iloc[-1]['RSI_14']
+
+        # 4h 支撑/阻力 (最近 50 根的最低/最高)
+        h4_key_support = df_h4['low'].tail(50).min()
+        h4_key_resistance = df_h4['high'].tail(50).max()
+
         # 市场结构 (简单判断 Higher High)
-        recent_highs = df_d1['high'].tail(50).rolling(window=10).max()
+        recent_highs = df_h4['high'].tail(50).rolling(window=10).max()
         market_structure = "Higher_High" if recent_highs.iloc[-1] > recent_highs.iloc[-10] else "Range"
 
         return HtfContext(
-            d1_trend=d1_trend,
-            d1_rsi=round(d1_rsi, 2),
-            w1_trend="Macro_Uptrend" if last_w1['close'] > df_w1['close'].shift(20).iloc[-1] else "Macro_Downtrend",
-            w1_key_support=round(w1_key_support, 2),
+            h4_trend=h4_trend,
+            h4_rsi=round(h4_rsi, 2),
+            h1_trend=h1_trend,
+            h1_rsi=round(h1_rsi, 2),
+            h4_key_support=round(h4_key_support, 2),
+            h4_key_resistance=round(h4_key_resistance, 2),
             market_structure=market_structure
         )
+
+    def get_derivatives_context(self, symbol: str, price_change_24h_pct: Optional[float]) -> DerivativesContext:
+        """获取合约衍生品上下文（资金费率、未平仓量、清算风险代理）"""
+        funding_rate = 0.0
+        funding_rate_pct = "N/A"
+        next_funding_time = None
+
+        open_interest_value = 0.0
+        oi_change_24h = "N/A"
+        oi_change_24h_value: Optional[float] = None
+
+        try:
+            funding_data = self.exchange.fetch_funding_rate(symbol)
+            funding_rate_raw = funding_data.get('fundingRate')
+            if funding_rate_raw is not None:
+                funding_rate = float(funding_rate_raw)
+                funding_rate_pct = self._format_pct(funding_rate * 100, digits=4)
+            next_funding_dt = funding_data.get('fundingDatetime') or funding_data.get('nextFundingTime')
+            if next_funding_dt is not None:
+                next_funding_time = str(next_funding_dt)
+        except Exception:
+            pass
+
+        try:
+            oi_data = self.exchange.fetch_open_interest(symbol)
+            oi_val = oi_data.get('openInterestValue') or oi_data.get('openInterestAmount')
+            if oi_val is not None:
+                open_interest_value = float(oi_val)
+        except Exception:
+            pass
+
+        try:
+            oi_hist = self.exchange.fetch_open_interest_history(symbol, timeframe='1h', limit=24)
+            if oi_hist and len(oi_hist) >= 2:
+                first_oi = oi_hist[0].get('openInterestValue') or oi_hist[0].get('openInterestAmount')
+                last_oi = oi_hist[-1].get('openInterestValue') or oi_hist[-1].get('openInterestAmount')
+                if first_oi and float(first_oi) > 0 and last_oi is not None:
+                    oi_change_24h_value = (float(last_oi) - float(first_oi)) / float(first_oi) * 100
+                    oi_change_24h = self._format_pct(oi_change_24h_value, digits=2)
+        except Exception:
+            pass
+
+        liquidation_risk_level = LiquidationRiskLevel.LOW
+        risk_note = "资金费率与持仓变化平稳，未见明显清算拥挤风险"
+
+        funding_abs_pct = abs(funding_rate * 100)
+        oi_change_abs = abs(oi_change_24h_value) if oi_change_24h_value is not None else 0.0
+        price_change_abs = abs(price_change_24h_pct) if price_change_24h_pct is not None else 0.0
+
+        if (funding_abs_pct > 0.03 and oi_change_abs > 10) or (oi_change_abs > 15 and price_change_abs > 4):
+            liquidation_risk_level = LiquidationRiskLevel.HIGH
+            risk_note = "资金费率偏极端且持仓变化剧烈，存在拥挤方向连环清算风险"
+        elif (funding_abs_pct > 0.015 and oi_change_abs > 6) or (oi_change_abs > 8 and price_change_abs > 2.5):
+            liquidation_risk_level = LiquidationRiskLevel.MEDIUM
+            risk_note = "资金费率或持仓变化偏热，需防插针扫损与短时清算波动"
+
+        return DerivativesContext(
+            funding_rate=round(funding_rate, 8),
+            funding_rate_pct=funding_rate_pct,
+            next_funding_time=next_funding_time,
+            open_interest_value=round(open_interest_value, 4),
+            open_interest_change_24h=oi_change_24h,
+            liquidation_risk_level=liquidation_risk_level,
+            liquidation_risk_note=risk_note,
+        )
+
+    def get_order_book_depth(self, symbol: str, current_price: float, depth_pct: float = 2.0) -> OrderBookDepth:
+        """获取订单簿深度摘要：在 ±depth_pct% 范围内聚合买卖墙"""
+        try:
+            order_book = self.exchange.fetch_order_book(symbol, limit=500)
+            bids = order_book.get('bids', [])  # [[price, amount], ...]
+            asks = order_book.get('asks', [])  # [[price, amount], ...]
+
+            lower_bound = current_price * (1 - depth_pct / 100)
+            upper_bound = current_price * (1 + depth_pct / 100)
+
+            # 过滤在范围内的挂单
+            filtered_bids = [(p, v) for p, v in bids if p >= lower_bound]
+            filtered_asks = [(p, v) for p, v in asks if p <= upper_bound]
+
+            total_bid_vol = sum(v for _, v in filtered_bids)
+            total_ask_vol = sum(v for _, v in filtered_asks)
+
+            # 找买墙：按价格分桶（桶宽 = 价格的 0.05%），找最大桶
+            bid_wall_price, bid_wall_volume = None, None
+            if filtered_bids:
+                bucket_width = current_price * 0.0005  # 0.05%
+                bid_buckets: Dict[float, float] = {}
+                for p, v in filtered_bids:
+                    bucket_key = round(p / bucket_width) * bucket_width
+                    bid_buckets[bucket_key] = bid_buckets.get(bucket_key, 0) + v
+                if bid_buckets:
+                    bid_wall_price = max(bid_buckets, key=bid_buckets.get)  # type: ignore
+                    bid_wall_volume = round(bid_buckets[bid_wall_price], 4)
+                    bid_wall_price = round(bid_wall_price, 2)
+
+            # 找卖墙：同样分桶
+            ask_wall_price, ask_wall_volume = None, None
+            if filtered_asks:
+                bucket_width = current_price * 0.0005
+                ask_buckets: Dict[float, float] = {}
+                for p, v in filtered_asks:
+                    bucket_key = round(p / bucket_width) * bucket_width
+                    ask_buckets[bucket_key] = ask_buckets.get(bucket_key, 0) + v
+                if ask_buckets:
+                    ask_wall_price = min(ask_buckets, key=ask_buckets.get)  # type: ignore
+                    # 卖墙应该是最大的那个桶
+                    ask_wall_price = max(ask_buckets, key=ask_buckets.get)  # type: ignore
+                    ask_wall_volume = round(ask_buckets[ask_wall_price], 4)
+                    ask_wall_price = round(ask_wall_price, 2)
+
+            bid_ask_imbalance = round(total_bid_vol / total_ask_vol, 2) if total_ask_vol > 0 else None
+
+            return OrderBookDepth(
+                bid_wall_price=bid_wall_price,
+                bid_wall_volume=bid_wall_volume,
+                ask_wall_price=ask_wall_price,
+                ask_wall_volume=ask_wall_volume,
+                bid_ask_imbalance=bid_ask_imbalance,
+                depth_range_pct=f"±{depth_pct}%",
+                total_bid_volume=round(total_bid_vol, 4),
+                total_ask_volume=round(total_ask_vol, 4),
+            )
+        except Exception:
+            return OrderBookDepth(depth_range_pct=f"±{depth_pct}%")
 
     def generate_input(self, symbol: str, request_id: str, learning_bridge: LearningBridge) -> TechnicalAnalystInput:
         """
         全自动生成技术分析师的输入数据
         """
-        # 1. 抓取各周期数据
-        df_m5 = self.fetch_ohlcv_df(symbol, '5m', limit=100)
-        df_m15 = self.fetch_ohlcv_df(symbol, '15m', limit=1000)
-        df_d1 = self.fetch_ohlcv_df(symbol, '1d', limit=300)
-        df_w1 = self.fetch_ohlcv_df(symbol, '1w', limit=100)
+        # 1. 抓取各周期数据（日内交易优化）
+        df_m5 = self.fetch_ohlcv_df(symbol, '5m', limit=100)    # ~8小时
+        df_m15 = self.fetch_ohlcv_df(symbol, '15m', limit=200)  # ~50小时，足够算指标
+        df_h1 = self.fetch_ohlcv_df(symbol, '1h', limit=100)    # ~4天
+        df_h4 = self.fetch_ohlcv_df(symbol, '4h', limit=100)    # ~17天
 
         # 2. 构建 MarketSnapshot
+        current_price = df_m5.iloc[-1]['close']
+
+        # 24h 涨跌幅：从交易所 ticker 获取精确数据
+        ticker_pct: Optional[float] = None
+        try:
+            ticker = self.exchange.fetch_ticker(symbol)
+            pct = ticker.get('percentage')  # 交易所返回的精确 24h 涨跌幅
+            if pct is not None:
+                ticker_pct = float(pct)
+                price_change_24h = f"{'+' if pct >= 0 else ''}{pct:.2f}%"
+            else:
+                price_change_24h = "N/A"
+        except Exception as e:
+            # logging.warning(f"fetch_ticker failed: {e}, falling back to D1 calc")
+            price_change_24h = "N/A"
+
+        # M5: 最近 12 根（1小时），同时填充 bar_status + vol_ratio
+        avg_vol_m5 = df_m5['volume'].tail(20).mean()
         m5_candles = []
-        for _, row in df_m5.tail(5).iterrows():
+        for _, row in df_m5.tail(12).iterrows():
             m5_candles.append(Candle(
                 t=row['datetime'].strftime('%H:%M'),
                 o=row['open'], h=row['high'], l=row['low'], c=row['close'], v=row['volume'],
-                bar_status=self.get_bar_status(row['open'], row['high'], row['low'], row['close'])
+                bar_status=self.get_bar_status(row['open'], row['high'], row['low'], row['close']),
+                vol_ratio=round(row['volume'] / avg_vol_m5, 2) if avg_vol_m5 > 0 else None
             ))
 
+        # M15: 最近 20 根（5小时），同时填充 bar_status + vol_ratio
+        avg_vol_m15 = df_m15['volume'].tail(20).mean()
         m15_candles = []
-        for _, row in df_m15.tail(5).iterrows():
-            # 简单计算 vol_ratio (对比过去 20 根线均值)
-            avg_vol = df_m15['volume'].tail(20).mean()
+        for _, row in df_m15.tail(20).iterrows():
             m15_candles.append(Candle(
                 t=row['datetime'].strftime('%H:%M'),
                 o=row['open'], h=row['high'], l=row['low'], c=row['close'], v=row['volume'],
-                vol_ratio=round(row['volume'] / avg_vol, 2)
+                bar_status=self.get_bar_status(row['open'], row['high'], row['low'], row['close']),
+                vol_ratio=round(row['volume'] / avg_vol_m15, 2) if avg_vol_m15 > 0 else None
             ))
 
-        snapshot = MarketSnapshot(m5_candles=m5_candles, m15_candles=m15_candles)
+        # H1: 最近 24 根（1天），日内趋势确认
+        avg_vol_h1 = df_h1['volume'].tail(24).mean()
+        h1_candles = []
+        for _, row in df_h1.tail(24).iterrows():
+            h1_candles.append(Candle(
+                t=row['datetime'].strftime('%m-%d %H:%M'),
+                o=row['open'], h=row['high'], l=row['low'], c=row['close'], v=row['volume'],
+                bar_status=self.get_bar_status(row['open'], row['high'], row['low'], row['close']),
+                vol_ratio=round(row['volume'] / avg_vol_h1, 2) if avg_vol_h1 > 0 else None
+            ))
+
+        # 订单簿深度摘要
+        order_book = self.get_order_book_depth(symbol, current_price)
+
+        snapshot = MarketSnapshot(
+            current_price=current_price,
+            price_change_24h=price_change_24h,
+            m5_candles=m5_candles,
+            m15_candles=m15_candles,
+            h1_candles=h1_candles,
+            order_book_depth=order_book,
+        )
 
         # 3. 计算多维指标层
         m15_analysis = self.calculate_indicators_m15(df_m15)
-        htf_context = self.get_htf_context(df_d1, df_w1)
+        htf_context = self.get_htf_context(df_h4, df_h1)
+        derivatives_context = self.get_derivatives_context(symbol, ticker_pct)
         indicators = TechnicalIndicators(
             m15_1000_bars=m15_analysis,
-            htf_context=htf_context
+            htf_context=htf_context,
+            derivatives_context=derivatives_context,
         )
 
         # 4. 组装完整输入
@@ -237,5 +426,5 @@ class TechnicalAnalystTools:
             system_header=header,
             market_snapshot=snapshot,
             technical_indicators=indicators,
-            learning_bridge=learning_bridge
+            # learning_bridge=learning_bridge
         )

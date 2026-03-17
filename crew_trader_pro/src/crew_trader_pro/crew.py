@@ -1,9 +1,10 @@
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai.llm import LLM
+from crewai.project import CrewBase, agent, crew, task, llm
 from crewai.agents.agent_builder.base_agent import BaseAgent
-# If you want to run a snippet of code before or after the crew starts,
-# you can use the @before_kickoff and @after_kickoff decorators
-# https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+from crewai_tools import SerperDevTool
+
+from crew_trader_pro.app.schemas.chief_strategist import ChiefStrategyOutput
 
 @CrewBase
 class CrewTraderPro():
@@ -12,52 +13,85 @@ class CrewTraderPro():
     agents: list[BaseAgent]
     tasks: list[Task]
 
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    
-    # If you would like to add tools to your agents, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
+    @llm
+    def deepseek_llm(self) -> LLM:
+        import os
+        return LLM(
+            model="deepseek/deepseek-chat",
+            api_base="https://api.deepseek.com/v1",
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            temperature=0.15,
+        )
+
+    # ── Agent 1: K线形态分析师 ──
     @agent
-    def researcher(self) -> Agent:
+    def kline_pattern_analyst(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'], # type: ignore[index]
+            config=self.agents_config['kline_pattern_analyst'],  # type: ignore[index]
             verbose=True
         )
 
+    # ── Agent 2: 技术指标分析师 ──
     @agent
-    def reporting_analyst(self) -> Agent:
+    def technical_indicator_analyst(self) -> Agent:
         return Agent(
-            config=self.agents_config['reporting_analyst'], # type: ignore[index]
+            config=self.agents_config['technical_indicator_analyst'],  # type: ignore[index]
             verbose=True
         )
 
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
-    @task
-    def research_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['research_task'], # type: ignore[index]
+    # ── Agent 3: 市场情绪分析师（暂时禁用）──
+    # @agent
+    # def sentiment_analyst(self) -> Agent:
+    #     return Agent(
+    #         config=self.agents_config['sentiment_analyst'],
+    #         tools=[SerperDevTool()],
+    #         verbose=True
+    #     )
+
+    # ── Agent 4: 首席交易策略师 ──
+    @agent
+    def chief_strategist(self) -> Agent:
+        return Agent(
+            config=self.agents_config['chief_strategist'],  # type: ignore[index]
+            verbose=True
         )
 
+    # ── Task 1: K线形态分析 ──
     @task
-    def reporting_task(self) -> Task:
+    def kline_pattern_task(self) -> Task:
         return Task(
-            config=self.tasks_config['reporting_task'], # type: ignore[index]
-            output_file='report.md'
+            config=self.tasks_config['kline_pattern_task'],  # type: ignore[index]
+        )
+
+    # ── Task 2: 技术指标分析 ──
+    @task
+    def technical_indicator_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['technical_indicator_task'],  # type: ignore[index]
+        )
+
+    # ── Task 3: 市场情绪分析（暂时禁用）──
+    # @task
+    # def sentiment_analysis_task(self) -> Task:
+    #     return Task(
+    #         config=self.tasks_config['sentiment_analysis_task'],
+    #     )
+
+    # ── Task 4（暂为Task 3）: 首席策略师综合决策 ──
+    @task
+    def chief_strategy_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['chief_strategy_task'],  # type: ignore[index]
+            output_json=ChiefStrategyOutput,
+            output_file='trading_decision_report.json'
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the CrewTraderPro crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
-
         return Crew(
-            agents=self.agents, # Automatically created by the @agent decorator
-            tasks=self.tasks, # Automatically created by the @task decorator
-            process=Process.sequential,
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,  # 顺序执行：1→2→3→4，前一个输出自动传给下一个
             verbose=True,
-            # process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
         )

@@ -115,17 +115,31 @@ def run():
         )
         print(f"[Local Run] ✅ 技术分析数据生成完成")
 
-        # 2. 将结构化数据传入 Crew
+        # 2. 拆分数据给不同 Agent
+        import json
+        input_data = technical_input.model_dump(mode="json")
+        current_price = input_data["market_snapshot"]["current_price"]
+
         inputs = {
             "symbol": symbol,
             "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "technical_input": technical_input.model_dump(mode="json"),
+            "current_price": current_price,
+            "market_snapshot": json.dumps(
+                input_data["market_snapshot"],
+                ensure_ascii=False, indent=2
+            ),
+            "technical_indicators": json.dumps(
+                input_data["technical_indicators"],
+                ensure_ascii=False, indent=2
+            ),
+            "learning_bridge": json.dumps(
+                learning_bridge.model_dump(mode="json"),
+                ensure_ascii=False, indent=2
+            ),
         }
-
-        print("inputs:", inputs)  # ✅ 输出输入数据，方便调试
-        return None
-        # result = CrewTraderPro().crew().kickoff(inputs=inputs)
-        # return result
+        # print(inputs)
+        result = CrewTraderPro().crew().kickoff(inputs=inputs)
+        return result
     except Exception as e:
         print(f"❌ 执行失败: {e}")
         raise

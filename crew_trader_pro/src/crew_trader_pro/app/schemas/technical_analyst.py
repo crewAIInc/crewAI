@@ -77,6 +77,12 @@ class VolatilityRank(str, Enum):
     NORMAL = "Normal"
     HIGH = "High"
 
+class LiquidationRiskLevel(str, Enum):
+    """清算风险等级（基于资金费率+持仓变化的代理指标）"""
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+
 class TradingAction(str, Enum):
     """交易动作建议"""
     STRONG_BUY = "Strong_Buy"
@@ -136,10 +142,25 @@ class Candle(BaseModel):
     bar_status: Optional[BarStatus] = Field(None, description="K线形态状态")
     vol_ratio: Optional[float] = Field(None, description="成交量比率")
 
+class OrderBookDepth(BaseModel):
+    """订单簿深度摘要（预聚合后的关键指标，非原始挂单）"""
+    bid_wall_price: Optional[float] = Field(None, description="买方最大挂单密集价位")
+    bid_wall_volume: Optional[float] = Field(None, description="买墙附近总挂单量")
+    ask_wall_price: Optional[float] = Field(None, description="卖方最大挂单密集价位")
+    ask_wall_volume: Optional[float] = Field(None, description="卖墙附近总挂单量")
+    bid_ask_imbalance: Optional[float] = Field(None, description="买卖力量比（>1 买方更强，<1 卖方更强）")
+    depth_range_pct: str = Field(default="±2%", description="分析的价格范围")
+    total_bid_volume: Optional[float] = Field(None, description="分析范围内买单总量")
+    total_ask_volume: Optional[float] = Field(None, description="分析范围内卖单总量")
+
 class MarketSnapshot(BaseModel):
     """实时量价快照层"""
+    current_price: float = Field(..., description="当前最新价格")
+    price_change_24h: str = Field(..., description="24小时涨跌幅(如 +2.35%)")
     m5_candles: List[Candle] = Field(..., description="5分钟级别K线列表")
     m15_candles: List[Candle] = Field(..., description="15分钟级别K线列表")
+    h1_candles: List[Candle] = Field(..., description="1小时级别K线列表")
+    order_book_depth: Optional[OrderBookDepth] = Field(None, description="订单簿深度摘要")
 
 class EmaCluster(BaseModel):
     """EMA 均线簇指标"""
@@ -173,17 +194,30 @@ class M15BarAnalysis(BaseModel):
     volatility: VolatilityIndicators
 
 class HtfContext(BaseModel):
-    """大周期(HTF)上下文层"""
-    d1_trend: BarStatus = Field(..., description="日线趋势")
-    d1_rsi: float = Field(..., description="日线RSI")
-    w1_trend: str = Field(..., description="周线趋势描述")
-    w1_key_support: float = Field(..., description="周线关键支撑位")
+    """大周期(HTF)上下文层 — 基于 4h + 1h"""
+    h4_trend: BarStatus = Field(..., description="4小时线趋势")
+    h4_rsi: float = Field(..., description="4小时RSI")
+    h1_trend: BarStatus = Field(..., description="1小时线趋势")
+    h1_rsi: float = Field(..., description="1小时RSI")
+    h4_key_support: float = Field(..., description="4小时关键支撑位")
+    h4_key_resistance: float = Field(..., description="4小时关键阻力位")
     market_structure: str = Field(..., description="市场结构(如 Higher_High)")
+
+class DerivativesContext(BaseModel):
+    """合约市场衍生品上下文"""
+    funding_rate: float = Field(..., description="当前资金费率（小数，如 0.0001 = 0.01%）")
+    funding_rate_pct: str = Field(..., description="资金费率百分比展示（如 +0.0100%）")
+    next_funding_time: Optional[str] = Field(None, description="下一次资金费结算时间（交易所时区字符串）")
+    open_interest_value: float = Field(..., description="当前未平仓名义价值")
+    open_interest_change_24h: str = Field(..., description="未平仓量24h变化（如 +8.32%）")
+    liquidation_risk_level: LiquidationRiskLevel = Field(..., description="清算风险等级")
+    liquidation_risk_note: str = Field(..., description="清算风险简述（100字以内）")
 
 class TechnicalIndicators(BaseModel):
     """多维指标层汇总"""
     m15_1000_bars: M15BarAnalysis
     htf_context: HtfContext
+    derivatives_context: DerivativesContext
 
 class LastRecommendation(BaseModel):
     """上次推荐记录(纠错参考)"""
@@ -214,49 +248,51 @@ class TechnicalAnalystInput(BaseModel):
     system_header: SystemHeader
     market_snapshot: MarketSnapshot
     technical_indicators: TechnicalIndicators
-    learning_bridge: LearningBridge
+    # learning_bridge: LearningBridge
 
 # --- 3. 输出实体类 (Output Models) ---
 
-class AnalysisMetadata(BaseModel):
-    """分析元数据"""
-    agent_id: str = Field(..., description="分析师Agent ID")
-    timestamp: datetime = Field(..., description="分析完成时间戳")
-    confidence_level: float = Field(..., ge=0, le=1, description="置信度(0-1)")
+class IndicatorSignal(BaseModel):
+    """单个指标的信号评估"""
+    name: str = Field(..., description="指标名称（如 EMA_Alignment, RSI_14, MACD, BB, ADX, H4_Trend, H1_Trend）")
+    value: str = Field(..., description="当前值或状态描述")
+    bias: str = Field(..., description="Bullish / Bearish / Neutral")
+    weight: str = Field(..., description="High / Medium / Low — 该指标在当前市况下的权重")
 
-class TechnicalScoreCard(BaseModel):
-    """技术评分表"""
-    score: int = Field(..., ge=0, le=25, description="综合得分(0-25)")
-    trend_weight: int = Field(..., ge=0, le=10, description="趋势得分权重")
-    momentum_weight: int = Field(..., ge=0, le=8, description="动量得分权重")
-    volatility_weight: int = Field(..., ge=0, le=7, description="波动/风险得分权重")
+class IndicatorConflict(BaseModel):
+    """指标间矛盾"""
+    indicator_a: str = Field(..., description="矛盾指标 A 名称")
+    indicator_b: str = Field(..., description="矛盾指标 B 名称")
+    detail: str = Field(..., description="矛盾具体表现")
+    resolution: str = Field(..., description="权衡建议（50字以内）")
 
-class SignalOutput(BaseModel):
-    """信号输出层"""
-    action: TradingAction = Field(..., description="建议动作")
-    entry_zone: float = Field(..., description="建议入场位")
-    target_exit: float = Field(..., description="建议止盈位")
-    stop_loss: float = Field(..., description="建议止损位")
+class HtfAlignmentResult(BaseModel):
+    """大周期对齐分析结果"""
+    status: HtfAlignment = Field(..., description="Aligned / Conflict / Neutral")
+    h4_bias: str = Field(..., description="4H 周期偏向")
+    h1_bias: str = Field(..., description="1H 周期偏向")
+    m15_bias: str = Field(..., description="M15 周期偏向")
+    detail: str = Field(..., description="对齐/冲突的具体说明（50字以内）")
 
-class LogicalReasoning(BaseModel):
-    """逻辑推理层"""
-    core_thesis: str = Field(..., description="核心论点/推导逻辑")
-    htf_status: HtfAlignment = Field(..., description="大周期对齐情况")
-    timing: TimingState = Field(..., description="入场时机评价")
-    volatility_alert: bool = Field(..., description="是否存在插针/异常波动风险")
-    pattern_recognized: str = Field(..., description="识别出的核心形态(如 BULL_ENGULFING)")
-    indicator_confluence: str = Field(..., description="指标共振描述")
-
-class SelfCorrectionReport(BaseModel):
-    """自我修正报告"""
-    instruction_id: str = Field(..., description="对应的进化指令ID")
-    is_corrected: bool = Field(..., description="是否针对历史错误进行了修正")
-    risk_resolved: str = Field(..., description="已解决的具体风险点类型(如 DIVERGENCE)")
-
-class TechnicalAnalystOutput(BaseModel):
-    """技术分析师 AI 1：完整输出 JSON 实体"""
-    analysis_metadata: AnalysisMetadata
-    technical_score_card: TechnicalScoreCard
-    signal_output: SignalOutput
-    logical_reasoning: LogicalReasoning
-    self_correction_report: SelfCorrectionReport
+class TechnicalIndicatorOutput(BaseModel):
+    """Agent 2 技术指标分析师：结构化输出"""
+    indicator_signals: List[IndicatorSignal] = Field(
+        ..., description="各指标信号汇总列表（至少包含 EMA/RSI/MACD/BB/ADX/H4/H1 共7项）"
+    )
+    conflicts: List[IndicatorConflict] = Field(
+        default_factory=list, description="指标间矛盾清单（无矛盾时为空列表）"
+    )
+    htf_alignment: HtfAlignmentResult = Field(
+        ..., description="多周期对齐分析"
+    )
+    score: int = Field(
+        ..., ge=-10, le=10,
+        description="综合多空评分：-10(极度看空) ~ 0(中性) ~ +10(极度看多)"
+    )
+    overall_bias: str = Field(..., description="Bullish / Bearish / Neutral")
+    confidence: int = Field(
+        ..., ge=1, le=10, description="技术面分析置信度 1-10"
+    )
+    summary: str = Field(
+        ..., description="一句话总结当前技术面状况（100字以内）"
+    )

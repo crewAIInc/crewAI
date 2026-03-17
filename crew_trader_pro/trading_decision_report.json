@@ -1,0 +1,49 @@
+{
+  "signal_summary": [
+    {
+      "dimension": "K线形态",
+      "bias": "Bearish",
+      "confidence": 7,
+      "key_point": "H1和M15周期均形成明确顶部反转结构，看跌吞没形态伴随极高成交量，反弹受制于2333-2336强阻力区"
+    },
+    {
+      "dimension": "技术指标",
+      "bias": "Bearish",
+      "confidence": 7,
+      "key_point": "短期趋势结构混乱但动能偏空，M15周期空头信号占优，但处于4H大牛市中的回调阶段，ADX显示弱趋势震荡"
+    }
+  ],
+  "action": "Sell",
+  "confidence_level": "MEDIUM",
+  "confidence_pct": 65,
+  "execution": {
+    "entry_price": 2325.0,
+    "take_profit": 2295.0,
+    "stop_loss": 2340.0,
+    "risk_reward_ratio": "2.5:1",
+    "position_size_pct": "8%",
+    "leverage": "5x"
+  },
+  "reasoning": {
+    "supporting_factors": [
+      "M15看跌吞没形态伴随极高成交量（vol_ratio=2.35），确认度高",
+      "价格反弹受制于2333-2336强阻力区，多次测试均被拒绝",
+      "M15和H1周期技术指标均显示空头动能占优",
+      "4H周期RSI超买（72.37），存在回调压力",
+      "订单簿卖墙位于2321.63，提供近期阻力"
+    ],
+    "opposing_factors": [
+      "下方2311-2313支撑带获订单簿买墙（2313.52）验证",
+      "4H大周期趋势仍为看涨结构（Higher High）",
+      "资金费率仅-0.0010%，衍生品风险较低",
+      "M5周期在2305-2307区域形成看涨吞没形态"
+    ],
+    "risk_warning": "主要风险：4H大周期仍为牛市结构，当前回调可能随时结束。若价格放量突破2336阻力，空头策略将失效，需严格止损。"
+  },
+  "self_review": {
+    "repeated_mistake": false,
+    "max_uncertainty": "4H牛市结构与M15空头信号的矛盾程度，回调深度和时间难以精确预测",
+    "learning_applied": "N/A"
+  },
+  "one_liner": "ETH短线做空 5x | 入场2325 止损2340 止盈2295"
+}
