@@ -1525,6 +1525,7 @@ class OpenAICompletion(BaseLLM):
         """Convert CrewAI tool format to OpenAI function calling format."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
         from crewai.utilities.pydantic_schema_utils import (
+            ensure_all_properties_required,
             force_additional_properties_false,
         )
 
@@ -1546,6 +1547,7 @@ class OpenAICompletion(BaseLLM):
                 params_dict = (
                     parameters if isinstance(parameters, dict) else dict(parameters)
                 )
+                params_dict = ensure_all_properties_required(params_dict)
                 params_dict = force_additional_properties_false(params_dict)
                 openai_tool["function"]["parameters"] = params_dict
 

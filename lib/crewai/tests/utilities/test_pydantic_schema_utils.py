@@ -16,7 +16,7 @@ from copy import deepcopy
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -1001,3 +1001,39 @@ class TestGenerateToolParametersSchema:
         assert props["count"]["type"] == "integer"
         assert props["score"]["type"] == "number"
         assert props["active"]["type"] == "boolean"
+
+    def test_field_named_title_preserved(self) -> None:
+        """A user field named 'title' must not be stripped from properties."""
+
+        class BookSearch(BaseModel):
+            title: str = Field(description="Book title to search for")
+            author: str = Field(description="Author name")
+
+        schema = generate_tool_parameters_schema(BookSearch)
+        props = schema["properties"]
+        assert "title" in props, "Field named 'title' was incorrectly stripped"
+        assert props["title"]["type"] == "string"
+        assert "author" in props
+
+    def test_field_named_default_preserved(self) -> None:
+        """A user field named 'default' must not be stripped from properties."""
+
+        class ConfigInput(BaseModel):
+            default: str = Field(description="Default value")
+            name: str
+
+        schema = generate_tool_parameters_schema(ConfigInput)
+        props = schema["properties"]
+        assert "default" in props, "Field named 'default' was incorrectly stripped"
+
+    def test_field_named_properties_still_stripped(self) -> None:
+        """A field named 'properties' should still have its schema metadata stripped."""
+
+        class MetaInput(BaseModel):
+            properties: str = Field(description="Some properties field")
+
+        schema = generate_tool_parameters_schema(MetaInput)
+        props = schema["properties"]
+        assert "properties" in props
+        # The schema node for the 'properties' field should have title stripped
+        assert "title" not in props["properties"]
