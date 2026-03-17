@@ -210,16 +210,29 @@ class JoyVerifier:
                 error=str(e),
             )
 
-    def should_trust(self, agent_id: str) -> bool:
+    def should_trust(self, agent_id: str, raise_on_error: bool = False) -> bool:
         """Simple check if an agent should be trusted.
 
         Args:
             agent_id: Joy agent ID to check
+            raise_on_error: If True, raise TrustVerificationError on API/network errors
+                          instead of returning False
 
         Returns:
             True if agent meets trust criteria
+
+        Raises:
+            TrustVerificationError: If raise_on_error=True and verification fails due to
+                                   API/network error (not due to low trust score)
         """
         result = self.verify_agent(agent_id)
+
+        # Surface API errors if requested
+        if result.error and raise_on_error:
+            raise TrustVerificationError(
+                f"Trust verification failed for {agent_id}: {result.error}"
+            )
+
         return result.is_trusted
 
     def verify_before_delegation(
@@ -267,6 +280,7 @@ class JoyVerifier:
         capability: Optional[str] = None,
         query: Optional[str] = None,
         limit: int = 10,
+        raise_on_error: bool = False,
     ) -> List[VerificationResult]:
         """Discover trusted agents from Joy network.
 
@@ -274,9 +288,14 @@ class JoyVerifier:
             capability: Filter by capability (e.g., "code", "research")
             query: Search query
             limit: Maximum results
+            raise_on_error: If True, raise TrustVerificationError on API/network errors
+                          instead of returning empty list
 
         Returns:
             List of VerificationResult for trusted agents
+
+        Raises:
+            TrustVerificationError: If raise_on_error=True and discovery fails
         """
         params = {"limit": limit}
         if capability:
@@ -316,6 +335,8 @@ class JoyVerifier:
             raise
         except Exception as e:
             logger.error(f"Agent discovery failed: {e}")
+            if raise_on_error:
+                raise TrustVerificationError(f"Agent discovery failed: {e}")
             return []
 
     def get_vouch_suggestions(self, limit: int = 10) -> dict:
@@ -329,9 +350,11 @@ class JoyVerifier:
         if not self.agent_id:
             raise ValueError("agent_id required for vouch suggestions")
 
+        # Use params dict for proper URL encoding (prevents injection)
         return self._request(
             "GET",
-            f"/agents/vouch-suggestions?agentId={self.agent_id}&limit={limit}"
+            "/agents/vouch-suggestions",
+            params={"agentId": self.agent_id, "limit": limit}
         )
 
     def close(self):
