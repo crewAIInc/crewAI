@@ -219,6 +219,16 @@ CrewAI provides a wide range of events that you can listen for:
 - **ToolExecutionErrorEvent**: Emitted when a tool execution encounters an error
 - **ToolSelectionErrorEvent**: Emitted when there's an error selecting a tool
 
+### MCP Events
+
+- **MCPConnectionStartedEvent**: Emitted when starting to connect to an MCP server. Contains the server name, URL, transport type, connection timeout, and whether it's a reconnection attempt.
+- **MCPConnectionCompletedEvent**: Emitted when successfully connected to an MCP server. Contains the server name, connection duration in milliseconds, and whether it was a reconnection.
+- **MCPConnectionFailedEvent**: Emitted when connection to an MCP server fails. Contains the server name, error message, and error type (`timeout`, `authentication`, `network`, etc.).
+- **MCPToolExecutionStartedEvent**: Emitted when starting to execute an MCP tool. Contains the server name, tool name, and tool arguments.
+- **MCPToolExecutionCompletedEvent**: Emitted when MCP tool execution completes successfully. Contains the server name, tool name, result, and execution duration in milliseconds.
+- **MCPToolExecutionFailedEvent**: Emitted when MCP tool execution fails. Contains the server name, tool name, error message, and error type (`timeout`, `validation`, `server_error`, etc.).
+- **MCPConfigFetchFailedEvent**: Emitted when fetching an MCP server configuration fails (e.g., the MCP is not connected in your account, API error, or connection failure after config was fetched). Contains the slug, error message, and error type (`not_connected`, `api_error`, `connection_failed`).
+
 ### Knowledge Events
 
 - **KnowledgeRetrievalStartedEvent**: Emitted when a knowledge retrieval is started
