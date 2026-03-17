@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 def process_config(
     values: dict[str, Any], model_class: type[BaseModel]
-) -> dict[str, Any]:
+) -> dict[str, Any] | Any:
     """Process the config dictionary and update the values accordingly.
 
     Args:
@@ -15,6 +15,8 @@ def process_config(
     Returns:
         The updated values dictionary.
     """
+    if not isinstance(values, dict):
+        return values
     config = values.get("config", {})
     if not config:
         return values

@@ -220,6 +220,16 @@ def test_multiple_output_type_error():
         )
 
 
+def test_task_invalid_agent_type_raises_validation_error():
+    """Task(agent=...) with non-Agent type should raise ValidationError, not AttributeError."""
+    with pytest.raises(ValidationError):
+        Task(
+            description="x",
+            expected_output="y",
+            agent="not_an_agent",
+        )
+
+
 def test_guardrail_type_error():
     desc = "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting."
     expected_output = "Bullet point list of 5 interesting ideas."
