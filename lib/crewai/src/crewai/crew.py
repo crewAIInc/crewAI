@@ -96,7 +96,7 @@ from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
+from crewai.utilities.constants import NOT_SPECIFIED, TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
@@ -302,6 +302,10 @@ class Crew(FlowTrackable, BaseModel):
     tracing: bool | None = Field(
         default=None,
         description="Whether to enable tracing for the crew. True=always enable, False=always disable, None=check environment/user settings.",
+    )
+    trained_agents_file: str = Field(
+        default=TRAINED_AGENTS_DATA_FILE,
+        description="Path to the trained agents data file to load during inference.",
     )
 
     @field_validator("id", mode="before")
