@@ -417,28 +417,40 @@ def strip_null_from_types(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
-def _strip_schema_metadata(d: Any, _is_properties: bool = False) -> Any:
+def _strip_schema_metadata(d: Any, _is_properties_map: bool = False) -> Any:
     """Recursively remove provider-specific metadata from a JSON schema.
 
     Strips ``title``, ``default``, and ``additionalProperties`` keys from
-    schema nodes. Skips stripping from ``properties`` mapping dicts (where
-    keys are field names, not schema keywords) to avoid accidentally removing
-    field definitions for tools that have fields named ``title`` or ``default``.
+    schema nodes. When traversing a ``properties`` mapping (where keys are
+    user-defined field names), the function does **not** pop keys from the
+    mapping itself — it only recurses into each field's schema node and
+    strips metadata there.
 
     Args:
         d: The dictionary/list to clean.
-        _is_properties: Internal flag — True when ``d`` is a ``properties``
-            mapping (field-name → schema) rather than a schema node itself.
+        _is_properties_map: Internal flag — ``True`` when ``d`` is a
+            ``properties`` mapping (field-name -> schema) rather than a
+            schema node itself.
 
     Returns:
         The cleaned dictionary/list.
     """
     if isinstance(d, dict):
-        if not _is_properties:
+        if _is_properties_map:
+            # ``d`` is a properties mapping: each value is a schema node.
+            # Do NOT pop keys from ``d`` (they are field names like
+            # ``title``, ``default``, etc.).  Recurse into each field's
+            # schema node with ``_is_properties_map=False``.
+            for v in d.values():
+                _strip_schema_metadata(v, _is_properties_map=False)
+        else:
+            # ``d`` is a schema node — strip cosmetic/metadata keys.
             for key in ("title", "default", "additionalProperties"):
                 d.pop(key, None)
-        for k, v in d.items():
-            _strip_schema_metadata(v, _is_properties=(k == "properties"))
+            for k, v in d.items():
+                _strip_schema_metadata(
+                    v, _is_properties_map=(k == "properties")
+                )
     elif isinstance(d, list):
         for item in d:
             _strip_schema_metadata(item)
