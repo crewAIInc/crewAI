@@ -17,6 +17,7 @@ from collections.abc import (
     ValuesView,
 )
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 import copy
 import enum
 import inspect
@@ -497,7 +498,9 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._list)
 
-    def index(self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None) -> int:  # type: ignore[override]
+    def index(
+        self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None
+    ) -> int:  # type: ignore[override]
         if stop is None:
             return self._list.index(value, start)
         return self._list.index(value, start, stop)
@@ -1811,8 +1814,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         try:
             asyncio.get_running_loop()
+            ctx = contextvars.copy_context()
             with ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(asyncio.run, _run_flow()).result()
+                return pool.submit(ctx.run, asyncio.run, _run_flow()).result()
         except RuntimeError:
             return asyncio.run(_run_flow())
 
@@ -2236,8 +2240,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 else:
                     # Run sync methods in thread pool for isolation
                     # This allows Agent.kickoff() to work synchronously inside Flow methods
-                    import contextvars
-
                     ctx = contextvars.copy_context()
                     result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
             finally:
@@ -2714,7 +2716,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if not isinstance(e, HumanFeedbackPending):
-                logger.error(f"Error executing listener {listener_name}: {e}")
+                if not getattr(e, "_flow_listener_logged", False):
+                    logger.error(f"Error executing listener {listener_name}: {e}")
+                    e._flow_listener_logged = True  # type: ignore[attr-defined]
             raise
 
     # ── User Input (self.ask) ────────────────────────────────────────
@@ -2856,8 +2860,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Manual executor management to avoid shutdown(wait=True)
                 # deadlock when the provider call outlives the timeout.
                 executor = ThreadPoolExecutor(max_workers=1)
+                ctx = contextvars.copy_context()
                 future = executor.submit(
-                    provider.request_input, message, self, metadata
+                    ctx.run, provider.request_input, message, self, metadata
                 )
                 try:
                     raw = future.result(timeout=timeout)
@@ -3081,25 +3086,35 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
             )
-            response = llm_instance.call(messages=prompt)
-            response_clean = str(response).strip()
+            try:
+                response = llm_instance.call(
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                response_clean = str(response).strip()
 
-            # Exact match (case-insensitive)
-            for outcome in outcomes:
-                if outcome.lower() == response_clean.lower():
-                    return outcome
+                # Exact match (case-insensitive)
+                for outcome in outcomes:
+                    if outcome.lower() == response_clean.lower():
+                        return outcome
 
-            # Partial match
-            for outcome in outcomes:
-                if outcome.lower() in response_clean.lower():
-                    return outcome
+                # Partial match
+                for outcome in outcomes:
+                    if outcome.lower() in response_clean.lower():
+                        return outcome
 
-            # Fallback to first outcome
-            logger.warning(
-                f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
-                f"Falling back to first outcome: {outcomes[0]}"
-            )
-            return outcomes[0]
+                # Fallback to first outcome
+                logger.warning(
+                    f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
+
+            except Exception as fallback_err:
+                logger.warning(
+                    f"Simple prompting also failed: {fallback_err}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
 
     def _log_flow_event(
         self,

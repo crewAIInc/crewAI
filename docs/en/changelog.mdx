@@ -4,6 +4,105 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Mar 15, 2026">
+  ## v1.11.0rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc1)
+
+  ## What's Changed
+
+  ### Features
+  - Add Plus API token authentication in a2a
+  - Implement plan execute pattern
+
+  ### Bug Fixes
+  - Resolve code interpreter sandbox escape issue
+
+  ### Documentation
+  - Update changelog and version for v1.10.2rc2
+
+  ## Contributors
+
+  @Copilot, @greysonlalonde, @lorenzejay, @theCyberTech
+
+</Update>
+
+<Update label="Mar 14, 2026">
+  ## v1.10.2rc2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc2)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Remove exclusive locks from read-only storage operations
+
+  ### Documentation
+  - Update changelog and version for v1.10.2rc1
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Mar 13, 2026">
+  ## v1.10.2rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc1)
+
+  ## What's Changed
+
+  ### Features
+  - Add release command and trigger PyPI publish
+
+  ### Bug Fixes
+  - Fix cross-process and thread-safe locking to unprotected I/O
+  - Propagate contextvars across all thread and executor boundaries
+  - Propagate ContextVars into async task threads
+
+  ### Documentation
+  - Update changelog and version for v1.10.2a1
+
+  ## Contributors
+
+  @danglies007, @greysonlalonde
+
+</Update>
+
+<Update label="Mar 11, 2026">
+  ## v1.10.2a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2a1)
+
+  ## What's Changed
+
+  ### Features
+  - Add support for tool search, saving tokens, and dynamically injecting appropriate tools during execution for Anthropics.
+  - Introduce more Brave Search tools.
+  - Create action for nightly releases.
+
+  ### Bug Fixes
+  - Fix LockException under concurrent multi-process execution.
+  - Resolve issues with grouping parallel tool results in a single user message.
+  - Address MCP tools resolutions and eliminate all shared mutable connections.
+  - Update LLM parameter handling in the human_feedback function.
+  - Add missing list/dict methods to LockedListProxy and LockedDictProxy.
+  - Propagate contextvars context to parallel tool call threads.
+  - Bump gitpython dependency to >=3.1.41 to resolve CVE path traversal vulnerability.
+
+  ### Refactoring
+  - Refactor memory classes to be serializable.
+
+  ### Documentation
+  - Update changelog and version for v1.10.1.
+
+  ## Contributors
+
+  @akaKuruma, @github-actions[bot], @giulio-leone, @greysonlalonde, @joaomdmoura, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha
+
+</Update>
+
 <Update label="Mar 04, 2026">
   ## v1.10.1
 

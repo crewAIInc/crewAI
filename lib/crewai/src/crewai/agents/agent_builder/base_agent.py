@@ -38,7 +38,7 @@ from crewai.utilities.string_utils import interpolate_only
 
 
 _SLUG_RE: Final[re.Pattern[str]] = re.compile(
-    r"^(?:crewai-amp:)?[a-zA-Z0-9][a-zA-Z0-9_-]*(?:#\w+)?$"
+    r"^(?:crewai-amp:)?[a-zA-Z0-9][a-zA-Z0-9_-]*(?:#[\w-]+)?$"
 )
 
 

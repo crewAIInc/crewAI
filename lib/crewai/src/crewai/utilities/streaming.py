@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
+import contextvars
 import queue
 import threading
 from typing import Any, NamedTuple
@@ -240,7 +241,8 @@ def create_chunk_generator(
     Yields:
         StreamChunk objects as they arrive.
     """
-    thread = threading.Thread(target=run_func, daemon=True)
+    ctx = contextvars.copy_context()
+    thread = threading.Thread(target=ctx.run, args=(run_func,), daemon=True)
     thread.start()
 
     try:

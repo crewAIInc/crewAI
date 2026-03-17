@@ -897,7 +897,7 @@ def test_gemini_agent_kickoff_structured_output_without_tools():
         role="Analyst",
         goal="Provide structured analysis on topics",
         backstory="You are an expert analyst who provides clear, structured insights.",
-        llm=LLM(model="google/gemini-2.0-flash-001"),
+        llm=LLM(model="google/gemini-2.5-flash"),
         tools=[],
         verbose=True,
     )
@@ -939,7 +939,7 @@ def test_gemini_agent_kickoff_structured_output_with_tools():
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="google/gemini-2.0-flash-001"),
+        llm=LLM(model="google/gemini-2.5-flash"),
         tools=[add_numbers],
         verbose=True,
     )

@@ -1410,9 +1410,7 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
-    def _add_memory_tools(
-        self, tools: list[BaseTool], memory: Any
-    ) -> list[BaseTool]:
+    def _add_memory_tools(self, tools: list[BaseTool], memory: Any) -> list[BaseTool]:
         """Add recall and remember tools when memory is available.
 
         Args:

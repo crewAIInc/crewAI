@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Coroutine
 import concurrent.futures
+import contextvars
 import logging
 from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
@@ -46,8 +47,9 @@ def _run_sync(coro: Coroutine[None, None, T]) -> T:
     """
     try:
         asyncio.get_running_loop()
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(asyncio.run, coro)
+            future = executor.submit(ctx.run, asyncio.run, coro)
             return future.result()
     except RuntimeError:
         return asyncio.run(coro)
