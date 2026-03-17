@@ -4,16 +4,16 @@ from pydantic import BaseModel
 
 
 def process_config(
-    values: dict[str, Any], model_class: type[BaseModel]
+    values: dict[str, Any] | Any, model_class: type[BaseModel]
 ) -> dict[str, Any] | Any:
     """Process the config dictionary and update the values accordingly.
 
     Args:
-        values: The dictionary of values to update.
+        values: The values to process; non-dict inputs are returned unchanged.
         model_class: The Pydantic model class to reference for field validation.
 
     Returns:
-        The updated values dictionary.
+        The updated values dictionary, or the original input if not a dict.
     """
     if not isinstance(values, dict):
         return values
