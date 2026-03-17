@@ -504,5 +504,5 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         pass
 
-    def set_skills(self) -> None:
+    def set_skills(self, resolved_crew_skills: list[Any] | None = None) -> None:
         pass

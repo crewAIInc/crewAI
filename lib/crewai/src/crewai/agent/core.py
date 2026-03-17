@@ -325,19 +325,29 @@ class Agent(BaseAgent):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 
-    def set_skills(self) -> None:
+    def set_skills(
+        self,
+        resolved_crew_skills: list[SkillModel] | None = None,
+    ) -> None:
         """Resolve skill paths and activate skills to INSTRUCTIONS level.
 
         Path entries trigger discovery and activation. Pre-loaded Skill objects
         below INSTRUCTIONS level are activated. Crew-level skills are merged in.
+
+        Args:
+            resolved_crew_skills: Pre-resolved crew skills (already discovered
+                and activated). When provided, avoids redundant discovery per agent.
         """
         from crewai.crew import Crew
 
-        crew_skills: list[Path | SkillModel] | None = (
-            self.crew.skills
-            if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
-            else None
-        )
+        if resolved_crew_skills is None:
+            crew_skills: list[Path | SkillModel] | None = (
+                self.crew.skills
+                if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
+                else None
+            )
+        else:
+            crew_skills = list(resolved_crew_skills)
 
         if not self.skills and not crew_skills:
             return
