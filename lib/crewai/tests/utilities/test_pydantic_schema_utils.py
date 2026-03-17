@@ -1037,3 +1037,47 @@ class TestGenerateToolParametersSchema:
         assert "properties" in props
         # The schema node for the 'properties' field should have title stripped
         assert "title" not in props["properties"]
+
+    def test_field_named_properties_not_treated_as_properties_map(self) -> None:
+        """Field named 'properties' must not suppress metadata stripping for sibling fields."""
+
+        class Tricky(BaseModel):
+            properties: str = Field(description="Raw schema properties")
+            title: str = Field(description="A field also named title")
+
+        schema = generate_tool_parameters_schema(Tricky)
+        props = schema["properties"]
+        # Both fields must appear — neither should be deleted
+        assert "properties" in props
+        assert "title" in props
+        # Schema nodes for both fields must have their own 'title' stripped
+        assert "title" not in props["properties"]
+        assert "title" not in props["title"]
+
+
+class TestOpenAIStrictModeTransforms:
+    """Verify _convert_tools_for_interference applies the full strict-mode pipeline."""
+
+    def test_strip_unsupported_formats_applied(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import strip_unsupported_formats
+
+        schema = {"type": "object", "properties": {"url": {"type": "string", "format": "uri"}}}
+        result = strip_unsupported_formats(schema)
+        assert "format" not in result["properties"]["url"]
+
+    def test_ensure_type_in_schemas_applied(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import ensure_type_in_schemas
+
+        # Empty schemas {} inside anyOf must become {"type": "object"}
+        schema = {"anyOf": [{}, {"type": "string"}]}
+        result = ensure_type_in_schemas(schema)
+        assert result["anyOf"][0] == {"type": "object"}
+        assert result["anyOf"][1] == {"type": "string"}
+
+    def test_convert_oneof_to_anyof_applied(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import convert_oneof_to_anyof
+
+        schema = {"oneOf": [{"type": "string"}, {"type": "integer"}]}
+        result = convert_oneof_to_anyof(schema)
+        assert "anyOf" in result
+        assert "oneOf" not in result
