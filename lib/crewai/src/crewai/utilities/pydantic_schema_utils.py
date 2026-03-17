@@ -417,24 +417,28 @@ def strip_null_from_types(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
-def _strip_schema_metadata(d: Any) -> Any:
+def _strip_schema_metadata(d: Any, _is_properties: bool = False) -> Any:
     """Recursively remove provider-specific metadata from a JSON schema.
 
-    Strips ``title``, ``default``, and ``additionalProperties`` keys from all
-    nested dicts so that the resulting schema is accepted by any LLM provider
-    (Bedrock, Gemini, Anthropic, OpenAI, etc.).
+    Strips ``title``, ``default``, and ``additionalProperties`` keys from
+    schema nodes. Skips stripping from ``properties`` mapping dicts (where
+    keys are field names, not schema keywords) to avoid accidentally removing
+    field definitions for tools that have fields named ``title`` or ``default``.
 
     Args:
         d: The dictionary/list to clean.
+        _is_properties: Internal flag — True when ``d`` is a ``properties``
+            mapping (field-name → schema) rather than a schema node itself.
 
     Returns:
         The cleaned dictionary/list.
     """
     if isinstance(d, dict):
-        for key in ("title", "default", "additionalProperties"):
-            d.pop(key, None)
-        for v in d.values():
-            _strip_schema_metadata(v)
+        if not _is_properties:
+            for key in ("title", "default", "additionalProperties"):
+                d.pop(key, None)
+        for k, v in d.items():
+            _strip_schema_metadata(v, _is_properties=(k == "properties"))
     elif isinstance(d, list):
         for item in d:
             _strip_schema_metadata(item)
