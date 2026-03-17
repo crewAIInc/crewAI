@@ -400,6 +400,45 @@ class TestCollapseToOutcome:
 
         assert result == "approved"  # First in list
 
+    def test_both_llm_calls_fail_returns_first_outcome(self):
+        """When both structured and simple prompting fail, return outcomes[0]."""
+        flow = Flow()
+
+        with patch("crewai.llm.LLM") as MockLLM:
+            mock_llm = MagicMock()
+            # Both calls raise — simulates wrong provider / auth failure
+            mock_llm.call.side_effect = RuntimeError("Model not found")
+            MockLLM.return_value = mock_llm
+
+            result = flow._collapse_to_outcome(
+                feedback="looks great, approve it",
+                outcomes=["needs_changes", "approved"],
+                llm="gemini-3-flash-preview",
+            )
+
+        assert result == "needs_changes"  # First in list (safe fallback)
+
+    def test_structured_fails_but_simple_succeeds(self):
+        """When structured output fails but simple prompting works, use that."""
+        flow = Flow()
+
+        with patch("crewai.llm.LLM") as MockLLM:
+            mock_llm = MagicMock()
+            # First call (structured) fails, second call (simple) succeeds
+            mock_llm.call.side_effect = [
+                RuntimeError("Function calling not supported"),
+                "approved",
+            ]
+            MockLLM.return_value = mock_llm
+
+            result = flow._collapse_to_outcome(
+                feedback="looks great",
+                outcomes=["needs_changes", "approved"],
+                llm="gpt-4o-mini",
+            )
+
+        assert result == "approved"
+
 
 # -- HITL Learning tests --
 
