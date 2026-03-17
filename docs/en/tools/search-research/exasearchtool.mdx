@@ -23,7 +23,7 @@ Set your Exa API key as an environment variable:
 export EXA_API_KEY='your_exa_api_key'
 ```
 
-Get an API key at [exa.ai](https://exa.ai/) (sign up for a free account, then create a key from the dashboard).
+Get an API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys).
 
 ## Example Usage
 
@@ -68,7 +68,6 @@ print(result)
 
 The `EXASearchTool` accepts the following parameters during initialization:
 
-- `type` (str, optional): The search type to use. Defaults to `"auto"`. Options include `"auto"`, `"neural"`, and `"keyword"`.
 - `content` (bool, optional): Whether to include full page content in results. Defaults to `False`.
 - `summary` (bool, optional): Whether to include AI-generated summaries of each result. Requires `content=True`. Defaults to `False`.
 - `api_key` (str, optional): Your Exa API key. Falls back to the `EXA_API_KEY` environment variable if not provided.
@@ -89,8 +88,7 @@ You can configure the tool with custom parameters for richer results:
 # Get full page content with AI summaries
 exa_tool = EXASearchTool(
     content=True,
-    summary=True,
-    type="neural"
+    summary=True
 )
 
 # Use it in an agent
@@ -103,8 +101,7 @@ agent = Agent(
 
 ## Features
 
-- **Neural Search**: Go beyond keywords — find results based on meaning using Exa's neural search
-- **Multiple Search Modes**: Choose between `auto`, `neural`, or `keyword` search types
+- **Semantic Search**: Find results based on meaning, not just keywords
 - **Full Content Retrieval**: Get the full text of web pages alongside search results
 - **AI Summaries**: Get concise, AI-generated summaries of each result
 - **Date Filtering**: Limit results to specific time periods with published date filters
