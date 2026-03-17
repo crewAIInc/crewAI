@@ -3086,25 +3086,35 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
             )
-            response = llm_instance.call(messages=prompt)
-            response_clean = str(response).strip()
+            try:
+                response = llm_instance.call(
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                response_clean = str(response).strip()
 
-            # Exact match (case-insensitive)
-            for outcome in outcomes:
-                if outcome.lower() == response_clean.lower():
-                    return outcome
+                # Exact match (case-insensitive)
+                for outcome in outcomes:
+                    if outcome.lower() == response_clean.lower():
+                        return outcome
 
-            # Partial match
-            for outcome in outcomes:
-                if outcome.lower() in response_clean.lower():
-                    return outcome
+                # Partial match
+                for outcome in outcomes:
+                    if outcome.lower() in response_clean.lower():
+                        return outcome
 
-            # Fallback to first outcome
-            logger.warning(
-                f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
-                f"Falling back to first outcome: {outcomes[0]}"
-            )
-            return outcomes[0]
+                # Fallback to first outcome
+                logger.warning(
+                    f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
+
+            except Exception as fallback_err:
+                logger.warning(
+                    f"Simple prompting also failed: {fallback_err}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
 
     def _log_flow_event(
         self,
