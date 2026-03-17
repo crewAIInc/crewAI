@@ -110,14 +110,21 @@ class AgentCoreRuntime:
             return inputs
 
         # Fall back to prompt-style input (wrap as {"input": str})
-        prompt = (
-            payload.get("prompt") or payload.get("message") or payload.get("input")
-        )
+        prompt = None
+        for key in ("prompt", "message", "input"):
+            val = payload.get(key)
+            if val is None:
+                continue
+            # Skip empty/whitespace-only strings so later keys can match
+            if isinstance(val, str) and not val.strip():
+                continue
+            prompt = val
+            break
         if isinstance(prompt, dict):
             prompt = prompt.get("prompt")
         if isinstance(prompt, str):
             prompt = prompt.strip()
-        if prompt and isinstance(prompt, (str, int, float)):
+        if prompt is not None and isinstance(prompt, (str, int, float)):
             return {"input": str(prompt)}
 
         raise HTTPException(
@@ -132,6 +139,7 @@ class AgentCoreRuntime:
         """Handle non-streaming invocation. Returns JSON response."""
         inputs = self._extract_inputs(payload)
         crew = self._crew.copy()
+        crew.stream = False
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
             None, lambda: crew.kickoff(inputs=inputs)
