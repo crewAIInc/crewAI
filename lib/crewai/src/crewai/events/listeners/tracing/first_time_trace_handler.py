@@ -101,6 +101,11 @@ class FirstTimeTraceHandler:
                     execution_metadata=execution_metadata,
                     use_ephemeral=True,
                 )
+
+                if not self.batch_manager.trace_batch_id:
+                    self._gracefully_fail("Backend batch creation failed, cannot send events.")
+                    return
+
                 self.batch_manager.backend_initialized = True
 
             if self.batch_manager.event_buffer:

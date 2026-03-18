@@ -1047,3 +1047,133 @@ class TestTraceBatchIdClearedOnFailure:
         """_send_events_to_backend must return early when trace_batch_id is None."""
         bm = self._make_batch_manager()
         bm.trace_batch_id = None
+        bm.event_buffer = [MagicMock()]  # has events
+
+        with patch.object(
+            bm.plus_api, "send_ephemeral_trace_events"
+        ) as mock_send:
+            result = bm._send_events_to_backend()
+
+        assert result == 500
+        mock_send.assert_not_called()
+
+
+class TestFirstTimeHandlerBackendInitGuard:
+    """Tests for Fix 2: backend_initialized gated on actual batch creation success."""
+
+    def _make_handler_with_manager(self):
+        """Create a FirstTimeTraceHandler wired to a TraceBatchManager."""
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.trace_batch_id = bm.current_batch.batch_id
+        bm.is_current_batch_ephemeral = True
+
+        handler = FirstTimeTraceHandler()
+        handler.is_first_time = True
+        handler.collected_events = True
+        handler.batch_manager = bm
+        return handler, bm
+
+    def test_backend_initialized_true_on_success(self):
+        """backend_initialized is True and events are sent when batch creation succeeds."""
+        handler, bm = self._make_handler_with_manager()
+        server_id = "server-id-abc"
+
+        mock_init_response = MagicMock(
+            status_code=201,
+            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
+        )
+        mock_send_response = MagicMock(status_code=200)
+
+        trace_batch_id_after_init = None
+
+        def capture_send(*args, **kwargs):
+            nonlocal trace_batch_id_after_init
+            trace_batch_id_after_init = bm.trace_batch_id
+            return mock_send_response
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=mock_init_response,
+            ),
+            patch.object(
+                bm.plus_api,
+                "send_ephemeral_trace_events",
+                side_effect=capture_send,
+            ),
+            patch.object(bm, "finalize_batch"),
+        ):
+            bm.event_buffer = [MagicMock(to_dict=MagicMock(return_value={}))]
+            handler._initialize_backend_and_send_events()
+
+        assert bm.backend_initialized is True
+        assert trace_batch_id_after_init == server_id
+
+    def test_backend_initialized_false_on_failure(self):
+        """backend_initialized stays False and events are NOT sent when batch creation fails."""
+        handler, bm = self._make_handler_with_manager()
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=None,  # server call fails
+            ),
+            patch.object(bm, "_send_events_to_backend") as mock_send,
+            patch.object(bm, "finalize_batch") as mock_finalize,
+            patch.object(handler, "_gracefully_fail") as mock_fail,
+        ):
+            bm.event_buffer = [MagicMock()]
+            handler._initialize_backend_and_send_events()
+
+        assert bm.backend_initialized is False
+        assert bm.trace_batch_id is None
+        mock_send.assert_not_called()
+        mock_finalize.assert_not_called()
+        mock_fail.assert_called_once()
+
+    def test_backend_initialized_false_on_non_2xx(self):
+        """backend_initialized stays False when server returns non-2xx."""
+        handler, bm = self._make_handler_with_manager()
+
+        mock_response = MagicMock(status_code=500, text="Internal Server Error")
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=mock_response,
+            ),
+            patch.object(bm, "_send_events_to_backend") as mock_send,
+            patch.object(bm, "finalize_batch") as mock_finalize,
+            patch.object(handler, "_gracefully_fail") as mock_fail,
+        ):
+            bm.event_buffer = [MagicMock()]
+            handler._initialize_backend_and_send_events()
+
+        assert bm.backend_initialized is False
+        assert bm.trace_batch_id is None
+        mock_send.assert_not_called()
+        mock_finalize.assert_not_called()
+        mock_fail.assert_called_once()
