@@ -1,6 +1,18 @@
 from typing import Literal, TypeAlias
 
 
+NovitaModels: TypeAlias = Literal[
+    "moonshotai/kimi-k2.5",
+    "zai-org/glm-5",
+    "minimax/minimax-m2.5",
+]
+NOVITA_MODELS: list[NovitaModels] = [
+    "moonshotai/kimi-k2.5",
+    "zai-org/glm-5",
+    "minimax/minimax-m2.5",
+]
+
+
 OpenAIModels: TypeAlias = Literal[
     "gpt-3.5-turbo",
     "gpt-3.5-turbo-0125",
