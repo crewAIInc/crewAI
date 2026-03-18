@@ -1755,21 +1755,13 @@ class Crew(FlowTrackable, BaseModel):
                     token_sum = agent._token_process.get_summary()
                     total_usage_metrics.add_usage_metrics(token_sum)
 
-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
-            token_sum = self.manager_agent._token_process.get_summary()
-            total_usage_metrics.add_usage_metrics(token_sum)
-
-        if (
-            self.manager_agent
-            and hasattr(self.manager_agent, "llm")
-            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
-        ):
+        if self.manager_agent:
             if isinstance(self.manager_agent.llm, BaseLLM):
                 llm_usage = self.manager_agent.llm.get_token_usage_summary()
-            else:
-                llm_usage = self.manager_agent.llm._token_process.get_summary()
-
-            total_usage_metrics.add_usage_metrics(llm_usage)
+                total_usage_metrics.add_usage_metrics(llm_usage)
+            elif hasattr(self.manager_agent, "_token_process"):
+                token_sum = self.manager_agent._token_process.get_summary()
+                total_usage_metrics.add_usage_metrics(token_sum)
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
