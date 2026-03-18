@@ -1325,7 +1325,7 @@ class TestFirstTimeHandlerBackendInitGuard:
                 "send_ephemeral_trace_events",
                 side_effect=capture_send,
             ),
-            patch.object(bm, "finalize_batch"),
+            patch.object(bm, "_finalize_backend_batch"),
         ):
             bm.event_buffer = [MagicMock(to_dict=MagicMock(return_value={}))]
             handler._initialize_backend_and_send_events()
@@ -1348,7 +1348,7 @@ class TestFirstTimeHandlerBackendInitGuard:
                 return_value=None,  # server call fails
             ),
             patch.object(bm, "_send_events_to_backend") as mock_send,
-            patch.object(bm, "finalize_batch") as mock_finalize,
+            patch.object(bm, "_finalize_backend_batch") as mock_finalize,
             patch.object(handler, "_gracefully_fail") as mock_fail,
         ):
             bm.event_buffer = [MagicMock()]
@@ -1377,7 +1377,7 @@ class TestFirstTimeHandlerBackendInitGuard:
                 return_value=mock_response,
             ),
             patch.object(bm, "_send_events_to_backend") as mock_send,
-            patch.object(bm, "finalize_batch") as mock_finalize,
+            patch.object(bm, "_finalize_backend_batch") as mock_finalize,
             patch.object(handler, "_gracefully_fail") as mock_fail,
         ):
             bm.event_buffer = [MagicMock()]
@@ -1390,77 +1390,10 @@ class TestFirstTimeHandlerBackendInitGuard:
         mock_fail.assert_called_once()
 
 
-class TestFirstTimeAuthRespected:
-    """Tests for Fix 3: first-time users respect authentication status."""
+class TestFirstTimeHandlerAlwaysEphemeral:
+    """Tests that first-time handler always uses ephemeral with skip_context_check."""
 
-    def test_first_time_authenticated_uses_non_ephemeral(self):
-        """Authenticated first-time user should use non-ephemeral (use_ephemeral=False)."""
-        with (
-            patch(
-                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-                return_value="mock_token",
-            ),
-            patch(
-                "crewai.events.listeners.tracing.trace_listener.get_auth_token",
-                return_value="mock_token",
-            ),
-        ):
-            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
-
-            listener = TraceCollectionListener.__new__(TraceCollectionListener)
-            listener.first_time_handler = FirstTimeTraceHandler()
-            listener.first_time_handler.is_first_time = True
-            listener.batch_manager = TraceBatchManager()
-
-            with patch.object(
-                listener.batch_manager, "initialize_batch"
-            ) as mock_init_batch:
-                listener._initialize_batch(
-                    user_context={"privacy_level": "standard"},
-                    execution_metadata={"execution_type": "crew"},
-                )
-
-                mock_init_batch.assert_called_once_with(
-                    {"privacy_level": "standard"},
-                    {"execution_type": "crew"},
-                    use_ephemeral=False,
-                )
-
-    def test_first_time_unauthenticated_uses_ephemeral(self):
-        """Unauthenticated first-time user should use ephemeral (use_ephemeral=True)."""
-        with (
-            patch(
-                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
-                return_value="mock_token",
-            ),
-            patch(
-                "crewai.events.listeners.tracing.trace_listener.get_auth_token",
-                return_value=None,
-            ),
-        ):
-            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
-
-            listener = TraceCollectionListener.__new__(TraceCollectionListener)
-            listener.first_time_handler = FirstTimeTraceHandler()
-            listener.first_time_handler.is_first_time = True
-            listener.batch_manager = TraceBatchManager()
-
-            with patch.object(
-                listener.batch_manager, "initialize_batch"
-            ) as mock_init_batch:
-                listener._initialize_batch(
-                    user_context={"privacy_level": "standard"},
-                    execution_metadata={"execution_type": "crew"},
-                )
-
-                mock_init_batch.assert_called_once_with(
-                    {"privacy_level": "standard"},
-                    {"execution_type": "crew"},
-                    use_ephemeral=True,
-                )
-
-    def test_first_time_handler_deferred_init_uses_batch_ephemeral_flag(self):
-        """Deferred backend init should use is_current_batch_ephemeral, not hardcoded True."""
+    def _make_handler_with_manager(self):
         with patch(
             "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
             return_value="mock_token",
@@ -1471,26 +1404,30 @@ class TestFirstTimeAuthRespected:
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
         )
         bm.trace_batch_id = bm.current_batch.batch_id
-        bm.is_current_batch_ephemeral = False  # authenticated user
+        bm.is_current_batch_ephemeral = True
 
         handler = FirstTimeTraceHandler()
         handler.is_first_time = True
         handler.collected_events = True
         handler.batch_manager = bm
+        return handler, bm
+
+    def test_deferred_init_uses_ephemeral_and_skip_context_check(self):
+        """Deferred backend init always uses ephemeral=True and skip_context_check=True."""
+        handler, bm = self._make_handler_with_manager()
 
         with (
             patch.object(bm, "_initialize_backend_batch") as mock_init,
             patch.object(bm, "_send_events_to_backend"),
-            patch.object(bm, "finalize_batch"),
+            patch.object(bm, "_finalize_backend_batch"),
         ):
-            # trace_batch_id stays set (simulating success)
             mock_init.side_effect = lambda **kwargs: None
             bm.event_buffer = [MagicMock()]
             handler._initialize_backend_and_send_events()
 
             mock_init.assert_called_once()
-            call_kwargs = mock_init.call_args
-            assert call_kwargs.kwargs["use_ephemeral"] is False
+            assert mock_init.call_args.kwargs["use_ephemeral"] is True
+            assert mock_init.call_args.kwargs["skip_context_check"] is True
 
 
 class TestAuthFailbackToEphemeral:
