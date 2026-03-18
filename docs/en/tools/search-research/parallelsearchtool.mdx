@@ -120,7 +120,7 @@ Restrict searches to specific domains. You can set defaults at initialization or
 parallel_tool = ParallelSearchTool(
     max_results=5,
     source_policy={
-        "allow": {"domains": ["un.org", "who.int"]},
+        "include_domains": ["un.org", "who.int"],
     }
 )
 
@@ -132,7 +132,7 @@ result = parallel_tool.run(
 # Override source policy for a specific search
 result = parallel_tool.run(
     objective="Latest WHO health guidelines",
-    source_policy={"allow": {"domains": ["who.int"]}},
+    source_policy={"include_domains": ["who.int"]},
     max_results=3  # Also override max_results for this search
 )
 ```
