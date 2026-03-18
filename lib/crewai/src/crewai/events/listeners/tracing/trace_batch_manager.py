@@ -184,6 +184,16 @@ class TraceBatchManager:
                 self.trace_batch_id = None
                 return
 
+            # Fall back to ephemeral on auth failure (expired/revoked token)
+            if response.status_code in [401, 403] and not use_ephemeral:
+                logger.warning(
+                    "Auth rejected by server, falling back to ephemeral tracing."
+                )
+                self.is_current_batch_ephemeral = True
+                return self._initialize_backend_batch(
+                    user_context, execution_metadata, use_ephemeral=True
+                )
+
             if response.status_code in [201, 200]:
                 response_data = response.json()
                 self.trace_batch_id = (
