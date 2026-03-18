@@ -34,6 +34,12 @@ from crewai.events.types.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
+from crewai.events.types.env_events import (
+    CCEnvEvent,
+    CodexEnvEvent,
+    CursorEnvEvent,
+    DefaultEnvEvent,
+)
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -143,6 +149,23 @@ class EventListener(BaseEventListener):
     # ----------- CREW EVENTS -----------
 
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
+
+        @crewai_event_bus.on(CCEnvEvent)
+        def on_cc_env(_: Any, event: CCEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
+        @crewai_event_bus.on(CodexEnvEvent)
+        def on_codex_env(_: Any, event: CodexEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
+        @crewai_event_bus.on(CursorEnvEvent)
+        def on_cursor_env(_: Any, event: CursorEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
+        @crewai_event_bus.on(DefaultEnvEvent)
+        def on_default_env(_: Any, event: DefaultEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             self.formatter.handle_crew_started(event.crew_name or "Crew", source.id)
