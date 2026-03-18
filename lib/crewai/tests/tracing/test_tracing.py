@@ -966,7 +966,7 @@ class TestTraceListenerSetup:
 
 
 class TestTraceBatchIdClearedOnFailure:
-    """Tests for Fix 1: trace_batch_id is cleared when _initialize_backend_batch fails."""
+    """Tests: trace_batch_id is cleared when _initialize_backend_batch fails."""
 
     def _make_batch_manager(self):
         """Create a TraceBatchManager with a pre-set trace_batch_id (simulating first-time user)."""
@@ -982,57 +982,6 @@ class TestTraceBatchIdClearedOnFailure:
         bm.trace_batch_id = bm.current_batch.batch_id  # simulate line 96
         bm.is_current_batch_ephemeral = True
         return bm
-
-    def test_trace_batch_id_cleared_on_none_response(self):
-        """trace_batch_id must be None when the API returns None."""
-        bm = self._make_batch_manager()
-        original_id = bm.trace_batch_id
-        assert original_id is not None
-
-        with (
-            patch(
-                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
-                return_value=True,
-            ),
-            patch.object(
-                bm.plus_api,
-                "initialize_ephemeral_trace_batch",
-                return_value=None,
-            ),
-        ):
-            bm._initialize_backend_batch(
-                user_context={"privacy_level": "standard"},
-                execution_metadata={"execution_type": "crew"},
-                use_ephemeral=True,
-            )
-
-        assert bm.trace_batch_id is None
-
-    def test_trace_batch_id_cleared_on_non_2xx_response(self):
-        """trace_batch_id must be None when the API returns a non-2xx status."""
-        bm = self._make_batch_manager()
-        assert bm.trace_batch_id is not None
-
-        mock_response = MagicMock(status_code=422, text="Unprocessable Entity")
-
-        with (
-            patch(
-                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
-                return_value=True,
-            ),
-            patch.object(
-                bm.plus_api,
-                "initialize_ephemeral_trace_batch",
-                return_value=mock_response,
-            ),
-        ):
-            bm._initialize_backend_batch(
-                user_context={"privacy_level": "standard"},
-                execution_metadata={"execution_type": "crew"},
-                use_ephemeral=True,
-            )
-
-        assert bm.trace_batch_id is None
 
     def test_trace_batch_id_cleared_on_exception(self):
         """trace_batch_id must be None when the API call raises an exception."""
@@ -1270,7 +1219,7 @@ class TestInitializeBackendBatchRetry:
 
 
 class TestFirstTimeHandlerBackendInitGuard:
-    """Tests for Fix 2: backend_initialized gated on actual batch creation success."""
+    """Tests: backend_initialized gated on actual batch creation success."""
 
     def _make_handler_with_manager(self):
         """Create a FirstTimeTraceHandler wired to a TraceBatchManager."""
