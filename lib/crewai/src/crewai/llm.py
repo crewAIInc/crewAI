@@ -1234,7 +1234,14 @@ class LLM(BaseLLM):
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
+        # --- 5) If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution.
+        # This must be checked before the text fallback below, because some LLMs
+        # return both text *and* tool_calls; the tool_calls should take priority.
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        # --- 6) If no tool calls (or no available functions), return the text response directly as long as there is a text response
         if (not tool_calls or not available_functions) and text_response:
             self._handle_emit_call_events(
                 response=text_response,
@@ -1244,11 +1251,6 @@ class LLM(BaseLLM):
                 messages=params["messages"],
             )
             return text_response
-
-        # --- 6) If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # --- 7) Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:

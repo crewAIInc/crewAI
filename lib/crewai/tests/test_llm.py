@@ -1022,3 +1022,49 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+def test_tool_calls_prioritized_over_text_when_no_available_functions():
+    """When an LLM returns both text content AND tool_calls, and
+    available_functions is None (executor handles execution), the tool_calls
+    should be returned -- not the text.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4788
+    """
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    # Build a fake litellm ModelResponse with both text AND tool_calls
+    fake_tool_call = MagicMock()
+    fake_tool_call.function.name = "code_search"
+    fake_tool_call.function.arguments = '{"query": "test"}'
+    fake_tool_call.id = "call_abc123"
+    fake_tool_call.type = "function"
+
+    fake_message = MagicMock()
+    fake_message.content = "I will search for the given query."
+    fake_message.tool_calls = [fake_tool_call]
+
+    fake_choice = MagicMock()
+    fake_choice.message = fake_message
+
+    fake_response = MagicMock()
+    fake_response.choices = [fake_choice]
+    fake_response.usage = MagicMock(
+        total_tokens=100, prompt_tokens=80, completion_tokens=20
+    )
+
+    params = {"messages": [{"role": "user", "content": "search for test"}]}
+
+    with patch.object(llm, "_call_litellm", return_value=fake_response):
+        result = llm._handle_non_streaming_response(
+            params=params,
+            callbacks=None,
+            available_functions=None,
+        )
+
+    # The method should return tool_calls (list), NOT the text string
+    assert isinstance(result, list), (
+        f"Expected tool_calls list but got text: {result!r}"
+    )
+    assert len(result) == 1
+    assert result[0].function.name == "code_search"
