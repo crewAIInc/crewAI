@@ -2243,12 +2243,15 @@ class LLM(BaseLLM):
                 ]
 
             failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+            failure_callbacks: list[str | Callable[..., Any] | CustomLogger] = []
             if failure_callbacks_str:
-                failure_callbacks: list[str | Callable[..., Any] | CustomLogger] = [
+                failure_callbacks = [
                     cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
                 ]
 
+            if success_callbacks:
                 litellm.success_callback = success_callbacks
+            if failure_callbacks:
                 litellm.failure_callback = failure_callbacks
 
     def __copy__(self) -> LLM:
