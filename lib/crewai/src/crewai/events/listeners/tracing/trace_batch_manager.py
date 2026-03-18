@@ -196,6 +196,7 @@ class TraceBatchManager:
                 )
 
             if response.status_code in [201, 200]:
+                self.is_current_batch_ephemeral = use_ephemeral
                 response_data = response.json()
                 self.trace_batch_id = (
                     response_data["trace_id"]

@@ -99,7 +99,7 @@ class FirstTimeTraceHandler:
                 self.batch_manager._initialize_backend_batch(
                     user_context=user_context,
                     execution_metadata=execution_metadata,
-                    use_ephemeral=self.batch_manager.is_current_batch_ephemeral,
+                    use_ephemeral=True,
                     skip_context_check=True,
                 )
 
@@ -109,10 +109,11 @@ class FirstTimeTraceHandler:
 
                 self.batch_manager.backend_initialized = True
 
+            events_count = len(self.batch_manager.event_buffer)
             if self.batch_manager.event_buffer:
                 self.batch_manager._send_events_to_backend()
 
-            self.batch_manager.finalize_batch()
+            self.batch_manager._finalize_backend_batch(events_count)
             self.ephemeral_url = self.batch_manager.ephemeral_trace_url
 
             if not self.ephemeral_url:
