@@ -1022,3 +1022,137 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+def test_tool_calls_prioritized_over_text_when_no_available_functions():
+    """When an LLM returns both text AND tool calls (e.g. Claude), tool calls
+    should be returned instead of the text when available_functions is None.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4788
+    """
+    from litellm.types.utils import (
+        ChatCompletionMessageToolCall,
+        Function,
+        Message,
+    )
+
+    tool_call = ChatCompletionMessageToolCall(
+        index=0,
+        function=Function(
+            arguments='{"query": "test"}',
+            name="search_tool",
+        ),
+        id="call_123",
+        type="function",
+    )
+
+    mock_message = Message(
+        content="I will search for that.",
+        role="assistant",
+        tool_calls=[tool_call],
+    )
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock(
+        prompt_tokens=10,
+        completion_tokens=5,
+        total_tokens=15,
+    )
+
+    llm = LLM(model="openai/anthropic/claude-sonnet-4-20250514", is_litellm=True)
+
+    with patch("litellm.completion", return_value=mock_response):
+        result = llm.call(
+            messages=[{"role": "user", "content": "Search for test"}],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_tool",
+                        "description": "Search",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                }
+            ],
+            available_functions=None,
+        )
+
+    # Should return the tool calls list, NOT the text response
+    assert isinstance(result, list), (
+        f"Expected list of tool calls, got {type(result)}: {result}"
+    )
+    assert len(result) == 1
+    assert result[0].function.name == "search_tool"
+
+
+@pytest.mark.asyncio
+async def test_tool_calls_prioritized_over_text_when_no_available_functions_async():
+    """Async version: tool calls should be prioritized over text when
+    available_functions is None.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4788
+    """
+    from litellm.types.utils import (
+        ChatCompletionMessageToolCall,
+        Function,
+        Message,
+    )
+
+    tool_call = ChatCompletionMessageToolCall(
+        index=0,
+        function=Function(
+            arguments='{"query": "test"}',
+            name="search_tool",
+        ),
+        id="call_456",
+        type="function",
+    )
+
+    mock_message = Message(
+        content="I will search for that.",
+        role="assistant",
+        tool_calls=[tool_call],
+    )
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock(
+        prompt_tokens=10,
+        completion_tokens=5,
+        total_tokens=15,
+    )
+
+    llm = LLM(model="openai/anthropic/claude-sonnet-4-20250514", is_litellm=True)
+
+    async def mock_acompletion(**kwargs):
+        return mock_response
+
+    with patch("litellm.acompletion", side_effect=mock_acompletion):
+        result = await llm.acall(
+            messages=[{"role": "user", "content": "Search for test"}],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_tool",
+                        "description": "Search",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                }
+            ],
+            available_functions=None,
+        )
+
+    # Should return the tool calls list, NOT the text response
+    assert isinstance(result, list), (
+        f"Expected list of tool calls, got {type(result)}: {result}"
+    )
+    assert len(result) == 1
+    assert result[0].function.name == "search_tool"
