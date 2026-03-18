@@ -152,6 +152,7 @@ class TraceBatchManager:
                 logger.warning(
                     "Trace batch initialization failed gracefully. Continuing without tracing."
                 )
+                self.trace_batch_id = None
                 return
 
             if response.status_code in [201, 200]:
@@ -165,11 +166,13 @@ class TraceBatchManager:
                 logger.warning(
                     f"Trace batch initialization returned status {response.status_code}. Continuing without tracing."
                 )
+                self.trace_batch_id = None
 
         except Exception as e:
             logger.warning(
                 f"Error initializing trace batch: {e}. Continuing without tracing."
             )
+            self.trace_batch_id = None
 
     def begin_event_processing(self) -> None:
         """Mark that an event handler started processing (for synchronization)."""
