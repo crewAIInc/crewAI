@@ -658,6 +658,16 @@ class TestTraceListenerSetup:
 
             trace_listener.first_time_handler.collected_events = True
 
+            mock_batch_response = MagicMock()
+            mock_batch_response.status_code = 201
+            mock_batch_response.json.return_value = {
+                "trace_id": "mock-trace-id",
+                "ephemeral_trace_id": "mock-ephemeral-trace-id",
+                "access_code": "TRACE-mock",
+            }
+            mock_events_response = MagicMock()
+            mock_events_response.status_code = 200
+
             with (
                 patch.object(
                     trace_listener.first_time_handler,
@@ -667,6 +677,40 @@ class TestTraceListenerSetup:
                 patch.object(
                     trace_listener.first_time_handler, "_display_ephemeral_trace_link"
                 ) as mock_display_link,
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "initialize_trace_batch",
+                    return_value=mock_batch_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "initialize_ephemeral_trace_batch",
+                    return_value=mock_batch_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "send_trace_events",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "send_ephemeral_trace_events",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "finalize_trace_batch",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "finalize_ephemeral_trace_batch",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager,
+                    "_cleanup_batch_data",
+                ),
             ):
                 crew.kickoff()
                 wait_for_event_handlers()

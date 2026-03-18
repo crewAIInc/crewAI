@@ -109,10 +109,11 @@ class TraceBatchManager:
         user_context: dict[str, str],
         execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
+        skip_context_check: bool = False,
     ) -> None:
         """Send batch initialization to backend"""
 
-        if not is_tracing_enabled_in_context():
+        if not skip_context_check and not is_tracing_enabled_in_context():
             return
 
         if not self.plus_api or not self.current_batch:

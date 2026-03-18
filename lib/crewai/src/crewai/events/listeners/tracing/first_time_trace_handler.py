@@ -100,6 +100,7 @@ class FirstTimeTraceHandler:
                     user_context=user_context,
                     execution_metadata=execution_metadata,
                     use_ephemeral=self.batch_manager.is_current_batch_ephemeral,
+                    skip_context_check=True,
                 )
 
                 if not self.batch_manager.trace_batch_id:
