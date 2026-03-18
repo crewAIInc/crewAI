@@ -99,7 +99,7 @@ class FirstTimeTraceHandler:
                 self.batch_manager._initialize_backend_batch(
                     user_context=user_context,
                     execution_metadata=execution_metadata,
-                    use_ephemeral=True,
+                    use_ephemeral=self.batch_manager.is_current_batch_ephemeral,
                 )
 
                 if not self.batch_manager.trace_batch_id:

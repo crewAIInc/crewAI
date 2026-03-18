@@ -706,13 +706,14 @@ class TraceCollectionListener(BaseEventListener):
             user_context: User context information.
             execution_metadata: Metadata about the execution.
         """
+        use_ephemeral = not self._check_authenticated()
+
         if self.first_time_handler.is_first_time:
             self.batch_manager.initialize_batch(
-                user_context, execution_metadata, use_ephemeral=True
+                user_context, execution_metadata, use_ephemeral=use_ephemeral
             )
             return
 
-        use_ephemeral = not self._check_authenticated()
         self.batch_manager.initialize_batch(
             user_context, execution_metadata, use_ephemeral=use_ephemeral
         )
