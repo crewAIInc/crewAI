@@ -110,6 +110,7 @@ if TYPE_CHECKING:
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.utilities.env import get_env_context
 from crewai.utilities.streaming import (
     TaskInfo,
     create_async_chunk_generator,
@@ -1770,6 +1771,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        get_env_context()
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
