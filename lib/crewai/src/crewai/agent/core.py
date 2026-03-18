@@ -1012,7 +1012,12 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        filename = (
+            self.crew._train_filename
+            if self.crew and self.crew._train_filename
+            else TRAINED_AGENTS_DATA_FILE
+        )
+        if data := CrewTrainingHandler(filename).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
