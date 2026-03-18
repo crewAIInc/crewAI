@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
@@ -142,11 +143,39 @@ class TraceBatchManager:
                 payload["ephemeral_trace_id"] = self.current_batch.batch_id
                 payload["user_identifier"] = get_user_id()
 
-            response = (
-                self.plus_api.initialize_ephemeral_trace_batch(payload)
-                if use_ephemeral
-                else self.plus_api.initialize_trace_batch(payload)
-            )
+            max_retries = 2
+            response = None
+            last_exception = None
+
+            for attempt in range(max_retries + 1):
+                try:
+                    response = (
+                        self.plus_api.initialize_ephemeral_trace_batch(payload)
+                        if use_ephemeral
+                        else self.plus_api.initialize_trace_batch(payload)
+                    )
+                    if response is not None and response.status_code < 500:
+                        break
+                    if attempt < max_retries:
+                        logger.debug(
+                            f"Trace batch init attempt {attempt + 1} failed "
+                            f"(status={response.status_code if response else 'None'}), retrying..."
+                        )
+                        time.sleep(1)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries:
+                        logger.debug(
+                            f"Trace batch init attempt {attempt + 1} raised {type(e).__name__}, retrying..."
+                        )
+                        time.sleep(1)
+
+            if last_exception and response is None:
+                logger.warning(
+                    f"Error initializing trace batch: {last_exception}. Continuing without tracing."
+                )
+                self.trace_batch_id = None
+                return
 
             if response is None:
                 logger.warning(
