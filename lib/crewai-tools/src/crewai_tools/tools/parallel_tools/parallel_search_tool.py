@@ -1,7 +1,6 @@
 import json
 import os
 from typing import Annotated, Any, Literal
-import warnings
 
 from crewai.tools import BaseTool, EnvVar
 from dotenv import load_dotenv
@@ -134,10 +133,6 @@ class ParallelSearchTool(BaseTool):
         search_queries: list[str] | None = None,
         max_results: int | None = None,
         source_policy: dict[str, Any] | None = None,
-        # Deprecated parameters for backwards compatibility
-        processor: str | None = None,
-        max_chars_per_result: int | None = None,
-        **_: Any,
     ) -> str:
         """Synchronously performs a search using the Parallel API.
 
@@ -146,8 +141,6 @@ class ParallelSearchTool(BaseTool):
             search_queries: Optional list of keyword queries.
             max_results: Maximum results to return. Overrides init value if provided.
             source_policy: Domain inclusion/exclusion policy. Overrides init value if provided.
-            processor: DEPRECATED - no longer used.
-            max_chars_per_result: DEPRECATED - use excerpts config instead.
 
         Returns:
             A JSON string containing the search results.
@@ -160,9 +153,6 @@ class ParallelSearchTool(BaseTool):
         if not objective and not search_queries:
             return "Error: Provide at least one of 'objective' or 'search_queries'"
 
-        # Handle deprecated parameters
-        excerpts = self._handle_deprecated_params(processor, max_chars_per_result)
-
         # Use runtime values if provided, otherwise fall back to init values
         effective_max_results = (
             max_results if max_results is not None else self.max_results
@@ -174,7 +164,7 @@ class ParallelSearchTool(BaseTool):
         search_params = self._build_search_params(
             objective,
             search_queries,
-            excerpts,
+            self.excerpts,
             effective_max_results,
             effective_source_policy,
         )
@@ -184,37 +174,6 @@ class ParallelSearchTool(BaseTool):
             return self._format_output(response)
         except Exception as exc:
             return f"Parallel Search API error: {exc}"
-
-    def _handle_deprecated_params(
-        self,
-        processor: str | None,
-        max_chars_per_result: int | None,
-    ) -> dict[str, int] | None:
-        """Handle deprecated parameters with warnings."""
-        excerpts = self.excerpts
-
-        if processor is not None:
-            warnings.warn(
-                "The 'processor' parameter is deprecated and will be ignored. "
-                "Use 'mode' instead when initializing the tool.",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-
-        if max_chars_per_result is not None:
-            warnings.warn(
-                "The 'max_chars_per_result' parameter is deprecated. "
-                "Use 'excerpts={\"max_chars_per_result\": N}' when initializing the tool.",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            # Map to new excerpts parameter for backwards compatibility
-            if excerpts is None:
-                excerpts = {"max_chars_per_result": max_chars_per_result}
-            elif "max_chars_per_result" not in excerpts:
-                excerpts = {**excerpts, "max_chars_per_result": max_chars_per_result}
-
-        return excerpts
 
     def _build_search_params(
         self,
