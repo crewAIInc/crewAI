@@ -163,7 +163,7 @@ def test_install_api_error(mock_get, capsys, tool_command):
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
 def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
     with raises(SystemExit):
-        tool_command.publish(is_public=True)
+        tool_command.publish()
 
     output = capsys.readouterr().out
     assert "Local changes need to be resolved before publishing" in output
@@ -204,7 +204,7 @@ def test_publish_when_not_in_sync_and_force(
     mock_publish_response.json.return_value = {"handle": "sample-tool"}
     mock_publish.return_value = mock_publish_response
 
-    tool_command.publish(is_public=True, force=True)
+    tool_command.publish(force=True)
 
     mock_get_project_name.assert_called_with(require=True)
     mock_get_project_version.assert_called_with(require=True)
@@ -217,7 +217,6 @@ def test_publish_when_not_in_sync_and_force(
     mock_open.assert_called_with(unittest.mock.ANY, "rb")
     mock_publish.assert_called_with(
         handle="sample-tool",
-        is_public=True,
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
@@ -259,7 +258,7 @@ def test_publish_success(
     mock_publish_response.json.return_value = {"handle": "sample-tool"}
     mock_publish.return_value = mock_publish_response
 
-    tool_command.publish(is_public=True)
+    tool_command.publish()
 
     mock_get_project_name.assert_called_with(require=True)
     mock_get_project_version.assert_called_with(require=True)
@@ -272,7 +271,6 @@ def test_publish_success(
     mock_open.assert_called_with(unittest.mock.ANY, "rb")
     mock_publish.assert_called_with(
         handle="sample-tool",
-        is_public=True,
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
@@ -313,7 +311,7 @@ def test_publish_failure(
     mock_publish.return_value = mock_publish_response
 
     with raises(SystemExit):
-        tool_command.publish(is_public=True)
+        tool_command.publish()
     output = capsys.readouterr().out
     assert "Failed to complete operation" in output
     assert "Name is already taken" in output
@@ -355,7 +353,7 @@ def test_publish_api_error(
     mock_publish.return_value = mock_response
 
     with raises(SystemExit):
-        tool_command.publish(is_public=True)
+        tool_command.publish()
     output = capsys.readouterr().out
     assert "Request to Enterprise API failed" in output
 

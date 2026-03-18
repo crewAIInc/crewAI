@@ -73,7 +73,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         finally:
             os.chdir(old_directory)
 
-    def publish(self, is_public: bool, force: bool = False) -> None:
+    def publish(self, force: bool = False) -> None:
         if not git.Repository().is_synced() and not force:
             console.print(
                 "[bold red]Failed to publish tool.[/bold red]\n"
@@ -129,7 +129,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         console.print("[bold blue]Publishing tool to repository...[/bold blue]")
         publish_response = self.plus_api_client.publish_tool(
             handle=project_name,
-            is_public=is_public,
             version=project_version,
             description=project_description,
             encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
