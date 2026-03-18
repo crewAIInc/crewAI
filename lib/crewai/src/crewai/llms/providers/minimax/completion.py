@@ -7,8 +7,10 @@ Key constraints:
 - temperature must be in (0.0, 1.0]; zero is rejected by the API.
 - response_format (JSON mode / structured outputs) is not supported;
   it is silently stripped to avoid API errors.
-- Only two chat models are available:
-    * MiniMax-M2.5  (default, 204 800-token context)
+- Available chat models:
+    * MiniMax-M2.7  (default, latest flagship with enhanced reasoning and coding)
+    * MiniMax-M2.7-highspeed  (high-speed version of M2.7 for low-latency scenarios)
+    * MiniMax-M2.5  (previous generation, 204 800-token context)
     * MiniMax-M2.5-highspeed  (same context, faster)
 """
 
@@ -46,7 +48,7 @@ if TYPE_CHECKING:
 # MiniMax-specific defaults
 MINIMAX_DEFAULT_BASE_URL = "https://api.minimax.io/v1"
 MINIMAX_CONTEXT_WINDOW = 204_800
-MINIMAX_DEFAULT_MODEL = "MiniMax-M2.5"
+MINIMAX_DEFAULT_MODEL = "MiniMax-M2.7"
 
 
 class MiniMaxCompletion(BaseLLM):
@@ -56,7 +58,7 @@ class MiniMaxCompletion(BaseLLM):
     endpoint (``https://api.minimax.io/v1`` by default).
 
     Args:
-        model: Model identifier (default ``MiniMax-M2.5``).
+        model: Model identifier (default ``MiniMax-M2.7``).
         api_key: MiniMax API key.  Falls back to ``MINIMAX_API_KEY`` env var.
         base_url: Override the default MiniMax API endpoint.
         temperature: Sampling temperature, must be in (0.0, 1.0].

@@ -239,10 +239,14 @@ ANTHROPIC_MODELS: list[AnthropicModels] = [
 ]
 
 MiniMaxModels: TypeAlias = Literal[
+    "MiniMax-M2.7",
+    "MiniMax-M2.7-highspeed",
     "MiniMax-M2.5",
     "MiniMax-M2.5-highspeed",
 ]
 MINIMAX_MODELS: list[MiniMaxModels] = [
+    "MiniMax-M2.7",
+    "MiniMax-M2.7-highspeed",
     "MiniMax-M2.5",
     "MiniMax-M2.5-highspeed",
 ]
