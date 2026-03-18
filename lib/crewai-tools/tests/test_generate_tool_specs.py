@@ -192,3 +192,4 @@ def test_save_to_json(extractor, tmp_path):
     assert len(data["tools"]) == 1
     assert data["tools"][0]["humanized_name"] == "Test Tool"
     assert data["tools"][0]["run_params_schema"][0]["name"] == "param1"
+    assert b"\r\n" not in file_path.read_bytes()
