@@ -405,7 +405,8 @@ class LanceDBStorage:
         with store_lock(self._lock_name):
             if record_ids and not (categories or metadata_filter):
                 before = int(self._table.count_rows())
-                ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
+                safe_ids = [str(rid).replace("'", "''") for rid in record_ids]
+                ids_expr = ", ".join(f"'{rid}'" for rid in safe_ids)
                 self._do_write("delete", f"id IN ({ids_expr})")
                 return before - int(self._table.count_rows())
             if categories or metadata_filter:
