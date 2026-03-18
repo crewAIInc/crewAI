@@ -25,7 +25,10 @@ class MockTool(BaseTool):
     my_parameter_bool: bool = Field(False)
     # Use default_factory like real tools do (not direct default)
     package_dependencies: list[str] = Field(
-        default_factory=lambda: ["this-is-a-required-package", "another-required-package"]
+        default_factory=lambda: [
+            "this-is-a-required-package",
+            "another-required-package",
+        ]
     )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
