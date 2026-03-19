@@ -163,9 +163,12 @@ class JoyVerifier:
 
         Raises:
             TrustVerificationError: If verification fails
+            ValueError: If agent_id format is invalid
         """
+        # Validate agent ID before try block so validation errors propagate immediately
+        validated_id = _validate_agent_id(agent_id)
+
         try:
-            validated_id = _validate_agent_id(agent_id)
             data = self._request("GET", f"/agents/{quote(validated_id, safe='')}")
 
             trust_score = float(data.get("trust_score", 0))
@@ -198,14 +201,11 @@ class JoyVerifier:
         except ImportError:
             # Re-raise ImportError so users know to install dependencies
             raise
-        except ValueError:
-            # Re-raise ValueError so callers know about invalid input
-            raise
         except Exception as e:
-            logger.error(f"Trust verification failed for {agent_id}: {e}")
+            logger.error(f"Trust verification failed for {validated_id}: {e}")
             return VerificationResult(
                 is_trusted=False,
-                agent_id=agent_id,
+                agent_id=validated_id,
                 trust_score=0.0,
                 vouch_count=0,
                 verified=False,
