@@ -223,7 +223,9 @@ class AnthropicCompletion(BaseLLM):
         self.response_format = response_format
         # Tool search config
         if tool_search is True:
-            self.tool_search = AnthropicToolSearchConfig()
+            self.tool_search: AnthropicToolSearchConfig | None = (
+                AnthropicToolSearchConfig()
+            )
         elif isinstance(tool_search, AnthropicToolSearchConfig):
             self.tool_search = tool_search
         else:
@@ -786,6 +788,20 @@ class AnthropicCompletion(BaseLLM):
         elif formatted_messages[0]["role"] != "user":
             # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
+
+        # Ensure no consecutive assistant messages (Anthropic requirement)
+        i = 0
+        while i < len(formatted_messages) - 1:
+            if (
+                formatted_messages[i].get("role") == "assistant"
+                and formatted_messages[i + 1].get("role") == "assistant"
+            ):
+                formatted_messages.insert(
+                    i + 1, {"role": "user", "content": "Continue."}
+                )
+                i += 2
+            else:
+                i += 1
 
         return formatted_messages, system_message
 

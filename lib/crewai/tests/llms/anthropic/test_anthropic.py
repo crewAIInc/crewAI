@@ -1463,3 +1463,37 @@ def test_tool_search_saves_input_tokens():
         f"Expected tool_search ({usage_search.prompt_tokens}) to use fewer input tokens "
         f"than no search ({usage_no_search.prompt_tokens})"
     )
+
+
+def test_format_messages_no_consecutive_assistants():
+    """Regression test for #4798."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "I will search for that."},
+        {"role": "assistant", "content": "Here are the results."},
+        {"role": "assistant", "content": "The final answer is 42."},
+    ]
+
+    result, _ = llm._format_messages_for_anthropic(messages)
+
+    roles = [m["role"] for m in result]
+    for i in range(len(roles) - 1):
+        assert not (roles[i] == "assistant" and roles[i + 1] == "assistant")
+
+
+def test_format_messages_alternating_preserved():
+    """Verify alternating messages are not modified."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi"},
+        {"role": "user", "content": "Search for X"},
+        {"role": "assistant", "content": "Found X"},
+    ]
+
+    result, _ = llm._format_messages_for_anthropic(messages)
+    roles = [m["role"] for m in result]
+    assert roles == ["user", "assistant", "user", "assistant"]
