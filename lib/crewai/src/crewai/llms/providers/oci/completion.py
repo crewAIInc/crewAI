@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from contextlib import contextmanager
+import inspect
 import json
 import logging
 import os
@@ -26,6 +27,17 @@ if TYPE_CHECKING:
 
 CUSTOM_ENDPOINT_PREFIX = "ocid1.generativeaiendpoint"
 DEFAULT_OCI_REGION = "us-chicago-1"
+_OCI_TOOL_RESULT_GUIDANCE = (
+    "You have received tool results above. Respond to the user with a helpful, "
+    "natural language answer that incorporates the tool results. Do not output "
+    "raw JSON or tool call syntax. If you need additional information, you may "
+    "call another tool."
+)
+_OCI_RESERVED_REQUEST_KWARGS = {
+    "tool_choice",
+    "parallel_tool_calls",
+    "tool_result_guidance",
+}
 
 
 def _get_oci_module() -> Any:
@@ -61,6 +73,7 @@ class OCICompletion(BaseLLM):
         top_k: int | None = None,
         stream: bool = False,
         oci_provider: str | None = None,
+        max_sequential_tool_calls: int = 8,
         client: Any | None = None,
         **kwargs: Any,
     ) -> None:
@@ -99,6 +112,7 @@ class OCICompletion(BaseLLM):
         self.top_k = top_k
         self.stream = stream
         self.oci_provider = oci_provider or self._infer_provider(model)
+        self.max_sequential_tool_calls = max_sequential_tool_calls
         self._oci = _get_oci_module()
 
         if client is not None:
@@ -202,13 +216,45 @@ class OCICompletion(BaseLLM):
 
         for message in messages:
             role = str(message.get("role", "user")).lower()
+            if role == "tool":
+                tool_kwargs: dict[str, Any] = {
+                    "content": self._build_generic_content(message.get("content", "")),
+                }
+                if message.get("tool_call_id"):
+                    tool_kwargs["tool_call_id"] = message["tool_call_id"]
+                oci_messages.append(models.ToolMessage(**tool_kwargs))
+                continue
+
             message_cls = role_map.get(role)
             if message_cls is None:
                 logging.debug("Skipping unsupported OCI message role: %s", role)
                 continue
+
+            message_kwargs: dict[str, Any] = {
+                "content": self._build_generic_content(message.get("content", "")),
+            }
+            if role == "assistant" and message.get("tool_calls"):
+                message_kwargs["tool_calls"] = [
+                    models.FunctionCall(
+                        id=tool_call.get("id"),
+                        name=tool_call.get("function", {}).get("name"),
+                        arguments=tool_call.get("function", {}).get("arguments", "{}"),
+                    )
+                    for tool_call in message.get("tool_calls", [])
+                    if tool_call.get("function", {}).get("name")
+                ]
+                if not message_kwargs["content"]:
+                    message_kwargs["content"] = [models.TextContent(text=".")]
+
+            oci_messages.append(message_cls(**message_kwargs))
+
+        if (
+            self._tool_result_guidance_enabled()
+            and any(str(message.get("role", "")).lower() == "tool" for message in messages)
+        ):
             oci_messages.append(
-                message_cls(
-                    content=self._build_generic_content(message.get("content", "")),
+                models.SystemMessage(
+                    content=[models.TextContent(text=_OCI_TOOL_RESULT_GUIDANCE)]
                 )
             )
 
@@ -216,12 +262,21 @@ class OCICompletion(BaseLLM):
 
     def _build_cohere_chat_history(
         self, messages: list[LLMMessage]
-    ) -> tuple[list[Any], str]:
-        """Translate CrewAI messages into Cohere's split history + message shape."""
+    ) -> tuple[list[Any], list[Any] | None, str]:
+        """Translate CrewAI messages into Cohere's split history/tool-results shape."""
         models = self._oci.generative_ai_inference.models
         chat_history: list[Any] = []
+        trailing_tool_count = 0
+        for message in reversed(messages):
+            if str(message.get("role", "")).lower() != "tool":
+                break
+            trailing_tool_count += 1
 
-        for message in messages[:-1]:
+        history_messages = (
+            messages[:-trailing_tool_count] if trailing_tool_count else messages[:-1]
+        )
+
+        for message in history_messages:
             role = str(message.get("role", "user")).lower()
             content = message.get("content", "")
 
@@ -233,15 +288,188 @@ class OCICompletion(BaseLLM):
                 )
                 chat_history.append(message_cls(message=self._coerce_text(content)))
             elif role == "assistant":
+                tool_calls = None
+                if message.get("tool_calls"):
+                    tool_calls = []
+                    for tool_call in message.get("tool_calls", []):
+                        function_info = tool_call.get("function", {})
+                        function_name = function_info.get("name")
+                        if not function_name:
+                            continue
+                        raw_arguments = function_info.get("arguments", "{}")
+                        if isinstance(raw_arguments, str):
+                            try:
+                                parameters = json.loads(raw_arguments)
+                            except json.JSONDecodeError:
+                                parameters = {}
+                        elif isinstance(raw_arguments, Mapping):
+                            parameters = dict(raw_arguments)
+                        else:
+                            parameters = {}
+                        tool_calls.append(
+                            models.CohereToolCall(name=function_name, parameters=parameters)
+                        )
                 chat_history.append(
                     models.CohereChatBotMessage(
                         message=self._coerce_text(content) or " ",
+                        tool_calls=tool_calls,
+                    )
+                )
+            elif role == "tool":
+                tool_name = message.get("name") or "tool"
+                chat_history.append(
+                    models.CohereToolMessage(
+                        tool_results=[
+                            models.CohereToolResult(
+                                call=models.CohereToolCall(name=tool_name, parameters={}),
+                                outputs=[{"output": self._coerce_text(content)}],
+                            )
+                        ]
                     )
                 )
 
         last_message = messages[-1] if messages else {"role": "user", "content": ""}
+        tool_results: list[Any] = []
+        if str(last_message.get("role", "user")).lower() == "tool":
+            previous_tool_calls: dict[str, dict[str, Any]] = {}
+            for message in messages:
+                if str(message.get("role", "")).lower() != "assistant":
+                    continue
+                for tool_call in message.get("tool_calls", []):
+                    tool_call_id = tool_call.get("id")
+                    if not tool_call_id:
+                        continue
+                    function_info = tool_call.get("function", {})
+                    raw_arguments = function_info.get("arguments", "{}")
+                    if isinstance(raw_arguments, str):
+                        try:
+                            parameters = json.loads(raw_arguments)
+                        except json.JSONDecodeError:
+                            parameters = {}
+                    elif isinstance(raw_arguments, Mapping):
+                        parameters = dict(raw_arguments)
+                    else:
+                        parameters = {}
+                    previous_tool_calls[tool_call_id] = {
+                        "name": function_info.get("name", "tool"),
+                        "parameters": parameters,
+                    }
+
+            for message in messages[-trailing_tool_count:]:
+                if str(message.get("role", "")).lower() != "tool":
+                    continue
+                tool_call_id = message.get("tool_call_id")
+                if not isinstance(tool_call_id, str):
+                    continue
+                previous_call = previous_tool_calls.get(tool_call_id, {})
+                tool_results.append(
+                    models.CohereToolResult(
+                        call=models.CohereToolCall(
+                            name=previous_call.get("name", message.get("name", "tool")),
+                            parameters=previous_call.get("parameters", {}),
+                        ),
+                        outputs=[{"output": self._coerce_text(message.get("content", ""))}],
+                    )
+                )
+
         message_text = self._coerce_text(last_message.get("content", ""))
-        return chat_history, message_text
+        if tool_results:
+            message_text = ""
+
+        return chat_history, tool_results or None, message_text
+
+    # ------------------------------------------------------------------
+    # Tool formatting
+    # ------------------------------------------------------------------
+
+    def _format_tools(self, tools: list[dict[str, Any]] | None) -> list[Any]:
+        if not tools:
+            return []
+        models = self._oci.generative_ai_inference.models
+        formatted: list[Any] = []
+        for tool in tools:
+            if not isinstance(tool, Mapping):
+                continue
+            function_spec = tool.get("function", {})
+            if not isinstance(function_spec, Mapping):
+                continue
+            name = function_spec.get("name")
+            if not name:
+                continue
+            parameters = function_spec.get("parameters", {})
+            if not isinstance(parameters, Mapping):
+                parameters = {}
+
+            if self.oci_provider == "cohere":
+                param_defs = {}
+                required = set(parameters.get("required", []))
+                for pname, pschema in parameters.get("properties", {}).items():
+                    if not isinstance(pschema, Mapping):
+                        continue
+                    param_defs[pname] = models.CohereParameterDefinition(
+                        description=pschema.get("description", ""),
+                        type=pschema.get("type", "object"),
+                        is_required=pname in required,
+                    )
+                formatted.append(models.CohereTool(
+                    name=name,
+                    description=function_spec.get("description", name),
+                    parameter_definitions=param_defs,
+                ))
+            else:
+                formatted.append(models.FunctionDefinition(
+                    name=name,
+                    description=function_spec.get("description", name),
+                    parameters={
+                        "type": parameters.get("type", "object"),
+                        "properties": parameters.get("properties", {}),
+                        "required": parameters.get("required", []),
+                    },
+                ))
+        return formatted
+
+    def _tool_result_guidance_enabled(self) -> bool:
+        return bool(self.additional_params.get("tool_result_guidance"))
+
+    def _parallel_tool_calls_enabled(self) -> bool:
+        return bool(self.additional_params.get("parallel_tool_calls"))
+
+    def _build_tool_choice(self) -> Any | None:
+        tool_choice = self.additional_params.get("tool_choice")
+        if tool_choice is None:
+            return None
+        models = self._oci.generative_ai_inference.models
+        if isinstance(tool_choice, str):
+            if tool_choice == "auto":
+                return models.ToolChoiceAuto()
+            if tool_choice == "none":
+                return models.ToolChoiceNone()
+            if tool_choice in ("any", "required"):
+                return models.ToolChoiceRequired()
+            return models.ToolChoiceFunction(name=tool_choice)
+        if isinstance(tool_choice, bool):
+            return models.ToolChoiceRequired() if tool_choice else models.ToolChoiceNone()
+        if isinstance(tool_choice, Mapping):
+            fn = tool_choice.get("function")
+            if isinstance(fn, Mapping) and fn.get("name"):
+                return models.ToolChoiceFunction(name=str(fn["name"]))
+            return models.ToolChoiceAuto()
+        raise ValueError("Unrecognized OCI tool_choice. Expected str, bool, or function mapping.")
+
+    def _allowed_passthrough_request_keys(self, request_cls: type[Any]) -> set[str]:
+        """Return request attributes that can safely be forwarded to the OCI SDK."""
+        attribute_map = getattr(request_cls, "attribute_map", None)
+        if isinstance(attribute_map, Mapping):
+            return {str(key) for key in attribute_map}
+        swagger_types = getattr(request_cls, "swagger_types", None)
+        if isinstance(swagger_types, Mapping):
+            return {str(key) for key in swagger_types}
+        signature = inspect.signature(request_cls)
+        return {
+            name
+            for name, param in signature.parameters.items()
+            if name != "self" and param.kind is not inspect.Parameter.VAR_KEYWORD
+        }
 
     # ------------------------------------------------------------------
     # Request building
@@ -250,6 +478,7 @@ class OCICompletion(BaseLLM):
     def _build_chat_request(
         self,
         messages: list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
         *,
         is_stream: bool = False,
     ) -> Any:
@@ -257,12 +486,16 @@ class OCICompletion(BaseLLM):
         models = self._oci.generative_ai_inference.models
 
         if self.oci_provider == "cohere":
-            chat_history, message_text = self._build_cohere_chat_history(messages)
+            chat_history, tool_results, message_text = self._build_cohere_chat_history(
+                messages
+            )
             request_kwargs: dict[str, Any] = {
                 "message": message_text,
                 "chat_history": chat_history,
                 "api_format": models.BaseChatRequest.API_FORMAT_COHERE,
             }
+            if tool_results:
+                request_kwargs["tool_results"] = tool_results
         else:
             request_kwargs = {
                 "messages": self._build_generic_messages(messages),
@@ -285,6 +518,20 @@ class OCICompletion(BaseLLM):
             stop_key = "stop_sequences" if self.oci_provider == "cohere" else "stop"
             request_kwargs[stop_key] = list(self.stop)
 
+        formatted_tools = self._format_tools(tools)
+        if formatted_tools:
+            request_kwargs["tools"] = formatted_tools
+            if self.oci_provider == "cohere":
+                if self._parallel_tool_calls_enabled():
+                    raise ValueError("OCI Cohere models do not support parallel_tool_calls.")
+                request_kwargs.setdefault("is_force_single_step", False)
+            else:
+                tool_choice = self._build_tool_choice()
+                if tool_choice is not None:
+                    request_kwargs["tool_choice"] = tool_choice
+                if self._parallel_tool_calls_enabled():
+                    request_kwargs["is_parallel_tool_calls"] = True
+
         if is_stream:
             request_kwargs["is_stream"] = True
             request_kwargs["stream_options"] = models.StreamOptions(
@@ -292,7 +539,20 @@ class OCICompletion(BaseLLM):
             )
 
         if self.oci_provider == "cohere":
+            allowed = self._allowed_passthrough_request_keys(models.CohereChatRequest)
+            passthrough = {
+                k: v for k, v in self.additional_params.items()
+                if k not in _OCI_RESERVED_REQUEST_KWARGS and k in allowed
+            }
+            request_kwargs.update(passthrough)
             return models.CohereChatRequest(**request_kwargs)
+
+        allowed = self._allowed_passthrough_request_keys(models.GenericChatRequest)
+        passthrough = {
+            k: v for k, v in self.additional_params.items()
+            if k not in _OCI_RESERVED_REQUEST_KWARGS and k in allowed
+        }
+        request_kwargs.update(passthrough)
         return models.GenericChatRequest(**request_kwargs)
 
     # ------------------------------------------------------------------
@@ -320,6 +580,42 @@ class OCICompletion(BaseLLM):
             return ""
         content = getattr(message, "content", None) or []
         return "".join(part.text for part in content if getattr(part, "text", None))
+
+    def _extract_tool_calls(self, response: Any) -> list[dict[str, Any]]:
+        """Normalize provider-specific tool calls back into CrewAI's shape."""
+        chat_response = response.data.chat_response
+        raw: list[Any] = []
+        if self.oci_provider == "cohere":
+            raw = getattr(chat_response, "tool_calls", None) or []
+        else:
+            choices = getattr(chat_response, "choices", None) or []
+            if choices:
+                msg = getattr(choices[0], "message", None)
+                raw = getattr(msg, "tool_calls", None) or []
+
+        if self.oci_provider == "cohere":
+            return [
+                {
+                    "id": uuid.uuid4().hex,
+                    "type": "function",
+                    "function": {
+                        "name": getattr(tc, "name", ""),
+                        "arguments": json.dumps(getattr(tc, "parameters", {}) or {}),
+                    },
+                }
+                for tc in raw
+            ]
+        return [
+            {
+                "id": getattr(tc, "id", None),
+                "type": "function",
+                "function": {
+                    "name": getattr(tc, "name", ""),
+                    "arguments": getattr(tc, "arguments", "{}"),
+                },
+            }
+            for tc in raw
+        ]
 
     def _extract_usage(self, response: Any) -> dict[str, int]:
         chat_response = response.data.chat_response
@@ -400,6 +696,31 @@ class OCICompletion(BaseLLM):
             if isinstance(part, Mapping) and part.get("text")
         )
 
+    def _extract_tool_calls_from_stream_event(
+        self, event_data: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        message = event_data.get("message", {})
+        if self.oci_provider == "cohere":
+            raw = event_data.get("toolCalls", [])
+        else:
+            raw = message.get("toolCalls", []) if isinstance(message, Mapping) else []
+        if not isinstance(raw, list):
+            return []
+        if self.oci_provider == "cohere":
+            return [
+                {"id": None, "type": "function", "function": {
+                    "name": str(tc.get("name", "")),
+                    "arguments": json.dumps(tc.get("parameters", {})),
+                }}
+                for tc in raw if isinstance(tc, Mapping)
+            ]
+        return [
+            {"id": tc.get("id"), "type": "function", "function": {
+                "name": tc.get("name"), "arguments": tc.get("arguments"),
+            }}
+            for tc in raw if isinstance(tc, Mapping)
+        ]
+
     def _extract_usage_from_stream_event(self, event_data: dict[str, Any]) -> dict[str, int]:
         usage = event_data.get("usage")
         if not isinstance(usage, Mapping):
@@ -419,6 +740,94 @@ class OCICompletion(BaseLLM):
         if usage:
             metadata["usage"] = usage
         return metadata
+
+    # ------------------------------------------------------------------
+    # Tool execution
+    # ------------------------------------------------------------------
+
+    def _handle_tool_calls(
+        self,
+        *,
+        normalized_messages: list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None,
+        callbacks: list[Any] | None,
+        available_functions: dict[str, Any] | None,
+        from_task: Task | None,
+        from_agent: Agent | None,
+        tool_depth: int,
+        tool_calls: list[dict[str, Any]],
+    ) -> str | BaseModel | list[dict[str, Any]]:
+        """Execute one round of tool calls and recurse until the model finishes."""
+        if tool_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=normalized_messages,
+            )
+            return tool_calls
+
+        if tool_depth >= self.max_sequential_tool_calls:
+            raise RuntimeError(
+                "OCI native provider exceeded max_sequential_tool_calls."
+            )
+
+        next_messages = list(normalized_messages)
+        next_messages.append(
+            {"role": "assistant", "content": None, "tool_calls": tool_calls}
+        )
+
+        for tool_call in tool_calls:
+            fn = tool_call.get("function", {})
+            fn_name = fn.get("name", "")
+            raw_args = fn.get("arguments", "{}")
+            if isinstance(raw_args, str):
+                try:
+                    fn_args = json.loads(raw_args)
+                except json.JSONDecodeError:
+                    fn_args = {}
+            elif isinstance(raw_args, Mapping):
+                fn_args = dict(raw_args)
+            else:
+                fn_args = {}
+
+            result = self._handle_tool_execution(
+                function_name=fn_name,
+                function_args=fn_args,
+                available_functions=available_functions or {},
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+            if result is None:
+                result = f"Tool '{fn_name}' failed or returned no result."
+
+            next_messages.append({
+                "role": "tool",
+                "tool_call_id": str(tool_call.get("id") or uuid.uuid4().hex),
+                "name": fn_name,
+                "content": str(result),
+            })
+
+        if self.stream:
+            return self._stream_call_impl(
+                messages=next_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                tool_depth=tool_depth + 1,
+            )
+        return self._call_impl(
+            messages=next_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            tool_depth=tool_depth + 1,
+        )
 
     # ------------------------------------------------------------------
     # Call paths
@@ -447,13 +856,17 @@ class OCICompletion(BaseLLM):
         self,
         *,
         messages: str | list[LLMMessage],
-        from_task: Task | None,
-        from_agent: Agent | None,
-    ) -> str:
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        tool_depth: int = 0,
+    ) -> str | BaseModel | list[dict[str, Any]]:
         normalized_messages = (
             messages if isinstance(messages, list) else self._normalize_messages(messages)
         )
-        chat_request = self._build_chat_request(normalized_messages)
+        chat_request = self._build_chat_request(normalized_messages, tools=tools)
         chat_details = self._oci.generative_ai_inference.models.ChatDetails(
             compartment_id=self.compartment_id,
             serving_mode=self._build_serving_mode(),
@@ -466,6 +879,19 @@ class OCICompletion(BaseLLM):
         self.last_response_metadata = self._extract_response_metadata(response) or None
 
         content = self._extract_text(response)
+        tool_calls = self._extract_tool_calls(response)
+        if tool_calls:
+            return self._handle_tool_calls(
+                normalized_messages=normalized_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                tool_depth=tool_depth,
+                tool_calls=tool_calls,
+            )
+
         return self._finalize_text_response(
             content=content,
             messages=normalized_messages,
@@ -477,20 +903,27 @@ class OCICompletion(BaseLLM):
         self,
         *,
         messages: str | list[LLMMessage],
-        from_task: Task | None,
-        from_agent: Agent | None,
-    ) -> str:
-        """Handle OCI streaming while reconstructing final text state."""
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        tool_depth: int = 0,
+    ) -> str | BaseModel | list[dict[str, Any]]:
+        """Handle OCI streaming while reconstructing final text/tool state."""
         normalized_messages = (
             messages if isinstance(messages, list) else self._normalize_messages(messages)
         )
-        chat_request = self._build_chat_request(normalized_messages, is_stream=True)
+        chat_request = self._build_chat_request(
+            normalized_messages, tools=tools, is_stream=True
+        )
         chat_details = self._oci.generative_ai_inference.models.ChatDetails(
             compartment_id=self.compartment_id,
             serving_mode=self._build_serving_mode(),
             chat_request=chat_request,
         )
         full_response = ""
+        tool_calls_by_index: dict[int, dict[str, Any]] = {}
         usage_data: dict[str, int] = {}
         response_metadata: dict[str, Any] = {}
         response_id = uuid.uuid4().hex
@@ -511,6 +944,32 @@ class OCICompletion(BaseLLM):
                     response_id=response_id,
                 )
 
+            stream_tool_calls = self._extract_tool_calls_from_stream_event(event_data)
+            for index, tc in enumerate(stream_tool_calls):
+                state = tool_calls_by_index.setdefault(
+                    index,
+                    {"id": None, "type": "function", "function": {"name": None, "arguments": ""}},
+                )
+                if tc.get("id"):
+                    state["id"] = tc["id"]
+                fn = tc.get("function", {})
+                if fn.get("name"):
+                    state["function"]["name"] = fn["name"]
+                chunk_args = fn.get("arguments")
+                if chunk_args:
+                    state["function"]["arguments"] += str(chunk_args)
+                self._emit_stream_chunk_event(
+                    chunk=str(chunk_args or ""),
+                    tool_call={"id": state["id"], "type": "function", "function": {
+                        "name": state["function"]["name"],
+                        "arguments": str(chunk_args or ""),
+                    }},
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    call_type=LLMCallType.TOOL_CALL,
+                    response_id=response_id,
+                )
+
             usage_chunk = self._extract_usage_from_stream_event(event_data)
             if usage_chunk:
                 usage_data = usage_chunk
@@ -520,6 +979,31 @@ class OCICompletion(BaseLLM):
             self._track_token_usage_internal(usage_data)
             response_metadata["usage"] = usage_data
         self.last_response_metadata = response_metadata or None
+
+        tool_calls = [
+            {
+                "id": tc.get("id") or uuid.uuid4().hex,
+                "type": "function",
+                "function": {
+                    "name": tc["function"].get("name", "") or "",
+                    "arguments": tc["function"].get("arguments", "") or "",
+                },
+            }
+            for _, tc in sorted(tool_calls_by_index.items())
+            if tc["function"].get("name")
+        ]
+
+        if tool_calls:
+            return self._handle_tool_calls(
+                normalized_messages=normalized_messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                tool_depth=tool_depth,
+                tool_calls=tool_calls,
+            )
 
         return self._finalize_text_response(
             content=full_response,
@@ -640,14 +1124,22 @@ class OCICompletion(BaseLLM):
                 if self.stream:
                     return self._stream_call_impl(
                         messages=normalized_messages,
+                        tools=tools,
+                        callbacks=callbacks,
+                        available_functions=available_functions,
                         from_task=from_task,
                         from_agent=from_agent,
+                        tool_depth=0,
                     )
 
                 return self._call_impl(
                     messages=normalized_messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
                     from_task=from_task,
                     from_agent=from_agent,
+                    tool_depth=0,
                 )
             except Exception as error:
                 error_message = f"OCI Generative AI call failed: {error!s}"
@@ -712,6 +1204,9 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
     # Capability declarations
     # ------------------------------------------------------------------
+
+    def supports_function_calling(self) -> bool:
+        return True
 
     def get_context_window_size(self) -> int:
         model_lower = self.model.lower()
