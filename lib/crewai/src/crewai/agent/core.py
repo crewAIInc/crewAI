@@ -255,6 +255,14 @@ class Agent(BaseAgent):
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
+    trained_agents_data_file: str = Field(
+        default=TRAINED_AGENTS_DATA_FILE,
+        description=(
+            "Path to the trained agents data file used when loading training results. "
+            "Defaults to 'trained_agents_data.pkl'. Set this to the custom filename "
+            "passed with `-f` during `crewai train` so agents load the correct data."
+        ),
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
@@ -1012,7 +1020,7 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        if data := CrewTrainingHandler(self.trained_agents_data_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
