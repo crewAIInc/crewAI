@@ -58,6 +58,12 @@ from crewai.events.types.crew_events import (
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
 )
+from crewai.events.types.env_events import (
+    CCEnvEvent,
+    CodexEnvEvent,
+    CursorEnvEvent,
+    DefaultEnvEvent,
+)
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -192,6 +198,7 @@ class TraceCollectionListener(BaseEventListener):
         if self._listeners_setup:
             return
 
+        self._register_env_event_handlers(crewai_event_bus)
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
         self._register_action_event_handlers(crewai_event_bus)
@@ -199,6 +206,25 @@ class TraceCollectionListener(BaseEventListener):
         self._register_system_event_handlers(crewai_event_bus)
 
         self._listeners_setup = True
+
+    def _register_env_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
+        """Register handlers for environment context events."""
+
+        @event_bus.on(CCEnvEvent)
+        def on_cc_env(source: Any, event: CCEnvEvent) -> None:
+            self._handle_action_event("cc_env", source, event)
+
+        @event_bus.on(CodexEnvEvent)
+        def on_codex_env(source: Any, event: CodexEnvEvent) -> None:
+            self._handle_action_event("codex_env", source, event)
+
+        @event_bus.on(CursorEnvEvent)
+        def on_cursor_env(source: Any, event: CursorEnvEvent) -> None:
+            self._handle_action_event("cursor_env", source, event)
+
+        @event_bus.on(DefaultEnvEvent)
+        def on_default_env(source: Any, event: DefaultEnvEvent) -> None:
+            self._handle_action_event("default_env", source, event)
 
     def _register_flow_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for flow events."""

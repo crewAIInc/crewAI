@@ -8,6 +8,21 @@ TRAINED_AGENTS_DATA_FILE: Final[str] = "trained_agents_data.pkl"
 KNOWLEDGE_DIRECTORY: Final[str] = "knowledge"
 MAX_FILE_NAME_LENGTH: Final[int] = 255
 EMITTER_COLOR: Final[PrinterColor] = "bold_blue"
+CC_ENV_VAR: Final[str] = "CLAUDECODE"
+CODEX_ENV_VARS: Final[tuple[str, ...]] = (
+    "CODEX_CI",
+    "CODEX_MANAGED_BY_NPM",
+    "CODEX_SANDBOX",
+    "CODEX_SANDBOX_NETWORK_DISABLED",
+    "CODEX_THREAD_ID",
+)
+CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
+    "CURSOR_AGENT",
+    "CURSOR_EXTENSION_HOST_ROLE",
+    "CURSOR_SANDBOX",
+    "CURSOR_TRACE_ID",
+    "CURSOR_WORKSPACE_LABEL",
+)
 
 
 class _NotSpecified:
