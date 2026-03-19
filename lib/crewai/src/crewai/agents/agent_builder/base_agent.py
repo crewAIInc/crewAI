@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
+from pathlib import Path
 import re
 from typing import Any, Final, Literal
 import uuid
@@ -29,6 +30,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -212,6 +214,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "or a Memory/MemoryScope/MemorySlice instance for custom configuration. "
             "If not set, falls back to crew memory."
         ),
+    )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
+        min_length=1,
     )
 
     @model_validator(mode="before")
@@ -495,4 +502,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self._rpm_controller = rpm_controller
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
+        pass
+
+    def set_skills(self, resolved_crew_skills: list[Any] | None = None) -> None:
         pass
