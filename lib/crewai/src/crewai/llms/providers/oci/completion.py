@@ -3,10 +3,12 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from contextlib import contextmanager
+import json
 import logging
 import os
 import threading
 from typing import TYPE_CHECKING, Any, Literal, cast
+import uuid
 
 from pydantic import BaseModel
 
@@ -57,6 +59,7 @@ class OCICompletion(BaseLLM):
         max_tokens: int | None = None,
         top_p: float | None = None,
         top_k: int | None = None,
+        stream: bool = False,
         oci_provider: str | None = None,
         client: Any | None = None,
         **kwargs: Any,
@@ -94,6 +97,7 @@ class OCICompletion(BaseLLM):
         self.max_tokens = max_tokens
         self.top_p = top_p
         self.top_k = top_k
+        self.stream = stream
         self.oci_provider = oci_provider or self._infer_provider(model)
         self._oci = _get_oci_module()
 
@@ -246,6 +250,8 @@ class OCICompletion(BaseLLM):
     def _build_chat_request(
         self,
         messages: list[LLMMessage],
+        *,
+        is_stream: bool = False,
     ) -> Any:
         """Build the provider-specific OCI chat request for the current model."""
         models = self._oci.generative_ai_inference.models
@@ -278,6 +284,12 @@ class OCICompletion(BaseLLM):
         if self.stop and not self._is_openai_gpt5_family():
             stop_key = "stop_sequences" if self.oci_provider == "cohere" else "stop"
             request_kwargs[stop_key] = list(self.stop)
+
+        if is_stream:
+            request_kwargs["is_stream"] = True
+            request_kwargs["stream_options"] = models.StreamOptions(
+                is_include_usage=True
+            )
 
         if self.oci_provider == "cohere":
             return models.CohereChatRequest(**request_kwargs)
@@ -340,6 +352,75 @@ class OCICompletion(BaseLLM):
         return metadata
 
     # ------------------------------------------------------------------
+    # Streaming extraction
+    # ------------------------------------------------------------------
+
+    def _parse_stream_event(self, event: Any) -> dict[str, Any]:
+        """Convert OCI SSE event payloads into plain dicts."""
+        event_data = getattr(event, "data", None)
+        if not event_data:
+            return {}
+        if isinstance(event_data, str):
+            try:
+                parsed = json.loads(event_data)
+                if isinstance(parsed, Mapping):
+                    return dict(parsed)
+                return {}
+            except json.JSONDecodeError:
+                logging.debug("Skipping invalid OCI SSE payload: %s", event_data)
+                return {}
+        if isinstance(event_data, Mapping):
+            return dict(event_data)
+        return {}
+
+    def _extract_text_from_stream_event(self, event_data: dict[str, Any]) -> str:
+        if self.oci_provider == "cohere":
+            if "text" in event_data:
+                return str(event_data.get("text", ""))
+            message = event_data.get("message", {})
+            if isinstance(message, Mapping):
+                content = message.get("content", [])
+                if isinstance(content, list):
+                    return "".join(
+                        str(part.get("text", ""))
+                        for part in content
+                        if isinstance(part, Mapping)
+                    )
+            return ""
+
+        message = event_data.get("message", {})
+        if not isinstance(message, Mapping):
+            return ""
+        content = message.get("content", [])
+        if not isinstance(content, list):
+            return ""
+        return "".join(
+            str(part.get("text", ""))
+            for part in content
+            if isinstance(part, Mapping) and part.get("text")
+        )
+
+    def _extract_usage_from_stream_event(self, event_data: dict[str, Any]) -> dict[str, int]:
+        usage = event_data.get("usage")
+        if not isinstance(usage, Mapping):
+            return {}
+        return {
+            "prompt_tokens": int(usage.get("promptTokens", 0) or 0),
+            "completion_tokens": int(usage.get("completionTokens", 0) or 0),
+            "total_tokens": int(usage.get("totalTokens", 0) or 0),
+        }
+
+    def _extract_metadata_from_stream_event(self, event_data: dict[str, Any]) -> dict[str, Any]:
+        metadata: dict[str, Any] = {}
+        finish_reason = event_data.get("finishReason")
+        if finish_reason is not None:
+            metadata["finish_reason"] = finish_reason
+        usage = self._extract_usage_from_stream_event(event_data)
+        if usage:
+            metadata["usage"] = usage
+        return metadata
+
+    # ------------------------------------------------------------------
     # Call paths
     # ------------------------------------------------------------------
 
@@ -392,6 +473,142 @@ class OCICompletion(BaseLLM):
             from_agent=from_agent,
         )
 
+    def _stream_call_impl(
+        self,
+        *,
+        messages: str | list[LLMMessage],
+        from_task: Task | None,
+        from_agent: Agent | None,
+    ) -> str:
+        """Handle OCI streaming while reconstructing final text state."""
+        normalized_messages = (
+            messages if isinstance(messages, list) else self._normalize_messages(messages)
+        )
+        chat_request = self._build_chat_request(normalized_messages, is_stream=True)
+        chat_details = self._oci.generative_ai_inference.models.ChatDetails(
+            compartment_id=self.compartment_id,
+            serving_mode=self._build_serving_mode(),
+            chat_request=chat_request,
+        )
+        full_response = ""
+        usage_data: dict[str, int] = {}
+        response_metadata: dict[str, Any] = {}
+        response_id = uuid.uuid4().hex
+
+        for event in self._stream_chat_events(chat_details):
+            event_data = self._parse_stream_event(event)
+            if not event_data:
+                continue
+
+            text_chunk = self._extract_text_from_stream_event(event_data)
+            if text_chunk:
+                full_response += text_chunk
+                self._emit_stream_chunk_event(
+                    chunk=text_chunk,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    call_type=LLMCallType.LLM_CALL,
+                    response_id=response_id,
+                )
+
+            usage_chunk = self._extract_usage_from_stream_event(event_data)
+            if usage_chunk:
+                usage_data = usage_chunk
+            response_metadata.update(self._extract_metadata_from_stream_event(event_data))
+
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
+            response_metadata["usage"] = usage_data
+        self.last_response_metadata = response_metadata or None
+
+        return self._finalize_text_response(
+            content=full_response,
+            messages=normalized_messages,
+            from_task=from_task,
+            from_agent=from_agent,
+        )
+
+    def iter_stream(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+    ) -> Any:
+        """Yield raw text chunks from OCI without triggering tool recursion."""
+        normalized_messages = self._normalize_messages(messages)
+        chat_request = self._build_chat_request(normalized_messages, is_stream=True)
+        chat_details = self._oci.generative_ai_inference.models.ChatDetails(
+            compartment_id=self.compartment_id,
+            serving_mode=self._build_serving_mode(),
+            chat_request=chat_request,
+        )
+        response = self._chat(chat_details)
+        usage_data: dict[str, int] = {}
+        response_metadata: dict[str, Any] = {}
+
+        for event in response.data.events():
+            event_data = self._parse_stream_event(event)
+            if not event_data:
+                continue
+            text_chunk = self._extract_text_from_stream_event(event_data)
+            if text_chunk:
+                yield text_chunk
+            usage_chunk = self._extract_usage_from_stream_event(event_data)
+            if usage_chunk:
+                usage_data = usage_chunk
+            response_metadata.update(self._extract_metadata_from_stream_event(event_data))
+
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
+            response_metadata["usage"] = usage_data
+        self.last_response_metadata = response_metadata or None
+
+    async def astream(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+    ) -> Any:
+        """Expose the sync OCI SSE stream through an async generator facade."""
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[str | None] = asyncio.Queue()
+        error_holder: list[BaseException] = []
+
+        def _producer() -> None:
+            try:
+                for chunk in self.iter_stream(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ):
+                    loop.call_soon_threadsafe(queue.put_nowait, chunk)
+            except BaseException as error:
+                error_holder.append(error)
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        thread = threading.Thread(target=_producer, daemon=True)
+        thread.start()
+
+        while True:
+            chunk = await queue.get()
+            if chunk is None:
+                break
+            yield chunk
+
+        thread.join()
+        if error_holder:
+            raise error_holder[0]
+
     def call(
         self,
         messages: str | list[LLMMessage],
@@ -419,6 +636,13 @@ class OCICompletion(BaseLLM):
                     normalized_messages, from_agent
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
+
+                if self.stream:
+                    return self._stream_call_impl(
+                        messages=normalized_messages,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
 
                 return self._call_impl(
                     messages=normalized_messages,
@@ -462,6 +686,12 @@ class OCICompletion(BaseLLM):
     def _chat(self, chat_details: Any) -> Any:
         with self._ordered_client_access():
             return self.client.chat(chat_details)
+
+    def _stream_chat_events(self, chat_details: Any) -> Any:
+        """Yield streaming events while holding the shared OCI client lock."""
+        with self._ordered_client_access():
+            response = self.client.chat(chat_details)
+            yield from response.data.events()
 
     @contextmanager
     def _ordered_client_access(self) -> Any:
