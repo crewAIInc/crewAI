@@ -487,7 +487,7 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def supports_function_calling(self) -> bool:
-        return True
+        return False  # Tool calling support will be added in a follow-up PR
 
     def supports_stop_words(self) -> bool:
         return True
