@@ -1242,7 +1242,7 @@ class TestFirstTimeHandlerBackendInitGuard:
         return handler, bm
 
     def test_backend_initialized_true_on_success(self):
-        """backend_initialized is True and events are sent when batch creation succeeds."""
+        """Events are sent when batch creation succeeds, then state is cleaned up."""
         handler, bm = self._make_handler_with_manager()
         server_id = "server-id-abc"
 
@@ -1252,11 +1252,11 @@ class TestFirstTimeHandlerBackendInitGuard:
         )
         mock_send_response = MagicMock(status_code=200)
 
-        trace_batch_id_after_init = None
+        trace_batch_id_during_send = None
 
         def capture_send(*args, **kwargs):
-            nonlocal trace_batch_id_after_init
-            trace_batch_id_after_init = bm.trace_batch_id
+            nonlocal trace_batch_id_during_send
+            trace_batch_id_during_send = bm.trace_batch_id
             return mock_send_response
 
         with (
@@ -1279,8 +1279,12 @@ class TestFirstTimeHandlerBackendInitGuard:
             bm.event_buffer = [MagicMock(to_dict=MagicMock(return_value={}))]
             handler._initialize_backend_and_send_events()
 
-        assert bm.backend_initialized is True
-        assert trace_batch_id_after_init == server_id
+        # trace_batch_id was set correctly during send
+        assert trace_batch_id_during_send == server_id
+        # State cleaned up after completion (singleton reuse)
+        assert bm.backend_initialized is False
+        assert bm.trace_batch_id is None
+        assert bm.current_batch is None
 
     def test_backend_initialized_false_on_failure(self):
         """backend_initialized stays False and events are NOT sent when batch creation fails."""
