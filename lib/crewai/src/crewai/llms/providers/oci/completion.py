@@ -486,12 +486,6 @@ class OCICompletion(BaseLLM):
     # Capability declarations
     # ------------------------------------------------------------------
 
-    def supports_function_calling(self) -> bool:
-        return False  # Tool calling support will be added in a follow-up PR
-
-    def supports_stop_words(self) -> bool:
-        return True
-
     def get_context_window_size(self) -> int:
         model_lower = self.model.lower()
         if model_lower.startswith("google.gemini"):
