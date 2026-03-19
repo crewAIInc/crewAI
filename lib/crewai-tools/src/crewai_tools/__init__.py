@@ -112,6 +112,7 @@ from crewai_tools.tools.multion_tool.multion_tool import MultiOnTool
 from crewai_tools.tools.mysql_search_tool.mysql_search_tool import MySQLSearchTool
 from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool
 from crewai_tools.tools.ocr_tool.ocr_tool import OCRTool
+from crewai_tools.tools.open_sandbox_tool.open_sandbox_tool import OpenSandboxTool
 from crewai_tools.tools.oxylabs_amazon_product_scraper_tool.oxylabs_amazon_product_scraper_tool import (
     OxylabsAmazonProductScraperTool,
 )
@@ -263,6 +264,7 @@ __all__ = [
     "MySQLSearchTool",
     "NL2SQLTool",
     "OCRTool",
+    "OpenSandboxTool",
     "OxylabsAmazonProductScraperTool",
     "OxylabsAmazonSearchScraperTool",
     "OxylabsGoogleSearchScraperTool",

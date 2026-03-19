@@ -124,6 +124,10 @@ oxylabs = [
 mongodb = [
     "pymongo>=4.13"
 ]
+opensandbox = [
+    "opensandbox>=0.1.5",
+    "opensandbox-code-interpreter>=0.1.0",
+]
 mysql = [
     "pymysql>=1.1.1"
 ]
