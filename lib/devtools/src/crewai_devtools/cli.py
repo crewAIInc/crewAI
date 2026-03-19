@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from typing import Final, Literal
 
 import click
 from dotenv import load_dotenv
@@ -250,7 +251,9 @@ def add_docs_version(docs_json_path: Path, version: str) -> bool:
     return True
 
 
-_PT_BR_MONTHS = {
+ChangelogLang = Literal["en", "pt-BR", "ko"]
+
+_PT_BR_MONTHS: Final[dict[int, str]] = {
     1: "jan",
     2: "fev",
     3: "mar",
@@ -265,7 +268,9 @@ _PT_BR_MONTHS = {
     12: "dez",
 }
 
-_CHANGELOG_LOCALES: dict[str, dict[str, str]] = {
+_CHANGELOG_LOCALES: Final[
+    dict[ChangelogLang, dict[Literal["link_text", "language_name"], str]]
+] = {
     "en": {
         "link_text": "View release on GitHub",
         "language_name": "English",
@@ -283,7 +288,7 @@ _CHANGELOG_LOCALES: dict[str, dict[str, str]] = {
 
 def translate_release_notes(
     release_notes: str,
-    lang: str,
+    lang: ChangelogLang,
     client: OpenAI,
 ) -> str:
     """Translate release notes into the target language using OpenAI.
@@ -326,7 +331,7 @@ def translate_release_notes(
         return release_notes
 
 
-def _format_changelog_date(lang: str) -> str:
+def _format_changelog_date(lang: ChangelogLang) -> str:
     """Format today's date for a changelog entry in the given language."""
     from datetime import datetime
 
@@ -342,7 +347,7 @@ def update_changelog(
     changelog_path: Path,
     version: str,
     release_notes: str,
-    lang: str = "en",
+    lang: ChangelogLang = "en",
 ) -> bool:
     """Prepend a new release entry to a docs changelog file.
 
@@ -475,6 +480,23 @@ def get_packages(lib_dir: Path) -> list[Path]:
     return packages
 
 
+PrereleaseIndicator = Literal["a", "b", "rc", "alpha", "beta", "dev"]
+_PRERELEASE_INDICATORS: Final[tuple[PrereleaseIndicator, ...]] = (
+    "a",
+    "b",
+    "rc",
+    "alpha",
+    "beta",
+    "dev",
+)
+
+
+def _is_prerelease(version: str) -> bool:
+    """Check if a version string represents a pre-release."""
+    v = version.lower().lstrip("v")
+    return any(indicator in v for indicator in _PRERELEASE_INDICATORS)
+
+
 def get_commits_from_last_tag(tag_name: str, version: str) -> tuple[str, str]:
     """Get commits from the last tag, excluding current version.
 
@@ -488,6 +510,9 @@ def get_commits_from_last_tag(tag_name: str, version: str) -> tuple[str, str]:
     try:
         all_tags = run_command(["git", "tag", "--sort=-version:refname"]).split("\n")
         prev_tags = [t for t in all_tags if t and t != tag_name and t != f"v{version}"]
+
+        if not _is_prerelease(version):
+            prev_tags = [t for t in prev_tags if not _is_prerelease(t)]
 
         if prev_tags:
             last_tag = prev_tags[0]
@@ -678,20 +703,28 @@ def _generate_release_notes(
 
     with console.status("[cyan]Generating release notes..."):
         try:
-            prev_bump_commit = run_command(
+            prev_bump_output = run_command(
                 [
                     "git",
                     "log",
                     "--grep=^feat: bump versions to",
-                    "--format=%H",
-                    "-n",
-                    "2",
+                    "--format=%H %s",
                 ]
             )
-            commits_list = prev_bump_commit.strip().split("\n")
+            bump_entries = [
+                line for line in prev_bump_output.strip().split("\n") if line.strip()
+            ]
 
-            if len(commits_list) > 1:
-                prev_commit = commits_list[1]
+            is_stable = not _is_prerelease(version)
+            prev_commit = None
+            for entry in bump_entries[1:]:
+                bump_ver = entry.split("feat: bump versions to", 1)[-1].strip()
+                if is_stable and _is_prerelease(bump_ver):
+                    continue
+                prev_commit = entry.split()[0]
+                break
+
+            if prev_commit:
                 commit_range = f"{prev_commit}..HEAD"
                 commits = run_command(
                     ["git", "log", commit_range, "--pretty=format:%s"]
@@ -777,10 +810,7 @@ def _generate_release_notes(
             "\n[green]✓[/green] Using generated release notes without editing"
         )
 
-    is_prerelease = any(
-        indicator in version.lower()
-        for indicator in ["a", "b", "rc", "alpha", "beta", "dev"]
-    )
+    is_prerelease = _is_prerelease(version)
 
     return release_notes, openai_client, is_prerelease
 
@@ -799,7 +829,7 @@ def _update_docs_and_create_pr(
         The docs branch name if a PR was created, None otherwise.
     """
     docs_json_path = cwd / "docs" / "docs.json"
-    changelog_langs = ["en", "pt-BR", "ko"]
+    changelog_langs: list[ChangelogLang] = ["en", "pt-BR", "ko"]
 
     if not dry_run:
         docs_files_staged: list[str] = []
