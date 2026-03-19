@@ -100,6 +100,7 @@ from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
+from crewai.utilities.env import get_env_context
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import FileHandler
@@ -686,6 +687,7 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        get_env_context()
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext()

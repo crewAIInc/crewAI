@@ -79,6 +79,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
@@ -426,6 +427,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        get_env_context()
         # Only call handle_reasoning for legacy CrewAgentExecutor
         # For AgentExecutor, planning is handled in AgentExecutor.generate_plan()
         if self.executor_class is not AgentExecutor:

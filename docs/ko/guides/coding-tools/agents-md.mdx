@@ -1,0 +1,61 @@
+---
+title: 코딩 도구
+description: AGENTS.md를 사용하여 CrewAI 프로젝트 전반에서 코딩 에이전트와 IDE를 안내합니다.
+icon: terminal
+mode: "wide"
+---
+
+## AGENTS.md를 사용하는 이유
+
+`AGENTS.md`는 가벼운 저장소 로컬 지침 파일로, 코딩 에이전트에게 일관되고 프로젝트별 안내를 제공합니다. 프로젝트 루트에 배치하고 어시스턴트가 작업하는 방식(컨벤션, 명령어, 아키텍처 노트, 가드레일)에 대한 신뢰할 수 있는 소스로 활용하세요.
+
+## CLI로 프로젝트 생성
+
+CrewAI CLI를 사용하여 프로젝트를 스캐폴딩하면, `AGENTS.md`가 루트에 자동으로 추가됩니다.
+
+```bash
+# Crew
+crewai create crew my_crew
+
+# Flow
+crewai create flow my_flow
+
+# Tool repository
+crewai tool create my_tool
+```
+
+## 도구 설정: 어시스턴트에 AGENTS.md 연결
+
+### Codex
+
+Codex는 저장소에 배치된 `AGENTS.md` 파일로 안내할 수 있습니다. 컨벤션, 명령어, 워크플로우 기대치 등 지속적인 프로젝트 컨텍스트를 제공하는 데 사용하세요.
+
+### Claude Code
+
+Claude Code는 프로젝트 메모리를 `CLAUDE.md`에 저장합니다. `/init`으로 부트스트랩하고 `/memory`로 편집할 수 있습니다. Claude Code는 `CLAUDE.md` 내에서 임포트도 지원하므로, `@AGENTS.md`와 같은 한 줄을 추가하여 공유 지침을 중복 없이 가져올 수 있습니다.
+
+간단하게 다음과 같이 사용할 수 있습니다:
+
+```bash
+mv AGENTS.md CLAUDE.md
+```
+
+### Gemini CLI와 Google Antigravity
+
+Gemini CLI와 Antigravity는 저장소 루트 및 상위 디렉토리에서 프로젝트 컨텍스트 파일(기본값: `GEMINI.md`)을 로드합니다. Gemini CLI 설정에서 `context.fileName`을 설정하여 `AGENTS.md`를 대신(또는 추가로) 읽도록 구성할 수 있습니다. 예를 들어, `AGENTS.md`만 설정하거나 각 도구의 형식을 유지하고 싶다면 `AGENTS.md`와 `GEMINI.md`를 모두 포함할 수 있습니다.
+
+간단하게 다음과 같이 사용할 수 있습니다:
+
+```bash
+mv AGENTS.md GEMINI.md
+```
+
+### Cursor
+
+Cursor는 `AGENTS.md`를 프로젝트 지침 파일로 지원합니다. 프로젝트 루트에 배치하여 Cursor의 코딩 어시스턴트에 안내를 제공하세요.
+
+### Windsurf
+
+Claude Code는 Windsurf와의 공식 통합을 제공합니다. Windsurf 내에서 Claude Code를 사용하는 경우, 위의 Claude Code 안내를 따르고 `CLAUDE.md`에서 `AGENTS.md`를 임포트하세요.
+
+Windsurf의 네이티브 어시스턴트를 사용하는 경우, 프로젝트 규칙 또는 지침 기능(사용 가능한 경우)을 구성하여 `AGENTS.md`에서 읽거나 내용을 직접 붙여넣으세요.

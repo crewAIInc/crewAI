@@ -116,6 +116,13 @@
                         ]
                       },
                       {
+                        "group": "Tools",
+                        "icon": "wrench",
+                        "pages": [
+                          "en/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
                         "group": "Coding Tools",
                         "icon": "terminal",
                         "pages": [
@@ -577,6 +584,13 @@
                         ]
                       },
                       {
+                        "group": "Tools",
+                        "icon": "wrench",
+                        "pages": [
+                          "en/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
                         "group": "Coding Tools",
                         "icon": "terminal",
                         "pages": [
@@ -1034,6 +1048,13 @@
                         "pages": [
                           "en/guides/flows/first-flow",
                           "en/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "Tools",
+                        "icon": "wrench",
+                        "pages": [
+                          "en/guides/tools/publish-custom-tools"
                         ]
                       },
                       {
@@ -1528,6 +1549,20 @@
                         ]
                       },
                       {
+                        "group": "Ferramentas",
+                        "icon": "wrench",
+                        "pages": [
+                          "pt-BR/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "Ferramentas de Codificação",
+                        "icon": "terminal",
+                        "pages": [
+                          "pt-BR/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
                         "group": "Avançado",
                         "icon": "gear",
                         "pages": [
@@ -1968,6 +2003,20 @@
                         ]
                       },
                       {
+                        "group": "Ferramentas",
+                        "icon": "wrench",
+                        "pages": [
+                          "pt-BR/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "Ferramentas de Codificação",
+                        "icon": "terminal",
+                        "pages": [
+                          "pt-BR/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
                         "group": "Avançado",
                         "icon": "gear",
                         "pages": [
@@ -2404,6 +2453,20 @@
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
                           "pt-BR/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "Ferramentas",
+                        "icon": "wrench",
+                        "pages": [
+                          "pt-BR/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "Ferramentas de Codificação",
+                        "icon": "terminal",
+                        "pages": [
+                          "pt-BR/guides/coding-tools/agents-md"
                         ]
                       },
                       {
@@ -2877,6 +2940,20 @@
                         ]
                       },
                       {
+                        "group": "도구",
+                        "icon": "wrench",
+                        "pages": [
+                          "ko/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "코딩 도구",
+                        "icon": "terminal",
+                        "pages": [
+                          "ko/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
                         "group": "고급",
                         "icon": "gear",
                         "pages": [
@@ -3329,6 +3406,20 @@
                         ]
                       },
                       {
+                        "group": "도구",
+                        "icon": "wrench",
+                        "pages": [
+                          "ko/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "코딩 도구",
+                        "icon": "terminal",
+                        "pages": [
+                          "ko/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
                         "group": "고급",
                         "icon": "gear",
                         "pages": [
@@ -3777,6 +3868,20 @@
                         "pages": [
                           "ko/guides/flows/first-flow",
                           "ko/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "도구",
+                        "icon": "wrench",
+                        "pages": [
+                          "ko/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "코딩 도구",
+                        "icon": "terminal",
+                        "pages": [
+                          "ko/guides/coding-tools/agents-md"
                         ]
                       },
                       {
