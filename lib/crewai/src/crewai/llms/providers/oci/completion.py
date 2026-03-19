@@ -3,10 +3,8 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from contextlib import contextmanager
-import json
 import logging
 import os
-import re
 import threading
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -26,7 +24,6 @@ if TYPE_CHECKING:
 
 CUSTOM_ENDPOINT_PREFIX = "ocid1.generativeaiendpoint"
 DEFAULT_OCI_REGION = "us-chicago-1"
-_OCI_SCHEMA_NAME_PATTERN = re.compile(r"[^a-zA-Z0-9_-]")
 
 
 def _get_oci_module() -> Any:
