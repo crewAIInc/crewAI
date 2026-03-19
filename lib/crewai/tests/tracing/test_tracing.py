@@ -1099,7 +1099,7 @@ class TestInitializeBackendBatchRetry:
 
         assert bm.trace_batch_id == server_id
         assert mock_init.call_count == 2
-        mock_sleep.assert_called_once_with(1)
+        mock_sleep.assert_called_once_with(0.2)
 
     def test_retries_on_5xx_then_succeeds(self):
         """Retries on 500 server error, succeeds on second attempt."""

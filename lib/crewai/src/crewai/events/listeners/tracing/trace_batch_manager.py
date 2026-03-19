@@ -162,14 +162,14 @@ class TraceBatchManager:
                             f"Trace batch init attempt {attempt + 1} failed "
                             f"(status={response.status_code if response else 'None'}), retrying..."
                         )
-                        time.sleep(1)
+                        time.sleep(0.2)
                 except Exception as e:
                     last_exception = e
                     if attempt < max_retries:
                         logger.debug(
                             f"Trace batch init attempt {attempt + 1} raised {type(e).__name__}, retrying..."
                         )
-                        time.sleep(1)
+                        time.sleep(0.2)
 
             if last_exception and response is None:
                 logger.warning(
@@ -192,7 +192,10 @@ class TraceBatchManager:
                 )
                 self.is_current_batch_ephemeral = True
                 return self._initialize_backend_batch(
-                    user_context, execution_metadata, use_ephemeral=True
+                    user_context,
+                    execution_metadata,
+                    use_ephemeral=True,
+                    skip_context_check=skip_context_check,
                 )
 
             if response.status_code in [201, 200]:

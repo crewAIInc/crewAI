@@ -122,6 +122,15 @@ class FirstTimeTraceHandler:
             self.batch_manager._finalize_backend_batch(events_count)
             self.ephemeral_url = self.batch_manager.ephemeral_trace_url
 
+            # Clean up batch state (mirrors finalize_batch cleanup)
+            self.batch_manager.batch_owner_type = None
+            self.batch_manager.batch_owner_id = None
+            self.batch_manager.current_batch = None
+            self.batch_manager.event_buffer.clear()
+            self.batch_manager.trace_batch_id = None
+            self.batch_manager.is_current_batch_ephemeral = False
+            self.batch_manager._cleanup_batch_data()
+
             if not self.ephemeral_url:
                 self._show_local_trace_message()
 
