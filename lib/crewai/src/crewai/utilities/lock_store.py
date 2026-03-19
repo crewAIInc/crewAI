@@ -1,7 +1,7 @@
 """Centralised lock factory.
 
-If ``REDIS_URL`` is set, locks are distributed via ``portalocker.RedisLock``. Otherwise, falls
-back to the standard ``portalocker.Lock``.
+If ``REDIS_URL`` is set and the ``redis`` package is installed, locks are distributed via
+``portalocker.RedisLock``. Otherwise, falls back to the standard ``portalocker.Lock``.
 """
 
 from __future__ import annotations
@@ -30,6 +30,18 @@ _REDIS_URL: str | None = os.environ.get("REDIS_URL")
 _DEFAULT_TIMEOUT: Final[int] = 120
 
 
+def _redis_available() -> bool:
+    """Return True if redis is installed and REDIS_URL is set."""
+    if not _REDIS_URL:
+        return False
+    try:
+        import redis  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 @lru_cache(maxsize=1)
 def _redis_connection() -> redis.Redis:
     """Return a cached Redis connection, creating one on first call."""
@@ -51,7 +63,7 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
     """
     channel = f"crewai:{md5(name.encode(), usedforsecurity=False).hexdigest()}"
 
-    if _REDIS_URL:
+    if _redis_available():
         with portalocker.RedisLock(
             channel=channel,
             connection=_redis_connection(),
