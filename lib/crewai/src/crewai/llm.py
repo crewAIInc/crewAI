@@ -42,6 +42,7 @@ from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
     BEDROCK_MODELS,
+    CORTEX_MODELS,
     GEMINI_MODELS,
     OPENAI_MODELS,
 )
@@ -317,6 +318,8 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "cortex",
+    "snowflake",
 ]
 
 
@@ -384,6 +387,8 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "cortex": "cortex",
+                "snowflake": "cortex",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -506,6 +511,16 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "cortex":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in [
+                    "llama3.", "llama4-", "mistral-", "mixtral-", "snowflake-",
+                    "reka-", "jamba-", "gemma-", "claude-3-5-sonnet", "claude-3-7-sonnet",
+                    "claude-sonnet-4", "claude-opus-4",
+                ]
+            )
+
         return False
 
     @classmethod
@@ -541,6 +556,9 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if (provider == "cortex" or provider == "snowflake") and model in CORTEX_MODELS:
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -572,6 +590,9 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        if model in CORTEX_MODELS:
+            return "cortex"
 
         return "openai"
 
@@ -621,6 +642,11 @@ class LLM(BaseLLM):
             )
 
             return OpenAICompatibleCompletion
+
+        if provider == "cortex" or provider == "snowflake":
+            from crewai.llms.providers.cortex.completion import CortexCompletion
+
+            return CortexCompletion
 
         return None
 
