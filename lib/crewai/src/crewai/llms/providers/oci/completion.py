@@ -184,8 +184,19 @@ class OCICompletion(BaseLLM):
             return "\n".join(part for part in parts if part)
         return str(content)
 
+    def _message_has_multimodal_content(self, content: Any) -> bool:
+        if not isinstance(content, list):
+            return False
+        for item in content:
+            if isinstance(item, Mapping) and item.get("type") not in (None, "text"):
+                return True
+        return False
+
     def _build_generic_content(self, content: Any) -> list[Any]:
-        """Translate CrewAI message content into OCI generic content objects."""
+        """Translate CrewAI message content into OCI generic content objects.
+
+        Handles text, image_url, document_url, video_url, and audio_url types.
+        """
         models = self._oci.generative_ai_inference.models
         if isinstance(content, str):
             return [models.TextContent(text=content or ".")]
@@ -197,14 +208,52 @@ class OCICompletion(BaseLLM):
         for item in content:
             if isinstance(item, str):
                 processed.append(models.TextContent(text=item))
-            elif isinstance(item, Mapping) and item.get("type") == "text":
+                continue
+            if not isinstance(item, Mapping):
+                raise ValueError(
+                    f"OCI message content items must be strings or dictionaries, got: {type(item)}"
+                )
+
+            content_type = item.get("type")
+            if content_type == "text":
                 processed.append(
                     models.TextContent(text=str(item.get("text", "")) or ".")
                 )
-            else:
+            elif content_type == "image_url":
+                image_url = item.get("image_url", {})
+                url = image_url.get("url") if isinstance(image_url, Mapping) else None
+                if not url:
+                    raise ValueError("OCI image_url content requires image_url.url")
                 processed.append(
-                    models.TextContent(text=self._coerce_text(item) or ".")
+                    models.ImageContent(image_url=models.ImageUrl(url=url))
                 )
+            elif content_type in ("document_url", "document", "file"):
+                doc_data = item.get("document_url") or item.get("document") or item.get("file")
+                url = doc_data.get("url") if isinstance(doc_data, Mapping) else item.get("url")
+                if not url:
+                    raise ValueError("OCI document content requires a url")
+                processed.append(
+                    models.DocumentContent(document_url=models.DocumentUrl(url=url))
+                )
+            elif content_type in ("video_url", "video"):
+                video_data = item.get("video_url") or item.get("video")
+                url = video_data.get("url") if isinstance(video_data, Mapping) else item.get("url")
+                if not url:
+                    raise ValueError("OCI video content requires a url")
+                processed.append(
+                    models.VideoContent(video_url=models.VideoUrl(url=url))
+                )
+            elif content_type in ("audio_url", "audio"):
+                audio_data = item.get("audio_url") or item.get("audio")
+                url = audio_data.get("url") if isinstance(audio_data, Mapping) else item.get("url")
+                if not url:
+                    raise ValueError("OCI audio content requires a url")
+                processed.append(
+                    models.AudioContent(audio_url=models.AudioUrl(url=url))
+                )
+            else:
+                raise ValueError(f"Unsupported OCI content type: {content_type}")
+
         return processed or [models.TextContent(text=".")]
 
     def _build_generic_messages(self, messages: list[LLMMessage]) -> list[Any]:
@@ -282,6 +331,10 @@ class OCICompletion(BaseLLM):
         for message in history_messages:
             role = str(message.get("role", "user")).lower()
             content = message.get("content", "")
+            if self._message_has_multimodal_content(content):
+                raise ValueError(
+                    "OCI Cohere models currently support text-only messages in CrewAI."
+                )
 
             if role in ("user", "system"):
                 message_cls = (
@@ -508,6 +561,10 @@ class OCICompletion(BaseLLM):
         models = self._oci.generative_ai_inference.models
 
         if self.oci_provider == "cohere":
+            if any(self._message_has_multimodal_content(msg.get("content")) for msg in messages):
+                raise ValueError(
+                    "OCI Cohere models currently support text-only messages in CrewAI."
+                )
             chat_history, tool_results, message_text = self._build_cohere_chat_history(
                 messages
             )
@@ -1300,6 +1357,9 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def supports_function_calling(self) -> bool:
+        return True
+
+    def supports_multimodal(self) -> bool:
         return True
 
     def get_context_window_size(self) -> int:
