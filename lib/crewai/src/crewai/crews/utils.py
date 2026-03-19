@@ -75,7 +75,7 @@ def _resolve_crew_skills(crew: Crew) -> list[SkillModel] | None:
                     if item.disclosure_level < INSTRUCTIONS
                     else item
                 )
-    return resolved or None
+    return resolved
 
 
 def setup_agents(
