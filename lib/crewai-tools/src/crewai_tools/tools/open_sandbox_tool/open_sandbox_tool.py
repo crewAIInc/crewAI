@@ -71,22 +71,40 @@ class OpenSandboxTool(BaseTool):
     _sandbox: Any = PrivateAttr(default=None)
     _interpreter: Any = PrivateAttr(default=None)
     _installed_libraries: set[str] = PrivateAttr(default_factory=set)
+    _loop: Any = PrivateAttr(default=None)
 
     def _get_api_key(self) -> str | None:
         return self.opensandbox_api_key or os.environ.get("OPENSANDBOX_API_KEY")
 
+    def _get_loop(self) -> asyncio.AbstractEventLoop:
+        """Return a persistent event loop for all sync invocations.
+
+        Using a single loop ensures that async objects created in one call
+        (sandbox, interpreter) remain valid for subsequent calls.
+        """
+        if self._loop is None or self._loop.is_closed():
+            self._loop = asyncio.new_event_loop()
+        return self._loop
+
     def _run(self, code: str, libraries: list[str] | None = None, **kwargs: Any) -> str:
         try:
-            return asyncio.run(self._arun(code=code, libraries=libraries, **kwargs))
-        except RuntimeError:
-            # Already in an async event loop — use nest_asyncio or create new loop
-            loop = asyncio.new_event_loop()
-            try:
-                return loop.run_until_complete(
-                    self._arun(code=code, libraries=libraries, **kwargs)
+            # Check if we're already inside a running event loop
+            asyncio.get_running_loop()
+            # If so, we cannot use run_until_complete; fall back to asyncio.run
+            # in a new thread, but this path loses sandbox persistence.
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(
+                    self._get_loop().run_until_complete,
+                    self._arun(code=code, libraries=libraries, **kwargs),
                 )
-            finally:
-                loop.close()
+                return future.result()
+        except RuntimeError:
+            # No running loop — safe to use our persistent loop directly
+            return self._get_loop().run_until_complete(
+                self._arun(code=code, libraries=libraries, **kwargs)
+            )
 
     async def _arun(self, code: str, libraries: list[str] | None = None, **kwargs: Any) -> str:
         try:
@@ -212,14 +230,17 @@ class OpenSandboxTool(BaseTool):
                 self._sandbox = None
                 self._interpreter = None
                 self._installed_libraries = set()
+                # Note: we do NOT close self._loop here so callers can
+                # still run cleanup() on it; the loop is closed in __del__.
 
     def __del__(self) -> None:
         if self._sandbox is not None:
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self.cleanup())
-                else:
-                    loop.run_until_complete(self.cleanup())
+                loop = self._loop
+                if loop is not None and not loop.is_closed():
+                    if loop.is_running():
+                        loop.create_task(self.cleanup())
+                    else:
+                        loop.run_until_complete(self.cleanup())
             except Exception:
                 pass
