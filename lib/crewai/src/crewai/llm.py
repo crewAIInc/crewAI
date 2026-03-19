@@ -510,7 +510,7 @@ class LLM(BaseLLM):
             return True
 
         if provider == "oci":
-            return model_lower.startswith("ocid1.generativeaiendpoint") or "." in model
+            return model_lower.startswith("ocid1.generativeaiendpoint") or "." in model_lower
 
         return False
 
