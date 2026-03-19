@@ -1,0 +1,194 @@
+---
+title: EU AI Act Compliance Guide
+description: Understanding EU AI Act obligations when deploying CrewAI agent systems
+---
+
+# EU AI Act Compliance Guide for CrewAI Deployers
+
+CrewAI orchestrates autonomous AI agents that collaborate on complex tasks. Under the EU AI Act, autonomous agent systems face the highest regulatory scrutiny. This guide explains what that means for teams deploying CrewAI in the EU.
+
+## Why autonomous agents are different
+
+The EU AI Act classifies AI systems by risk. Multi-agent systems that make autonomous decisions are more likely to be classified as high-risk under Article 6 and Annex III, particularly when used for:
+
+- Employment and worker management (hiring, task allocation, performance evaluation)
+- Access to essential services (insurance, credit, housing)
+- Law enforcement or border control
+- Critical infrastructure management
+- Education and vocational training
+
+A CrewAI crew that generates marketing copy is likely minimal risk. The same architecture making hiring recommendations or evaluating loan applications is high-risk. **The risk classification depends on your use case, not the framework.**
+
+## What the scanner found
+
+Running [AI Trace Auditor](https://github.com/BipinRimal314/ai-trace-auditor) against the CrewAI codebase reveals the full scope of external services the framework can connect to:
+
+- **Files scanned:** 1,027
+- **AI providers:** Anthropic, OpenAI, Google Generative AI, LangChain, LlamaIndex
+- **Model identifiers:** 28 (claude-3-opus, claude-3-5-sonnet, gpt-4o, gemini, etc.)
+- **Vector databases:** ChromaDB, Qdrant, Weaviate
+- **Traditional databases:** PostgreSQL, MySQL, MongoDB, Redis, SQLite
+- **Cloud services:** AWS S3, AWS Bedrock, AWS Lambda, Azure OpenAI, GCP Vertex AI
+- **Total external services:** 17
+- **Data flows:** 17
+
+CrewAI *supports* all of these. Your deployment will use a subset. Document which services are active in your system.
+
+## Data flow diagram
+
+```mermaid
+graph LR
+    USER((User)) -->|task| APP[CrewAI Crew]
+
+    APP -->|prompts| Anthropic([Anthropic API])
+    Anthropic -->|responses| APP
+    APP -->|prompts| OpenAI([OpenAI API])
+    OpenAI -->|responses| APP
+    APP -->|prompts| Google([Google GenAI])
+    Google -->|responses| APP
+
+    APP -->|embeddings| ChromaDB[(ChromaDB)]
+    APP -->|embeddings| Qdrant[(Qdrant)]
+    APP -->|embeddings| Weaviate[(Weaviate)]
+
+    APP -->|data| PostgreSQL[(PostgreSQL)]
+    APP -->|data| Redis[(Redis)]
+
+    APP -->|inference| Bedrock{{AWS Bedrock}}
+    APP -->|storage| S3{{AWS S3}}
+    APP -->|inference| VertexAI{{GCP Vertex AI}}
+
+    classDef controller fill:#4ade80,stroke:#166534,color:#000
+    classDef processor fill:#60a5fa,stroke:#1e40af,color:#000
+    classDef app fill:#a78bfa,stroke:#5b21b6,color:#000
+    classDef user fill:#f472b6,stroke:#be185d,color:#000
+
+    class USER user
+    class APP app
+    class Anthropic processor
+    class OpenAI processor
+    class Google processor
+    class Qdrant processor
+    class Weaviate processor
+    class Bedrock processor
+    class S3 processor
+    class VertexAI processor
+    class ChromaDB controller
+    class PostgreSQL controller
+    class Redis controller
+```
+
+**Legend:** Green = controller (you own the data). Blue = processor (third party, requires Data Processing Agreement).
+
+## GDPR role classification
+
+Each external service has a different GDPR relationship depending on how it's deployed:
+
+| Service | Default Role | Why | Action Required |
+|---------|-------------|-----|----------------|
+| Anthropic API | Processor | Cloud API; Anthropic processes prompts on your behalf | DPA required (Article 28) |
+| OpenAI API | Processor | Cloud API; same as above | DPA required |
+| Google GenAI | Processor | Cloud API | DPA required |
+| AWS Bedrock | Processor | Managed inference; AWS processes on your behalf | DPA via AWS agreement |
+| GCP Vertex AI | Processor | Managed inference | DPA via GCP agreement |
+| Pinecone / Qdrant Cloud | Processor | Cloud-hosted vector storage | DPA required |
+| ChromaDB | Controller | Typically self-hosted; data stays on your infrastructure | No third-party DPA |
+| PostgreSQL / Redis / SQLite | Controller | Self-hosted databases | No third-party DPA |
+| AWS S3 | Processor | Cloud storage | DPA via AWS agreement |
+
+If any of these services transfer data outside the EEA, additional safeguards are required (Standard Contractual Clauses or adequacy decisions).
+
+## Article 14: Human oversight for autonomous agents
+
+This is the most important article for CrewAI deployments. Article 14 requires that high-risk AI systems are designed to be "effectively overseen by natural persons."
+
+For autonomous agent crews, this means:
+
+### What CrewAI already provides
+
+- **`human_input` parameter:** Agents can request human approval before proceeding. Use this for high-stakes decisions.
+- **Callbacks:** Register callbacks on tasks and agents to monitor execution in real-time.
+- **Delegation controls:** `allow_delegation` parameter controls whether agents can pass tasks to other agents. Restricting delegation reduces autonomous action.
+- **Memory inspection:** CrewAI's memory system (short-term, long-term, entity memory) is inspectable. Regulators may ask what the system "remembers."
+
+### What you need to add
+
+- **Kill switch:** A mechanism to halt all agents immediately. CrewAI doesn't provide this natively; implement it at the infrastructure level (container orchestration, process management).
+- **Decision logging:** Record every agent decision, tool call, and delegation with timestamps. Article 12 requires this for the system's lifetime.
+- **Escalation rules:** Define which decisions require human approval. Don't let agents make irreversible decisions (sending emails, modifying databases, making purchases) without human confirmation.
+- **Output review:** For high-risk applications, implement a human review step between the crew's output and any action taken on that output.
+
+## Article 11: Technical documentation
+
+High-risk systems need Annex IV technical documentation before market placement. Generate a starting template from your codebase:
+
+```bash
+pip install ai-trace-auditor
+aitrace docs ./your-crewai-project -o annex-iv-docs.md
+```
+
+The tool auto-populates approximately 44% of the required sections from code analysis. The remaining sections require your input on intended purpose, risk assessment, and monitoring plans.
+
+Key sections for CrewAI deployments:
+
+| Section | CrewAI-specific considerations |
+|---------|-------------------------------|
+| General description | Document the crew structure: which agents, which roles, which tools, what decisions they can make |
+| Development process | Document agent prompt design, tool selection rationale, and testing methodology |
+| Human oversight | Document `human_input` configuration, callback implementation, and escalation rules |
+| Risk management | Autonomous agent risks: hallucination cascades (agent A hallucinates, agent B acts on it), tool misuse, unbounded delegation loops |
+| Performance metrics | Per-agent accuracy, task completion rate, delegation appropriateness, human override frequency |
+
+## Article 12: Record-keeping
+
+If you have LLM traces from your CrewAI deployment, audit them against Article 12:
+
+```bash
+aitrace audit your-traces.json -r "EU AI Act"
+```
+
+For CrewAI specifically, ensure you log:
+- Every LLM call (model, tokens, input, output)
+- Every tool invocation (which tool, inputs, outputs, success/failure)
+- Every delegation event (which agent delegated to which, why)
+- Every human intervention point (what was reviewed, what was approved/rejected)
+- Memory reads and writes (what context influenced each decision)
+
+## Specific risks for multi-agent systems
+
+These risks are unique to autonomous agent architectures and should be addressed in your Annex IV Section 5 (risk management):
+
+1. **Hallucination cascading:** Agent A produces incorrect output. Agent B treats it as ground truth and acts on it. In a crew, errors compound across agents rather than being caught.
+
+2. **Unbounded tool use:** An agent with access to web search, code execution, and file writing can take actions with real-world consequences. Scope tool access to the minimum required for each agent's role.
+
+3. **Delegation loops:** Agent A delegates to Agent B, which delegates back to Agent A. CrewAI has safeguards, but document your delegation policy and test edge cases.
+
+4. **Prompt injection via tools:** If an agent retrieves external content (web pages, documents, API responses), that content can contain instructions that override the agent's system prompt. This is an active research area with no complete solution.
+
+5. **Opacity of multi-step reasoning:** A single LLM call is auditable. A crew that passes context across 5 agents over 20 tool calls produces reasoning chains that are difficult for a human overseer to evaluate in real time.
+
+## Full compliance scan
+
+Generate a complete compliance package covering Articles 11, 12, and 13 plus GDPR Article 30:
+
+```bash
+aitrace comply ./your-crewai-project --split -o compliance-package/
+```
+
+This produces:
+- `article-11-docs.md` — Annex IV technical documentation template
+- `article-13-flows.md` — Data flow diagram with GDPR annotations
+- `compliance-summary.md` — Combined overview with coverage table
+
+## Resources
+
+- [EU AI Act full text](https://artificialintelligenceact.eu/)
+- [Article 14: Human oversight](https://artificialintelligenceact.eu/article/14/)
+- [AI Trace Auditor](https://github.com/BipinRimal314/ai-trace-auditor) — open-source compliance scanning
+- [CrewAI human input docs](https://docs.crewai.com/concepts/tasks#task-with-human-input)
+- [CrewAI callbacks](https://docs.crewai.com/concepts/tasks#task-callbacks)
+
+---
+
+*This guide was generated with assistance from [AI Trace Auditor](https://github.com/BipinRimal314/ai-trace-auditor) and reviewed for accuracy. It is not legal advice. Consult a qualified professional for compliance decisions.*
