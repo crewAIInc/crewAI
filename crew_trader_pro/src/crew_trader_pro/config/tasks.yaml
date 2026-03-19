@@ -29,12 +29,6 @@ kline_pattern_task:
        - vol_ratio > 1.5 的K线是否伴随关键形态
        - 价格突破时成交量是否配合
        - 是否出现量价背离
-
-    5. **订单簿深度分析**
-       - bid_wall_price（买墙）和 ask_wall_price（卖墙）的位置与当前价格的关系
-       - bid_ask_imbalance > 1.5 表示买方明显强势，< 0.7 表示卖方强势
-       - 买墙/卖墙是否与K线识别的支撑阻力位重合（重合则该价位更可靠）
-       - 结合成交量判断挂单的真实性（高成交量突破挂单墙 = 强信号）
   expected_output: >
     ## K线形态分析报告
 
@@ -58,12 +52,6 @@ kline_pattern_task:
     ### 多周期一致性
     - M5偏向 / M15偏向 / H1偏向
     - 三个周期是否对齐
-
-    ### 订单簿深度评估
-    - 买墙：价格 (挂单量 X ETH)
-    - 卖墙：价格 (挂单量 X ETH)
-    - 买卖力量比：X（>1.5 买方强势 / <0.7 卖方强势 / 均衡）
-    - 挂单与支撑阻力重合度：是否有挂单验证K线价位
 
     ### 形态综合结论
     - 偏向：看多 / 看空 / 中性
@@ -245,21 +233,29 @@ chief_strategy_task:
        - 止损必须设在关键支撑/阻力之外（留出噪音空间）
        - 明确给出止盈止损的价格（精确到小数点后2位）
 
-    5. **杠杆与仓位**
+    5. **数值验证（必须严格执行）**
+       在填写 execution 之前，必须先用以下公式逐步计算并验证：
+       - 做多时：profit = take_profit - entry_price, loss = entry_price - stop_loss
+       - 做空时：profit = entry_price - take_profit, loss = stop_loss - entry_price
+       - risk_reward_ratio = profit / loss（保留1位小数，格式如 "2.1:1"）
+       - 如果计算出的盈亏比 < 1.5，必须调整 take_profit 直到盈亏比 ≥ 1.5
+       - profit 和 loss 必须都 > 0，否则方向错误需修正
+       - position_size_pct = (2% / (loss / entry_price × 100)) / leverage × 100（不超过20%）
+
+    6. **杠杆与仓位**
        - 根据 ADX 趋势强度和波动率选择杠杆：
          * 强趋势(ADX>40) + 低波动 → 可用 10x-20x
          * 普通趋势(ADX 25-40) → 5x-10x
          * 弱趋势/震荡(ADX<25) → 3x-5x 或不开单
        - 单笔最大风险不超过总资金的 2%
-       - position_size_pct 基于杠杆和止损距离反算：
-         仓位% = (可承受亏损% × 总资金) / (止损距离% × 杠杆)
+       - position_size_pct 必须通过第5步公式计算得出，不能凭感觉填写
 
-    6. **风控约束**
+    7. **风控约束**
        - 如果大周期(4H)与小周期(M15)方向矛盾，杠杆减半、仓位减半
        - RSI 极端值(>80或<20)时，不追单，等回调
        - 布林带极端挤压时，等突破方向确认后再入场
 
-    7. **历史纠错** — 参考 learning_bridge 中的历史记录，避免重复错误
+    8. **历史纠错** — 参考 learning_bridge 中的历史记录，避免重复错误
   expected_output: >
     以严格 JSON 格式返回，字段说明：
     - signal_summary: 各分析维度结论列表，每项含 dimension(K线形态/技术指标), bias, confidence(1-10), key_point
@@ -270,8 +266,8 @@ chief_strategy_task:
       * entry_price: 精确入场价格
       * take_profit: 止盈价格
       * stop_loss: 止损价格
-      * risk_reward_ratio: 盈亏比（如 2.1:1）
-      * position_size_pct: 仓位占比（如 10%）
+      * risk_reward_ratio: 必须 = |take_profit - entry_price| / |stop_loss - entry_price|，保留1位小数（如 2.1:1）
+      * position_size_pct: 必须通过公式计算（如 8%）
       * leverage: 建议杠杆倍数（如 10x）
     - reasoning: 决策推理，含 supporting_factors[], opposing_factors[], risk_warning
     - self_review: 自我审查，含 repeated_mistake(bool), max_uncertainty, learning_applied

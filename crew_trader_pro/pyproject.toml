@@ -7,7 +7,7 @@ requires-python = ">=3.12,<3.14"  # <--- 修改这里，从 3.10 改为 3.12
 
 # 整合后的依赖列表
 dependencies = [
-    "crewai[litellm,tools]==1.10.1",
+    "crewai[anthropic,litellm,tools]==1.10.1",
     "pandas>=2.2.3,<2.3",         # 与 crewai 要求一致
     "ta>=0.11.0",                  # 替代 pandas_ta，兼容 pandas<2.3
     "fastapi>=0.110.0",

@@ -142,17 +142,6 @@ class Candle(BaseModel):
     bar_status: Optional[BarStatus] = Field(None, description="K线形态状态")
     vol_ratio: Optional[float] = Field(None, description="成交量比率")
 
-class OrderBookDepth(BaseModel):
-    """订单簿深度摘要（预聚合后的关键指标，非原始挂单）"""
-    bid_wall_price: Optional[float] = Field(None, description="买方最大挂单密集价位")
-    bid_wall_volume: Optional[float] = Field(None, description="买墙附近总挂单量")
-    ask_wall_price: Optional[float] = Field(None, description="卖方最大挂单密集价位")
-    ask_wall_volume: Optional[float] = Field(None, description="卖墙附近总挂单量")
-    bid_ask_imbalance: Optional[float] = Field(None, description="买卖力量比（>1 买方更强，<1 卖方更强）")
-    depth_range_pct: str = Field(default="±2%", description="分析的价格范围")
-    total_bid_volume: Optional[float] = Field(None, description="分析范围内买单总量")
-    total_ask_volume: Optional[float] = Field(None, description="分析范围内卖单总量")
-
 class MarketSnapshot(BaseModel):
     """实时量价快照层"""
     current_price: float = Field(..., description="当前最新价格")
@@ -160,7 +149,6 @@ class MarketSnapshot(BaseModel):
     m5_candles: List[Candle] = Field(..., description="5分钟级别K线列表")
     m15_candles: List[Candle] = Field(..., description="15分钟级别K线列表")
     h1_candles: List[Candle] = Field(..., description="1小时级别K线列表")
-    order_book_depth: Optional[OrderBookDepth] = Field(None, description="订单簿深度摘要")
 
 class EmaCluster(BaseModel):
     """EMA 均线簇指标"""

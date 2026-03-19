@@ -1039,7 +1039,7 @@ source = { editable = "crew_trader_pro" }
 dependencies = [
     { name = "ccxt" },
     { name = "celery" },
-    { name = "crewai", extra = ["litellm", "tools"] },
+    { name = "crewai", extra = ["anthropic", "litellm", "tools"] },
     { name = "fastapi" },
     { name = "pandas" },
     { name = "pydantic-settings" },
@@ -1055,7 +1055,7 @@ dependencies = [
 requires-dist = [
     { name = "ccxt", specifier = ">=4.2.0" },
     { name = "celery", specifier = ">=5.3.6" },
-    { name = "crewai", extras = ["litellm", "tools"], editable = "lib/crewai" },
+    { name = "crewai", extras = ["anthropic", "litellm", "tools"], editable = "lib/crewai" },
     { name = "fastapi", specifier = ">=0.110.0" },
     { name = "pandas", specifier = ">=2.2.3,<2.3" },
     { name = "pydantic-settings", specifier = ">=2.2.0" },

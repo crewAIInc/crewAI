@@ -5,7 +5,7 @@ import ta
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from ..schemas.technical_analyst import (
-    TechnicalAnalystInput, SystemHeader, MarketSnapshot, Candle, OrderBookDepth,
+    TechnicalAnalystInput, SystemHeader, MarketSnapshot, Candle,
     TechnicalIndicators, M15BarAnalysis, EmaCluster, MomentumIndicators,
     VolatilityIndicators, HtfContext, DerivativesContext, LearningBridge, BarStatus,
     EmaAlignment, SlopeState, RsiState, MacdState, DivergenceType,
@@ -272,66 +272,6 @@ class TechnicalAnalystTools:
             liquidation_risk_note=risk_note,
         )
 
-    def get_order_book_depth(self, symbol: str, current_price: float, depth_pct: float = 2.0) -> OrderBookDepth:
-        """获取订单簿深度摘要：在 ±depth_pct% 范围内聚合买卖墙"""
-        try:
-            order_book = self.exchange.fetch_order_book(symbol, limit=500)
-            bids = order_book.get('bids', [])  # [[price, amount], ...]
-            asks = order_book.get('asks', [])  # [[price, amount], ...]
-
-            lower_bound = current_price * (1 - depth_pct / 100)
-            upper_bound = current_price * (1 + depth_pct / 100)
-
-            # 过滤在范围内的挂单
-            filtered_bids = [(p, v) for p, v in bids if p >= lower_bound]
-            filtered_asks = [(p, v) for p, v in asks if p <= upper_bound]
-
-            total_bid_vol = sum(v for _, v in filtered_bids)
-            total_ask_vol = sum(v for _, v in filtered_asks)
-
-            # 找买墙：按价格分桶（桶宽 = 价格的 0.05%），找最大桶
-            bid_wall_price, bid_wall_volume = None, None
-            if filtered_bids:
-                bucket_width = current_price * 0.0005  # 0.05%
-                bid_buckets: Dict[float, float] = {}
-                for p, v in filtered_bids:
-                    bucket_key = round(p / bucket_width) * bucket_width
-                    bid_buckets[bucket_key] = bid_buckets.get(bucket_key, 0) + v
-                if bid_buckets:
-                    bid_wall_price = max(bid_buckets, key=bid_buckets.get)  # type: ignore
-                    bid_wall_volume = round(bid_buckets[bid_wall_price], 4)
-                    bid_wall_price = round(bid_wall_price, 2)
-
-            # 找卖墙：同样分桶
-            ask_wall_price, ask_wall_volume = None, None
-            if filtered_asks:
-                bucket_width = current_price * 0.0005
-                ask_buckets: Dict[float, float] = {}
-                for p, v in filtered_asks:
-                    bucket_key = round(p / bucket_width) * bucket_width
-                    ask_buckets[bucket_key] = ask_buckets.get(bucket_key, 0) + v
-                if ask_buckets:
-                    ask_wall_price = min(ask_buckets, key=ask_buckets.get)  # type: ignore
-                    # 卖墙应该是最大的那个桶
-                    ask_wall_price = max(ask_buckets, key=ask_buckets.get)  # type: ignore
-                    ask_wall_volume = round(ask_buckets[ask_wall_price], 4)
-                    ask_wall_price = round(ask_wall_price, 2)
-
-            bid_ask_imbalance = round(total_bid_vol / total_ask_vol, 2) if total_ask_vol > 0 else None
-
-            return OrderBookDepth(
-                bid_wall_price=bid_wall_price,
-                bid_wall_volume=bid_wall_volume,
-                ask_wall_price=ask_wall_price,
-                ask_wall_volume=ask_wall_volume,
-                bid_ask_imbalance=bid_ask_imbalance,
-                depth_range_pct=f"±{depth_pct}%",
-                total_bid_volume=round(total_bid_vol, 4),
-                total_ask_volume=round(total_ask_vol, 4),
-            )
-        except Exception:
-            return OrderBookDepth(depth_range_pct=f"±{depth_pct}%")
-
     def generate_input(self, symbol: str, request_id: str, learning_bridge: LearningBridge) -> TechnicalAnalystInput:
         """
         全自动生成技术分析师的输入数据
@@ -392,16 +332,12 @@ class TechnicalAnalystTools:
                 vol_ratio=round(row['volume'] / avg_vol_h1, 2) if avg_vol_h1 > 0 else None
             ))
 
-        # 订单簿深度摘要
-        order_book = self.get_order_book_depth(symbol, current_price)
-
         snapshot = MarketSnapshot(
             current_price=current_price,
             price_change_24h=price_change_24h,
             m5_candles=m5_candles,
             m15_candles=m15_candles,
             h1_candles=h1_candles,
-            order_book_depth=order_book,
         )
 
         # 3. 计算多维指标层
