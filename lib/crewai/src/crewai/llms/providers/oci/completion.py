@@ -6,6 +6,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import threading
 from typing import TYPE_CHECKING, Any, Literal, cast
 import uuid
@@ -15,6 +16,7 @@ from pydantic import BaseModel
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.utilities.oci import create_oci_client_kwargs, get_oci_module
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
 
@@ -27,6 +29,7 @@ if TYPE_CHECKING:
 CUSTOM_ENDPOINT_PREFIX = "ocid1.generativeaiendpoint"
 DEFAULT_OCI_REGION = "us-chicago-1"
 DEFAULT_OCI_TIMEOUT = (10, 240)
+_OCI_SCHEMA_NAME_PATTERN = re.compile(r"[^a-zA-Z0-9_-]")
 _OCI_TOOL_RESULT_GUIDANCE = (
     "You have received tool results above. Respond to the user with a helpful, "
     "natural language answer that incorporates the tool results. Do not output "
@@ -491,10 +494,29 @@ class OCICompletion(BaseLLM):
     # Request building
     # ------------------------------------------------------------------
 
+    def _build_response_format(
+        self, response_model: type[BaseModel] | None
+    ) -> Any | None:
+        if response_model is None:
+            return None
+        models = self._oci.generative_ai_inference.models
+        schema_description = generate_model_description(response_model)["json_schema"]
+        schema_name = _OCI_SCHEMA_NAME_PATTERN.sub("_", schema_description["name"])
+        json_schema = models.ResponseJsonSchema(
+            name=schema_name,
+            description=(response_model.__doc__ or "").strip() or schema_name,
+            schema=schema_description["schema"],
+            is_strict=schema_description["strict"],
+        )
+        if self.oci_provider == "cohere":
+            return models.CohereResponseJsonFormat(schema=json_schema.schema)
+        return models.JsonSchemaResponseFormat(json_schema=json_schema)
+
     def _build_chat_request(
         self,
         messages: list[LLMMessage],
         tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
         *,
         is_stream: bool = False,
     ) -> Any:
@@ -553,6 +575,10 @@ class OCICompletion(BaseLLM):
                     request_kwargs["tool_choice"] = tool_choice
                 if self._parallel_tool_calls_enabled():
                     request_kwargs["is_parallel_tool_calls"] = True
+
+        response_format = self._build_response_format(response_model)
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
 
         if is_stream:
             request_kwargs["is_stream"] = True
@@ -767,6 +793,44 @@ class OCICompletion(BaseLLM):
         return metadata
 
     # ------------------------------------------------------------------
+    # Structured output
+    # ------------------------------------------------------------------
+
+    def _parse_structured_response(
+        self,
+        *,
+        content: str,
+        response_model: type[BaseModel],
+        messages: list[LLMMessage],
+        from_task: Task | None,
+        from_agent: Agent | None,
+    ) -> BaseModel:
+        try:
+            structured_response = self._validate_structured_output(
+                content, response_model
+            )
+        except Exception as error:
+            raise ValueError(
+                f"Failed to validate OCI structured response with model "
+                f"{response_model.__name__}: {error}"
+            ) from error
+
+        if not isinstance(structured_response, BaseModel):
+            raise ValueError(
+                f"OCI structured response parsing returned unexpected type: "
+                f"{type(structured_response)}"
+            )
+
+        self._emit_call_completed_event(
+            response=structured_response.model_dump_json(),
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=messages,
+        )
+        return structured_response
+
+    # ------------------------------------------------------------------
     # Tool execution
     # ------------------------------------------------------------------
 
@@ -780,6 +844,7 @@ class OCICompletion(BaseLLM):
         from_task: Task | None,
         from_agent: Agent | None,
         tool_depth: int,
+        response_model: type[BaseModel] | None = None,
         tool_calls: list[dict[str, Any]],
     ) -> str | BaseModel | list[dict[str, Any]]:
         """Execute one round of tool calls and recurse until the model finishes."""
@@ -843,6 +908,7 @@ class OCICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 tool_depth=tool_depth + 1,
+                response_model=response_model,
             )
         return self._call_impl(
             messages=next_messages,
@@ -852,6 +918,7 @@ class OCICompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             tool_depth=tool_depth + 1,
+            response_model=response_model,
         )
 
     # ------------------------------------------------------------------
@@ -888,12 +955,15 @@ class OCICompletion(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         tool_depth: int = 0,
+        response_model: type[BaseModel] | None = None,
     ) -> str | BaseModel | list[dict[str, Any]]:
         """Build the OCI chat request, invoke the service, record metadata, and return the finalized text (running the tool loop when the model requests tool calls)."""
         normalized_messages = (
             messages if isinstance(messages, list) else self._normalize_messages(messages)
         )
-        chat_request = self._build_chat_request(normalized_messages, tools=tools)
+        chat_request = self._build_chat_request(
+            normalized_messages, tools=tools, response_model=response_model
+        )
         chat_details = self._oci.generative_ai_inference.models.ChatDetails(
             compartment_id=self.compartment_id,
             serving_mode=self._build_serving_mode(),
@@ -916,7 +986,17 @@ class OCICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 tool_depth=tool_depth,
+                response_model=response_model,
                 tool_calls=tool_calls,
+            )
+
+        if response_model is not None:
+            return self._parse_structured_response(
+                content=content,
+                response_model=response_model,
+                messages=normalized_messages,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
         return self._finalize_text_response(
@@ -936,13 +1016,15 @@ class OCICompletion(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         tool_depth: int = 0,
+        response_model: type[BaseModel] | None = None,
     ) -> str | BaseModel | list[dict[str, Any]]:
         """Handle OCI streaming while reconstructing final text/tool state."""
         normalized_messages = (
             messages if isinstance(messages, list) else self._normalize_messages(messages)
         )
         chat_request = self._build_chat_request(
-            normalized_messages, tools=tools, is_stream=True
+            normalized_messages, tools=tools, response_model=response_model,
+            is_stream=True,
         )
         chat_details = self._oci.generative_ai_inference.models.ChatDetails(
             compartment_id=self.compartment_id,
@@ -1029,7 +1111,17 @@ class OCICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 tool_depth=tool_depth,
+                response_model=response_model,
                 tool_calls=tool_calls,
+            )
+
+        if response_model is not None:
+            return self._parse_structured_response(
+                content=full_response,
+                response_model=response_model,
+                messages=normalized_messages,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
         return self._finalize_text_response(
@@ -1164,6 +1256,7 @@ class OCICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         tool_depth=0,
+                        response_model=response_model,
                     )
 
                 return self._call_impl(
@@ -1174,6 +1267,7 @@ class OCICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     tool_depth=0,
+                    response_model=response_model,
                 )
             except Exception as error:
                 error_message = f"OCI Generative AI call failed: {error!s}"
