@@ -180,7 +180,7 @@ class JoyVerifier:
 
             result = VerificationResult(
                 is_trusted=is_trusted,
-                agent_id=agent_id,
+                agent_id=validated_id,
                 trust_score=trust_score,
                 vouch_count=vouch_count,
                 verified=verified,
@@ -188,7 +188,7 @@ class JoyVerifier:
             )
 
             logger.info(
-                f"Agent {agent_id} verification: "
+                f"Agent {validated_id} verification: "
                 f"score={trust_score}, vouches={vouch_count}, "
                 f"verified={verified}, trusted={is_trusted}"
             )
@@ -197,6 +197,9 @@ class JoyVerifier:
 
         except ImportError:
             # Re-raise ImportError so users know to install dependencies
+            raise
+        except ValueError:
+            # Re-raise ValueError so callers know about invalid input
             raise
         except Exception as e:
             logger.error(f"Trust verification failed for {agent_id}: {e}")
