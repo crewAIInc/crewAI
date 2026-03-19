@@ -1,0 +1,136 @@
+---
+title: "Custom MCP Servers"
+description: "Connect your own MCP servers to CrewAI AMP with public access, API key authentication, or OAuth 2.0"
+icon: "plug"
+mode: "wide"
+---
+
+CrewAI AMP supports connecting to any MCP server that implements the [Model Context Protocol](https://modelcontextprotocol.io/). You can bring public servers that require no authentication, servers protected by an API key or bearer token, and servers that use OAuth 2.0 for secure delegated access.
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="CrewAI AMP Account" icon="user">
+    You need an active [CrewAI AMP](https://app.crewai.com) account.
+  </Card>
+  <Card title="MCP Server URL" icon="link">
+    The URL of the MCP server you want to connect. The server must be accessible from the internet and support Streamable HTTP transport.
+  </Card>
+</CardGroup>
+
+## Adding a Custom MCP Server
+
+<Steps>
+    <Step title="Open Tools & Integrations">
+        Navigate to **Tools & Integrations** in the left sidebar of CrewAI AMP, then select the **Connections** tab.
+    </Step>
+
+    <Step title="Start adding a Custom MCP Server">
+        Click the **Add Custom MCP Server** button. A dialog will appear with the configuration form.
+    </Step>
+
+    <Step title="Fill in the basic information">
+        - **Name** (required): A descriptive name for your MCP server (e.g., "My Internal Tools Server").
+        - **Description**: An optional summary of what this MCP server provides.
+        - **Server URL** (required): The full URL to your MCP server endpoint (e.g., `https://my-server.example.com/mcp`).
+    </Step>
+
+    <Step title="Choose an authentication method">
+        Select one of the three available authentication methods based on how your MCP server is secured. See the sections below for details on each method.
+    </Step>
+
+    <Step title="Add custom headers (optional)">
+        If your MCP server requires additional headers on every request (e.g., tenant identifiers or routing headers), click **+ Add Header** and provide the header name and value. You can add multiple custom headers.
+    </Step>
+
+    <Step title="Create the connection">
+        Click **Create MCP Server** to save the connection. Your custom MCP server will now appear in the Connections list and its tools will be available for use in your crews.
+    </Step>
+</Steps>
+
+## Authentication Methods
+
+### No Authentication
+
+Choose this option when your MCP server is publicly accessible and does not require any credentials. This is common for open-source or internal servers running behind a VPN.
+
+### Authentication Token
+
+Use this method when your MCP server is protected by an API key or bearer token.
+
+<Frame>
+    <img src="/images/enterprise/custom-mcp-auth-token.png" alt="Custom MCP Server with Authentication Token" />
+</Frame>
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| **Header Name** | Yes | The name of the HTTP header that carries the token (e.g., `X-API-Key`, `Authorization`). |
+| **Value** | Yes | Your API key or bearer token. |
+| **Add to** | No | Where to attach the credential — **Header** (default) or **Query parameter**. |
+
+<Tip>
+If your server expects a `Bearer` token in the `Authorization` header, set the Header Name to `Authorization` and the Value to `Bearer <your-token>`.
+</Tip>
+
+### OAuth 2.0
+
+Use this method for MCP servers that require OAuth 2.0 authorization. CrewAI will handle the full OAuth flow, including token refresh.
+
+<Frame>
+    <img src="/images/enterprise/custom-mcp-oauth.png" alt="Custom MCP Server with OAuth 2.0" />
+</Frame>
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| **Redirect URI** | — | Pre-filled and read-only. Copy this URI and register it as an authorized redirect URI in your OAuth provider. |
+| **Authorization Endpoint** | Yes | The URL where users are sent to authorize access (e.g., `https://auth.example.com/oauth/authorize`). |
+| **Token Endpoint** | Yes | The URL used to exchange the authorization code for an access token (e.g., `https://auth.example.com/oauth/token`). |
+| **Client ID** | Yes | The OAuth client ID issued by your provider. |
+| **Client Secret** | No | The OAuth client secret. Not required for public clients using PKCE. |
+| **Scopes** | No | Space-separated list of scopes to request (e.g., `read write`). |
+| **Token Auth Method** | No | How the client credentials are sent when exchanging tokens — **Standard (POST body)** or **Basic Auth (header)**. Defaults to Standard. |
+| **PKCE Supported** | No | Enable if your OAuth provider supports Proof Key for Code Exchange. Recommended for improved security. |
+
+<Info>
+**Discover OAuth Config**: If your OAuth provider supports OpenID Connect Discovery, click the **Discover OAuth Config** link to auto-populate the authorization and token endpoints from the provider's `/.well-known/openid-configuration` URL.
+</Info>
+
+#### Setting Up OAuth 2.0 Step by Step
+
+<Steps>
+    <Step title="Register the redirect URI">
+        Copy the **Redirect URI** shown in the form and add it as an authorized redirect URI in your OAuth provider's application settings.
+    </Step>
+
+    <Step title="Enter endpoints and credentials">
+        Fill in the **Authorization Endpoint**, **Token Endpoint**, **Client ID**, and optionally the **Client Secret** and **Scopes**.
+    </Step>
+
+    <Step title="Configure token exchange method">
+        Select the appropriate **Token Auth Method**. Most providers use the default **Standard (POST body)**. Some older providers require **Basic Auth (header)**.
+    </Step>
+
+    <Step title="Enable PKCE (recommended)">
+        Check **PKCE Supported** if your provider supports it. PKCE adds an extra layer of security to the authorization code flow and is recommended for all new integrations.
+    </Step>
+
+    <Step title="Create and authorize">
+        Click **Create MCP Server**. You will be redirected to your OAuth provider to authorize access. Once authorized, CrewAI will store the tokens and automatically refresh them as needed.
+    </Step>
+</Steps>
+
+## Using Your Custom MCP Server
+
+Once connected, your custom MCP server's tools appear alongside built-in connections on the **Tools & Integrations** page. You can:
+
+- **Assign tools to agents** in your crews just like any other CrewAI tool.
+- **Manage visibility** to control which team members can use the server.
+- **Edit or remove** the connection at any time from the Connections list.
+
+<Warning>
+If your MCP server becomes unreachable or the credentials expire, tool calls using that server will fail. Make sure the server URL is stable and credentials are kept up to date.
+</Warning>
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with custom MCP server configuration or troubleshooting.
+</Card>

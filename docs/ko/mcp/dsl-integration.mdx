@@ -62,22 +62,22 @@ agent = Agent(
 "https://mcp.exa.ai/mcp?api_key=your_key#web_search_exa"
 ```
 
-### CrewAI AMP 마켓플레이스
+### 연결된 MCP 통합
 
-CrewAI AMP 마켓플레이스의 도구에 액세스하세요:
+CrewAI 카탈로그에서 MCP 서버를 연결하거나 직접 가져올 수 있습니다. 계정에 연결한 후 슬러그로 참조하세요:
 
 ```python
-# 모든 도구가 포함된 전체 서비스
-"crewai-amp:financial-data"
+# 모든 도구가 포함된 연결된 MCP
+"snowflake"
 
-# AMP 서비스의 특정 도구
-"crewai-amp:research-tools#pubmed_search"
+# 연결된 MCP의 특정 도구
+"stripe#list_invoices"
 
-# 다중 AMP 서비스
+# 여러 연결된 MCP
 mcps=[
-    "crewai-amp:weather-insights",
-    "crewai-amp:market-analysis",
-    "crewai-amp:social-media-monitoring"
+    "snowflake",
+    "stripe",
+    "github"
 ]
 ```
 
@@ -99,10 +99,10 @@ multi_source_agent = Agent(
         "https://mcp.exa.ai/mcp?api_key=your_exa_key&profile=research",
         "https://weather.api.com/mcp#get_current_conditions",
 
-        # CrewAI AMP 마켓플레이스
-        "crewai-amp:financial-insights",
-        "crewai-amp:academic-research#pubmed_search",
-        "crewai-amp:market-intelligence#competitor_analysis"
+        # 카탈로그에서 연결된 MCP
+        "snowflake",
+        "stripe#list_invoices",
+        "github#search_repositories"
     ]
 )
 
@@ -154,7 +154,7 @@ agent = Agent(
         "https://reliable-server.com/mcp",        # 작동할 것
         "https://unreachable-server.com/mcp",     # 우아하게 건너뛸 것
         "https://slow-server.com/mcp",            # 우아하게 타임아웃될 것
-        "crewai-amp:working-service"              # 작동할 것
+        "snowflake"                               # 카탈로그에서 연결된 MCP
     ]
 )
 # 에이전트는 작동하는 서버의 도구를 사용하고 실패한 서버에 대한 경고를 로그에 남깁니다
@@ -229,6 +229,6 @@ agent = Agent(
 mcps=[
     "https://primary-api.com/mcp",       # 주요 선택
     "https://backup-api.com/mcp",        # 백업 옵션
-    "crewai-amp:reliable-service"        # AMP 폴백
+    "snowflake"                          # 연결된 MCP 폴백
 ]
 ```

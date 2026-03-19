@@ -989,8 +989,10 @@ class TestLLMObjectPreservedInContext:
             persistence = SQLiteFlowPersistence(db_path)
 
             # Create a mock BaseLLM object (not a string)
+            # Simulates LLM(model="gemini-2.0-flash", provider="gemini")
             mock_llm_obj = MagicMock()
-            mock_llm_obj.model = "gemini/gemini-2.0-flash"
+            mock_llm_obj.model = "gemini-2.0-flash"
+            mock_llm_obj.provider = "gemini"
 
             class PausingProvider:
                 def __init__(self, persistence: SQLiteFlowPersistence):
@@ -1086,11 +1088,36 @@ class TestLLMObjectPreservedInContext:
 
     def test_none_llm_when_no_model_attr(self) -> None:
         """Test that llm is None when object has no model attribute."""
-        mock_obj = MagicMock(spec=[])  # No attributes
+        from crewai.flow.human_feedback import _serialize_llm_for_context
 
-        # Simulate what the decorator does
-        llm_value = mock_obj if isinstance(mock_obj, str) else getattr(mock_obj, "model", None)
-        assert llm_value is None
+        mock_obj = MagicMock(spec=[])  # No attributes
+        assert _serialize_llm_for_context(mock_obj) is None
+
+    def test_provider_prefix_added_to_bare_model(self) -> None:
+        """Test that provider prefix is added when model has no slash."""
+        from crewai.flow.human_feedback import _serialize_llm_for_context
+
+        mock_obj = MagicMock()
+        mock_obj.model = "gemini-3-flash-preview"
+        mock_obj.provider = "gemini"
+        assert _serialize_llm_for_context(mock_obj) == "gemini/gemini-3-flash-preview"
+
+    def test_provider_prefix_not_doubled_when_already_present(self) -> None:
+        """Test that provider prefix is not added when model already has a slash."""
+        from crewai.flow.human_feedback import _serialize_llm_for_context
+
+        mock_obj = MagicMock()
+        mock_obj.model = "gemini/gemini-2.0-flash"
+        mock_obj.provider = "gemini"
+        assert _serialize_llm_for_context(mock_obj) == "gemini/gemini-2.0-flash"
+
+    def test_no_provider_attr_falls_back_to_bare_model(self) -> None:
+        """Test that bare model is used when no provider attribute exists."""
+        from crewai.flow.human_feedback import _serialize_llm_for_context
+
+        mock_obj = MagicMock(spec=[])
+        mock_obj.model = "gpt-4o-mini"
+        assert _serialize_llm_for_context(mock_obj) == "gpt-4o-mini"
 
 
 class TestAsyncHumanFeedbackEdgeCases:
