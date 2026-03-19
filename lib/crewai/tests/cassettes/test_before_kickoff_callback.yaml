@@ -39,13 +39,13 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-DIqrxbdWncBetSyqX8P36UUXoil9d\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1773385505,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-DJVXy6jcneOpe2GdSSGfNO4TkB6np\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773541870,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"Test expected output\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
@@ -54,18 +54,18 @@ interactions:
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_5e793402c9\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_db58fd2815\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-Ray:
-      - 9db9302f7f411efc-EWR
+      - 9dc819af5cbb8ce8-EWR
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Mar 2026 07:05:06 GMT
+      - Sun, 15 Mar 2026 02:31:10 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '376'
+      - '351'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
