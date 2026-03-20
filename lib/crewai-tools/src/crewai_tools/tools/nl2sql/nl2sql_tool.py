@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -52,7 +53,18 @@ class NL2SQLTool(BaseTool):
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
         )
 
+    @staticmethod
+    def _validate_identifier(value: str, name: str) -> str:
+        """Validate a SQL identifier to prevent SQL injection."""
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_$]*$", value):
+            raise ValueError(
+                f"Invalid {name}: {value!r}. "
+                f"Only alphanumeric characters, underscores, and dollar signs are allowed."
+            )
+        return value
+
     def _fetch_all_available_columns(self, table_name: str):
+        table_name = self._validate_identifier(table_name, "table_name")
         return self.execute_sql(
             f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"  # noqa: S608
         )
