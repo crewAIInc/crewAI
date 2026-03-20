@@ -19,18 +19,15 @@ The EU AI Act classifies AI systems by risk. Multi-agent systems that make auton
 
 A CrewAI crew that generates marketing copy is likely minimal risk. The same architecture making hiring recommendations or evaluating loan applications is high-risk. **The risk classification depends on your use case, not the framework.**
 
-## What the scanner found
+## Supported providers and services
 
-Running [AI Trace Auditor](https://github.com/BipinRimal314/ai-trace-auditor) against the CrewAI codebase reveals the full scope of external services the framework can connect to:
+CrewAI integrates with a broad range of external services. The following are the key ones relevant to compliance:
 
-- **Files scanned:** 1,027
 - **AI providers:** Anthropic, OpenAI, Google Generative AI, LangChain, LlamaIndex
-- **Model identifiers:** 28 (claude-3-opus, claude-3-5-sonnet, gpt-4o, gemini, etc.)
+- **Model identifiers include:** claude-3-opus, claude-3-5-sonnet, gpt-4o, gemini, and others
 - **Vector databases:** ChromaDB, Qdrant, Weaviate
 - **Traditional databases:** PostgreSQL, MySQL, MongoDB, Redis, SQLite
 - **Cloud services:** AWS S3, AWS Bedrock, AWS Lambda, Azure OpenAI, GCP Vertex AI
-- **Total external services:** 17
-- **Data flows:** 17
 
 CrewAI *supports* all of these. Your deployment will use a subset. Document which services are active in your system.
 
@@ -78,7 +75,7 @@ graph LR
     class Redis controller
 ```
 
-**Legend:** Green = controller (you own the data). Blue = processor (third party, requires Data Processing Agreement).
+**Legend:** Green = your organization is the controller (you own the data). Blue = the operating organization acts as processor (third party, requires Data Processing Agreement).
 
 ## GDPR role classification
 
@@ -86,15 +83,15 @@ Each external service has a different GDPR relationship depending on how it's de
 
 | Service | Default Role | Why | Action Required |
 |---------|-------------|-----|----------------|
-| Anthropic API | Processor | Cloud API; Anthropic processes prompts on your behalf | DPA required (Article 28) |
-| OpenAI API | Processor | Cloud API; same as above | DPA required |
-| Google GenAI | Processor | Cloud API | DPA required |
-| AWS Bedrock | Processor | Managed inference; AWS processes on your behalf | DPA via AWS agreement |
-| GCP Vertex AI | Processor | Managed inference | DPA via GCP agreement |
-| Pinecone / Qdrant Cloud | Processor | Cloud-hosted vector storage | DPA required |
-| ChromaDB | Controller | Typically self-hosted; data stays on your infrastructure | No third-party DPA |
-| PostgreSQL / Redis / SQLite | Controller | Self-hosted databases | No third-party DPA |
-| AWS S3 | Processor | Cloud storage | DPA via AWS agreement |
+| Anthropic API | Organization acts as processor | Cloud API; Anthropic processes prompts on your behalf | DPA required (Article 28) |
+| OpenAI API | Organization acts as processor | Cloud API; same as above | DPA required |
+| Google GenAI | Organization acts as processor | Cloud API | DPA required |
+| AWS Bedrock | Organization acts as processor | Managed inference; AWS processes on your behalf | DPA via AWS agreement |
+| GCP Vertex AI | Organization acts as processor | Managed inference | DPA via GCP agreement |
+| Pinecone / Qdrant Cloud | Organization acts as processor | Cloud-hosted vector storage | DPA required |
+| ChromaDB | Your organization is controller | Typically self-hosted; data stays on your infrastructure | No third-party DPA |
+| PostgreSQL / Redis / SQLite | Your organization is controller | Self-hosted databases | No third-party DPA |
+| AWS S3 | Organization acts as processor | Cloud storage | DPA via AWS agreement |
 
 If any of these services transfer data outside the EEA, additional safeguards are required (Standard Contractual Clauses or adequacy decisions).
 
@@ -120,14 +117,7 @@ For autonomous agent crews, this means:
 
 ## Article 11: Technical documentation
 
-High-risk systems need Annex IV technical documentation before market placement. Generate a starting template from your codebase:
-
-```bash
-pip install ai-trace-auditor
-aitrace docs ./your-crewai-project -o annex-iv-docs.md
-```
-
-The tool auto-populates approximately 44% of the required sections from code analysis. The remaining sections require your input on intended purpose, risk assessment, and monitoring plans.
+High-risk systems need Annex IV technical documentation before market placement. Some sections can be derived from your codebase (providers, models, architecture), while the remaining sections require your input on intended purpose, risk assessment, and monitoring plans.
 
 Key sections for CrewAI deployments:
 
@@ -141,13 +131,7 @@ Key sections for CrewAI deployments:
 
 ## Article 12: Record-keeping
 
-If you have LLM traces from your CrewAI deployment, audit them against Article 12:
-
-```bash
-aitrace audit your-traces.json -r "EU AI Act"
-```
-
-For CrewAI specifically, ensure you log:
+If you have LLM traces from your CrewAI deployment, audit them against Article 12 requirements. For CrewAI specifically, ensure you log:
 - Every LLM call (model, tokens, input, output)
 - Every tool invocation (which tool, inputs, outputs, success/failure)
 - Every delegation event (which agent delegated to which, why)
@@ -168,27 +152,13 @@ These risks are unique to autonomous agent architectures and should be addressed
 
 5. **Opacity of multi-step reasoning:** A single LLM call is auditable. A crew that passes context across 5 agents over 20 tool calls produces reasoning chains that are difficult for a human overseer to evaluate in real time.
 
-## Full compliance scan
-
-Generate a complete compliance package covering Articles 11, 12, and 13 plus GDPR Article 30:
-
-```bash
-aitrace comply ./your-crewai-project --split -o compliance-package/
-```
-
-This produces:
-- `article-11-docs.md` — Annex IV technical documentation template
-- `article-13-flows.md` — Data flow diagram with GDPR annotations
-- `compliance-summary.md` — Combined overview with coverage table
-
 ## Resources
 
 - [EU AI Act full text](https://artificialintelligenceact.eu/)
 - [Article 14: Human oversight](https://artificialintelligenceact.eu/article/14/)
-- [AI Trace Auditor](https://github.com/BipinRimal314/ai-trace-auditor) — open-source compliance scanning
 - [CrewAI human input docs](https://docs.crewai.com/concepts/tasks#task-with-human-input)
 - [CrewAI callbacks](https://docs.crewai.com/concepts/tasks#task-callbacks)
 
 ---
 
-*This guide was generated with assistance from [AI Trace Auditor](https://github.com/BipinRimal314/ai-trace-auditor) and reviewed for accuracy. It is not legal advice. Consult a qualified professional for compliance decisions.*
+*This is not legal advice. Consult a qualified professional for compliance decisions.*
