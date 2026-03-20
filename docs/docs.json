@@ -259,7 +259,8 @@
                           "en/tools/database-data/qdrantvectorsearchtool",
                           "en/tools/database-data/weaviatevectorsearchtool",
                           "en/tools/database-data/mongodbvectorsearchtool",
-                          "en/tools/database-data/singlestoresearchtool"
+                          "en/tools/database-data/singlestoresearchtool",
+                          "en/tools/database-data/goldrushtools"
                         ]
                       },
                       {
@@ -726,7 +727,8 @@
                           "en/tools/database-data/qdrantvectorsearchtool",
                           "en/tools/database-data/weaviatevectorsearchtool",
                           "en/tools/database-data/mongodbvectorsearchtool",
-                          "en/tools/database-data/singlestoresearchtool"
+                          "en/tools/database-data/singlestoresearchtool",
+                          "en/tools/database-data/goldrushtools"
                         ]
                       },
                       {
@@ -1193,7 +1195,8 @@
                           "en/tools/database-data/qdrantvectorsearchtool",
                           "en/tools/database-data/weaviatevectorsearchtool",
                           "en/tools/database-data/mongodbvectorsearchtool",
-                          "en/tools/database-data/singlestoresearchtool"
+                          "en/tools/database-data/singlestoresearchtool",
+                          "en/tools/database-data/goldrushtools"
                         ]
                       },
                       {

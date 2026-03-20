@@ -1,0 +1,246 @@
+---
+title: GoldRush Blockchain Tools
+description: Access multichain blockchain data from 100+ networks via the GoldRush MCP Server — wallet balances, transactions, NFTs, DEX prices, and more.
+icon: link
+mode: "wide"
+---
+
+# GoldRush Blockchain Tools
+
+## Description
+
+The [GoldRush MCP Server](https://goldrush.dev/docs/goldrush-mcp-server/) exposes 27+ blockchain data tools through the Model Context Protocol, giving your CrewAI agents instant access to onchain data across **100+ supported chains** including Ethereum, Base, Solana, Polygon, Arbitrum, Optimism, Bitcoin, and more.
+
+Rather than building custom blockchain API integrations, you can connect the GoldRush MCP Server directly to your agents. All tools are automatically discovered — no manual tool definitions required.
+
+| Category | Tools | Use case |
+| --- | --- | --- |
+| **Cross-Chain** | `multichain_balances`, `multichain_transactions`, `multichain_address_activity` | Portfolio views across multiple chains |
+| **Balances** | `token_balances`, `historical_token_balances`, `historical_portfolio_value`, `erc20_token_transfers`, `token_holders`, `native_token_balance` | Wallet analysis, portfolio tracking |
+| **Transactions** | `transaction`, `transaction_summary`, `transactions_for_address`, `transactions_for_block` | Transaction history and decoded events |
+| **NFTs** | `nft_for_address`, `nft_check_ownership`, `nft_check_ownership_token_id` | NFT holdings and ownership verification |
+| **Bitcoin** | `bitcoin_hd_wallet_balances`, `bitcoin_transactions`, `bitcoin_non_hd_wallet_balances` | Bitcoin wallet and transaction data |
+| **Security** | `token_approvals` | Token approval monitoring and risk analysis |
+| **Pricing** | `historical_token_prices`, `pool_spot_prices` | Token price history and DEX pool prices |
+| **Utilities** | `gas_prices`, `block`, `block_heights`, `log_events_by_address`, `log_events_by_topic` | Gas estimates, block data, event logs |
+
+<Note>
+  The GoldRush MCP Server requires a free API key. Sign up at [goldrush.dev/platform](https://goldrush.dev/platform/auth/register/) to get yours.
+</Note>
+
+## Prerequisites
+
+- **Node.js 18+** installed on your system
+- A **GoldRush API key** (free tier available)
+
+## Installation
+
+```shell
+pip install crewai
+uv add mcp
+```
+
+No additional Python packages are needed — the MCP server runs as a local Node.js process via `npx`.
+
+## Getting Started
+
+1. **Install CrewAI** — ensure `crewai` and `mcp` are installed in your Python environment.
+2. **Get an API key** — sign up at [goldrush.dev/platform](https://goldrush.dev/platform/auth/register/) to generate a free key.
+3. **Set the environment variable** — store your key as `GOLDRUSH_API_KEY`, or pass it directly via the `env` parameter.
+
+## Quick Example
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai.mcp import MCPServerStdio
+
+goldrush = MCPServerStdio(
+    command="npx",
+    args=["-y", "@covalenthq/goldrush-mcp-server"],
+    env={"GOLDRUSH_API_KEY": "YOUR_API_KEY"},
+    cache_tools_list=True,
+)
+
+agent = Agent(
+    role="Blockchain Analyst",
+    goal="Analyze wallet activity and token holdings across multiple chains",
+    backstory="Expert onchain data analyst with deep knowledge of DeFi and token markets",
+    mcps=[goldrush],
+)
+
+task = Task(
+    description="Get the token balances for wallet 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 on Ethereum",
+    expected_output="A summary of token holdings with current USD values",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Parameters
+
+The `MCPServerStdio` configuration accepts the following parameters:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `command` | `str` | — | Set to `"npx"` to run the MCP server. |
+| `args` | `list[str]` | — | Set to `["-y", "@covalenthq/goldrush-mcp-server"]`. |
+| `env` | `dict` | `None` | Environment variables. Must include `GOLDRUSH_API_KEY`. |
+| `cache_tools_list` | `bool` | `False` | Cache the tool list for better performance. Recommended. |
+| `connect_timeout` | `int` | `30` | Connection timeout in seconds. Increase for complex queries. |
+
+## Tool Filtering
+
+You can restrict which GoldRush tools your agent has access to using static or dynamic filters:
+
+### Static Filter
+
+```python Code
+from crewai import Agent
+from crewai.mcp import MCPServerStdio
+from crewai.mcp.filters import create_static_tool_filter
+
+goldrush = MCPServerStdio(
+    command="npx",
+    args=["-y", "@covalenthq/goldrush-mcp-server"],
+    env={"GOLDRUSH_API_KEY": "YOUR_API_KEY"},
+    tool_filter=create_static_tool_filter(
+        allowed_tool_names=["token_balances", "transactions_for_address", "gas_prices"]
+    ),
+    cache_tools_list=True,
+)
+
+agent = Agent(
+    role="Wallet Monitor",
+    goal="Track wallet balances and recent transactions",
+    backstory="Focused wallet monitoring specialist",
+    mcps=[goldrush],
+)
+```
+
+### Dynamic Filter
+
+```python Code
+from crewai.mcp.filters import create_dynamic_tool_filter
+
+async def blockchain_tool_filter(tool) -> bool:
+    """Only allow balance and transaction tools."""
+    allowed_prefixes = ["token_", "transaction", "multichain_"]
+    return any(tool.name.startswith(prefix) for prefix in allowed_prefixes)
+
+goldrush = MCPServerStdio(
+    command="npx",
+    args=["-y", "@covalenthq/goldrush-mcp-server"],
+    env={"GOLDRUSH_API_KEY": "YOUR_API_KEY"},
+    tool_filter=create_dynamic_tool_filter(blockchain_tool_filter),
+    cache_tools_list=True,
+)
+```
+
+## Multi-Agent Examples
+
+### Portfolio Analysis Crew
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai.mcp import MCPServerStdio
+
+goldrush = MCPServerStdio(
+    command="npx",
+    args=["-y", "@covalenthq/goldrush-mcp-server"],
+    env={"GOLDRUSH_API_KEY": "YOUR_API_KEY"},
+    cache_tools_list=True,
+)
+
+data_fetcher = Agent(
+    role="Onchain Data Fetcher",
+    goal="Retrieve comprehensive wallet data across multiple chains",
+    backstory="Specialist in querying blockchain data efficiently",
+    mcps=[goldrush],
+)
+
+analyst = Agent(
+    role="DeFi Analyst",
+    goal="Interpret onchain data and provide actionable insights",
+    backstory="Senior DeFi researcher with expertise in portfolio analysis",
+    mcps=[goldrush],
+)
+
+fetch_task = Task(
+    description="Fetch token balances and recent transactions for 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 on Ethereum and Base",
+    expected_output="Raw balance and transaction data across both chains",
+    agent=data_fetcher,
+)
+
+analysis_task = Task(
+    description="Analyze the wallet data to identify major holdings, recent activity patterns, and DeFi positions",
+    expected_output="A detailed portfolio analysis report with key findings",
+    agent=analyst,
+    context=[fetch_task],
+)
+
+crew = Crew(agents=[data_fetcher, analyst], tasks=[fetch_task, analysis_task])
+result = crew.kickoff()
+```
+
+### Security Monitoring Crew
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai.mcp import MCPServerStdio
+from crewai.mcp.filters import create_static_tool_filter
+
+goldrush = MCPServerStdio(
+    command="npx",
+    args=["-y", "@covalenthq/goldrush-mcp-server"],
+    env={"GOLDRUSH_API_KEY": "YOUR_API_KEY"},
+    tool_filter=create_static_tool_filter(
+        allowed_tool_names=["token_approvals", "token_balances", "transactions_for_address"]
+    ),
+    cache_tools_list=True,
+)
+
+security_agent = Agent(
+    role="Smart Contract Security Monitor",
+    goal="Identify risky token approvals and suspicious transaction patterns",
+    backstory="Blockchain security expert focused on protecting user assets",
+    mcps=[goldrush],
+)
+
+audit_task = Task(
+    description="Check token approvals for 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 on Ethereum. Flag any unlimited approvals or approvals to unverified contracts.",
+    expected_output="A security report listing all active approvals with risk levels",
+    agent=security_agent,
+)
+
+crew = Crew(agents=[security_agent], tasks=[audit_task])
+result = crew.kickoff()
+```
+
+## Supported Chains
+
+GoldRush provides data from 100+ blockchain networks, including:
+
+- **EVM chains**: Ethereum, Base, Polygon, Arbitrum, Optimism, Avalanche, BNB Chain, Fantom, and more
+- **Bitcoin**: Full support for HD and non-HD wallets
+- **Solana**: Token balances and transaction data
+- **Layer 2s**: All major rollups and sidechains
+
+For a full list of supported chains, see the [GoldRush documentation](https://goldrush.dev/docs/networks/).
+
+## Best Practices
+
+- **Enable caching**: Always set `cache_tools_list=True` to avoid re-fetching the tool schema on every agent run.
+- **Use tool filters**: Give each agent only the tools it needs to reduce context window usage and improve accuracy.
+- **Set environment variables**: Store your `GOLDRUSH_API_KEY` as an environment variable rather than hardcoding it.
+- **Increase timeouts**: For complex multichain queries, set `connect_timeout=60` or higher.
+- **Combine with other MCP servers**: The `mcps` list supports multiple servers — pair GoldRush with web search or database tools for richer analysis.
+
+## Learn More
+
+- [GoldRush MCP Server Documentation](https://goldrush.dev/docs/goldrush-mcp-server/)
+- [GoldRush for AI Agents](https://goldrush.dev/agents/)
+- [GoldRush API Reference](https://goldrush.dev/docs/api/)
+- [CrewAI MCP Integration Guide](/en/mcp/overview)
