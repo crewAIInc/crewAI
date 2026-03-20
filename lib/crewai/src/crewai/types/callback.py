@@ -108,7 +108,7 @@ def _resolve_dotted_path(path: str) -> Callable[..., Any]:
         module_path = ".".join(parts[:i])
         try:
             obj: Any = importlib.import_module(module_path)
-        except (ImportError, ValueError):
+        except (ImportError, TypeError, ValueError):
             continue
         # Walk the remaining attribute chain.
         try:
