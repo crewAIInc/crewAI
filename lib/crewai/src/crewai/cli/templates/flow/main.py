@@ -53,7 +53,8 @@ def kickoff():
 
 def plot():
     poem_flow = PoemFlow()
-    poem_flow.plot()
+    path = poem_flow.plot()
+    print(f"Flow visualization saved to {path}")
 
 
 def run_with_trigger():
