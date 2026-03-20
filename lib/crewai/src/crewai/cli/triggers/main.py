@@ -16,7 +16,7 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
     A class to handle trigger-related operations for CrewAI projects.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
