@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel
 from typing_extensions import Required
@@ -246,6 +246,7 @@ class BedrockCompletion(BaseLLM):
         additional_model_response_field_paths: list[str] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
         response_format: type[BaseModel] | None = None,
+        api: Literal["completions", "responses"] = "completions",
         **kwargs: Any,
     ) -> None:
         """Initialize AWS Bedrock completion client.
@@ -270,6 +271,16 @@ class BedrockCompletion(BaseLLM):
                            response_model is not passed to call()/acall() methods.
             **kwargs: Additional parameters
         """
+        if api == "responses":
+            raise NotImplementedError(
+                "The Responses API is not supported by AWS Bedrock provider. "
+                "Bedrock uses the Converse API natively. "
+                "The Responses API is available for OpenAI and Azure OpenAI providers. "
+                "Use api='completions' (default) with Bedrock."
+            )
+
+        self.api = api
+
         if interceptor is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for AWS Bedrock provider. "

@@ -1463,3 +1463,55 @@ def test_tool_search_saves_input_tokens():
         f"Expected tool_search ({usage_search.prompt_tokens}) to use fewer input tokens "
         f"than no search ({usage_no_search.prompt_tokens})"
     )
+
+# =============================================================================
+# Responses API Error Handling Tests
+# =============================================================================
+
+
+def test_anthropic_responses_api_raises_not_implemented():
+    """Test that Anthropic raises NotImplementedError when api='responses' is used."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    with pytest.raises(NotImplementedError, match="Responses API is not supported by Anthropic"):
+        AnthropicCompletion(
+            model="claude-sonnet-4-20250514",
+            api="responses",
+        )
+
+
+def test_anthropic_responses_api_error_suggests_completions():
+    """Test that the error message suggests using api='completions' instead."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        AnthropicCompletion(
+            model="claude-sonnet-4-20250514",
+            api="responses",
+        )
+
+    error_msg = str(exc_info.value)
+    assert "api='completions'" in error_msg
+    assert "Messages API" in error_msg
+
+
+def test_anthropic_completions_api_still_works():
+    """Test that api='completions' (default) still works normally."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    # Should not raise any error
+    completion = AnthropicCompletion(
+        model="claude-sonnet-4-20250514",
+        api="completions",
+    )
+    assert completion.api == "completions"
+
+
+def test_anthropic_default_api_is_completions():
+    """Test that the default API is 'completions'."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    completion = AnthropicCompletion(
+        model="claude-sonnet-4-20250514",
+    )
+    assert completion.api == "completions"

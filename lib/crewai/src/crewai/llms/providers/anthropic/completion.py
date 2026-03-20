@@ -167,6 +167,7 @@ class AnthropicCompletion(BaseLLM):
         thinking: AnthropicThinkingConfig | None = None,
         response_format: type[BaseModel] | None = None,
         tool_search: AnthropicToolSearchConfig | bool | None = None,
+        api: Literal["completions", "responses"] = "completions",
         **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
@@ -192,6 +193,16 @@ class AnthropicCompletion(BaseLLM):
                 and a tool search tool is injected into the tools list.
             **kwargs: Additional parameters
         """
+        if api == "responses":
+            raise NotImplementedError(
+                "The Responses API is not supported by Anthropic provider. "
+                "Anthropic uses the Messages API natively. "
+                "The Responses API is available for OpenAI and Azure OpenAI providers. "
+                "Use api='completions' (default) with Anthropic."
+            )
+
+        self.api = api
+
         super().__init__(
             model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
         )

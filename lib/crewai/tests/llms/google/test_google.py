@@ -1190,3 +1190,55 @@ def test_gemini_cached_prompt_tokens_with_tools():
     # cached_prompt_tokens should be populated (may be 0 if Gemini
     # doesn't cache for this particular request, but the field should exist)
     assert usage.cached_prompt_tokens >= 0
+
+# =============================================================================
+# Responses API Error Handling Tests
+# =============================================================================
+
+
+def test_gemini_responses_api_raises_not_implemented():
+    """Test that Gemini raises NotImplementedError when api='responses' is used."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    with pytest.raises(NotImplementedError, match="Responses API is not supported by Google Gemini"):
+        GeminiCompletion(
+            model="gemini-2.0-flash-001",
+            api="responses",
+        )
+
+
+def test_gemini_responses_api_error_suggests_completions():
+    """Test that the error message suggests using api='completions' instead."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        GeminiCompletion(
+            model="gemini-2.0-flash-001",
+            api="responses",
+        )
+
+    error_msg = str(exc_info.value)
+    assert "api='completions'" in error_msg
+    assert "generate_content" in error_msg
+
+
+def test_gemini_completions_api_still_works():
+    """Test that api='completions' (default) still works normally."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    # Should not raise any error
+    completion = GeminiCompletion(
+        model="gemini-2.0-flash-001",
+        api="completions",
+    )
+    assert completion.api == "completions"
+
+
+def test_gemini_default_api_is_completions():
+    """Test that the default API is 'completions'."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(
+        model="gemini-2.0-flash-001",
+    )
+    assert completion.api == "completions"

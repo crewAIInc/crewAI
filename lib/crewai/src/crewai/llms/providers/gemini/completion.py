@@ -62,6 +62,7 @@ class GeminiCompletion(BaseLLM):
         use_vertexai: bool | None = None,
         response_format: type[BaseModel] | None = None,
         thinking_config: types.ThinkingConfig | None = None,
+        api: Literal["completions", "responses"] = "completions",
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
@@ -100,6 +101,16 @@ class GeminiCompletion(BaseLLM):
                            get include_thoughts=True so thought content is surfaced.
             **kwargs: Additional parameters
         """
+        if api == "responses":
+            raise NotImplementedError(
+                "The Responses API is not supported by Google Gemini provider. "
+                "Gemini uses the generate_content API natively. "
+                "The Responses API is available for OpenAI and Azure OpenAI providers. "
+                "Use api='completions' (default) with Gemini."
+            )
+
+        self.api = api
+
         if interceptor is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for Google Gemini provider. "
