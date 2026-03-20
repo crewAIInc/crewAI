@@ -7,6 +7,27 @@ description: Understanding EU AI Act obligations when deploying CrewAI agent sys
 
 CrewAI orchestrates autonomous AI agents that collaborate on complex tasks. Under the EU AI Act, autonomous agent systems face the highest regulatory scrutiny. This guide explains what that means for teams deploying CrewAI in the EU.
 
+## Is your system in scope?
+
+The detailed obligations in Articles 12, 13, and 14 only apply to **high-risk AI systems** as defined in Annex III of the EU AI Act. An autonomous agent system is high-risk if it is used for:
+
+- **Recruitment and HR** — screening candidates, allocating tasks, evaluating employee performance
+- **Credit scoring and insurance** — assessing creditworthiness or setting premiums
+- **Law enforcement** — profiling, criminal risk assessment, border control
+- **Critical infrastructure** — managing energy, water, transport, or telecommunications systems
+- **Education assessment** — grading students, determining admissions
+- **Essential public services** — evaluating eligibility for benefits, housing, or emergency services
+
+Because CrewAI crews make autonomous decisions and can chain actions across multiple agents, use cases that touch these domains are especially likely to trigger high-risk classification. A crew that generates marketing copy is not high-risk. A crew that screens job applicants or processes loan decisions is.
+
+If your crew does **not** fall into one of the categories above:
+
+- **Article 50** (end-user transparency) still applies if users interact with your crew's output directly. See the [Article 50 section](#article-50-end-user-transparency) below.
+- **GDPR** still applies if you process personal data.
+- You can skip the Articles 11-14 requirements and focus on transparency and data protection instead.
+
+If you are unsure whether your use case qualifies as high-risk, consult a qualified legal professional before proceeding.
+
 ## Why autonomous agents are different
 
 The EU AI Act classifies AI systems by risk. Multi-agent systems that make autonomous decisions are more likely to be classified as high-risk under Article 6 and Annex III, particularly when used for:
@@ -137,6 +158,8 @@ If you have LLM traces from your CrewAI deployment, audit them against Article 1
 - Every delegation event (which agent delegated to which, why)
 - Every human intervention point (what was reviewed, what was approved/rejected)
 - Memory reads and writes (what context influenced each decision)
+
+**Retention periods:** The required retention period depends on your role under the Act. Article 18 requires **providers** of high-risk systems to retain logs and technical documentation for **10 years** after market placement. Article 26(6) requires **deployers** to retain logs for at least **6 months**. If you have substantially modified the CrewAI framework (custom agents, proprietary tools) such that you are marketing a complete AI system, you may be classified as a provider. Confirm the applicable retention period with legal counsel.
 
 ## Article 13: Transparency to deployers
 
