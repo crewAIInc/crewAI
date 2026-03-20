@@ -1064,6 +1064,37 @@ def test_agent_use_trained_data(crew_training_handler):
     )
 
 
+def test_agent_use_trained_data_custom_file(crew_training_handler):
+    """Agent should load trained data from custom file path when specified."""
+    task_prompt = "What is 1 + 1?"
+    custom_file = "my_custom_training.pkl"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+        trained_agents_data_file=custom_file,
+    )
+    crew_training_handler.return_value.load.return_value = {
+        agent.role: {
+            "suggestions": [
+                "The result of the math operation must be right.",
+            ]
+        }
+    }
+
+    result = agent._use_trained_data(task_prompt=task_prompt)
+
+    assert (
+        result == "What is 1 + 1?\n\nYou MUST follow these instructions: \n"
+        " - The result of the math operation must be right."
+    )
+    # Ensure custom file is used instead of hardcoded default
+    crew_training_handler.assert_has_calls(
+        [mock.call(custom_file), mock.call().load()]
+    )
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",
