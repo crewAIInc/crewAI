@@ -1208,39 +1208,64 @@ class OCICompletion(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
     ) -> Any:
-        """Expose the sync OCI SSE stream through an async generator facade."""
-        loop = asyncio.get_running_loop()
-        queue: asyncio.Queue[str | None] = asyncio.Queue()
-        error_holder: list[BaseException] = []
+        """Async streaming — true async via aiohttp when available, thread fallback otherwise."""
+        if self._async_client is None:
+            # Fallback: sync stream bridged via thread
+            loop = asyncio.get_running_loop()
+            queue: asyncio.Queue[str | None] = asyncio.Queue()
+            error_holder: list[BaseException] = []
 
-        def _producer() -> None:
-            try:
-                for chunk in self.iter_stream(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                ):
-                    loop.call_soon_threadsafe(queue.put_nowait, chunk)
-            except BaseException as error:
-                error_holder.append(error)
-            finally:
-                loop.call_soon_threadsafe(queue.put_nowait, None)
+            def _producer() -> None:
+                try:
+                    for chunk in self.iter_stream(
+                        messages=messages, tools=tools, callbacks=callbacks,
+                        available_functions=available_functions, from_task=from_task,
+                        from_agent=from_agent,
+                    ):
+                        loop.call_soon_threadsafe(queue.put_nowait, chunk)
+                except BaseException as error:
+                    error_holder.append(error)
+                finally:
+                    loop.call_soon_threadsafe(queue.put_nowait, None)
 
-        thread = threading.Thread(target=_producer, daemon=True)
-        thread.start()
+            thread = threading.Thread(target=_producer, daemon=True)
+            thread.start()
+            while True:
+                chunk = await queue.get()
+                if chunk is None:
+                    break
+                yield chunk
+            thread.join()
+            if error_holder:
+                raise error_holder[0]
+            return
 
-        while True:
-            chunk = await queue.get()
-            if chunk is None:
-                break
-            yield chunk
+        normalized_messages = self._normalize_messages(messages)
+        request_data = self._prepare_async_request(
+            normalized_messages, tools=tools, is_stream=True
+        )
+        usage_data: dict[str, int] = {}
+        response_metadata: dict[str, Any] = {}
 
-        thread.join()
-        if error_holder:
-            raise error_holder[0]
+        async for event_data in self._async_client.chat_async(
+            compartment_id=request_data["compartment_id"],
+            chat_request_dict=request_data["chat_request_dict"],
+            serving_mode_dict=request_data["serving_mode_dict"],
+            stream=True,
+        ):
+            text_chunk = self._extract_text_from_stream_event(event_data)
+            if text_chunk:
+                yield text_chunk
+
+            usage_chunk = self._extract_usage_from_stream_event(event_data)
+            if usage_chunk:
+                usage_data = usage_chunk
+            response_metadata.update(self._extract_metadata_from_stream_event(event_data))
+
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
+            response_metadata["usage"] = usage_data
+        self.last_response_metadata = response_metadata or None
 
     def call(
         self,
@@ -1311,19 +1336,142 @@ class OCICompletion(BaseLLM):
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        return await asyncio.to_thread(
-            self.call,
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
+        """Async call — true async via aiohttp when available, thread fallback otherwise."""
+        if self._async_client is None:
+            return await asyncio.to_thread(
+                self.call, messages, tools=tools, callbacks=callbacks,
+                available_functions=available_functions, from_task=from_task,
+                from_agent=from_agent, response_model=response_model,
+            )
+
+        normalized_messages = self._normalize_messages(messages)
+        request_data = self._prepare_async_request(
+            normalized_messages, tools=tools, response_model=response_model
         )
 
+        response_data = None
+        async for data in self._async_client.chat_async(
+            compartment_id=request_data["compartment_id"],
+            chat_request_dict=request_data["chat_request_dict"],
+            serving_mode_dict=request_data["serving_mode_dict"],
+            stream=False,
+        ):
+            response_data = data
+            break
+
+        if response_data is None:
+            raise RuntimeError("No response received from OCI GenAI async call")
+
+        # Extract text from the raw JSON response
+        chat_response = response_data.get("chatResponse", {})
+        content = self._extract_text_from_async_response(chat_response)
+        content = self._apply_stop_words(content)
+
+        # Track usage
+        usage = chat_response.get("usage", {})
+        if usage:
+            usage_dict = {
+                "prompt_tokens": usage.get("promptTokens", 0),
+                "completion_tokens": usage.get("completionTokens", 0),
+                "total_tokens": usage.get("totalTokens", 0),
+            }
+            self._track_token_usage_internal(usage_dict)
+
+        self._emit_call_completed_event(
+            response=content,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=normalized_messages,
+        )
+        return content
+
+    def _extract_text_from_async_response(self, chat_response: dict[str, Any]) -> str:
+        """Extract text from a raw JSON chat response dict."""
+        # Generic format: choices[0].message.content[].text
+        choices = chat_response.get("choices", [])
+        if choices:
+            message = choices[0].get("message", {})
+            content = message.get("content", [])
+            if isinstance(content, list):
+                return "".join(
+                    str(part.get("text", ""))
+                    for part in content
+                    if isinstance(part, dict) and part.get("text")
+                )
+            return str(content) if content else ""
+
+        # Cohere format: text field or message.content
+        text = chat_response.get("text")
+        if text:
+            return str(text)
+
+        message = chat_response.get("message", {})
+        content = message.get("content", [])
+        if isinstance(content, list):
+            return "".join(
+                str(part.get("text", ""))
+                for part in content
+                if isinstance(part, dict)
+            )
+        return ""
+
     # ------------------------------------------------------------------
-    # Client serialization
+    # Async support (true async via aiohttp, no thread wrappers)
+    # ------------------------------------------------------------------
+
+    @property
+    def _async_client(self) -> Any | None:
+        """Lazy-init true async client reusing the sync client's signer.
+
+        Returns None if aiohttp is not installed or the client can't be created,
+        in which case callers fall back to asyncio.to_thread.
+        """
+        if not hasattr(self, "_async_client_instance"):
+            self._async_client_instance = None
+            try:
+                from crewai.utilities.oci_async import OCIAsyncClient
+
+                oci = self._oci
+                expected_cls = oci.generative_ai_inference.GenerativeAiInferenceClient
+                if isinstance(self.client, expected_cls):
+                    base_client = self.client.base_client
+                    self._async_client_instance = OCIAsyncClient(
+                        service_endpoint=self.service_endpoint,
+                        signer=base_client.signer,
+                        config=getattr(base_client, "config", {}),
+                    )
+            except (ImportError, Exception):
+                pass
+        return self._async_client_instance
+
+    def _prepare_async_request(
+        self,
+        messages: list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
+        *,
+        is_stream: bool = False,
+    ) -> dict[str, Any]:
+        """Build request dicts for the async client (SDK objects → JSON dicts)."""
+        from oci.util import to_dict
+
+        chat_request = self._build_chat_request(
+            messages, tools=tools, response_model=response_model, is_stream=is_stream
+        )
+        chat_details = self._oci.generative_ai_inference.models.ChatDetails(
+            compartment_id=self.compartment_id,
+            serving_mode=self._build_serving_mode(),
+            chat_request=chat_request,
+        )
+        return {
+            "compartment_id": chat_details.compartment_id,
+            "chat_request_dict": to_dict(chat_details.chat_request),
+            "serving_mode_dict": to_dict(chat_details.serving_mode),
+        }
+
+    # ------------------------------------------------------------------
+    # Client serialization (sync)
     # ------------------------------------------------------------------
 
     def _chat(self, chat_details: Any) -> Any:
