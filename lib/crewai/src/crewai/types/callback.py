@@ -91,6 +91,6 @@ def callable_to_string(fn: Callable[..., Any]) -> str:
 SerializableCallable = Annotated[
     Callable[..., Any],
     BeforeValidator(string_to_callable),
-    PlainSerializer(callable_to_string, return_type=str),
+    PlainSerializer(callable_to_string, return_type=str, when_used="json"),
     WithJsonSchema({"type": "string"}),
 ]
