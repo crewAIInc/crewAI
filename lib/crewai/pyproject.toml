@@ -105,6 +105,10 @@ a2a = [
 file-processing = [
     "crewai-files",
 ]
+joy = [
+    # Joy trust verification uses httpx (already a core dependency)
+    # This extra exists for discoverability - no additional packages needed
+]
 
 
 [project.scripts]
