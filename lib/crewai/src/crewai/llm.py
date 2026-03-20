@@ -497,10 +497,7 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
-        if provider == "oci":
-            return cls._matches_provider_pattern(model, provider)
-
-        # Fallback to pattern matching for models not in constants
+        # Fallback to pattern matching for models not in constants (includes OCI)
         return cls._matches_provider_pattern(model, provider)
 
     @classmethod
