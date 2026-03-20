@@ -10,6 +10,7 @@ import re
 from typing import (
     TYPE_CHECKING,
     Any,
+    Literal,
     cast,
 )
 import uuid
@@ -110,6 +111,7 @@ from crewai.utilities.file_store import clear_files, get_all_files
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
+    aggregate_summarized_outputs_from_task_outputs,
 )
 from crewai.utilities.i18n import get_i18n
 from crewai.utilities.llm_utils import create_llm
@@ -260,6 +262,15 @@ class Crew(FlowTrackable, BaseModel):
     output_log_file: bool | str | None = Field(
         default=None,
         description="Path to the log file to be saved",
+    )
+    context_strategy: Literal["full", "summarized"] = Field(
+        default="full",
+        description=(
+            "Strategy for passing prior task outputs as context to subsequent tasks. "
+            "'full' (default) passes the complete raw output. "
+            "'summarized' condenses each output to 2-3 sentences before passing it, "
+            "which reduces token usage in long multi-task crews."
+        ),
     )
     planning: bool | None = Field(
         default=False,
@@ -1489,19 +1500,55 @@ class Crew(FlowTrackable, BaseModel):
                 )
         return tools
 
-    @staticmethod
-    def _get_context(task: Task, task_outputs: list[TaskOutput]) -> str:
+    def _get_context(self, task: Task, task_outputs: list[TaskOutput]) -> str:
         if not task.context:
             return ""
 
-        return (
-            aggregate_raw_outputs_from_task_outputs(task_outputs)
-            if task.context is NOT_SPECIFIED
-            else aggregate_raw_outputs_from_tasks(task.context)
-        )
+        effective_strategy = task.context_strategy or self.context_strategy
+
+        if task.context is NOT_SPECIFIED:
+            if effective_strategy == "summarized":
+                return aggregate_summarized_outputs_from_task_outputs(task_outputs)
+            return aggregate_raw_outputs_from_task_outputs(task_outputs)
+        else:
+            if effective_strategy == "summarized":
+                explicit_outputs = [
+                    t.output for t in task.context if t.output is not None
+                ]
+                return aggregate_summarized_outputs_from_task_outputs(explicit_outputs)
+            return aggregate_raw_outputs_from_tasks(task.context)
+
+    def _generate_context_summary(self, task: Task, output: TaskOutput) -> None:
+        """Generate a condensed summary of a task output for use as context.
+
+        Called after task completion when context_strategy='summarized' is active
+        at the crew or task level. Falls back silently on any LLM error.
+        """
+        if task.agent is None or not hasattr(task.agent, "llm"):
+            return
+        try:
+            prompt = (
+                "Summarize the following task output in 2-3 concise sentences, "
+                "preserving the key facts and conclusions:\n\n"
+                f"{output.raw}"
+            )
+            summary = task.agent.llm.call(messages=prompt)
+            if isinstance(summary, str) and summary.strip():
+                output.context_summary = summary.strip()
+        except Exception:
+            pass  # Fall back to raw output in aggregate_summarized_outputs_from_task_outputs
 
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
+
+        effective_strategy = (
+            task.context_strategy
+            if task.context_strategy is not None
+            else self.context_strategy
+        )
+        if effective_strategy == "summarized":
+            self._generate_context_summary(task, output)
+
         if self.output_log_file:
             self._file_handler.log(
                 task_name=task.name,  # type: ignore[arg-type]
