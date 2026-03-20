@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import re
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -36,6 +37,20 @@ logger = logging.getLogger(__name__)
 _query_cache: dict[str, list[dict[str, Any]]] = {}
 _cache_lock = threading.Lock()
 
+# Snowflake unquoted identifier pattern: starts with letter or underscore,
+# followed by alphanumeric, underscores, or dollar signs.
+SNOWFLAKE_IDENTIFIER_PATTERN = r"^[A-Za-z_][A-Za-z0-9_$]*$"
+
+
+def _validate_identifier(value: str, name: str) -> str:
+    """Validate that a string is a safe Snowflake identifier."""
+    if not re.match(SNOWFLAKE_IDENTIFIER_PATTERN, value):
+        raise ValueError(
+            f"Invalid Snowflake identifier for {name}: {value!r}. "
+            "Must match pattern: letter or underscore, followed by alphanumeric, underscores, or dollar signs."
+        )
+    return value
+
 
 class SnowflakeConfig(BaseModel):
     """Configuration for Snowflake connection."""
@@ -49,8 +64,8 @@ class SnowflakeConfig(BaseModel):
     password: SecretStr | None = Field(None, description="Snowflake password")
     private_key_path: str | None = Field(None, description="Path to private key file")
     warehouse: str | None = Field(None, description="Snowflake warehouse")
-    database: str | None = Field(None, description="Default database")
-    snowflake_schema: str | None = Field(None, description="Default schema")
+    database: str | None = Field(None, description="Default database", pattern=SNOWFLAKE_IDENTIFIER_PATTERN)
+    snowflake_schema: str | None = Field(None, description="Default schema", pattern=SNOWFLAKE_IDENTIFIER_PATTERN)
     role: str | None = Field(None, description="Snowflake role")
     session_parameters: dict[str, Any] | None = Field(
         default_factory=dict, description="Session parameters"
@@ -71,8 +86,8 @@ class SnowflakeSearchToolInput(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     query: str = Field(..., description="SQL query or semantic search query to execute")
-    database: str | None = Field(None, description="Override default database")
-    snowflake_schema: str | None = Field(None, description="Override default schema")
+    database: str | None = Field(None, description="Override default database", pattern=SNOWFLAKE_IDENTIFIER_PATTERN)
+    snowflake_schema: str | None = Field(None, description="Override default schema", pattern=SNOWFLAKE_IDENTIFIER_PATTERN)
     timeout: int | None = Field(300, description="Query timeout in seconds")
 
 
@@ -259,9 +274,13 @@ class SnowflakeSearchTool(BaseTool):
         try:
             # Override database/schema if provided
             if database:
-                await self._execute_query(f"USE DATABASE {database}")
+                _validate_identifier(database, "database")
+                safe_db = database.replace('"', '')
+                await self._execute_query(f'USE DATABASE "{safe_db}"')
             if snowflake_schema:
-                await self._execute_query(f"USE SCHEMA {snowflake_schema}")
+                _validate_identifier(snowflake_schema, "schema")
+                safe_schema = snowflake_schema.replace('"', '')
+                await self._execute_query(f'USE SCHEMA "{safe_schema}"')
 
             return await self._execute_query(query, timeout)
         except Exception as e:
