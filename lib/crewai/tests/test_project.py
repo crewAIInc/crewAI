@@ -6,6 +6,7 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.project import (
     CrewBase,
     after_kickoff,
@@ -371,9 +372,12 @@ def test_internal_crew_with_mcp():
     mock_adapter = Mock()
     mock_adapter.tools = ToolCollection([simple_tool, another_simple_tool])
 
+    mock_llm = Mock()
+    mock_llm.__class__ = BaseLLM
+
     with (
         patch("crewai_tools.MCPServerAdapter", return_value=mock_adapter) as adapter_mock,
-        patch("crewai.llm.LLM.__new__", return_value=Mock()),
+        patch("crewai.llm.LLM.__new__", return_value=mock_llm),
     ):
         crew = InternalCrewWithMCP()
         assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]

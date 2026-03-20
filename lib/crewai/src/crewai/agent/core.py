@@ -66,6 +66,7 @@ from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -75,6 +76,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
@@ -142,7 +144,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    step_callback: Any | None = Field(
+    step_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
@@ -150,10 +152,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | Any = Field(
+    llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: str | None = Field(
@@ -339,7 +341,7 @@ class Agent(BaseAgent):
         return (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
-            and self.llm.supports_function_calling()
+            and self.llm.supports_function_calling()  # type: ignore[union-attr]
             and len(tools) > 0
         )
 
@@ -364,6 +366,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        get_env_context()
         # Only call handle_reasoning for legacy CrewAgentExecutor
         # For AgentExecutor, planning is handled in AgentExecutor.generate_plan()
         if self.executor_class is not AgentExecutor:
