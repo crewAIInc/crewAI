@@ -55,8 +55,7 @@ def string_to_callable(value: Any) -> Callable[..., Any]:
         The resolved callable.
 
     Raises:
-        ModuleNotFoundError: If the module portion of the path cannot be imported.
-        AttributeError: If the attribute cannot be found on the imported module.
+        ValueError: If *value* is not callable or a resolvable dotted-path string.
     """
     if callable(value):
         if _is_non_roundtrippable(value):
@@ -68,8 +67,20 @@ def string_to_callable(value: Any) -> Callable[..., Any]:
                 stacklevel=2,
             )
         return value  # type: ignore[no-any-return]
-    module, func = value.rsplit(".", 1)
-    return getattr(importlib.import_module(module), func)  # type: ignore[no-any-return]
+    if not isinstance(value, str):
+        raise ValueError(
+            f"Expected a callable or dotted-path string, got {type(value).__name__}"
+        )
+    try:
+        module, func = value.rsplit(".", 1)
+    except ValueError:
+        raise ValueError(
+            f"Invalid callback path {value!r}: expected 'module.name' format"
+        ) from None
+    try:
+        return getattr(importlib.import_module(module), func)  # type: ignore[no-any-return]
+    except (ModuleNotFoundError, AttributeError) as exc:
+        raise ValueError(f"Cannot resolve callback {value!r}: {exc}") from None
 
 
 def callable_to_string(fn: Callable[..., Any]) -> str:
