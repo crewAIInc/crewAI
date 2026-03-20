@@ -1276,3 +1276,160 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+# =============================================================================
+# _parse_native_tool_call — Bedrock Converse API dict format (issue #4972)
+# =============================================================================
+
+
+class TestParseNativeToolCallBedrockDict:
+    """Verify that _parse_native_tool_call correctly extracts arguments from
+    Bedrock-style dict tool calls that use ``{"name": ..., "input": {...}, "toolUseId": ...}``
+    instead of OpenAI-style ``{"function": {"name": ..., "arguments": ...}}``.
+
+    Regression tests for https://github.com/crewAIInc/crewAI/issues/4972
+    """
+
+    def _make_executor(self) -> "CrewAgentExecutor":
+        """Create a minimal CrewAgentExecutor for unit-testing parsing."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        executor = object.__new__(CrewAgentExecutor)
+        return executor
+
+    # --- Bedrock-style dicts (the bug scenario) ---
+
+    def test_bedrock_dict_tool_call_extracts_input_args(self) -> None:
+        """Bedrock Converse API returns {name, input, toolUseId}; args must come from 'input'."""
+        executor = self._make_executor()
+        tool_call = {
+            "name": "search_knowledge",
+            "input": {"search_query": "latest updates"},
+            "toolUseId": "tooluse_abc123",
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "tooluse_abc123"
+        assert func_name == "search_knowledge"
+        assert func_args == {"search_query": "latest updates"}
+
+    def test_bedrock_dict_with_multiple_input_args(self) -> None:
+        """Multiple args in the Bedrock 'input' dict should all be preserved."""
+        executor = self._make_executor()
+        tool_call = {
+            "name": "create_document",
+            "input": {"title": "Report", "content": "body text", "format": "pdf"},
+            "toolUseId": "tooluse_xyz789",
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        _, _, func_args = result
+        assert func_args == {"title": "Report", "content": "body text", "format": "pdf"}
+
+    def test_bedrock_dict_with_empty_input(self) -> None:
+        """A Bedrock tool call with an empty 'input' dict should fall through to default '{}'."""
+        executor = self._make_executor()
+        tool_call = {
+            "name": "no_args_tool",
+            "input": {},
+            "toolUseId": "tooluse_empty",
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        _, _, func_args = result
+        # Empty dict is falsy, so the or-chain falls through to the final "{}"
+        assert func_args == "{}"
+
+    # --- OpenAI-style dicts (must still work after the fix) ---
+
+    def test_openai_dict_tool_call_still_works(self) -> None:
+        """OpenAI-style dict tool calls must continue to extract from 'function.arguments'."""
+        executor = self._make_executor()
+        tool_call = {
+            "id": "call_openai_123",
+            "function": {
+                "name": "calculator",
+                "arguments": '{"expression": "15 * 8"}',
+            },
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_openai_123"
+        assert func_name == "calculator"
+        assert func_args == '{"expression": "15 * 8"}'
+
+    def test_openai_dict_with_empty_string_arguments(self) -> None:
+        """OpenAI dict with empty string arguments should fall through to '{}'."""
+        executor = self._make_executor()
+        tool_call = {
+            "id": "call_empty",
+            "function": {
+                "name": "ping",
+                "arguments": "",
+            },
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        _, _, func_args = result
+        # Empty string is falsy, so we fall through to "{}"
+        assert func_args == "{}"
+
+    # --- Dict with neither function nor input ---
+
+    def test_dict_with_only_name_no_function_no_input(self) -> None:
+        """Dict with 'name' but no 'function' and no 'input' keys should default to '{}'."""
+        executor = self._make_executor()
+        tool_call = {
+            "name": "simple_tool",
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        _, func_name, func_args = result
+        assert func_name == "simple_tool"
+        assert func_args == "{}"
+
+    # --- Bedrock toolUseId used as call_id ---
+
+    def test_bedrock_dict_uses_toolUseId_as_call_id(self) -> None:
+        """Bedrock's 'toolUseId' should be used as the call_id."""
+        executor = self._make_executor()
+        tool_call = {
+            "name": "my_tool",
+            "input": {"query": "test"},
+            "toolUseId": "tooluse_unique_id",
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        call_id, _, _ = result
+        assert call_id == "tooluse_unique_id"
+
+    def test_bedrock_dict_fallback_call_id(self) -> None:
+        """Without 'id' or 'toolUseId', should generate a fallback call_id."""
+        executor = self._make_executor()
+        tool_call = {
+            "name": "my_tool",
+            "input": {"query": "test"},
+        }
+
+        result = executor._parse_native_tool_call(tool_call)
+
+        assert result is not None
+        call_id, _, _ = result
+        assert call_id.startswith("call_")
