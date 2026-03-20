@@ -51,7 +51,7 @@ ANTHROPIC_MODELS = [
 ]
 
 GEMINI_MODELS = [
-    "gemini/gemini-2.0-flash",
+    "gemini/gemini-2.5-flash",
 ]
 
 

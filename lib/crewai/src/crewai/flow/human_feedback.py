@@ -76,6 +76,24 @@ if TYPE_CHECKING:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
+def _serialize_llm_for_context(llm: Any) -> str | None:
+    """Serialize a BaseLLM object to a model string with provider prefix.
+
+    When persisting the LLM for HITL resume, we need to store enough info
+    to reconstruct a working LLM on the resume worker. Just storing the bare
+    model name (e.g. "gemini-3-flash-preview") causes provider inference to
+    fail — it defaults to OpenAI. Including the provider prefix (e.g.
+    "gemini/gemini-3-flash-preview") allows LLM() to correctly route.
+    """
+    model = getattr(llm, "model", None)
+    if not model:
+        return None
+    provider = getattr(llm, "provider", None)
+    if provider and "/" not in model:
+        return f"{provider}/{model}"
+    return model
+
+
 @dataclass
 class HumanFeedbackResult:
     """Result from a @human_feedback decorated method.
@@ -412,7 +430,7 @@ def human_feedback(
                 emit=list(emit) if emit else None,
                 default_outcome=default_outcome,
                 metadata=metadata or {},
-                llm=llm if isinstance(llm, str) else getattr(llm, "model", None),
+                llm=llm if isinstance(llm, str) else _serialize_llm_for_context(llm),
             )
 
             # Determine effective provider:

@@ -986,6 +986,22 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
+    def env_context_span(self, tool: str) -> None:
+        """Records the coding tool environment context."""
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Environment Context")
+            self._add_attribute(
+                span,
+                "crewai_version",
+                version("crewai"),
+            )
+            self._add_attribute(span, "tool", tool)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
     def human_feedback_span(
         self,
         event_type: str,
