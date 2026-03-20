@@ -1,0 +1,126 @@
+# xProof Certification Tool
+
+[xProof](https://xproof.app) provides on-chain proof and accountability for AI agent actions. Every task output, decision, and tool call can be certified on the MultiversX blockchain — creating a tamper-proof, verifiable audit trail.
+
+## Installation
+
+```bash
+pip install xproof
+```
+
+## Option 1: XProofCertifyTool (Agent-Controlled)
+
+`XProofCertifyTool` is a standard CrewAI-compatible tool that agents can call explicitly to certify content. It requires no `crewai` dependency in its core.
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from xproof.integrations.crewai import XProofCertifyTool
+
+# Initialize the tool
+certify_tool = XProofCertifyTool(
+    api_key=os.environ["XPROOF_API_KEY"],
+    agent_name="research-agent",
+)
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Analyze market data and certify findings",
+    backstory="Expert analyst who certifies all conclusions on-chain.",
+    tools=[certify_tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Analyze Q1 earnings and certify your conclusion.",
+    expected_output="Certified analysis with blockchain proof ID.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## Option 2: XProofCrewCallback (Automatic, Crew-Level)
+
+`XProofCrewCallback` automatically certifies every task output without any agent awareness — ideal for compliance deployments where you need auditability without modifying agent behavior.
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from xproof.integrations.crewai import XProofCrewCallback
+
+# Automatic certification of all task outputs
+callback = XProofCrewCallback(
+    api_key=os.environ["XPROOF_API_KEY"],
+    agent_name="compliance-crew",
+)
+
+analyst = Agent(
+    role="Financial Analyst",
+    goal="Produce accurate financial analysis",
+    backstory="Expert in financial modeling and reporting.",
+    verbose=True,
+)
+
+task = Task(
+    description="Analyze revenue trends for Q1 2024.",
+    expected_output="Detailed revenue analysis with recommendations.",
+    agent=analyst,
+    callback=callback.on_task_end,  # Auto-certify on completion
+)
+
+crew = Crew(agents=[analyst], tasks=[task])
+result = crew.kickoff()
+
+# Access proof IDs after run
+for proof in callback.proofs:
+    print(f"Task certified: {proof['id']}")
+    print(f"Verify at: https://xproof.app/proof/{proof['id']}")
+```
+
+## Option 3: XProofCrewTool (Native BaseTool)
+
+`XProofCrewTool` extends CrewAI's `BaseTool` directly for full native integration:
+
+```python
+from xproof.integrations.crewai import XProofCrewTool
+
+tool = XProofCrewTool(
+    api_key=os.environ["XPROOF_API_KEY"],
+    agent_name="my-agent",
+)
+```
+
+## Getting an API Key
+
+```bash
+pip install xproof
+```
+
+```python
+from xproof import XProofClient
+import asyncio
+
+async def register():
+    client = await XProofClient.register("my-crew")
+    print(f"API Key: {client.api_key}")  # Save this key
+
+asyncio.run(register())
+```
+
+Or get a free key at [xproof.app](https://xproof.app) (10 certs/day, no credit card).
+
+## Verifying Proofs
+
+Every certified action gets a permanent, publicly verifiable proof:
+
+```
+https://xproof.app/proof/<proof-id>
+```
+
+## Links
+
+- [xProof Documentation](https://xproof.app/docs)
+- [Python SDK (PyPI)](https://pypi.org/project/xproof/)
+- [4W Agent Accountability Standard](https://xproof.app/docs/4w)
