@@ -26,6 +26,26 @@ def aggregate_raw_outputs_from_task_outputs(task_outputs: list[TaskOutput]) -> s
     return DIVIDERS.join(output.raw for output in task_outputs)
 
 
+def aggregate_summarized_outputs_from_task_outputs(
+    task_outputs: list[TaskOutput],
+) -> str:
+    """Generate condensed string context from summarized task outputs.
+
+    Falls back to raw output for any task that has no context_summary.
+
+    Args:
+        task_outputs: List of TaskOutput objects.
+
+    Returns:
+        A string containing the aggregated context summaries (or raw fallbacks).
+    """
+    parts = [
+        output.context_summary if output.context_summary is not None else output.raw
+        for output in task_outputs
+    ]
+    return DIVIDERS.join(parts)
+
+
 def aggregate_raw_outputs_from_tasks(tasks: list[Task] | _NotSpecified) -> str:
     """Generate string context from the tasks.
 

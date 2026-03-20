@@ -14,6 +14,7 @@ import threading
 from typing import (
     Any,
     ClassVar,
+    Literal,
     cast,
     get_args,
     get_origin,
@@ -133,6 +134,14 @@ class Task(BaseModel):
     context: list[Task] | None | _NotSpecified = Field(
         description="Other tasks that will have their output used as context for this task.",
         default=NOT_SPECIFIED,
+    )
+    context_strategy: Literal["full", "summarized"] | None = Field(
+        description=(
+            "Override the crew-level context_strategy for this task. "
+            "'full' uses raw outputs; 'summarized' uses condensed summaries. "
+            "Defaults to None (inherit from crew)."
+        ),
+        default=None,
     )
     async_execution: bool | None = Field(
         description="Whether the task should be executed asynchronously or not.",
