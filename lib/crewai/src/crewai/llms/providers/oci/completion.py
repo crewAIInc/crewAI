@@ -362,14 +362,11 @@ class OCICompletion(BaseLLM):
     def _call_impl(
         self,
         *,
-        messages: str | list[LLMMessage],
+        messages: list[LLMMessage],
         from_task: Task | None,
         from_agent: Agent | None,
     ) -> str:
-        normalized_messages = (
-            messages if isinstance(messages, list) else self._normalize_messages(messages)
-        )
-        chat_request = self._build_chat_request(normalized_messages)
+        chat_request = self._build_chat_request(messages)
         chat_details = self._oci.generative_ai_inference.models.ChatDetails(
             compartment_id=self.compartment_id,
             serving_mode=self._build_serving_mode(),
@@ -384,7 +381,7 @@ class OCICompletion(BaseLLM):
         content = self._extract_text(response)
         return self._finalize_text_response(
             content=content,
-            messages=normalized_messages,
+            messages=messages,
             from_task=from_task,
             from_agent=from_agent,
         )
@@ -399,10 +396,9 @@ class OCICompletion(BaseLLM):
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | BaseModel | list[dict[str, Any]]:
-        normalized_messages = self._normalize_messages(messages)
-
         with llm_call_context():
             try:
+                normalized_messages = self._normalize_messages(messages)
                 self._emit_call_started_event(
                     messages=normalized_messages,
                     tools=tools,
