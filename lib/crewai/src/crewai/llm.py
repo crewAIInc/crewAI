@@ -325,6 +325,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "oci",
 ]
 
 
@@ -384,6 +385,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "oci": "oci",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -483,6 +485,9 @@ class LLM(BaseLLM):
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
 
+        if provider == "oci":
+            return model_lower.startswith("ocid1.generativeaiendpoint") or "." in model_lower
+
         return False
 
     @classmethod
@@ -518,7 +523,7 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
-        # Fallback to pattern matching for models not in constants
+        # Fallback to pattern matching for models not in constants (includes OCI)
         return cls._matches_provider_pattern(model, provider)
 
     @classmethod
@@ -581,6 +586,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "oci":
+            from crewai.llms.providers.oci.completion import OCICompletion
+
+            return OCICompletion
 
         return None
 
