@@ -950,11 +950,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Raises:
             ValueError: If no memory is configured for this flow.
+            TypeError: If batch remember is attempted on a MemoryScope or MemorySlice.
         """
         if self.memory is None:
             raise ValueError("No memory configured for this flow")
         if isinstance(content, list):
-            return self.memory.remember_many(content, **kwargs)  # type: ignore[union-attr]
+            if not isinstance(self.memory, Memory):
+                raise TypeError(
+                    "Batch remember requires a Memory instance, "
+                    f"got {type(self.memory).__name__}"
+                )
+            return self.memory.remember_many(content, **kwargs)
         return self.memory.remember(content, **kwargs)
 
     def extract_memories(self, content: str) -> list[str]:
