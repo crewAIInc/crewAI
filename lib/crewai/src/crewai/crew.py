@@ -228,16 +228,14 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Callback to be executed after each task for all agents execution.",
     )
-    before_kickoff_callbacks: list[
-        Callable[[dict[str, Any] | None], dict[str, Any] | None]
-    ] = Field(
+    before_kickoff_callbacks: list[SerializableCallable] = Field(
         default_factory=list,
         description=(
             "List of callbacks to be executed before crew kickoff. "
             "It may be used to adjust inputs before the crew is executed."
         ),
     )
-    after_kickoff_callbacks: list[Callable[[CrewOutput], CrewOutput]] = Field(
+    after_kickoff_callbacks: list[SerializableCallable] = Field(
         default_factory=list,
         description=(
             "List of callbacks to be executed after crew kickoff. "

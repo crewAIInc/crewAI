@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
 import re
@@ -34,6 +33,7 @@ from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
@@ -191,7 +191,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: list[Callable[[Any], Any]] = Field(
+    callbacks: list[SerializableCallable] = Field(
         default_factory=list, description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
