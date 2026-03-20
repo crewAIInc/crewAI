@@ -71,16 +71,47 @@ def string_to_callable(value: Any) -> Callable[..., Any]:
         raise ValueError(
             f"Expected a callable or dotted-path string, got {type(value).__name__}"
         )
-    try:
-        module, func = value.rsplit(".", 1)
-    except ValueError:
+    if "." not in value:
         raise ValueError(
             f"Invalid callback path {value!r}: expected 'module.name' format"
-        ) from None
-    try:
-        return getattr(importlib.import_module(module), func)  # type: ignore[no-any-return]
-    except (ModuleNotFoundError, AttributeError) as exc:
-        raise ValueError(f"Cannot resolve callback {value!r}: {exc}") from None
+        )
+    return _resolve_dotted_path(value)
+
+
+def _resolve_dotted_path(path: str) -> Callable[..., Any]:
+    """Import a module and walk attribute lookups to resolve a dotted path.
+
+    Handles multi-level qualified names like ``"module.ClassName.method"``
+    by trying progressively shorter module paths and resolving the remainder
+    as chained attribute lookups.
+
+    Args:
+        path: A dotted string e.g. ``"builtins.print"`` or
+              ``"mymodule.MyClass.my_method"``.
+
+    Returns:
+        The resolved callable.
+
+    Raises:
+        ValueError: If no valid module can be imported from the path.
+    """
+    parts = path.split(".")
+    # Try importing progressively shorter prefixes as the module.
+    for i in range(len(parts), 0, -1):
+        module_path = ".".join(parts[:i])
+        try:
+            obj: Any = importlib.import_module(module_path)
+        except (ModuleNotFoundError, ValueError):
+            continue
+        # Walk the remaining attribute chain.
+        try:
+            for attr in parts[i:]:
+                obj = getattr(obj, attr)
+        except AttributeError:
+            continue
+        if callable(obj):
+            return obj  # type: ignore[no-any-return]
+    raise ValueError(f"Cannot resolve callback {path!r}")
 
 
 def callable_to_string(fn: Callable[..., Any]) -> str:
