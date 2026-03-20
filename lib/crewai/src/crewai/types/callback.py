@@ -127,7 +127,14 @@ def callable_to_string(fn: Callable[..., Any]) -> str:
     Returns:
         A dotted string of the form ``"module.qualname"``.
     """
-    return f"{fn.__module__}.{fn.__qualname__}"
+    module = getattr(fn, "__module__", None)
+    qualname = getattr(fn, "__qualname__", None)
+    if module is None or qualname is None:
+        raise ValueError(
+            f"Cannot serialize {fn!r}: missing __module__ or __qualname__. "
+            "Use a module-level named function for checkpointable callbacks."
+        )
+    return f"{module}.{qualname}"
 
 
 SerializableCallable = Annotated[
