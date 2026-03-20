@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import re
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -71,8 +72,16 @@ class SnowflakeSearchToolInput(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     query: str = Field(..., description="SQL query or semantic search query to execute")
-    database: str | None = Field(None, description="Override default database")
-    snowflake_schema: str | None = Field(None, description="Override default schema")
+    database: str | None = Field(
+        None,
+        description="Override default database",
+        pattern=r"^[A-Za-z_][A-Za-z0-9_$]*$",
+    )
+    snowflake_schema: str | None = Field(
+        None,
+        description="Override default schema",
+        pattern=r"^[A-Za-z_][A-Za-z0-9_$]*$",
+    )
     timeout: int | None = Field(300, description="Query timeout in seconds")
 
 
@@ -247,6 +256,16 @@ class SnowflakeSearchTool(BaseTool):
                 continue
         raise RuntimeError("Query failed after all retries")
 
+    @staticmethod
+    def _validate_identifier(value: str, name: str) -> str:
+        """Validate and sanitize a Snowflake identifier to prevent SQL injection."""
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_$]*$", value):
+            raise ValueError(
+                f"Invalid {name}: {value!r}. "
+                f"Only alphanumeric characters, underscores, and dollar signs are allowed."
+            )
+        return value
+
     async def _run(
         self,
         query: str,
@@ -259,9 +278,11 @@ class SnowflakeSearchTool(BaseTool):
         try:
             # Override database/schema if provided
             if database:
-                await self._execute_query(f"USE DATABASE {database}")
+                database = self._validate_identifier(database, "database")
+                await self._execute_query(f'USE DATABASE "{database}"')
             if snowflake_schema:
-                await self._execute_query(f"USE SCHEMA {snowflake_schema}")
+                snowflake_schema = self._validate_identifier(snowflake_schema, "schema")
+                await self._execute_query(f'USE SCHEMA "{snowflake_schema}"')
 
             return await self._execute_query(query, timeout)
         except Exception as e:
