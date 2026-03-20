@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import importlib
 import inspect
+import os
 from typing import Annotated, Any
 import warnings
 
@@ -74,6 +75,12 @@ def string_to_callable(value: Any) -> Callable[..., Any]:
     if "." not in value:
         raise ValueError(
             f"Invalid callback path {value!r}: expected 'module.name' format"
+        )
+    if not os.environ.get("CREWAI_DESERIALIZE_CALLBACKS"):
+        raise ValueError(
+            f"Refusing to resolve callback path {value!r}: "
+            "set CREWAI_DESERIALIZE_CALLBACKS=1 to allow. "
+            "Only enable this for trusted checkpoint data."
         )
     return _resolve_dotted_path(value)
 
