@@ -112,6 +112,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.logger import Logger
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.printer import PrinterColor
+from crewai.utilities.replanning_evaluator import ReplanningEvaluator
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
@@ -182,6 +183,8 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=TaskOutputStorageHandler
     )
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    _replan_count: int = PrivateAttr(default=0)
+    _original_task_descriptions: list[str] = PrivateAttr(default_factory=list)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -268,6 +271,21 @@ class Crew(FlowTrackable, BaseModel):
         description=(
             "Language model that will run the AgentPlanner if planning is True."
         ),
+    )
+    replan_on_failure: bool = Field(
+        default=False,
+        description=(
+            "When True and planning is enabled, evaluate each task result against "
+            "the plan and trigger replanning if results deviate significantly."
+        ),
+    )
+    max_replans: int = Field(
+        default=3,
+        description=(
+            "Maximum number of replans allowed during a single crew execution. "
+            "Prevents infinite replanning loops."
+        ),
+        ge=0,
     )
     task_execution_output_json_files: list[str] | None = Field(
         default=None,
@@ -1041,6 +1059,7 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+                self._maybe_replan(task, task_output, task_index, tasks, task_outputs)
 
         if pending_tasks:
             task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
@@ -1087,6 +1106,11 @@ class Crew(FlowTrackable, BaseModel):
             tasks=self.tasks, planning_agent_llm=self.planning_llm
         )._handle_crew_planning()
 
+        # Store original descriptions before appending plans so replanning
+        # can strip the old plan and apply a fresh one.
+        self._original_task_descriptions = [task.description for task in self.tasks]
+        self._replan_count = 0
+
         plan_map: dict[int, str] = {}
         for step_plan in result.list_of_plans_per_task:
             if step_plan.task_number in plan_map:
@@ -1107,6 +1131,95 @@ class Crew(FlowTrackable, BaseModel):
                     "warning",
                     f"No plan found for Task Number {task_number}",
                 )
+
+    def _maybe_replan(
+        self,
+        task: Task,
+        task_output: TaskOutput,
+        task_index: int,
+        tasks: list[Task],
+        all_task_outputs: list[TaskOutput],
+    ) -> None:
+        """Evaluate a completed task and replan remaining tasks if needed.
+
+        This is called after each synchronous task completes when both
+        ``planning`` and ``replan_on_failure`` are enabled. It uses a
+        lightweight LLM call to decide whether the result deviates from
+        the plan, and if so generates revised plans for remaining tasks.
+
+        Args:
+            task: The task that just completed.
+            task_output: The output produced by the completed task.
+            task_index: Index of the completed task in the tasks list.
+            tasks: The full list of tasks being executed.
+            all_task_outputs: All task outputs collected so far.
+        """
+        if (
+            not self.planning
+            or not self.replan_on_failure
+            or self._replan_count >= self.max_replans
+        ):
+            return
+
+        remaining_tasks = tasks[task_index + 1 :]
+        if not remaining_tasks:
+            return
+
+        # Extract the plan portion appended to this task's description
+        original_desc = (
+            self._original_task_descriptions[task_index]
+            if task_index < len(self._original_task_descriptions)
+            else task.description
+        )
+        plan_text = task.description[len(original_desc) :]
+
+        if not plan_text.strip():
+            return
+
+        evaluator = ReplanningEvaluator(llm=self.planning_llm)
+        decision = evaluator.evaluate(
+            completed_task=task,
+            task_output=task_output,
+            original_plan=plan_text,
+            remaining_tasks=remaining_tasks,
+        )
+
+        if not decision.should_replan:
+            return
+
+        self._replan_count += 1
+        self._logger.log(
+            "info",
+            f"Replanning triggered (replan {self._replan_count}/{self.max_replans}): "
+            f"{decision.reason}",
+        )
+
+        completed_tasks = tasks[: task_index + 1]
+        planner = CrewPlanner(tasks=self.tasks, planning_agent_llm=self.planning_llm)
+        replan_result = planner._handle_crew_replanning(
+            completed_tasks=completed_tasks,
+            completed_outputs=all_task_outputs,
+            remaining_tasks=remaining_tasks,
+            deviation_reason=decision.reason,
+        )
+
+        # Build a map of new plans keyed by task_number
+        new_plan_map: dict[int, str] = {}
+        for step_plan in replan_result.list_of_plans_per_task:
+            if step_plan.task_number not in new_plan_map:
+                new_plan_map[step_plan.task_number] = step_plan.plan
+
+        # Apply revised plans to remaining tasks, restoring original
+        # descriptions first so old plans don't accumulate.
+        for plan_idx, remaining_task in enumerate(remaining_tasks):
+            global_idx = task_index + 1 + plan_idx
+            if global_idx < len(self._original_task_descriptions):
+                remaining_task.description = self._original_task_descriptions[
+                    global_idx
+                ]
+            plan_number = plan_idx + 1
+            if plan_number in new_plan_map:
+                remaining_task.description += new_plan_map[plan_number]
 
     def _store_execution_log(
         self,
@@ -1240,6 +1353,7 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+                self._maybe_replan(task, task_output, task_index, tasks, task_outputs)
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
