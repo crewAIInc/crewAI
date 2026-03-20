@@ -21,23 +21,23 @@ from pydantic.functional_serializers import PlainSerializer
 def _is_non_roundtrippable(fn: object) -> bool:
     """Return ``True`` if *fn* cannot survive a serialize/deserialize round-trip.
 
-    Detects lambdas via ``__qualname__`` ending with ``"<lambda>"`` and
-    closures or nested functions via ``"<locals>"`` appearing anywhere in
-    ``__qualname__``.  Both produce dotted paths that
-    :func:`string_to_callable` cannot resolve back to the original object.
-    ``inspect.isfunction`` gates the check so non-function callables
-    like classes and partials are never flagged.
+    Only plain module-level functions and built-in functions produce dotted
+    paths that :func:`_resolve_dotted_path` can reliably resolve.  Bound
+    methods, ``functools.partial`` objects, callable class instances, lambdas,
+    and closures all fail or silently change semantics during round-tripping.
 
     Args:
         fn: The object to check.
 
     Returns:
-        ``True`` if *fn* is a lambda, closure, or nested function.
+        ``True`` if *fn* would not round-trip through JSON serialization.
     """
-    if not inspect.isfunction(fn):
+    if inspect.isbuiltin(fn):
         return False
-    qualname = getattr(fn, "__qualname__", "")
-    return qualname.endswith("<lambda>") or "<locals>" in qualname
+    if inspect.isfunction(fn):
+        qualname = getattr(fn, "__qualname__", "")
+        return qualname.endswith("<lambda>") or "<locals>" in qualname
+    return True
 
 
 def string_to_callable(value: Any) -> Callable[..., Any]:
