@@ -209,7 +209,9 @@ class CrewPlanner:
             A formatted string summarizing completed tasks and results.
         """
         summaries = []
-        for idx, (task, output) in enumerate(zip(tasks, outputs), start=1):
+        for idx, (task, output) in enumerate(
+            zip(tasks, outputs, strict=False), start=1
+        ):
             agent_role = task.agent.role if task.agent else "None"
             summaries.append(
                 f"Task {idx} (Agent: {agent_role}):\n"
@@ -234,7 +236,7 @@ class CrewPlanner:
             agent_role = task.agent.role if task.agent else "None"
             agent_goal = task.agent.goal if task.agent else "None"
             summaries.append(
-                f'Task Number {idx}:\n'
+                f"Task Number {idx}:\n"
                 f'  "task_description": {task.description}\n'
                 f'  "task_expected_output": {task.expected_output}\n'
                 f'  "agent": {agent_role}\n'

@@ -129,7 +129,9 @@ class ReplanningEvaluator:
         if isinstance(result.pydantic, ReplanDecision):
             return result.pydantic
 
-        logger.warning("Failed to get structured ReplanDecision, defaulting to no replan")
+        logger.warning(
+            "Failed to get structured ReplanDecision, defaulting to no replan"
+        )
         return ReplanDecision(
             should_replan=False,
             reason="Failed to evaluate task output against plan.",

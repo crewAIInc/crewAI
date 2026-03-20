@@ -111,8 +111,8 @@ from crewai.utilities.i18n import get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.logger import Logger
 from crewai.utilities.planning_handler import CrewPlanner
-from crewai.utilities.replanning_evaluator import ReplanningEvaluator
 from crewai.utilities.printer import PrinterColor
+from crewai.utilities.replanning_evaluator import ReplanningEvaluator
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
@@ -1059,9 +1059,7 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
-                self._maybe_replan(
-                    task, task_output, task_index, tasks, task_outputs
-                )
+                self._maybe_replan(task, task_output, task_index, tasks, task_outputs)
 
         if pending_tasks:
             task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
@@ -1110,9 +1108,7 @@ class Crew(FlowTrackable, BaseModel):
 
         # Store original descriptions before appending plans so replanning
         # can strip the old plan and apply a fresh one.
-        self._original_task_descriptions = [
-            task.description for task in self.tasks
-        ]
+        self._original_task_descriptions = [task.description for task in self.tasks]
         self._replan_count = 0
 
         plan_map: dict[int, str] = {}
@@ -1165,7 +1161,7 @@ class Crew(FlowTrackable, BaseModel):
         ):
             return
 
-        remaining_tasks = tasks[task_index + 1:]
+        remaining_tasks = tasks[task_index + 1 :]
         if not remaining_tasks:
             return
 
@@ -1175,7 +1171,7 @@ class Crew(FlowTrackable, BaseModel):
             if task_index < len(self._original_task_descriptions)
             else task.description
         )
-        plan_text = task.description[len(original_desc):]
+        plan_text = task.description[len(original_desc) :]
 
         if not plan_text.strip():
             return
@@ -1199,9 +1195,7 @@ class Crew(FlowTrackable, BaseModel):
         )
 
         completed_tasks = tasks[: task_index + 1]
-        planner = CrewPlanner(
-            tasks=self.tasks, planning_agent_llm=self.planning_llm
-        )
+        planner = CrewPlanner(tasks=self.tasks, planning_agent_llm=self.planning_llm)
         replan_result = planner._handle_crew_replanning(
             completed_tasks=completed_tasks,
             completed_outputs=all_task_outputs,
@@ -1359,9 +1353,7 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
-                self._maybe_replan(
-                    task, task_output, task_index, tasks, task_outputs
-                )
+                self._maybe_replan(task, task_output, task_index, tasks, task_outputs)
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
