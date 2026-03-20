@@ -99,6 +99,8 @@ anthropic = [
 ]
 oci = [
     "oci>=2.168.0",
+    "aiohttp>=3.9.0",
+    "certifi",
 ]
 a2a = [
      "a2a-sdk~=0.3.10",
