@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
@@ -108,10 +109,11 @@ class TraceBatchManager:
         user_context: dict[str, str],
         execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
+        skip_context_check: bool = False,
     ) -> None:
         """Send batch initialization to backend"""
 
-        if not is_tracing_enabled_in_context():
+        if not skip_context_check and not is_tracing_enabled_in_context():
             return
 
         if not self.plus_api or not self.current_batch:
@@ -142,19 +144,62 @@ class TraceBatchManager:
                 payload["ephemeral_trace_id"] = self.current_batch.batch_id
                 payload["user_identifier"] = get_user_id()
 
-            response = (
-                self.plus_api.initialize_ephemeral_trace_batch(payload)
-                if use_ephemeral
-                else self.plus_api.initialize_trace_batch(payload)
-            )
+            max_retries = 2
+            response = None
+            last_exception = None
+
+            for attempt in range(max_retries + 1):
+                try:
+                    response = (
+                        self.plus_api.initialize_ephemeral_trace_batch(payload)
+                        if use_ephemeral
+                        else self.plus_api.initialize_trace_batch(payload)
+                    )
+                    if response is not None and response.status_code < 500:
+                        break
+                    if attempt < max_retries:
+                        logger.debug(
+                            f"Trace batch init attempt {attempt + 1} failed "
+                            f"(status={response.status_code if response else 'None'}), retrying..."
+                        )
+                        time.sleep(0.2)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries:
+                        logger.debug(
+                            f"Trace batch init attempt {attempt + 1} raised {type(e).__name__}, retrying..."
+                        )
+                        time.sleep(0.2)
+
+            if last_exception and response is None:
+                logger.warning(
+                    f"Error initializing trace batch: {last_exception}. Continuing without tracing."
+                )
+                self.trace_batch_id = None
+                return
 
             if response is None:
                 logger.warning(
                     "Trace batch initialization failed gracefully. Continuing without tracing."
                 )
+                self.trace_batch_id = None
                 return
 
+            # Fall back to ephemeral on auth failure (expired/revoked token)
+            if response.status_code in [401, 403] and not use_ephemeral:
+                logger.warning(
+                    "Auth rejected by server, falling back to ephemeral tracing."
+                )
+                self.is_current_batch_ephemeral = True
+                return self._initialize_backend_batch(
+                    user_context,
+                    execution_metadata,
+                    use_ephemeral=True,
+                    skip_context_check=skip_context_check,
+                )
+
             if response.status_code in [201, 200]:
+                self.is_current_batch_ephemeral = use_ephemeral
                 response_data = response.json()
                 self.trace_batch_id = (
                     response_data["trace_id"]
@@ -165,11 +210,13 @@ class TraceBatchManager:
                 logger.warning(
                     f"Trace batch initialization returned status {response.status_code}. Continuing without tracing."
                 )
+                self.trace_batch_id = None
 
         except Exception as e:
             logger.warning(
                 f"Error initializing trace batch: {e}. Continuing without tracing."
             )
+            self.trace_batch_id = None
 
     def begin_event_processing(self) -> None:
         """Mark that an event handler started processing (for synchronization)."""
