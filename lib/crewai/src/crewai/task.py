@@ -67,6 +67,7 @@ except ImportError:
         return []
 
 
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -124,7 +125,7 @@ class Task(BaseModel):
         description="Configuration for the agent",
         default=None,
     )
-    callback: Any | None = Field(
+    callback: SerializableCallable | None = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
     agent: BaseAgent | None = Field(
