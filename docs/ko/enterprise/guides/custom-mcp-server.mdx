@@ -1,0 +1,136 @@
+---
+title: "커스텀 MCP 서버"
+description: "공개 액세스, API 키 인증 또는 OAuth 2.0을 사용하여 자체 MCP 서버를 CrewAI AMP에 연결하세요"
+icon: "plug"
+mode: "wide"
+---
+
+CrewAI AMP는 [Model Context Protocol](https://modelcontextprotocol.io/)을 구현하는 모든 MCP 서버에 연결할 수 있습니다. 인증이 필요 없는 공개 서버, API 키 또는 Bearer 토큰으로 보호되는 서버, OAuth 2.0을 사용하는 서버를 연결할 수 있습니다.
+
+## 사전 요구사항
+
+<CardGroup cols={2}>
+  <Card title="CrewAI AMP 계정" icon="user">
+    활성화된 [CrewAI AMP](https://app.crewai.com) 계정이 필요합니다.
+  </Card>
+  <Card title="MCP 서버 URL" icon="link">
+    연결하려는 MCP 서버의 URL입니다. 서버는 인터넷에서 접근 가능해야 하며 Streamable HTTP 전송을 지원해야 합니다.
+  </Card>
+</CardGroup>
+
+## 커스텀 MCP 서버 추가하기
+
+<Steps>
+    <Step title="Tools & Integrations 열기">
+        CrewAI AMP 왼쪽 사이드바에서 **Tools & Integrations**로 이동한 후 **Connections** 탭을 선택합니다.
+    </Step>
+
+    <Step title="커스텀 MCP 서버 추가 시작">
+        **Add Custom MCP Server** 버튼을 클릭합니다. 구성 양식이 포함된 대화 상자가 나타납니다.
+    </Step>
+
+    <Step title="기본 정보 입력">
+        - **Name** (필수): MCP 서버의 설명적 이름 (예: "내부 도구 서버").
+        - **Description**: 이 MCP 서버가 제공하는 기능에 대한 선택적 요약.
+        - **Server URL** (필수): MCP 서버 엔드포인트의 전체 URL (예: `https://my-server.example.com/mcp`).
+    </Step>
+
+    <Step title="인증 방법 선택">
+        MCP 서버의 보안 방식에 따라 세 가지 인증 방법 중 하나를 선택합니다. 각 방법에 대한 자세한 내용은 아래 섹션을 참조하세요.
+    </Step>
+
+    <Step title="커스텀 헤더 추가 (선택사항)">
+        MCP 서버가 모든 요청에 추가 헤더를 요구하는 경우 (예: 테넌트 식별자 또는 라우팅 헤더), **+ Add Header**를 클릭하고 헤더 이름과 값을 입력합니다. 여러 커스텀 헤더를 추가할 수 있습니다.
+    </Step>
+
+    <Step title="연결 생성">
+        **Create MCP Server**를 클릭하여 연결을 저장합니다. 커스텀 MCP 서버가 Connections 목록에 나타나고 해당 도구를 crew에서 사용할 수 있게 됩니다.
+    </Step>
+</Steps>
+
+## 인증 방법
+
+### 인증 없음
+
+MCP 서버가 공개적으로 접근 가능하고 자격 증명이 필요 없을 때 이 옵션을 선택합니다. 오픈 소스 서버나 VPN 뒤에서 실행되는 내부 서버에 일반적입니다.
+
+### 인증 토큰
+
+MCP 서버가 API 키 또는 Bearer 토큰으로 보호되는 경우 이 방법을 사용합니다.
+
+<Frame>
+    <img src="/images/enterprise/custom-mcp-auth-token.png" alt="인증 토큰을 사용하는 커스텀 MCP 서버" />
+</Frame>
+
+| 필드 | 필수 | 설명 |
+|------|------|------|
+| **Header Name** | 예 | 토큰을 전달하는 HTTP 헤더 이름 (예: `X-API-Key`, `Authorization`). |
+| **Value** | 예 | API 키 또는 Bearer 토큰. |
+| **Add to** | 아니오 | 자격 증명을 첨부할 위치 — **Header** (기본값) 또는 **Query parameter**. |
+
+<Tip>
+서버가 `Authorization` 헤더에 `Bearer` 토큰을 예상하는 경우, Header Name을 `Authorization`으로, Value를 `Bearer <토큰>`으로 설정하세요.
+</Tip>
+
+### OAuth 2.0
+
+OAuth 2.0 인증이 필요한 MCP 서버에 이 방법을 사용합니다. CrewAI가 토큰 갱신을 포함한 전체 OAuth 흐름을 처리합니다.
+
+<Frame>
+    <img src="/images/enterprise/custom-mcp-oauth.png" alt="OAuth 2.0을 사용하는 커스텀 MCP 서버" />
+</Frame>
+
+| 필드 | 필수 | 설명 |
+|------|------|------|
+| **Redirect URI** | — | 자동으로 채워지며 읽기 전용입니다. 이 URI를 복사하여 OAuth 제공자에 승인된 리디렉션 URI로 등록하세요. |
+| **Authorization Endpoint** | 예 | 사용자가 접근을 승인하기 위해 이동하는 URL (예: `https://auth.example.com/oauth/authorize`). |
+| **Token Endpoint** | 예 | 인증 코드를 액세스 토큰으로 교환하는 데 사용되는 URL (예: `https://auth.example.com/oauth/token`). |
+| **Client ID** | 예 | OAuth 제공자가 발급한 클라이언트 ID. |
+| **Client Secret** | 아니오 | OAuth 클라이언트 시크릿. PKCE를 사용하는 공개 클라이언트에는 필요하지 않습니다. |
+| **Scopes** | 아니오 | 요청할 스코프의 공백으로 구분된 목록 (예: `read write`). |
+| **Token Auth Method** | 아니오 | 토큰 교환 시 클라이언트 자격 증명을 보내는 방법 — **Standard (POST body)** 또는 **Basic Auth (header)**. 기본값은 Standard입니다. |
+| **PKCE Supported** | 아니오 | OAuth 제공자가 Proof Key for Code Exchange를 지원하는 경우 활성화합니다. 보안 강화를 위해 권장됩니다. |
+
+<Info>
+**Discover OAuth Config**: OAuth 제공자가 OpenID Connect Discovery를 지원하는 경우, **Discover OAuth Config** 링크를 클릭하여 제공자의 `/.well-known/openid-configuration` URL에서 인증 및 토큰 엔드포인트를 자동으로 채울 수 있습니다.
+</Info>
+
+#### OAuth 2.0 단계별 설정
+
+<Steps>
+    <Step title="리디렉션 URI 등록">
+        양식에 표시된 **Redirect URI**를 복사하여 OAuth 제공자의 애플리케이션 설정에서 승인된 리디렉션 URI로 추가합니다.
+    </Step>
+
+    <Step title="엔드포인트 및 자격 증명 입력">
+        **Authorization Endpoint**, **Token Endpoint**, **Client ID**를 입력하고, 선택적으로 **Client Secret**과 **Scopes**를 입력합니다.
+    </Step>
+
+    <Step title="토큰 교환 방법 구성">
+        적절한 **Token Auth Method**를 선택합니다. 대부분의 제공자는 기본값인 **Standard (POST body)**를 사용합니다. 일부 오래된 제공자는 **Basic Auth (header)**를 요구합니다.
+    </Step>
+
+    <Step title="PKCE 활성화 (권장)">
+        제공자가 지원하는 경우 **PKCE Supported**를 체크합니다. PKCE는 인증 코드 흐름에 추가 보안 계층을 제공하며 모든 새 통합에 권장됩니다.
+    </Step>
+
+    <Step title="생성 및 인증">
+        **Create MCP Server**를 클릭합니다. OAuth 제공자로 리디렉션되어 접근을 인증합니다. 인증 완료 후 CrewAI가 토큰을 저장하고 필요에 따라 자동으로 갱신합니다.
+    </Step>
+</Steps>
+
+## 커스텀 MCP 서버 사용하기
+
+연결이 완료되면 커스텀 MCP 서버의 도구가 **Tools & Integrations** 페이지에서 기본 제공 연결과 함께 표시됩니다. 다음을 수행할 수 있습니다:
+
+- 다른 CrewAI 도구와 마찬가지로 crew의 **에이전트에 도구를 할당**합니다.
+- **가시성을 관리**하여 어떤 팀원이 서버를 사용할 수 있는지 제어합니다.
+- Connections 목록에서 언제든지 연결을 **편집하거나 제거**합니다.
+
+<Warning>
+MCP 서버에 접근할 수 없거나 자격 증명이 만료되면 해당 서버를 사용하는 도구 호출이 실패합니다. 서버 URL이 안정적이고 자격 증명이 최신 상태인지 확인하세요.
+</Warning>
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  커스텀 MCP 서버 구성 또는 문제 해결에 대한 도움이 필요하면 지원팀에 문의하세요.
+</Card>

@@ -18,7 +18,6 @@ class MergeAgentHandlerToolError(Exception):
     """Base exception for Merge Agent Handler tool errors."""
 
 
-
 class MergeAgentHandlerTool(BaseTool):
     """
     Wrapper for Merge Agent Handler tools.
@@ -174,7 +173,7 @@ class MergeAgentHandlerTool(BaseTool):
             >>> tool = MergeAgentHandlerTool.from_tool_name(
             ...     tool_name="linear__create_issue",
             ...     tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
-            ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+            ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
             ... )
         """
         # Create an empty args schema model (proper BaseModel subclass)
@@ -210,7 +209,10 @@ class MergeAgentHandlerTool(BaseTool):
                     if "parameters" in tool_schema:
                         try:
                             params = tool_schema["parameters"]
-                            if params.get("type") == "object" and "properties" in params:
+                            if (
+                                params.get("type") == "object"
+                                and "properties" in params
+                            ):
                                 # Build field definitions for Pydantic
                                 fields = {}
                                 properties = params["properties"]
@@ -298,7 +300,7 @@ class MergeAgentHandlerTool(BaseTool):
             >>> tools = MergeAgentHandlerTool.from_tool_pack(
             ...     tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
             ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
-            ...     tool_names=["linear__create_issue", "linear__get_issues"]
+            ...     tool_names=["linear__create_issue", "linear__get_issues"],
             ... )
         """
         # Create a temporary instance to fetch the tool list

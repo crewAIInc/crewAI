@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -30,28 +31,39 @@ class FileWriterTool(BaseTool):
 
     def _run(self, **kwargs: Any) -> str:
         try:
-            # Create the directory if it doesn't exist
-            if kwargs.get("directory") and not os.path.exists(kwargs["directory"]):
-                os.makedirs(kwargs["directory"])
+            directory = kwargs.get("directory") or "./"
+            filename = kwargs["filename"]
 
-            # Construct the full path
-            filepath = os.path.join(kwargs.get("directory") or "", kwargs["filename"])
+            filepath = os.path.join(directory, filename)
 
-            # Convert overwrite to boolean
+            # Prevent path traversal: the resolved path must be strictly inside
+            # the resolved directory. This blocks ../sequences, absolute paths in
+            # filename, and symlink escapes regardless of how directory is set.
+            # is_relative_to() does a proper path-component comparison that is
+            # safe on case-insensitive filesystems and avoids the "// " edge case
+            # that plagues startswith(real_directory + os.sep).
+            # We also reject the case where filepath resolves to the directory
+            # itself, since that is not a valid file target.
+            real_directory = Path(directory).resolve()
+            real_filepath = Path(filepath).resolve()
+            if not real_filepath.is_relative_to(real_directory) or real_filepath == real_directory:
+                return "Error: Invalid file path — the filename must not escape the target directory."
+
+            if kwargs.get("directory"):
+                os.makedirs(real_directory, exist_ok=True)
+
             kwargs["overwrite"] = strtobool(kwargs["overwrite"])
 
-            # Check if file exists and overwrite is not allowed
-            if os.path.exists(filepath) and not kwargs["overwrite"]:
-                return f"File {filepath} already exists and overwrite option was not passed."
+            if os.path.exists(real_filepath) and not kwargs["overwrite"]:
+                return f"File {real_filepath} already exists and overwrite option was not passed."
 
-            # Write content to the file
             mode = "w" if kwargs["overwrite"] else "x"
-            with open(filepath, mode) as file:
+            with open(real_filepath, mode) as file:
                 file.write(kwargs["content"])
-            return f"Content successfully written to {filepath}"
+            return f"Content successfully written to {real_filepath}"
         except FileExistsError:
             return (
-                f"File {filepath} already exists and overwrite option was not passed."
+                f"File {real_filepath} already exists and overwrite option was not passed."
             )
         except KeyError as e:
             return f"An error occurred while accessing key: {e!s}"

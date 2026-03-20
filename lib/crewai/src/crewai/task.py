@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import Future
+import contextvars
 from copy import copy as shallow_copy
 import datetime
 from hashlib import md5
@@ -524,10 +525,11 @@ class Task(BaseModel):
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
+        ctx = contextvars.copy_context()
         threading.Thread(
             daemon=True,
-            target=self._execute_task_async,
-            args=(agent, context, tools, future),
+            target=ctx.run,
+            args=(self._execute_task_async, agent, context, tools, future),
         ).start()
         return future
 

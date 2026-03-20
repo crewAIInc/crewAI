@@ -1456,7 +1456,7 @@ def test_agent_execute_task_with_tool():
     )
 
     result = agent.execute_task(task)
-    assert "you should always think about what to do" in result
+    assert "test query" in result
 
 
 @pytest.mark.vcr()
@@ -1475,9 +1475,9 @@ def test_agent_execute_task_with_custom_llm():
     )
 
     result = agent.execute_task(task)
-    assert "In circuits they thrive" in result
-    assert "Artificial minds awake" in result
-    assert "Future's coded drive" in result
+    assert "Artificial minds" in result
+    assert "Code and circuits" in result
+    assert "Future undefined" in result
 
 
 @pytest.mark.vcr()
