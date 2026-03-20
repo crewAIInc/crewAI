@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
-from contextlib import contextmanager
 import logging
 import os
 import threading
@@ -111,9 +110,7 @@ class OCICompletion(BaseLLM):
             self.client = self._oci.generative_ai_inference.GenerativeAiInferenceClient(
                 **client_kwargs
             )
-        self._client_condition = threading.Condition()
-        self._next_client_ticket = 0
-        self._active_client_ticket = 0
+        self._client_lock = threading.Lock()
         self.last_response_metadata = None
 
     # ------------------------------------------------------------------
@@ -128,7 +125,7 @@ class OCICompletion(BaseLLM):
         return "generic"
 
     def _is_openai_gpt5_family(self) -> bool:
-        return self.model.startswith("openai.gpt-5")
+        return self.model.lower().startswith("openai.gpt-5")
 
     def _build_serving_mode(self) -> Any:
         models = self._oci.generative_ai_inference.models
@@ -175,7 +172,7 @@ class OCICompletion(BaseLLM):
         processed: list[Any] = []
         for item in content:
             if isinstance(item, str):
-                processed.append(models.TextContent(text=item))
+                processed.append(models.TextContent(text=item or "."))
             elif isinstance(item, Mapping) and item.get("type") == "text":
                 processed.append(
                     models.TextContent(text=str(item.get("text", "")) or ".")
@@ -266,7 +263,7 @@ class OCICompletion(BaseLLM):
         if self.temperature is not None and not self._is_openai_gpt5_family():
             request_kwargs["temperature"] = self.temperature
         if self.max_tokens is not None:
-            if self.oci_provider == "generic" and self.model.startswith("openai."):
+            if self.oci_provider == "generic" and self.model.lower().startswith("openai."):
                 request_kwargs["max_completion_tokens"] = self.max_tokens
             else:
                 request_kwargs["max_tokens"] = self.max_tokens
@@ -460,24 +457,8 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def _chat(self, chat_details: Any) -> Any:
-        with self._ordered_client_access():
+        with self._client_lock:
             return self.client.chat(chat_details)
-
-    @contextmanager
-    def _ordered_client_access(self) -> Any:
-        """Serialize shared OCI client access in call-arrival order."""
-        with self._client_condition:
-            ticket = self._next_client_ticket
-            self._next_client_ticket += 1
-            while ticket != self._active_client_ticket:
-                self._client_condition.wait()
-
-        try:
-            yield
-        finally:
-            with self._client_condition:
-                self._active_client_ticket += 1
-                self._client_condition.notify_all()
 
     # ------------------------------------------------------------------
     # Capability declarations
