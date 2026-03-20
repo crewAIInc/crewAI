@@ -21672,6 +21672,7 @@
           "database": {
             "anyOf": [
               {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$",
                 "type": "string"
               },
               {
@@ -21690,6 +21691,7 @@
           "snowflake_schema": {
             "anyOf": [
               {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$",
                 "type": "string"
               },
               {
