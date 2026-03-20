@@ -54,7 +54,8 @@ class NL2SQLTool(BaseTool):
 
     def _fetch_all_available_columns(self, table_name: str):
         return self.execute_sql(
-            f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"  # noqa: S608
+            "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = :table_name;",
+            params={"table_name": table_name},
         )
 
     def _run(self, sql_query: str):
@@ -69,7 +70,7 @@ class NL2SQLTool(BaseTool):
 
         return data
 
-    def execute_sql(self, sql_query: str) -> list | str:
+    def execute_sql(self, sql_query: str, params: dict | None = None) -> list | str:
         if not SQLALCHEMY_AVAILABLE:
             raise ImportError(
                 "sqlalchemy is not installed. Please install it with `pip install crewai-tools[sqlalchemy]`"
@@ -79,7 +80,7 @@ class NL2SQLTool(BaseTool):
         Session = sessionmaker(bind=engine)  # noqa: N806
         session = Session()
         try:
-            result = session.execute(text(sql_query))
+            result = session.execute(text(sql_query), params or {})
             session.commit()
 
             if result.returns_rows:  # type: ignore[attr-defined]
