@@ -847,7 +847,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            # Prefer the OpenAI-style "function.arguments" when it is present and
+            # non-empty.  Fall back to the Bedrock Converse API "input" field.
+            # Previously this used a default of "{}" which is a truthy string and
+            # prevented the or-chain from ever reaching tool_call["input"],
+            # causing all Bedrock tool arguments to be silently dropped (#4972).
+            _raw_args = func_info.get("arguments")
+            func_args = _raw_args if _raw_args else tool_call.get("input", {})
             return call_id, func_name, func_args
         return None
 
