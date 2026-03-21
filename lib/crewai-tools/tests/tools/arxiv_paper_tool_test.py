@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import urllib.error
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 from crewai_tools import ArxivPaperTool
 import pytest
