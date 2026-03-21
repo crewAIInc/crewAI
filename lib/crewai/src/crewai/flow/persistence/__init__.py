@@ -10,10 +10,11 @@ from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.decorators import persist
+from crewai.flow.persistence.kalki import KalkiFlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
 
-__all__ = ["FlowPersistence", "SQLiteFlowPersistence", "persist"]
+__all__ = ["FlowPersistence", "KalkiFlowPersistence", "SQLiteFlowPersistence", "persist"]
 
 StateType = TypeVar("StateType", bound=dict[str, Any] | BaseModel)
 DictStateType = dict[str, Any]
