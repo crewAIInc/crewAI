@@ -7,7 +7,7 @@ mode: "wide"
 
 ## Connect CrewAI to LLMs
 
-CrewAI connects to LLMs through native SDK integrations for the most popular providers (OpenAI, Anthropic, Google Gemini, Azure, and AWS Bedrock), and uses LiteLLM as a flexible fallback for all other providers.
+CrewAI connects to LLMs through native SDK integrations for the most popular providers (OpenAI, Anthropic, Google Gemini, Azure, AWS Bedrock, and Avian), and uses LiteLLM as a flexible fallback for all other providers.
 
 <Note>
     By default, CrewAI uses the `gpt-4o-mini` model. This is determined by the `OPENAI_MODEL_NAME` environment variable, which defaults to "gpt-4o-mini" if not set.
@@ -36,6 +36,7 @@ LiteLLM supports a wide range of providers, including but not limited to:
 - Groq
 - SambaNova
 - Nebius AI Studio
+- [Avian](https://avian.io)
 - [NVIDIA NIMs](https://docs.api.nvidia.com/nim/reference/models-1)
 - And many more!
 
