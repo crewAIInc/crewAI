@@ -941,6 +941,8 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            if self._memory is not None and hasattr(self._memory, "drain_writes"):
+                self._memory.drain_writes()
             clear_files(self.id)
             detach(token)
 
