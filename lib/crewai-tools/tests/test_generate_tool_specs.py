@@ -192,3 +192,14 @@ def test_save_to_json(extractor, tmp_path):
     assert len(data["tools"]) == 1
     assert data["tools"][0]["humanized_name"] == "Test Tool"
     assert data["tools"][0]["run_params_schema"][0]["name"] == "param1"
+
+
+def test_save_to_json_uses_lf_newlines(extractor):
+    extractor.tools_spec = []
+
+    with mock.patch("crewai_tools.generate_tool_specs.open", mock.mock_open()) as mocked_open:
+        extractor.save_to_json("tool.specs.json")
+
+    mocked_open.assert_called_once_with(
+        "tool.specs.json", "w", encoding="utf-8", newline="\n"
+    )
