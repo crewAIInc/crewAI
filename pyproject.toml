@@ -142,6 +142,22 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "scm"
+tag_format = "$version"
+allowed_prefixes = ["Merge", "Revert"]
+changelog_incremental = true
+update_changelog_on_bump = false
+
+[tool.commitizen.customize]
+schema = "<type>(<scope>): <description>"
+schema_pattern = "^(feat|fix|refactor|perf|test|docs|chore|ci|style|revert)(\\(.+\\))?!?: .{1,72}"
+bump_pattern = "^(feat|fix|perf|refactor|revert)"
+bump_map = { feat = "MINOR", fix = "PATCH", perf = "PATCH", refactor = "PATCH", revert = "PATCH" }
+info = "Commits must follow Conventional Commits 1.0.0. See RELEASE_PROCESS.md for details."
+
+
 [tool.uv]
 
 # composio-core pins rich<14 but textual requires rich>=14.

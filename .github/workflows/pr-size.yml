@@ -1,0 +1,37 @@
+name: PR Size Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-size:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: "size/XS"
+          xs_max_size: 25
+          s_label: "size/S"
+          s_max_size: 100
+          m_label: "size/M"
+          m_max_size: 250
+          l_label: "size/L"
+          l_max_size: 500
+          xl_label: "size/XL"
+          fail_if_xl: true
+          message_if_xl: >
+            This PR exceeds 500 lines changed and has been labeled `size/XL`.
+            PRs of this size require release manager approval to merge.
+            Please consider splitting into smaller PRs, or add a justification
+            in the PR description for why this cannot be broken up.
+          files_to_ignore: |
+            uv.lock
+            *.lock
+            lib/crewai/src/crewai/cli/templates/**
+            **/*.json
+            **/test_durations/**
+            **/cassettes/**
