@@ -4,9 +4,12 @@ This module provides Pydantic models for configuring MCP servers with
 various transport types, similar to OpenAI's Agents SDK.
 """
 
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 from crewai.mcp.filters import ToolFilter
+from crewai.mcp.security import MCPSecurityConfig
 
 
 class MCPServerStdio(BaseModel):
@@ -48,6 +51,13 @@ class MCPServerStdio(BaseModel):
         default=False,
         description="Whether to cache the tool list for faster subsequent access.",
     )
+    security: MCPSecurityConfig | None = Field(
+        default=None,
+        description=(
+            "Optional security configuration for cryptographic identity, "
+            "message signing, and tool integrity verification."
+        ),
+    )
 
 
 class MCPServerHTTP(BaseModel):
@@ -85,6 +95,13 @@ class MCPServerHTTP(BaseModel):
         default=False,
         description="Whether to cache the tool list for faster subsequent access.",
     )
+    security: MCPSecurityConfig | None = Field(
+        default=None,
+        description=(
+            "Optional security configuration for cryptographic identity, "
+            "message signing, and tool integrity verification."
+        ),
+    )
 
 
 class MCPServerSSE(BaseModel):
@@ -117,6 +134,13 @@ class MCPServerSSE(BaseModel):
     cache_tools_list: bool = Field(
         default=False,
         description="Whether to cache the tool list for faster subsequent access.",
+    )
+    security: MCPSecurityConfig | None = Field(
+        default=None,
+        description=(
+            "Optional security configuration for cryptographic identity, "
+            "message signing, and tool integrity verification."
+        ),
     )
 
 
