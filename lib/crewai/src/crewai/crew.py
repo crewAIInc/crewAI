@@ -441,6 +441,19 @@ class Crew(FlowTrackable, BaseModel):
                     agent.set_rpm_controller(self._rpm_controller)
         return self
 
+    @staticmethod
+    def _sort_tasks_by_priority(tasks: list[Task]) -> list[Task]:
+        """Sort tasks by priority while preserving insertion order for ties."""
+        indexed_tasks = list(enumerate(tasks))
+        indexed_tasks.sort(key=lambda item: (-item[1].priority, item[0]))
+        return [task for _, task in indexed_tasks]
+
+    @model_validator(mode="after")
+    def enforce_deterministic_task_order(self) -> Self:
+        """Ensure deterministic task execution order for equal-priority tasks."""
+        self.tasks = self._sort_tasks_by_priority(self.tasks)
+        return self
+
     @model_validator(mode="after")
     def validate_tasks(self) -> Self:
         if self.process == Process.sequential:
