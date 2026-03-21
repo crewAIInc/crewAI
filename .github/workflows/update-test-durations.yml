@@ -5,7 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'tests/**/*.py'
+      - 'lib/crewai/tests/**/*.py'
+      - 'lib/crewai-tools/tests/**/*.py'
+      - 'lib/crewai-files/tests/**/*.py'
   workflow_dispatch:
 
 permissions:
@@ -20,37 +22,25 @@ jobs:
     env:
       OPENAI_API_KEY: fake-api-key
       PYTHONUNBUFFERED: 1
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Restore global uv cache
-        id: cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-main-py${{ matrix.python-version }}-
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.4"
           python-version: ${{ matrix.python-version }}
-          enable-cache: false
+          enable-cache: true
 
       - name: Install the project
-        run: uv sync --all-groups --all-extras
+        run: uv sync --all-groups --all-extras --frozen
 
       - name: Run all tests and store durations
         run: |
           PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
-          uv run pytest --store-durations --durations-path=.test_durations_py${PYTHON_VERSION_SAFE} -n auto
+          uv run --frozen pytest --store-durations --durations-path=.test_durations_py${PYTHON_VERSION_SAFE} -n auto
         continue-on-error: true
 
       - name: Save durations to cache
@@ -59,13 +49,3 @@ jobs:
         with:
           path: .test_durations_py*
           key: test-durations-py${{ matrix.python-version }}
-
-      - name: Save uv caches
-        if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
