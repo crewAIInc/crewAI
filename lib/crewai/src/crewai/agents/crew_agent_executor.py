@@ -847,7 +847,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            # Check for OpenAI-style arguments first, then Bedrock-style input.
+            # Use sentinel to distinguish "key absent" from "key is empty string".
+            _sentinel = object()
+            _raw_args = func_info.get("arguments", _sentinel)
+            if _raw_args is _sentinel or (isinstance(_raw_args, str) and _raw_args in ("", "{}")):
+                # No valid OpenAI arguments — try Bedrock's input field
+                func_args = tool_call.get("input", _raw_args if _raw_args is not _sentinel else "{}")
+            else:
+                func_args = _raw_args
             return call_id, func_name, func_args
         return None
 
