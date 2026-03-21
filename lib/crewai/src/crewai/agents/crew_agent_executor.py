@@ -215,6 +215,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
+        # Reset execution state for fresh execution
+        self.messages = []
+        self.iterations = 0
+
         self._setup_messages(inputs)
 
         self._inject_multimodal_files(inputs)
@@ -1119,6 +1123,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
+        # Reset execution state for fresh execution
+        self.messages = []
+        self.iterations = 0
+
         self._setup_messages(inputs)
 
         await self._ainject_multimodal_files(inputs)
