@@ -1,0 +1,87 @@
+---
+title: AgentCore Overview
+description: AWS-managed tools and runtime for CrewAI — browser automation, code execution, knowledge retrieval, and cloud deployment via Amazon Bedrock AgentCore.
+icon: aws
+mode: "wide"
+---
+
+# Amazon Bedrock AgentCore
+
+[Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/) provides AWS-managed infrastructure for CrewAI agents. Instead of running tools locally or managing your own servers, AgentCore handles browser sessions, code sandboxes, knowledge bases, agent invocation, and production deployment in the cloud.
+
+## Available Integrations
+
+<CardGroup cols={2}>
+  <Card title="AgentCore Browser" icon="globe" href="/en/tools/automation/agentcorebrowsertool">
+    Playwright-based browser automation in secure cloud sandboxes — no local Docker or browser installs.
+  </Card>
+
+  <Card title="AgentCore Code Interpreter" icon="code" href="/en/tools/ai-ml/agentcorecodeinterpretertool">
+    Python and shell execution in cloud sandboxes with up to 8-hour sessions — no local Docker required.
+  </Card>
+
+  <Card title="Bedrock Invoke Agent" icon="robot" href="/en/tools/integration/bedrockinvokeagenttool">
+    Call Amazon Bedrock Agents from your crews, reuse AWS guardrails, and stream responses back.
+  </Card>
+
+  <Card title="Bedrock KB Retriever" icon="database" href="/en/tools/cloud-storage/bedrockkbretriever">
+    Query Amazon Bedrock Knowledge Bases for RAG-powered retrieval within your agent workflows.
+  </Card>
+</CardGroup>
+
+## Installation
+
+All AgentCore tool integrations share the same install:
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[bedrock]'
+```
+
+**Prerequisites:**
+- AWS credentials configured (environment variables, AWS CLI profile, or IAM role)
+- IAM permissions for `bedrock-agentcore:*`
+- An LLM configured for your agents — see [LLM connections](/en/learn/llm-connections)
+
+## Quick Start
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.browser import create_browser_toolkit
+from crewai_tools.aws.bedrock.code_interpreter import create_code_interpreter_toolkit
+
+# Cloud browser — no local setup needed
+browser_toolkit, browser_tools = create_browser_toolkit(region="us-west-2")
+
+# Cloud code sandbox — no local Docker needed
+ci_toolkit, code_tools = create_code_interpreter_toolkit(region="us-west-2")
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find information online and analyze it with code",
+    backstory="You research topics on the web and use Python to analyze findings.",
+    tools=browser_tools + code_tools,
+)
+
+task = Task(
+    description="Navigate to https://example.com, extract the page text, then write Python code to count the words.",
+    expected_output="The word count of the page content.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+
+# Always clean up cloud resources
+browser_toolkit.sync_cleanup()
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+asyncio.run(ci_toolkit.cleanup())
+```
+
+## What's Next
+
+- **[Browser Toolkit](/en/tools/automation/agentcorebrowsertool)** — full tool reference, multi-agent usage, cleanup patterns
+- **[Code Interpreter Toolkit](/en/tools/ai-ml/agentcorecodeinterpretertool)** — full tool reference, async commands, file operations
+- **[Bedrock Invoke Agent](/en/tools/integration/bedrockinvokeagenttool)** — session management, multi-agent workflows
+- **[Bedrock KB Retriever](/en/tools/cloud-storage/bedrockkbretriever)** — knowledge base queries for RAG

@@ -1,0 +1,132 @@
+---
+title: AgentCore 코드 인터프리터
+description: AWS 관리형 클라우드 샌드박스에서 Python, 셸 명령, 파일 작업을 안전하게 실행하는 CrewAI 에이전트용 코드 실행 도구입니다.
+icon: aws
+mode: "wide"
+---
+
+# `CodeInterpreterToolkit`
+
+## 설명
+
+[Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/)의 `CodeInterpreterToolkit`은 CrewAI 에이전트에 AWS 관리형 코드 실행 환경을 제공합니다. 로컬 Docker 기반 [`CodeInterpreterTool`](/ko/tools/ai-ml/codeinterpretertool)과 달리, AgentCore는 로컬 Docker 없이 보안 클라우드 샌드박스(MicroVM)에서 코드를 실행합니다. Docker를 사용할 수 있는 빠른 로컬 작업에는 `CodeInterpreterTool`을, 장시간 세션이나 Docker 없는 환경, 또는 프로덕션 워크로드에는 AgentCore를 사용하세요.
+
+주요 기능:
+- **로컬 Docker 불필요** — AWS 관리형 클라우드 샌드박스에서 코드 실행
+- **최대 8시간 세션** — 타임아웃 걱정 없이 장시간 연산 수행
+- **완전한 실행 환경** — Python, 셸 명령, 파일 시스템 작업 지원
+- **멀티 에이전트 격리** — `thread_id`로 각 에이전트에 독립 샌드박스 환경 제공
+
+## 설치
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[bedrock]'
+```
+
+**사전 요구사항:**
+- AWS 자격 증명 구성 (환경 변수, AWS CLI 프로필, 또는 IAM 역할)
+- `bedrock-agentcore:*` IAM 권한
+- 에이전트용 LLM 구성 (Amazon Bedrock 모델 사용 시 `llm=LLM(model="bedrock/...", region_name="us-west-2")`을 Agent에 전달 — [LLM 연결](/en/learn/llm-connections) 참조)
+
+## 사용 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.code_interpreter import create_code_interpreter_toolkit
+
+# 코드 인터프리터 툴킷 생성
+toolkit, code_tools = create_code_interpreter_toolkit(region="us-west-2")
+
+# 코드 인터프리터 도구를 사용하는 에이전트 생성
+developer_agent = Agent(
+    role="Python Developer",
+    goal="Write and execute Python code to solve problems",
+    backstory="You're a skilled Python developer with expertise in data analysis.",
+    tools=code_tools,
+)
+
+# 태스크 생성
+coding_task = Task(
+    description="Write a Python function that calculates the factorial of a number and test it with values 1 through 10.",
+    expected_output="The factorial values for numbers 1 through 10.",
+    agent=developer_agent,
+)
+
+# 크루 실행
+crew = Crew(agents=[developer_agent], tasks=[coding_task])
+result = crew.kickoff()
+
+# 완료 후 항상 코드 인터프리터 세션 정리
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+asyncio.run(toolkit.cleanup())
+```
+
+## 사용 가능한 도구
+
+툴킷은 9개의 코드 실행 및 파일 관리 도구를 제공합니다:
+
+| 도구 | 설명 |
+| :--- | :---------- |
+| `execute_code` | 다양한 언어(주로 Python)로 코드를 실행합니다 |
+| `execute_command` | 코드 인터프리터 환경에서 셸 명령을 실행합니다 |
+| `read_files` | 환경 내 파일의 내용을 읽습니다 |
+| `list_files` | 환경 내 디렉토리의 파일을 나열합니다 |
+| `delete_files` | 환경에서 파일을 삭제합니다 |
+| `write_files` | 환경에서 파일을 생성하거나 업데이트합니다 |
+| `start_command_execution` | 장시간 실행 명령을 비동기적으로 시작합니다 |
+| `get_task` | 비동기 작업의 상태를 확인합니다 |
+| `stop_task` | 실행 중인 작업을 중지합니다 |
+
+## 파라미터
+
+| 파라미터 | 타입 | 설명 |
+| :------- | :--- | :---------- |
+| `region` | `str` | 코드 인터프리터 서비스의 AWS 리전 (기본값: `us-west-2`) |
+
+## 멀티 에이전트 사용
+
+`thread_id`를 사용하여 각 에이전트에 격리된 코드 인터프리터 세션을 제공할 수 있습니다. 각 스레드는 자체 파일 시스템과 실행 컨텍스트를 가진 별도의 샌드박스를 갖습니다.
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.code_interpreter import create_code_interpreter_toolkit
+
+toolkit, code_tools = create_code_interpreter_toolkit(region="us-west-2")
+
+# 두 에이전트가 툴킷을 공유하지만 서로 다른 thread_id로
+# 별도의 샌드박스 환경을 유지할 수 있습니다
+data_agent = Agent(
+    role="Data Analyst",
+    goal="Analyze datasets and produce insights",
+    backstory="You specialize in data analysis with pandas and matplotlib.",
+    tools=code_tools,
+)
+
+test_agent = Agent(
+    role="Test Engineer",
+    goal="Write and run test suites",
+    backstory="You specialize in writing comprehensive test cases.",
+    tools=code_tools,
+)
+```
+
+## 정리
+
+크루 실행이 완료되면 항상 코드 인터프리터 세션을 정리하여 클라우드 리소스를 해제하세요. 브라우저 툴킷과 달리 코드 인터프리터 정리는 비동기 전용입니다. CrewAI는 `crew.kickoff()` 이후 이벤트 루프를 실행 상태로 남길 수 있으므로, `asyncio.run()` 사용 전에 `nest_asyncio.apply()`를 호출하세요.
+
+```python Code
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+
+# 동기 코드에서 (예: crew.kickoff() 이후)
+asyncio.run(toolkit.cleanup())
+
+# 비동기 코드에서
+await toolkit.cleanup()
+
+# 특정 스레드의 세션만 정리
+asyncio.run(toolkit.cleanup(thread_id="specific-thread"))
+```

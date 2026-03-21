@@ -273,7 +273,8 @@
                           "en/tools/ai-ml/llamaindextool",
                           "en/tools/ai-ml/langchaintool",
                           "en/tools/ai-ml/ragtool",
-                          "en/tools/ai-ml/codeinterpretertool"
+                          "en/tools/ai-ml/codeinterpretertool",
+                          "en/tools/ai-ml/agentcorecodeinterpretertool"
                         ]
                       },
                       {
@@ -291,6 +292,7 @@
                         "icon": "plug",
                         "pages": [
                           "en/tools/integration/overview",
+                          "en/tools/integration/agentcoreoverview",
                           "en/tools/integration/bedrockinvokeagenttool",
                           "en/tools/integration/crewaiautomationtool",
                           "en/tools/integration/mergeagenthandlertool"
@@ -304,7 +306,8 @@
                           "en/tools/automation/apifyactorstool",
                           "en/tools/automation/composiotool",
                           "en/tools/automation/multiontool",
-                          "en/tools/automation/zapieractionstool"
+                          "en/tools/automation/zapieractionstool",
+                          "en/tools/automation/agentcorebrowsertool"
                         ]
                       }
                     ]
@@ -1207,7 +1210,8 @@
                           "en/tools/ai-ml/llamaindextool",
                           "en/tools/ai-ml/langchaintool",
                           "en/tools/ai-ml/ragtool",
-                          "en/tools/ai-ml/codeinterpretertool"
+                          "en/tools/ai-ml/codeinterpretertool",
+                          "en/tools/ai-ml/agentcorecodeinterpretertool"
                         ]
                       },
                       {
@@ -1225,6 +1229,7 @@
                         "icon": "plug",
                         "pages": [
                           "en/tools/integration/overview",
+                          "en/tools/integration/agentcoreoverview",
                           "en/tools/integration/bedrockinvokeagenttool",
                           "en/tools/integration/crewaiautomationtool",
                           "en/tools/integration/mergeagenthandlertool"
@@ -1238,7 +1243,8 @@
                           "en/tools/automation/apifyactorstool",
                           "en/tools/automation/composiotool",
                           "en/tools/automation/multiontool",
-                          "en/tools/automation/zapieractionstool"
+                          "en/tools/automation/zapieractionstool",
+                          "en/tools/automation/agentcorebrowsertool"
                         ]
                       }
                     ]
@@ -3093,7 +3099,8 @@
                           "ko/tools/ai-ml/llamaindextool",
                           "ko/tools/ai-ml/langchaintool",
                           "ko/tools/ai-ml/ragtool",
-                          "ko/tools/ai-ml/codeinterpretertool"
+                          "ko/tools/ai-ml/codeinterpretertool",
+                          "ko/tools/ai-ml/agentcorecodeinterpretertool"
                         ]
                       },
                       {
@@ -3123,7 +3130,8 @@
                           "ko/tools/automation/apifyactorstool",
                           "ko/tools/automation/composiotool",
                           "ko/tools/automation/multiontool",
-                          "ko/tools/automation/zapieractionstool"
+                          "ko/tools/automation/zapieractionstool",
+                          "ko/tools/automation/agentcorebrowsertool"
                         ]
                       }
                     ]
@@ -4023,7 +4031,8 @@
                           "ko/tools/ai-ml/llamaindextool",
                           "ko/tools/ai-ml/langchaintool",
                           "ko/tools/ai-ml/ragtool",
-                          "ko/tools/ai-ml/codeinterpretertool"
+                          "ko/tools/ai-ml/codeinterpretertool",
+                          "ko/tools/ai-ml/agentcorecodeinterpretertool"
                         ]
                       },
                       {
@@ -4053,7 +4062,8 @@
                           "ko/tools/automation/apifyactorstool",
                           "ko/tools/automation/composiotool",
                           "ko/tools/automation/multiontool",
-                          "ko/tools/automation/zapieractionstool"
+                          "ko/tools/automation/zapieractionstool",
+                          "ko/tools/automation/agentcorebrowsertool"
                         ]
                       }
                     ]

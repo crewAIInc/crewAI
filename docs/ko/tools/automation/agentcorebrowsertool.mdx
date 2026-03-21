@@ -1,0 +1,129 @@
+---
+title: AgentCore 브라우저
+description: AWS 관리형 클라우드 샌드박스에서 Playwright 기반 웹 상호작용을 제공하는 CrewAI 에이전트용 브라우저 자동화 도구입니다.
+icon: aws
+mode: "wide"
+---
+
+# `BrowserToolkit`
+
+## 설명
+
+[Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/)의 `BrowserToolkit`은 CrewAI 에이전트에 AWS 관리형 브라우저 자동화 기능을 제공합니다. 로컬 Docker 기반 솔루션이나 서드파티 브라우저 서비스와 달리, AgentCore는 보안 클라우드 샌드박스에서 Playwright 기반 브라우저를 실행하므로 로컬 설정이 필요 없습니다.
+
+주요 기능:
+- **로컬 인프라 불필요** — Docker, 브라우저 설치, Playwright 설정 없음
+- **보안 클라우드 샌드박스** — 각 브라우저 세션이 격리된 AWS 관리형 환경에서 실행
+- **Playwright 기반** — 탐색, 클릭, 텍스트 추출 등 완전한 브라우저 자동화
+- **멀티 에이전트 격리** — `thread_id`로 각 에이전트에 독립 브라우저 세션 제공
+
+## 설치
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[bedrock]'
+```
+
+**사전 요구사항:**
+- AWS 자격 증명 구성 (환경 변수, AWS CLI 프로필, 또는 IAM 역할)
+- `bedrock-agentcore:*` IAM 권한
+- 에이전트용 LLM 구성 (Amazon Bedrock 모델 사용 시 `llm=LLM(model="bedrock/...", region_name="us-west-2")`을 Agent에 전달 — [LLM 연결](/en/learn/llm-connections) 참조)
+
+## 사용 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.browser import create_browser_toolkit
+
+# 브라우저 툴킷 생성
+toolkit, browser_tools = create_browser_toolkit(region="us-west-2")
+
+# 브라우저 도구를 사용하는 에이전트 생성
+research_agent = Agent(
+    role="Web Researcher",
+    goal="Research and summarize web content",
+    backstory="You're an expert at finding information online.",
+    tools=browser_tools,
+)
+
+# 태스크 생성
+research_task = Task(
+    description="Navigate to https://example.com and extract all text content. Summarize the main points.",
+    expected_output="A summary of the main content on example.com.",
+    agent=research_agent,
+)
+
+# 크루 실행
+crew = Crew(agents=[research_agent], tasks=[research_task])
+result = crew.kickoff()
+
+# 완료 후 항상 브라우저 세션 정리
+toolkit.sync_cleanup()
+```
+
+## 사용 가능한 도구
+
+툴킷은 7개의 브라우저 도구를 제공합니다:
+
+| 도구 | 설명 |
+| :--- | :---------- |
+| `navigate_browser` | 지정된 URL로 브라우저를 이동합니다 |
+| `click_element` | 주어진 CSS 선택자로 요소를 클릭합니다 |
+| `extract_text` | 현재 웹페이지의 모든 텍스트를 추출합니다 |
+| `extract_hyperlinks` | 현재 웹페이지의 모든 하이퍼링크를 추출합니다 |
+| `get_elements` | CSS 선택자를 사용하여 웹페이지에서 요소를 가져옵니다 |
+| `navigate_back` | 이전 페이지로 돌아갑니다 |
+| `current_webpage` | 현재 웹페이지 정보를 가져옵니다 |
+
+## 파라미터
+
+| 파라미터 | 타입 | 설명 |
+| :------- | :--- | :---------- |
+| `region` | `str` | 브라우저 서비스의 AWS 리전 (기본값: `us-west-2`) |
+
+## 멀티 에이전트 사용
+
+`thread_id`를 사용하여 동시에 실행되는 에이전트 간 브라우저 세션을 격리할 수 있습니다. 각 스레드는 독립적인 브라우저 인스턴스를 갖습니다.
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.browser import create_browser_toolkit
+
+toolkit, browser_tools = create_browser_toolkit(region="us-west-2")
+
+# 두 에이전트가 툴킷을 공유하지만 서로 다른 thread_id로
+# 별도의 브라우저 세션을 유지할 수 있습니다
+news_agent = Agent(
+    role="News Researcher",
+    goal="Find the latest tech news",
+    backstory="You specialize in technology news.",
+    tools=browser_tools,
+)
+
+finance_agent = Agent(
+    role="Finance Researcher",
+    goal="Find current market data",
+    backstory="You specialize in financial markets.",
+    tools=browser_tools,
+)
+
+# 특정 도구만 특정 에이전트에 할당할 수도 있습니다
+tools_by_name = toolkit.get_tools_by_name()
+navigate_only_agent = Agent(
+    role="Navigator",
+    goal="Navigate to specified URLs",
+    backstory="You navigate to web pages.",
+    tools=[tools_by_name["navigate_browser"], tools_by_name["extract_text"]],
+)
+```
+
+## 정리
+
+크루 실행이 완료되면 항상 브라우저 세션을 정리하여 클라우드 리소스를 해제하세요.
+
+```python Code
+# 동기 코드에서
+toolkit.sync_cleanup()
+
+# 비동기 코드에서
+await toolkit.cleanup()
+```
