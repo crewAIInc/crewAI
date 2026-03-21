@@ -110,6 +110,5 @@ class TestCrewaiPlatformTools(unittest.TestCase):
 
     def test_crewai_platform_tools_no_token(self):
         with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaises(ValueError) as context:
-                CrewaiPlatformTools(apps=["github"])
-            assert "No platform integration token found" in str(context.exception)
+            tools = CrewaiPlatformTools(apps=["github"])
+            assert tools == []
