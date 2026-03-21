@@ -221,6 +221,74 @@ def test_connect_timeout_with_filtered_tools(echo_server_script):
         assert tools[0].run(text="timeout test") == "Echo: timeout test"
 
 
+def test_mcp_tool_ignores_security_context(echo_server_script):
+    """Test that MCP tools ignore extra fields like security_context.
+
+    This is a regression test for https://github.com/crewAIInc/crewAI/issues/4796.
+    CrewAI's tool execution framework injects a `security_context` parameter
+    (containing agent_fingerprint and metadata) into tool calls. MCP tools must
+    ignore this extra field instead of raising a Pydantic validation error.
+    """
+    serverparams = StdioServerParameters(
+        command="uv", args=["run", "python", "-c", echo_server_script]
+    )
+    with MCPServerAdapter(serverparams) as tools:
+        echo_tool = tools[0]
+        # Simulate what CrewAI's tool_usage._add_fingerprint_metadata does:
+        # it adds security_context to the tool arguments before invocation.
+        result = echo_tool.run(
+            text="hello",
+            security_context={
+                "agent_fingerprint": {
+                    "uuid_str": "test-uuid-12345",
+                    "created_at": "2026-01-01T00:00:00",
+                },
+                "metadata": {},
+            },
+        )
+        assert result == "Echo: hello"
+
+
+def test_mcp_tool_ignores_security_context_calc(echo_server_script):
+    """Test that security_context is ignored for tools with multiple args."""
+    serverparams = StdioServerParameters(
+        command="uv", args=["run", "python", "-c", echo_server_script]
+    )
+    with MCPServerAdapter(serverparams) as tools:
+        calc_tool = tools[1]
+        result = calc_tool.run(
+            a=10,
+            b=20,
+            security_context={
+                "agent_fingerprint": {
+                    "uuid_str": "test-uuid-67890",
+                    "created_at": "2026-01-01T00:00:00",
+                },
+                "task_fingerprint": {
+                    "uuid_str": "task-uuid-11111",
+                    "created_at": "2026-01-01T00:00:00",
+                },
+                "metadata": {},
+            },
+        )
+        assert result == "30"
+
+
+def test_mcp_tool_args_schema_allows_extra_fields(echo_server_script):
+    """Test that the args_schema on MCP tools is configured to ignore extra fields."""
+    serverparams = StdioServerParameters(
+        command="uv", args=["run", "python", "-c", echo_server_script]
+    )
+    with MCPServerAdapter(serverparams) as tools:
+        echo_tool = tools[0]
+        # Validate that the schema accepts and ignores extra fields
+        schema = echo_tool.args_schema
+        validated = schema.model_validate(
+            {"text": "test", "security_context": {"agent_fingerprint": "abc"}}
+        )
+        assert validated.model_dump() == {"text": "test"}
+
+
 @patch("crewai_tools.adapters.mcp_adapter.MCPAdapt")
 def test_connect_timeout_passed_to_mcpadapt(mock_mcpadapt):
     mock_adapter_instance = MagicMock()
