@@ -2822,7 +2822,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         return handle_agent_action_core(
             formatted_answer=formatted_answer,
             tool_result=tool_result,
-            messages=self.state.messages,
             step_callback=self.step_callback,
             show_logs=self._show_logs,
         )
