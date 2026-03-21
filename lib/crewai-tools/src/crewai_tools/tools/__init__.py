@@ -121,6 +121,10 @@ from crewai_tools.tools.patronus_eval_tool import (
     PatronusPredefinedCriteriaEvalTool,
 )
 from crewai_tools.tools.pdf_search_tool.pdf_search_tool import PDFSearchTool
+from crewai_tools.tools.proxies_sx_tool.proxies_sx_tool import (
+    ProxiesSxBrowserTool,
+    ProxiesSxProxyTool,
+)
 from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import (
     QdrantVectorSearchTool,
 )
@@ -256,6 +260,8 @@ __all__ = [
     "PatronusEvalTool",
     "PatronusLocalEvaluatorTool",
     "PatronusPredefinedCriteriaEvalTool",
+    "ProxiesSxBrowserTool",
+    "ProxiesSxProxyTool",
     "QdrantVectorSearchTool",
     "RagTool",
     "ScrapeElementFromWebsiteTool",
