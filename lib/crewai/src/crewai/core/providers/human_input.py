@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextvars import ContextVar, Token
+from contextvars import ContextVar
 import sys
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -468,22 +468,4 @@ def get_provider() -> HumanInputProvider:
     return provider
 
 
-def set_provider(provider: HumanInputProvider) -> Token[HumanInputProvider | None]:
-    """Set the human input provider for the current context.
 
-    Args:
-        provider: The provider to use.
-
-    Returns:
-        Token that can be used to reset to previous value.
-    """
-    return _provider.set(provider)
-
-
-def reset_provider(token: Token[HumanInputProvider | None]) -> None:
-    """Reset the provider to its previous value.
-
-    Args:
-        token: Token returned from set_provider.
-    """
-    _provider.reset(token)
