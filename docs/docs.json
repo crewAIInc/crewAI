@@ -104,7 +104,8 @@
                         "group": "Crews",
                         "icon": "users",
                         "pages": [
-                          "en/guides/crews/first-crew"
+                          "en/guides/crews/first-crew",
+                          "en/guides/crews/debugging-multi-agent-crews-wfgy"
                         ]
                       },
                       {
@@ -1038,7 +1039,8 @@
                         "group": "Crews",
                         "icon": "users",
                         "pages": [
-                          "en/guides/crews/first-crew"
+                          "en/guides/crews/first-crew",
+                          "en/guides/crews/debugging-multi-agent-crews-wfgy"
                         ]
                       },
                       {
