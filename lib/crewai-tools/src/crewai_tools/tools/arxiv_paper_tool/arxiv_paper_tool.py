@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import urllib.error
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
@@ -92,7 +92,7 @@ class ArxivPaperTool(BaseTool):
             logger.error(f"Error fetching data from Arxiv: {e}")
             raise
 
-        root = ET.fromstring(data)  # noqa: S314
+        root = ET.fromstring(data)
         papers = []
 
         for entry in root.findall(self.ATOM_NAMESPACE + "entry"):
