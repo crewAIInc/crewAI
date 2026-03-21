@@ -77,6 +77,7 @@ _track_install_async()
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
+    "VALCrew": ("crewai.val", "VALCrew"),
 }
 
 
@@ -107,5 +108,6 @@ __all__ = [
     "Process",
     "Task",
     "TaskOutput",
+    "VALCrew",
     "__version__",
 ]
