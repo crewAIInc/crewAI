@@ -417,6 +417,86 @@ def strip_null_from_types(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def _strip_schema_metadata(d: Any, _is_properties_map: bool = False) -> Any:
+    """Recursively remove provider-specific metadata from a JSON schema.
+
+    Strips ``title``, ``default``, and ``additionalProperties`` keys from
+    schema nodes. When traversing a ``properties`` mapping (where keys are
+    user-defined field names), the function does **not** pop keys from the
+    mapping itself — it only recurses into each field's schema node and
+    strips metadata there.
+
+    Args:
+        d: The dictionary/list to clean.
+        _is_properties_map: Internal flag — ``True`` when ``d`` is a
+            ``properties`` mapping (field-name -> schema) rather than a
+            schema node itself.
+
+    Returns:
+        The cleaned dictionary/list.
+    """
+    if isinstance(d, dict):
+        if _is_properties_map:
+            # ``d`` is a properties mapping: each value is a schema node.
+            # Do NOT pop keys from ``d`` (they are field names like
+            # ``title``, ``default``, etc.).  Recurse into each field's
+            # schema node with ``_is_properties_map=False``.
+            for v in d.values():
+                _strip_schema_metadata(v, _is_properties_map=False)
+        else:
+            # ``d`` is a schema node — strip cosmetic/metadata keys.
+            for key in ("title", "default", "additionalProperties"):
+                d.pop(key, None)
+            for k, v in d.items():
+                _strip_schema_metadata(
+                    v, _is_properties_map=(k == "properties")
+                )
+    elif isinstance(d, list):
+        for item in d:
+            _strip_schema_metadata(item)
+    return d
+
+
+def generate_tool_parameters_schema(
+    model: type[BaseModel],
+) -> dict[str, Any]:
+    """Generate a provider-agnostic JSON schema for tool parameters.
+
+    Unlike :func:`generate_model_description`, this function does **not** apply
+    OpenAI-specific transformations such as ``additionalProperties: false``,
+    forcing all properties into ``required``, or adding ``title`` to nested
+    objects.  The result is a clean schema that works with Bedrock, Gemini,
+    Anthropic, and OpenAI alike.
+
+    Steps:
+        1. Obtain Pydantic's JSON schema.
+        2. Resolve ``$ref`` / ``$defs`` inline.
+        3. Strip ``null`` from optional-field type unions.
+        4. Recursively remove ``title``, ``default``, and
+           ``additionalProperties`` keys.
+
+    Args:
+        model: A Pydantic model class (typically the tool's ``args_schema``).
+
+    Returns:
+        A plain JSON-schema ``dict`` suitable for the ``parameters`` key of a
+        tool/function definition.
+    """
+    schema = model.model_json_schema(ref_template="#/$defs/{model}")
+
+    # Inline all $ref definitions
+    schema = resolve_refs(schema)
+    schema.pop("$defs", None)
+
+    # Strip null variants for optional fields (the partial fix from #4579)
+    schema = strip_null_from_types(schema)
+
+    # Remove provider-specific / cosmetic keys
+    schema = _strip_schema_metadata(schema)
+
+    return schema
+
+
 def generate_model_description(
     model: type[BaseModel],
     *,
