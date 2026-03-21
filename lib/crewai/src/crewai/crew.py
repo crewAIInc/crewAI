@@ -1482,7 +1482,8 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[BaseTool]:
         if self.manager_agent:
             if task.agent:
-                tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
+                other_agents = [agent for agent in self.agents if agent != task.agent]
+                tools = self._inject_delegation_tools(tools, task.agent, other_agents)
             else:
                 tools = self._inject_delegation_tools(
                     tools, self.manager_agent, self.agents
