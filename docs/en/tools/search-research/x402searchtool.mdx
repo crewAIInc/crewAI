@@ -1,0 +1,93 @@
+---
+title: x402search Tool
+description: The `X402SearchTool` searches 14,000+ indexed API services by natural language capability query via x402 protocol.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# `X402SearchTool`
+
+## Description
+
+The `X402SearchTool` enables CrewAI agents to discover API services by natural language capability query. It searches 14,000+ indexed APIs across crypto, DeFi, NFT, weather, finance, AI, and more — returning matching services with names, descriptions, and endpoints.
+
+**Cost:** $0.01 USDC per query via [x402 protocol](https://x402.org) on Base mainnet — paid automatically, no API key required.
+
+Coinbase Bazaar lists services. x402search searches them by capability — they are complementary, not competing.
+
+## Installation
+```shell
+uv add crewai
+```
+
+No API key required. Payment of $0.01 USDC is handled automatically via x402 protocol on Base mainnet. The agent's wallet must hold USDC on Base mainnet (`eip155:8453`).
+
+## Example
+```python
+from crewai import Agent, Task, Crew
+from crewai.tools import X402SearchTool
+
+search_tool = X402SearchTool()
+
+agent = Agent(
+    role="API Researcher",
+    goal="Find the best APIs for a given capability",
+    backstory="Expert at discovering and evaluating API services",
+    tools=[search_tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Find APIs for real-time cryptocurrency price data.",
+    expected_output="A list of 5 API services with names, descriptions, and endpoints.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+### Direct usage
+```python
+from crewai.tools import X402SearchTool
+
+tool = X402SearchTool()
+print(tool.run(query="token price", limit=5))
+```
+
+## Parameters
+
+### Initialization Parameters
+
+No required initialization parameters.
+
+### Run Parameters
+
+- `query` (str, required): Natural language capability query (2–200 chars).
+- `limit` (int, default `5`, range 1–10): Maximum number of results to return.
+
+## Best queries
+
+| Query | Approx results |
+|-------|---------------|
+| `crypto` | 112 |
+| `token price` | 88 |
+| `crypto market data` | 10 |
+| `btc price` | 8 |
+
+## Output format
+
+Returns a human-readable list of matching API services with:
+- Service name
+- Description (truncated to 120 chars)
+- Endpoint URL
+
+## Payment
+
+Payment is handled automatically via the [x402 protocol](https://x402.org). The agent's wallet pays $0.01 USDC per query on Base mainnet. No API keys or subscriptions required.
+
+## Related links
+
+- x402search API: https://x402search.xyz
+- x402 protocol: https://x402.org
+- MCP package: `x402search-mcp` on npm and PyPI
