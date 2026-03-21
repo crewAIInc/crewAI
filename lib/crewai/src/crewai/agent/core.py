@@ -1014,8 +1014,20 @@ class Agent(BaseAgent):
         return task_prompt
 
     def _use_trained_data(self, task_prompt: str) -> str:
-        """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        """Use trained data for the agent task prompt to improve output.
+
+        Loads trained agent suggestions from the crew's configured
+        ``trained_agents_file`` when available, falling back to the default
+        ``TRAINED_AGENTS_DATA_FILE`` constant.  This allows users who trained
+        with a custom filename (``crew.train(filename="custom.pkl")``) to have
+        their suggestions picked up automatically during inference by setting
+        ``Crew(trained_agents_file="custom.pkl")``.
+        """
+        trained_file = TRAINED_AGENTS_DATA_FILE
+        if self.crew and getattr(self.crew, "trained_agents_file", None):
+            trained_file = self.crew.trained_agents_file
+
+        if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
