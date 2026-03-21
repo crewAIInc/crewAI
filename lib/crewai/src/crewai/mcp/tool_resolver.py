@@ -611,7 +611,14 @@ class MCPToolResolver:
 
     @staticmethod
     def _json_schema_to_pydantic(tool_name: str, json_schema: dict[str, Any]) -> type:
-        """Convert JSON Schema to a Pydantic model for tool arguments."""
+        """Convert JSON Schema to a Pydantic model for tool arguments.
+
+        Uses extra='ignore' so that MCP servers injecting non-standard
+        properties (e.g. security_context) do not cause Pydantic
+        validation errors.
+        """
+        from pydantic import ConfigDict
+
         from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
         model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
@@ -619,4 +626,5 @@ class MCPToolResolver:
             json_schema,
             model_name=model_name,
             enrich_descriptions=True,
+            __config__=ConfigDict(extra="ignore"),
         )
