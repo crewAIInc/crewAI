@@ -120,18 +120,16 @@ class TestPlusAPI(unittest.TestCase):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
         handle = "test_tool_handle"
-        public = True
         version = "1.0.0"
         description = "Test tool description"
         encoded_file = "encoded_test_file"
 
         response = self.api.publish_tool(
-            handle, public, version, description, encoded_file
+            handle, version, description, encoded_file
         )
 
         params = {
             "handle": handle,
-            "public": public,
             "version": version,
             "file": encoded_file,
             "description": description,
@@ -157,18 +155,16 @@ class TestPlusAPI(unittest.TestCase):
         mock_client_class.return_value.__enter__.return_value = mock_client_instance
 
         handle = "test_tool_handle"
-        public = True
         version = "1.0.0"
         description = "Test tool description"
         encoded_file = "encoded_test_file"
 
         response = self.api.publish_tool(
-            handle, public, version, description, encoded_file
+            handle, version, description, encoded_file
         )
 
         expected_params = {
             "handle": handle,
-            "public": public,
             "version": version,
             "file": encoded_file,
             "description": description,
@@ -185,18 +181,16 @@ class TestPlusAPI(unittest.TestCase):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
         handle = "test_tool_handle"
-        public = False
         version = "2.0.0"
         description = None
         encoded_file = "encoded_test_file"
 
         response = self.api.publish_tool(
-            handle, public, version, description, encoded_file
+            handle, version, description, encoded_file
         )
 
         params = {
             "handle": handle,
-            "public": public,
             "version": version,
             "file": encoded_file,
             "description": description,

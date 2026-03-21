@@ -68,7 +68,6 @@ class PlusAPI:
     def publish_tool(
         self,
         handle: str,
-        is_public: bool,
         version: str,
         description: str | None,
         encoded_file: str,
@@ -76,7 +75,6 @@ class PlusAPI:
     ) -> httpx.Response:
         params = {
             "handle": handle,
-            "public": is_public,
             "version": version,
             "file": encoded_file,
             "description": description,

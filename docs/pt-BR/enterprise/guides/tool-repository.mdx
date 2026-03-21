@@ -9,10 +9,7 @@ mode: "wide"
 
 O Repositório de Ferramentas é um gerenciador de pacotes para ferramentas da CrewAI. Ele permite que usuários publiquem, instalem e gerenciem ferramentas que se integram com crews e flows da CrewAI.
 
-As ferramentas podem ser:
-
-- **Privadas**: acessíveis apenas dentro da sua organização (padrão)
-- **Públicas**: acessíveis a todos os usuários CrewAI se publicadas com a flag `--public`
+Todas as ferramentas são privadas por padrão e acessíveis apenas dentro da sua organização.
 
 O repositório não é um sistema de controle de versões. Use Git para rastrear mudanças no código e permitir colaboração.
 
@@ -58,12 +55,6 @@ Para publicar a ferramenta:
 
 ```bash
 crewai tool publish
-```
-
-Por padrão, as ferramentas são publicadas como privadas. Para tornar uma ferramenta pública:
-
-```bash
-crewai tool publish --public
 ```
 
 Para mais detalhes sobre como construir ferramentas, acesse [Criando suas próprias ferramentas](/pt-BR/concepts/tools#creating-your-own-tools).

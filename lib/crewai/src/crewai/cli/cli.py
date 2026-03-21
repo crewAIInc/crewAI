@@ -452,12 +452,10 @@ def tool_install(handle: str):
     default=False,
     help="Bypasses Git remote validations",
 )
-@click.option("--public", "is_public", flag_value=True, default=False)
-@click.option("--private", "is_public", flag_value=False)
-def tool_publish(is_public: bool, force: bool):
+def tool_publish(force: bool):
     tool_cmd = ToolCommand()
     tool_cmd.login()
-    tool_cmd.publish(is_public, force)
+    tool_cmd.publish(force)
 
 
 @crewai.group()
