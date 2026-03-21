@@ -201,6 +201,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of applications or application/action combinations that the agent can access through CrewAI Platform. Can contain app names (e.g., 'gmail') or specific actions (e.g., 'gmail/send_email')",
     )
+    trained_agents_data_file: str | None = Field(
+        default=None,
+        description=(
+            "Path to the trained-agents data file produced by `crewai train -f <file>`. "
+            "When set, the agent loads its trained suggestions from this path instead of "
+            "the default 'trained_agents_data.pkl'. Useful when multiple crews share the "
+            "same working directory or when a custom filename was used during training."
+        ),
+    )
     mcps: list[str | MCPServerConfig] | None = Field(
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",

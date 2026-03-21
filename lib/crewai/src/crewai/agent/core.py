@@ -971,7 +971,11 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        # Honour a custom file path when one was supplied at agent construction time
+        # (e.g. matching the -f flag passed to `crewai train`).  Fall back to the
+        # default constant so that the existing behaviour is preserved.
+        trained_file = self.trained_agents_data_file or TRAINED_AGENTS_DATA_FILE
+        if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
