@@ -1604,6 +1604,7 @@ class Crew(FlowTrackable, BaseModel):
                 raw=stored_output["raw"],
                 pydantic=stored_output["pydantic"],
                 json_dict=stored_output["json_dict"],
+                proof_links=stored_output.get("proof_links", {}),
                 output_format=stored_output["output_format"],
                 messages=stored_output.get("messages", []),
             )
