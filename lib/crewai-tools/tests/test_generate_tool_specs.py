@@ -192,3 +192,26 @@ def test_save_to_json(extractor, tmp_path):
     assert len(data["tools"]) == 1
     assert data["tools"][0]["humanized_name"] == "Test Tool"
     assert data["tools"][0]["run_params_schema"][0]["name"] == "param1"
+
+
+def test_save_to_json_forces_lf_line_endings(extractor, tmp_path):
+    extractor.tools_spec = [
+        {
+            "name": "TestTool",
+            "humanized_name": "Test Tool",
+            "description": "A test tool",
+            "run_params_schema": [
+                {"name": "param1", "description": "Test parameter", "type": "str"}
+            ],
+        }
+    ]
+
+    file_path = tmp_path / "output.json"
+
+    with mock.patch("crewai_tools.generate_tool_specs.open", wraps=open) as mocked_open:
+        extractor.save_to_json(str(file_path))
+
+    mocked_open.assert_called_once_with(
+        str(file_path), "w", encoding="utf-8", newline="\n"
+    )
+    assert b"\r\n" not in file_path.read_bytes()
