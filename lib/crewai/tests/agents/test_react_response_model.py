@@ -11,7 +11,7 @@ The fix: _invoke_loop_react() must pass response_model=None so the LLM
 produces plain text that the ReAct parser can handle normally.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -138,3 +138,58 @@ class TestReActResponseModel:
 
                 spy_react.assert_called_once()
                 spy_native.assert_not_called()
+
+    def test_react_path_with_valid_json_string_bypasses_fallback_parser(
+        self, mock_llm, mock_agent, mock_task, mock_crew
+    ):
+        """Valid JSON strings should be returned directly in ReAct mode."""
+        from pydantic import BaseModel
+
+        class MyOutput(BaseModel):
+            answer: str
+
+        executor = _make_executor(
+            mock_llm, mock_agent, mock_task, mock_crew, response_model=MyOutput
+        )
+
+        valid_json = '{"answer": "hello"}'
+
+        with patch(
+            "crewai.agents.crew_agent_executor.get_llm_response",
+            return_value=valid_json,
+        ), patch(
+            "crewai.agents.crew_agent_executor.process_llm_response"
+        ) as mock_process:
+            result = executor._invoke_loop_react()
+
+        mock_process.assert_not_called()
+        assert result.output == valid_json
+        assert result.text == valid_json
+
+    @pytest.mark.asyncio
+    async def test_async_react_path_with_valid_json_string_bypasses_fallback_parser(
+        self, mock_llm, mock_agent, mock_task, mock_crew
+    ):
+        """Async ReAct mode should treat valid JSON strings the same way."""
+        from pydantic import BaseModel
+
+        class MyOutput(BaseModel):
+            answer: str
+
+        executor = _make_executor(
+            mock_llm, mock_agent, mock_task, mock_crew, response_model=MyOutput
+        )
+
+        valid_json = '{"answer": "hello"}'
+
+        with patch(
+            "crewai.agents.crew_agent_executor.aget_llm_response",
+            new=AsyncMock(return_value=valid_json),
+        ), patch(
+            "crewai.agents.crew_agent_executor.process_llm_response"
+        ) as mock_process:
+            result = await executor._ainvoke_loop_react()
+
+        mock_process.assert_not_called()
+        assert result.output == valid_json
+        assert result.text == valid_json

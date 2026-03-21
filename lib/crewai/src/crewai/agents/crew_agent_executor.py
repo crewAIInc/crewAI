@@ -370,28 +370,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     verbose=self.agent.verbose,
                 )
                 if self.response_model is not None:
+                    answer_str = answer if isinstance(answer, str) else str(answer)
                     try:
-                        if isinstance(answer, BaseModel):
-                            output_json = answer.model_dump_json()
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=output_json,
-                            )
-                        else:
-                            self.response_model.model_validate_json(answer)
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=answer,
-                            )
-                    except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
-                        answer_str = (
-                            answer.model_dump_json()
-                            if isinstance(answer, BaseModel)
-                            else str(answer)
+                        self.response_model.model_validate_json(answer_str)
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer_str,
+                            text=answer_str,
                         )
+                    except ValidationError:
                         formatted_answer = process_llm_response(
                             answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
@@ -1216,28 +1203,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
 
                 if self.response_model is not None:
+                    answer_str = answer if isinstance(answer, str) else str(answer)
                     try:
-                        if isinstance(answer, BaseModel):
-                            output_json = answer.model_dump_json()
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=output_json,
-                            )
-                        else:
-                            self.response_model.model_validate_json(answer)
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=answer,
-                            )
-                    except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
-                        answer_str = (
-                            answer.model_dump_json()
-                            if isinstance(answer, BaseModel)
-                            else str(answer)
+                        self.response_model.model_validate_json(answer_str)
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer_str,
+                            text=answer_str,
                         )
+                    except ValidationError:
                         formatted_answer = process_llm_response(
                             answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
