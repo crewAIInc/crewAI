@@ -1,6 +1,7 @@
 from typing import Any
 
 from defusedxml.ElementTree import ParseError, fromstring, parse
+from defusedxml.common import EntitiesForbidden
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.loaders.utils import load_from_url
@@ -51,7 +52,7 @@ class XMLLoader(BaseLoader):
 
             text = "\n".join(text_parts)
             metadata = {"format": "xml", "root_tag": root.tag}
-        except ParseError as e:
+        except (ParseError, EntitiesForbidden) as e:
             text = content
             metadata = {"format": "xml", "parse_error": str(e)}
 
