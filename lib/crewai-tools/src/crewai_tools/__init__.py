@@ -205,6 +205,8 @@ from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool impo
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
 
 
+from crewai_tools.tools.spix_tool.spix_tool import SpixCallTool, SpixSMSTool, SpixEmailTool
+
 __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
@@ -307,6 +309,9 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
+    "SpixCallTool",
+    "SpixSMSTool",
+    "SpixEmailTool",
 ]
 
 __version__ = "1.11.0"
