@@ -144,8 +144,13 @@ class AzureCompletion(BaseLLM):
         data["is_azure_openai_endpoint"] = AzureCompletion._is_azure_openai_endpoint(
             data["endpoint"]
         )
-        data["is_openai_model"] = any(
-            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
+        # Azure OpenAI deployments can use arbitrary names chosen by the user
+        # (e.g. "gpt5nano", "my-gpt4", "production-model"), so any deployment
+        # hosted on an Azure OpenAI endpoint is treated as OpenAI-compatible.
+        # For non-standard endpoints the prefix heuristic remains a fallback.
+        data["is_openai_model"] = data["is_azure_openai_endpoint"] or any(
+            prefix in model.lower()
+            for prefix in ["gpt-", "gpt5", "o1-", "o3-", "o4-", "text-"]
         )
         return data
 
@@ -286,6 +291,10 @@ class AzureCompletion(BaseLLM):
                 self.is_azure_openai_endpoint = (
                     AzureCompletion._is_azure_openai_endpoint(self.endpoint)
                 )
+                if self.is_azure_openai_endpoint:
+                    # Arbitrary deployment names on Azure OpenAI endpoints are
+                    # OpenAI-compatible even if they miss the prefix heuristic.
+                    self.is_openai_model = True
 
         if not self.endpoint:
             raise ValueError(
