@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
@@ -13,6 +12,7 @@ from pydantic import (
     UUID4,
     BaseModel,
     Field,
+    InstanceOf,
     PrivateAttr,
     field_validator,
     model_validator,
@@ -27,11 +27,15 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.mcp.config import MCPServerConfig
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
 from crewai.tools.base_tool import BaseTool, Tool
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
@@ -181,7 +185,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="Knowledge sources for the agent.",
     )
-    knowledge_storage: Any | None = Field(
+    knowledge_storage: InstanceOf[BaseKnowledgeStorage] | None = Field(
         default=None,
         description="Custom knowledge storage for the agent.",
     )
@@ -189,7 +193,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: list[Callable[[Any], Any]] = Field(
+    callbacks: list[SerializableCallable] = Field(
         default_factory=list, description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
@@ -207,7 +211,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
     )
-    memory: Any = Field(
+    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
         default=None,
         description=(
             "Enable agent memory. Pass True for default Memory(), "

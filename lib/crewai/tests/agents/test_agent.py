@@ -1690,7 +1690,10 @@ def test_agent_with_knowledge_sources_works_with_copy():
         with patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
         ) as mock_knowledge_storage:
+            from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+
             mock_knowledge_storage_instance = mock_knowledge_storage.return_value
+            mock_knowledge_storage_instance.__class__ = BaseKnowledgeStorage
             agent.knowledge_storage = mock_knowledge_storage_instance
 
             agent_copy = agent.copy()
