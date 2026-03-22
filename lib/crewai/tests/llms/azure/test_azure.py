@@ -457,6 +457,45 @@ def test_azure_model_capabilities():
     assert llm_gpt35.supports_function_calling() == True
 
 
+def test_azure_arbitrary_deployment_names_on_azure_openai_endpoint():
+    """
+    Test that arbitrary Azure OpenAI deployment names (e.g. 'gpt5nano', 'my-model',
+    'production-llm') are treated as OpenAI-compatible models when the endpoint is
+    an Azure OpenAI endpoint (<resource>.openai.azure.com/openai/deployments/<name>).
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4478 — custom
+    deployment names caused is_openai_model=False, silently dropping response_model.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    arbitrary_names = [
+        "gpt5nano",
+        "gpt5",
+        "gpt5mini",
+        "my-production-model",
+        "arbitrary-deployment",
+        "custom_llm_v2",
+    ]
+
+    for name in arbitrary_names:
+        with patch.dict(
+            os.environ,
+            {
+                "AZURE_API_KEY": "test-key",
+                "AZURE_ENDPOINT": f"https://my-resource.openai.azure.com/openai/deployments/{name}",
+            },
+        ):
+            llm = LLM(model=f"azure/{name}")
+            assert isinstance(llm, AzureCompletion)
+            assert llm.is_openai_model is True, (
+                f"Deployment '{name}' on Azure OpenAI endpoint should be treated as "
+                f"an OpenAI model, but is_openai_model={llm.is_openai_model}"
+            )
+            assert llm.supports_function_calling() is True, (
+                f"Deployment '{name}' on Azure OpenAI endpoint should support function calling"
+            )
+
+
 def test_azure_completion_params_preparation():
     """
     Test that completion parameters are properly prepared
