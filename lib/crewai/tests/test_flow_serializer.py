@@ -698,3 +698,98 @@ class TestJsonSerializable:
         parsed = json.loads(json_str)
         assert parsed["name"] == "SerializableFlow"
         assert len(parsed["methods"]) > 0
+
+
+class TestFlowInheritance:
+    """Test flow inheritance scenarios."""
+
+    def test_child_flow_inherits_parent_methods(self):
+        """Test that FlowB inheriting from FlowA includes methods from both.
+
+        Note: FlowMeta propagates methods but does NOT fully propagate the
+        _listeners registry from parent classes. This means edges defined
+        in the parent class (e.g., parent_start -> parent_process) may not
+        appear in the child's structure. This is a known FlowMeta limitation.
+        """
+
+        class FlowA(Flow):
+            """Parent flow with start method."""
+
+            @start()
+            def parent_start(self):
+                return "parent started"
+
+            @listen(parent_start)
+            def parent_process(self):
+                return "parent processed"
+
+        class FlowB(FlowA):
+            """Child flow with additional methods."""
+
+            @listen(FlowA.parent_process)
+            def child_continue(self):
+                return "child continued"
+
+            @listen(child_continue)
+            def child_finalize(self):
+                return "child finalized"
+
+        structure = flow_structure(FlowB)
+
+        assert structure["name"] == "FlowB"
+
+        # Check all methods are present (from both parent and child)
+        method_names = {m["name"] for m in structure["methods"]}
+        assert "parent_start" in method_names
+        assert "parent_process" in method_names
+        assert "child_continue" in method_names
+        assert "child_finalize" in method_names
+
+        # Check method types
+        method_map = {m["name"]: m for m in structure["methods"]}
+        assert method_map["parent_start"]["type"] == "start"
+        assert method_map["parent_process"]["type"] == "listen"
+        assert method_map["child_continue"]["type"] == "listen"
+        assert method_map["child_finalize"]["type"] == "listen"
+
+        # Check edges defined in child class exist
+        edge_pairs = [(e["from_method"], e["to_method"]) for e in structure["edges"]]
+        assert ("parent_process", "child_continue") in edge_pairs
+        assert ("child_continue", "child_finalize") in edge_pairs
+
+        # KNOWN LIMITATION: Edges defined in parent class (parent_start -> parent_process)
+        # are NOT propagated to child's _listeners registry by FlowMeta.
+        # The edge (parent_start, parent_process) will NOT be in edge_pairs.
+        # This is a FlowMeta limitation, not a serializer bug.
+
+    def test_child_flow_can_override_parent_method(self):
+        """Test that child can override parent methods."""
+
+        class BaseFlow(Flow):
+            @start()
+            def begin(self):
+                return "base begin"
+
+            @listen(begin)
+            def process(self):
+                return "base process"
+
+        class ExtendedFlow(BaseFlow):
+            @listen(BaseFlow.begin)
+            def process(self):
+                # Override parent's process method
+                return "extended process"
+
+            @listen(process)
+            def finalize(self):
+                return "extended finalize"
+
+        structure = flow_structure(ExtendedFlow)
+
+        method_names = {m["name"] for m in structure["methods"]}
+        assert "begin" in method_names
+        assert "process" in method_names
+        assert "finalize" in method_names
+
+        # Should have 3 methods total (not 4, since process is overridden)
+        assert len(structure["methods"]) == 3

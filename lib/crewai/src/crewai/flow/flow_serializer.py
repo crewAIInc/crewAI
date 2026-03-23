@@ -31,6 +31,7 @@ import textwrap
 from typing import Any, TypedDict, get_args, get_origin
 
 from pydantic import BaseModel
+from pydantic_core import PydanticUndefined
 
 from crewai.flow.flow_wrappers import (
     FlowCondition,
@@ -177,6 +178,12 @@ def _detect_crew_reference(method: Any) -> bool:
     - Crew( instantiation
     - References to Crew class in type hints
 
+    Note:
+        This is a **best-effort heuristic for UI hints**, not a guarantee.
+        Uses inspect.getsource + regex which can false-positive on comments
+        or string literals, and may fail on dynamically generated methods
+        or lambdas. Do not rely on this for correctness-critical logic.
+
     Args:
         method: The method object to inspect.
 
@@ -274,16 +281,25 @@ def _extract_all_methods_from_condition(
     """Extract all method names from a condition tree recursively.
 
     Args:
-        condition: Can be a string, dict, or list.
+        condition: Can be a string, FlowCondition tuple, dict, or list.
 
     Returns:
         List of all method names found in the condition.
     """
     if isinstance(condition, str):
         return [condition]
+    if isinstance(condition, tuple) and len(condition) == 2:
+        # FlowCondition: (condition_type, methods_list)
+        _, methods = condition
+        if isinstance(methods, list):
+            result: list[str] = []
+            for m in methods:
+                result.extend(_extract_all_methods_from_condition(m))
+            return result
+        return []
     if isinstance(condition, dict):
         conditions_list = condition.get("conditions", [])
-        methods = []
+        methods: list[str] = []
         for sub_cond in conditions_list:
             methods.extend(_extract_all_methods_from_condition(sub_cond))
         return methods
@@ -419,7 +435,11 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
                 )
 
             default_value = None
-            if field_info.default is not None and not callable(field_info.default):
+            if (
+                field_info.default is not PydanticUndefined
+                and field_info.default is not None
+                and not callable(field_info.default)
+            ):
                 try:
                     # Try to serialize the default value
                     default_value = field_info.default
@@ -444,7 +464,7 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
 def _detect_flow_inputs(flow_class: type) -> list[str]:
     """Detect flow input parameters.
 
-    Looks for get_flow_inputs() method pattern or initial_state hints.
+    Inspects the __init__ signature for custom parameters beyond standard Flow params.
 
     Args:
         flow_class: The Flow class to inspect.
@@ -453,21 +473,6 @@ def _detect_flow_inputs(flow_class: type) -> list[str]:
         List of detected input names.
     """
     inputs: list[str] = []
-
-    # Check for get_flow_inputs method
-    if hasattr(flow_class, "get_flow_inputs"):
-        try:
-            method = flow_class.get_flow_inputs
-            sig = inspect.signature(method)
-            return_annotation = sig.return_annotation
-            if return_annotation != inspect.Parameter.empty:
-                # Try to extract from return type
-                pass
-        except Exception:
-            logger.debug(
-                "Failed to extract inputs from get_flow_inputs for %s",
-                flow_class.__name__,
-            )
 
     # Check for inputs in __init__ signature beyond standard Flow params
     try:
