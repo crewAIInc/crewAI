@@ -4,6 +4,38 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Mar 23, 2026">
+  ## v1.11.1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## What's Changed
+
+  ### Features
+  - Add flow_structure() serializer for Flow class introspection.
+
+  ### Bug Fixes
+  - Fix security vulnerabilities by bumping pypdf, tinytag, and langchain-core.
+  - Preserve full LLM config across HITL resume for non-OpenAI providers.
+  - Prevent path traversal in FileWriterTool.
+  - Fix lock_store crash when redis package is not installed.
+  - Pass cache_function from BaseTool to CrewStructuredTool.
+
+  ### Documentation
+  - Add publish custom tools guide with translations.
+  - Update changelog and version for v1.11.0.
+  - Add missing event listeners documentation.
+
+  ### Refactoring
+  - Replace urllib with requests in pdf loader.
+  - Replace Any-typed callback and model fields with serializable types.
+
+  ## Contributors
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
 <Update label="Mar 18, 2026">
   ## v1.11.0
 
