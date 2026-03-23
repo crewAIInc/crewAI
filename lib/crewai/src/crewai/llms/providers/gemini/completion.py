@@ -176,6 +176,31 @@ class GeminiCompletion(BaseLLM):
         else:
             self.stop_sequences = []
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Gemini/Vertex-specific fields."""
+        config = super().to_config_dict()
+        if self.project:
+            config["project"] = self.project
+        if self.location and self.location != "us-central1":
+            config["location"] = self.location
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.top_k is not None:
+            config["top_k"] = self.top_k
+        if self.max_output_tokens is not None:
+            config["max_output_tokens"] = self.max_output_tokens
+        if self.safety_settings:
+            try:
+                config["safety_settings"] = [
+                    {"category": str(s.category), "threshold": str(s.threshold)}
+                    if hasattr(s, "category") and hasattr(s, "threshold")
+                    else s
+                    for s in self.safety_settings
+                ]
+            except Exception:
+                pass
+        return config
+
     def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:
         """Initialize the Google Gen AI client with proper parameter handling.
 
