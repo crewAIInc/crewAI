@@ -190,15 +190,12 @@ class GeminiCompletion(BaseLLM):
         if self.max_output_tokens is not None:
             config["max_output_tokens"] = self.max_output_tokens
         if self.safety_settings:
-            try:
-                config["safety_settings"] = [
-                    {"category": str(s.category), "threshold": str(s.threshold)}
-                    if hasattr(s, "category") and hasattr(s, "threshold")
-                    else s
-                    for s in self.safety_settings
-                ]
-            except Exception:  # noqa: S110
-                pass  # non-serializable safety_settings — omit from config
+            config["safety_settings"] = [
+                {"category": str(s.category), "threshold": str(s.threshold)}
+                if hasattr(s, "category") and hasattr(s, "threshold")
+                else s
+                for s in self.safety_settings
+            ]
         return config
 
     def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:
