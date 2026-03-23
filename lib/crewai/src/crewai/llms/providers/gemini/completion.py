@@ -197,8 +197,8 @@ class GeminiCompletion(BaseLLM):
                     else s
                     for s in self.safety_settings
                 ]
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # non-serializable safety_settings — omit from config
         return config
 
     def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:

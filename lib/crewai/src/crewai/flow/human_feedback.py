@@ -94,7 +94,9 @@ def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
     return f"{provider}/{model}" if provider and "/" not in model else model
 
 
-def _deserialize_llm_from_context(llm_data: dict[str, Any] | str | None) -> BaseLLM | None:
+def _deserialize_llm_from_context(
+    llm_data: dict[str, Any] | str | None,
+) -> BaseLLM | None:
     """Reconstruct an LLM instance from serialized context data.
 
     Handles both the new dict format (with full config) and the legacy
@@ -116,7 +118,6 @@ def _deserialize_llm_from_context(llm_data: dict[str, Any] | str | None) -> Base
             return None
         return LLM(model=model, **llm_data)
     return None
-
 
 
 @dataclass

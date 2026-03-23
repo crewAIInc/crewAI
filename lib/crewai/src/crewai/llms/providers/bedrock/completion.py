@@ -1897,7 +1897,9 @@ class BedrockCompletion(BaseLLM):
                 # Anthropic (Claude) models reject assistant-last messages when
                 # tools are in the request. Append a user message so the
                 # Converse API accepts the payload.
-                elif "anthropic" in self.model.lower() or "claude" in self.model.lower():
+                elif (
+                    "anthropic" in self.model.lower() or "claude" in self.model.lower()
+                ):
                     converse_messages.append(
                         {
                             "role": "user",
