@@ -554,6 +554,14 @@ def human_feedback(
             wrapper.__is_router__ = True
             wrapper.__router_paths__ = list(emit)
 
+        # Stash the live LLM object for HITL resume to retrieve.
+        # When a flow pauses for human feedback and later resumes (possibly in a
+        # different process), the serialized context only contains a model string.
+        # By storing the original LLM on the wrapper, resume_async can retrieve
+        # the fully-configured LLM (with credentials, project, safety_settings, etc.)
+        # instead of creating a bare LLM from just the model string.
+        wrapper._hf_llm = llm
+
         return wrapper  # type: ignore[no-any-return]
 
     return decorator

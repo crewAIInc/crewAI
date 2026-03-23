@@ -22,7 +22,6 @@ from crewai.events.types.memory_events import (
 )
 from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
-from crewai.memory.recall_flow import RecallFlow
 from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.types import (
     MemoryConfig,
@@ -620,6 +619,8 @@ class Memory(BaseModel):
                         )
                     results.sort(key=lambda m: m.score, reverse=True)
             else:
+                from crewai.memory.recall_flow import RecallFlow
+
                 flow = RecallFlow(
                     storage=self._storage,
                     llm=self._llm,
