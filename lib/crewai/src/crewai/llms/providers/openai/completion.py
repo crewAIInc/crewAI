@@ -329,6 +329,35 @@ class OpenAICompletion(BaseLLM):
         """
         self._last_reasoning_items = None
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with OpenAI-specific fields."""
+        config = super().to_config_dict()
+        # Client-level params (from OpenAI SDK)
+        if self.organization:
+            config["organization"] = self.organization
+        if self.project:
+            config["project"] = self.project
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
+        if self.max_retries != 2:
+            config["max_retries"] = self.max_retries
+        # Completion params
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.frequency_penalty is not None:
+            config["frequency_penalty"] = self.frequency_penalty
+        if self.presence_penalty is not None:
+            config["presence_penalty"] = self.presence_penalty
+        if self.max_tokens is not None:
+            config["max_tokens"] = self.max_tokens
+        if self.max_completion_tokens is not None:
+            config["max_completion_tokens"] = self.max_completion_tokens
+        if self.seed is not None:
+            config["seed"] = self.seed
+        if self.reasoning_effort is not None:
+            config["reasoning_effort"] = self.reasoning_effort
+        return config
+
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""
 
