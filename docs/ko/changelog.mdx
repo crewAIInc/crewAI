@@ -4,6 +4,38 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 3월 23일">
+  ## v1.11.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - Flow 클래스 내성 검사를 위한 flow_structure() 직렬 변환기 추가.
+
+  ### 버그 수정
+  - pypdf, tinytag 및 langchain-core의 버전을 업데이트하여 보안 취약점 수정.
+  - 비-OpenAI 제공자의 HITL 재개 시 전체 LLM 구성 유지.
+  - FileWriterTool에서 경로 탐색 방지.
+  - redis 패키지가 설치되지 않았을 때 lock_store 충돌 수정.
+  - BaseTool에서 CrewStructuredTool로 cache_function 전달.
+
+  ### 문서화
+  - 번역이 포함된 사용자 정의 도구 게시 가이드 추가.
+  - v1.11.0에 대한 변경 로그 및 버전 업데이트.
+  - 누락된 이벤트 리스너 문서 추가.
+
+  ### 리팩토링
+  - pdf 로더에서 urllib를 requests로 교체.
+  - Any 유형의 콜백 및 모델 필드를 직렬화 가능한 유형으로 교체.
+
+  ## 기여자
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
 <Update label="2026년 3월 18일">
   ## v1.11.0
 
