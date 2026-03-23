@@ -171,13 +171,18 @@ class AzureCompletion(BaseLLM):
         self.stream = stream
         self.response_format = response_format
 
-        self.is_openai_model = any(
-            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
-        )
-
         self.is_azure_openai_endpoint = (
             "openai.azure.com" in self.endpoint
             and "/openai/deployments/" in self.endpoint
+        )
+
+        # Azure OpenAI deployments can use arbitrary names chosen by the user
+        # (e.g. "gpt5nano", "my-gpt4", "production-model").  We therefore treat
+        # any deployment hosted on an Azure OpenAI endpoint as an OpenAI-compatible
+        # model.  For non-standard endpoints we keep the prefix-based heuristic as
+        # a best-effort fallback.
+        self.is_openai_model = self.is_azure_openai_endpoint or any(
+            prefix in model.lower() for prefix in ["gpt-", "gpt5", "o1-", "o3-", "o4-", "text-"]
         )
 
     @staticmethod
