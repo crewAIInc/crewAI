@@ -55,6 +55,31 @@ def _make_task_output(raw: str) -> TaskOutput:
     )
 
 
+def _make_agent_with_mocked_llm(*responses: str) -> tuple[Agent, LLM]:
+    llm = LLM(model="gpt-4o")
+    llm.supports_stop_words = MagicMock(return_value=False)
+    llm.supports_function_calling = MagicMock(return_value=False)
+    llm.stop = []
+
+    call_count = 0
+
+    def _call(*args, **kwargs):
+        nonlocal call_count
+        response = responses[min(call_count, len(responses) - 1)]
+        call_count += 1
+        return response
+
+    llm.call = MagicMock(side_effect=_call)
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Return JSON",
+        backstory="You are a test agent.",
+        llm=llm,
+    )
+    return agent, llm
+
+
 def test_invoke_resets_messages():
     """invoke() must reset messages and iterations via the production code path.
 
@@ -87,46 +112,51 @@ def test_kickoff_preserves_full_output_with_reused_agent():
     """When the same agent is reused across multiple crew.kickoff() calls,
     the full output is preserved (not truncated by stale executor state).
     """
-    with patch.object(Task, "execute_sync") as mock_execute:
-        mock_execute.return_value = _make_task_output(LONG_OUTPUT)
+    agent, llm = _make_agent_with_mocked_llm(
+        f"Final Answer: {LONG_OUTPUT}",
+        f"Final Answer: {LONG_OUTPUT}",
+    )
+    task1 = Task(
+        description="First task",
+        expected_output="JSON output",
+        agent=agent,
+    )
 
-        agent = Agent(
-            role="Test Agent",
-            goal="Return JSON",
-            backstory="You are a test agent.",
-            llm=LLM(model="gpt-4o"),
-        )
-        task1 = Task(
-            description="First task",
-            expected_output="JSON output",
-            agent=agent,
-        )
+    crew1 = Crew(
+        agents=[agent],
+        tasks=[task1],
+        process=Process.sequential,
+        memory=False,
+    )
+    result1 = crew1.kickoff()
+    first_executor = agent.agent_executor
 
-        crew1 = Crew(
-            agents=[agent],
-            tasks=[task1],
-            process=Process.sequential,
-            memory=False,
-        )
-        result1 = crew1.kickoff()
+    # Second run with same agent must reuse the same executor instance.
+    task2 = Task(
+        description="Second task",
+        expected_output="JSON output",
+        agent=agent,
+    )
+    crew2 = Crew(
+        agents=[agent],
+        tasks=[task2],
+        process=Process.sequential,
+        memory=False,
+    )
+    result2 = crew2.kickoff()
 
-        # Second run with same agent
-        task2 = Task(
-            description="Second task",
-            expected_output="JSON output",
-            agent=agent,
-        )
-        crew2 = Crew(
-            agents=[agent],
-            tasks=[task2],
-            process=Process.sequential,
-            memory=False,
-        )
-        result2 = crew2.kickoff()
-
-        assert result1.raw == LONG_OUTPUT
-        assert result2.raw == LONG_OUTPUT
-        assert len(result2.raw) == len(LONG_OUTPUT)
+    assert first_executor is not None
+    assert agent.agent_executor is first_executor
+    assert result1.raw == LONG_OUTPUT
+    assert result2.raw == LONG_OUTPUT
+    assert len(result2.raw) == len(LONG_OUTPUT)
+    assert llm.call.call_count == 2
+    assert first_executor.iterations == 1
+    assert not [
+        message
+        for message in first_executor.messages
+        if "First task" in str(message.get("content", ""))
+    ]
 
 
 def test_kickoff_output_matches_task_output():
@@ -173,32 +203,34 @@ def test_kickoff_output_matches_task_output():
 
 def test_multiple_sequential_kickoffs_no_truncation():
     """Running kickoff 5 times with the same agent must not truncate output."""
-    with patch.object(Task, "execute_sync") as mock_execute:
-        mock_execute.return_value = _make_task_output(LONG_OUTPUT)
+    responses = [f"Final Answer: {LONG_OUTPUT}" for _ in range(5)]
+    agent, llm = _make_agent_with_mocked_llm(*responses)
 
-        agent = Agent(
-            role="Test Agent",
-            goal="Return JSON",
-            backstory="You are a test agent.",
-            llm=LLM(model="gpt-4o"),
+    for i in range(5):
+        task_obj = Task(
+            description=f"Task run {i}",
+            expected_output="JSON output",
+            agent=agent,
         )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task_obj],
+            process=Process.sequential,
+            memory=False,
+        )
+        result = crew.kickoff()
+        assert result.raw == LONG_OUTPUT, (
+            f"Run {i}: output was truncated to {len(result.raw)} chars"
+        )
+        assert agent.agent_executor is not None
+        assert agent.agent_executor.iterations == 1
+        assert not [
+            message
+            for message in agent.agent_executor.messages
+            if i > 0 and f"Task run {i - 1}" in str(message.get("content", ""))
+        ], f"Run {i}: stale task prompt leaked into reused executor state"
 
-        for i in range(5):
-            task_obj = Task(
-                description=f"Task run {i}",
-                expected_output="JSON output",
-                agent=agent,
-            )
-            crew = Crew(
-                agents=[agent],
-                tasks=[task_obj],
-                process=Process.sequential,
-                memory=False,
-            )
-            result = crew.kickoff()
-            assert result.raw == LONG_OUTPUT, (
-                f"Run {i}: output was truncated to {len(result.raw)} chars"
-            )
+    assert llm.call.call_count == 5
 
 
 def test_executor_state_reset_on_invoke():
