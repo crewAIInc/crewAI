@@ -1316,24 +1316,24 @@ class Flow(Generic[T], metaclass=FlowMeta):
         emit = context.emit
         default_outcome = context.default_outcome
 
-        # Try to get the live LLM from the re-imported decorator instead of the
-        # serialized string. When a flow pauses for HITL and resumes (possibly in
-        # a different process), context.llm only contains a model string like
-        # 'gemini/gemini-3-flash-preview'. This loses credentials, project,
-        # location, safety_settings, and client_params. By looking up the method
-        # on the re-imported flow class, we can retrieve the fully-configured LLM
-        # that was passed to the @human_feedback decorator.
-        llm = context.llm  # fallback to serialized string
+        # Try to get the live LLM from the re-imported decorator first.
+        # This preserves the fully-configured object (credentials, safety_settings, etc.)
+        # for same-process resume. For cross-process resume, fall back to the
+        # serialized context.llm which is now a dict with full config (or a legacy string).
+        from crewai.flow.human_feedback import _deserialize_llm_from_context
+
+        llm = None
         method = self._methods.get(FlowMethodName(context.method_name))
         if method is not None:
             live_llm = getattr(method, "_hf_llm", None)
             if live_llm is not None:
                 from crewai.llms.base_llm import BaseLLM as BaseLLMClass
 
-                # Only use live LLM if it's a BaseLLM instance (not a string)
-                # String values offer no benefit over the serialized context.llm
                 if isinstance(live_llm, BaseLLMClass):
                     llm = live_llm
+
+        if llm is None:
+            llm = _deserialize_llm_from_context(context.llm)
 
         # Determine outcome
         collapsed_outcome: str | None = None
