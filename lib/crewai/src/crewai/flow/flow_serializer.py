@@ -25,13 +25,13 @@ Example:
 from __future__ import annotations
 
 import inspect
+import logging
 import re
 import textwrap
 from typing import Any, TypedDict, get_args, get_origin
 
 from pydantic import BaseModel
 
-from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowMethod,
@@ -39,7 +39,9 @@ from crewai.flow.flow_wrappers import (
     RouterMethod,
     StartMethod,
 )
-from crewai.flow.types import FlowMethodName
+
+
+logger = logging.getLogger(__name__)
 
 
 class MethodInfo(TypedDict, total=False):
@@ -227,7 +229,11 @@ def _extract_trigger_methods(method: Any) -> tuple[list[str], str | None]:
         trigger_methods = [str(m) for m in method.__trigger_methods__]
 
     # For complex conditions (or_/and_ combinators), extract from __trigger_condition__
-    if not trigger_methods and hasattr(method, "__trigger_condition__") and method.__trigger_condition__:
+    if (
+        not trigger_methods
+        and hasattr(method, "__trigger_condition__")
+        and method.__trigger_condition__
+    ):
         trigger_condition = method.__trigger_condition__
         trigger_methods = _extract_all_methods_from_condition(trigger_condition)
 
@@ -237,7 +243,9 @@ def _extract_trigger_methods(method: Any) -> tuple[list[str], str | None]:
     return trigger_methods, condition_type
 
 
-def _extract_router_paths(method: Any, router_paths_registry: dict[str, list[str]]) -> list[str]:
+def _extract_router_paths(
+    method: Any, router_paths_registry: dict[str, list[str]]
+) -> list[str]:
     """Extract router paths for a router method.
 
     Args:
@@ -309,27 +317,24 @@ def _generate_edges(
     # Generate edges from listeners (listen edges)
     for listener_name, condition_data in listeners.items():
         trigger_methods: list[str] = []
-        condition_type: str = OR_CONDITION
 
         if isinstance(condition_data, tuple) and len(condition_data) == 2:
-            condition_type, methods = condition_data
+            _condition_type, methods = condition_data
             trigger_methods = [str(m) for m in methods]
         elif isinstance(condition_data, dict):
             trigger_methods = _extract_all_methods_from_condition(condition_data)
-            condition_type = condition_data.get("type", OR_CONDITION)
 
         # Create edges from each trigger to the listener
-        for trigger in trigger_methods:
-            # Only create edge if trigger is a method name (not a router path string)
-            if trigger in all_methods:
-                edges.append(
-                    EdgeInfo(
-                        from_method=trigger,
-                        to_method=listener_name,
-                        edge_type="listen",
-                        condition=None,
-                    )
-                )
+        edges.extend(
+            EdgeInfo(
+                from_method=trigger,
+                to_method=listener_name,
+                edge_type="listen",
+                condition=None,
+            )
+            for trigger in trigger_methods
+            if trigger in all_methods
+        )
 
     # Generate edges from routers (route edges)
     for router_name, paths in router_paths.items():
@@ -409,7 +414,9 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
                 field_type_str = str(field_info.annotation)
                 # Clean up the type string
                 field_type_str = field_type_str.replace("typing.", "")
-                field_type_str = field_type_str.replace("<class '", "").replace("'>", "")
+                field_type_str = field_type_str.replace("<class '", "").replace(
+                    "'>", ""
+                )
 
             default_value = None
             if field_info.default is not None and not callable(field_info.default):
@@ -427,7 +434,9 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
                 )
             )
     except Exception:
-        pass
+        logger.debug(
+            "Failed to extract state schema fields for %s", flow_class.__name__
+        )
 
     return StateSchemaInfo(fields=fields) if fields else None
 
@@ -448,14 +457,17 @@ def _detect_flow_inputs(flow_class: type) -> list[str]:
     # Check for get_flow_inputs method
     if hasattr(flow_class, "get_flow_inputs"):
         try:
-            method = getattr(flow_class, "get_flow_inputs")
+            method = flow_class.get_flow_inputs
             sig = inspect.signature(method)
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Parameter.empty:
                 # Try to extract from return type
                 pass
         except Exception:
-            pass
+            logger.debug(
+                "Failed to extract inputs from get_flow_inputs for %s",
+                flow_class.__name__,
+            )
 
     # Check for inputs in __init__ signature beyond standard Flow params
     try:
@@ -468,11 +480,15 @@ def _detect_flow_inputs(flow_class: type) -> list[str]:
             "max_method_calls",
             "kwargs",
         }
-        for param_name in init_sig.parameters:
-            if param_name not in standard_params and not param_name.startswith("_"):
-                inputs.append(param_name)
+        inputs.extend(
+            param_name
+            for param_name in init_sig.parameters
+            if param_name not in standard_params and not param_name.startswith("_")
+        )
     except Exception:
-        pass
+        logger.debug(
+            "Failed to detect inputs from __init__ for %s", flow_class.__name__
+        )
 
     return inputs
 
@@ -515,7 +531,9 @@ def flow_structure(flow_class: type) -> FlowStructureInfo:
     start_methods: list[str] = getattr(flow_class, "_start_methods", [])
     listeners: dict[str, Any] = getattr(flow_class, "_listeners", {})
     routers: set[str] = getattr(flow_class, "_routers", set())
-    router_paths_registry: dict[str, list[str]] = getattr(flow_class, "_router_paths", {})
+    router_paths_registry: dict[str, list[str]] = getattr(
+        flow_class, "_router_paths", {}
+    )
 
     # Collect all flow methods
     methods: list[MethodInfo] = []
