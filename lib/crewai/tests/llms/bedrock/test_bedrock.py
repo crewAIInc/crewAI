@@ -1175,3 +1175,56 @@ def test_bedrock_tool_results_not_merged_across_assistant_messages():
     )
     assert tool_result_messages[0]["content"][0]["toolResult"]["toolUseId"] == "call_a"
     assert tool_result_messages[1]["content"][0]["toolResult"]["toolUseId"] == "call_b"
+
+
+# =============================================================================
+# Responses API Error Handling Tests
+# =============================================================================
+
+
+def test_bedrock_responses_api_raises_not_implemented(bedrock_mocks):
+    """Test that Bedrock raises NotImplementedError when api='responses' is used."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    with pytest.raises(NotImplementedError, match="Responses API is not supported by AWS Bedrock"):
+        BedrockCompletion(
+            model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+            api="responses",
+        )
+
+
+def test_bedrock_responses_api_error_suggests_completions(bedrock_mocks):
+    """Test that the error message suggests using api='completions' instead."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        BedrockCompletion(
+            model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+            api="responses",
+        )
+
+    error_msg = str(exc_info.value)
+    assert "api='completions'" in error_msg
+    assert "Converse API" in error_msg
+
+
+def test_bedrock_completions_api_still_works(bedrock_mocks):
+    """Test that api='completions' (default) still works normally."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    # Should not raise any error
+    completion = BedrockCompletion(
+        model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        api="completions",
+    )
+    assert completion.api == "completions"
+
+
+def test_bedrock_default_api_is_completions(bedrock_mocks):
+    """Test that the default API is 'completions'."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    completion = BedrockCompletion(
+        model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+    )
+    assert completion.api == "completions"

@@ -1403,3 +1403,784 @@ def test_azure_stop_words_still_applied_to_regular_responses():
         assert "Observation:" not in result
         assert "Found results" not in result
         assert "I need to search for more information" in result
+
+
+# =============================================================================
+# Azure Responses API Tests
+# =============================================================================
+
+
+def test_azure_responses_api_initialization():
+    """Test that Azure Responses API can be initialized with api='responses'."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            instructions="You are a helpful assistant.",
+            store=True,
+        )
+
+        assert completion.api == "responses"
+        assert completion.instructions == "You are a helpful assistant."
+        assert completion.store is True
+        assert completion.model == "gpt-4o"
+
+
+def test_azure_responses_api_default_is_completions():
+    """Test that the default API is 'completions' for backward compatibility."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    completion = AzureCompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+    )
+
+    assert completion.api == "completions"
+
+
+def test_azure_responses_api_prepare_params():
+    """Test that Responses API params are prepared correctly."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            instructions="Base instructions.",
+            store=True,
+            temperature=0.7,
+        )
+
+        messages = [
+            {"role": "system", "content": "System message."},
+            {"role": "user", "content": "Hello!"},
+        ]
+
+        params = completion._prepare_responses_params(messages)
+
+        assert params["model"] == "gpt-4o"
+        assert "Base instructions." in params["instructions"]
+        assert "System message." in params["instructions"]
+        assert params["store"] is True
+        assert params["temperature"] == 0.7
+        assert params["input"] == [{"role": "user", "content": "Hello!"}]
+
+
+def test_azure_responses_api_tool_format():
+    """Test that tools are converted to Responses API format (internally-tagged)."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+        tools = [
+            {
+                "name": "get_weather",
+                "description": "Get the weather for a location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"location": {"type": "string"}},
+                    "required": ["location"],
+                },
+            }
+        ]
+
+        responses_tools = completion._convert_tools_for_responses(tools)
+
+        assert len(responses_tools) == 1
+        tool = responses_tools[0]
+        assert tool["type"] == "function"
+        assert tool["name"] == "get_weather"
+        assert tool["description"] == "Get the weather for a location"
+        assert "parameters" in tool
+        assert "function" not in tool
+
+
+def test_azure_responses_api_structured_output_format():
+    """Test that structured outputs use text.format for Responses API."""
+    from pydantic import BaseModel
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    class Person(BaseModel):
+        name: str
+        age: int
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+        messages = [{"role": "user", "content": "Extract: Jane, 25"}]
+        params = completion._prepare_responses_params(messages, response_model=Person)
+
+        assert "text" in params
+        assert "format" in params["text"]
+        assert params["text"]["format"]["type"] == "json_schema"
+        assert params["text"]["format"]["name"] == "Person"
+        assert params["text"]["format"]["strict"] is True
+
+
+def test_azure_responses_api_with_previous_response_id():
+    """Test that previous_response_id is passed for multi-turn conversations."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            previous_response_id="resp_abc123",
+            store=True,
+        )
+
+        messages = [{"role": "user", "content": "Continue our conversation."}]
+        params = completion._prepare_responses_params(messages)
+
+        assert params["previous_response_id"] == "resp_abc123"
+        assert params["store"] is True
+
+
+def test_azure_responses_api_call_routing():
+    """Test that call() routes to the correct API based on the api parameter."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    completion_completions = AzureCompletion(
+        model="gpt-4o",
+        api="completions",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+    )
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion_responses = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+    with patch.object(
+        completion_completions, "_handle_completion", return_value="completions result"
+    ) as mock_completions:
+        with patch.object(completion_completions, "_format_messages_for_azure", return_value=[{"role": "user", "content": "Hello"}]):
+            result = completion_completions.call("Hello")
+            mock_completions.assert_called_once()
+            assert result == "completions result"
+
+    with patch.object(
+        completion_responses, "_call_responses", return_value="responses result"
+    ) as mock_responses:
+        with patch.object(completion_responses, "_format_messages_for_azure", return_value=[{"role": "user", "content": "Hello"}]):
+            result = completion_responses.call("Hello")
+            mock_responses.assert_called_once()
+            assert result == "responses result"
+
+
+def test_azure_responses_api_builtin_tools_param():
+    """Test that builtin_tools parameter is properly configured."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            builtin_tools=["web_search", "code_interpreter"],
+        )
+
+        assert completion.builtin_tools == ["web_search", "code_interpreter"]
+
+        messages = [{"role": "user", "content": "Test"}]
+        params = completion._prepare_responses_params(messages)
+
+        assert "tools" in params
+        tool_types = [t["type"] for t in params["tools"]]
+        assert "web_search_preview" in tool_types
+        assert "code_interpreter" in tool_types
+
+
+def test_azure_responses_api_builtin_tools_with_custom_tools():
+    """Test that builtin_tools can be combined with custom function tools."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            builtin_tools=["web_search"],
+        )
+
+        custom_tools = [
+            {
+                "name": "get_weather",
+                "description": "Get weather for a location",
+                "parameters": {"type": "object", "properties": {}},
+            }
+        ]
+
+        messages = [{"role": "user", "content": "Test"}]
+        params = completion._prepare_responses_params(messages, tools=custom_tools)
+
+        assert len(params["tools"]) == 2
+        tool_types = [t.get("type") for t in params["tools"]]
+        assert "web_search_preview" in tool_types
+        assert "function" in tool_types
+
+
+def test_azure_responses_api_parse_tool_outputs_param():
+    """Test that parse_tool_outputs parameter is properly configured."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            parse_tool_outputs=True,
+        )
+
+        assert completion.parse_tool_outputs is True
+
+
+def test_azure_responses_api_parse_tool_outputs_default_false():
+    """Test that parse_tool_outputs defaults to False."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+        assert completion.parse_tool_outputs is False
+
+
+# =============================================================================
+# Auto-Chaining Tests (Azure Responses API)
+# =============================================================================
+
+
+def test_azure_responses_api_auto_chain_param():
+    """Test that auto_chain parameter is properly configured."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain=True,
+        )
+
+        assert completion.auto_chain is True
+        assert completion._last_response_id is None
+
+
+def test_azure_responses_api_auto_chain_default_false():
+    """Test that auto_chain defaults to False."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+        assert completion.auto_chain is False
+
+
+def test_azure_responses_api_last_response_id_property():
+    """Test last_response_id property."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain=True,
+        )
+
+        # Initially None
+        assert completion.last_response_id is None
+
+        # Simulate setting the internal value
+        completion._last_response_id = "resp_test_123"
+        assert completion.last_response_id == "resp_test_123"
+
+
+def test_azure_responses_api_reset_chain():
+    """Test reset_chain() method clears the response ID."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain=True,
+        )
+
+        # Set a response ID
+        completion._last_response_id = "resp_test_123"
+        assert completion.last_response_id == "resp_test_123"
+
+        # Reset the chain
+        completion.reset_chain()
+        assert completion.last_response_id is None
+
+
+def test_azure_responses_api_auto_chain_prepare_params():
+    """Test that _prepare_responses_params uses auto-chained response ID."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain=True,
+        )
+
+        # No previous response ID yet
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert "previous_response_id" not in params
+
+        # Set a previous response ID
+        completion._last_response_id = "resp_previous_123"
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert params.get("previous_response_id") == "resp_previous_123"
+
+
+def test_azure_responses_api_explicit_previous_response_id_takes_precedence():
+    """Test that explicit previous_response_id overrides auto-chained ID."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain=True,
+            previous_response_id="resp_explicit_456",
+        )
+
+        # Set an auto-chained response ID
+        completion._last_response_id = "resp_auto_123"
+
+        # Explicit should take precedence
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert params.get("previous_response_id") == "resp_explicit_456"
+
+
+def test_azure_responses_api_auto_chain_disabled_no_tracking():
+    """Test that response ID is not tracked when auto_chain is False."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain=False,
+        )
+
+        # Even with a "previous" response ID set internally, params shouldn't use it
+        completion._last_response_id = "resp_should_not_use"
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert "previous_response_id" not in params
+
+
+# =============================================================================
+# Encrypted Reasoning for ZDR (Zero Data Retention) Tests
+# =============================================================================
+
+
+def test_azure_responses_api_auto_chain_reasoning_param():
+    """Test that auto_chain_reasoning parameter is properly configured."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=True,
+        )
+
+        assert completion.auto_chain_reasoning is True
+        assert completion._last_reasoning_items == []
+
+
+def test_azure_responses_api_auto_chain_reasoning_default_false():
+    """Test that auto_chain_reasoning defaults to False."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+        assert completion.auto_chain_reasoning is False
+
+
+def test_azure_responses_api_last_reasoning_items_property():
+    """Test last_reasoning_items property."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=True,
+        )
+
+        # Initially empty
+        assert completion.last_reasoning_items == []
+
+        # Simulate setting the internal value
+        mock_items = [{"id": "rs_test_123", "type": "reasoning"}]
+        completion._last_reasoning_items = mock_items
+        assert completion.last_reasoning_items == mock_items
+
+
+def test_azure_responses_api_reset_reasoning_chain():
+    """Test reset_reasoning_chain() method clears reasoning items."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=True,
+        )
+
+        # Set reasoning items
+        mock_items = [{"id": "rs_test_123", "type": "reasoning"}]
+        completion._last_reasoning_items = mock_items
+        assert completion.last_reasoning_items == mock_items
+
+        # Reset the reasoning chain
+        completion.reset_reasoning_chain()
+        assert completion.last_reasoning_items == []
+
+
+def test_azure_responses_api_auto_chain_reasoning_adds_include():
+    """Test that auto_chain_reasoning adds reasoning.encrypted_content to include."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=True,
+        )
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert "include" in params
+        assert "reasoning.encrypted_content" in params["include"]
+
+
+def test_azure_responses_api_auto_chain_reasoning_preserves_existing_include():
+    """Test that auto_chain_reasoning preserves existing include items."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=True,
+            include=["file_search_call.results"],
+        )
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert "include" in params
+        assert "reasoning.encrypted_content" in params["include"]
+        assert "file_search_call.results" in params["include"]
+
+
+def test_azure_responses_api_auto_chain_reasoning_no_duplicate_include():
+    """Test that reasoning.encrypted_content is not duplicated if already in include."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=True,
+            include=["reasoning.encrypted_content"],
+        )
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert "include" in params
+        # Should only appear once
+        assert params["include"].count("reasoning.encrypted_content") == 1
+
+
+def test_azure_responses_api_auto_chain_reasoning_prepends_to_input():
+    """Test that stored reasoning items are prepended to input."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=True,
+        )
+
+        # Simulate stored reasoning items
+        mock_reasoning = MagicMock()
+        mock_reasoning.type = "reasoning"
+        mock_reasoning.id = "rs_test_123"
+        completion._last_reasoning_items = [mock_reasoning]
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+
+        # Input should have reasoning item first, then the message
+        assert len(params["input"]) == 2
+        assert params["input"][0] == mock_reasoning
+        assert params["input"][1]["role"] == "user"
+
+
+def test_azure_responses_api_auto_chain_reasoning_disabled_no_include():
+    """Test that reasoning.encrypted_content is not added when auto_chain_reasoning is False."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=False,
+        )
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        # Should not have include at all (unless explicitly set)
+        assert "include" not in params or "reasoning.encrypted_content" not in params.get("include", [])
+
+
+def test_azure_responses_api_auto_chain_reasoning_disabled_no_prepend():
+    """Test that reasoning items are not prepended when auto_chain_reasoning is False."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain_reasoning=False,
+        )
+
+        # Even with stored reasoning items, they should not be prepended
+        mock_reasoning = MagicMock()
+        mock_reasoning.type = "reasoning"
+        completion._last_reasoning_items = [mock_reasoning]
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+
+        # Input should only have the message, not the reasoning item
+        assert len(params["input"]) == 1
+        assert params["input"][0]["role"] == "user"
+
+
+def test_azure_responses_api_both_auto_chains_work_together():
+    """Test that auto_chain and auto_chain_reasoning can be used together."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            auto_chain=True,
+            auto_chain_reasoning=True,
+        )
+
+        assert completion.auto_chain is True
+        assert completion.auto_chain_reasoning is True
+        assert completion._last_response_id is None
+        assert completion._last_reasoning_items == []
+
+        # Set both internal values
+        completion._last_response_id = "resp_123"
+        mock_reasoning = MagicMock()
+        mock_reasoning.type = "reasoning"
+        completion._last_reasoning_items = [mock_reasoning]
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+
+        # Both should be applied
+        assert params.get("previous_response_id") == "resp_123"
+        assert "reasoning.encrypted_content" in params["include"]
+        assert len(params["input"]) == 2  # Reasoning item + message
+
+
+def test_azure_responses_api_max_completion_tokens():
+    """Test that max_completion_tokens is mapped to max_output_tokens."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            max_completion_tokens=4096,
+        )
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert params["max_output_tokens"] == 4096
+
+
+def test_azure_responses_api_seed_param():
+    """Test that seed parameter is passed through."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            seed=42,
+        )
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert params["seed"] == 42
+
+
+def test_azure_responses_api_reasoning_effort_param():
+    """Test that reasoning_effort parameter is passed through."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            reasoning_effort="high",
+        )
+
+        params = completion._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+        assert params["reasoning"] == {"effort": "high"}
+
+
+def test_azure_responses_api_init_responses_clients():
+    """Test that _init_responses_clients creates OpenAI AzureOpenAI clients."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients") as mock_init:
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+        # _init_responses_clients should be called during __init__
+        mock_init.assert_called_once()
+
+
+def test_azure_responses_api_system_message_extraction():
+    """Test that system messages are extracted to instructions for Responses API."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Hello!"},
+            {"role": "assistant", "content": "Hi there!"},
+            {"role": "user", "content": "How are you?"},
+        ]
+
+        params = completion._prepare_responses_params(messages)
+
+        # System message should be extracted to instructions
+        assert params["instructions"] == "You are a helpful assistant."
+        # Non-system messages should be in input
+        assert len(params["input"]) == 3
+        assert params["input"][0]["role"] == "user"
+        assert params["input"][1]["role"] == "assistant"
+        assert params["input"][2]["role"] == "user"
+
+
+def test_azure_responses_api_multiple_system_messages_merged():
+    """Test that multiple system messages are merged into instructions."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch("crewai.llms.providers.azure.completion.AzureCompletion._init_responses_clients"):
+        completion = AzureCompletion(
+            model="gpt-4o",
+            api="responses",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            instructions="Base instructions.",
+        )
+
+        messages = [
+            {"role": "system", "content": "System context."},
+            {"role": "user", "content": "Hello!"},
+        ]
+
+        params = completion._prepare_responses_params(messages)
+
+        # Both base instructions and system message should be merged
+        assert "Base instructions." in params["instructions"]
+        assert "System context." in params["instructions"]
