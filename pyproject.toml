@@ -29,6 +29,7 @@ dev = [
     "types-psycopg2==2.9.21.20251012",
     "types-pymysql==1.1.0.20250916",
     "types-aiofiles~=25.1.0",
+    "commitizen>=4.13.9",
 ]
 
 
@@ -143,7 +144,7 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.commitizen]
-name = "cz_conventional_commits"
+name = "cz_customize"
 version_provider = "scm"
 tag_format = "$version"
 allowed_prefixes = ["Merge", "Revert"]
@@ -155,7 +156,7 @@ schema = "<type>(<scope>): <description>"
 schema_pattern = "^(feat|fix|refactor|perf|test|docs|chore|ci|style|revert)(\\(.+\\))?!?: .{1,72}"
 bump_pattern = "^(feat|fix|perf|refactor|revert)"
 bump_map = { feat = "MINOR", fix = "PATCH", perf = "PATCH", refactor = "PATCH", revert = "PATCH" }
-info = "Commits must follow Conventional Commits 1.0.0. See RELEASE_PROCESS.md for details."
+info = "Commits must follow Conventional Commits 1.0.0."
 
 
 [tool.uv]

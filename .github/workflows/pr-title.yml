@@ -35,5 +35,3 @@ jobs:
               feat(memory): add lancedb storage backend
               fix(agents): resolve deadlock in concurrent execution
               chore(deps): bump pydantic to 2.11.9
-
-            See RELEASE_PROCESS.md for the full commit message convention.
