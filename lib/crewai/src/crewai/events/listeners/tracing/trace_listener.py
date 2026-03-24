@@ -235,8 +235,11 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
-            if not self.batch_manager.is_batch_initialized():
-                self._initialize_flow_batch(source, event)
+            # Always call _initialize_flow_batch to claim ownership.
+            # If batch was already initialized by a concurrent action event
+            # (race condition), initialize_batch() returns early but
+            # batch_owner_type is still correctly set to "flow".
+            self._initialize_flow_batch(source, event)
             self._handle_trace_event("flow_started", source, event)
 
         @event_bus.on(MethodExecutionStartedEvent)
@@ -266,7 +269,12 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
-            if not self.batch_manager.is_batch_initialized():
+            if self.batch_manager.batch_owner_type != "flow":
+                # Always call _initialize_crew_batch to claim ownership.
+                # If batch was already initialized by a concurrent action event
+                # (race condition with DefaultEnvEvent), initialize_batch() returns
+                # early but batch_owner_type is still correctly set to "crew".
+                # Skip only when a parent flow already owns the batch.
                 self._initialize_crew_batch(source, event)
             self._handle_trace_event("crew_kickoff_started", source, event)
 
