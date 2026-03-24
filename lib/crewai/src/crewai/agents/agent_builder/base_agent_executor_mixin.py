@@ -49,20 +49,21 @@ class CrewAgentExecutorMixin:
             )
             extracted = memory.extract_memories(raw)
             if extracted:
-                # Build agent-specific root_scope that extends the crew's root
-                agent_role = self.agent.role or "unknown"
-                sanitized_role = sanitize_scope_name(agent_role)
+                # Get the memory's existing root_scope
+                base_root = getattr(memory, "root_scope", None)
 
-                # Get the memory's existing root_scope and extend with agent info
-                base_root = getattr(memory, "root_scope", None) or ""
-                # Construct agent root: base_root + /agent/<role>
-                agent_root = f"{base_root.rstrip('/')}/agent/{sanitized_role}"
-                # Ensure leading slash
-                if not agent_root.startswith("/"):
-                    agent_root = "/" + agent_root
-
-                memory.remember_many(
-                    extracted, agent_role=self.agent.role, root_scope=agent_root
-                )
+                if isinstance(base_root, str) and base_root:
+                    # Memory has a root_scope — extend it with agent info
+                    agent_role = self.agent.role or "unknown"
+                    sanitized_role = sanitize_scope_name(agent_role)
+                    agent_root = f"{base_root.rstrip('/')}/agent/{sanitized_role}"
+                    if not agent_root.startswith("/"):
+                        agent_root = "/" + agent_root
+                    memory.remember_many(
+                        extracted, agent_role=self.agent.role, root_scope=agent_root
+                    )
+                else:
+                    # No base root_scope — don't inject one, preserve backward compat
+                    memory.remember_many(extracted, agent_role=self.agent.role)
         except Exception as e:
             self.agent._logger.log("error", f"Failed to save to memory: {e}")

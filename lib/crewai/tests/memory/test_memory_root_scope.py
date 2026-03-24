@@ -295,7 +295,13 @@ class TestMemoryRootScope:
         )
         mem.drain_writes()
 
-        records = mem.list_records()
+        # Use a global memory view to see all records (not scoped to /default)
+        mem_global = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+        records = mem_global.list_records()
         assert len(records) == 1
         assert records[0].scope == "/agent/researcher/inner"
 
@@ -822,3 +828,382 @@ class TestMemoryScopeWithRootScope:
         # Note: MemoryScope builds the scope before calling memory.remember
         # So the scope it passes is /agent/1/task, which then gets root_scope prepended
         assert record.scope.startswith("/crew/test/agent/1")
+
+
+class TestReadIsolation:
+    """Tests for root_scope read isolation (recall, list, info, reset)."""
+
+    def test_recall_with_root_scope_only_returns_scoped_records(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """recall() with root_scope returns only records within that scope."""
+        from crewai.memory.unified_memory import Memory
+
+        # Create memory without root_scope and store some records
+        mem_global = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+
+        # Store records at different scopes
+        mem_global.remember(
+            "Global record",
+            scope="/other/scope",
+            categories=["global"],
+            importance=0.5,
+        )
+        mem_global.remember(
+            "Crew A record",
+            scope="/crew/crew-a/inner",
+            categories=["crew-a"],
+            importance=0.5,
+        )
+        mem_global.remember(
+            "Crew B record",
+            scope="/crew/crew-b/inner",
+            categories=["crew-b"],
+            importance=0.5,
+        )
+
+        # Create a scoped view for crew-a
+        mem_scoped = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/crew-a",
+        )
+
+        # recall() should only find crew-a records
+        results = mem_scoped.recall("record", depth="shallow")
+        assert len(results) == 1
+        assert results[0].record.scope == "/crew/crew-a/inner"
+
+    def test_recall_with_root_scope_and_explicit_scope_nests(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """recall() with root_scope + explicit scope combines them."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/test",
+        )
+
+        mem.remember(
+            "Nested record",
+            scope="/inner/deep",
+            categories=["test"],
+            importance=0.5,
+        )
+
+        # recall with explicit scope should nest under root_scope
+        results = mem.recall("record", scope="/inner", depth="shallow")
+        assert len(results) == 1
+        assert results[0].record.scope == "/crew/test/inner/deep"
+
+    def test_recall_without_root_scope_works_globally(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """recall() without root_scope searches globally (backward compat)."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+
+        mem.remember(
+            "Record A",
+            scope="/scope-a",
+            categories=["test"],
+            importance=0.5,
+        )
+        mem.remember(
+            "Record B",
+            scope="/scope-b",
+            categories=["test"],
+            importance=0.5,
+        )
+
+        # recall without scope should find all records
+        results = mem.recall("record", depth="shallow")
+        assert len(results) == 2
+
+    def test_list_records_defaults_to_root_scope(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """list_records() with root_scope defaults to that scope."""
+        from crewai.memory.unified_memory import Memory
+
+        # Store records at different scopes
+        mem_global = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+
+        mem_global.remember("Global", scope="/other", categories=["x"], importance=0.5)
+        mem_global.remember("Scoped", scope="/crew/a/inner", categories=["x"], importance=0.5)
+
+        # Create scoped memory
+        mem_scoped = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/a",
+        )
+
+        # list_records() without scope should only show /crew/a records
+        records = mem_scoped.list_records()
+        assert len(records) == 1
+        assert records[0].scope == "/crew/a/inner"
+
+    def test_list_scopes_defaults_to_root_scope(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """list_scopes() with root_scope defaults to that scope."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+
+        mem.remember("A", scope="/crew/a/child1", categories=["x"], importance=0.5)
+        mem.remember("B", scope="/crew/a/child2", categories=["x"], importance=0.5)
+        mem.remember("C", scope="/crew/b/other", categories=["x"], importance=0.5)
+
+        mem_scoped = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/a",
+        )
+
+        # list_scopes() should only show children under /crew/a
+        scopes = mem_scoped.list_scopes()
+        assert "/crew/a/child1" in scopes or "child1" in str(scopes)
+        assert "/crew/b" not in scopes
+
+    def test_info_defaults_to_root_scope(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """info() with root_scope defaults to that scope."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+
+        mem.remember("A", scope="/crew/a/inner", categories=["x"], importance=0.5)
+        mem.remember("B", scope="/other/inner", categories=["x"], importance=0.5)
+
+        mem_scoped = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/a",
+        )
+
+        # info() should only count records under /crew/a
+        scope_info = mem_scoped.info()
+        assert scope_info.record_count == 1
+
+    def test_reset_with_root_scope_only_deletes_scoped_records(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """reset() with root_scope only deletes within that scope."""
+        from crewai.memory.unified_memory import Memory
+
+        mem = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+
+        mem.remember("A", scope="/crew/a/inner", categories=["x"], importance=0.5)
+        mem.remember("B", scope="/other/inner", categories=["x"], importance=0.5)
+
+        mem_scoped = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            root_scope="/crew/a",
+        )
+
+        # reset() should only delete /crew/a records
+        mem_scoped.reset()
+
+        # Check with a fresh global memory instance to avoid stale table references
+        mem_fresh = Memory(
+            storage=str(tmp_path / "db"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+        )
+        records = mem_fresh.list_records()
+        assert len(records) == 1
+        assert records[0].scope == "/other/inner"
+
+
+class TestAgentExecutorBackwardCompat:
+    """Tests for agent executor backward compatibility."""
+
+    def test_agent_executor_no_root_scope_when_memory_has_none(self) -> None:
+        """Agent executor doesn't inject root_scope when memory has none."""
+        from crewai.agents.agent_builder.base_agent_executor_mixin import (
+            CrewAgentExecutorMixin,
+        )
+        from crewai.agents.parser import AgentFinish
+        from crewai.utilities.printer import Printer
+
+        mock_memory = MagicMock()
+        mock_memory.read_only = False
+        mock_memory.root_scope = None  # No root_scope set
+        mock_memory.extract_memories.return_value = ["Fact A"]
+
+        mock_agent = MagicMock()
+        mock_agent.memory = mock_memory
+        mock_agent._logger = MagicMock()
+        mock_agent.role = "Researcher"
+
+        mock_task = MagicMock()
+        mock_task.description = "Task"
+        mock_task.expected_output = "Output"
+
+        class MinimalExecutor(CrewAgentExecutorMixin):
+            crew = None
+            agent = mock_agent
+            task = mock_task
+            iterations = 0
+            max_iter = 1
+            messages = []
+            _i18n = MagicMock()
+            _printer = Printer()
+
+        executor = MinimalExecutor()
+        executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
+
+        # Should NOT pass root_scope when memory has none
+        mock_memory.remember_many.assert_called_once()
+        call_kwargs = mock_memory.remember_many.call_args.kwargs
+        assert "root_scope" not in call_kwargs
+
+    def test_agent_executor_extends_root_scope_when_memory_has_one(self) -> None:
+        """Agent executor extends root_scope when memory has one."""
+        from crewai.agents.agent_builder.base_agent_executor_mixin import (
+            CrewAgentExecutorMixin,
+        )
+        from crewai.agents.parser import AgentFinish
+        from crewai.utilities.printer import Printer
+
+        mock_memory = MagicMock()
+        mock_memory.read_only = False
+        mock_memory.root_scope = "/crew/test"  # Has root_scope
+        mock_memory.extract_memories.return_value = ["Fact A"]
+
+        mock_agent = MagicMock()
+        mock_agent.memory = mock_memory
+        mock_agent._logger = MagicMock()
+        mock_agent.role = "Researcher"
+
+        mock_task = MagicMock()
+        mock_task.description = "Task"
+        mock_task.expected_output = "Output"
+
+        class MinimalExecutor(CrewAgentExecutorMixin):
+            crew = None
+            agent = mock_agent
+            task = mock_task
+            iterations = 0
+            max_iter = 1
+            messages = []
+            _i18n = MagicMock()
+            _printer = Printer()
+
+        executor = MinimalExecutor()
+        executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
+
+        # Should pass extended root_scope
+        mock_memory.remember_many.assert_called_once()
+        call_kwargs = mock_memory.remember_many.call_args.kwargs
+        assert call_kwargs["root_scope"] == "/crew/test/agent/researcher"
+
+
+class TestConsolidationIsolation:
+    """Tests for consolidation staying within root_scope boundary."""
+
+    def test_consolidation_search_constrained_to_root_scope(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """Consolidation similarity search is constrained to root_scope."""
+        from crewai.memory.encoding_flow import EncodingFlow, ItemState
+        from crewai.memory.types import MemoryConfig
+
+        mock_storage = MagicMock()
+        mock_storage.search.return_value = []
+
+        flow = EncodingFlow(
+            storage=mock_storage,
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            config=MemoryConfig(),
+        )
+
+        # Create item with root_scope
+        item = ItemState(
+            content="Test",
+            scope="/inner",
+            root_scope="/crew/a",
+            embedding=[0.1] * 1536,
+        )
+        flow.state.items = [item]
+
+        # Run parallel_find_similar
+        flow.parallel_find_similar()
+
+        # Check that search was called with correct scope_prefix
+        mock_storage.search.assert_called_once()
+        call_kwargs = mock_storage.search.call_args.kwargs
+        # Should be /crew/a/inner (root + inner combined)
+        assert call_kwargs["scope_prefix"] == "/crew/a/inner"
+
+    def test_consolidation_search_without_root_scope(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """Consolidation without root_scope searches by explicit scope only."""
+        from crewai.memory.encoding_flow import EncodingFlow, ItemState
+        from crewai.memory.types import MemoryConfig
+
+        mock_storage = MagicMock()
+        mock_storage.search.return_value = []
+
+        flow = EncodingFlow(
+            storage=mock_storage,
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            config=MemoryConfig(),
+        )
+
+        # Create item without root_scope
+        item = ItemState(
+            content="Test",
+            scope="/inner",
+            root_scope=None,
+            embedding=[0.1] * 1536,
+        )
+        flow.state.items = [item]
+
+        # Run parallel_find_similar
+        flow.parallel_find_similar()
+
+        # Check that search was called with explicit scope only
+        mock_storage.search.assert_called_once()
+        call_kwargs = mock_storage.search.call_args.kwargs
+        assert call_kwargs["scope_prefix"] == "/inner"

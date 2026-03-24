@@ -25,7 +25,7 @@ def sanitize_scope_name(name: str) -> str:
         >>> sanitize_scope_name("Agent #1 (Main)")
         'agent-1-main'
         >>> sanitize_scope_name("café_worker")
-        'caf-worker'
+        'caf-_worker'
     """
     if not name:
         return "unknown"

@@ -106,7 +106,6 @@ class EncodingFlow(Flow[EncodingState]):
         llm: Any,
         embedder: Any,
         config: MemoryConfig | None = None,
-        root_scope: str | None = None,
     ) -> None:
         """Initialize the encoding flow.
 
@@ -115,15 +114,12 @@ class EncodingFlow(Flow[EncodingState]):
             llm: LLM instance for analysis.
             embedder: Embedder for generating vectors.
             config: Optional memory configuration.
-            root_scope: Structural root scope prefix. LLM-inferred or explicit
-                scopes are nested under this root.
         """
         super().__init__(suppress_flow_events=True)
         self._storage = storage
         self._llm = llm
         self._embedder = embedder
         self._config = config or MemoryConfig()
-        self._root_scope = root_scope
 
     # ------------------------------------------------------------------
     # Step 1: Batch embed (ONE embedder call)
@@ -195,10 +191,18 @@ class EncodingFlow(Flow[EncodingState]):
         def _search_one(
             item: ItemState,
         ) -> list[tuple[MemoryRecord, float]]:
-            scope_prefix = item.scope if item.scope and item.scope.strip("/") else None
+            # Use root_scope as the search boundary, then narrow by explicit scope if provided
+            effective_prefix = None
+            if item.root_scope:
+                effective_prefix = item.root_scope.rstrip("/")
+                if item.scope and item.scope.strip("/"):
+                    effective_prefix = effective_prefix + "/" + item.scope.strip("/")
+            elif item.scope and item.scope.strip("/"):
+                effective_prefix = item.scope
+
             return self._storage.search(  # type: ignore[no-any-return]
                 item.embedding,
-                scope_prefix=scope_prefix,
+                scope_prefix=effective_prefix,
                 categories=None,
                 limit=self._config.consolidation_limit,
                 min_score=0.0,
@@ -268,9 +272,16 @@ class EncodingFlow(Flow[EncodingState]):
         existing_scopes: list[str] = []
         existing_categories: list[str] = []
         if any_needs_fields:
-            existing_scopes = self._storage.list_scopes("/") or ["/"]
+            # Constrain scope/category suggestions to root_scope boundary
+            # Check if any active item has root_scope
+            active_root = next(
+                (it.root_scope for it in items if not it.dropped and it.root_scope),
+                None,
+            )
+            scope_search_root = active_root if active_root else "/"
+            existing_scopes = self._storage.list_scopes(scope_search_root) or ["/"]
             existing_categories = list(
-                self._storage.list_categories(scope_prefix=None).keys()
+                self._storage.list_categories(scope_prefix=active_root).keys()
             )
 
         # Classify items and submit LLM calls

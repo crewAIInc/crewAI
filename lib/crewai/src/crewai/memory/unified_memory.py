@@ -31,6 +31,7 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_text,
 )
+from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 
@@ -333,7 +334,6 @@ class Memory(BaseModel):
             llm=self._llm,
             embedder=self._embedder,
             config=self._config,
-            root_scope=root_scope,
         )
         items_input = [
             {
@@ -637,6 +637,14 @@ class Memory(BaseModel):
         # so that the search sees all persisted records.
         self.drain_writes()
 
+        # Apply root_scope as default scope_prefix for read isolation
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            # Nest provided scope under root
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
+
         _source = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -657,7 +665,7 @@ class Memory(BaseModel):
                 else:
                     raw = self._storage.search(
                         embedding,
-                        scope_prefix=scope,
+                        scope_prefix=effective_scope,
                         categories=categories,
                         limit=limit,
                         min_score=0.0,
@@ -692,7 +700,7 @@ class Memory(BaseModel):
                 flow.kickoff(
                     inputs={
                         "query": query,
-                        "scope": scope,
+                        "scope": effective_scope,
                         "categories": categories or [],
                         "limit": limit,
                         "source": source,
@@ -746,11 +754,24 @@ class Memory(BaseModel):
     ) -> int:
         """Delete memories matching criteria.
 
+        Args:
+            scope: Scope to delete from. If None and root_scope is set, deletes
+                only within root_scope.
+            categories: Filter by categories.
+            older_than: Delete records older than this datetime.
+            metadata_filter: Filter by metadata fields.
+            record_ids: Specific record IDs to delete.
+
         Returns:
             Number of records deleted.
         """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.delete(
-            scope_prefix=scope,
+            scope_prefix=effective_scope,
             categories=categories,
             record_ids=record_ids,
             older_than=older_than,
@@ -825,9 +846,21 @@ class Memory(BaseModel):
             read_only=read_only,
         )
 
-    def list_scopes(self, path: str = "/") -> list[str]:
-        """List immediate child scopes under path."""
-        return self._storage.list_scopes(path)
+    def list_scopes(self, path: str | None = None) -> list[str]:
+        """List immediate child scopes under path.
+
+        Args:
+            path: Scope path to list children of. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+        return self._storage.list_scopes(effective_path)
 
     def list_records(
         self, scope: str | None = None, limit: int = 200, offset: int = 0
@@ -835,20 +868,52 @@ class Memory(BaseModel):
         """List records in a scope, newest first.
 
         Args:
-            scope: Optional scope path prefix to filter by.
+            scope: Optional scope path prefix to filter by. If None and root_scope
+                is set, defaults to root_scope.
             limit: Maximum number of records to return.
             offset: Number of records to skip (for pagination).
         """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.list_records(
-            scope_prefix=scope, limit=limit, offset=offset
+            scope_prefix=effective_scope, limit=limit, offset=offset
         )
 
-    def info(self, path: str = "/") -> ScopeInfo:
-        """Return scope info for path."""
-        return self._storage.get_scope_info(path)
+    def info(self, path: str | None = None) -> ScopeInfo:
+        """Return scope info for path.
 
-    def tree(self, path: str = "/", max_depth: int = 3) -> str:
-        """Return a formatted tree of scopes (string)."""
+        Args:
+            path: Scope path to get info for. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+        return self._storage.get_scope_info(effective_path)
+
+    def tree(self, path: str | None = None, max_depth: int = 3) -> str:
+        """Return a formatted tree of scopes (string).
+
+        Args:
+            path: Root path for the tree. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+            max_depth: Maximum depth to traverse.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+
         lines: list[str] = []
 
         def _walk(p: str, depth: int, prefix: str) -> None:
@@ -859,16 +924,36 @@ class Memory(BaseModel):
             for child in info.child_scopes[:20]:
                 _walk(child, depth + 1, prefix + "  ")
 
-        _walk(path.rstrip("/") or "/", 0, "")
-        return "\n".join(lines) if lines else f"{path or '/'} (0 records)"
+        _walk(effective_path.rstrip("/") or "/", 0, "")
+        return "\n".join(lines) if lines else f"{effective_path or '/'} (0 records)"
 
     def list_categories(self, path: str | None = None) -> dict[str, int]:
-        """List categories and counts; path=None means global."""
-        return self._storage.list_categories(scope_prefix=path)
+        """List categories and counts.
+
+        Args:
+            path: Scope path to filter categories by. If None and root_scope is set,
+                defaults to root_scope.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        return self._storage.list_categories(scope_prefix=effective_path)
 
     def reset(self, scope: str | None = None) -> None:
-        """Reset (delete all) memories in scope. None = all."""
-        self._storage.reset(scope_prefix=scope)
+        """Reset (delete all) memories in scope.
+
+        Args:
+            scope: Scope to reset. If None and root_scope is set, resets only
+                within root_scope. If None and no root_scope, resets all.
+        """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
+        self._storage.reset(scope_prefix=effective_scope)
 
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""
