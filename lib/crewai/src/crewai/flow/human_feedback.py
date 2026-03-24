@@ -76,22 +76,48 @@ if TYPE_CHECKING:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _serialize_llm_for_context(llm: Any) -> str | None:
-    """Serialize a BaseLLM object to a model string with provider prefix.
+def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
+    """Serialize a BaseLLM object to a dict preserving full config.
 
-    When persisting the LLM for HITL resume, we need to store enough info
-    to reconstruct a working LLM on the resume worker. Just storing the bare
-    model name (e.g. "gemini-3-flash-preview") causes provider inference to
-    fail — it defaults to OpenAI. Including the provider prefix (e.g.
-    "gemini/gemini-3-flash-preview") allows LLM() to correctly route.
+    Delegates to ``llm.to_config_dict()`` when available (BaseLLM and
+    subclasses). Falls back to extracting the model string with provider
+    prefix for unknown LLM types.
     """
+    if hasattr(llm, "to_config_dict"):
+        return llm.to_config_dict()
+
+    # Fallback for non-BaseLLM objects: just extract model + provider prefix
     model = getattr(llm, "model", None)
     if not model:
         return None
     provider = getattr(llm, "provider", None)
-    if provider and "/" not in model:
-        return f"{provider}/{model}"
-    return model
+    return f"{provider}/{model}" if provider and "/" not in model else model
+
+
+def _deserialize_llm_from_context(
+    llm_data: dict[str, Any] | str | None,
+) -> BaseLLM | None:
+    """Reconstruct an LLM instance from serialized context data.
+
+    Handles both the new dict format (with full config) and the legacy
+    string format (model name only) for backward compatibility.
+
+    Returns a BaseLLM instance, or None if llm_data is None.
+    """
+    if llm_data is None:
+        return None
+
+    from crewai.llm import LLM
+
+    if isinstance(llm_data, str):
+        return LLM(model=llm_data)
+
+    if isinstance(llm_data, dict):
+        model = llm_data.pop("model", None)
+        if not model:
+            return None
+        return LLM(model=model, **llm_data)
+    return None
 
 
 @dataclass
@@ -571,6 +597,14 @@ def human_feedback(
         if emit:
             wrapper.__is_router__ = True
             wrapper.__router_paths__ = list(emit)
+
+        # Stash the live LLM object for HITL resume to retrieve.
+        # When a flow pauses for human feedback and later resumes (possibly in a
+        # different process), the serialized context only contains a model string.
+        # By storing the original LLM on the wrapper, resume_async can retrieve
+        # the fully-configured LLM (with credentials, project, safety_settings, etc.)
+        # instead of creating a bare LLM from just the model string.
+        wrapper._hf_llm = llm
 
         return wrapper  # type: ignore[no-any-return]
 

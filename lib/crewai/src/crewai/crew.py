@@ -6,6 +6,7 @@ from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
+from pathlib import Path
 import re
 from typing import (
     TYPE_CHECKING,
@@ -91,6 +92,7 @@ from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -294,6 +296,11 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Skill search paths or pre-loaded Skill objects applied to all agents in the crew.",
+    )
+
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
@@ -357,7 +364,18 @@ class Crew(FlowTrackable, BaseModel):
 
     @model_validator(mode="after")
     def create_crew_memory(self) -> Crew:
-        """Initialize unified memory, respecting crew embedder config."""
+        """Initialize unified memory, respecting crew embedder config.
+
+        When memory is enabled, sets a hierarchical root_scope based on the
+        crew name (e.g. '/crew/research-crew') so that all memories saved by
+        this crew and its agents are organized under a consistent namespace.
+        """
+        from crewai.memory.utils import sanitize_scope_name
+
+        # Compute sanitized crew name for root_scope
+        crew_name = sanitize_scope_name(self.name or "crew")
+        crew_root_scope = f"/crew/{crew_name}"
+
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
@@ -365,10 +383,11 @@ class Crew(FlowTrackable, BaseModel):
             if self.embedder is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
-                embedder = build_embedder(self.embedder)  # type: ignore[arg-type]
-            self._memory = Memory(embedder=embedder)
+                embedder = build_embedder(cast(dict[str, Any], self.embedder))
+            self._memory = Memory(embedder=embedder, root_scope=crew_root_scope)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
+            # Respect user's configuration — don't auto-set root_scope
             self._memory = self.memory
         else:
             self._memory = None

@@ -905,7 +905,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
         # to avoid creating a wasteful standalone Memory instance.
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
-            self.memory = Memory()
+            from crewai.memory.utils import sanitize_scope_name
+
+            flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
+            self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -1315,7 +1318,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
-        llm = context.llm
+
+        # Try to get the live LLM from the re-imported decorator first.
+        # This preserves the fully-configured object (credentials, safety_settings, etc.)
+        # for same-process resume. For cross-process resume, fall back to the
+        # serialized context.llm which is now a dict with full config (or a legacy string).
+        from crewai.flow.human_feedback import _deserialize_llm_from_context
+
+        llm = None
+        method = self._methods.get(FlowMethodName(context.method_name))
+        if method is not None:
+            live_llm = getattr(method, "_hf_llm", None)
+            if live_llm is not None:
+                from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+
+                if isinstance(live_llm, BaseLLMClass):
+                    llm = live_llm
+
+        if llm is None:
+            llm = _deserialize_llm_from_context(context.llm)
 
         # Determine outcome
         collapsed_outcome: str | None = None

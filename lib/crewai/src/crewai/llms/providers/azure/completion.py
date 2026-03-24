@@ -180,6 +180,27 @@ class AzureCompletion(BaseLLM):
             and "/openai/deployments/" in self.endpoint
         )
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Azure-specific fields."""
+        config = super().to_config_dict()
+        if self.endpoint:
+            config["endpoint"] = self.endpoint
+        if self.api_version and self.api_version != "2024-06-01":
+            config["api_version"] = self.api_version
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
+        if self.max_retries != 2:
+            config["max_retries"] = self.max_retries
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.frequency_penalty is not None:
+            config["frequency_penalty"] = self.frequency_penalty
+        if self.presence_penalty is not None:
+            config["presence_penalty"] = self.presence_penalty
+        if self.max_tokens is not None:
+            config["max_tokens"] = self.max_tokens
+        return config
+
     @staticmethod
     def _validate_and_fix_endpoint(endpoint: str, model: str) -> str:
         """Validate and fix Azure endpoint URL format.
