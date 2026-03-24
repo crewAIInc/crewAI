@@ -28,6 +28,7 @@ from crewai.memory.analyze import (
     analyze_for_save,
 )
 from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
+from crewai.memory.utils import join_scope_paths
 
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,8 @@ class ItemState(BaseModel):
     importance: float | None = None
     source: str | None = None
     private: bool = False
+    # Structural root scope prefix for hierarchical scoping
+    root_scope: str | None = None
     # Resolved values
     resolved_scope: str = "/"
     resolved_categories: list[str] = Field(default_factory=list)
@@ -103,12 +106,24 @@ class EncodingFlow(Flow[EncodingState]):
         llm: Any,
         embedder: Any,
         config: MemoryConfig | None = None,
+        root_scope: str | None = None,
     ) -> None:
+        """Initialize the encoding flow.
+
+        Args:
+            storage: Storage backend for persisting memories.
+            llm: LLM instance for analysis.
+            embedder: Embedder for generating vectors.
+            config: Optional memory configuration.
+            root_scope: Structural root scope prefix. LLM-inferred or explicit
+                scopes are nested under this root.
+        """
         super().__init__(suppress_flow_events=True)
         self._storage = storage
         self._llm = llm
         self._embedder = embedder
         self._config = config or MemoryConfig()
+        self._root_scope = root_scope
 
     # ------------------------------------------------------------------
     # Step 1: Batch embed (ONE embedder call)
@@ -321,7 +336,13 @@ class EncodingFlow(Flow[EncodingState]):
             for i, future in save_futures.items():
                 analysis = future.result()
                 item = items[i]
-                item.resolved_scope = item.scope or analysis.suggested_scope or "/"
+                # Determine inner scope from explicit scope or LLM-inferred
+                inner_scope = item.scope or analysis.suggested_scope or "/"
+                # Join root_scope with inner scope if root_scope is set
+                if item.root_scope:
+                    item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
+                else:
+                    item.resolved_scope = inner_scope
                 item.resolved_categories = (
                     item.categories
                     if item.categories is not None
@@ -353,8 +374,18 @@ class EncodingFlow(Flow[EncodingState]):
             pool.shutdown(wait=False)
 
     def _apply_defaults(self, item: ItemState) -> None:
-        """Apply caller values with config defaults (fast path)."""
-        item.resolved_scope = item.scope or "/"
+        """Apply caller values with config defaults (fast path).
+
+        If root_scope is set, prepends it to the inner scope to create the
+        final resolved_scope.
+        """
+        inner_scope = item.scope or "/"
+        # Join root_scope with inner scope if root_scope is set
+        if item.root_scope:
+            item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
+        else:
+            item.resolved_scope = inner_scope if inner_scope != "/" else "/"
+
         item.resolved_categories = item.categories or []
         item.resolved_metadata = item.metadata or {}
         item.resolved_importance = (

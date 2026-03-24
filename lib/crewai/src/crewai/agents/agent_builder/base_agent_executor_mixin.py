@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from crewai.agents.parser import AgentFinish
+from crewai.memory.utils import sanitize_scope_name
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -26,7 +27,12 @@ class CrewAgentExecutorMixin:
     _printer: Printer = Printer()
 
     def _save_to_memory(self, output: AgentFinish) -> None:
-        """Save task result to unified memory (memory or crew._memory)."""
+        """Save task result to unified memory (memory or crew._memory).
+
+        Extends the memory's root_scope with agent-specific path segment
+        (e.g., '/crew/research-crew/agent/researcher') so that agent memories
+        are scoped hierarchically under their crew.
+        """
         memory = getattr(self.agent, "memory", None) or (
             getattr(self.crew, "_memory", None) if self.crew else None
         )
@@ -43,6 +49,20 @@ class CrewAgentExecutorMixin:
             )
             extracted = memory.extract_memories(raw)
             if extracted:
-                memory.remember_many(extracted, agent_role=self.agent.role)
+                # Build agent-specific root_scope that extends the crew's root
+                agent_role = self.agent.role or "unknown"
+                sanitized_role = sanitize_scope_name(agent_role)
+
+                # Get the memory's existing root_scope and extend with agent info
+                base_root = getattr(memory, "root_scope", None) or ""
+                # Construct agent root: base_root + /agent/<role>
+                agent_root = f"{base_root.rstrip('/')}/agent/{sanitized_role}"
+                # Ensure leading slash
+                if not agent_root.startswith("/"):
+                    agent_root = "/" + agent_root
+
+                memory.remember_many(
+                    extracted, agent_role=self.agent.role, root_scope=agent_root
+                )
         except Exception as e:
             self.agent._logger.log("error", f"Failed to save to memory: {e}")

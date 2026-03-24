@@ -126,6 +126,14 @@ class Memory(BaseModel):
         default=False,
         description="If True, remember() and remember_many() are silent no-ops.",
     )
+    root_scope: str | None = Field(
+        default=None,
+        description=(
+            "Structural root scope prefix. When set, LLM-inferred or explicit scopes "
+            "are nested under this root. For example, a crew with root_scope='/crew/research' "
+            "will store memories at '/crew/research/<inferred_scope>'."
+        ),
+    )
 
     _config: MemoryConfig = PrivateAttr()
     _llm_instance: BaseLLM | None = PrivateAttr(default=None)
@@ -297,11 +305,26 @@ class Memory(BaseModel):
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the batch EncodingFlow for one or more items. No event emission.
 
         This is the core encoding logic shared by ``remember()`` and
         ``remember_many()``. Events are managed by the calling method.
+
+        Args:
+            contents: List of text content to encode and store.
+            scope: Optional explicit scope (inner scope, nested under root_scope).
+            categories: Optional categories for all items.
+            metadata: Optional metadata for all items.
+            importance: Optional importance score for all items.
+            source: Optional source identifier for all items.
+            private: Whether items are private.
+            root_scope: Structural root scope prefix. LLM-inferred or explicit
+                scopes are nested under this root.
+
+        Returns:
+            List of created MemoryRecord instances.
         """
         from crewai.memory.encoding_flow import EncodingFlow
 
@@ -310,6 +333,7 @@ class Memory(BaseModel):
             llm=self._llm,
             embedder=self._embedder,
             config=self._config,
+            root_scope=root_scope,
         )
         items_input = [
             {
@@ -320,6 +344,7 @@ class Memory(BaseModel):
                 "importance": importance,
                 "source": source,
                 "private": private,
+                "root_scope": root_scope,
             }
             for c in contents
         ]
@@ -340,6 +365,7 @@ class Memory(BaseModel):
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> MemoryRecord | None:
         """Store a single item in memory (synchronous).
 
@@ -349,13 +375,15 @@ class Memory(BaseModel):
 
         Args:
             content: Text to remember.
-            scope: Optional scope path; inferred if None.
+            scope: Optional scope path (inner scope); inferred if None.
             categories: Optional categories; inferred if None.
             metadata: Optional metadata; merged with LLM-extracted if inferred.
             importance: Optional importance 0-1; inferred if None.
             source: Optional provenance identifier (e.g. user ID, session ID).
             private: If True, only visible to recall from the same source.
             agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope override. If provided, this overrides
+                the instance-level root_scope for this call only.
 
         Returns:
             The created MemoryRecord, or None if this memory is read-only.
@@ -365,6 +393,10 @@ class Memory(BaseModel):
         """
         if self.read_only:
             return None
+
+        # Determine effective root_scope: per-call override takes precedence
+        effective_root = root_scope if root_scope is not None else self.root_scope
+
         _source_type = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -388,6 +420,7 @@ class Memory(BaseModel):
                 importance,
                 source,
                 private,
+                effective_root,
             )
             records = future.result()
             record = records[0] if records else None
@@ -426,6 +459,7 @@ class Memory(BaseModel):
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Store multiple items in memory (non-blocking).
 
@@ -440,19 +474,24 @@ class Memory(BaseModel):
 
         Args:
             contents: List of text items to remember.
-            scope: Optional scope applied to all items.
+            scope: Optional scope (inner scope) applied to all items.
             categories: Optional categories applied to all items.
             metadata: Optional metadata applied to all items.
             importance: Optional importance applied to all items.
             source: Optional provenance identifier applied to all items.
             private: Privacy flag applied to all items.
             agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope override. If provided, this overrides
+                the instance-level root_scope for this call only.
 
         Returns:
             Empty list (records are not available until the background save completes).
         """
         if not contents or self.read_only:
             return []
+
+        # Determine effective root_scope: per-call override takes precedence
+        effective_root = root_scope if root_scope is not None else self.root_scope
 
         self._submit_save(
             self._background_encode_batch,
@@ -464,6 +503,7 @@ class Memory(BaseModel):
             source,
             private,
             agent_role,
+            effective_root,
         )
         return []
 
@@ -477,6 +517,7 @@ class Memory(BaseModel):
         source: str | None,
         private: bool,
         agent_role: str | None,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the encoding pipeline in a background thread with event emission.
 
@@ -486,6 +527,20 @@ class Memory(BaseModel):
         All ``emit`` calls are wrapped in try/except to handle the case where
         the event bus shuts down before the background save finishes (e.g.
         during process exit).
+
+        Args:
+            contents: List of text content to encode.
+            scope: Optional inner scope for all items.
+            categories: Optional categories for all items.
+            metadata: Optional metadata for all items.
+            importance: Optional importance for all items.
+            source: Optional source identifier for all items.
+            private: Whether items are private.
+            agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope prefix for hierarchical scoping.
+
+        Returns:
+            List of created MemoryRecord instances.
         """
         try:
             crewai_event_bus.emit(
@@ -502,7 +557,14 @@ class Memory(BaseModel):
         try:
             start = time.perf_counter()
             records = self._encode_batch(
-                contents, scope, categories, metadata, importance, source, private
+                contents,
+                scope,
+                categories,
+                metadata,
+                importance,
+                source,
+                private,
+                root_scope,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
         except RuntimeError:

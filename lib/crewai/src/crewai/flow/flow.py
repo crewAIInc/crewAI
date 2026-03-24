@@ -905,7 +905,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
         # to avoid creating a wasteful standalone Memory instance.
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
-            self.memory = Memory()
+            from crewai.memory.utils import sanitize_scope_name
+
+            flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
+            self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
         # Register all flow-related methods
         for method_name in dir(self):
