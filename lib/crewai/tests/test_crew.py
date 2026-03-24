@@ -1910,18 +1910,15 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
         _, kwargs = mock_execute_async.call_args
         tools = kwargs["tools"]
 
-        # Verify the delegation tools were passed correctly
+        # Verify the delegation tools were passed correctly.
+        # The manager must be able to delegate to ALL workers (writer, researcher,
+        # ceo), not just to the agent originally assigned to the task.
         assert len(tools) == 2
-        assert any(
-            "Delegate a specific task to one of the following coworkers: Senior Writer\n"
-            in tool.description
-            for tool in tools
-        )
-        assert any(
-            "Ask a specific question to one of the following coworkers: Senior Writer\n"
-            in tool.description
-            for tool in tools
-        )
+        tool_descriptions = " ".join(t.description for t in tools)
+        assert "Senior Writer" in tool_descriptions
+        assert "Researcher" in tool_descriptions
+        assert "Delegate a specific task to one of the following coworkers" in tool_descriptions
+        assert "Ask a specific question to one of the following coworkers" in tool_descriptions
 
 
 @pytest.mark.vcr()
@@ -1955,6 +1952,55 @@ def test_hierarchical_crew_creation_tasks_with_sync_last(researcher, writer, ceo
     assert (
         "Delegate a specific task to one of the following coworkers: Senior Writer, Researcher, CEO\n"
         in crew.manager_agent.tools[0].description
+    )
+
+
+def test_hierarchical_manager_delegates_to_all_agents_when_task_has_agent(
+    researcher, writer, ceo
+):
+    """Regression test for #4783.
+
+    When a task has an explicit ``agent`` assignment, the hierarchical manager
+    must still receive delegation tools that cover *all* worker agents, not
+    only the single agent attached to the task.  Before the fix,
+    ``_update_manager_tools`` silently replaced the full-crew delegation tools
+    with a single-agent variant, causing the hierarchical process to behave
+    like a sequential one.
+    """
+    task = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,  # task has an explicit agent — this is the trigger for the bug
+    )
+
+    crew = Crew(
+        tasks=[task],
+        agents=[writer, researcher, ceo],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task.output = mock_task_output
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+
+    # The manager's delegation tools must list ALL worker agents.
+    combined_desc = " ".join(t.description for t in crew.manager_agent.tools)
+    assert "Senior Writer" in combined_desc, (
+        "Manager should be able to delegate to Senior Writer"
+    )
+    assert "Researcher" in combined_desc, (
+        "Manager should be able to delegate to Researcher"
+    )
+    assert "CEO" in combined_desc, (
+        "Manager should be able to delegate to CEO"
     )
 
 
