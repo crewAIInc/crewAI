@@ -380,10 +380,8 @@ class Crew(FlowTrackable, BaseModel):
             self._memory = Memory(embedder=embedder, root_scope=crew_root_scope)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
+            # Respect user's configuration — don't auto-set root_scope
             self._memory = self.memory
-            # Set root_scope only if not already set (don't override user config)
-            if hasattr(self._memory, "root_scope") and self._memory.root_scope is None:
-                self._memory.root_scope = crew_root_scope
         else:
             self._memory = None
 

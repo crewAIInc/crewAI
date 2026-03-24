@@ -406,10 +406,10 @@ class TestCrewAutoScoping:
         assert hasattr(crew._memory, "root_scope")
         assert crew._memory.root_scope == "/crew/research-crew"
 
-    def test_crew_memory_instance_gets_root_scope_if_not_set(
+    def test_crew_memory_instance_preserves_no_root_scope(
         self, tmp_path: Path, mock_embedder: MagicMock
     ) -> None:
-        """User-provided Memory instance gets root_scope if not already set."""
+        """User-provided Memory instance is not modified — root_scope stays None."""
         from crewai.agent import Agent
         from crewai.crew import Crew
         from crewai.memory.unified_memory import Memory
@@ -443,7 +443,8 @@ class TestCrewAutoScoping:
         )
 
         assert crew._memory is mem
-        assert crew._memory.root_scope == "/crew/test-crew"
+        # User-provided Memory is not auto-scoped — respect their config
+        assert crew._memory.root_scope is None
 
     def test_crew_respects_existing_root_scope(
         self, tmp_path: Path, mock_embedder: MagicMock
