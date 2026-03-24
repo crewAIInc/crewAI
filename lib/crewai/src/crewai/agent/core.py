@@ -334,13 +334,16 @@ class Agent(BaseAgent):
         """Resolve skill paths and activate skills to INSTRUCTIONS level.
 
         Path entries trigger discovery and activation. Pre-loaded Skill objects
-        below INSTRUCTIONS level are activated. Crew-level skills are merged in.
+        below INSTRUCTIONS level are activated. Crew-level skills are merged in
+        with event emission so observability is consistent regardless of origin.
 
         Args:
             resolved_crew_skills: Pre-resolved crew skills (already discovered
                 and activated). When provided, avoids redundant discovery per agent.
         """
         from crewai.crew import Crew
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.skill_events import SkillActivatedEvent
 
         if resolved_crew_skills is None:
             crew_skills: list[Path | SkillModel] | None = (
@@ -379,7 +382,18 @@ class Agent(BaseAgent):
             elif isinstance(item, SkillModel):
                 if item.name not in seen:
                     seen.add(item.name)
-                    resolved.append(activate_skill(item, source=self))
+                    activated = activate_skill(item, source=self)
+                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                        crewai_event_bus.emit(
+                            self,
+                            event=SkillActivatedEvent(
+                                from_agent=self,
+                                skill_name=item.name,
+                                skill_path=item.path,
+                                disclosure_level=item.disclosure_level,
+                            ),
+                        )
+                    resolved.append(activated)
 
         self.skills = resolved if resolved else None
 

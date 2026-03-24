@@ -384,7 +384,7 @@ class Crew(FlowTrackable, BaseModel):
                 from crewai.rag.embeddings.factory import build_embedder
 
                 embedder = build_embedder(cast(dict[str, Any], self.embedder))
-            self._memory = Memory(embedder=embedder)
+            self._memory = Memory(embedder=embedder, root_scope=crew_root_scope)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
             # Respect user's configuration — don't auto-set root_scope
