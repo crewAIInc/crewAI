@@ -16,7 +16,7 @@ from copy import deepcopy
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from crewai.utilities.pydantic_schema_utils import (
     build_rich_field_description,
@@ -25,6 +25,7 @@ from crewai.utilities.pydantic_schema_utils import (
     ensure_all_properties_required,
     ensure_type_in_schemas,
     force_additional_properties_false,
+    generate_tool_parameters_schema,
     resolve_refs,
     strip_null_from_types,
     strip_unsupported_formats,
@@ -882,3 +883,201 @@ class TestEndToEndMCPSchema:
         )
         assert obj.filters.date_from == datetime.date(2025, 1, 1)
         assert obj.filters.categories == ["news", "tech"]
+
+
+# ---------------------------------------------------------------------------
+# Tests for generate_tool_parameters_schema (provider-agnostic tool schemas)
+# ---------------------------------------------------------------------------
+
+class TestGenerateToolParametersSchema:
+    """Verify that generate_tool_parameters_schema produces clean, provider-agnostic
+    JSON schemas suitable for Bedrock, Gemini, Anthropic, **and** OpenAI."""
+
+    def test_no_additional_properties_key(self) -> None:
+        """Schema must not contain additionalProperties (Bedrock/Gemini reject it)."""
+
+        class SimpleInput(BaseModel):
+            query: str
+
+        schema = generate_tool_parameters_schema(SimpleInput)
+        assert "additionalProperties" not in schema
+
+    def test_optional_fields_not_forced_required(self) -> None:
+        """Optional fields should NOT be forced into the required array.
+
+        generate_model_description forces all fields required (OpenAI strict mode).
+        The tool-parameters variant must preserve the original required array.
+        """
+        from typing import Optional
+
+        class MixedInput(BaseModel):
+            query: str
+            page: Optional[int] = None
+
+        schema = generate_tool_parameters_schema(MixedInput)
+        required = schema.get("required", [])
+        assert "query" in required
+        assert "page" not in required
+
+    def test_nested_objects_have_no_title(self) -> None:
+        """Nested object schemas must not carry a 'title' key (Gemini rejects it)."""
+
+        class Address(BaseModel):
+            city: str
+            zip_code: str
+
+        class Person(BaseModel):
+            name: str
+            address: Address
+
+        schema = generate_tool_parameters_schema(Person)
+
+        # Top-level title removed
+        assert "title" not in schema
+
+        # Nested object title removed
+        addr_schema = schema["properties"]["address"]
+        assert "title" not in addr_schema
+
+    def test_refs_resolved_inline(self) -> None:
+        """$ref and $defs should be fully resolved (no leftover references)."""
+
+        class Inner(BaseModel):
+            value: int
+
+        class Outer(BaseModel):
+            inner: Inner
+
+        schema = generate_tool_parameters_schema(Outer)
+        assert "$defs" not in schema
+        assert "$ref" not in str(schema)
+
+    def test_null_stripped_from_optional_types(self) -> None:
+        """Optional fields should have null stripped from anyOf/type arrays."""
+        from typing import Optional
+
+        class OptInput(BaseModel):
+            name: Optional[str] = None
+
+        schema = generate_tool_parameters_schema(OptInput)
+        name_prop = schema["properties"]["name"]
+        # Should be simplified to {"type": "string"}, not anyOf with null
+        assert name_prop.get("type") == "string"
+        assert "anyOf" not in name_prop
+
+    def test_default_values_stripped(self) -> None:
+        """Default values should be removed from the schema."""
+        from pydantic import Field
+
+        class WithDefaults(BaseModel):
+            count: int = Field(default=10, description="Item count")
+
+        schema = generate_tool_parameters_schema(WithDefaults)
+        count_prop = schema["properties"]["count"]
+        assert "default" not in count_prop
+
+    def test_preserves_descriptions(self) -> None:
+        """Field descriptions must be preserved."""
+        from pydantic import Field
+
+        class Described(BaseModel):
+            query: str = Field(description="Search query")
+
+        schema = generate_tool_parameters_schema(Described)
+        assert schema["properties"]["query"]["description"] == "Search query"
+
+    def test_preserves_property_types(self) -> None:
+        """Basic property types must be correctly represented."""
+
+        class TypedInput(BaseModel):
+            name: str
+            count: int
+            score: float
+            active: bool
+
+        schema = generate_tool_parameters_schema(TypedInput)
+        props = schema["properties"]
+        assert props["name"]["type"] == "string"
+        assert props["count"]["type"] == "integer"
+        assert props["score"]["type"] == "number"
+        assert props["active"]["type"] == "boolean"
+
+    def test_field_named_title_preserved(self) -> None:
+        """A user field named 'title' must not be stripped from properties."""
+
+        class BookSearch(BaseModel):
+            title: str = Field(description="Book title to search for")
+            author: str = Field(description="Author name")
+
+        schema = generate_tool_parameters_schema(BookSearch)
+        props = schema["properties"]
+        assert "title" in props, "Field named 'title' was incorrectly stripped"
+        assert props["title"]["type"] == "string"
+        assert "author" in props
+
+    def test_field_named_default_preserved(self) -> None:
+        """A user field named 'default' must not be stripped from properties."""
+
+        class ConfigInput(BaseModel):
+            default: str = Field(description="Default value")
+            name: str
+
+        schema = generate_tool_parameters_schema(ConfigInput)
+        props = schema["properties"]
+        assert "default" in props, "Field named 'default' was incorrectly stripped"
+
+    def test_field_named_properties_still_stripped(self) -> None:
+        """A field named 'properties' should still have its schema metadata stripped."""
+
+        class MetaInput(BaseModel):
+            properties: str = Field(description="Some properties field")
+
+        schema = generate_tool_parameters_schema(MetaInput)
+        props = schema["properties"]
+        assert "properties" in props
+        # The schema node for the 'properties' field should have title stripped
+        assert "title" not in props["properties"]
+
+    def test_field_named_properties_not_treated_as_properties_map(self) -> None:
+        """Field named 'properties' must not suppress metadata stripping for sibling fields."""
+
+        class Tricky(BaseModel):
+            properties: str = Field(description="Raw schema properties")
+            title: str = Field(description="A field also named title")
+
+        schema = generate_tool_parameters_schema(Tricky)
+        props = schema["properties"]
+        # Both fields must appear — neither should be deleted
+        assert "properties" in props
+        assert "title" in props
+        # Schema nodes for both fields must have their own 'title' stripped
+        assert "title" not in props["properties"]
+        assert "title" not in props["title"]
+
+
+class TestOpenAIStrictModeTransforms:
+    """Verify _convert_tools_for_interference applies the full strict-mode pipeline."""
+
+    def test_strip_unsupported_formats_applied(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import strip_unsupported_formats
+
+        schema = {"type": "object", "properties": {"url": {"type": "string", "format": "uri"}}}
+        result = strip_unsupported_formats(schema)
+        assert "format" not in result["properties"]["url"]
+
+    def test_ensure_type_in_schemas_applied(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import ensure_type_in_schemas
+
+        # Empty schemas {} inside anyOf must become {"type": "object"}
+        schema = {"anyOf": [{}, {"type": "string"}]}
+        result = ensure_type_in_schemas(schema)
+        assert result["anyOf"][0] == {"type": "object"}
+        assert result["anyOf"][1] == {"type": "string"}
+
+    def test_convert_oneof_to_anyof_applied(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import convert_oneof_to_anyof
+
+        schema = {"oneOf": [{"type": "string"}, {"type": "integer"}]}
+        result = convert_oneof_to_anyof(schema)
+        assert "anyOf" in result
+        assert "oneOf" not in result
