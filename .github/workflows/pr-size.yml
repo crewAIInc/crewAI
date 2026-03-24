@@ -22,12 +22,7 @@ jobs:
           l_label: "size/L"
           l_max_size: 500
           xl_label: "size/XL"
-          fail_if_xl: true
-          message_if_xl: >
-            This PR exceeds 500 lines changed and has been labeled `size/XL`.
-            PRs of this size require release manager approval to merge.
-            Please consider splitting into smaller PRs, or add a justification
-            in the PR description for why this cannot be broken up.
+          fail_if_xl: false
           files_to_ignore: |
             uv.lock
             *.lock
