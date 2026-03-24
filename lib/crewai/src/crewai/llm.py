@@ -248,6 +248,14 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "us.amazon.nova-pro-v1:0": 300000,
     "us.amazon.nova-micro-v1:0": 128000,
     "us.amazon.nova-lite-v1:0": 300000,
+    # Claude 4.x (us-prefixed)
+    "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "us.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
+    "us.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "us.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "us.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    # Claude 3.x (us-prefixed)
     "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
     "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
@@ -263,11 +271,20 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "us.meta.llama3-1-70b-instruct-v1:0": 128000,
     "us.meta.llama3-3-70b-instruct-v1:0": 128000,
     "us.meta.llama3-1-405b-instruct-v1:0": 128000,
+    # Claude 4.x (eu-prefixed)
+    "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "eu.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
+    "eu.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    # Claude 3.x (eu-prefixed)
     "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
     "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
     "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
     "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
+    # Claude 4.x (apac-prefixed)
+    "apac.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "apac.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
+    # Claude 3.x (apac-prefixed)
     "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
     "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
@@ -275,6 +292,14 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "amazon.nova-pro-v1:0": 300000,
     "amazon.nova-micro-v1:0": 128000,
     "amazon.nova-lite-v1:0": 300000,
+    # Claude 4.x (no region prefix)
+    "anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "anthropic.claude-sonnet-4-20250514-v1:0": 200000,
+    "anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    # Claude 3.x (no region prefix)
     "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
     "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
