@@ -1136,7 +1136,6 @@ dependencies = [
     { name = "json-repair" },
     { name = "json5" },
     { name = "jsonref" },
-    { name = "lancedb" },
     { name = "mcp" },
     { name = "openai" },
     { name = "openpyxl" },
@@ -1196,6 +1195,9 @@ litellm = [
 mem0 = [
     { name = "mem0ai" },
 ]
+memory-storage = [
+    { name = "lancedb" },
+]
 openpyxl = [
     { name = "openpyxl" },
 ]
@@ -1240,8 +1242,8 @@ requires-dist = [
     { name = "json-repair", specifier = "~=0.25.2" },
     { name = "json5", specifier = "~=0.10.0" },
     { name = "jsonref", specifier = "~=1.1.0" },
-    { name = "lancedb", specifier = ">=0.29.2" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.9,<3" },
+    { name = "lancedb", marker = "extra == 'memory-storage'", specifier = ">=0.29.2" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.9,<=1.82.6" },
     { name = "mcp", specifier = "~=1.26.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = "~=0.1.94" },
     { name = "openai", specifier = ">=1.83.0,<3" },
@@ -1268,7 +1270,7 @@ requires-dist = [
     { name = "uv", specifier = "~=0.9.13" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "memory-storage", "openpyxl", "pandas", "qdrant", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-devtools"

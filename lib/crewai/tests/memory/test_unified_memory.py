@@ -999,3 +999,62 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+# --- lancedb optional dependency ---
+
+
+def test_lancedb_storage_import_error_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """LanceDBStorage.__init__ raises ImportError with install hint when lancedb is absent."""
+    import crewai.memory.storage.lancedb_storage as mod
+
+    # Simulate lancedb not being installed
+    monkeypatch.setattr(mod, "lancedb", None)
+    with pytest.raises(ImportError, match="pip install crewai\\[memory-storage\\]"):
+        mod.LanceDBStorage(path="/tmp/fake")
+
+
+def test_memory_raises_import_error_when_lancedb_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Memory(storage='lancedb') raises ImportError with install hint when lancedb is absent."""
+    import importlib
+
+    # Make the import of lancedb_storage raise ImportError
+    original_import = importlib.import_module
+
+    def _patched_import(name: str, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if name == "crewai.memory.storage.lancedb_storage":
+            raise ImportError("No module named 'lancedb'")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(importlib, "import_module", _patched_import)
+
+    # Also patch the direct import that model_post_init uses
+    import builtins
+
+    original_builtins_import = builtins.__import__
+
+    def _patched_builtins_import(name, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if "lancedb_storage" in name:
+            raise ImportError("No module named 'lancedb'")
+        return original_builtins_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _patched_builtins_import)
+
+    from crewai.memory.unified_memory import Memory
+
+    with pytest.raises(ImportError, match="pip install crewai\\[memory-storage\\]"):
+        Memory(storage="lancedb", llm=MagicMock(), embedder=MagicMock())
+
+
+def test_memory_works_with_custom_storage_when_lancedb_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Memory accepts a custom StorageBackend even when lancedb is not installed."""
+    from crewai.memory.unified_memory import Memory
+
+    mock_storage = MagicMock()
+    # Should not raise even if lancedb is missing — custom storage bypasses it
+    mem = Memory(storage=mock_storage, llm=MagicMock(), embedder=MagicMock())
+    assert mem._storage is mock_storage

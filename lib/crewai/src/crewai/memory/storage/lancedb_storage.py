@@ -12,10 +12,26 @@ import threading
 import time
 from typing import Any
 
-import lancedb  # type: ignore[import-untyped]
+
+try:
+    import lancedb  # type: ignore[import-untyped]
+except ImportError:
+    lancedb = None  # type: ignore[assignment]
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
 from crewai.utilities.lock_store import lock as store_lock
+
+
+_INSTALL_HINT = (
+    "lancedb is required for the default memory storage backend but is not installed.\n\n"
+    "Install it with:\n"
+    "  pip install crewai[memory-storage]   # or: pip install lancedb\n\n"
+    "If lancedb does not provide wheels for your platform (e.g. Windows with "
+    "lancedb >=0.30), pin an older version:\n"
+    "  pip install 'lancedb>=0.29.2,<0.30'\n\n"
+    "Alternatively, supply a custom StorageBackend to Memory(storage=...) to "
+    "bypass lancedb entirely."
+)
 
 
 _logger = logging.getLogger(__name__)
@@ -63,6 +79,8 @@ class LanceDBStorage:
                   fragment file; compaction merges them, keeping query
                   performance consistent.  Set to 0 to disable.
         """
+        if lancedb is None:
+            raise ImportError(_INSTALL_HINT)
         if path is None:
             storage_dir = os.environ.get("CREWAI_STORAGE_DIR")
             if storage_dir:
