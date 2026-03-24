@@ -85,7 +85,9 @@ class AIMindTool(BaseTool):
         # Run the query on the AI-Mind.
         # The Minds API is OpenAI compatible and therefore, the OpenAI client can be used.
         openai_client = OpenAI(
-            base_url=AIMindToolConstants.MINDS_API_BASE_URL, api_key=self.api_key
+            base_url=AIMindToolConstants.MINDS_API_BASE_URL, api_key=self.api_key,
+            timeout=60.0,
+            max_retries=3,
         )
 
         if self.mind_name is None:

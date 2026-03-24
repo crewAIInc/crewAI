@@ -744,7 +744,7 @@ def _generate_release_notes(
 
         github_contributors = get_github_contributors(commit_range)
 
-        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=60.0, max_retries=3)
 
         if commits.strip():
             contributors_section = ""

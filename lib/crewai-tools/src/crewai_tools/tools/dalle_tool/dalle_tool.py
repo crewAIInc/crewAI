@@ -49,20 +49,23 @@ class DallETool(BaseTool):
     )
 
     def _run(self, **kwargs) -> str:
-        client = OpenAI()
+        client = OpenAI(timeout=60.0, max_retries=3)
 
         image_description = kwargs.get("image_description")
 
         if not image_description:
             return "Image description is required."
 
-        response = client.images.generate(
-            model=self.model,
-            prompt=image_description,
-            size=self.size,
-            quality=self.quality,
-            n=self.n,
-        )
+        try:
+            response = client.images.generate(
+                model=self.model,
+                prompt=image_description,
+                size=self.size,
+                quality=self.quality,
+                n=self.n,
+            )
+        except Exception as e:
+            return f"Failed to generate image: {e}"
 
         if not response or not response.data:
             return "Failed to generate image."
