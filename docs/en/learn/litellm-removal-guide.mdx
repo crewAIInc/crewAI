@@ -15,7 +15,7 @@ CrewAI supports two paths for connecting to LLM providers:
 This guide explains how to use CrewAI exclusively with native provider integrations, removing any dependency on LiteLLM.
 
 <Warning>
-  The `litellm` package was quarantined on PyPI due to a security/reliability incident. While this has been resolved, some teams prefer to minimize their dependency surface. CrewAI's native integrations give you full functionality without LiteLLM.
+  The `litellm` package was quarantined on PyPI due to a security/reliability incident. If you rely on LiteLLM-dependent providers, you should migrate to native integrations. CrewAI's native integrations give you full functionality without LiteLLM.
 </Warning>
 
 ## Why Remove LiteLLM?
@@ -344,7 +344,7 @@ llm = LLM(
     ```
   </Accordion>
   <Accordion title="Is LiteLLM safe to use now?">
-    The quarantine has been resolved. However, reducing your dependency surface is a good security practice regardless. If you only need providers that CrewAI supports natively, there's no reason to keep LiteLLM installed.
+    Regardless of quarantine status, reducing your dependency surface is good security practice. If you only need providers that CrewAI supports natively, there's no reason to keep LiteLLM installed.
   </Accordion>
   <Accordion title="What about environment variables like OPENAI_API_KEY?">
     Native providers use the same environment variables you're already familiar with. No changes needed for `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, etc.
