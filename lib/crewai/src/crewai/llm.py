@@ -43,6 +43,7 @@ from crewai.llms.constants import (
     AZURE_MODELS,
     BEDROCK_MODELS,
     GEMINI_MODELS,
+    NOVITA_MODELS,
     OPENAI_MODELS,
 )
 from crewai.utilities import InternalInstructor
@@ -311,6 +312,10 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "mistral/mistral-large-latest": 32768,
     "mistral/mistral-large-2407": 32768,
     "mistral/mistral-large-2402": 32768,
+    # novita
+    "moonshotai/kimi-k2.5": 131072,
+    "zai-org/glm-5": 131072,
+    "minimax/minimax-m2.5": 131072,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
@@ -325,6 +330,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "novita",
 ]
 
 
@@ -384,6 +390,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "novita": "novita",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -394,6 +401,12 @@ class LLM(BaseLLM):
                 provider = canonical_provider
                 use_native = True
                 model_string = model_part
+            elif model in NOVITA_MODELS:
+                # Handle vendor/model IDs (e.g. "moonshotai/kimi-k2.5")
+                # that are Novita models but whose prefix is a vendor, not a provider
+                provider = "novita"
+                use_native = True
+                model_string = model
             else:
                 provider = prefix
                 use_native = False
@@ -483,6 +496,9 @@ class LLM(BaseLLM):
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
 
+        if provider == "novita":
+            return model in NOVITA_MODELS
+
         return False
 
     @classmethod
@@ -518,6 +534,9 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if provider == "novita" and model in NOVITA_MODELS:
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -546,6 +565,9 @@ class LLM(BaseLLM):
 
         if model in BEDROCK_MODELS:
             return "bedrock"
+
+        if model in NOVITA_MODELS:
+            return "novita"
 
         if model in AZURE_MODELS:
             return "azure"
@@ -581,6 +603,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "novita":
+            from crewai.llms.providers.novita.completion import NovitaCompletion
+
+            return NovitaCompletion
 
         return None
 
