@@ -173,6 +173,12 @@ class Telemetry:
 
         self._original_handlers: dict[int, Any] = {}
 
+        if threading.current_thread() is not threading.main_thread():
+            logger.debug(
+                "Skipping signal handler registration: not running in main thread"
+            )
+            return
+
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
         if hasattr(signal, "SIGHUP"):
@@ -976,6 +982,22 @@ class Telemetry:
             span = tracer.start_span("Flow Execution")
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def env_context_span(self, tool: str) -> None:
+        """Records the coding tool environment context."""
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Environment Context")
+            self._add_attribute(
+                span,
+                "crewai_version",
+                version("crewai"),
+            )
+            self._add_attribute(span, "tool", tool)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

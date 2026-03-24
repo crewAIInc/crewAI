@@ -2,6 +2,8 @@
 # https://github.com/un33k/python-slugify
 # MIT License
 
+import functools
+import hashlib
 import re
 from typing import Any, Final
 import unicodedata
@@ -14,6 +16,11 @@ _CAMEL_UPPER_LOWER: Final[re.Pattern[str]] = re.compile(r"([A-Z]+)([A-Z][a-z])")
 _DISALLOWED_CHARS_PATTERN: Final[re.Pattern[str]] = re.compile(r"[^a-zA-Z0-9]+")
 _DUPLICATE_UNDERSCORE_PATTERN: Final[re.Pattern[str]] = re.compile(r"_+")
 _MAX_TOOL_NAME_LENGTH: Final[int] = 64
+
+
+@functools.lru_cache(maxsize=8)
+def _duplicate_separator_pattern(separator: str) -> re.Pattern[str]:
+    return re.compile(f"(?:{re.escape(separator)}){{2,}}")
 
 
 def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> str:
@@ -40,9 +47,33 @@ def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> st
     name = name.strip("_")
 
     if len(name) > max_length:
-        name = name[:max_length].rstrip("_")
+        name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]
+        suffix = f"_{name_hash}"
+        name = name[: max_length - len(suffix)].rstrip("_") + suffix
 
     return name
+
+
+def slugify(text: str, separator: str = "_") -> str:
+    """Convert text to a URL-safe slug.
+
+    Normalizes Unicode characters, removes special characters,
+    and replaces whitespace with the separator.
+
+    Args:
+        text: The text to slugify.
+        separator: The separator to use between words. Defaults to underscore.
+
+    Returns:
+        A URL-safe slug.
+    """
+    text = unicodedata.normalize("NFKD", text)
+    text = text.encode("ascii", "ignore").decode("ascii")
+    text = text.lower()
+    text = _QUOTE_PATTERN.sub("", text)
+    text = _DISALLOWED_CHARS_PATTERN.sub(separator, text)
+    text = _duplicate_separator_pattern(separator).sub(separator, text)
+    return text.strip(separator)
 
 
 def interpolate_only(

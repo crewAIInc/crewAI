@@ -346,6 +346,23 @@ class BedrockCompletion(BaseLLM):
         # Handle inference profiles for newer models
         self.model_id = model
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Bedrock-specific fields."""
+        config = super().to_config_dict()
+        # NOTE: AWS credentials (access_key, secret_key, session_token) are
+        # intentionally excluded — they must come from env on resume.
+        if self.region_name and self.region_name != "us-east-1":
+            config["region_name"] = self.region_name
+        if self.max_tokens is not None:
+            config["max_tokens"] = self.max_tokens
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.top_k is not None:
+            config["top_k"] = self.top_k
+        if self.guardrail_config:
+            config["guardrail_config"] = self.guardrail_config
+        return config
+
     @property
     def stop(self) -> list[str]:
         """Get stop sequences sent to the API."""
@@ -1781,6 +1798,7 @@ class BedrockCompletion(BaseLLM):
 
         converse_messages: list[LLMMessage] = []
         system_message: str | None = None
+        pending_tool_results: list[dict[str, Any]] = []
 
         for message in formatted_messages:
             role = message.get("role")
@@ -1794,56 +1812,62 @@ class BedrockCompletion(BaseLLM):
                     system_message += f"\n\n{content}"
                 else:
                     system_message = cast(str, content)
-            elif role == "assistant" and tool_calls:
-                # Convert OpenAI-style tool_calls to Bedrock toolUse format
-                bedrock_content = []
-                for tc in tool_calls:
-                    func = tc.get("function", {})
-                    tool_use_block = {
-                        "toolUse": {
-                            "toolUseId": tc.get("id", f"call_{id(tc)}"),
-                            "name": func.get("name", ""),
-                            "input": func.get("arguments", {})
-                            if isinstance(func.get("arguments"), dict)
-                            else json.loads(func.get("arguments", "{}") or "{}"),
-                        }
-                    }
-                    bedrock_content.append(tool_use_block)
-                converse_messages.append(
-                    {"role": "assistant", "content": bedrock_content}
-                )
             elif role == "tool":
                 if not tool_call_id:
                     raise ValueError("Tool message missing required tool_call_id")
-                converse_messages.append(
+                pending_tool_results.append(
                     {
-                        "role": "user",
-                        "content": [
-                            {
-                                "toolResult": {
-                                    "toolUseId": tool_call_id,
-                                    "content": [
-                                        {"text": str(content) if content else ""}
-                                    ],
-                                }
-                            }
-                        ],
+                        "toolResult": {
+                            "toolUseId": tool_call_id,
+                            "content": [{"text": str(content) if content else ""}],
+                        }
                     }
                 )
             else:
-                # Convert to Converse API format with proper content structure
-                if isinstance(content, list):
-                    # Already formatted as multimodal content blocks
-                    converse_messages.append({"role": role, "content": content})
-                else:
-                    # String content - wrap in text block
-                    text_content = content if content else ""
+                if pending_tool_results:
                     converse_messages.append(
-                        {"role": role, "content": [{"text": text_content}]}
+                        {"role": "user", "content": pending_tool_results}
                     )
+                    pending_tool_results = []
+
+                if role == "assistant" and tool_calls:
+                    # Convert OpenAI-style tool_calls to Bedrock toolUse format
+                    bedrock_content = []
+                    for tc in tool_calls:
+                        func = tc.get("function", {})
+                        tool_use_block = {
+                            "toolUse": {
+                                "toolUseId": tc.get("id", f"call_{id(tc)}"),
+                                "name": func.get("name", ""),
+                                "input": func.get("arguments", {})
+                                if isinstance(func.get("arguments"), dict)
+                                else json.loads(func.get("arguments", "{}") or "{}"),
+                            }
+                        }
+                        bedrock_content.append(tool_use_block)
+                    converse_messages.append(
+                        {"role": "assistant", "content": bedrock_content}
+                    )
+                else:
+                    # Convert to Converse API format with proper content structure
+                    if isinstance(content, list):
+                        # Already formatted as multimodal content blocks
+                        converse_messages.append({"role": role, "content": content})
+                    else:
+                        # String content - wrap in text block
+                        text_content = content if content else ""
+                        converse_messages.append(
+                            {"role": role, "content": [{"text": text_content}]}
+                        )
+
+        if pending_tool_results:
+            converse_messages.append({"role": "user", "content": pending_tool_results})
 
         # CRITICAL: Handle model-specific conversation requirements
-        # Cohere and some other models require conversation to end with user message
+        # Cohere and some other models require conversation to end with user message.
+        # Anthropic models on Bedrock also reject assistant messages in the final
+        # position when tools are present ("pre-filling the assistant response is
+        # not supported").
         if converse_messages:
             last_message = converse_messages[-1]
             if last_message["role"] == "assistant":
@@ -1868,6 +1892,22 @@ class BedrockCompletion(BaseLLM):
                         {
                             "role": "user",
                             "content": [{"text": "Continue your response."}],
+                        }
+                    )
+                # Anthropic (Claude) models reject assistant-last messages when
+                # tools are in the request. Append a user message so the
+                # Converse API accepts the payload.
+                elif (
+                    "anthropic" in self.model.lower() or "claude" in self.model.lower()
+                ):
+                    converse_messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "text": "Please continue and provide your final answer."
+                                }
+                            ],
                         }
                     )
 

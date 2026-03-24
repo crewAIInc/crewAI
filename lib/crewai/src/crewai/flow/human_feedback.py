@@ -76,6 +76,50 @@ if TYPE_CHECKING:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
+def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
+    """Serialize a BaseLLM object to a dict preserving full config.
+
+    Delegates to ``llm.to_config_dict()`` when available (BaseLLM and
+    subclasses). Falls back to extracting the model string with provider
+    prefix for unknown LLM types.
+    """
+    if hasattr(llm, "to_config_dict"):
+        return llm.to_config_dict()
+
+    # Fallback for non-BaseLLM objects: just extract model + provider prefix
+    model = getattr(llm, "model", None)
+    if not model:
+        return None
+    provider = getattr(llm, "provider", None)
+    return f"{provider}/{model}" if provider and "/" not in model else model
+
+
+def _deserialize_llm_from_context(
+    llm_data: dict[str, Any] | str | None,
+) -> BaseLLM | None:
+    """Reconstruct an LLM instance from serialized context data.
+
+    Handles both the new dict format (with full config) and the legacy
+    string format (model name only) for backward compatibility.
+
+    Returns a BaseLLM instance, or None if llm_data is None.
+    """
+    if llm_data is None:
+        return None
+
+    from crewai.llm import LLM
+
+    if isinstance(llm_data, str):
+        return LLM(model=llm_data)
+
+    if isinstance(llm_data, dict):
+        model = llm_data.pop("model", None)
+        if not model:
+            return None
+        return LLM(model=model, **llm_data)
+    return None
+
+
 @dataclass
 class HumanFeedbackResult:
     """Result from a @human_feedback decorated method.
@@ -188,7 +232,7 @@ def human_feedback(
     metadata: dict[str, Any] | None = None,
     provider: HumanFeedbackProvider | None = None,
     learn: bool = False,
-    learn_source: str = "hitl"
+    learn_source: str = "hitl",
 ) -> Callable[[F], F]:
     """Decorator for Flow methods that require human feedback.
 
@@ -328,9 +372,7 @@ def human_feedback(
             """Recall past HITL lessons and use LLM to pre-review the output."""
             try:
                 query = f"human feedback lessons for {func.__name__}: {method_output!s}"
-                matches = flow_instance.memory.recall(
-                    query, source=learn_source
-                )
+                matches = flow_instance.memory.recall(query, source=learn_source)
                 if not matches:
                     return method_output
 
@@ -341,7 +383,10 @@ def human_feedback(
                     lessons=lessons,
                 )
                 messages = [
-                    {"role": "system", "content": _get_hitl_prompt("hitl_pre_review_system")},
+                    {
+                        "role": "system",
+                        "content": _get_hitl_prompt("hitl_pre_review_system"),
+                    },
                     {"role": "user", "content": prompt},
                 ]
                 if getattr(llm_inst, "supports_function_calling", lambda: False)():
@@ -366,7 +411,10 @@ def human_feedback(
                     feedback=raw_feedback,
                 )
                 messages = [
-                    {"role": "system", "content": _get_hitl_prompt("hitl_distill_system")},
+                    {
+                        "role": "system",
+                        "content": _get_hitl_prompt("hitl_distill_system"),
+                    },
                     {"role": "user", "content": prompt},
                 ]
 
@@ -408,7 +456,7 @@ def human_feedback(
                 emit=list(emit) if emit else None,
                 default_outcome=default_outcome,
                 metadata=metadata or {},
-                llm=llm if isinstance(llm, str) else None,
+                llm=llm if isinstance(llm, str) else _serialize_llm_for_context(llm),
             )
 
             # Determine effective provider:
@@ -487,7 +535,11 @@ def human_feedback(
                 result = _process_feedback(self, method_output, raw_feedback)
 
                 # Distill: extract lessons from output + feedback, store in memory
-                if learn and getattr(self, "memory", None) is not None and raw_feedback.strip():
+                if (
+                    learn
+                    and getattr(self, "memory", None) is not None
+                    and raw_feedback.strip()
+                ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
                 return result
@@ -507,7 +559,11 @@ def human_feedback(
                 result = _process_feedback(self, method_output, raw_feedback)
 
                 # Distill: extract lessons from output + feedback, store in memory
-                if learn and getattr(self, "memory", None) is not None and raw_feedback.strip():
+                if (
+                    learn
+                    and getattr(self, "memory", None) is not None
+                    and raw_feedback.strip()
+                ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
                 return result
@@ -534,13 +590,21 @@ def human_feedback(
             metadata=metadata,
             provider=provider,
             learn=learn,
-            learn_source=learn_source
+            learn_source=learn_source,
         )
         wrapper.__is_flow_method__ = True
 
         if emit:
             wrapper.__is_router__ = True
             wrapper.__router_paths__ = list(emit)
+
+        # Stash the live LLM object for HITL resume to retrieve.
+        # When a flow pauses for human feedback and later resumes (possibly in a
+        # different process), the serialized context only contains a model string.
+        # By storing the original LLM on the wrapper, resume_async can retrieve
+        # the fully-configured LLM (with credentials, project, safety_settings, etc.)
+        # instead of creating a bare LLM from just the model string.
+        wrapper._hf_llm = llm
 
         return wrapper  # type: ignore[no-any-return]
 

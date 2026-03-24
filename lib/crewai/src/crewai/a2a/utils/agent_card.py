@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import MutableMapping
+import concurrent.futures
+import contextvars
 from functools import lru_cache
 import ssl
 import time
@@ -138,14 +140,18 @@ def fetch_agent_card(
         ttl_hash = int(time.time() // cache_ttl)
         return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    coro = afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
     try:
-        return loop.run_until_complete(
-            afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
-        )
-    finally:
-        loop.close()
+        asyncio.get_running_loop()
+        has_running_loop = True
+    except RuntimeError:
+        has_running_loop = False
+
+    if has_running_loop:
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, coro).result()
+    return asyncio.run(coro)
 
 
 async def afetch_agent_card(
@@ -203,14 +209,18 @@ def _fetch_agent_card_cached(
     """Cached sync version of fetch_agent_card."""
     auth = _auth_store.get(auth_hash)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    coro = _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
     try:
-        return loop.run_until_complete(
-            _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
-        )
-    finally:
-        loop.close()
+        asyncio.get_running_loop()
+        has_running_loop = True
+    except RuntimeError:
+        has_running_loop = False
+
+    if has_running_loop:
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, coro).result()
+    return asyncio.run(coro)
 
 
 @cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]

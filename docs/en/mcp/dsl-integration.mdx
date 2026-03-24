@@ -62,22 +62,22 @@ Use the `#` syntax to select specific tools from a server:
 "https://mcp.exa.ai/mcp?api_key=your_key#web_search_exa"
 ```
 
-### CrewAI AMP Marketplace
+### Connected MCP Integrations
 
-Access tools from the CrewAI AMP marketplace:
+Connect MCP servers from the CrewAI catalog or bring your own. Once connected in your account, reference them by slug:
 
 ```python
-# Full service with all tools
-"crewai-amp:financial-data"
+# Connected MCP with all tools
+"snowflake"
 
-# Specific tool from AMP service
-"crewai-amp:research-tools#pubmed_search"
+# Specific tool from a connected MCP
+"stripe#list_invoices"
 
-# Multiple AMP services
+# Multiple connected MCPs
 mcps=[
-    "crewai-amp:weather-insights",
-    "crewai-amp:market-analysis",
-    "crewai-amp:social-media-monitoring"
+    "snowflake",
+    "stripe",
+    "github"
 ]
 ```
 
@@ -99,10 +99,10 @@ multi_source_agent = Agent(
         "https://mcp.exa.ai/mcp?api_key=your_exa_key&profile=research",
         "https://weather.api.com/mcp#get_current_conditions",
 
-        # CrewAI AMP marketplace
-        "crewai-amp:financial-insights",
-        "crewai-amp:academic-research#pubmed_search",
-        "crewai-amp:market-intelligence#competitor_analysis"
+        # Connected MCPs from catalog
+        "snowflake",
+        "stripe#list_invoices",
+        "github#search_repositories"
     ]
 )
 
@@ -147,7 +147,7 @@ agent = Agent(
     mcps=[
         "https://mcp.exa.ai/mcp?api_key=key",      # Tools: mcp_exa_ai_*
         "https://weather.service.com/mcp",         # Tools: weather_service_com_*
-        "crewai-amp:financial-data"                # Tools: financial_data_*
+        "snowflake"                                # Tools: snowflake_*
     ]
 )
 
@@ -170,7 +170,7 @@ agent = Agent(
         "https://primary-server.com/mcp",         # Primary data source
         "https://backup-server.com/mcp",          # Backup if primary fails
         "https://unreachable-server.com/mcp",     # Will be skipped with warning
-        "crewai-amp:reliable-service"             # Reliable AMP service
+        "snowflake"                               # Connected MCP from catalog
     ]
 )
 
@@ -254,7 +254,7 @@ agent = Agent(
     apps=["gmail", "slack"],                       # Platform integrations
     mcps=[                                         # MCP servers
         "https://mcp.exa.ai/mcp?api_key=key",
-        "crewai-amp:research-tools"
+        "snowflake"
     ],
 
     verbose=True,
@@ -298,7 +298,7 @@ agent = Agent(
 mcps=[
     "https://primary-api.com/mcp",       # Primary choice
     "https://backup-api.com/mcp",        # Backup option
-    "crewai-amp:reliable-service"        # AMP fallback
+    "snowflake"                          # Connected MCP fallback
 ]
 ```
 
@@ -311,7 +311,7 @@ agent = Agent(
     backstory="Financial analyst with access to weather data for agricultural market insights",
     mcps=[
         "https://weather.service.com/mcp#get_forecast",
-        "crewai-amp:financial-data#stock_analysis"
+        "stripe#list_invoices"
     ]
 )
 ```

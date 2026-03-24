@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import pytest
 from vcr.request import Request  # type: ignore[import-untyped]
 
+
 try:
     import vcr.stubs.httpx_stubs as httpx_stubs  # type: ignore[import-untyped]
 except ModuleNotFoundError:
@@ -40,6 +41,35 @@ def _patched_make_vcr_request(httpx_request: Any, **kwargs: Any) -> Any:
 
 
 httpx_stubs._make_vcr_request = _patched_make_vcr_request
+
+
+# Patch the response-side of VCR to fix httpx.ResponseNotRead errors.
+# VCR's _from_serialized_response mocks httpx.Response.read(), which prevents
+# the response's internal _content attribute from being properly initialized.
+# When OpenAI's client (using with_raw_response) accesses response.content,
+# httpx raises ResponseNotRead because read() was never actually called.
+# This patch ensures _content is explicitly set after response creation.
+_original_from_serialized_response = getattr(
+    httpx_stubs, "_from_serialized_response", None
+)
+
+if _original_from_serialized_response is not None:
+
+    def _patched_from_serialized_response(
+        request: Any, serialized_response: Any, history: Any = None
+    ) -> Any:
+        """Patched version that ensures response._content is properly set."""
+        response = _original_from_serialized_response(request, serialized_response, history)
+        # Explicitly set _content to avoid ResponseNotRead errors
+        # The content was passed to the constructor but the mocked read() prevents
+        # proper initialization of the internal state
+        body_content = serialized_response.get("body", {}).get("string", b"")
+        if isinstance(body_content, str):
+            body_content = body_content.encode("utf-8")
+        response._content = body_content
+        return response
+
+    httpx_stubs._from_serialized_response = _patched_from_serialized_response
 
 
 @pytest.fixture(autouse=True, scope="function")

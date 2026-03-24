@@ -4,6 +4,210 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="23 mar 2026">
+  ## v1.11.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar o serializer flow_structure() para introspecção da classe Flow.
+
+  ### Correções de Bugs
+  - Corrigir vulnerabilidades de segurança atualizando pypdf, tinytag e langchain-core.
+  - Preservar a configuração completa do LLM durante a retomada do HITL para provedores que não são da OpenAI.
+  - Prevenir a travessia de caminho no FileWriterTool.
+  - Corrigir a falha do lock_store quando o pacote redis não está instalado.
+  - Passar cache_function de BaseTool para CrewStructuredTool.
+
+  ### Documentação
+  - Adicionar guia de publicação de ferramentas personalizadas com traduções.
+  - Atualizar changelog e versão para v1.11.0.
+  - Adicionar documentação de ouvintes de eventos ausentes.
+
+  ### Refatoração
+  - Substituir urllib por requests no carregador de pdf.
+  - Substituir campos de callback e modelo do tipo Any por tipos serializáveis.
+
+  ## Contribuidores
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="18 mar 2026">
+  ## v1.11.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.11.0rc2
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="17 mar 2026">
+  ## v1.11.0rc2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Aprimorar o manuseio e a serialização das respostas do LLM.
+  - Atualizar dependências transitivas vulneráveis (authlib, PyJWT, snowflake-connector-python).
+  - Substituir `os.system` por `subprocess.run` na instalação do pip em modo inseguro.
+
+  ### Documentação
+  - Atualizar a página da Ferramenta de Pesquisa Exa com nomes, descrições e opções de configuração aprimoradas.
+  - Adicionar Servidores MCP Personalizados no Guia de Como Fazer.
+  - Atualizar a documentação dos coletores OTEL.
+  - Atualizar a documentação do MCP.
+  - Atualizar o changelog e a versão para v1.11.0rc1.
+
+  ## Contributors
+
+  @10ishq, @greysonlalonde, @joaomdmoura, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="15 mar 2026">
+  ## v1.11.0rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar autenticação de token da API Plus
+  - Implementar padrão de execução de plano
+
+  ### Correções de Bugs
+  - Resolver problema de escape do sandbox do interpretador de código
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2rc2
+
+  ## Contribuidores
+
+  @Copilot, @greysonlalonde, @lorenzejay, @theCyberTech
+
+</Update>
+
+<Update label="14 mar 2026">
+  ## v1.10.2rc2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Remover bloqueios exclusivos de operações de armazenamento somente leitura
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2rc1
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="13 mar 2026">
+  ## v1.10.2rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar comando de lançamento e acionar publicação no PyPI
+
+  ### Correções de Bugs
+  - Corrigir bloqueio seguro entre processos e threads para I/O não protegido
+  - Propagar contextvars através de todos os limites de thread e executor
+  - Propagar ContextVars para threads de tarefas assíncronas
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2a1
+
+  ## Contribuidores
+
+  @danglies007, @greysonlalonde
+
+</Update>
+
+<Update label="11 mar 2026">
+  ## v1.10.2a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2a1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Adicionar suporte para busca de ferramentas, salvamento de tokens e injeção dinâmica de ferramentas apropriadas durante a execução para Anthropics.
+  - Introduzir mais ferramentas de Busca Brave.
+  - Criar ação para lançamentos noturnos.
+
+  ### Correções de Bugs
+  - Corrigir LockException durante a execução concorrente de múltiplos processos.
+  - Resolver problemas com a agrupação de resultados de ferramentas paralelas em uma única mensagem de usuário.
+  - Abordar resoluções de ferramentas MCP e eliminar todas as conexões mutáveis compartilhadas.
+  - Atualizar o manuseio de parâmetros LLM na função human_feedback.
+  - Adicionar métodos de lista/dicionário ausentes a LockedListProxy e LockedDictProxy.
+  - Propagar o contexto de contextvars para as threads de chamada de ferramentas paralelas.
+  - Atualizar a dependência gitpython para >=3.1.41 para resolver a vulnerabilidade de travessia de diretórios CVE.
+
+  ### Refatoração
+  - Refatorar classes de memória para serem serializáveis.
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.10.1.
+
+  ## Contribuidores
+
+  @akaKuruma, @github-actions[bot], @giulio-leone, @greysonlalonde, @joaomdmoura, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha
+
+</Update>
+
+<Update label="04 mar 2026">
+  ## v1.10.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Atualizar Gemini GenAI
+
+  ### Correções de Bugs
+  - Ajustar o valor do listener do executor para evitar recursão
+  - Agrupar partes da resposta da função paralela em um único objeto Content no Gemini
+  - Exibir a saída de pensamento dos modelos de pensamento no Gemini
+  - Carregar ferramentas MCP e da plataforma quando as ferramentas do agente forem None
+  - Suportar ambientes Jupyter com loops de eventos em A2A
+  - Usar ID anônimo para rastreamentos efêmeros
+  - Passar condicionalmente o cabeçalho plus
+  - Ignorar o registro do manipulador de sinal em threads não principais para telemetria
+  - Injetar erros de ferramentas como observações e resolver colisões de nomes
+  - Atualizar pypdf de 4.x para 6.7.4 para resolver alertas do Dependabot
+  - Resolver alertas de segurança críticos e altos do Dependabot
+
+  ### Documentação
+  - Sincronizar a documentação da ferramenta Composio entre locais
+
+  ## Contribuidores
+
+  @giulio-leone, @greysonlalonde, @haxzie, @joaomdmoura, @lorenzejay, @mattatcha, @mplachta, @nicoferdi96
+
+</Update>
+
 <Update label="27 fev 2026">
   ## v1.10.1a1
 

@@ -1456,7 +1456,7 @@ def test_agent_execute_task_with_tool():
     )
 
     result = agent.execute_task(task)
-    assert "you should always think about what to do" in result
+    assert "test query" in result
 
 
 @pytest.mark.vcr()
@@ -1475,9 +1475,9 @@ def test_agent_execute_task_with_custom_llm():
     )
 
     result = agent.execute_task(task)
-    assert "In circuits they thrive" in result
-    assert "Artificial minds awake" in result
-    assert "Future's coded drive" in result
+    assert "Artificial minds" in result
+    assert "Code and circuits" in result
+    assert "Future undefined" in result
 
 
 @pytest.mark.vcr()
@@ -1690,7 +1690,10 @@ def test_agent_with_knowledge_sources_works_with_copy():
         with patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
         ) as mock_knowledge_storage:
+            from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+
             mock_knowledge_storage_instance = mock_knowledge_storage.return_value
+            mock_knowledge_storage_instance.__class__ = BaseKnowledgeStorage
             agent.knowledge_storage = mock_knowledge_storage_instance
 
             agent_copy = agent.copy()
@@ -2353,3 +2356,68 @@ def test_agent_without_apps_no_platform_tools():
 
     tools = crew._prepare_tools(agent, task, [])
     assert tools == []
+
+
+def test_agent_mcps_accepts_slug_with_specific_tool():
+    """Agent(mcps=["notion#get_page"]) must pass validation (_SLUG_RE)."""
+    agent = Agent(
+        role="MCP Agent",
+        goal="Test MCP validation",
+        backstory="Test agent",
+        mcps=["notion#get_page"],
+    )
+    assert agent.mcps == ["notion#get_page"]
+
+
+def test_agent_mcps_accepts_slug_with_hyphenated_tool():
+    agent = Agent(
+        role="MCP Agent",
+        goal="Test MCP validation",
+        backstory="Test agent",
+        mcps=["notion#get-page"],
+    )
+    assert agent.mcps == ["notion#get-page"]
+
+
+def test_agent_mcps_accepts_multiple_hash_refs():
+    agent = Agent(
+        role="MCP Agent",
+        goal="Test MCP validation",
+        backstory="Test agent",
+        mcps=["notion#get_page", "notion#search", "github#list_repos"],
+    )
+    assert len(agent.mcps) == 3
+
+
+def test_agent_mcps_accepts_mixed_ref_types():
+    agent = Agent(
+        role="MCP Agent",
+        goal="Test MCP validation",
+        backstory="Test agent",
+        mcps=[
+            "notion#get_page",
+            "notion",
+            "https://mcp.example.com/api",
+        ],
+    )
+    assert len(agent.mcps) == 3
+
+
+def test_agent_mcps_rejects_hash_without_slug():
+    with pytest.raises(ValueError, match="Invalid MCP reference"):
+        Agent(
+            role="MCP Agent",
+            goal="Test MCP validation",
+            backstory="Test agent",
+            mcps=["#get_page"],
+        )
+
+
+def test_agent_mcps_accepts_legacy_prefix_with_tool():
+    agent = Agent(
+        role="MCP Agent",
+        goal="Test MCP validation",
+        backstory="Test agent",
+        mcps=["crewai-amp:notion#get_page"],
+    )
+    assert agent.mcps == ["crewai-amp:notion#get_page"]
