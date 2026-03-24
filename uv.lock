@@ -1241,7 +1241,7 @@ requires-dist = [
     { name = "json5", specifier = "~=0.10.0" },
     { name = "jsonref", specifier = "~=1.1.0" },
     { name = "lancedb", specifier = ">=0.29.2" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.9,<3" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.9,<=1.82.6" },
     { name = "mcp", specifier = "~=1.26.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = "~=0.1.94" },
     { name = "openai", specifier = ">=1.83.0,<3" },

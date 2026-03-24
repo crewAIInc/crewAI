@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
 from crewai.utilities.llm_utils import create_llm
 
@@ -25,7 +25,7 @@ class MetricCategory(enum.Enum):
     PARAMETER_EXTRACTION = "parameter_extraction"
     TOOL_INVOCATION = "tool_invocation"
 
-    def title(self):
+    def title(self) -> str:
         return self.value.replace("_", " ").title()
 
 

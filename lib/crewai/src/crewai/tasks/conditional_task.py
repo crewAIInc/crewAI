@@ -32,8 +32,8 @@ class ConditionalTask(Task):
     def __init__(
         self,
         condition: Callable[[Any], bool] | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.condition = condition
 

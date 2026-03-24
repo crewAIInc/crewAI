@@ -83,8 +83,11 @@ def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
     subclasses). Falls back to extracting the model string with provider
     prefix for unknown LLM types.
     """
-    if hasattr(llm, "to_config_dict"):
-        return llm.to_config_dict()
+    to_config: Callable[[], dict[str, Any]] | None = getattr(
+        llm, "to_config_dict", None
+    )
+    if to_config is not None:
+        return to_config()
 
     # Fallback for non-BaseLLM objects: just extract model + provider prefix
     model = getattr(llm, "model", None)
@@ -371,8 +374,13 @@ def human_feedback(
         ) -> Any:
             """Recall past HITL lessons and use LLM to pre-review the output."""
             try:
+                from crewai.memory.unified_memory import Memory
+
+                mem = flow_instance.memory
+                if not isinstance(mem, Memory):
+                    return method_output
                 query = f"human feedback lessons for {func.__name__}: {method_output!s}"
-                matches = flow_instance.memory.recall(query, source=learn_source)
+                matches = mem.recall(query, source=learn_source)
                 if not matches:
                     return method_output
 
@@ -404,6 +412,11 @@ def human_feedback(
         ) -> None:
             """Extract generalizable lessons from output + feedback, store in memory."""
             try:
+                from crewai.memory.unified_memory import Memory
+
+                mem = flow_instance.memory
+                if not isinstance(mem, Memory):
+                    return
                 llm_inst = _resolve_llm_instance()
                 prompt = _get_hitl_prompt("hitl_distill_user").format(
                     method_name=func.__name__,
@@ -435,7 +448,7 @@ def human_feedback(
                         ]
 
                 if lessons:
-                    flow_instance.memory.remember_many(lessons, source=learn_source)
+                    mem.remember_many(lessons, source=learn_source)
             except Exception:  # noqa: S110
                 pass  # non-critical: don't fail the flow because lesson storage failed
 

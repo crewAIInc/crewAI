@@ -122,11 +122,14 @@ class StdioTransport(BaseTransport):
             if self._process is not None:
                 try:
                     self._process.terminate()
+                    loop = asyncio.get_running_loop()
                     try:
-                        await asyncio.wait_for(self._process.wait(), timeout=5.0)
+                        await asyncio.wait_for(
+                            loop.run_in_executor(None, self._process.wait), timeout=5.0
+                        )
                     except asyncio.TimeoutError:
                         self._process.kill()
-                        await self._process.wait()
+                        await loop.run_in_executor(None, self._process.wait)
                 # except ProcessLookupError:
                 #     pass
                 finally:

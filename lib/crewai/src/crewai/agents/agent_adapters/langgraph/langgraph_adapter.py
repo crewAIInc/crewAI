@@ -64,7 +64,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         llm: Any = None,
         max_iterations: int = 10,
         agent_config: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Initialize the LangGraph agent adapter.
 

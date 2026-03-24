@@ -65,9 +65,9 @@ class FirstTimeTraceHandler:
             self._gracefully_fail(f"Error in trace handling: {e}")
             mark_first_execution_completed(user_consented=False)
 
-    def _initialize_backend_and_send_events(self):
+    def _initialize_backend_and_send_events(self) -> None:
         """Initialize backend batch and send collected events."""
-        if not self.batch_manager:
+        if not self.batch_manager or not self.batch_manager.trace_batch_id:
             return
 
         try:
@@ -115,12 +115,13 @@ class FirstTimeTraceHandler:
         except Exception as e:
             self._gracefully_fail(f"Backend initialization failed: {e}")
 
-    def _display_ephemeral_trace_link(self):
+    def _display_ephemeral_trace_link(self) -> None:
         """Display the ephemeral trace link to the user and automatically open browser."""
         console = Console()
 
         try:
-            webbrowser.open(self.ephemeral_url)
+            if self.ephemeral_url:
+                webbrowser.open(self.ephemeral_url)
         except Exception:  # noqa: S110
             pass
 
@@ -158,7 +159,7 @@ To disable tracing later, do any one of these:
         console.print(panel)
         console.print()
 
-    def _show_tracing_declined_message(self):
+    def _show_tracing_declined_message(self) -> None:
         """Show message when user declines tracing."""
         console = Console()
 
@@ -184,15 +185,18 @@ To enable tracing later, do any one of these:
         console.print(panel)
         console.print()
 
-    def _gracefully_fail(self, error_message: str):
+    def _gracefully_fail(self, error_message: str) -> None:
         """Handle errors gracefully without disrupting user experience."""
         console = Console()
         console.print(f"[yellow]Note: {error_message}[/yellow]")
 
         logger.debug(f"First-time trace error: {error_message}")
 
-    def _show_local_trace_message(self):
+    def _show_local_trace_message(self) -> None:
         """Show message when traces were collected locally but couldn't be uploaded."""
+        if self.batch_manager is None:
+            return
+
         console = Console()
 
         panel_content = f"""
