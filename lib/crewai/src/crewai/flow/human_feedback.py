@@ -374,10 +374,8 @@ def human_feedback(
         ) -> Any:
             """Recall past HITL lessons and use LLM to pre-review the output."""
             try:
-                from crewai.memory.unified_memory import Memory
-
                 mem = flow_instance.memory
-                if not isinstance(mem, Memory):
+                if mem is None:
                     return method_output
                 query = f"human feedback lessons for {func.__name__}: {method_output!s}"
                 matches = mem.recall(query, source=learn_source)
@@ -412,10 +410,8 @@ def human_feedback(
         ) -> None:
             """Extract generalizable lessons from output + feedback, store in memory."""
             try:
-                from crewai.memory.unified_memory import Memory
-
                 mem = flow_instance.memory
-                if not isinstance(mem, Memory):
+                if mem is None:
                     return
                 llm_inst = _resolve_llm_instance()
                 prompt = _get_hitl_prompt("hitl_distill_user").format(
@@ -448,7 +444,7 @@ def human_feedback(
                         ]
 
                 if lessons:
-                    mem.remember_many(lessons, source=learn_source)
+                    mem.remember_many(lessons, source=learn_source)  # type: ignore[union-attr]
             except Exception:  # noqa: S110
                 pass  # non-critical: don't fail the flow because lesson storage failed
 
