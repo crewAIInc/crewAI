@@ -825,64 +825,65 @@ class Telemetry:
                 span, crew, self._add_attribute, include_fingerprint=False
             )
             self._add_attribute(span, "crew_inputs", json.dumps(inputs or {}))
-            self._add_attribute(
-                span,
-                "crew_agents",
-                json.dumps(
-                    [
-                        {
-                            "key": agent.key,
-                            "id": str(agent.id),
-                            "role": agent.role,
-                            "goal": agent.goal,
-                            "backstory": agent.backstory,
-                            "verbose?": agent.verbose,
-                            "max_iter": agent.max_iter,
-                            "max_rpm": agent.max_rpm,
-                            "i18n": agent.i18n.prompt_file,
-                            "llm": agent.llm.model,
-                            "delegation_enabled?": agent.allow_delegation,
-                            "tools_names": [
-                                sanitize_tool_name(tool.name)
-                                for tool in agent.tools or []
-                            ],
-                        }
-                        for agent in crew.agents
-                    ]
-                ),
-            )
-            self._add_attribute(
-                span,
-                "crew_tasks",
-                json.dumps(
-                    [
-                        {
-                            "id": str(task.id),
-                            "description": task.description,
-                            "expected_output": task.expected_output,
-                            "async_execution?": task.async_execution,
-                            "human_input?": task.human_input,
-                            "agent_role": task.agent.role if task.agent else "None",
-                            "agent_key": task.agent.key if task.agent else None,
-                            "context": (
-                                [task.description for task in task.context]
-                                if isinstance(task.context, list)
-                                else None
-                            ),
-                            "tools_names": [
-                                sanitize_tool_name(tool.name)
-                                for tool in task.tools or []
-                            ],
-                        }
-                        for task in crew.tasks
-                    ]
-                ),
-            )
+
+            if crew.share_crew:
+                self._add_attribute(
+                    span,
+                    "crew_agents",
+                    json.dumps(
+                        [
+                            {
+                                "key": agent.key,
+                                "id": str(agent.id),
+                                "role": agent.role,
+                                "goal": agent.goal,
+                                "backstory": agent.backstory,
+                                "verbose?": agent.verbose,
+                                "max_iter": agent.max_iter,
+                                "max_rpm": agent.max_rpm,
+                                "i18n": agent.i18n.prompt_file,
+                                "llm": agent.llm.model,
+                                "delegation_enabled?": agent.allow_delegation,
+                                "tools_names": [
+                                    sanitize_tool_name(tool.name)
+                                    for tool in agent.tools or []
+                                ],
+                            }
+                            for agent in crew.agents
+                        ]
+                    ),
+                )
+                self._add_attribute(
+                    span,
+                    "crew_tasks",
+                    json.dumps(
+                        [
+                            {
+                                "id": str(task.id),
+                                "description": task.description,
+                                "expected_output": task.expected_output,
+                                "async_execution?": task.async_execution,
+                                "human_input?": task.human_input,
+                                "agent_role": task.agent.role if task.agent else "None",
+                                "agent_key": task.agent.key if task.agent else None,
+                                "context": (
+                                    [task.description for task in task.context]
+                                    if isinstance(task.context, list)
+                                    else None
+                                ),
+                                "tools_names": [
+                                    sanitize_tool_name(tool.name)
+                                    for tool in task.tools or []
+                                ],
+                            }
+                            for task in crew.tasks
+                        ]
+                    ),
+                )
+
             return span
 
-        if crew.share_crew:
-            return self._safe_telemetry_operation(_operation)
-        return None
+        return self._safe_telemetry_operation(_operation)
 
     def end_crew(self, crew: Any, final_string_output: str) -> None:
         """Records the end of crew execution.
