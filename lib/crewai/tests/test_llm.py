@@ -211,7 +211,7 @@ def test_llm_passes_additional_params():
 
 
 def test_get_custom_llm_provider_openrouter():
-    llm = LLM(model="openrouter/deepseek/deepseek-chat")
+    llm = LLM(model="openrouter/deepseek/deepseek-chat", is_litellm=True)
     assert llm._get_custom_llm_provider() == "openrouter"
 
 
@@ -232,7 +232,9 @@ def test_validate_call_params_supported():
     # Patch supports_response_schema to simulate a supported model.
     with patch("crewai.llm.supports_response_schema", return_value=True):
         llm = LLM(
-            model="openrouter/deepseek/deepseek-chat", response_format=DummyResponse
+            model="openrouter/deepseek/deepseek-chat",
+            response_format=DummyResponse,
+            is_litellm=True,
         )
         # Should not raise any error.
         llm._validate_call_params()

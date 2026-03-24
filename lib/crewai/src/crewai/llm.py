@@ -309,6 +309,14 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    # OpenAI-compatible providers
+    "openrouter",
+    "deepseek",
+    "ollama",
+    "ollama_chat",
+    "hosted_vllm",
+    "cerebras",
+    "dashscope",
 ]
 
 
@@ -368,6 +376,14 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                # OpenAI-compatible providers
+                "openrouter": "openrouter",
+                "deepseek": "deepseek",
+                "ollama": "ollama",
+                "ollama_chat": "ollama_chat",
+                "hosted_vllm": "hosted_vllm",
+                "cerebras": "cerebras",
+                "dashscope": "dashscope",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -467,6 +483,29 @@ class LLM(BaseLLM):
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
 
+        # OpenAI-compatible providers - accept any model name since these
+        # providers host many different models with varied naming conventions
+        if provider == "deepseek":
+            return model_lower.startswith("deepseek")
+
+        if provider == "ollama" or provider == "ollama_chat":
+            # Ollama accepts any local model name
+            return True
+
+        if provider == "hosted_vllm":
+            # vLLM serves any model
+            return True
+
+        if provider == "cerebras":
+            return True
+
+        if provider == "dashscope":
+            return model_lower.startswith("qwen")
+
+        if provider == "openrouter":
+            # OpenRouter uses org/model format but accepts anything
+            return True
+
         return False
 
     @classmethod
@@ -565,6 +604,23 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        # OpenAI-compatible providers
+        openai_compatible_providers = {
+            "openrouter",
+            "deepseek",
+            "ollama",
+            "ollama_chat",
+            "hosted_vllm",
+            "cerebras",
+            "dashscope",
+        }
+        if provider in openai_compatible_providers:
+            from crewai.llms.providers.openai_compatible.completion import (
+                OpenAICompatibleCompletion,
+            )
+
+            return OpenAICompatibleCompletion
 
         return None
 
