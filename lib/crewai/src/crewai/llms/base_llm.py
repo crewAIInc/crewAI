@@ -152,6 +152,28 @@ class BaseLLM(ABC):
             "cached_prompt_tokens": 0,
         }
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Serialize this LLM to a dict that can reconstruct it via ``LLM(**config)``.
+
+        Returns the core fields that BaseLLM owns. Provider subclasses should
+        override this (calling ``super().to_config_dict()``) to add their own
+        fields (e.g. ``project``, ``location``, ``safety_settings``).
+        """
+        model = self.model
+        provider = self.provider
+        model_str = f"{provider}/{model}" if provider and "/" not in model else model
+
+        config: dict[str, Any] = {"model": model_str}
+
+        if self.temperature is not None:
+            config["temperature"] = self.temperature
+        if self.base_url is not None:
+            config["base_url"] = self.base_url
+        if self.stop:
+            config["stop"] = self.stop
+
+        return config
+
     @property
     def provider(self) -> str:
         """Get the provider of the LLM."""
@@ -619,7 +641,16 @@ class BaseLLM(ABC):
         Returns:
             Messages with files formatted into content blocks.
         """
-        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+        if not HAS_CREWAI_FILES:
+            return messages
+
+        if not self.supports_multimodal():
+            if any(msg.get("files") for msg in messages):
+                raise ValueError(
+                    f"Model '{self.model}' does not support multimodal input, "
+                    "but files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the file inputs."
+                )
             return messages
 
         provider = getattr(self, "provider", None) or getattr(self, "model", "openai")

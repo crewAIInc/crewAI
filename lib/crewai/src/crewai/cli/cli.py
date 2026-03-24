@@ -22,6 +22,7 @@ from crewai.cli.replay_from_task import replay_task_command
 from crewai.cli.reset_memories_command import reset_memories_command
 from crewai.cli.run_crew import run_crew
 from crewai.cli.settings.main import SettingsCommand
+from crewai.cli.shared.token_manager import TokenManager
 from crewai.cli.tools.main import ToolCommand
 from crewai.cli.train_crew import train_crew
 from crewai.cli.triggers.main import TriggersCommand
@@ -34,7 +35,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 
 @click.group()
 @click.version_option(get_version("crewai"))
-def crewai():
+def crewai() -> None:
     """Top-level command group for crewai."""
 
 
@@ -45,7 +46,7 @@ def crewai():
     ),
 )
 @click.argument("uv_args", nargs=-1, type=click.UNPROCESSED)
-def uv(uv_args):
+def uv(uv_args: tuple[str, ...]) -> None:
     """A wrapper around uv commands that adds custom tool authentication through env vars."""
     env = os.environ.copy()
     try:
@@ -83,7 +84,9 @@ def uv(uv_args):
 @click.argument("name")
 @click.option("--provider", type=str, help="The provider to use for the crew")
 @click.option("--skip_provider", is_flag=True, help="Skip provider validation")
-def create(type, name, provider, skip_provider=False):
+def create(
+    type: str, name: str, provider: str | None, skip_provider: bool = False
+) -> None:
     """Create a new crew, or flow."""
     if type == "crew":
         create_crew(name, provider, skip_provider)
@@ -97,7 +100,7 @@ def create(type, name, provider, skip_provider=False):
 @click.option(
     "--tools", is_flag=True, help="Show the installed version of crewai tools"
 )
-def version(tools):
+def version(tools: bool) -> None:
     """Show the installed version of crewai."""
     try:
         crewai_version = get_version("crewai")
@@ -128,7 +131,7 @@ def version(tools):
     default="trained_agents_data.pkl",
     help="Path to a custom file for training",
 )
-def train(n_iterations: int, filename: str):
+def train(n_iterations: int, filename: str) -> None:
     """Train the crew."""
     click.echo(f"Training the Crew for {n_iterations} iterations")
     train_crew(n_iterations, filename)
@@ -334,7 +337,7 @@ def memory(
     default="gpt-4o-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
-def test(n_iterations: int, model: str):
+def test(n_iterations: int, model: str) -> None:
     """Test the crew and evaluate the results."""
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     evaluate_crew(n_iterations, model)
@@ -347,46 +350,62 @@ def test(n_iterations: int, model: str):
     )
 )
 @click.pass_context
-def install(context):
+def install(context: click.Context) -> None:
     """Install the Crew."""
     install_crew(context.args)
 
 
 @crewai.command()
-def run():
+def run() -> None:
     """Run the Crew."""
     run_crew()
 
 
 @crewai.command()
-def update():
+def update() -> None:
     """Update the pyproject.toml of the Crew project to use uv."""
     update_crew()
 
 
 @crewai.command()
-def login():
+def login() -> None:
     """Sign Up/Login to CrewAI AMP."""
     Settings().clear_user_settings()
     AuthenticationCommand().login()
 
 
+@crewai.command()
+@click.option(
+    "--reset", is_flag=True, help="Also reset all CLI configuration to defaults"
+)
+def logout(reset: bool) -> None:
+    """Logout from CrewAI AMP."""
+    settings = Settings()
+    if reset:
+        settings.reset()
+        click.echo("Successfully logged out and reset all CLI configuration.")
+    else:
+        TokenManager().clear_tokens()
+        settings.clear_user_settings()
+        click.echo("Successfully logged out from CrewAI AMP.")
+
+
 # DEPLOY CREWAI+ COMMANDS
 @crewai.group()
-def deploy():
+def deploy() -> None:
     """Deploy the Crew CLI group."""
 
 
 @deploy.command(name="create")
 @click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
-def deploy_create(yes: bool):
+def deploy_create(yes: bool) -> None:
     """Create a Crew deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.create_crew(yes)
 
 
 @deploy.command(name="list")
-def deploy_list():
+def deploy_list() -> None:
     """List all deployments."""
     deploy_cmd = DeployCommand()
     deploy_cmd.list_crews()
@@ -394,7 +413,7 @@ def deploy_list():
 
 @deploy.command(name="push")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_push(uuid: str | None):
+def deploy_push(uuid: str | None) -> None:
     """Deploy the Crew."""
     deploy_cmd = DeployCommand()
     deploy_cmd.deploy(uuid=uuid)
@@ -402,7 +421,7 @@ def deploy_push(uuid: str | None):
 
 @deploy.command(name="status")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deply_status(uuid: str | None):
+def deply_status(uuid: str | None) -> None:
     """Get the status of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_status(uuid=uuid)
@@ -410,7 +429,7 @@ def deply_status(uuid: str | None):
 
 @deploy.command(name="logs")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_logs(uuid: str | None):
+def deploy_logs(uuid: str | None) -> None:
     """Get the logs of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_logs(uuid=uuid)
@@ -418,27 +437,27 @@ def deploy_logs(uuid: str | None):
 
 @deploy.command(name="remove")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_remove(uuid: str | None):
+def deploy_remove(uuid: str | None) -> None:
     """Remove a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
 
 
 @crewai.group()
-def tool():
+def tool() -> None:
     """Tool Repository related commands."""
 
 
 @tool.command(name="create")
 @click.argument("handle")
-def tool_create(handle: str):
+def tool_create(handle: str) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.create(handle)
 
 
 @tool.command(name="install")
 @click.argument("handle")
-def tool_install(handle: str):
+def tool_install(handle: str) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.install(handle)
@@ -454,26 +473,26 @@ def tool_install(handle: str):
 )
 @click.option("--public", "is_public", flag_value=True, default=False)
 @click.option("--private", "is_public", flag_value=False)
-def tool_publish(is_public: bool, force: bool):
+def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
 
 
 @crewai.group()
-def flow():
+def flow() -> None:
     """Flow related commands."""
 
 
 @flow.command(name="kickoff")
-def flow_run():
+def flow_run() -> None:
     """Kickoff the Flow."""
     click.echo("Running the Flow")
     kickoff_flow()
 
 
 @flow.command(name="plot")
-def flow_plot():
+def flow_plot() -> None:
     """Plot the Flow."""
     click.echo("Plotting the Flow")
     plot_flow()
@@ -481,19 +500,19 @@ def flow_plot():
 
 @flow.command(name="add-crew")
 @click.argument("crew_name")
-def flow_add_crew(crew_name):
+def flow_add_crew(crew_name: str) -> None:
     """Add a crew to an existing flow."""
     click.echo(f"Adding crew {crew_name} to the flow")
     add_crew_to_flow(crew_name)
 
 
 @crewai.group()
-def triggers():
+def triggers() -> None:
     """Trigger related commands. Use 'crewai triggers list' to see available triggers, or 'crewai triggers run app_slug/trigger_slug' to execute."""
 
 
 @triggers.command(name="list")
-def triggers_list():
+def triggers_list() -> None:
     """List all available triggers from integrations."""
     triggers_cmd = TriggersCommand()
     triggers_cmd.list_triggers()
@@ -501,14 +520,14 @@ def triggers_list():
 
 @triggers.command(name="run")
 @click.argument("trigger_path")
-def triggers_run(trigger_path: str):
+def triggers_run(trigger_path: str) -> None:
     """Execute crew with trigger payload. Format: app_slug/trigger_slug"""
     triggers_cmd = TriggersCommand()
     triggers_cmd.execute_with_trigger(trigger_path)
 
 
 @crewai.command()
-def chat():
+def chat() -> None:
     """
     Start a conversation with the Crew, collecting user-supplied inputs,
     and using the Chat LLM to generate responses.
@@ -521,12 +540,12 @@ def chat():
 
 
 @crewai.group(invoke_without_command=True)
-def org():
+def org() -> None:
     """Organization management commands."""
 
 
 @org.command("list")
-def org_list():
+def org_list() -> None:
     """List available organizations."""
     org_command = OrganizationCommand()
     org_command.list()
@@ -534,39 +553,39 @@ def org_list():
 
 @org.command()
 @click.argument("id")
-def switch(id):
+def switch(id: str) -> None:
     """Switch to a specific organization."""
     org_command = OrganizationCommand()
     org_command.switch(id)
 
 
 @org.command()
-def current():
+def current() -> None:
     """Show current organization when 'crewai org' is called without subcommands."""
     org_command = OrganizationCommand()
     org_command.current()
 
 
 @crewai.group()
-def enterprise():
+def enterprise() -> None:
     """Enterprise Configuration commands."""
 
 
 @enterprise.command("configure")
 @click.argument("enterprise_url")
-def enterprise_configure(enterprise_url: str):
+def enterprise_configure(enterprise_url: str) -> None:
     """Configure CrewAI AMP OAuth2 settings from the provided Enterprise URL."""
     enterprise_command = EnterpriseConfigureCommand()
     enterprise_command.configure(enterprise_url)
 
 
 @crewai.group()
-def config():
+def config() -> None:
     """CLI Configuration commands."""
 
 
 @config.command("list")
-def config_list():
+def config_list() -> None:
     """List all CLI configuration parameters."""
     config_command = SettingsCommand()
     config_command.list()
@@ -575,26 +594,26 @@ def config_list():
 @config.command("set")
 @click.argument("key")
 @click.argument("value")
-def config_set(key: str, value: str):
+def config_set(key: str, value: str) -> None:
     """Set a CLI configuration parameter."""
     config_command = SettingsCommand()
     config_command.set(key, value)
 
 
 @config.command("reset")
-def config_reset():
+def config_reset() -> None:
     """Reset all CLI configuration parameters to default values."""
     config_command = SettingsCommand()
     config_command.reset_all_settings()
 
 
 @crewai.group()
-def env():
+def env() -> None:
     """Environment variable commands."""
 
 
 @env.command("view")
-def env_view():
+def env_view() -> None:
     """View tracing-related environment variables."""
     import os
     from pathlib import Path
@@ -672,12 +691,12 @@ def env_view():
 
 
 @crewai.group()
-def traces():
+def traces() -> None:
     """Trace collection management commands."""
 
 
 @traces.command("enable")
-def traces_enable():
+def traces_enable() -> None:
     """Enable trace collection for crew/flow executions."""
     from rich.console import Console
     from rich.panel import Panel
@@ -700,7 +719,7 @@ def traces_enable():
 
 
 @traces.command("disable")
-def traces_disable():
+def traces_disable() -> None:
     """Disable trace collection for crew/flow executions."""
     from rich.console import Console
     from rich.panel import Panel
@@ -723,7 +742,7 @@ def traces_disable():
 
 
 @traces.command("status")
-def traces_status():
+def traces_status() -> None:
     """Show current trace collection status."""
     import os
 
