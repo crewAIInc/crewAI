@@ -346,6 +346,23 @@ class BedrockCompletion(BaseLLM):
         # Handle inference profiles for newer models
         self.model_id = model
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Bedrock-specific fields."""
+        config = super().to_config_dict()
+        # NOTE: AWS credentials (access_key, secret_key, session_token) are
+        # intentionally excluded — they must come from env on resume.
+        if self.region_name and self.region_name != "us-east-1":
+            config["region_name"] = self.region_name
+        if self.max_tokens is not None:
+            config["max_tokens"] = self.max_tokens
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.top_k is not None:
+            config["top_k"] = self.top_k
+        if self.guardrail_config:
+            config["guardrail_config"] = self.guardrail_config
+        return config
+
     @property
     def stop(self) -> list[str]:
         """Get stop sequences sent to the API."""
@@ -1880,7 +1897,9 @@ class BedrockCompletion(BaseLLM):
                 # Anthropic (Claude) models reject assistant-last messages when
                 # tools are in the request. Append a user message so the
                 # Converse API accepts the payload.
-                elif "anthropic" in self.model.lower() or "claude" in self.model.lower():
+                elif (
+                    "anthropic" in self.model.lower() or "claude" in self.model.lower()
+                ):
                     converse_messages.append(
                         {
                             "role": "user",

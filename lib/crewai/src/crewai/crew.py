@@ -364,7 +364,18 @@ class Crew(FlowTrackable, BaseModel):
 
     @model_validator(mode="after")
     def create_crew_memory(self) -> Crew:
-        """Initialize unified memory, respecting crew embedder config."""
+        """Initialize unified memory, respecting crew embedder config.
+
+        When memory is enabled, sets a hierarchical root_scope based on the
+        crew name (e.g. '/crew/research-crew') so that all memories saved by
+        this crew and its agents are organized under a consistent namespace.
+        """
+        from crewai.memory.utils import sanitize_scope_name
+
+        # Compute sanitized crew name for root_scope
+        crew_name = sanitize_scope_name(self.name or "crew")
+        crew_root_scope = f"/crew/{crew_name}"
+
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
@@ -376,6 +387,7 @@ class Crew(FlowTrackable, BaseModel):
             self._memory = Memory(embedder=embedder)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
+            # Respect user's configuration — don't auto-set root_scope
             self._memory = self.memory
         else:
             self._memory = None
