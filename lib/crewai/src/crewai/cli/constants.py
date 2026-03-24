@@ -112,6 +112,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    "minimax": [
+        {
+            "prompt": "Enter your MiniMax API key (press Enter to skip)",
+            "key_name": "MINIMAX_API_KEY",
+        }
+    ],
 }
 
 
@@ -128,6 +134,7 @@ PROVIDERS: list[str] = [
     "azure",
     "cerebras",
     "sambanova",
+    "minimax",
 ]
 
 MODELS: dict[str, list[str]] = {
@@ -323,6 +330,12 @@ MODELS: dict[str, list[str]] = {
         "sambanova/Llama-3.2-11B-Vision-Instruct",
         "sambanova/Meta-Llama-3.2-3B-Instruct",
         "sambanova/Meta-Llama-3.2-1B-Instruct",
+    ],
+    "minimax": [
+        "minimax/MiniMax-M2.7",
+        "minimax/MiniMax-M2.7-highspeed",
+        "minimax/MiniMax-M2.5",
+        "minimax/MiniMax-M2.5-highspeed",
     ],
 }
 

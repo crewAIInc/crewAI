@@ -551,6 +551,14 @@ This example demonstrates how to:
 
 CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
+CrewAI includes native support for [MiniMax](https://www.minimax.io) models. Set the `MINIMAX_API_KEY` environment variable and use `MiniMax-M2.7` (latest flagship) or any other available model as the model name:
+
+```python
+from crewai import LLM
+
+llm = LLM(model="MiniMax-M2.7")
+```
+
 Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models.
 
 ## How CrewAI Compares
