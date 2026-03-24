@@ -167,7 +167,7 @@ class OpenAIFileUploader(FileUploader):
             try:
                 from openai import OpenAI
 
-                self._client = OpenAI(api_key=self._api_key)
+                self._client = OpenAI(api_key=self._api_key, timeout=60.0, max_retries=3)
             except ImportError as e:
                 raise ImportError(
                     "openai is required for OpenAI file uploads. "
@@ -181,7 +181,7 @@ class OpenAIFileUploader(FileUploader):
             try:
                 from openai import AsyncOpenAI
 
-                self._async_client = AsyncOpenAI(api_key=self._api_key)
+                self._async_client = AsyncOpenAI(api_key=self._api_key, timeout=60.0, max_retries=3)
             except ImportError as e:
                 raise ImportError(
                     "openai is required for OpenAI file uploads. "

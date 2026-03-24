@@ -121,7 +121,7 @@ class MongoDBVectorSearchTool(BaseTool):
                 raise ImportError("You are missing the 'mongodb' crewai tool.")
 
         if "AZURE_OPENAI_ENDPOINT" in os.environ:
-            self._openai_client = AzureOpenAI()
+            self._openai_client = AzureOpenAI(timeout=60.0, max_retries=3)
         elif "OPENAI_API_KEY" in os.environ:
             self._openai_client = Client()
         else:
