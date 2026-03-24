@@ -182,7 +182,7 @@ class AgentReasoning:
         if self.config.llm is not None:
             if isinstance(self.config.llm, LLM):
                 return self.config.llm
-            return create_llm(self.config.llm)
+            return cast(LLM, create_llm(self.config.llm))
         return cast(LLM, self.agent.llm)
 
     def handle_agent_reasoning(self) -> AgentReasoningOutput:

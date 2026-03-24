@@ -222,6 +222,7 @@ class AnthropicCompletion(BaseLLM):
         self.previous_thinking_blocks: list[ThinkingBlock] = []
         self.response_format = response_format
         # Tool search config
+        self.tool_search: AnthropicToolSearchConfig | None
         if tool_search is True:
             self.tool_search = AnthropicToolSearchConfig()
         elif isinstance(tool_search, AnthropicToolSearchConfig):

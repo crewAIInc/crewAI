@@ -299,15 +299,15 @@ def _extract_all_methods_from_condition(
         return []
     if isinstance(condition, dict):
         conditions_list = condition.get("conditions", [])
-        methods: list[str] = []
+        dict_methods: list[str] = []
         for sub_cond in conditions_list:
-            methods.extend(_extract_all_methods_from_condition(sub_cond))
-        return methods
+            dict_methods.extend(_extract_all_methods_from_condition(sub_cond))
+        return dict_methods
     if isinstance(condition, list):
-        methods = []
+        list_methods: list[str] = []
         for item in condition:
-            methods.extend(_extract_all_methods_from_condition(item))
-        return methods
+            list_methods.extend(_extract_all_methods_from_condition(item))
+        return list_methods
     return []
 
 
@@ -476,7 +476,8 @@ def _detect_flow_inputs(flow_class: type) -> list[str]:
 
     # Check for inputs in __init__ signature beyond standard Flow params
     try:
-        init_sig = inspect.signature(flow_class.__init__)
+        init_method = flow_class.__init__  # type: ignore[misc]
+        init_sig = inspect.signature(init_method)
         standard_params = {
             "self",
             "persistence",

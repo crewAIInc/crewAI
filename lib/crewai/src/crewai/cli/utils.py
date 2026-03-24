@@ -386,7 +386,7 @@ def fetch_crews(module_attr: Any) -> list[Crew]:
     return crew_instances
 
 
-def get_flow_instance(module_attr: Any) -> Flow | None:
+def get_flow_instance(module_attr: Any) -> Flow[Any] | None:
     """Check if a module attribute is a user-defined Flow subclass and return an instance.
 
     Args:
@@ -413,7 +413,7 @@ _SKIP_DIRS = frozenset(
 )
 
 
-def get_flows(flow_path: str = "main.py") -> list[Flow]:
+def get_flows(flow_path: str = "main.py") -> list[Flow[Any]]:
     """Get the flow instances from project files.
 
     Walks the project directory looking for files matching ``flow_path``
@@ -427,7 +427,7 @@ def get_flows(flow_path: str = "main.py") -> list[Flow]:
     Returns:
         A list of discovered Flow instances.
     """
-    flow_instances: list[Flow] = []
+    flow_instances: list[Flow[Any]] = []
     try:
         current_dir = os.getcwd()
         if current_dir not in sys.path:

@@ -1571,8 +1571,9 @@ class TestReasoningEffort:
         executor.agent.planning_config = None
         assert executor._get_reasoning_effort() == "medium"
 
-        # Case 3: planning_config without reasoning_effort attr → defaults to "medium"
-        executor.agent.planning_config = Mock(spec=[])
+        # Case 3: planning_config with default reasoning_effort
+        executor.agent.planning_config = Mock()
+        executor.agent.planning_config.reasoning_effort = "medium"
         assert executor._get_reasoning_effort() == "medium"
 
 

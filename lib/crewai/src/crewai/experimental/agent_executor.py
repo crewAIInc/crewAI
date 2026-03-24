@@ -8,7 +8,7 @@ from datetime import datetime
 import inspect
 import json
 import threading
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, GetCoreSchemaHandler
@@ -22,7 +22,11 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserError,
 )
-from crewai.core.providers.human_input import get_provider
+from crewai.core.providers.human_input import (
+    AsyncExecutorContext,
+    ExecutorContext,
+    get_provider,
+)
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled_in_context,
@@ -89,7 +93,7 @@ from crewai.utilities.planning_types import (
     TodoList,
 )
 from crewai.utilities.printer import Printer
-from crewai.utilities.step_execution_context import StepExecutionContext
+from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -104,6 +108,8 @@ if TYPE_CHECKING:
     from crewai.task import Task
     from crewai.tools.tool_types import ToolResult
     from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
+
+_RouteT = TypeVar("_RouteT", bound=str)
 
 
 class AgentExecutorState(BaseModel):
@@ -446,29 +452,29 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             step failures reliably trigger replanning rather than being
             silently ignored.
         """
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "reasoning_effort"):
+        config = self.agent.planning_config
+        if config is not None:
             return config.reasoning_effort
         return "medium"
 
     def _get_max_replans(self) -> int:
         """Get max replans from planning config or default to 3."""
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "max_replans"):
+        config = self.agent.planning_config
+        if config is not None:
             return config.max_replans
         return 3
 
     def _get_max_step_iterations(self) -> int:
         """Get max step iterations from planning config or default to 15."""
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "max_step_iterations"):
+        config = self.agent.planning_config
+        if config is not None:
             return config.max_step_iterations
         return 15
 
     def _get_step_timeout(self) -> int | None:
         """Get per-step timeout from planning config or default to None."""
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "step_timeout"):
+        config = self.agent.planning_config
+        if config is not None:
             return config.step_timeout
         return None
 
@@ -1130,9 +1136,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         # Process results: store on todos and log, then observe each.
         # asyncio.gather preserves input order, so zip gives us the exact
         # todo ↔ result (or exception) mapping.
-        step_results: list[tuple[TodoItem, object]] = []
+        step_results: list[tuple[TodoItem, StepResult]] = []
         for todo, item in zip(ready, gathered, strict=True):
-            if isinstance(item, Exception):
+            if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
                 self.state.todos.mark_failed(todo.step_number, result=error_msg)
@@ -1143,31 +1149,34 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                     )
             else:
                 _returned_todo, result = item
-                todo.result = result.result
+                step_result = cast(StepResult, result)
+                todo.result = step_result.result
 
                 self.state.execution_log.append(
                     {
                         "type": "step_execution",
                         "step_number": todo.step_number,
-                        "success": result.success,
-                        "result_preview": result.result[:200] if result.result else "",
-                        "error": result.error,
-                        "tool_calls": result.tool_calls_made,
-                        "execution_time": result.execution_time,
+                        "success": step_result.success,
+                        "result_preview": step_result.result[:200]
+                        if step_result.result
+                        else "",
+                        "error": step_result.error,
+                        "tool_calls": step_result.tool_calls_made,
+                        "execution_time": step_result.execution_time,
                     }
                 )
 
                 if self.agent.verbose:
-                    status = "success" if result.success else "failed"
+                    status = "success" if step_result.success else "failed"
                     self._printer.print(
                         content=(
                             f"[Execute] Step {todo.step_number} {status} "
-                            f"({result.execution_time:.1f}s, "
-                            f"{len(result.tool_calls_made)} tool calls)"
+                            f"({step_result.execution_time:.1f}s, "
+                            f"{len(step_result.tool_calls_made)} tool calls)"
                         ),
-                        color="green" if result.success else "red",
+                        color="green" if step_result.success else "red",
                     )
-                step_results.append((todo, result))
+                step_results.append((todo, step_result))
 
         # Observe each completed step sequentially (observation updates shared state)
         effort = self._get_reasoning_effort()
@@ -1431,8 +1440,8 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             raise
 
     def _route_finish_with_todos(
-        self, default_route: str
-    ) -> Literal["native_finished", "agent_finished", "todo_satisfied"]:
+        self, default_route: _RouteT
+    ) -> _RouteT | Literal["todo_satisfied"]:
         """Helper to route finish events, checking for pending todos first.
 
         If there are pending todos, route to todo_satisfied instead of the
@@ -1448,7 +1457,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             current_todo = self.state.todos.current_todo
             if current_todo:
                 return "todo_satisfied"
-        return default_route  # type: ignore[return-value]
+        return default_route
 
     @router(call_llm_and_parse)
     def route_by_answer_type(
@@ -2063,7 +2072,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         elif not self.state.current_answer and self.state.messages:
             # For native tools, results are in the message history as 'tool' roles
             # We take the content of the most recent tool results
-            tool_results = []
+            tool_results: list[str] = []
             for msg in reversed(self.state.messages):
                 if msg.get("role") == "tool":
                     tool_results.insert(0, str(msg.get("content", "")))
@@ -3003,7 +3012,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             Final answer after feedback.
         """
         provider = get_provider()
-        return provider.handle_feedback(formatted_answer, self)
+        return provider.handle_feedback(formatted_answer, cast("ExecutorContext", self))
 
     async def _ahandle_human_feedback(
         self, formatted_answer: AgentFinish
@@ -3017,7 +3026,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             Final answer after feedback.
         """
         provider = get_provider()
-        return await provider.handle_feedback_async(formatted_answer, self)
+        return await provider.handle_feedback_async(
+            formatted_answer, cast("AsyncExecutorContext", self)
+        )
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.

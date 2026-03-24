@@ -45,14 +45,14 @@ class CrewOutput(BaseModel):
             output_dict.update(self.pydantic.model_dump())
         return output_dict
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         if self.pydantic and hasattr(self.pydantic, key):
             return getattr(self.pydantic, key)
         if self.json_dict and key in self.json_dict:
             return self.json_dict[key]
         raise KeyError(f"Key '{key}' not found in CrewOutput.")
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.pydantic:
             return str(self.pydantic)
         if self.json_dict:

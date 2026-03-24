@@ -81,7 +81,7 @@ class TaskEvaluator:
         """
         crewai_event_bus.emit(
             self,
-            TaskEvaluationEvent(evaluation_type="task_evaluation", task=task),  # type: ignore[no-untyped-call]
+            TaskEvaluationEvent(evaluation_type="task_evaluation", task=task),
         )
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
@@ -129,7 +129,7 @@ class TaskEvaluator:
         """
         crewai_event_bus.emit(
             self,
-            TaskEvaluationEvent(evaluation_type="training_data_evaluation"),  # type: ignore[no-untyped-call]
+            TaskEvaluationEvent(evaluation_type="training_data_evaluation"),
         )
 
         output_training_data = training_data[agent_id]

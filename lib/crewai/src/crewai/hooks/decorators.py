@@ -122,7 +122,7 @@ def before_llm_call(
     """
     from crewai.hooks.llm_hooks import register_before_llm_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="llm",
         register_function=register_before_llm_call_hook,
         marker_attribute="is_before_llm_call_hook",
@@ -176,7 +176,7 @@ def after_llm_call(
     """
     from crewai.hooks.llm_hooks import register_after_llm_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="llm",
         register_function=register_after_llm_call_hook,
         marker_attribute="is_after_llm_call_hook",
@@ -237,7 +237,7 @@ def before_tool_call(
     """
     from crewai.hooks.tool_hooks import register_before_tool_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="tool",
         register_function=register_before_tool_call_hook,
         marker_attribute="is_before_tool_call_hook",
@@ -293,7 +293,7 @@ def after_tool_call(
     """
     from crewai.hooks.tool_hooks import register_after_tool_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="tool",
         register_function=register_after_tool_call_hook,
         marker_attribute="is_after_tool_call_hook",
