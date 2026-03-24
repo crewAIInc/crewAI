@@ -173,7 +173,20 @@ class Memory(BaseModel):
         )
 
         if isinstance(self.storage, str):
-            from crewai.memory.storage.lancedb_storage import LanceDBStorage
+            try:
+                from crewai.memory.storage.lancedb_storage import LanceDBStorage
+            except ImportError as exc:
+                raise ImportError(
+                    "lancedb is required for the default memory storage backend "
+                    "but is not installed.\n\n"
+                    "Install it with:\n"
+                    "  pip install crewai[memory-storage]   # or: pip install lancedb\n\n"
+                    "If lancedb does not provide wheels for your platform "
+                    "(e.g. Windows with lancedb >=0.30), pin an older version:\n"
+                    "  pip install 'lancedb>=0.29.2,<0.30'\n\n"
+                    "Alternatively, supply a custom StorageBackend instance to "
+                    "Memory(storage=my_backend) to bypass lancedb entirely."
+                ) from exc
 
             self._storage = (
                 LanceDBStorage()

@@ -43,7 +43,6 @@ dependencies = [
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
     "pyyaml~=6.0",
-    "lancedb>=0.29.2",
 ]
 
 [project.urls]
@@ -102,6 +101,9 @@ a2a = [
      "httpx-auth~=0.23.1",
      "httpx-sse~=0.4.0",
      "aiocache[redis,memcached]~=0.12.3",
+]
+memory-storage = [
+    "lancedb>=0.29.2",
 ]
 file-processing = [
     "crewai-files",
