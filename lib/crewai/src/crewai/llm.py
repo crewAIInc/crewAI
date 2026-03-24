@@ -483,8 +483,8 @@ class LLM(BaseLLM):
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
 
-        # OpenAI-compatible providers - accept any model name since these
-        # providers host many different models with varied naming conventions
+        # OpenAI-compatible providers - most accept any model name, but some
+        # (DeepSeek, Dashscope) restrict to their own model prefixes
         if provider == "deepseek":
             return model_lower.startswith("deepseek")
 
