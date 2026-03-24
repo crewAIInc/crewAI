@@ -88,6 +88,14 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningStartedEvent,
     ReasoningEvent,
 )
+from crewai.events.types.skill_events import (
+    SkillActivatedEvent,
+    SkillDiscoveryCompletedEvent,
+    SkillDiscoveryStartedEvent,
+    SkillEvent,
+    SkillLoadFailedEvent,
+    SkillLoadedEvent,
+)
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskEvaluationEvent,
@@ -186,6 +194,12 @@ __all__ = [
     "MethodExecutionFinishedEvent",
     "MethodExecutionStartedEvent",
     "ReasoningEvent",
+    "SkillActivatedEvent",
+    "SkillDiscoveryCompletedEvent",
+    "SkillDiscoveryStartedEvent",
+    "SkillEvent",
+    "SkillLoadFailedEvent",
+    "SkillLoadedEvent",
     "TaskCompletedEvent",
     "TaskEvaluationEvent",
     "TaskFailedEvent",

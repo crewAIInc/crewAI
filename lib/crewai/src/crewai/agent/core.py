@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
 import contextvars
+from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -26,6 +27,7 @@ from typing_extensions import Self
 from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
+    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
@@ -65,7 +67,10 @@ from crewai.mcp import MCPServerConfig
 from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -75,6 +80,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
@@ -142,7 +148,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    step_callback: Any | None = Field(
+    step_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
@@ -150,10 +156,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | Any = Field(
+    llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: str | None = Field(
@@ -276,6 +282,8 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        self.set_skills()
+
         # Handle backward compatibility: convert reasoning=True to planning_config
         if self.reasoning and self.planning_config is None:
             import warnings
@@ -319,6 +327,76 @@ class Agent(BaseAgent):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 
+    def set_skills(
+        self,
+        resolved_crew_skills: list[SkillModel] | None = None,
+    ) -> None:
+        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+
+        Path entries trigger discovery and activation. Pre-loaded Skill objects
+        below INSTRUCTIONS level are activated. Crew-level skills are merged in
+        with event emission so observability is consistent regardless of origin.
+
+        Args:
+            resolved_crew_skills: Pre-resolved crew skills (already discovered
+                and activated). When provided, avoids redundant discovery per agent.
+        """
+        from crewai.crew import Crew
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.skill_events import SkillActivatedEvent
+
+        if resolved_crew_skills is None:
+            crew_skills: list[Path | SkillModel] | None = (
+                self.crew.skills
+                if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
+                else None
+            )
+        else:
+            crew_skills = list(resolved_crew_skills)
+
+        if not self.skills and not crew_skills:
+            return
+
+        needs_work = self.skills and any(
+            isinstance(s, Path)
+            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
+            for s in self.skills
+        )
+        if not needs_work and not crew_skills:
+            return
+
+        seen: set[str] = set()
+        resolved: list[Path | SkillModel] = []
+        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+
+        if crew_skills:
+            items.extend(crew_skills)
+
+        for item in items:
+            if isinstance(item, Path):
+                discovered = discover_skills(item, source=self)
+                for skill in discovered:
+                    if skill.name not in seen:
+                        seen.add(skill.name)
+                        resolved.append(activate_skill(skill, source=self))
+            elif isinstance(item, SkillModel):
+                if item.name not in seen:
+                    seen.add(item.name)
+                    activated = activate_skill(item, source=self)
+                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                        crewai_event_bus.emit(
+                            self,
+                            event=SkillActivatedEvent(
+                                from_agent=self,
+                                skill_name=item.name,
+                                skill_path=item.path,
+                                disclosure_level=item.disclosure_level,
+                            ),
+                        )
+                    resolved.append(activated)
+
+        self.skills = resolved if resolved else None
+
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
         if getattr(self, "memory", None):
@@ -339,7 +417,7 @@ class Agent(BaseAgent):
         return (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
-            and self.llm.supports_function_calling()
+            and self.llm.supports_function_calling()  # type: ignore[union-attr]
             and len(tools) > 0
         )
 
@@ -364,6 +442,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        get_env_context()
         # Only call handle_reasoning for legacy CrewAgentExecutor
         # For AgentExecutor, planning is handled in AgentExecutor.generate_plan()
         if self.executor_class is not AgentExecutor:
@@ -438,6 +517,8 @@ class Agent(BaseAgent):
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
             self.crew.query_knowledge if self.crew else lambda *a, **k: None,
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)
@@ -678,6 +759,8 @@ class Agent(BaseAgent):
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)
@@ -1339,6 +1422,8 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
+
+        formatted_messages = append_skill_context(self, formatted_messages)
 
         # Build the input dict for the executor
         inputs: dict[str, Any] = {

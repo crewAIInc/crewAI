@@ -256,6 +256,19 @@ class AnthropicCompletion(BaseLLM):
         else:
             self.stop_sequences = []
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Anthropic-specific fields."""
+        config = super().to_config_dict()
+        if self.max_tokens != 4096:  # non-default
+            config["max_tokens"] = self.max_tokens
+        if self.max_retries != 2:  # non-default
+            config["max_retries"] = self.max_retries
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
+        return config
+
     def _get_client_params(self) -> dict[str, Any]:
         """Get client parameters."""
 
@@ -1753,7 +1766,14 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             True if the model supports images and PDFs.
         """
-        return "claude-3" in self.model.lower() or "claude-4" in self.model.lower()
+        model_lower = self.model.lower()
+        return (
+            "claude-3" in model_lower
+            or "claude-4" in model_lower
+            or "claude-sonnet-4" in model_lower
+            or "claude-opus-4" in model_lower
+            or "claude-haiku-4" in model_lower
+        )
 
     def get_file_uploader(self) -> Any:
         """Get an Anthropic file uploader using this LLM's clients.
