@@ -1133,15 +1133,9 @@ class TestInitializeBackendBatchRetry:
         assert bm.trace_batch_id == server_id
         assert mock_init.call_count == 2
 
-    def test_retries_on_exception_then_succeeds(self):
-        """Retries on ConnectionError, succeeds on second attempt."""
+    def test_no_retry_on_exception(self):
+        """Exceptions (e.g. timeout, connection error) abort immediately without retry."""
         bm = self._make_batch_manager()
-        server_id = "server-id-after-exception"
-
-        success_response = MagicMock(
-            status_code=201,
-            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
-        )
 
         with (
             patch(
@@ -1151,9 +1145,9 @@ class TestInitializeBackendBatchRetry:
             patch.object(
                 bm.plus_api,
                 "initialize_ephemeral_trace_batch",
-                side_effect=[ConnectionError("network down"), success_response],
+                side_effect=ConnectionError("network down"),
             ) as mock_init,
-            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep"),
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep") as mock_sleep,
         ):
             bm._initialize_backend_batch(
                 user_context={"privacy_level": "standard"},
@@ -1161,8 +1155,9 @@ class TestInitializeBackendBatchRetry:
                 use_ephemeral=True,
             )
 
-        assert bm.trace_batch_id == server_id
-        assert mock_init.call_count == 2
+        assert bm.trace_batch_id is None
+        assert mock_init.call_count == 1
+        mock_sleep.assert_not_called()
 
     def test_no_retry_on_4xx(self):
         """Does NOT retry on 422 — client error is not transient."""
@@ -1215,7 +1210,7 @@ class TestInitializeBackendBatchRetry:
             )
 
         assert bm.trace_batch_id is None
-        assert mock_init.call_count == 3  # initial + 2 retries
+        assert mock_init.call_count == 2  # initial + 1 retry
 
 
 class TestFirstTimeHandlerBackendInitGuard:
