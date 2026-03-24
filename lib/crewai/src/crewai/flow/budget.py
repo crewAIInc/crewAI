@@ -18,9 +18,10 @@ Example:
     ```python
     from crewai.flow import Flow, start, listen, budget
 
+
     class BudgetedFlow(Flow):
         @start()
-        @budget(max_cost=5.00, on_exceed='pause')
+        @budget(max_cost=5.00, on_exceed="pause")
         def run_expensive_task(self):
             crew = MyCrew()
             return crew.kickoff()
@@ -121,11 +122,15 @@ class BudgetExceededError(Exception):
         if message is None:
             parts = []
             if budget_limit is not None and current_cost >= budget_limit:
-                parts.append(f"Budget exceeded: ${current_cost:.2f} >= ${budget_limit:.2f}")
+                parts.append(
+                    f"Budget exceeded: ${current_cost:.2f} >= ${budget_limit:.2f}"
+                )
             if token_limit is not None and total_tokens >= token_limit:
                 parts.append(f"Token limit exceeded: {total_tokens} >= {token_limit}")
             if request_limit is not None and total_requests >= request_limit:
-                parts.append(f"Request limit exceeded: {total_requests} >= {request_limit}")
+                parts.append(
+                    f"Request limit exceeded: {total_requests} >= {request_limit}"
+                )
             message = " | ".join(parts) if parts else "Budget exceeded"
 
         super().__init__(message)
@@ -216,7 +221,11 @@ class BudgetTracker:
 
         # Calculate cost based on prompt/completion tokens
         # If only total_tokens is set (no breakdown), use a 70/30 estimate
-        if usage.prompt_tokens == 0 and usage.completion_tokens == 0 and usage.total_tokens > 0:
+        if (
+            usage.prompt_tokens == 0
+            and usage.completion_tokens == 0
+            and usage.total_tokens > 0
+        ):
             # Estimate 70% prompt, 30% completion if no breakdown provided
             estimated_prompt = int(usage.total_tokens * 0.7)
             estimated_completion = usage.total_tokens - estimated_prompt
@@ -225,7 +234,10 @@ class BudgetTracker:
             estimated_completion = usage.completion_tokens
 
         # Priority: flat pricing > cost_map > default
-        if self._cost_per_prompt_token is not None and self._cost_per_completion_token is not None:
+        if (
+            self._cost_per_prompt_token is not None
+            and self._cost_per_completion_token is not None
+        ):
             # Use flat per-token pricing (already per-token, not per-1M)
             prompt_cost_usd = estimated_prompt * self._cost_per_prompt_token
             completion_cost_usd = estimated_completion * self._cost_per_completion_token
@@ -336,7 +348,9 @@ class BudgetTracker:
             "effective_budget": self.effective_budget,
             "effective_token_limit": self.effective_token_limit,
             "effective_request_limit": self.effective_request_limit,
-            "budget_remaining": round(self.budget_remaining, 4) if self.budget_remaining is not None else None,
+            "budget_remaining": round(self.budget_remaining, 4)
+            if self.budget_remaining is not None
+            else None,
             "is_budget_exceeded": self.is_budget_exceeded,
             "is_token_limit_exceeded": self.is_token_limit_exceeded,
             "is_request_limit_exceeded": self.is_request_limit_exceeded,
@@ -433,16 +447,30 @@ def _request_budget_approval(
     # Determine which limit was hit
     limits_hit = []
     if tracker.is_budget_exceeded:
-        limits_hit.append(f"cost (${tracker.estimated_cost:.2f} >= ${tracker.max_cost:.2f})")
+        limits_hit.append(
+            f"cost (${tracker.estimated_cost:.2f} >= ${tracker.max_cost:.2f})"
+        )
     if tracker.is_token_limit_exceeded:
-        limits_hit.append(f"tokens ({tracker.total_tokens:,} >= {tracker.max_tokens:,})")
+        limits_hit.append(
+            f"tokens ({tracker.total_tokens:,} >= {tracker.max_tokens:,})"
+        )
     if tracker.is_request_limit_exceeded:
-        limits_hit.append(f"requests ({tracker.total_requests} >= {tracker.max_requests})")
+        limits_hit.append(
+            f"requests ({tracker.total_requests} >= {tracker.max_requests})"
+        )
 
     limits_str = ", ".join(limits_hit)
 
-    # Build message for human
-    budget_str = f"${tracker.max_cost:.2f}" if tracker.max_cost else "unlimited"
+    # Build message for human - show effective budget (including prior approvals)
+    effective_budget = tracker.effective_budget
+    budget_str = (
+        f"${effective_budget:.2f}" if effective_budget is not None else "unlimited"
+    )
+    remaining_str = (
+        f"${tracker.budget_remaining:.2f}"
+        if tracker.budget_remaining is not None
+        else "N/A"
+    )
     current_str = f"${tracker.estimated_cost:.2f}"
 
     message = (
@@ -450,7 +478,7 @@ def _request_budget_approval(
         f"Your flow '{flow_instance.name or flow_instance.__class__.__name__}' "
         f"has hit the following limit(s): {limits_str}\n\n"
         f"Current spend breakdown:\n"
-        f"  - Estimated cost: {current_str} of {budget_str} budget\n"
+        f"  - Estimated cost: {current_str} of {budget_str} budget (remaining: {remaining_str})\n"
         f"  - Tokens used: {tracker.total_tokens:,}\n"
         f"  - LLM requests made: {tracker.total_requests}\n\n"
         f"To continue, approve additional budget/tokens/requests or deny to stop the flow."
@@ -513,10 +541,21 @@ def _handle_exceeded_budget(
         HumanFeedbackPending: If on_exceed='pause' with async provider.
     """
     if config.on_exceed == "warn":
+        max_cost_str = (
+            f"${tracker.max_cost:.2f}" if tracker.max_cost is not None else "unlimited"
+        )
+        max_tokens_str = (
+            f"{tracker.max_tokens:,}" if tracker.max_tokens is not None else "unlimited"
+        )
+        max_requests_str = (
+            str(tracker.max_requests)
+            if tracker.max_requests is not None
+            else "unlimited"
+        )
         logger.warning(
             f"Budget/token/request limit exceeded in flow '{flow_instance.name or flow_instance.__class__.__name__}': "
             f"cost=${tracker.estimated_cost:.2f}, tokens={tracker.total_tokens}, requests={tracker.total_requests}, "
-            f"max_cost=${tracker.max_cost}, max_tokens={tracker.max_tokens}, max_requests={tracker.max_requests}"
+            f"max_cost={max_cost_str}, max_tokens={max_tokens_str}, max_requests={max_requests_str}"
         )
         return
 
@@ -543,13 +582,21 @@ def _handle_exceeded_budget(
     is_denied = feedback_lower == "denied"
 
     if not is_approved and not is_denied:
-        # Fall back to text parsing - check APPROVAL patterns FIRST to avoid
-        # false positives like "no problem" matching denial
-        approval_pattern = r'\b(yes|approve[ds]?|continue|go\s*ahead|proceed|ok|okay)\b'
-        denial_pattern = r'\b(denied|deny|no|stop|reject)\b'
+        # Fall back to text parsing
+        approval_pattern = r"\b(yes|approve[ds]?|continue|go\s*ahead|proceed|ok|okay)\b"
+        denial_pattern = r"\b(denied|deny|no|stop|reject)\b"
+        # Negation patterns that invert approval meaning (e.g., "do not approve", "can't continue")
+        negation_pattern = r"\b(not|don'?t|cannot|can'?t|won'?t|never)\s+"
 
-        if re.search(approval_pattern, feedback_lower):
-            is_approved = True
+        # Check for negated approval first (e.g., "I do not approve", "can't continue")
+        approval_match = re.search(approval_pattern, feedback_lower)
+        if approval_match:
+            # Check if there's a negation immediately before the approval word
+            prefix = feedback_lower[: approval_match.start()]
+            if re.search(negation_pattern + r"$", prefix):
+                is_denied = True
+            else:
+                is_approved = True
         elif re.search(denial_pattern, feedback_lower):
             is_denied = True
 
@@ -583,12 +630,14 @@ def _handle_exceeded_budget(
     # Handle budget approval
     if tracker.is_budget_exceeded:
         # Parse budget amount - require $ prefix for budget
-        budget_match = re.search(r'\$(\d+(?:\.\d{1,2})?)', feedback)
+        budget_match = re.search(r"\$(\d+(?:\.\d{1,2})?)", feedback)
         if budget_match:
             additional_budget = float(budget_match.group(1))
         else:
             # Default: approve same amount as original budget
-            additional_budget = tracker.max_cost if tracker.max_cost is not None else 0.0
+            additional_budget = (
+                tracker.max_cost if tracker.max_cost is not None else 0.0
+            )
         tracker.approved_budget += additional_budget
         effective = tracker.effective_budget
         effective_str = f"${effective:.2f}" if effective is not None else "N/A"
@@ -601,10 +650,10 @@ def _handle_exceeded_budget(
     if tracker.is_token_limit_exceeded:
         # Try to extract a token count from feedback - require explicit token context
         # Match patterns like "10000 tokens", "10k tokens", "100K", "50000tokens"
-        token_match = re.search(r'(\d+)\s*([kK])?\s*tokens?', feedback_lower)
+        token_match = re.search(r"(\d+)\s*([kK])?\s*tokens?", feedback_lower)
         if not token_match:
             # Also try "NNNk" or "NNNK" without "tokens" suffix
-            token_match = re.search(r'(\d+)\s*([kK])\b', feedback)
+            token_match = re.search(r"(\d+)\s*([kK])\b", feedback)
         if token_match:
             additional_tokens = int(token_match.group(1))
             # Handle "k" or "K" suffix
@@ -612,7 +661,9 @@ def _handle_exceeded_budget(
                 additional_tokens *= 1000
         else:
             # Default: approve same amount as original token limit
-            additional_tokens = tracker.max_tokens if tracker.max_tokens is not None else 0
+            additional_tokens = (
+                tracker.max_tokens if tracker.max_tokens is not None else 0
+            )
         tracker.approved_tokens += additional_tokens
         effective = tracker.effective_token_limit
         effective_str = f"{effective:,}" if effective is not None else "N/A"
@@ -624,12 +675,14 @@ def _handle_exceeded_budget(
     # Handle request limit approval
     if tracker.is_request_limit_exceeded:
         # Try to extract a request count from feedback - require explicit request context
-        request_match = re.search(r'(\d+)\s*requests?', feedback_lower)
+        request_match = re.search(r"(\d+)\s*requests?", feedback_lower)
         if request_match:
             additional_requests = int(request_match.group(1))
         else:
             # Default: approve same amount as original request limit
-            additional_requests = tracker.max_requests if tracker.max_requests is not None else 0
+            additional_requests = (
+                tracker.max_requests if tracker.max_requests is not None else 0
+            )
         tracker.approved_requests += additional_requests
         effective = tracker.effective_request_limit
         effective_str = str(effective) if effective is not None else "N/A"
@@ -701,7 +754,7 @@ def budget(
         Token limit with stop on exceed:
         ```python
         @start()
-        @budget(max_tokens=100000, on_exceed='stop')
+        @budget(max_tokens=100000, on_exceed="stop")
         def limited_task(self):
             crew = MyCrew()
             return crew.kickoff()
@@ -710,7 +763,7 @@ def budget(
         Request limit to cap LLM calls:
         ```python
         @start()
-        @budget(max_requests=10, on_exceed='stop')
+        @budget(max_requests=10, on_exceed="stop")
         def limited_requests_task(self):
             # Each LLM call counts against the limit
             agent = MyAgent()
@@ -724,7 +777,7 @@ def budget(
             max_cost=10.00,
             max_tokens=500000,
             max_requests=50,
-            on_exceed='pause',
+            on_exceed="pause",
             cost_per_prompt_token=0.000003,  # $3 per 1M tokens
             cost_per_completion_token=0.000015,  # $15 per 1M tokens
         )
@@ -743,7 +796,9 @@ def budget(
     if on_exceed not in ("pause", "stop", "warn"):
         raise ValueError("on_exceed must be 'pause', 'stop', or 'warn'")
     if (cost_per_prompt_token is not None) != (cost_per_completion_token is not None):
-        raise ValueError("cost_per_prompt_token and cost_per_completion_token must both be set or both be None")
+        raise ValueError(
+            "cost_per_prompt_token and cost_per_completion_token must both be set or both be None"
+        )
 
     # Build config
     config = BudgetConfig(
@@ -762,7 +817,10 @@ def budget(
 
         def _ensure_budget_tracker(flow_instance: Flow[Any]) -> BudgetTracker:
             """Ensure the flow has a budget tracker initialized."""
-            if not hasattr(flow_instance, "_budget_tracker") or flow_instance._budget_tracker is None:
+            if (
+                not hasattr(flow_instance, "_budget_tracker")
+                or flow_instance._budget_tracker is None
+            ):
                 merged_costs = DEFAULT_MODEL_COSTS.copy()
                 if config.cost_map:
                     merged_costs.update(config.cost_map)
@@ -790,16 +848,17 @@ def budget(
             llm_snapshots: dict[int, dict[str, int]],
         ) -> Callable[[Any, LLMCallStartedEvent], None]:
             """Create an event handler that counts LLM requests and snapshots token state."""
+
             def handler(source: Any, event: LLMCallStartedEvent) -> None:
                 tracker.increment_request_count()
                 # Snapshot current token state before the call
                 if hasattr(source, "_token_usage"):
                     llm_snapshots[id(source)] = dict(source._token_usage)
+
             return handler
 
         def _create_completion_tracker(
             tracker: BudgetTracker,
-            cfg: BudgetConfig,
             llm_snapshots: dict[int, dict[str, int]],
         ) -> Callable[[Any, LLMCallCompletedEvent], None]:
             """Create an event handler that extracts token usage from LLM completion events.
@@ -808,6 +867,7 @@ def budget(
             (captured at call start vs call end) to get per-call usage. Works for all
             providers since BaseLLM._track_token_usage_internal() updates before this fires.
             """
+
             def handler(source: Any, event: LLMCallCompletedEvent) -> None:
                 model = event.model or getattr(source, "model", None)
 
@@ -815,11 +875,20 @@ def budget(
                 if hasattr(source, "_token_usage"):
                     llm_id = id(source)
                     current = dict(source._token_usage)
-                    prev = llm_snapshots.pop(llm_id, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+                    prev = llm_snapshots.pop(
+                        llm_id,
+                        {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                    )
 
-                    prompt_delta = current.get("prompt_tokens", 0) - prev.get("prompt_tokens", 0)
-                    completion_delta = current.get("completion_tokens", 0) - prev.get("completion_tokens", 0)
-                    total_delta = current.get("total_tokens", 0) - prev.get("total_tokens", 0)
+                    prompt_delta = current.get("prompt_tokens", 0) - prev.get(
+                        "prompt_tokens", 0
+                    )
+                    completion_delta = current.get("completion_tokens", 0) - prev.get(
+                        "completion_tokens", 0
+                    )
+                    total_delta = current.get("total_tokens", 0) - prev.get(
+                        "total_tokens", 0
+                    )
 
                     if total_delta > 0:
                         metrics = UsageMetrics(
@@ -838,7 +907,9 @@ def budget(
                     if usage:
                         prompt_tokens = usage.get("prompt_tokens", 0)
                         completion_tokens = usage.get("completion_tokens", 0)
-                        total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+                        total_tokens = usage.get(
+                            "total_tokens", prompt_tokens + completion_tokens
+                        )
                         if total_tokens > 0:
                             metrics = UsageMetrics(
                                 total_tokens=total_tokens,
@@ -847,6 +918,7 @@ def budget(
                                 successful_requests=0,
                             )
                             tracker.add_usage(metrics, model)
+
             return handler
 
         def _process_result(
@@ -867,12 +939,17 @@ def budget(
                     tracker.add_usage(usage, model)
 
             # Check limits (any one being exceeded triggers the action)
-            if tracker.is_budget_exceeded or tracker.is_token_limit_exceeded or tracker.is_request_limit_exceeded:
+            if (
+                tracker.is_budget_exceeded
+                or tracker.is_token_limit_exceeded
+                or tracker.is_request_limit_exceeded
+            ):
                 _handle_exceeded_budget(flow_instance, config, tracker, method_name)
 
             return result
 
         if asyncio.iscoroutinefunction(func):
+
             @wraps(func)
             async def async_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 tracker = _ensure_budget_tracker(self)
@@ -880,11 +957,13 @@ def budget(
                 # Per-invocation snapshots dict to avoid cross-instance interference
                 llm_snapshots: dict[int, dict[str, int]] = {}
                 request_handler = _create_request_counter(tracker, llm_snapshots)
-                completion_handler = _create_completion_tracker(tracker, config, llm_snapshots)
+                completion_handler = _create_completion_tracker(tracker, llm_snapshots)
 
                 # Register event listeners for request counting and token tracking
                 crewai_event_bus.register_handler(LLMCallStartedEvent, request_handler)
-                crewai_event_bus.register_handler(LLMCallCompletedEvent, completion_handler)
+                crewai_event_bus.register_handler(
+                    LLMCallCompletedEvent, completion_handler
+                )
                 try:
                     result = await func(self, *args, **kwargs)
                     return _process_result(self, result, func.__name__, tokens_before)
@@ -894,6 +973,7 @@ def budget(
 
             wrapper: Any = async_wrapper
         else:
+
             @wraps(func)
             def sync_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 tracker = _ensure_budget_tracker(self)
@@ -902,22 +982,27 @@ def budget(
                 # Per-invocation snapshots dict to avoid cross-instance interference
                 llm_snapshots: dict[int, dict[str, int]] = {}
                 request_handler = _create_request_counter(tracker, llm_snapshots)
-                completion_handler = _create_completion_tracker(tracker, config, llm_snapshots)
+                completion_handler = _create_completion_tracker(tracker, llm_snapshots)
 
                 # Register event listeners for request counting and token tracking
                 crewai_event_bus.register_handler(LLMCallStartedEvent, request_handler)
-                crewai_event_bus.register_handler(LLMCallCompletedEvent, completion_handler)
+                crewai_event_bus.register_handler(
+                    LLMCallCompletedEvent, completion_handler
+                )
                 try:
                     result = func(self, *args, **kwargs)
                     # Poll for event handlers to complete (event bus dispatches in thread pool)
                     # If requests were made, wait for token updates; otherwise skip immediately
                     import time
+
                     if tracker.total_requests > requests_before:
                         # Requests were made - poll for token updates with short timeout
                         max_wait = 0.05  # 50ms max wait
                         interval = 0.005  # 5ms polling interval
                         waited = 0.0
-                        while waited < max_wait and tracker.total_tokens == tokens_before:
+                        while (
+                            waited < max_wait and tracker.total_tokens == tokens_before
+                        ):
                             time.sleep(interval)
                             waited += interval
                     return _process_result(self, result, func.__name__, tokens_before)
