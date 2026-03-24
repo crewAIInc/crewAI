@@ -1,0 +1,129 @@
+---
+title: AgentCore Browser
+description: AWS-managed browser automation for CrewAI agents with Playwright-based web interaction in secure cloud sandboxes.
+icon: aws
+mode: "wide"
+---
+
+# `BrowserToolkit`
+
+## Description
+
+The `BrowserToolkit` from [Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/) provides AWS-managed browser automation for CrewAI agents. Unlike local Docker-based solutions or third-party browser services, AgentCore runs Playwright-based browsers in secure cloud sandboxes with no local setup required.
+
+Key features:
+- **No local infrastructure** — no Docker, no browser installs, no Playwright setup
+- **Secure cloud sandboxes** — each browser session runs in an isolated AWS-managed environment
+- **Playwright-based** — full Playwright browser automation capabilities (navigation, clicking, text extraction)
+- **Multi-agent isolation** — use `thread_id` to give each agent its own independent browser session
+
+## Installation
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[bedrock]'
+```
+
+**Prerequisites:**
+- AWS credentials configured (via environment variables, AWS CLI profile, or IAM role)
+- IAM permissions for `bedrock-agentcore:*`
+- An LLM configured for your agents (if using Amazon Bedrock models, pass `llm=LLM(model="bedrock/...", region_name="us-west-2")` to your Agent — see [LLM connections](/en/learn/llm-connections))
+
+## Example
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.browser import create_browser_toolkit
+
+# Create the browser toolkit
+toolkit, browser_tools = create_browser_toolkit(region="us-west-2")
+
+# Create an agent with browser tools
+research_agent = Agent(
+    role="Web Researcher",
+    goal="Research and summarize web content",
+    backstory="You're an expert at finding information online.",
+    tools=browser_tools,
+)
+
+# Create a task
+research_task = Task(
+    description="Navigate to https://example.com and extract all text content. Summarize the main points.",
+    expected_output="A summary of the main content on example.com.",
+    agent=research_agent,
+)
+
+# Run the crew
+crew = Crew(agents=[research_agent], tasks=[research_task])
+result = crew.kickoff()
+
+# Always clean up browser sessions when done
+toolkit.sync_cleanup()
+```
+
+## Available Tools
+
+The toolkit provides seven browser tools:
+
+| Tool | Description |
+| :--- | :---------- |
+| `navigate_browser` | Navigate a browser to the specified URL |
+| `click_element` | Click on an element with the given CSS selector |
+| `extract_text` | Extract all the text on the current webpage |
+| `extract_hyperlinks` | Extract all hyperlinks on the current webpage |
+| `get_elements` | Get elements from the webpage using a CSS selector |
+| `navigate_back` | Navigate back to the previous page |
+| `current_webpage` | Get information about the current webpage |
+
+## Arguments
+
+| Argument | Type | Description |
+| :------- | :--- | :---------- |
+| `region` | `str` | AWS region for the browser service (default: `us-west-2`) |
+
+## Multi-Agent Usage
+
+Use `thread_id` to isolate browser sessions across concurrent agents. Each thread gets its own independent browser instance.
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.browser import create_browser_toolkit
+
+toolkit, browser_tools = create_browser_toolkit(region="us-west-2")
+
+# Both agents share the toolkit but can use different thread_ids
+# to maintain separate browser sessions
+news_agent = Agent(
+    role="News Researcher",
+    goal="Find the latest tech news",
+    backstory="You specialize in technology news.",
+    tools=browser_tools,
+)
+
+finance_agent = Agent(
+    role="Finance Researcher",
+    goal="Find current market data",
+    backstory="You specialize in financial markets.",
+    tools=browser_tools,
+)
+
+# You can also assign specific tools to specific agents
+tools_by_name = toolkit.get_tools_by_name()
+navigate_only_agent = Agent(
+    role="Navigator",
+    goal="Navigate to specified URLs",
+    backstory="You navigate to web pages.",
+    tools=[tools_by_name["navigate_browser"], tools_by_name["extract_text"]],
+)
+```
+
+## Cleanup
+
+Always clean up browser sessions when your crew finishes to release cloud resources.
+
+```python Code
+# From synchronous code
+toolkit.sync_cleanup()
+
+# From async code
+await toolkit.cleanup()
+```

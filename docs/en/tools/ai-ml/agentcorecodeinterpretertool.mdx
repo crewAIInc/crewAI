@@ -1,0 +1,132 @@
+---
+title: AgentCore Code Interpreter
+description: AWS-managed secure code execution for CrewAI agents with Python, shell commands, and file operations in cloud sandboxes.
+icon: aws
+mode: "wide"
+---
+
+# `CodeInterpreterToolkit`
+
+## Description
+
+The `CodeInterpreterToolkit` from [Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/) provides AWS-managed code execution for CrewAI agents. Unlike the local Docker-based [`CodeInterpreterTool`](/en/tools/ai-ml/codeinterpretertool), AgentCore runs code in secure cloud sandboxes (MicroVMs) with no local Docker required. Use `CodeInterpreterTool` for quick local tasks when Docker is available; use AgentCore for longer sessions, no-Docker setups, or production workloads.
+
+Key features:
+- **No local Docker required** — code runs in AWS-managed cloud sandboxes
+- **Up to 8-hour sessions** — long-running computations without timeout concerns
+- **Full environment** — Python, shell commands, and file system operations
+- **Multi-agent isolation** — use `thread_id` to give each agent its own sandboxed environment
+
+## Installation
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[bedrock]'
+```
+
+**Prerequisites:**
+- AWS credentials configured (via environment variables, AWS CLI profile, or IAM role)
+- IAM permissions for `bedrock-agentcore:*`
+- An LLM configured for your agents (if using Amazon Bedrock models, pass `llm=LLM(model="bedrock/...", region_name="us-west-2")` to your Agent — see [LLM connections](/en/learn/llm-connections))
+
+## Example
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.code_interpreter import create_code_interpreter_toolkit
+
+# Create the code interpreter toolkit
+toolkit, code_tools = create_code_interpreter_toolkit(region="us-west-2")
+
+# Create an agent with code interpreter tools
+developer_agent = Agent(
+    role="Python Developer",
+    goal="Write and execute Python code to solve problems",
+    backstory="You're a skilled Python developer with expertise in data analysis.",
+    tools=code_tools,
+)
+
+# Create a task
+coding_task = Task(
+    description="Write a Python function that calculates the factorial of a number and test it with values 1 through 10.",
+    expected_output="The factorial values for numbers 1 through 10.",
+    agent=developer_agent,
+)
+
+# Run the crew
+crew = Crew(agents=[developer_agent], tasks=[coding_task])
+result = crew.kickoff()
+
+# Always clean up code interpreter sessions when done
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+asyncio.run(toolkit.cleanup())
+```
+
+## Available Tools
+
+The toolkit provides nine code execution and file management tools:
+
+| Tool | Description |
+| :--- | :---------- |
+| `execute_code` | Execute code in various languages (primarily Python) |
+| `execute_command` | Run shell commands in the code interpreter environment |
+| `read_files` | Read content of files in the environment |
+| `list_files` | List files in directories in the environment |
+| `delete_files` | Remove files from the environment |
+| `write_files` | Create or update files in the environment |
+| `start_command_execution` | Start long-running commands asynchronously |
+| `get_task` | Check status of async tasks |
+| `stop_task` | Stop running tasks |
+
+## Arguments
+
+| Argument | Type | Description |
+| :------- | :--- | :---------- |
+| `region` | `str` | AWS region for the code interpreter service (default: `us-west-2`) |
+
+## Multi-Agent Usage
+
+Use `thread_id` to give each agent its own isolated code interpreter session. Each thread gets a separate sandbox with its own file system and execution context.
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.code_interpreter import create_code_interpreter_toolkit
+
+toolkit, code_tools = create_code_interpreter_toolkit(region="us-west-2")
+
+# Both agents share the toolkit but can use different thread_ids
+# to maintain separate sandbox environments
+data_agent = Agent(
+    role="Data Analyst",
+    goal="Analyze datasets and produce insights",
+    backstory="You specialize in data analysis with pandas and matplotlib.",
+    tools=code_tools,
+)
+
+test_agent = Agent(
+    role="Test Engineer",
+    goal="Write and run test suites",
+    backstory="You specialize in writing comprehensive test cases.",
+    tools=code_tools,
+)
+```
+
+## Cleanup
+
+Always clean up code interpreter sessions when your crew finishes to release cloud resources. Unlike the Browser toolkit, Code Interpreter cleanup is async-only. CrewAI may leave a running event loop after `crew.kickoff()`, so call `nest_asyncio.apply()` before using `asyncio.run()`.
+
+```python Code
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+
+# From synchronous code (e.g., after crew.kickoff())
+asyncio.run(toolkit.cleanup())
+
+# From async code
+await toolkit.cleanup()
+
+# Clean up a specific thread's session only
+asyncio.run(toolkit.cleanup(thread_id="specific-thread"))
+```

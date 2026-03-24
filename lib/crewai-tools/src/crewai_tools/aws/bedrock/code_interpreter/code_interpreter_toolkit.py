@@ -456,6 +456,257 @@ class StopTaskTool(BaseTool):
         return self._run(task_id=task_id, thread_id=thread_id)
 
 
+class UploadFileInput(BaseModel):
+    """Input for UploadFile."""
+
+    path: str = Field(description="Relative path where the file should be saved")
+    content: str = Field(description="File content as a string")
+    description: str = Field(
+        default="", description="Optional semantic description of the file contents"
+    )
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
+
+
+class UploadFilesInput(BaseModel):
+    """Input for UploadFiles."""
+
+    files: list[dict[str, str]] = Field(
+        description="List of dicts with 'path', 'content', and optional 'description'"
+    )
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
+
+
+class InstallPackagesInput(BaseModel):
+    """Input for InstallPackages."""
+
+    packages: list[str] = Field(description="List of package names to install via pip")
+    upgrade: bool = Field(
+        default=False, description="Whether to add --upgrade flag"
+    )
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
+
+
+class DownloadFileInput(BaseModel):
+    """Input for DownloadFile."""
+
+    path: str = Field(description="Path to the file to download")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
+
+
+class DownloadFilesInput(BaseModel):
+    """Input for DownloadFiles."""
+
+    paths: list[str] = Field(description="List of file paths to download")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
+
+
+class ClearContextInput(BaseModel):
+    """Input for ClearContext."""
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
+
+
+class UploadFileTool(BaseTool):
+    """Tool for uploading a file with an optional semantic description."""
+
+    name: str = "upload_file"
+    description: str = "Upload a file to the code interpreter environment with an optional description"
+    args_schema: type[BaseModel] = UploadFileInput
+    toolkit: Any = Field(default=None, exclude=True)
+
+    def __init__(self, toolkit):
+        super().__init__()
+        self.toolkit = toolkit
+
+    def _run(
+        self,
+        path: str,
+        content: str,
+        description: str = "",
+        thread_id: str = "default",
+    ) -> str:
+        try:
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+            result = code_interpreter.upload_file(
+                path=path, content=content, description=description
+            )
+            return extract_output_from_stream(result)
+        except Exception as e:
+            logger.error("Failed to upload file: %s", e, exc_info=True)
+            return f"Error uploading file: {e!s}"
+
+    async def _arun(self, **kwargs) -> str:
+        return self._run(**kwargs)
+
+
+class UploadFilesTool(BaseTool):
+    """Tool for uploading multiple files at once."""
+
+    name: str = "upload_files"
+    description: str = "Upload multiple files to the code interpreter environment"
+    args_schema: type[BaseModel] = UploadFilesInput
+    toolkit: Any = Field(default=None, exclude=True)
+
+    def __init__(self, toolkit):
+        super().__init__()
+        self.toolkit = toolkit
+
+    def _run(
+        self,
+        files: list[dict[str, str]],
+        thread_id: str = "default",
+    ) -> str:
+        try:
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+            result = code_interpreter.upload_files(files=files)
+            return extract_output_from_stream(result)
+        except Exception as e:
+            logger.error("Failed to upload files: %s", e, exc_info=True)
+            return f"Error uploading files: {e!s}"
+
+    async def _arun(self, **kwargs) -> str:
+        return self._run(**kwargs)
+
+
+class InstallPackagesTool(BaseTool):
+    """Tool for installing Python packages via pip."""
+
+    name: str = "install_packages"
+    description: str = "Install Python packages via pip in the code interpreter environment"
+    args_schema: type[BaseModel] = InstallPackagesInput
+    toolkit: Any = Field(default=None, exclude=True)
+
+    def __init__(self, toolkit):
+        super().__init__()
+        self.toolkit = toolkit
+
+    def _run(
+        self,
+        packages: list[str],
+        upgrade: bool = False,
+        thread_id: str = "default",
+    ) -> str:
+        try:
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+            result = code_interpreter.install_packages(
+                packages=packages, upgrade=upgrade
+            )
+            return extract_output_from_stream(result)
+        except Exception as e:
+            logger.error("Failed to install packages: %s", e, exc_info=True)
+            return f"Error installing packages: {e!s}"
+
+    async def _arun(self, **kwargs) -> str:
+        return self._run(**kwargs)
+
+
+class DownloadFileTool(BaseTool):
+    """Tool for downloading a file from the sandbox."""
+
+    name: str = "download_file"
+    description: str = "Download a file from the code interpreter environment"
+    args_schema: type[BaseModel] = DownloadFileInput
+    toolkit: Any = Field(default=None, exclude=True)
+
+    def __init__(self, toolkit):
+        super().__init__()
+        self.toolkit = toolkit
+
+    def _run(self, path: str, thread_id: str = "default") -> str:
+        try:
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+            content = code_interpreter.download_file(path=path)
+            if isinstance(content, bytes):
+                return f"[Binary file: {len(content)} bytes]"
+            return content
+        except Exception as e:
+            logger.error("Failed to download file: %s", e, exc_info=True)
+            return f"Error downloading file: {e!s}"
+
+    async def _arun(self, **kwargs) -> str:
+        return self._run(**kwargs)
+
+
+class DownloadFilesTool(BaseTool):
+    """Tool for downloading multiple files from the sandbox."""
+
+    name: str = "download_files"
+    description: str = "Download multiple files from the code interpreter environment"
+    args_schema: type[BaseModel] = DownloadFilesInput
+    toolkit: Any = Field(default=None, exclude=True)
+
+    def __init__(self, toolkit):
+        super().__init__()
+        self.toolkit = toolkit
+
+    def _run(self, paths: list[str], thread_id: str = "default") -> str:
+        try:
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+            files = code_interpreter.download_files(paths=paths)
+            results = []
+            for file_path, content in files.items():
+                if isinstance(content, bytes):
+                    results.append(f"==== {file_path} [Binary: {len(content)} bytes] ====")
+                else:
+                    results.append(f"==== {file_path} ====\n{content}")
+            return "\n".join(results) if results else "No files found"
+        except Exception as e:
+            logger.error("Failed to download files: %s", e, exc_info=True)
+            return f"Error downloading files: {e!s}"
+
+    async def _arun(self, **kwargs) -> str:
+        return self._run(**kwargs)
+
+
+class ClearContextTool(BaseTool):
+    """Tool for clearing all variable state in the Python execution context."""
+
+    name: str = "clear_context"
+    description: str = "Clear all variable state in the Python execution context"
+    args_schema: type[BaseModel] = ClearContextInput
+    toolkit: Any = Field(default=None, exclude=True)
+
+    def __init__(self, toolkit):
+        super().__init__()
+        self.toolkit = toolkit
+
+    def _run(self, thread_id: str = "default") -> str:
+        try:
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+            code_interpreter.clear_context()
+            return "Python execution context cleared successfully"
+        except Exception as e:
+            logger.error("Failed to clear context: %s", e, exc_info=True)
+            return f"Error clearing context: {e!s}"
+
+    async def _arun(self, **kwargs) -> str:
+        return self._run(**kwargs)
+
+
 class CodeInterpreterToolkit:
     """Toolkit for working with AWS Bedrock code interpreter environment.
 
@@ -470,6 +721,12 @@ class CodeInterpreterToolkit:
     * start_command_execution - Start long-running commands asynchronously
     * get_task - Check status of async tasks
     * stop_task - Stop running tasks
+    * upload_file - Upload a single file to the environment
+    * upload_files - Upload multiple files to the environment
+    * install_packages - Install pip packages in the environment
+    * download_file - Download a single file from the environment
+    * download_files - Download multiple files from the environment
+    * clear_context - Reset the Python execution context
 
     The toolkit lazily initializes the code interpreter session on first use.
     It supports multiple threads by maintaining separate code interpreter sessions for each thread ID.
@@ -509,13 +766,24 @@ class CodeInterpreterToolkit:
         ```
     """
 
-    def __init__(self, region: str = "us-west-2"):
+    def __init__(
+        self,
+        region: str = "us-west-2",
+        identifier: str | None = None,
+        session_timeout_seconds: int | None = None,
+    ):
         """Initialize the toolkit.
 
         Args:
             region: AWS region for the code interpreter
+            identifier: Code interpreter sandbox identifier. Defaults to the system interpreter.
+                Use a custom ID from create_code_interpreter() for custom configurations.
+            session_timeout_seconds: Session timeout in seconds. Defaults to 900
+                (15 minutes) if not specified.
         """
         self.region = region
+        self.identifier = identifier
+        self.session_timeout_seconds = session_timeout_seconds
         self._code_interpreters: dict[str, CodeInterpreter] = {}
         self.tools: list[BaseTool] = []
         self._setup_tools()
@@ -532,6 +800,12 @@ class CodeInterpreterToolkit:
             StartCommandTool(self),
             GetTaskTool(self),
             StopTaskTool(self),
+            UploadFileTool(self),
+            UploadFilesTool(self),
+            InstallPackagesTool(self),
+            DownloadFileTool(self),
+            DownloadFilesTool(self),
+            ClearContextTool(self),
         ]
 
     def _get_or_create_interpreter(self, thread_id: str = "default") -> CodeInterpreter:
@@ -549,8 +823,16 @@ class CodeInterpreterToolkit:
         # Create a new code interpreter for this thread
         from bedrock_agentcore.tools.code_interpreter_client import CodeInterpreter
 
-        code_interpreter = CodeInterpreter(region=self.region)
-        code_interpreter.start()
+        code_interpreter = CodeInterpreter(
+            region=self.region,
+            integration_source="crewai",
+        )
+        start_kwargs: dict[str, Any] = {}
+        if self.identifier is not None:
+            start_kwargs["identifier"] = self.identifier
+        if self.session_timeout_seconds is not None:
+            start_kwargs["session_timeout_seconds"] = self.session_timeout_seconds
+        code_interpreter.start(**start_kwargs)
         logger.info(
             f"Started code interpreter with session_id:{code_interpreter.session_id} for thread:{thread_id}"
         )
@@ -611,15 +893,25 @@ class CodeInterpreterToolkit:
 
 def create_code_interpreter_toolkit(
     region: str = "us-west-2",
+    identifier: str | None = None,
+    session_timeout_seconds: int | None = None,
 ) -> tuple[CodeInterpreterToolkit, list[BaseTool]]:
     """Create a CodeInterpreterToolkit.
 
     Args:
         region: AWS region for code interpreter
+        identifier: Code interpreter sandbox identifier. Defaults to the system interpreter.
+            Use a custom ID from create_code_interpreter() for custom configurations.
+        session_timeout_seconds: Session timeout in seconds. Defaults to 900
+            (15 minutes) if not specified.
 
     Returns:
         Tuple of (toolkit, tools)
     """
-    toolkit = CodeInterpreterToolkit(region=region)
+    toolkit = CodeInterpreterToolkit(
+        region=region,
+        identifier=identifier,
+        session_timeout_seconds=session_timeout_seconds,
+    )
     tools = toolkit.get_tools()
     return toolkit, tools

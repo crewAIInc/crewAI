@@ -1,10 +1,20 @@
 """Toolkit for navigating web with AWS browser."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from bedrock_agentcore.tools.config import (
+        BrowserExtension,
+        ProfileConfiguration,
+        ProxyConfiguration,
+        ViewportConfiguration,
+    )
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -483,6 +493,130 @@ class CurrentWebPageTool(BrowserBaseTool):
             return f"Error getting current webpage info: {e!s}"
 
 
+class GenerateLiveViewUrlToolInput(BaseModel):
+    """Input for GenerateLiveViewUrlTool."""
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
+
+
+class TakeControlToolInput(BaseModel):
+    """Input for TakeControlTool."""
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
+
+
+class ReleaseControlToolInput(BaseModel):
+    """Input for ReleaseControlTool."""
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
+
+
+class GenerateLiveViewUrlTool(BrowserBaseTool):
+    """Tool for generating a presigned URL for human oversight of a browser session."""
+
+    name: str = "generate_live_view_url"
+    description: str = "Generate a presigned URL for viewing the browser session in real-time"
+    args_schema: type[BaseModel] = GenerateLiveViewUrlToolInput
+
+    def _run(self, thread_id: str = "default", **kwargs) -> str:
+        try:
+            browser_client = self._session_manager.get_browser_client(thread_id)
+            if not browser_client:
+                return "No browser session found. Navigate to a URL first."
+            url = browser_client.generate_live_view_url()
+            return f"Live view URL: {url}"
+        except Exception as e:
+            logger.error("Failed to generate live view URL: %s", e, exc_info=True)
+            return f"Error generating live view URL: {e!s}"
+
+    async def _arun(self, thread_id: str = "default", **kwargs) -> str:
+        try:
+            browser_client = await self._session_manager.get_async_browser_client(
+                thread_id
+            )
+            if not browser_client:
+                return "No browser session found. Navigate to a URL first."
+            url = browser_client.generate_live_view_url()
+            return f"Live view URL: {url}"
+        except Exception as e:
+            logger.error("Failed to generate live view URL: %s", e, exc_info=True)
+            return f"Error generating live view URL: {e!s}"
+
+
+class TakeControlTool(BrowserBaseTool):
+    """Tool for taking manual control of a browser session (disables automation)."""
+
+    name: str = "take_control"
+    description: str = "Take manual control of the browser session, disabling automation"
+    args_schema: type[BaseModel] = TakeControlToolInput
+
+    def _run(self, thread_id: str = "default", **kwargs) -> str:
+        try:
+            browser_client = self._session_manager.get_browser_client(thread_id)
+            if not browser_client:
+                return "No browser session found. Navigate to a URL first."
+            browser_client.take_control()
+            return "Manual control enabled. Automation is now disabled."
+        except Exception as e:
+            logger.error("Failed to take control: %s", e, exc_info=True)
+            return f"Error taking control: {e!s}"
+
+    async def _arun(self, thread_id: str = "default", **kwargs) -> str:
+        try:
+            browser_client = await self._session_manager.get_async_browser_client(
+                thread_id
+            )
+            if not browser_client:
+                return "No browser session found. Navigate to a URL first."
+            browser_client.take_control()
+            return "Manual control enabled. Automation is now disabled."
+        except Exception as e:
+            logger.error("Failed to take control: %s", e, exc_info=True)
+            return f"Error taking control: {e!s}"
+
+
+class ReleaseControlTool(BrowserBaseTool):
+    """Tool for releasing manual control of a browser session (re-enables automation)."""
+
+    name: str = "release_control"
+    description: str = "Release manual control of the browser session, re-enabling automation"
+    args_schema: type[BaseModel] = ReleaseControlToolInput
+
+    def _run(self, thread_id: str = "default", **kwargs) -> str:
+        try:
+            browser_client = self._session_manager.get_browser_client(thread_id)
+            if not browser_client:
+                return "No browser session found."
+            browser_client.release_control()
+            # Reconnect Playwright — release_control invalidates the CDP connection
+            self._session_manager.reconnect_sync_browser(thread_id)
+            return "Manual control released. Automation is now re-enabled."
+        except Exception as e:
+            logger.error("Failed to release control: %s", e, exc_info=True)
+            return f"Error releasing control: {e!s}"
+
+    async def _arun(self, thread_id: str = "default", **kwargs) -> str:
+        try:
+            browser_client = await self._session_manager.get_async_browser_client(
+                thread_id
+            )
+            if not browser_client:
+                return "No browser session found."
+            browser_client.release_control()
+            # Reconnect Playwright — release_control invalidates the CDP connection
+            await self._session_manager.reconnect_async_browser(thread_id)
+            return "Manual control released. Automation is now re-enabled."
+        except Exception as e:
+            logger.error("Failed to release control: %s", e, exc_info=True)
+            return f"Error releasing control: {e!s}"
+
+
 class BrowserToolkit:
     """Toolkit for navigating web with AWS Bedrock browser.
 
@@ -523,14 +657,86 @@ class BrowserToolkit:
         ```
     """
 
-    def __init__(self, region: str = "us-west-2"):
+    def __init__(
+        self,
+        region: str = "us-west-2",
+        identifier: str | None = None,
+        session_timeout_seconds: int | None = None,
+        viewport: ViewportConfiguration | dict[str, int] | None = None,
+        proxy_configuration: ProxyConfiguration | dict | None = None,
+        extensions: list[BrowserExtension | dict] | None = None,
+        profile_configuration: ProfileConfiguration | dict | None = None,
+    ):
         """Initialize the toolkit.
 
         Args:
             region: AWS region for the browser client
+            identifier: Browser sandbox identifier. Defaults to the system browser.
+                Use a custom browser ID from create_browser() for custom configurations.
+            session_timeout_seconds: Session timeout in seconds (1-28800). Defaults to
+                3600 (1 hour) if not specified.
+            viewport: Viewport dimensions. Accepts a ``ViewportConfiguration`` instance
+                or a plain dict::
+
+                    # Typed (recommended)
+                    from bedrock_agentcore.tools import ViewportConfiguration
+                    viewport=ViewportConfiguration.desktop_hd()   # 1920x1080
+                    viewport=ViewportConfiguration(width=1280, height=720)
+
+                    # Plain dict
+                    viewport={"width": 1920, "height": 1080}
+
+            proxy_configuration: Proxy routing configuration. Accepts a
+                ``ProxyConfiguration`` instance or a plain dict::
+
+                    # Typed (recommended)
+                    from bedrock_agentcore.tools import (
+                        ProxyConfiguration, ExternalProxy, ProxyCredentials, BasicAuth,
+                    )
+                    proxy_configuration=ProxyConfiguration(
+                        proxies=[ExternalProxy(server="proxy.corp.com", port=8080)],
+                        bypass_patterns=[".amazonaws.com"],
+                    )
+
+                    # Plain dict
+                    proxy_configuration={
+                        "proxies": [{"externalProxy": {"server": "proxy.corp.com", "port": 8080}}],
+                        "bypass": {"domainPatterns": [".amazonaws.com"]},
+                    }
+
+            extensions: List of browser extensions stored in S3. Each element can be
+                a ``BrowserExtension`` instance or a plain dict::
+
+                    # Typed (recommended)
+                    from bedrock_agentcore.tools import BrowserExtension, ExtensionS3Location
+                    extensions=[BrowserExtension(s3_location=ExtensionS3Location(
+                        bucket="my-ext", prefix="ublock/",
+                    ))]
+
+                    # Plain dict
+                    extensions=[{"location": {"s3": {"bucket": "my-ext", "prefix": "ublock/"}}}]
+
+            profile_configuration: Profile for persisting browser state (cookies,
+                local storage) across sessions. Accepts a ``ProfileConfiguration``
+                instance or a plain dict::
+
+                    # Typed (recommended)
+                    from bedrock_agentcore.tools import ProfileConfiguration
+                    profile_configuration=ProfileConfiguration(profile_identifier="my-profile")
+
+                    # Plain dict
+                    profile_configuration={"profileIdentifier": "my-profile-id"}
         """
         self.region = region
-        self.session_manager = BrowserSessionManager(region=region)
+        self.session_manager = BrowserSessionManager(
+            region=region,
+            identifier=identifier,
+            session_timeout_seconds=session_timeout_seconds,
+            viewport=viewport,
+            proxy_configuration=proxy_configuration,
+            extensions=extensions,
+            profile_configuration=profile_configuration,
+        )
         self.tools: list[BaseTool] = []
         self._nest_current_loop()
         self._setup_tools()
@@ -559,6 +765,9 @@ class BrowserToolkit:
             ExtractHyperlinksTool(session_manager=self.session_manager),
             GetElementsTool(session_manager=self.session_manager),
             CurrentWebPageTool(session_manager=self.session_manager),
+            GenerateLiveViewUrlTool(session_manager=self.session_manager),
+            TakeControlTool(session_manager=self.session_manager),
+            ReleaseControlTool(session_manager=self.session_manager),
         ]
 
     def get_tools(self) -> list[BaseTool]:
@@ -598,15 +807,41 @@ class BrowserToolkit:
 
 def create_browser_toolkit(
     region: str = "us-west-2",
+    identifier: str | None = None,
+    session_timeout_seconds: int | None = None,
+    viewport: ViewportConfiguration | dict[str, int] | None = None,
+    proxy_configuration: ProxyConfiguration | dict | None = None,
+    extensions: list[BrowserExtension | dict] | None = None,
+    profile_configuration: ProfileConfiguration | dict | None = None,
 ) -> tuple[BrowserToolkit, list[BaseTool]]:
     """Create a BrowserToolkit.
 
     Args:
         region: AWS region for browser client
+        identifier: Browser sandbox identifier. Defaults to the system browser.
+            Use a custom browser ID from create_browser() for custom configurations.
+        session_timeout_seconds: Session timeout in seconds (1-28800). Defaults to
+            3600 (1 hour) if not specified.
+        viewport: Viewport dimensions. Accepts a ``ViewportConfiguration`` instance
+            (e.g. ``ViewportConfiguration.desktop_hd()``) or a plain dict.
+        proxy_configuration: Proxy routing configuration. Accepts a
+            ``ProxyConfiguration`` instance or a plain dict.
+        extensions: List of browser extensions. Each element can be a
+            ``BrowserExtension`` instance or a plain dict.
+        profile_configuration: Profile for persisting browser state. Accepts a
+            ``ProfileConfiguration`` instance or a plain dict.
 
     Returns:
         Tuple of (toolkit, tools)
     """
-    toolkit = BrowserToolkit(region=region)
+    toolkit = BrowserToolkit(
+        region=region,
+        identifier=identifier,
+        session_timeout_seconds=session_timeout_seconds,
+        viewport=viewport,
+        proxy_configuration=proxy_configuration,
+        extensions=extensions,
+        profile_configuration=profile_configuration,
+    )
     tools = toolkit.get_tools()
     return toolkit, tools
