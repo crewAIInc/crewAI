@@ -1024,3 +1024,118 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+def test_tools_not_discarded_when_response_model_set():
+    """Test that agent tools are preserved when response_model is set.
+
+    Regression test for #4697: when both tools and response_model are
+    provided, InternalInstructor must NOT be used because it creates its
+    own litellm call that silently discards the tools.  Instead the
+    standard litellm.completion path should receive both tools and
+    response_model.
+    """
+
+    class MyOutput(BaseModel):
+        name: str
+        value: str
+
+    tool_schema = {
+        "type": "function",
+        "function": {
+            "name": "my_search_tool",
+            "description": "Search for data",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query",
+                    }
+                },
+                "required": ["query"],
+            },
+        },
+    }
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    messages = [{"role": "user", "content": "Find the name and value"}]
+
+    with patch("litellm.completion") as mocked_completion:
+        # Simulate a structured response from litellm when response_model is set
+        mock_result = MyOutput(name="Alice", value="42")
+        mocked_completion.return_value = mock_result
+
+        result = llm.call(
+            messages,
+            tools=[tool_schema],
+            response_model=MyOutput,
+        )
+
+        # litellm.completion must have been called (not InternalInstructor)
+        mocked_completion.assert_called_once()
+
+        _, kwargs = mocked_completion.call_args
+
+        # The tools must be present in the call to litellm.completion
+        assert "tools" in kwargs, "tools should be passed to litellm.completion"
+        assert len(kwargs["tools"]) == 1
+        assert kwargs["tools"][0]["function"]["name"] == "my_search_tool"
+
+        # response_model must also be present
+        assert kwargs.get("response_model") is MyOutput
+
+
+@pytest.mark.asyncio
+async def test_tools_not_discarded_when_response_model_set_async():
+    """Async variant: agent tools are preserved when response_model is set.
+
+    Regression test for #4697 (async path).
+    """
+
+    class MyOutput(BaseModel):
+        name: str
+        value: str
+
+    tool_schema = {
+        "type": "function",
+        "function": {
+            "name": "my_search_tool",
+            "description": "Search for data",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query",
+                    }
+                },
+                "required": ["query"],
+            },
+        },
+    }
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    messages = [{"role": "user", "content": "Find the name and value"}]
+
+    with patch("litellm.acompletion") as mocked_acompletion:
+        mock_result = MyOutput(name="Alice", value="42")
+        mocked_acompletion.return_value = mock_result
+
+        result = await llm.acall(
+            messages,
+            tools=[tool_schema],
+            response_model=MyOutput,
+        )
+
+        mocked_acompletion.assert_called_once()
+
+        _, kwargs = mocked_acompletion.call_args
+
+        assert "tools" in kwargs, "tools should be passed to litellm.acompletion"
+        assert len(kwargs["tools"]) == 1
+        assert kwargs["tools"][0]["function"]["name"] == "my_search_tool"
+
+        assert kwargs.get("response_model") is MyOutput

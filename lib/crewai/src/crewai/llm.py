@@ -1193,7 +1193,11 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Handle response_model with InternalInstructor for LiteLLM
-        if response_model and self.is_litellm:
+        # Only use the InternalInstructor shortcut when there are no tools.
+        # When tools are present, fall through to the standard litellm.completion
+        # path so that both tools and response_model are sent together — otherwise
+        # the agent's tools are silently discarded (see #4697).
+        if response_model and self.is_litellm and not params.get("tools"):
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1338,7 +1342,11 @@ class LLM(BaseLLM):
         Returns:
             str: The response text
         """
-        if response_model and self.is_litellm:
+        # Only use the InternalInstructor shortcut when there are no tools.
+        # When tools are present, fall through to the standard litellm.acompletion
+        # path so that both tools and response_model are sent together — otherwise
+        # the agent's tools are silently discarded (see #4697).
+        if response_model and self.is_litellm and not params.get("tools"):
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
