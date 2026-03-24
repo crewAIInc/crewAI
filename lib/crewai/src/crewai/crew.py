@@ -6,6 +6,7 @@ from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
+from pathlib import Path
 import re
 from typing import (
     TYPE_CHECKING,
@@ -91,6 +92,7 @@ from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -294,6 +296,11 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Skill search paths or pre-loaded Skill objects applied to all agents in the crew.",
+    )
+
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
@@ -376,7 +383,7 @@ class Crew(FlowTrackable, BaseModel):
             if self.embedder is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
-                embedder = build_embedder(self.embedder)  # type: ignore[arg-type]
+                embedder = build_embedder(cast(dict[str, Any], self.embedder))
             self._memory = Memory(embedder=embedder, root_scope=crew_root_scope)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
