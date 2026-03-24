@@ -100,6 +100,93 @@ class TestStreamChunk:
         assert chunk.tool_call.tool_name == "search"
 
 
+class TestCreateStreamChunkTaskMetadata:
+    """Tests for _create_stream_chunk populating task metadata from events.
+
+    Regression tests for https://github.com/crewAIInc/crewAI/issues/4347
+    where streaming chunks were missing task_name, task_id, and task_index
+    because the values were only read from the (empty) current_task_info
+    dict instead of from the LLMStreamChunkEvent.
+    """
+
+    def test_task_name_and_id_from_event(self) -> None:
+        """task_name and task_id should come from the event when available."""
+        from crewai.utilities.streaming import TaskInfo, _create_stream_chunk
+
+        empty_info: TaskInfo = {
+            "index": 0,
+            "name": "",
+            "id": "",
+            "agent_role": "",
+            "agent_id": "",
+        }
+        event = LLMStreamChunkEvent(
+            type="llm_stream_chunk",
+            chunk="hello",
+            call_id="c1",
+            task_id="uuid-task-1",
+            task_name="My Task",
+            agent_id="uuid-agent-1",
+            agent_role="Researcher",
+        )
+
+        chunk = _create_stream_chunk(event, empty_info)
+        assert chunk.task_id == "uuid-task-1"
+        assert chunk.task_name == "My Task"
+        assert chunk.agent_id == "uuid-agent-1"
+        assert chunk.agent_role == "Researcher"
+
+    def test_task_index_resolved_via_mapping(self) -> None:
+        """task_index should be looked up from task_id_to_index mapping."""
+        from crewai.utilities.streaming import TaskInfo, _create_stream_chunk
+
+        empty_info: TaskInfo = {
+            "index": 0,
+            "name": "",
+            "id": "",
+            "agent_role": "",
+            "agent_id": "",
+        }
+        mapping = {"uuid-task-0": 0, "uuid-task-1": 1, "uuid-task-2": 2}
+
+        event = LLMStreamChunkEvent(
+            type="llm_stream_chunk",
+            chunk="hello",
+            call_id="c1",
+            task_id="uuid-task-2",
+            task_name="Third Task",
+        )
+
+        chunk = _create_stream_chunk(event, empty_info, task_id_to_index=mapping)
+        assert chunk.task_index == 2
+        assert chunk.task_id == "uuid-task-2"
+        assert chunk.task_name == "Third Task"
+
+    def test_fallback_to_current_task_info(self) -> None:
+        """When the event has no task metadata, fall back to current_task_info."""
+        from crewai.utilities.streaming import TaskInfo, _create_stream_chunk
+
+        info: TaskInfo = {
+            "index": 3,
+            "name": "Fallback Task",
+            "id": "fallback-id",
+            "agent_role": "Fallback Agent",
+            "agent_id": "fallback-agent-id",
+        }
+        event = LLMStreamChunkEvent(
+            type="llm_stream_chunk",
+            chunk="data",
+            call_id="c2",
+        )
+
+        chunk = _create_stream_chunk(event, info)
+        assert chunk.task_index == 3
+        assert chunk.task_name == "Fallback Task"
+        assert chunk.task_id == "fallback-id"
+        assert chunk.agent_role == "Fallback Agent"
+        assert chunk.agent_id == "fallback-agent-id"
+
+
 class TestCrewStreamingOutput:
     """Tests for CrewStreamingOutput functionality."""
 
