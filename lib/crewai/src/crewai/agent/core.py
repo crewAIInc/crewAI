@@ -421,6 +421,18 @@ class Agent(BaseAgent):
             and len(tools) > 0
         )
 
+    def _llm_supports_function_calling(self) -> bool:
+        """Check if the LLM supports native function calling.
+
+        Returns:
+            True if the LLM supports function calling.
+        """
+        return (
+            hasattr(self.llm, "supports_function_calling")
+            and callable(getattr(self.llm, "supports_function_calling", None))
+            and self.llm.supports_function_calling()
+        )
+
     def execute_task(
         self,
         task: Task,
@@ -969,7 +981,13 @@ class Agent(BaseAgent):
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
                 response_model=(
-                    task.response_model or task.output_pydantic or task.output_json
+                    task.response_model
+                    or (
+                        (task.output_pydantic or task.output_json)
+                        if use_native_tool_calling
+                        or self._llm_supports_function_calling()
+                        else None
+                    )
                 )
                 if task
                 else None,
@@ -1002,7 +1020,14 @@ class Agent(BaseAgent):
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
-            (task.response_model or task.output_pydantic or task.output_json)
+            (
+                task.response_model
+                or (
+                    (task.output_pydantic or task.output_json)
+                    if self._llm_supports_function_calling()
+                    else None
+                )
+            )
             if task
             else None
         )
