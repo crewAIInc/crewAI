@@ -1,7 +1,5 @@
 """Tests for StdioTransport command allowlist validation."""
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
 
 from crewai.mcp.config import MCPServerStdio
