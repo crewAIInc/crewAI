@@ -22,6 +22,7 @@ dependencies = [
 bump-version = "crewai_devtools.cli:bump"
 tag = "crewai_devtools.cli:tag"
 release = "crewai_devtools.cli:release"
+docs-check = "crewai_devtools.docs_check:docs_check"
 devtools = "crewai_devtools.cli:main"
 
 [build-system]
