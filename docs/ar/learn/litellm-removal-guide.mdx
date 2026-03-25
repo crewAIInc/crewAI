@@ -1,0 +1,358 @@
+---
+title: استخدام CrewAI بدون LiteLLM
+description: كيفية استخدام CrewAI مع التكاملات الأصلية للمزودين وإزالة اعتمادية LiteLLM من مشروعك.
+icon: shield-check
+mode: "wide"
+---
+
+## نظرة عامة
+
+يدعم CrewAI مسارين للاتصال بمزودي LLM:
+
+1. **التكاملات الأصلية** — اتصالات SDK مباشرة مع OpenAI وAnthropic وGoogle Gemini وAzure OpenAI وAWS Bedrock
+2. **LiteLLM كاحتياط** — طبقة ترجمة تدعم أكثر من 100 مزود إضافي
+
+يشرح هذا الدليل كيفية استخدام CrewAI حصرياً مع التكاملات الأصلية للمزودين، مع إزالة أي اعتمادية على LiteLLM.
+
+<Warning>
+  تم عزل حزمة `litellm` على PyPI بسبب حادث أمني/موثوقية. إذا كنت تعتمد على مزودين يحتاجون LiteLLM، يجب عليك الانتقال إلى التكاملات الأصلية. توفر لك تكاملات CrewAI الأصلية الوظائف الكاملة بدون LiteLLM.
+</Warning>
+
+## لماذا إزالة LiteLLM؟
+
+- **تقليل سطح الاعتماديات** — حزم أقل تعني مخاطر أقل محتملة في سلسلة التوريد
+- **أداء أفضل** — تتواصل حزم SDK الأصلية مباشرة مع واجهات برمجة تطبيقات المزودين، مما يلغي طبقة الترجمة
+- **تصحيح أخطاء أبسط** — طبقة تجريد واحدة أقل بين كودك والمزود
+- **حجم تثبيت أصغر** — يجلب LiteLLM العديد من الاعتماديات العابرة
+
+## المزودون الأصليون (لا يحتاجون LiteLLM)
+
+هؤلاء المزودون يستخدمون حزم SDK الخاصة بهم ويعملون بدون تثبيت LiteLLM:
+
+<CardGroup cols={2}>
+  <Card title="OpenAI" icon="bolt">
+    GPT-4o، GPT-4o-mini، o1، o3-mini، والمزيد.
+    ```bash
+    uv add "crewai[openai]"
+    ```
+  </Card>
+  <Card title="Anthropic" icon="a">
+    Claude Sonnet، Claude Haiku، والمزيد.
+    ```bash
+    uv add "crewai[anthropic]"
+    ```
+  </Card>
+  <Card title="Google Gemini" icon="google">
+    Gemini 2.0 Flash، Gemini 2.0 Pro، والمزيد.
+    ```bash
+    uv add "crewai[gemini]"
+    ```
+  </Card>
+  <Card title="Azure OpenAI" icon="microsoft">
+    نماذج OpenAI المستضافة على Azure.
+    ```bash
+    uv add "crewai[azure]"
+    ```
+  </Card>
+  <Card title="AWS Bedrock" icon="aws">
+    Claude، Llama، Titan، والمزيد عبر AWS.
+    ```bash
+    uv add "crewai[bedrock]"
+    ```
+  </Card>
+</CardGroup>
+
+<Info>
+  إذا كنت تستخدم المزودين الأصليين فقط، فلن تحتاج **أبداً** لتثبيت `crewai[litellm]`. حزمة `crewai` الأساسية بالإضافة إلى الإضافة الخاصة بالمزود الذي اخترته هي كل ما تحتاجه.
+</Info>
+
+## كيفية التحقق مما إذا كنت تستخدم LiteLLM
+
+### تحقق من سلاسل النماذج الخاصة بك
+
+إذا كان كودك يستخدم بادئات النماذج هذه، فأنت تمرر عبر LiteLLM:
+
+| البادئة | المزود | يستخدم LiteLLM؟ |
+|--------|----------|---------------|
+| `ollama/` | Ollama | ✅ نعم |
+| `groq/` | Groq | ✅ نعم |
+| `together_ai/` | Together AI | ✅ نعم |
+| `mistral/` | Mistral | ✅ نعم |
+| `cohere/` | Cohere | ✅ نعم |
+| `huggingface/` | Hugging Face | ✅ نعم |
+| `openai/` | OpenAI | ❌ أصلي |
+| `anthropic/` | Anthropic | ❌ أصلي |
+| `gemini/` | Google Gemini | ❌ أصلي |
+| `azure/` | Azure OpenAI | ❌ أصلي |
+| `bedrock/` | AWS Bedrock | ❌ أصلي |
+
+### تحقق مما إذا كان LiteLLM مثبتاً
+
+```bash
+# Using pip
+pip show litellm
+
+# Using uv
+uv pip show litellm
+```
+
+إذا أرجع الأمر معلومات الحزمة، فإن LiteLLM مثبت في بيئتك.
+
+### تحقق من اعتمادياتك
+
+انظر إلى ملف `pyproject.toml` الخاص بك بحثاً عن `crewai[litellm]`:
+
+```toml
+# If you see this, you have LiteLLM as a dependency
+dependencies = [
+    "crewai[litellm]>=0.100.0",  # ← Uses LiteLLM
+]
+
+# Change to a native provider extra instead
+dependencies = [
+    "crewai[openai]>=0.100.0",   # ← Native, no LiteLLM
+]
+```
+
+## دليل الانتقال
+
+### الخطوة 1: حدد مزودك الحالي
+
+ابحث عن جميع استدعاءات `LLM()` وسلاسل النماذج في كودك:
+
+```bash
+# Search your codebase for LLM model strings
+grep -r "LLM(" --include="*.py" .
+grep -r "llm=" --include="*.yaml" .
+grep -r "llm:" --include="*.yaml" .
+```
+
+### الخطوة 2: انتقل إلى مزود أصلي
+
+<Tabs>
+  <Tab title="الانتقال إلى OpenAI">
+    ```python
+    from crewai import LLM
+
+    # Before (LiteLLM):
+    # llm = LLM(model="groq/llama-3.1-70b")
+
+    # After (Native):
+    llm = LLM(model="openai/gpt-4o")
+    ```
+
+    ```bash
+    # Install
+    uv add "crewai[openai]"
+
+    # Set your API key
+    export OPENAI_API_KEY="sk-..."
+    ```
+  </Tab>
+  <Tab title="الانتقال إلى Anthropic">
+    ```python
+    from crewai import LLM
+
+    # Before (LiteLLM):
+    # llm = LLM(model="together_ai/meta-llama/Meta-Llama-3.1-70B")
+
+    # After (Native):
+    llm = LLM(model="anthropic/claude-sonnet-4-20250514")
+    ```
+
+    ```bash
+    # Install
+    uv add "crewai[anthropic]"
+
+    # Set your API key
+    export ANTHROPIC_API_KEY="sk-ant-..."
+    ```
+  </Tab>
+  <Tab title="الانتقال إلى Gemini">
+    ```python
+    from crewai import LLM
+
+    # Before (LiteLLM):
+    # llm = LLM(model="mistral/mistral-large-latest")
+
+    # After (Native):
+    llm = LLM(model="gemini/gemini-2.0-flash")
+    ```
+
+    ```bash
+    # Install
+    uv add "crewai[gemini]"
+
+    # Set your API key
+    export GEMINI_API_KEY="..."
+    ```
+  </Tab>
+  <Tab title="الانتقال إلى Azure OpenAI">
+    ```python
+    from crewai import LLM
+
+    # After (Native):
+    llm = LLM(
+        model="azure/your-deployment-name",
+        api_key="your-azure-api-key",
+        base_url="https://your-resource.openai.azure.com",
+        api_version="2024-06-01"
+    )
+    ```
+
+    ```bash
+    # Install
+    uv add "crewai[azure]"
+    ```
+  </Tab>
+  <Tab title="الانتقال إلى AWS Bedrock">
+    ```python
+    from crewai import LLM
+
+    # After (Native):
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_region_name="us-east-1"
+    )
+    ```
+
+    ```bash
+    # Install
+    uv add "crewai[bedrock]"
+
+    # Configure AWS credentials
+    export AWS_ACCESS_KEY_ID="..."
+    export AWS_SECRET_ACCESS_KEY="..."
+    export AWS_DEFAULT_REGION="us-east-1"
+    ```
+  </Tab>
+</Tabs>
+
+### الخطوة 3: الاحتفاظ بـ Ollama بدون LiteLLM
+
+إذا كنت تستخدم Ollama وتريد الاستمرار في استخدامه، يمكنك الاتصال عبر واجهة برمجة تطبيقات Ollama المتوافقة مع OpenAI:
+
+```python
+from crewai import LLM
+
+# Before (LiteLLM):
+# llm = LLM(model="ollama/llama3")
+
+# After (OpenAI-compatible mode, no LiteLLM needed):
+llm = LLM(
+    model="openai/llama3",
+    base_url="http://localhost:11434/v1",
+    api_key="ollama"  # Ollama doesn't require a real API key
+)
+```
+
+<Tip>
+  العديد من خوادم الاستدلال المحلية (Ollama، vLLM، LM Studio، llama.cpp) توفر واجهة برمجة تطبيقات متوافقة مع OpenAI. يمكنك استخدام بادئة `openai/` مع `base_url` مخصص للاتصال بأي منها بشكل أصلي.
+</Tip>
+
+### الخطوة 4: تحديث إعدادات YAML
+
+```yaml
+# Before (LiteLLM providers):
+researcher:
+  role: Research Specialist
+  goal: Conduct research
+  backstory: A dedicated researcher
+  llm: groq/llama-3.1-70b          # ← LiteLLM
+
+# After (Native provider):
+researcher:
+  role: Research Specialist
+  goal: Conduct research
+  backstory: A dedicated researcher
+  llm: openai/gpt-4o               # ← Native
+```
+
+### الخطوة 5: إزالة LiteLLM
+
+بمجرد انتقال جميع مراجع النماذج الخاصة بك:
+
+```bash
+# Remove litellm from your project
+uv remove litellm
+
+# Or if using pip
+pip uninstall litellm
+
+# Update your pyproject.toml: change crewai[litellm] to your provider extra
+# e.g., crewai[openai], crewai[anthropic], crewai[gemini]
+```
+
+### الخطوة 6: التحقق
+
+شغّل مشروعك وتأكد من أن كل شيء يعمل:
+
+```bash
+# Run your crew
+crewai run
+
+# Or run your tests
+uv run pytest
+```
+
+## مرجع سريع: خريطة سلاسل النماذج
+
+فيما يلي مسارات الانتقال الشائعة من المزودين المعتمدين على LiteLLM إلى المزودين الأصليين:
+
+```python
+from crewai import LLM
+
+# ─── LiteLLM providers → Native alternatives ────────────────────
+
+# Groq → OpenAI or Anthropic
+# llm = LLM(model="groq/llama-3.1-70b")
+llm = LLM(model="openai/gpt-4o-mini")           # Fast & affordable
+llm = LLM(model="anthropic/claude-haiku-3-5")    # Fast & affordable
+
+# Together AI → OpenAI or Gemini
+# llm = LLM(model="together_ai/meta-llama/Meta-Llama-3.1-70B")
+llm = LLM(model="openai/gpt-4o")                 # High quality
+llm = LLM(model="gemini/gemini-2.0-flash")       # Fast & capable
+
+# Mistral → Anthropic or OpenAI
+# llm = LLM(model="mistral/mistral-large-latest")
+llm = LLM(model="anthropic/claude-sonnet-4-20250514")  # High quality
+
+# Ollama → OpenAI-compatible (keep using local models)
+# llm = LLM(model="ollama/llama3")
+llm = LLM(
+    model="openai/llama3",
+    base_url="http://localhost:11434/v1",
+    api_key="ollama"
+)
+```
+
+## الأسئلة الشائعة
+
+<AccordionGroup>
+  <Accordion title="هل أفقد أي وظائف بإزالة LiteLLM؟">
+    لا، إذا كنت تستخدم أحد المزودين الخمسة المدعومين أصلياً (OpenAI، Anthropic، Gemini، Azure، Bedrock). تدعم هذه التكاملات الأصلية جميع ميزات CrewAI بما في ذلك البث واستدعاء الأدوات والمخرجات المنظمة والمزيد. ستفقد فقط الوصول إلى المزودين المتاحين حصرياً عبر LiteLLM (مثل Groq وTogether AI وMistral كمزودين من الدرجة الأولى).
+  </Accordion>
+  <Accordion title="هل يمكنني استخدام عدة مزودين أصليين في نفس الوقت؟">
+    نعم. ثبّت إضافات متعددة واستخدم مزودين مختلفين لوكلاء مختلفين:
+    ```bash
+    uv add "crewai[openai,anthropic,gemini]"
+    ```
+    ```python
+    researcher = Agent(llm="openai/gpt-4o", ...)
+    writer = Agent(llm="anthropic/claude-sonnet-4-20250514", ...)
+    ```
+  </Accordion>
+  <Accordion title="هل LiteLLM آمن للاستخدام الآن؟">
+    بغض النظر عن حالة العزل، فإن تقليل سطح اعتمادياتك يُعد ممارسة أمنية جيدة. إذا كنت تحتاج فقط مزودين يدعمهم CrewAI أصلياً، فلا يوجد سبب لإبقاء LiteLLM مثبتاً.
+  </Accordion>
+  <Accordion title="ماذا عن متغيرات البيئة مثل OPENAI_API_KEY؟">
+    يستخدم المزودون الأصليون نفس متغيرات البيئة التي اعتدت عليها. لا حاجة لتغييرات على `OPENAI_API_KEY` أو `ANTHROPIC_API_KEY` أو `GEMINI_API_KEY` وغيرها.
+  </Accordion>
+</AccordionGroup>
+
+## موارد ذات صلة
+
+- [اتصالات LLM](/ar/learn/llm-connections) — الدليل الكامل لربط CrewAI مع أي LLM
+- [مفاهيم LLM](/ar/concepts/llms) — فهم نماذج اللغة الكبيرة في CrewAI
+- [دليل اختيار LLM](/ar/learn/llm-selection-guide) — اختيار النموذج المناسب لحالة استخدامك

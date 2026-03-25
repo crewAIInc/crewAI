@@ -1,0 +1,206 @@
+---
+title: تقييم Patronus AI
+description: راقب وقيّم أداء وكلاء CrewAI باستخدام منصة التقييم الشاملة من Patronus AI لمخرجات LLM وسلوكيات الوكلاء.
+icon: shield-check
+mode: "wide"
+---
+
+# تقييم Patronus AI
+
+## نظرة عامة
+
+يوفر [Patronus AI](https://patronus.ai) إمكانيات تقييم ومراقبة شاملة لوكلاء CrewAI، مما يمكّنك من تقييم مخرجات النماذج وسلوكيات الوكلاء والأداء العام للنظام. يتيح لك هذا التكامل تنفيذ سير عمل تقييم مستمر يساعد في الحفاظ على الجودة والموثوقية في بيئات الإنتاج.
+
+## الميزات الرئيسية
+
+- **التقييم الآلي**: تقييم فوري لمخرجات وسلوكيات الوكلاء
+- **معايير مخصصة**: حدد معايير تقييم محددة مصممة لحالات الاستخدام الخاصة بك
+- **مراقبة الأداء**: تتبع مقاييس أداء الوكلاء بمرور الوقت
+- **ضمان الجودة**: ضمان جودة مخرجات متسقة عبر سيناريوهات مختلفة
+- **السلامة والامتثال**: مراقبة المشكلات المحتملة وانتهاكات السياسات
+
+## أدوات التقييم
+
+يوفر Patronus ثلاث أدوات تقييم رئيسية لحالات استخدام مختلفة:
+
+1. **PatronusEvalTool**: يسمح للوكلاء باختيار المقيّم والمعايير الأنسب لمهمة التقييم.
+2. **PatronusPredefinedCriteriaEvalTool**: يستخدم مقيّماً ومعايير محددة مسبقاً من قبل المستخدم.
+3. **PatronusLocalEvaluatorTool**: يستخدم دوال تقييم مخصصة محددة من قبل المستخدم.
+
+## التثبيت
+
+لاستخدام هذه الأدوات، تحتاج إلى تثبيت حزمة Patronus:
+
+```shell
+uv add patronus
+```
+
+ستحتاج أيضاً إلى إعداد مفتاح API الخاص بـ Patronus كمتغير بيئة:
+
+```shell
+export PATRONUS_API_KEY="your_patronus_api_key"
+```
+
+## خطوات البدء
+
+لاستخدام أدوات تقييم Patronus بفعالية، اتبع الخطوات التالية:
+
+1. **تثبيت Patronus**: ثبّت حزمة Patronus باستخدام الأمر أعلاه.
+2. **إعداد مفتاح API**: عيّن مفتاح API الخاص بـ Patronus كمتغير بيئة.
+3. **اختيار الأداة المناسبة**: حدد أداة تقييم Patronus المناسبة بناءً على احتياجاتك.
+4. **إعداد الأداة**: هيئ الأداة بالمعاملات اللازمة.
+
+## أمثلة
+
+### استخدام PatronusEvalTool
+
+يوضح المثال التالي كيفية استخدام `PatronusEvalTool`، التي تسمح للوكلاء باختيار المقيّم والمعايير الأنسب:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusEvalTool
+
+# Initialize the tool
+patronus_eval_tool = PatronusEvalTool()
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code and verify that the output is code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate and evaluate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence. Select the most appropriate evaluator and criteria for evaluating your output.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+### استخدام PatronusPredefinedCriteriaEvalTool
+
+يوضح المثال التالي كيفية استخدام `PatronusPredefinedCriteriaEvalTool`، التي تستخدم مقيّماً ومعايير محددة مسبقاً:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusPredefinedCriteriaEvalTool
+
+# Initialize the tool with predefined criteria
+patronus_eval_tool = PatronusPredefinedCriteriaEvalTool(
+    evaluators=[{"evaluator": "judge", "criteria": "contains-code"}]
+)
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+### استخدام PatronusLocalEvaluatorTool
+
+يوضح المثال التالي كيفية استخدام `PatronusLocalEvaluatorTool`، التي تستخدم دوال تقييم مخصصة:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusLocalEvaluatorTool
+from patronus import Client, EvaluationResult
+import random
+
+# Initialize the Patronus client
+client = Client()
+
+# Register a custom evaluator
+@client.register_local_evaluator("random_evaluator")
+def random_evaluator(**kwargs):
+    score = random.random()
+    return EvaluationResult(
+        score_raw=score,
+        pass_=score >= 0.5,
+        explanation="example explanation",
+    )
+
+# Initialize the tool with the custom evaluator
+patronus_eval_tool = PatronusLocalEvaluatorTool(
+    patronus_client=client,
+    evaluator="random_evaluator",
+    evaluated_model_gold_answer="example label",
+)
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+## المعاملات
+
+### PatronusEvalTool
+
+لا تتطلب `PatronusEvalTool` أي معاملات أثناء التهيئة. تقوم تلقائياً بجلب المقيّمين والمعايير المتاحة من API الخاص بـ Patronus.
+
+### PatronusPredefinedCriteriaEvalTool
+
+تقبل `PatronusPredefinedCriteriaEvalTool` المعاملات التالية أثناء التهيئة:
+
+- **evaluators**: مطلوب. قائمة من القواميس تحتوي على المقيّم والمعايير المراد استخدامها. مثال: `[{"evaluator": "judge", "criteria": "contains-code"}]`.
+
+### PatronusLocalEvaluatorTool
+
+تقبل `PatronusLocalEvaluatorTool` المعاملات التالية أثناء التهيئة:
+
+- **patronus_client**: مطلوب. مثيل عميل Patronus.
+- **evaluator**: اختياري. اسم المقيّم المحلي المسجل للاستخدام. القيمة الافتراضية هي سلسلة نصية فارغة.
+- **evaluated_model_gold_answer**: اختياري. الإجابة المرجعية للاستخدام في التقييم. القيمة الافتراضية هي سلسلة نصية فارغة.
+
+## الاستخدام
+
+عند استخدام أدوات تقييم Patronus، تقدم مدخلات النموذج ومخرجاته وسياقه، وتعيد الأداة نتائج التقييم من API الخاص بـ Patronus.
+
+بالنسبة لـ `PatronusEvalTool` و`PatronusPredefinedCriteriaEvalTool`، المعاملات التالية مطلوبة عند استدعاء الأداة:
+
+- **evaluated_model_input**: وصف مهمة الوكيل بنص بسيط.
+- **evaluated_model_output**: مخرجات الوكيل للمهمة.
+- **evaluated_model_retrieved_context**: سياق الوكيل.
+
+بالنسبة لـ `PatronusLocalEvaluatorTool`، نفس المعاملات مطلوبة، لكن المقيّم والإجابة المرجعية يتم تحديدهما أثناء التهيئة.
+
+## الخلاصة
+
+توفر أدوات تقييم Patronus طريقة قوية لتقييم وتسجيل درجات مدخلات ومخرجات النماذج باستخدام منصة Patronus AI. من خلال تمكين الوكلاء من تقييم مخرجاتهم أو مخرجات وكلاء آخرين، يمكن لهذه الأدوات المساعدة في تحسين جودة وموثوقية سير عمل CrewAI.

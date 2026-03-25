@@ -5667,6 +5667,1898 @@
             ]
           }
         ]
+      },
+      {
+        "language": "ar",
+        "global": {
+          "anchors": [
+            {
+              "anchor": "الموقع",
+              "href": "https://crewai.com",
+              "icon": "globe"
+            },
+            {
+              "anchor": "المنتدى",
+              "href": "https://community.crewai.com",
+              "icon": "discourse"
+            },
+            {
+              "anchor": "المدوّنة",
+              "href": "https://blog.crewai.com",
+              "icon": "newspaper"
+            },
+            {
+              "anchor": "CrewGPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
+            }
+          ]
+        },
+        "versions": [
+          {
+            "version": "v1.11.1",
+            "default": true,
+            "tabs": [
+              {
+                "tab": "الرئيسية",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "مرحباً",
+                    "pages": [
+                      "ar/index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التقنية التوثيق",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/introduction",
+                      "ar/installation",
+                      "ar/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "الأدلّة",
+                    "pages": [
+                      {
+                        "group": "الاستراتيجية",
+                        "icon": "compass",
+                        "pages": [
+                          "ar/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "الوكلاء",
+                        "icon": "user",
+                        "pages": [
+                          "ar/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "الطواقم",
+                        "icon": "users",
+                        "pages": [
+                          "ar/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "التدفقات",
+                        "icon": "code-branch",
+                        "pages": [
+                          "ar/guides/flows/first-flow",
+                          "ar/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "الأدوات",
+                        "icon": "wrench",
+                        "pages": [
+                          "ar/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "أدوات البرمجة",
+                        "icon": "terminal",
+                        "pages": [
+                          "ar/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
+                        "group": "متقدّم",
+                        "icon": "gear",
+                        "pages": [
+                          "ar/guides/advanced/customizing-prompts",
+                          "ar/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "الترحيل",
+                        "icon": "shuffle",
+                        "pages": [
+                          "ar/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "المفاهيم الأساسية",
+                    "pages": [
+                      "ar/concepts/agents",
+                      "ar/concepts/tasks",
+                      "ar/concepts/crews",
+                      "ar/concepts/flows",
+                      "ar/concepts/production-architecture",
+                      "ar/concepts/knowledge",
+                      "ar/concepts/skills",
+                      "ar/concepts/llms",
+                      "ar/concepts/files",
+                      "ar/concepts/processes",
+                      "ar/concepts/collaboration",
+                      "ar/concepts/training",
+                      "ar/concepts/memory",
+                      "ar/concepts/reasoning",
+                      "ar/concepts/planning",
+                      "ar/concepts/testing",
+                      "ar/concepts/cli",
+                      "ar/concepts/tools",
+                      "ar/concepts/event-listener"
+                    ]
+                  },
+                  {
+                    "group": "تكامل MCP",
+                    "pages": [
+                      "ar/mcp/overview",
+                      "ar/mcp/dsl-integration",
+                      "ar/mcp/stdio",
+                      "ar/mcp/sse",
+                      "ar/mcp/streamable-http",
+                      "ar/mcp/multiple-servers",
+                      "ar/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "الأدوات",
+                    "pages": [
+                      "ar/tools/overview",
+                      {
+                        "group": "الملفات والمستندات",
+                        "icon": "folder-open",
+                        "pages": [
+                          "ar/tools/file-document/overview",
+                          "ar/tools/file-document/filereadtool",
+                          "ar/tools/file-document/filewritetool",
+                          "ar/tools/file-document/pdfsearchtool",
+                          "ar/tools/file-document/docxsearchtool",
+                          "ar/tools/file-document/mdxsearchtool",
+                          "ar/tools/file-document/xmlsearchtool",
+                          "ar/tools/file-document/txtsearchtool",
+                          "ar/tools/file-document/jsonsearchtool",
+                          "ar/tools/file-document/csvsearchtool",
+                          "ar/tools/file-document/directorysearchtool",
+                          "ar/tools/file-document/directoryreadtool",
+                          "ar/tools/file-document/ocrtool",
+                          "ar/tools/file-document/pdf-text-writing-tool"
+                        ]
+                      },
+                      {
+                        "group": "استخراج بيانات الويب",
+                        "icon": "globe",
+                        "pages": [
+                          "ar/tools/web-scraping/overview",
+                          "ar/tools/web-scraping/scrapewebsitetool",
+                          "ar/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "ar/tools/web-scraping/scrapflyscrapetool",
+                          "ar/tools/web-scraping/seleniumscrapingtool",
+                          "ar/tools/web-scraping/scrapegraphscrapetool",
+                          "ar/tools/web-scraping/spidertool",
+                          "ar/tools/web-scraping/browserbaseloadtool",
+                          "ar/tools/web-scraping/hyperbrowserloadtool",
+                          "ar/tools/web-scraping/stagehandtool",
+                          "ar/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "ar/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "ar/tools/web-scraping/oxylabsscraperstool",
+                          "ar/tools/web-scraping/brightdata-tools"
+                        ]
+                      },
+                      {
+                        "group": "البحث والاستكشاف",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "ar/tools/search-research/overview",
+                          "ar/tools/search-research/serperdevtool",
+                          "ar/tools/search-research/bravesearchtool",
+                          "ar/tools/search-research/exasearchtool",
+                          "ar/tools/search-research/linkupsearchtool",
+                          "ar/tools/search-research/githubsearchtool",
+                          "ar/tools/search-research/websitesearchtool",
+                          "ar/tools/search-research/codedocssearchtool",
+                          "ar/tools/search-research/youtubechannelsearchtool",
+                          "ar/tools/search-research/youtubevideosearchtool",
+                          "ar/tools/search-research/tavilysearchtool",
+                          "ar/tools/search-research/tavilyextractortool",
+                          "ar/tools/search-research/arxivpapertool",
+                          "ar/tools/search-research/serpapi-googlesearchtool",
+                          "ar/tools/search-research/serpapi-googleshoppingtool",
+                          "ar/tools/search-research/databricks-query-tool"
+                        ]
+                      },
+                      {
+                        "group": "قواعد البيانات",
+                        "icon": "database",
+                        "pages": [
+                          "ar/tools/database-data/overview",
+                          "ar/tools/database-data/mysqltool",
+                          "ar/tools/database-data/pgsearchtool",
+                          "ar/tools/database-data/snowflakesearchtool",
+                          "ar/tools/database-data/nl2sqltool",
+                          "ar/tools/database-data/qdrantvectorsearchtool",
+                          "ar/tools/database-data/weaviatevectorsearchtool",
+                          "ar/tools/database-data/mongodbvectorsearchtool",
+                          "ar/tools/database-data/singlestoresearchtool"
+                        ]
+                      },
+                      {
+                        "group": "الذكاء الاصطناعي والتعلّم الآلي",
+                        "icon": "brain",
+                        "pages": [
+                          "ar/tools/ai-ml/overview",
+                          "ar/tools/ai-ml/dalletool",
+                          "ar/tools/ai-ml/visiontool",
+                          "ar/tools/ai-ml/aimindtool",
+                          "ar/tools/ai-ml/llamaindextool",
+                          "ar/tools/ai-ml/langchaintool",
+                          "ar/tools/ai-ml/ragtool",
+                          "ar/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "التخزين السحابي",
+                        "icon": "cloud",
+                        "pages": [
+                          "ar/tools/cloud-storage/overview",
+                          "ar/tools/cloud-storage/s3readertool",
+                          "ar/tools/cloud-storage/s3writertool",
+                          "ar/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "ar/tools/integration/overview",
+                          "ar/tools/integration/bedrockinvokeagenttool",
+                          "ar/tools/integration/crewaiautomationtool"
+                        ]
+                      },
+                      {
+                        "group": "الأتمتة",
+                        "icon": "bolt",
+                        "pages": [
+                          "ar/tools/automation/overview",
+                          "ar/tools/automation/apifyactorstool",
+                          "ar/tools/automation/composiotool",
+                          "ar/tools/automation/multiontool",
+                          "ar/tools/automation/zapieractionstool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observability",
+                    "pages": [
+                      "ar/observability/tracing",
+                      "ar/observability/overview",
+                      "ar/observability/arize-phoenix",
+                      "ar/observability/braintrust",
+                      "ar/observability/datadog",
+                      "ar/observability/galileo",
+                      "ar/observability/langdb",
+                      "ar/observability/langfuse",
+                      "ar/observability/langtrace",
+                      "ar/observability/maxim",
+                      "ar/observability/mlflow",
+                      "ar/observability/neatlogs",
+                      "ar/observability/openlit",
+                      "ar/observability/opik",
+                      "ar/observability/patronus-evaluation",
+                      "ar/observability/portkey",
+                      "ar/observability/weave"
+                    ]
+                  },
+                  {
+                    "group": "التعلّم",
+                    "pages": [
+                      "ar/learn/overview",
+                      "ar/learn/llm-selection-guide",
+                      "ar/learn/conditional-tasks",
+                      "ar/learn/coding-agents",
+                      "ar/learn/create-custom-tools",
+                      "ar/learn/custom-llm",
+                      "ar/learn/custom-manager-agent",
+                      "ar/learn/customizing-agents",
+                      "ar/learn/dalle-image-generation",
+                      "ar/learn/force-tool-output-as-result",
+                      "ar/learn/hierarchical-process",
+                      "ar/learn/human-input-on-execution",
+                      "ar/learn/human-in-the-loop",
+                      "ar/learn/human-feedback-in-flows",
+                      "ar/learn/kickoff-async",
+                      "ar/learn/kickoff-for-each",
+                      "ar/learn/llm-connections",
+                      "ar/learn/multimodal-agents",
+                      "ar/learn/replay-tasks-from-latest-crew-kickoff",
+                      "ar/learn/sequential-process",
+                      "ar/learn/using-annotations",
+                      "ar/learn/execution-hooks",
+                      "ar/learn/llm-hooks",
+                      "ar/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetry",
+                    "pages": [
+                      "ar/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "المؤسسات",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "البناء",
+                    "pages": [
+                      "ar/enterprise/features/automations",
+                      "ar/enterprise/features/crew-studio",
+                      "ar/enterprise/features/marketplace",
+                      "ar/enterprise/features/agent-repositories",
+                      "ar/enterprise/features/tools-and-integrations",
+                      "ar/enterprise/features/pii-trace-redactions"
+                    ]
+                  },
+                  {
+                    "group": "العمليات",
+                    "pages": [
+                      "ar/enterprise/features/traces",
+                      "ar/enterprise/features/webhook-streaming",
+                      "ar/enterprise/features/hallucination-guardrail",
+                      "ar/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "الإدارة",
+                    "pages": [
+                      "ar/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "التكاملات",
+                    "pages": [
+                      "ar/enterprise/integrations/asana",
+                      "ar/enterprise/integrations/box",
+                      "ar/enterprise/integrations/clickup",
+                      "ar/enterprise/integrations/github",
+                      "ar/enterprise/integrations/gmail",
+                      "ar/enterprise/integrations/google_calendar",
+                      "ar/enterprise/integrations/google_contacts",
+                      "ar/enterprise/integrations/google_docs",
+                      "ar/enterprise/integrations/google_drive",
+                      "ar/enterprise/integrations/google_sheets",
+                      "ar/enterprise/integrations/google_slides",
+                      "ar/enterprise/integrations/hubspot",
+                      "ar/enterprise/integrations/jira",
+                      "ar/enterprise/integrations/linear",
+                      "ar/enterprise/integrations/microsoft_excel",
+                      "ar/enterprise/integrations/microsoft_onedrive",
+                      "ar/enterprise/integrations/microsoft_outlook",
+                      "ar/enterprise/integrations/microsoft_sharepoint",
+                      "ar/enterprise/integrations/microsoft_teams",
+                      "ar/enterprise/integrations/microsoft_word",
+                      "ar/enterprise/integrations/notion",
+                      "ar/enterprise/integrations/salesforce",
+                      "ar/enterprise/integrations/shopify",
+                      "ar/enterprise/integrations/slack",
+                      "ar/enterprise/integrations/stripe",
+                      "ar/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "How-To Guides",
+                    "pages": [
+                      "ar/enterprise/guides/build-crew",
+                      "ar/enterprise/guides/prepare-for-deployment",
+                      "ar/enterprise/guides/deploy-to-amp",
+                      "ar/enterprise/guides/private-package-registry",
+                      "ar/enterprise/guides/kickoff-crew",
+                      "ar/enterprise/guides/update-crew",
+                      "ar/enterprise/guides/enable-crew-studio",
+                      "ar/enterprise/guides/capture_telemetry_logs",
+                      "ar/enterprise/guides/azure-openai-setup",
+                      "ar/enterprise/guides/tool-repository",
+                      "ar/enterprise/guides/custom-mcp-server",
+                      "ar/enterprise/guides/react-component-export",
+                      "ar/enterprise/guides/team-management",
+                      "ar/enterprise/guides/human-in-the-loop",
+                      "ar/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "المشغّلات",
+                    "pages": [
+                      "ar/enterprise/guides/automation-triggers",
+                      "ar/enterprise/guides/gmail-trigger",
+                      "ar/enterprise/guides/google-calendar-trigger",
+                      "ar/enterprise/guides/google-drive-trigger",
+                      "ar/enterprise/guides/outlook-trigger",
+                      "ar/enterprise/guides/onedrive-trigger",
+                      "ar/enterprise/guides/microsoft-teams-trigger",
+                      "ar/enterprise/guides/slack-trigger",
+                      "ar/enterprise/guides/hubspot-trigger",
+                      "ar/enterprise/guides/salesforce-trigger",
+                      "ar/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "موارد التعلّم",
+                    "pages": [
+                      "ar/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "API المرجع",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/api-reference/introduction",
+                      "ar/api-reference/inputs",
+                      "ar/api-reference/kickoff",
+                      "ar/api-reference/resume",
+                      "ar/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "أمثلة",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "أمثلة",
+                    "pages": [
+                      "ar/examples/example",
+                      "ar/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التغييرات السجلات",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "سجل التغييرات",
+                    "pages": [
+                      "ar/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "v1.11.0",
+            "tabs": [
+              {
+                "tab": "الرئيسية",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "مرحباً",
+                    "pages": [
+                      "ar/index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التقنية التوثيق",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/introduction",
+                      "ar/installation",
+                      "ar/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "الأدلّة",
+                    "pages": [
+                      {
+                        "group": "الاستراتيجية",
+                        "icon": "compass",
+                        "pages": [
+                          "ar/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "الوكلاء",
+                        "icon": "user",
+                        "pages": [
+                          "ar/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "الطواقم",
+                        "icon": "users",
+                        "pages": [
+                          "ar/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "التدفقات",
+                        "icon": "code-branch",
+                        "pages": [
+                          "ar/guides/flows/first-flow",
+                          "ar/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "الأدوات",
+                        "icon": "wrench",
+                        "pages": [
+                          "ar/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "أدوات البرمجة",
+                        "icon": "terminal",
+                        "pages": [
+                          "ar/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
+                        "group": "متقدّم",
+                        "icon": "gear",
+                        "pages": [
+                          "ar/guides/advanced/customizing-prompts",
+                          "ar/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "الترحيل",
+                        "icon": "shuffle",
+                        "pages": [
+                          "ar/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "المفاهيم الأساسية",
+                    "pages": [
+                      "ar/concepts/agents",
+                      "ar/concepts/tasks",
+                      "ar/concepts/crews",
+                      "ar/concepts/flows",
+                      "ar/concepts/production-architecture",
+                      "ar/concepts/knowledge",
+                      "ar/concepts/llms",
+                      "ar/concepts/files",
+                      "ar/concepts/processes",
+                      "ar/concepts/collaboration",
+                      "ar/concepts/training",
+                      "ar/concepts/memory",
+                      "ar/concepts/reasoning",
+                      "ar/concepts/planning",
+                      "ar/concepts/testing",
+                      "ar/concepts/cli",
+                      "ar/concepts/tools",
+                      "ar/concepts/event-listener"
+                    ]
+                  },
+                  {
+                    "group": "تكامل MCP",
+                    "pages": [
+                      "ar/mcp/overview",
+                      "ar/mcp/dsl-integration",
+                      "ar/mcp/stdio",
+                      "ar/mcp/sse",
+                      "ar/mcp/streamable-http",
+                      "ar/mcp/multiple-servers",
+                      "ar/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "الأدوات",
+                    "pages": [
+                      "ar/tools/overview",
+                      {
+                        "group": "الملفات والمستندات",
+                        "icon": "folder-open",
+                        "pages": [
+                          "ar/tools/file-document/overview",
+                          "ar/tools/file-document/filereadtool",
+                          "ar/tools/file-document/filewritetool",
+                          "ar/tools/file-document/pdfsearchtool",
+                          "ar/tools/file-document/docxsearchtool",
+                          "ar/tools/file-document/mdxsearchtool",
+                          "ar/tools/file-document/xmlsearchtool",
+                          "ar/tools/file-document/txtsearchtool",
+                          "ar/tools/file-document/jsonsearchtool",
+                          "ar/tools/file-document/csvsearchtool",
+                          "ar/tools/file-document/directorysearchtool",
+                          "ar/tools/file-document/directoryreadtool",
+                          "ar/tools/file-document/ocrtool",
+                          "ar/tools/file-document/pdf-text-writing-tool"
+                        ]
+                      },
+                      {
+                        "group": "استخراج بيانات الويب",
+                        "icon": "globe",
+                        "pages": [
+                          "ar/tools/web-scraping/overview",
+                          "ar/tools/web-scraping/scrapewebsitetool",
+                          "ar/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "ar/tools/web-scraping/scrapflyscrapetool",
+                          "ar/tools/web-scraping/seleniumscrapingtool",
+                          "ar/tools/web-scraping/scrapegraphscrapetool",
+                          "ar/tools/web-scraping/spidertool",
+                          "ar/tools/web-scraping/browserbaseloadtool",
+                          "ar/tools/web-scraping/hyperbrowserloadtool",
+                          "ar/tools/web-scraping/stagehandtool",
+                          "ar/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "ar/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "ar/tools/web-scraping/oxylabsscraperstool",
+                          "ar/tools/web-scraping/brightdata-tools"
+                        ]
+                      },
+                      {
+                        "group": "البحث والاستكشاف",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "ar/tools/search-research/overview",
+                          "ar/tools/search-research/serperdevtool",
+                          "ar/tools/search-research/bravesearchtool",
+                          "ar/tools/search-research/exasearchtool",
+                          "ar/tools/search-research/linkupsearchtool",
+                          "ar/tools/search-research/githubsearchtool",
+                          "ar/tools/search-research/websitesearchtool",
+                          "ar/tools/search-research/codedocssearchtool",
+                          "ar/tools/search-research/youtubechannelsearchtool",
+                          "ar/tools/search-research/youtubevideosearchtool",
+                          "ar/tools/search-research/tavilysearchtool",
+                          "ar/tools/search-research/tavilyextractortool",
+                          "ar/tools/search-research/arxivpapertool",
+                          "ar/tools/search-research/serpapi-googlesearchtool",
+                          "ar/tools/search-research/serpapi-googleshoppingtool",
+                          "ar/tools/search-research/databricks-query-tool"
+                        ]
+                      },
+                      {
+                        "group": "قواعد البيانات",
+                        "icon": "database",
+                        "pages": [
+                          "ar/tools/database-data/overview",
+                          "ar/tools/database-data/mysqltool",
+                          "ar/tools/database-data/pgsearchtool",
+                          "ar/tools/database-data/snowflakesearchtool",
+                          "ar/tools/database-data/nl2sqltool",
+                          "ar/tools/database-data/qdrantvectorsearchtool",
+                          "ar/tools/database-data/weaviatevectorsearchtool",
+                          "ar/tools/database-data/mongodbvectorsearchtool",
+                          "ar/tools/database-data/singlestoresearchtool"
+                        ]
+                      },
+                      {
+                        "group": "الذكاء الاصطناعي والتعلّم الآلي",
+                        "icon": "brain",
+                        "pages": [
+                          "ar/tools/ai-ml/overview",
+                          "ar/tools/ai-ml/dalletool",
+                          "ar/tools/ai-ml/visiontool",
+                          "ar/tools/ai-ml/aimindtool",
+                          "ar/tools/ai-ml/llamaindextool",
+                          "ar/tools/ai-ml/langchaintool",
+                          "ar/tools/ai-ml/ragtool",
+                          "ar/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "التخزين السحابي",
+                        "icon": "cloud",
+                        "pages": [
+                          "ar/tools/cloud-storage/overview",
+                          "ar/tools/cloud-storage/s3readertool",
+                          "ar/tools/cloud-storage/s3writertool",
+                          "ar/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "ar/tools/integration/overview",
+                          "ar/tools/integration/bedrockinvokeagenttool",
+                          "ar/tools/integration/crewaiautomationtool"
+                        ]
+                      },
+                      {
+                        "group": "الأتمتة",
+                        "icon": "bolt",
+                        "pages": [
+                          "ar/tools/automation/overview",
+                          "ar/tools/automation/apifyactorstool",
+                          "ar/tools/automation/composiotool",
+                          "ar/tools/automation/multiontool",
+                          "ar/tools/automation/zapieractionstool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observability",
+                    "pages": [
+                      "ar/observability/tracing",
+                      "ar/observability/overview",
+                      "ar/observability/arize-phoenix",
+                      "ar/observability/braintrust",
+                      "ar/observability/datadog",
+                      "ar/observability/galileo",
+                      "ar/observability/langdb",
+                      "ar/observability/langfuse",
+                      "ar/observability/langtrace",
+                      "ar/observability/maxim",
+                      "ar/observability/mlflow",
+                      "ar/observability/neatlogs",
+                      "ar/observability/openlit",
+                      "ar/observability/opik",
+                      "ar/observability/patronus-evaluation",
+                      "ar/observability/portkey",
+                      "ar/observability/weave"
+                    ]
+                  },
+                  {
+                    "group": "التعلّم",
+                    "pages": [
+                      "ar/learn/overview",
+                      "ar/learn/llm-selection-guide",
+                      "ar/learn/conditional-tasks",
+                      "ar/learn/coding-agents",
+                      "ar/learn/create-custom-tools",
+                      "ar/learn/custom-llm",
+                      "ar/learn/custom-manager-agent",
+                      "ar/learn/customizing-agents",
+                      "ar/learn/dalle-image-generation",
+                      "ar/learn/force-tool-output-as-result",
+                      "ar/learn/hierarchical-process",
+                      "ar/learn/human-input-on-execution",
+                      "ar/learn/human-in-the-loop",
+                      "ar/learn/human-feedback-in-flows",
+                      "ar/learn/kickoff-async",
+                      "ar/learn/kickoff-for-each",
+                      "ar/learn/llm-connections",
+                      "ar/learn/multimodal-agents",
+                      "ar/learn/replay-tasks-from-latest-crew-kickoff",
+                      "ar/learn/sequential-process",
+                      "ar/learn/using-annotations",
+                      "ar/learn/execution-hooks",
+                      "ar/learn/llm-hooks",
+                      "ar/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetry",
+                    "pages": [
+                      "ar/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "المؤسسات",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "البناء",
+                    "pages": [
+                      "ar/enterprise/features/automations",
+                      "ar/enterprise/features/crew-studio",
+                      "ar/enterprise/features/marketplace",
+                      "ar/enterprise/features/agent-repositories",
+                      "ar/enterprise/features/tools-and-integrations",
+                      "ar/enterprise/features/pii-trace-redactions"
+                    ]
+                  },
+                  {
+                    "group": "العمليات",
+                    "pages": [
+                      "ar/enterprise/features/traces",
+                      "ar/enterprise/features/webhook-streaming",
+                      "ar/enterprise/features/hallucination-guardrail",
+                      "ar/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "الإدارة",
+                    "pages": [
+                      "ar/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "التكاملات",
+                    "pages": [
+                      "ar/enterprise/integrations/asana",
+                      "ar/enterprise/integrations/box",
+                      "ar/enterprise/integrations/clickup",
+                      "ar/enterprise/integrations/github",
+                      "ar/enterprise/integrations/gmail",
+                      "ar/enterprise/integrations/google_calendar",
+                      "ar/enterprise/integrations/google_contacts",
+                      "ar/enterprise/integrations/google_docs",
+                      "ar/enterprise/integrations/google_drive",
+                      "ar/enterprise/integrations/google_sheets",
+                      "ar/enterprise/integrations/google_slides",
+                      "ar/enterprise/integrations/hubspot",
+                      "ar/enterprise/integrations/jira",
+                      "ar/enterprise/integrations/linear",
+                      "ar/enterprise/integrations/microsoft_excel",
+                      "ar/enterprise/integrations/microsoft_onedrive",
+                      "ar/enterprise/integrations/microsoft_outlook",
+                      "ar/enterprise/integrations/microsoft_sharepoint",
+                      "ar/enterprise/integrations/microsoft_teams",
+                      "ar/enterprise/integrations/microsoft_word",
+                      "ar/enterprise/integrations/notion",
+                      "ar/enterprise/integrations/salesforce",
+                      "ar/enterprise/integrations/shopify",
+                      "ar/enterprise/integrations/slack",
+                      "ar/enterprise/integrations/stripe",
+                      "ar/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "How-To Guides",
+                    "pages": [
+                      "ar/enterprise/guides/build-crew",
+                      "ar/enterprise/guides/prepare-for-deployment",
+                      "ar/enterprise/guides/deploy-to-amp",
+                      "ar/enterprise/guides/private-package-registry",
+                      "ar/enterprise/guides/kickoff-crew",
+                      "ar/enterprise/guides/update-crew",
+                      "ar/enterprise/guides/enable-crew-studio",
+                      "ar/enterprise/guides/capture_telemetry_logs",
+                      "ar/enterprise/guides/azure-openai-setup",
+                      "ar/enterprise/guides/tool-repository",
+                      "ar/enterprise/guides/custom-mcp-server",
+                      "ar/enterprise/guides/react-component-export",
+                      "ar/enterprise/guides/team-management",
+                      "ar/enterprise/guides/human-in-the-loop",
+                      "ar/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "المشغّلات",
+                    "pages": [
+                      "ar/enterprise/guides/automation-triggers",
+                      "ar/enterprise/guides/gmail-trigger",
+                      "ar/enterprise/guides/google-calendar-trigger",
+                      "ar/enterprise/guides/google-drive-trigger",
+                      "ar/enterprise/guides/outlook-trigger",
+                      "ar/enterprise/guides/onedrive-trigger",
+                      "ar/enterprise/guides/microsoft-teams-trigger",
+                      "ar/enterprise/guides/slack-trigger",
+                      "ar/enterprise/guides/hubspot-trigger",
+                      "ar/enterprise/guides/salesforce-trigger",
+                      "ar/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "موارد التعلّم",
+                    "pages": [
+                      "ar/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "API المرجع",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/api-reference/introduction",
+                      "ar/api-reference/inputs",
+                      "ar/api-reference/kickoff",
+                      "ar/api-reference/resume",
+                      "ar/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "أمثلة",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "أمثلة",
+                    "pages": [
+                      "ar/examples/example",
+                      "ar/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التغييرات السجلات",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "سجل التغييرات",
+                    "pages": [
+                      "ar/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "v1.10.1",
+            "tabs": [
+              {
+                "tab": "الرئيسية",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "مرحباً",
+                    "pages": [
+                      "ar/index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التقنية التوثيق",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/introduction",
+                      "ar/installation",
+                      "ar/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "الأدلّة",
+                    "pages": [
+                      {
+                        "group": "الاستراتيجية",
+                        "icon": "compass",
+                        "pages": [
+                          "ar/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "الوكلاء",
+                        "icon": "user",
+                        "pages": [
+                          "ar/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "الطواقم",
+                        "icon": "users",
+                        "pages": [
+                          "ar/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "التدفقات",
+                        "icon": "code-branch",
+                        "pages": [
+                          "ar/guides/flows/first-flow",
+                          "ar/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "الأدوات",
+                        "icon": "wrench",
+                        "pages": [
+                          "ar/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "أدوات البرمجة",
+                        "icon": "terminal",
+                        "pages": [
+                          "ar/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
+                        "group": "متقدّم",
+                        "icon": "gear",
+                        "pages": [
+                          "ar/guides/advanced/customizing-prompts",
+                          "ar/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "الترحيل",
+                        "icon": "shuffle",
+                        "pages": [
+                          "ar/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "المفاهيم الأساسية",
+                    "pages": [
+                      "ar/concepts/agents",
+                      "ar/concepts/tasks",
+                      "ar/concepts/crews",
+                      "ar/concepts/flows",
+                      "ar/concepts/production-architecture",
+                      "ar/concepts/knowledge",
+                      "ar/concepts/llms",
+                      "ar/concepts/files",
+                      "ar/concepts/processes",
+                      "ar/concepts/collaboration",
+                      "ar/concepts/training",
+                      "ar/concepts/memory",
+                      "ar/concepts/reasoning",
+                      "ar/concepts/planning",
+                      "ar/concepts/testing",
+                      "ar/concepts/cli",
+                      "ar/concepts/tools",
+                      "ar/concepts/event-listener"
+                    ]
+                  },
+                  {
+                    "group": "تكامل MCP",
+                    "pages": [
+                      "ar/mcp/overview",
+                      "ar/mcp/dsl-integration",
+                      "ar/mcp/stdio",
+                      "ar/mcp/sse",
+                      "ar/mcp/streamable-http",
+                      "ar/mcp/multiple-servers",
+                      "ar/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "الأدوات",
+                    "pages": [
+                      "ar/tools/overview",
+                      {
+                        "group": "الملفات والمستندات",
+                        "icon": "folder-open",
+                        "pages": [
+                          "ar/tools/file-document/overview",
+                          "ar/tools/file-document/filereadtool",
+                          "ar/tools/file-document/filewritetool",
+                          "ar/tools/file-document/pdfsearchtool",
+                          "ar/tools/file-document/docxsearchtool",
+                          "ar/tools/file-document/mdxsearchtool",
+                          "ar/tools/file-document/xmlsearchtool",
+                          "ar/tools/file-document/txtsearchtool",
+                          "ar/tools/file-document/jsonsearchtool",
+                          "ar/tools/file-document/csvsearchtool",
+                          "ar/tools/file-document/directorysearchtool",
+                          "ar/tools/file-document/directoryreadtool",
+                          "ar/tools/file-document/ocrtool",
+                          "ar/tools/file-document/pdf-text-writing-tool"
+                        ]
+                      },
+                      {
+                        "group": "استخراج بيانات الويب",
+                        "icon": "globe",
+                        "pages": [
+                          "ar/tools/web-scraping/overview",
+                          "ar/tools/web-scraping/scrapewebsitetool",
+                          "ar/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "ar/tools/web-scraping/scrapflyscrapetool",
+                          "ar/tools/web-scraping/seleniumscrapingtool",
+                          "ar/tools/web-scraping/scrapegraphscrapetool",
+                          "ar/tools/web-scraping/spidertool",
+                          "ar/tools/web-scraping/browserbaseloadtool",
+                          "ar/tools/web-scraping/hyperbrowserloadtool",
+                          "ar/tools/web-scraping/stagehandtool",
+                          "ar/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "ar/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "ar/tools/web-scraping/oxylabsscraperstool",
+                          "ar/tools/web-scraping/brightdata-tools"
+                        ]
+                      },
+                      {
+                        "group": "البحث والاستكشاف",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "ar/tools/search-research/overview",
+                          "ar/tools/search-research/serperdevtool",
+                          "ar/tools/search-research/bravesearchtool",
+                          "ar/tools/search-research/exasearchtool",
+                          "ar/tools/search-research/linkupsearchtool",
+                          "ar/tools/search-research/githubsearchtool",
+                          "ar/tools/search-research/websitesearchtool",
+                          "ar/tools/search-research/codedocssearchtool",
+                          "ar/tools/search-research/youtubechannelsearchtool",
+                          "ar/tools/search-research/youtubevideosearchtool",
+                          "ar/tools/search-research/tavilysearchtool",
+                          "ar/tools/search-research/tavilyextractortool",
+                          "ar/tools/search-research/arxivpapertool",
+                          "ar/tools/search-research/serpapi-googlesearchtool",
+                          "ar/tools/search-research/serpapi-googleshoppingtool",
+                          "ar/tools/search-research/databricks-query-tool"
+                        ]
+                      },
+                      {
+                        "group": "قواعد البيانات",
+                        "icon": "database",
+                        "pages": [
+                          "ar/tools/database-data/overview",
+                          "ar/tools/database-data/mysqltool",
+                          "ar/tools/database-data/pgsearchtool",
+                          "ar/tools/database-data/snowflakesearchtool",
+                          "ar/tools/database-data/nl2sqltool",
+                          "ar/tools/database-data/qdrantvectorsearchtool",
+                          "ar/tools/database-data/weaviatevectorsearchtool",
+                          "ar/tools/database-data/mongodbvectorsearchtool",
+                          "ar/tools/database-data/singlestoresearchtool"
+                        ]
+                      },
+                      {
+                        "group": "الذكاء الاصطناعي والتعلّم الآلي",
+                        "icon": "brain",
+                        "pages": [
+                          "ar/tools/ai-ml/overview",
+                          "ar/tools/ai-ml/dalletool",
+                          "ar/tools/ai-ml/visiontool",
+                          "ar/tools/ai-ml/aimindtool",
+                          "ar/tools/ai-ml/llamaindextool",
+                          "ar/tools/ai-ml/langchaintool",
+                          "ar/tools/ai-ml/ragtool",
+                          "ar/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "التخزين السحابي",
+                        "icon": "cloud",
+                        "pages": [
+                          "ar/tools/cloud-storage/overview",
+                          "ar/tools/cloud-storage/s3readertool",
+                          "ar/tools/cloud-storage/s3writertool",
+                          "ar/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "ar/tools/integration/overview",
+                          "ar/tools/integration/bedrockinvokeagenttool",
+                          "ar/tools/integration/crewaiautomationtool"
+                        ]
+                      },
+                      {
+                        "group": "الأتمتة",
+                        "icon": "bolt",
+                        "pages": [
+                          "ar/tools/automation/overview",
+                          "ar/tools/automation/apifyactorstool",
+                          "ar/tools/automation/composiotool",
+                          "ar/tools/automation/multiontool",
+                          "ar/tools/automation/zapieractionstool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observability",
+                    "pages": [
+                      "ar/observability/tracing",
+                      "ar/observability/overview",
+                      "ar/observability/arize-phoenix",
+                      "ar/observability/braintrust",
+                      "ar/observability/datadog",
+                      "ar/observability/galileo",
+                      "ar/observability/langdb",
+                      "ar/observability/langfuse",
+                      "ar/observability/langtrace",
+                      "ar/observability/maxim",
+                      "ar/observability/mlflow",
+                      "ar/observability/neatlogs",
+                      "ar/observability/openlit",
+                      "ar/observability/opik",
+                      "ar/observability/patronus-evaluation",
+                      "ar/observability/portkey",
+                      "ar/observability/weave"
+                    ]
+                  },
+                  {
+                    "group": "التعلّم",
+                    "pages": [
+                      "ar/learn/overview",
+                      "ar/learn/llm-selection-guide",
+                      "ar/learn/conditional-tasks",
+                      "ar/learn/coding-agents",
+                      "ar/learn/create-custom-tools",
+                      "ar/learn/custom-llm",
+                      "ar/learn/custom-manager-agent",
+                      "ar/learn/customizing-agents",
+                      "ar/learn/dalle-image-generation",
+                      "ar/learn/force-tool-output-as-result",
+                      "ar/learn/hierarchical-process",
+                      "ar/learn/human-input-on-execution",
+                      "ar/learn/human-in-the-loop",
+                      "ar/learn/human-feedback-in-flows",
+                      "ar/learn/kickoff-async",
+                      "ar/learn/kickoff-for-each",
+                      "ar/learn/llm-connections",
+                      "ar/learn/multimodal-agents",
+                      "ar/learn/replay-tasks-from-latest-crew-kickoff",
+                      "ar/learn/sequential-process",
+                      "ar/learn/using-annotations",
+                      "ar/learn/execution-hooks",
+                      "ar/learn/llm-hooks",
+                      "ar/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetry",
+                    "pages": [
+                      "ar/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "المؤسسات",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "البناء",
+                    "pages": [
+                      "ar/enterprise/features/automations",
+                      "ar/enterprise/features/crew-studio",
+                      "ar/enterprise/features/marketplace",
+                      "ar/enterprise/features/agent-repositories",
+                      "ar/enterprise/features/tools-and-integrations",
+                      "ar/enterprise/features/pii-trace-redactions"
+                    ]
+                  },
+                  {
+                    "group": "العمليات",
+                    "pages": [
+                      "ar/enterprise/features/traces",
+                      "ar/enterprise/features/webhook-streaming",
+                      "ar/enterprise/features/hallucination-guardrail",
+                      "ar/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "الإدارة",
+                    "pages": [
+                      "ar/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "التكاملات",
+                    "pages": [
+                      "ar/enterprise/integrations/asana",
+                      "ar/enterprise/integrations/box",
+                      "ar/enterprise/integrations/clickup",
+                      "ar/enterprise/integrations/github",
+                      "ar/enterprise/integrations/gmail",
+                      "ar/enterprise/integrations/google_calendar",
+                      "ar/enterprise/integrations/google_contacts",
+                      "ar/enterprise/integrations/google_docs",
+                      "ar/enterprise/integrations/google_drive",
+                      "ar/enterprise/integrations/google_sheets",
+                      "ar/enterprise/integrations/google_slides",
+                      "ar/enterprise/integrations/hubspot",
+                      "ar/enterprise/integrations/jira",
+                      "ar/enterprise/integrations/linear",
+                      "ar/enterprise/integrations/microsoft_excel",
+                      "ar/enterprise/integrations/microsoft_onedrive",
+                      "ar/enterprise/integrations/microsoft_outlook",
+                      "ar/enterprise/integrations/microsoft_sharepoint",
+                      "ar/enterprise/integrations/microsoft_teams",
+                      "ar/enterprise/integrations/microsoft_word",
+                      "ar/enterprise/integrations/notion",
+                      "ar/enterprise/integrations/salesforce",
+                      "ar/enterprise/integrations/shopify",
+                      "ar/enterprise/integrations/slack",
+                      "ar/enterprise/integrations/stripe",
+                      "ar/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "How-To Guides",
+                    "pages": [
+                      "ar/enterprise/guides/build-crew",
+                      "ar/enterprise/guides/prepare-for-deployment",
+                      "ar/enterprise/guides/deploy-to-amp",
+                      "ar/enterprise/guides/private-package-registry",
+                      "ar/enterprise/guides/kickoff-crew",
+                      "ar/enterprise/guides/update-crew",
+                      "ar/enterprise/guides/enable-crew-studio",
+                      "ar/enterprise/guides/capture_telemetry_logs",
+                      "ar/enterprise/guides/azure-openai-setup",
+                      "ar/enterprise/guides/tool-repository",
+                      "ar/enterprise/guides/custom-mcp-server",
+                      "ar/enterprise/guides/react-component-export",
+                      "ar/enterprise/guides/team-management",
+                      "ar/enterprise/guides/human-in-the-loop",
+                      "ar/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "المشغّلات",
+                    "pages": [
+                      "ar/enterprise/guides/automation-triggers",
+                      "ar/enterprise/guides/gmail-trigger",
+                      "ar/enterprise/guides/google-calendar-trigger",
+                      "ar/enterprise/guides/google-drive-trigger",
+                      "ar/enterprise/guides/outlook-trigger",
+                      "ar/enterprise/guides/onedrive-trigger",
+                      "ar/enterprise/guides/microsoft-teams-trigger",
+                      "ar/enterprise/guides/slack-trigger",
+                      "ar/enterprise/guides/hubspot-trigger",
+                      "ar/enterprise/guides/salesforce-trigger",
+                      "ar/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "موارد التعلّم",
+                    "pages": [
+                      "ar/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "API المرجع",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/api-reference/introduction",
+                      "ar/api-reference/inputs",
+                      "ar/api-reference/kickoff",
+                      "ar/api-reference/resume",
+                      "ar/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "أمثلة",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "أمثلة",
+                    "pages": [
+                      "ar/examples/example",
+                      "ar/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التغييرات السجلات",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "سجل التغييرات",
+                    "pages": [
+                      "ar/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "v1.10.0",
+            "tabs": [
+              {
+                "tab": "الرئيسية",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "مرحباً",
+                    "pages": [
+                      "ar/index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التقنية التوثيق",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/introduction",
+                      "ar/installation",
+                      "ar/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "الأدلّة",
+                    "pages": [
+                      {
+                        "group": "الاستراتيجية",
+                        "icon": "compass",
+                        "pages": [
+                          "ar/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "الوكلاء",
+                        "icon": "user",
+                        "pages": [
+                          "ar/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "الطواقم",
+                        "icon": "users",
+                        "pages": [
+                          "ar/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "التدفقات",
+                        "icon": "code-branch",
+                        "pages": [
+                          "ar/guides/flows/first-flow",
+                          "ar/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "الأدوات",
+                        "icon": "wrench",
+                        "pages": [
+                          "ar/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "أدوات البرمجة",
+                        "icon": "terminal",
+                        "pages": [
+                          "ar/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
+                        "group": "متقدّم",
+                        "icon": "gear",
+                        "pages": [
+                          "ar/guides/advanced/customizing-prompts",
+                          "ar/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "الترحيل",
+                        "icon": "shuffle",
+                        "pages": [
+                          "ar/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "المفاهيم الأساسية",
+                    "pages": [
+                      "ar/concepts/agents",
+                      "ar/concepts/tasks",
+                      "ar/concepts/crews",
+                      "ar/concepts/flows",
+                      "ar/concepts/production-architecture",
+                      "ar/concepts/knowledge",
+                      "ar/concepts/skills",
+                      "ar/concepts/llms",
+                      "ar/concepts/files",
+                      "ar/concepts/processes",
+                      "ar/concepts/collaboration",
+                      "ar/concepts/training",
+                      "ar/concepts/memory",
+                      "ar/concepts/reasoning",
+                      "ar/concepts/planning",
+                      "ar/concepts/testing",
+                      "ar/concepts/cli",
+                      "ar/concepts/tools",
+                      "ar/concepts/event-listener"
+                    ]
+                  },
+                  {
+                    "group": "تكامل MCP",
+                    "pages": [
+                      "ar/mcp/overview",
+                      "ar/mcp/dsl-integration",
+                      "ar/mcp/stdio",
+                      "ar/mcp/sse",
+                      "ar/mcp/streamable-http",
+                      "ar/mcp/multiple-servers",
+                      "ar/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "الأدوات",
+                    "pages": [
+                      "ar/tools/overview",
+                      {
+                        "group": "الملفات والمستندات",
+                        "icon": "folder-open",
+                        "pages": [
+                          "ar/tools/file-document/overview",
+                          "ar/tools/file-document/filereadtool",
+                          "ar/tools/file-document/filewritetool",
+                          "ar/tools/file-document/pdfsearchtool",
+                          "ar/tools/file-document/docxsearchtool",
+                          "ar/tools/file-document/mdxsearchtool",
+                          "ar/tools/file-document/xmlsearchtool",
+                          "ar/tools/file-document/txtsearchtool",
+                          "ar/tools/file-document/jsonsearchtool",
+                          "ar/tools/file-document/csvsearchtool",
+                          "ar/tools/file-document/directorysearchtool",
+                          "ar/tools/file-document/directoryreadtool",
+                          "ar/tools/file-document/ocrtool",
+                          "ar/tools/file-document/pdf-text-writing-tool"
+                        ]
+                      },
+                      {
+                        "group": "استخراج بيانات الويب",
+                        "icon": "globe",
+                        "pages": [
+                          "ar/tools/web-scraping/overview",
+                          "ar/tools/web-scraping/scrapewebsitetool",
+                          "ar/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "ar/tools/web-scraping/scrapflyscrapetool",
+                          "ar/tools/web-scraping/seleniumscrapingtool",
+                          "ar/tools/web-scraping/scrapegraphscrapetool",
+                          "ar/tools/web-scraping/spidertool",
+                          "ar/tools/web-scraping/browserbaseloadtool",
+                          "ar/tools/web-scraping/hyperbrowserloadtool",
+                          "ar/tools/web-scraping/stagehandtool",
+                          "ar/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "ar/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "ar/tools/web-scraping/oxylabsscraperstool",
+                          "ar/tools/web-scraping/brightdata-tools"
+                        ]
+                      },
+                      {
+                        "group": "البحث والاستكشاف",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "ar/tools/search-research/overview",
+                          "ar/tools/search-research/serperdevtool",
+                          "ar/tools/search-research/bravesearchtool",
+                          "ar/tools/search-research/exasearchtool",
+                          "ar/tools/search-research/linkupsearchtool",
+                          "ar/tools/search-research/githubsearchtool",
+                          "ar/tools/search-research/websitesearchtool",
+                          "ar/tools/search-research/codedocssearchtool",
+                          "ar/tools/search-research/youtubechannelsearchtool",
+                          "ar/tools/search-research/youtubevideosearchtool",
+                          "ar/tools/search-research/tavilysearchtool",
+                          "ar/tools/search-research/tavilyextractortool",
+                          "ar/tools/search-research/arxivpapertool",
+                          "ar/tools/search-research/serpapi-googlesearchtool",
+                          "ar/tools/search-research/serpapi-googleshoppingtool",
+                          "ar/tools/search-research/databricks-query-tool"
+                        ]
+                      },
+                      {
+                        "group": "قواعد البيانات",
+                        "icon": "database",
+                        "pages": [
+                          "ar/tools/database-data/overview",
+                          "ar/tools/database-data/mysqltool",
+                          "ar/tools/database-data/pgsearchtool",
+                          "ar/tools/database-data/snowflakesearchtool",
+                          "ar/tools/database-data/nl2sqltool",
+                          "ar/tools/database-data/qdrantvectorsearchtool",
+                          "ar/tools/database-data/weaviatevectorsearchtool",
+                          "ar/tools/database-data/mongodbvectorsearchtool",
+                          "ar/tools/database-data/singlestoresearchtool"
+                        ]
+                      },
+                      {
+                        "group": "الذكاء الاصطناعي والتعلّم الآلي",
+                        "icon": "brain",
+                        "pages": [
+                          "ar/tools/ai-ml/overview",
+                          "ar/tools/ai-ml/dalletool",
+                          "ar/tools/ai-ml/visiontool",
+                          "ar/tools/ai-ml/aimindtool",
+                          "ar/tools/ai-ml/llamaindextool",
+                          "ar/tools/ai-ml/langchaintool",
+                          "ar/tools/ai-ml/ragtool",
+                          "ar/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "التخزين السحابي",
+                        "icon": "cloud",
+                        "pages": [
+                          "ar/tools/cloud-storage/overview",
+                          "ar/tools/cloud-storage/s3readertool",
+                          "ar/tools/cloud-storage/s3writertool",
+                          "ar/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "ar/tools/integration/overview",
+                          "ar/tools/integration/bedrockinvokeagenttool",
+                          "ar/tools/integration/crewaiautomationtool"
+                        ]
+                      },
+                      {
+                        "group": "الأتمتة",
+                        "icon": "bolt",
+                        "pages": [
+                          "ar/tools/automation/overview",
+                          "ar/tools/automation/apifyactorstool",
+                          "ar/tools/automation/composiotool",
+                          "ar/tools/automation/multiontool",
+                          "ar/tools/automation/zapieractionstool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observability",
+                    "pages": [
+                      "ar/observability/tracing",
+                      "ar/observability/overview",
+                      "ar/observability/arize-phoenix",
+                      "ar/observability/braintrust",
+                      "ar/observability/datadog",
+                      "ar/observability/galileo",
+                      "ar/observability/langdb",
+                      "ar/observability/langfuse",
+                      "ar/observability/langtrace",
+                      "ar/observability/maxim",
+                      "ar/observability/mlflow",
+                      "ar/observability/neatlogs",
+                      "ar/observability/openlit",
+                      "ar/observability/opik",
+                      "ar/observability/patronus-evaluation",
+                      "ar/observability/portkey",
+                      "ar/observability/weave"
+                    ]
+                  },
+                  {
+                    "group": "التعلّم",
+                    "pages": [
+                      "ar/learn/overview",
+                      "ar/learn/llm-selection-guide",
+                      "ar/learn/conditional-tasks",
+                      "ar/learn/coding-agents",
+                      "ar/learn/create-custom-tools",
+                      "ar/learn/custom-llm",
+                      "ar/learn/custom-manager-agent",
+                      "ar/learn/customizing-agents",
+                      "ar/learn/dalle-image-generation",
+                      "ar/learn/force-tool-output-as-result",
+                      "ar/learn/hierarchical-process",
+                      "ar/learn/human-input-on-execution",
+                      "ar/learn/human-in-the-loop",
+                      "ar/learn/human-feedback-in-flows",
+                      "ar/learn/kickoff-async",
+                      "ar/learn/kickoff-for-each",
+                      "ar/learn/llm-connections",
+                      "ar/learn/multimodal-agents",
+                      "ar/learn/replay-tasks-from-latest-crew-kickoff",
+                      "ar/learn/sequential-process",
+                      "ar/learn/using-annotations",
+                      "ar/learn/execution-hooks",
+                      "ar/learn/llm-hooks",
+                      "ar/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetry",
+                    "pages": [
+                      "ar/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "المؤسسات",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "البناء",
+                    "pages": [
+                      "ar/enterprise/features/automations",
+                      "ar/enterprise/features/crew-studio",
+                      "ar/enterprise/features/marketplace",
+                      "ar/enterprise/features/agent-repositories",
+                      "ar/enterprise/features/tools-and-integrations",
+                      "ar/enterprise/features/pii-trace-redactions"
+                    ]
+                  },
+                  {
+                    "group": "العمليات",
+                    "pages": [
+                      "ar/enterprise/features/traces",
+                      "ar/enterprise/features/webhook-streaming",
+                      "ar/enterprise/features/hallucination-guardrail",
+                      "ar/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "الإدارة",
+                    "pages": [
+                      "ar/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "التكاملات",
+                    "pages": [
+                      "ar/enterprise/integrations/asana",
+                      "ar/enterprise/integrations/box",
+                      "ar/enterprise/integrations/clickup",
+                      "ar/enterprise/integrations/github",
+                      "ar/enterprise/integrations/gmail",
+                      "ar/enterprise/integrations/google_calendar",
+                      "ar/enterprise/integrations/google_contacts",
+                      "ar/enterprise/integrations/google_docs",
+                      "ar/enterprise/integrations/google_drive",
+                      "ar/enterprise/integrations/google_sheets",
+                      "ar/enterprise/integrations/google_slides",
+                      "ar/enterprise/integrations/hubspot",
+                      "ar/enterprise/integrations/jira",
+                      "ar/enterprise/integrations/linear",
+                      "ar/enterprise/integrations/microsoft_excel",
+                      "ar/enterprise/integrations/microsoft_onedrive",
+                      "ar/enterprise/integrations/microsoft_outlook",
+                      "ar/enterprise/integrations/microsoft_sharepoint",
+                      "ar/enterprise/integrations/microsoft_teams",
+                      "ar/enterprise/integrations/microsoft_word",
+                      "ar/enterprise/integrations/notion",
+                      "ar/enterprise/integrations/salesforce",
+                      "ar/enterprise/integrations/shopify",
+                      "ar/enterprise/integrations/slack",
+                      "ar/enterprise/integrations/stripe",
+                      "ar/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "How-To Guides",
+                    "pages": [
+                      "ar/enterprise/guides/build-crew",
+                      "ar/enterprise/guides/prepare-for-deployment",
+                      "ar/enterprise/guides/deploy-to-amp",
+                      "ar/enterprise/guides/private-package-registry",
+                      "ar/enterprise/guides/kickoff-crew",
+                      "ar/enterprise/guides/update-crew",
+                      "ar/enterprise/guides/enable-crew-studio",
+                      "ar/enterprise/guides/capture_telemetry_logs",
+                      "ar/enterprise/guides/azure-openai-setup",
+                      "ar/enterprise/guides/tool-repository",
+                      "ar/enterprise/guides/custom-mcp-server",
+                      "ar/enterprise/guides/react-component-export",
+                      "ar/enterprise/guides/team-management",
+                      "ar/enterprise/guides/human-in-the-loop",
+                      "ar/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "المشغّلات",
+                    "pages": [
+                      "ar/enterprise/guides/automation-triggers",
+                      "ar/enterprise/guides/gmail-trigger",
+                      "ar/enterprise/guides/google-calendar-trigger",
+                      "ar/enterprise/guides/google-drive-trigger",
+                      "ar/enterprise/guides/outlook-trigger",
+                      "ar/enterprise/guides/onedrive-trigger",
+                      "ar/enterprise/guides/microsoft-teams-trigger",
+                      "ar/enterprise/guides/slack-trigger",
+                      "ar/enterprise/guides/hubspot-trigger",
+                      "ar/enterprise/guides/salesforce-trigger",
+                      "ar/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "موارد التعلّم",
+                    "pages": [
+                      "ar/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "API المرجع",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/api-reference/introduction",
+                      "ar/api-reference/inputs",
+                      "ar/api-reference/kickoff",
+                      "ar/api-reference/resume",
+                      "ar/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "أمثلة",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "أمثلة",
+                    "pages": [
+                      "ar/examples/example",
+                      "ar/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التغييرات السجلات",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "سجل التغييرات",
+                    "pages": [
+                      "ar/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ]
   },

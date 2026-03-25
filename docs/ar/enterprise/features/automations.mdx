@@ -1,0 +1,104 @@
+---
+title: الأتمتة
+description: "إدارة ونشر ومراقبة أطقمك المباشرة (الأتمتة) في مكان واحد."
+icon: "rocket"
+mode: "wide"
+---
+
+## نظرة عامة
+
+الأتمتة هي مركز العمليات المباشرة لأطقمك المنشورة. استخدمها للنشر من GitHub أو ملف ZIP، وإدارة متغيرات البيئة، وإعادة النشر عند الحاجة، ومراقبة حالة كل أتمتة.
+
+<Frame>
+  ![Automations Overview](/images/enterprise/automations-overview.png)
+
+</Frame>
+
+## طرق النشر
+
+### النشر من GitHub
+
+استخدم هذا للمشاريع ذات التحكم في الإصدارات والنشر المستمر.
+
+<Steps>
+  <Step title="ربط GitHub">
+    انقر على <b>Configure GitHub</b> وصرّح بالوصول.
+  </Step>
+  <Step title="اختيار المستودع والفرع">
+    اختر <b>المستودع</b> و<b>الفرع</b> الذي تريد النشر منه.
+  </Step>
+  <Step title="تفعيل النشر التلقائي (اختياري)">
+    فعّل <b>النشر التلقائي للالتزامات الجديدة</b> لإرسال التحديثات مع كل دفع.
+  </Step>
+  <Step title="إضافة متغيرات البيئة">
+    أضف المتغيرات السرية فرديًا أو استخدم <b>العرض الجماعي</b> لمتغيرات متعددة.
+  </Step>
+  <Step title="النشر">
+    انقر على <b>Deploy</b> لإنشاء الأتمتة المباشرة.
+  </Step>
+</Steps>
+
+<Frame>
+  ![GitHub Deployment](/images/enterprise/deploy-from-github.png)
+</Frame>
+
+### النشر من ZIP
+
+انشر بسرعة بدون Git — ارفع حزمة مضغوطة من مشروعك.
+
+<Steps>
+  <Step title="اختيار الملف">
+    اختر أرشيف ZIP من جهازك.
+  </Step>
+  <Step title="إضافة متغيرات البيئة">
+    وفّر أي متغيرات أو مفاتيح مطلوبة.
+  </Step>
+  <Step title="النشر">
+    انقر على <b>Deploy</b> لإنشاء الأتمتة المباشرة.
+  </Step>
+</Steps>
+
+<Frame>
+  ![ZIP Deployment](/images/enterprise/deploy-from-zip.png)
+</Frame>
+
+## لوحة تحكم الأتمتة
+
+يعرض الجدول جميع الأتمتة المباشرة مع التفاصيل الرئيسية:
+
+- **CREW**: اسم الأتمتة
+- **STATUS**: متصل / فشل / قيد التنفيذ
+- **URL**: نقطة نهاية التشغيل/الحالة
+- **TOKEN**: رمز الأتمتة
+- **ACTIONS**: إعادة النشر، الحذف، والمزيد
+
+استخدم عناصر التحكم في أعلى اليمين للتصفية والبحث:
+
+- البحث بالاسم
+- التصفية حسب <b>الحالة</b>
+- التصفية حسب <b>المصدر</b> (GitHub / Studio / ZIP)
+
+بعد النشر، يمكنك عرض تفاصيل الأتمتة واستخدام القائمة المنسدلة **الخيارات** لـ `الدردشة مع هذا الطاقم`، `تصدير مكون React` و`التصدير كـ MCP`.
+
+<Frame>
+  ![Automations Table](/images/enterprise/automations-table.png)
+</Frame>
+
+## أفضل الممارسات
+
+- فضّل نشر GitHub للتحكم في الإصدارات وCI/CD
+- استخدم إعادة النشر للتقدم بعد تحديثات الكود أو التهيئة أو اضبطه على النشر التلقائي مع كل دفع
+
+## ذات صلة
+
+<CardGroup cols={3}>
+  <Card title="نشر طاقم" href="/ar/enterprise/guides/deploy-to-amp" icon="rocket">
+    انشر طاقمًا من GitHub أو ملف ZIP.
+  </Card>
+  <Card title="مشغلات الأتمتة" href="/ar/enterprise/guides/automation-triggers" icon="trigger">
+    شغّل الأتمتة عبر webhooks أو API.
+  </Card>
+  <Card title="أتمتة Webhook" href="/ar/enterprise/guides/webhook-automation" icon="webhook">
+    بث الأحداث والتحديثات في الوقت الفعلي إلى أنظمتك.
+  </Card>
+</CardGroup>

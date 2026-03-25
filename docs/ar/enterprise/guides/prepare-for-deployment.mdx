@@ -1,0 +1,311 @@
+---
+title: "التحضير للنشر"
+description: "تأكد من جاهزية طاقمك أو تدفقك للنشر على CrewAI AMP"
+icon: "clipboard-check"
+mode: "wide"
+---
+
+<Note>
+  قبل النشر على CrewAI AMP، من الضروري التحقق من صحة بنية مشروعك.
+  يمكن نشر كل من الطواقم والتدفقات كـ "أتمتات"، لكن لهما بنى مشاريع
+  ومتطلبات مختلفة يجب استيفاؤها لنجاح النشر.
+</Note>
+
+## فهم الأتمتات
+
+في CrewAI AMP، **الأتمتات** هو المصطلح الشامل لمشاريع الذكاء الاصطناعي الوكيل القابلة للنشر. يمكن أن تكون الأتمتة إما:
+
+- **طاقم**: فريق مستقل من وكلاء الذكاء الاصطناعي يعملون معاً على المهام
+- **تدفق**: سير عمل مُنسّق يمكنه الجمع بين طواقم متعددة واستدعاءات LLM المباشرة والمنطق الإجرائي
+
+فهم النوع الذي تنشره ضروري لأن لهما بنى مشاريع ونقاط دخول مختلفة.
+
+## الطواقم مقابل التدفقات: الفروقات الرئيسية
+
+<CardGroup cols={2}>
+  <Card title="مشاريع الطاقم" icon="users">
+    فرق وكلاء ذكاء اصطناعي مستقلة مع `crew.py` يحدد الوكلاء والمهام. الأفضل للمهام المركزة والتعاونية.
+  </Card>
+  <Card title="مشاريع التدفق" icon="diagram-project">
+    سير عمل مُنسّق مع طواقم مضمنة في مجلد `crews/`. الأفضل للعمليات المعقدة متعددة المراحل.
+  </Card>
+</CardGroup>
+
+| الجانب | الطاقم | التدفق |
+|--------|--------|--------|
+| **بنية المشروع** | `src/project_name/` مع `crew.py` | `src/project_name/` مع مجلد `crews/` |
+| **موقع المنطق الرئيسي** | `src/project_name/crew.py` | `src/project_name/main.py` (فئة Flow) |
+| **دالة نقطة الدخول** | `run()` في `main.py` | `kickoff()` في `main.py` |
+| **نوع pyproject.toml** | `type = "crew"` | `type = "flow"` |
+| **أمر CLI للإنشاء** | `crewai create crew name` | `crewai create flow name` |
+| **موقع التهيئة** | `src/project_name/config/` | `src/project_name/crews/crew_name/config/` |
+| **يمكن أن يحتوي طواقم أخرى** | لا | نعم (في مجلد `crews/`) |
+
+## مرجع بنية المشروع
+
+### بنية مشروع الطاقم
+
+عند تشغيل `crewai create crew my_crew`، تحصل على هذه البنية:
+
+```
+my_crew/
+├── .gitignore
+├── pyproject.toml          # Must have type = "crew"
+├── README.md
+├── .env
+├── uv.lock                  # REQUIRED for deployment
+└── src/
+    └── my_crew/
+        ├── __init__.py
+        ├── main.py          # Entry point with run() function
+        ├── crew.py          # Crew class with @CrewBase decorator
+        ├── tools/
+        │   ├── custom_tool.py
+        │   └── __init__.py
+        └── config/
+            ├── agents.yaml  # Agent definitions
+            └── tasks.yaml   # Task definitions
+```
+
+<Warning>
+  بنية `src/project_name/` المتداخلة ضرورية للطواقم.
+  وضع الملفات في المستوى الخاطئ سيسبب فشل النشر.
+</Warning>
+
+### بنية مشروع التدفق
+
+عند تشغيل `crewai create flow my_flow`، تحصل على هذه البنية:
+
+```
+my_flow/
+├── .gitignore
+├── pyproject.toml          # Must have type = "flow"
+├── README.md
+├── .env
+├── uv.lock                  # REQUIRED for deployment
+└── src/
+    └── my_flow/
+        ├── __init__.py
+        ├── main.py          # Entry point with kickoff() function + Flow class
+        ├── crews/           # Embedded crews folder
+        │   └── poem_crew/
+        │       ├── __init__.py
+        │       ├── poem_crew.py  # Crew with @CrewBase decorator
+        │       └── config/
+        │           ├── agents.yaml
+        │           └── tasks.yaml
+        └── tools/
+            ├── __init__.py
+            └── custom_tool.py
+```
+
+<Info>
+  كلا الطواقم والتدفقات تستخدم بنية `src/project_name/`.
+  الفرق الرئيسي أن التدفقات لها مجلد `crews/` للطواقم المضمنة،
+  بينما الطواقم لها `crew.py` مباشرة في مجلد المشروع.
+</Info>
+
+## قائمة فحص ما قبل النشر
+
+استخدم هذه القائمة للتحقق من جاهزية مشروعك للنشر.
+
+### 1. التحقق من تهيئة pyproject.toml
+
+يجب أن يتضمن `pyproject.toml` قسم `[tool.crewai]` الصحيح:
+
+<Tabs>
+  <Tab title="للطواقم">
+    ```toml
+    [tool.crewai]
+    type = "crew"
+    ```
+  </Tab>
+  <Tab title="للتدفقات">
+    ```toml
+    [tool.crewai]
+    type = "flow"
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  إذا لم يتطابق `type` مع بنية مشروعك، سيفشل البناء أو
+  لن تعمل الأتمتة بشكل صحيح.
+</Warning>
+
+### 2. التأكد من وجود ملف uv.lock
+
+يستخدم CrewAI `uv` لإدارة الاعتماديات. يضمن ملف `uv.lock` بناءً قابلاً للتكرار وهو **مطلوب** للنشر.
+
+```bash
+# إنشاء أو تحديث ملف القفل
+uv lock
+
+# التحقق من وجوده
+ls -la uv.lock
+```
+
+إذا لم يكن الملف موجوداً، شغّل `uv lock` وارفعه إلى مستودعك:
+
+```bash
+uv lock
+git add uv.lock
+git commit -m "Add uv.lock for deployment"
+git push
+```
+
+### 3. التحقق من استخدام مُزخرف CrewBase
+
+**يجب أن تستخدم كل فئة طاقم مُزخرف `@CrewBase`.** ينطبق هذا على:
+
+- مشاريع الطاقم المستقلة
+- الطواقم المضمنة داخل مشاريع التدفق
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase  # This decorator is REQUIRED
+class MyCrew():
+    """My crew description"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    @agent
+    def my_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['my_agent'],  # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def my_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['my_task']  # type: ignore[index]
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+<Warning>
+  إذا نسيت مُزخرف `@CrewBase`، سيفشل النشر بأخطاء حول
+  تهيئات الوكلاء أو المهام المفقودة.
+</Warning>
+
+### 4. التحقق من نقاط دخول المشروع
+
+كل من الطواقم والتدفقات لها نقطة دخول في `src/project_name/main.py`:
+
+<Tabs>
+  <Tab title="للطواقم">
+    تستخدم نقطة الدخول دالة `run()`:
+
+    ```python
+    # src/my_crew/main.py
+    from my_crew.crew import MyCrew
+
+    def run():
+        """Run the crew."""
+        inputs = {'topic': 'AI in Healthcare'}
+        result = MyCrew().crew().kickoff(inputs=inputs)
+        return result
+
+    if __name__ == "__main__":
+        run()
+    ```
+  </Tab>
+  <Tab title="للتدفقات">
+    تستخدم نقطة الدخول دالة `kickoff()` مع فئة Flow:
+
+    ```python
+    # src/my_flow/main.py
+    from crewai.flow import Flow, listen, start
+    from my_flow.crews.poem_crew.poem_crew import PoemCrew
+
+    class MyFlow(Flow):
+        @start()
+        def begin(self):
+            # Flow logic here
+            result = PoemCrew().crew().kickoff(inputs={...})
+            return result
+
+    def kickoff():
+        """Run the flow."""
+        MyFlow().kickoff()
+
+    if __name__ == "__main__":
+        kickoff()
+    ```
+  </Tab>
+</Tabs>
+
+### 5. تحضير متغيرات البيئة
+
+قبل النشر، تأكد من أن لديك:
+
+1. **مفاتيح API لـ LLM** جاهزة (OpenAI، Anthropic، Google، إلخ.)
+2. **مفاتيح API للأدوات** إذا كنت تستخدم أدوات خارجية (Serper، إلخ.)
+
+<Info>
+  إذا كان مشروعك يعتمد على حزم من **سجل PyPI خاص**، ستحتاج أيضاً لتهيئة
+  بيانات اعتماد مصادقة السجل كمتغيرات بيئة. راجع
+  دليل [سجلات الحزم الخاصة](/ar/enterprise/guides/private-package-registry) للتفاصيل.
+</Info>
+
+<Tip>
+  اختبر مشروعك محلياً بنفس متغيرات البيئة قبل النشر
+  لاكتشاف مشاكل التهيئة مبكراً.
+</Tip>
+
+## أوامر التحقق السريع
+
+شغّل هذه الأوامر من جذر مشروعك للتحقق السريع من إعدادك:
+
+```bash
+# 1. Check project type in pyproject.toml
+grep -A2 "\[tool.crewai\]" pyproject.toml
+
+# 2. Verify uv.lock exists
+ls -la uv.lock || echo "ERROR: uv.lock missing! Run 'uv lock'"
+
+# 3. Verify src/ structure exists
+ls -la src/*/main.py 2>/dev/null || echo "No main.py found in src/"
+
+# 4. For Crews - verify crew.py exists
+ls -la src/*/crew.py 2>/dev/null || echo "No crew.py (expected for Crews)"
+
+# 5. For Flows - verify crews/ folder exists
+ls -la src/*/crews/ 2>/dev/null || echo "No crews/ folder (expected for Flows)"
+
+# 6. Check for CrewBase usage
+grep -r "@CrewBase" . --include="*.py"
+```
+
+## أخطاء الإعداد الشائعة
+
+| الخطأ | العرض | الإصلاح |
+|-------|-------|---------|
+| `uv.lock` مفقود | فشل البناء أثناء حل الاعتماديات | شغّل `uv lock` وارفعه |
+| `type` خاطئ في pyproject.toml | نجاح البناء لكن فشل وقت التشغيل | غيّر إلى النوع الصحيح |
+| مُزخرف `@CrewBase` مفقود | أخطاء "Config not found" | أضف المُزخرف لجميع فئات الطاقم |
+| ملفات في الجذر بدل `src/` | نقطة الدخول غير موجودة | انقلها إلى `src/project_name/` |
+| `run()` أو `kickoff()` مفقودة | لا يمكن بدء الأتمتة | أضف دالة الدخول الصحيحة |
+
+## الخطوات التالية
+
+بمجرد اجتياز مشروعك لجميع عناصر القائمة، أنت جاهز للنشر:
+
+<Card title="النشر على AMP" icon="rocket" href="/ar/enterprise/guides/deploy-to-amp">
+  اتبع دليل النشر لنشر طاقمك أو تدفقك على CrewAI AMP باستخدام
+  CLI أو واجهة الويب أو تكامل CI/CD.
+</Card>

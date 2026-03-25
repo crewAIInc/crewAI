@@ -1,0 +1,151 @@
+---
+title: "استخدام التعليقات التوضيحية في crew.py"
+description: "تعلم كيفية استخدام التعليقات التوضيحية لتنظيم الوكلاء والمهام والمكونات بشكل صحيح في CrewAI"
+icon: "at"
+mode: "wide"
+---
+
+يشرح هذا الدليل كيفية استخدام التعليقات التوضيحية للإشارة بشكل صحيح إلى **الوكلاء** و**المهام** والمكونات الأخرى في ملف `crew.py`.
+
+## مقدمة
+
+تُستخدم التعليقات التوضيحية في إطار عمل CrewAI لتزيين الفئات والطرق، مما يوفر بيانات وصفية ووظائف للمكونات المختلفة في طاقمك. تساعد هذه التعليقات التوضيحية في تنظيم وهيكلة الكود الخاص بك، مما يجعله أكثر قابلية للقراءة والصيانة.
+
+## التعليقات التوضيحية المتاحة
+
+يوفر إطار عمل CrewAI التعليقات التوضيحية التالية:
+
+- `@CrewBase`: تُستخدم لتزيين فئة الطاقم الرئيسية.
+- `@agent`: تزين الطرق التي تعرّف وتُرجع كائنات Agent.
+- `@task`: تزين الطرق التي تعرّف وتُرجع كائنات Task.
+- `@crew`: تزين الطريقة التي تنشئ وتُرجع كائن Crew.
+- `@llm`: تزين الطرق التي تهيئ وتُرجع كائنات نماذج اللغة.
+- `@tool`: تزين الطرق التي تهيئ وتُرجع كائنات الأدوات.
+- `@callback`: تُستخدم لتعريف طرق الاستدعاء الراجع.
+- `@output_json`: تُستخدم للطرق التي تُخرج بيانات JSON.
+- `@output_pydantic`: تُستخدم للطرق التي تُخرج نماذج Pydantic.
+- `@cache_handler`: تُستخدم لتعريف طرق معالجة التخزين المؤقت.
+
+## أمثلة الاستخدام
+
+لنمر عبر أمثلة لكيفية استخدام هذه التعليقات التوضيحية:
+
+### 1. فئة الطاقم الأساسية
+
+```python
+@CrewBase
+class LinkedinProfileCrew():
+    """LinkedinProfile crew"""
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
+```
+
+تُستخدم التعليقة التوضيحية `@CrewBase` لتزيين فئة الطاقم الرئيسية. تحتوي هذه الفئة عادةً على الإعدادات والطرق لإنشاء الوكلاء والمهام والطاقم نفسه.
+
+<Tip>
+`@CrewBase` تفعل أكثر من مجرد تسجيل الفئة:
+
+- **تمهيد الإعدادات:** تبحث عن `agents_config` و `tasks_config` (القيمة الافتراضية `config/agents.yaml` و `config/tasks.yaml`) بجانب ملف الفئة، وتحملها عند الإنشاء، وتتراجع بأمان إلى قواميس فارغة إذا كانت الملفات مفقودة.
+- **تنسيق المزخرفات:** تحتفظ بمراجع محفوظة لكل طريقة مُعلّمة بـ `@agent` أو `@task` أو `@before_kickoff` أو `@after_kickoff` بحيث يتم إنشاؤها مرة واحدة لكل طاقم وتُنفذ بترتيب الإعلان.
+- **ربط الخطافات:** تربط تلقائياً خطافات التشغيل المحفوظة بكائن `Crew` المُرجع من طريقة `@crew`، مما يجعلها تعمل قبل وبعد `.kickoff()`.
+- **تكامل MCP:** عندما تعرّف الفئة `mcp_server_params`، ينشئ `get_mcp_tools()` بكسل محول MCP server، ويملأ الأدوات المُعلنة، ويوقف خطاف ما بعد التشغيل الداخلي المحول. راجع [نظرة عامة على MCP](/ar/mcp/overview) لتفاصيل إعداد المحول.
+</Tip>
+
+### 2. تعريف الأداة
+
+```python
+@tool
+def myLinkedInProfileTool(self):
+    return LinkedInProfileTool()
+```
+
+تُستخدم التعليقة التوضيحية `@tool` لتزيين الطرق التي تُرجع كائنات أدوات. يمكن للوكلاء استخدام هذه الأدوات لأداء مهام محددة.
+
+### 3. تعريف LLM
+
+```python
+@llm
+def groq_llm(self):
+    api_key = os.getenv('api_key')
+    return ChatGroq(api_key=api_key, temperature=0, model_name="mixtral-8x7b-32768")
+```
+
+تُستخدم التعليقة التوضيحية `@llm` لتزيين الطرق التي تهيئ وتُرجع كائنات نماذج اللغة. تستخدم هذه النماذج من قبل الوكلاء لمهام معالجة اللغة الطبيعية.
+
+### 4. تعريف الوكيل
+
+```python
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config['researcher']
+    )
+```
+
+تُستخدم التعليقة التوضيحية `@agent` لتزيين الطرق التي تعرّف وتُرجع كائنات Agent.
+
+### 5. تعريف المهمة
+
+```python
+@task
+def research_task(self) -> Task:
+    return Task(
+        config=self.tasks_config['research_linkedin_task'],
+        agent=self.researcher()
+    )
+```
+
+تُستخدم التعليقة التوضيحية `@task` لتزيين الطرق التي تعرّف وتُرجع كائنات Task. تحدد هذه الطرق إعداد المهمة والوكيل المسؤول عنها.
+
+### 6. إنشاء الطاقم
+
+```python
+@crew
+def crew(self) -> Crew:
+    """Creates the LinkedinProfile crew"""
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True
+    )
+```
+
+تُستخدم التعليقة التوضيحية `@crew` لتزيين الطريقة التي تنشئ وتُرجع كائن `Crew`. تجمع هذه الطريقة جميع المكونات (الوكلاء والمهام) في طاقم وظيفي.
+
+## إعداد YAML
+
+تُخزن إعدادات الوكلاء عادةً في ملف YAML. إليك مثالاً على كيفية ظهور ملف `agents.yaml` لوكيل الباحث:
+
+```yaml
+researcher:
+    role: >
+        LinkedIn Profile Senior Data Researcher
+    goal: >
+        Uncover detailed LinkedIn profiles based on provided name {name} and domain {domain}
+        Generate a Dall-E image based on domain {domain}
+    backstory: >
+        You're a seasoned researcher with a knack for uncovering the most relevant LinkedIn profiles.
+        Known for your ability to navigate LinkedIn efficiently, you excel at gathering and presenting
+        professional information clearly and concisely.
+    allow_delegation: False
+    verbose: True
+    llm: groq_llm
+    tools:
+        - myLinkedInProfileTool
+        - mySerperDevTool
+        - myDallETool
+```
+
+يتوافق إعداد YAML هذا مع وكيل الباحث المُعرّف في فئة `LinkedinProfileCrew`. يحدد الإعداد دور الوكيل وهدفه وخلفيته وخصائص أخرى مثل LLM والأدوات التي يستخدمها.
+
+لاحظ كيف يتوافق `llm` و `tools` في ملف YAML مع الطرق المزينة بـ `@llm` و `@tool` في فئة Python.
+
+## أفضل الممارسات
+
+- **تسمية متسقة**: استخدم اصطلاحات تسمية واضحة ومتسقة لطرقك. على سبيل المثال، يمكن تسمية طرق الوكلاء بأسماء أدوارهم (مثل researcher، reporting_analyst).
+- **متغيرات البيئة**: استخدم متغيرات البيئة للمعلومات الحساسة مثل مفاتيح API.
+- **المرونة**: صمم طاقمك ليكون مرناً بالسماح بإضافة أو إزالة الوكلاء والمهام بسهولة.
+- **توافق YAML-الكود**: تأكد من أن الأسماء والهياكل في ملفات YAML تتوافق بشكل صحيح مع الطرق المزينة في كود Python الخاص بك.
+
+باتباع هذه الإرشادات واستخدام التعليقات التوضيحية بشكل صحيح، يمكنك إنشاء أطقم منظمة جيداً وسهلة الصيانة باستخدام إطار عمل CrewAI.

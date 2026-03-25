@@ -1,0 +1,209 @@
+---
+title: "سجل التغييرات"
+description: "تحديثات المنتج والتحسينات وإصلاحات الأخطاء لـ CrewAI"
+icon: "clock"
+mode: "wide"
+---
+<Update label="Mar 23, 2026">
+  ## v1.11.1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## ما تغيّر
+
+  ### الميزات
+  - إضافة مُسلسِل flow_structure() لفحص فئة Flow.
+
+  ### إصلاحات الأخطاء
+  - إصلاح ثغرات أمنية بتحديث pypdf و tinytag و langchain-core.
+  - الحفاظ على تهيئة LLM الكاملة عبر استئناف HITL لمزودي غير OpenAI.
+  - منع اجتياز المسار في FileWriterTool.
+  - إصلاح انهيار lock_store عندما لا تكون حزمة redis مثبتة.
+  - تمرير cache_function من BaseTool إلى CrewStructuredTool.
+
+  ### التوثيق
+  - إضافة دليل نشر الأدوات المخصصة مع الترجمات.
+  - تحديث سجل التغييرات والإصدار لـ v1.11.0.
+  - إضافة توثيق مستمعي الأحداث المفقود.
+
+  ### إعادة الهيكلة
+  - استبدال urllib بـ requests في محمّل PDF.
+  - استبدال حقول callback والنموذج من نوع Any بأنواع قابلة للتسلسل.
+
+  ## المساهمون
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="Mar 18, 2026">
+  ## v1.11.0
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0)
+
+  ## ما تغيّر
+
+  ### التوثيق
+  - تحديث سجل التغييرات والإصدار لـ v1.11.0rc2
+
+  ## المساهمون
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Mar 17, 2026">
+  ## v1.11.0rc2
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc2)
+
+  ## ما تغيّر
+
+  ### إصلاحات الأخطاء
+  - تحسين معالجة استجابات LLM والتسلسل.
+  - ترقية الاعتماديات الانتقالية المعرضة للخطر (authlib، PyJWT، snowflake-connector-python).
+  - استبدال `os.system` بـ `subprocess.run` في تثبيت pip بالوضع غير الآمن.
+
+  ### التوثيق
+  - تحديث صفحة أداة Exa Search بتسمية ووصف وخيارات تهيئة محسّنة.
+  - إضافة خوادم MCP المخصصة في دليل الإرشادات.
+  - تحديث توثيق جامعي OTEL.
+  - تحديث توثيق MCP.
+  - تحديث سجل التغييرات والإصدار لـ v1.11.0rc1.
+
+  ## المساهمون
+
+  @10ishq, @greysonlalonde, @joaomdmoura, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="Mar 15, 2026">
+  ## v1.11.0rc1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc1)
+
+  ## ما تغيّر
+
+  ### الميزات
+  - إضافة مصادقة رمز Plus API في a2a
+  - تنفيذ نمط التخطيط والتنفيذ
+
+  ### إصلاحات الأخطاء
+  - حل مشكلة هروب صندوق حماية مفسر الكود
+
+  ### التوثيق
+  - تحديث سجل التغييرات والإصدار لـ v1.10.2rc2
+
+  ## المساهمون
+
+  @Copilot, @greysonlalonde, @lorenzejay, @theCyberTech
+
+</Update>
+
+<Update label="Mar 14, 2026">
+  ## v1.10.2rc2
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc2)
+
+  ## ما تغيّر
+
+  ### إصلاحات الأخطاء
+  - إزالة الأقفال الحصرية من عمليات التخزين للقراءة فقط
+
+  ### التوثيق
+  - تحديث سجل التغييرات والإصدار لـ v1.10.2rc1
+
+  ## المساهمون
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Mar 13, 2026">
+  ## v1.10.2rc1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc1)
+
+  ## ما تغيّر
+
+  ### الميزات
+  - إضافة أمر الإصدار وتشغيل نشر PyPI
+
+  ### إصلاحات الأخطاء
+  - إصلاح القفل الآمن عبر العمليات والخيوط للإدخال/الإخراج غير المحمي
+  - نشر contextvars عبر جميع حدود الخيوط والمنفذين
+  - نشر ContextVars إلى خيوط المهام غير المتزامنة
+
+  ### التوثيق
+  - تحديث سجل التغييرات والإصدار لـ v1.10.2a1
+
+  ## المساهمون
+
+  @danglies007, @greysonlalonde
+
+</Update>
+
+<Update label="Mar 11, 2026">
+  ## v1.10.2a1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2a1)
+
+  ## ما تغيّر
+
+  ### الميزات
+  - إضافة دعم البحث عن الأدوات وتوفير الرموز وحقن الأدوات المناسبة ديناميكيًا أثناء التنفيذ لـ Anthropic.
+  - تقديم المزيد من أدوات Brave Search.
+  - إنشاء إجراء للإصدارات الليلية.
+
+  ### إصلاحات الأخطاء
+  - إصلاح LockException تحت التنفيذ المتزامن متعدد العمليات.
+  - حل مشكلات تجميع نتائج الأدوات المتوازية في رسالة مستخدم واحدة.
+  - معالجة حلول أدوات MCP والقضاء على جميع الاتصالات المشتركة القابلة للتغيير.
+  - تحديث معالجة معاملات LLM في دالة human_feedback.
+  - إضافة طرق list/dict المفقودة إلى LockedListProxy و LockedDictProxy.
+  - نشر سياق contextvars إلى خيوط استدعاء الأدوات المتوازية.
+  - ترقية اعتمادية gitpython إلى >=3.1.41 لحل ثغرة اجتياز مسار CVE.
+
+  ### إعادة الهيكلة
+  - إعادة هيكلة فئات الذاكرة لتكون قابلة للتسلسل.
+
+  ### التوثيق
+  - تحديث سجل التغييرات والإصدار لـ v1.10.1.
+
+  ## المساهمون
+
+  @akaKuruma, @github-actions[bot], @giulio-leone, @greysonlalonde, @joaomdmoura, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha
+
+</Update>
+
+<Update label="Mar 04, 2026">
+  ## v1.10.1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## ما تغيّر
+
+  ### الميزات
+  - ترقية Gemini GenAI
+
+  ### إصلاحات الأخطاء
+  - ضبط قيمة مستمع المنفذ لتجنب التكرار
+  - تجميع أجزاء استجابة الدوال المتوازية في كائن Content واحد في Gemini
+  - إظهار مخرجات التفكير من نماذج التفكير في Gemini
+  - تحميل أدوات MCP والمنصة عندما تكون أدوات الوكيل None
+  - دعم بيئات Jupyter مع حلقات أحداث قيد التشغيل في A2A
+  - استخدام معرّف مجهول للتتبعات المؤقتة
+  - تمرير ترويسة plus بشكل مشروط
+  - تخطي تسجيل معالج الإشارة في الخيوط غير الرئيسية لقياس الأداء عن بعد
+  - حقن أخطاء الأدوات كملاحظات وحل تعارضات الأسماء
+  - ترقية pypdf من 4.x إلى 6.7.4 لحل تنبيهات Dependabot
+  - حل تنبيهات أمان Dependabot الحرجة والعالية
+
+  ### التوثيق
+  - تحديث توثيق بث webhook
+  - ضبط لغة التوثيق من AOP إلى AMP
+
+  ### المساهمون
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide, @mplachta
+
+</Update>
