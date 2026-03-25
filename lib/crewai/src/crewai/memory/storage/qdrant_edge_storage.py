@@ -308,13 +308,12 @@ class QdrantEdgeStorage:
         """Search both central and local shards, merge results."""
         filt = self._build_scope_filter(scope_prefix)
         fetch_limit = limit * 3 if (categories or metadata_filter) else limit
-        all_scored: list[
-            tuple[dict[str, Any], float, dict[str, list[float]] | None]
-        ] = []
+        all_scored: list[tuple[dict[str, Any], float, bool]] = []
 
         for shard_path in (self._central_path, self._local_path):
             if not shard_path.exists():
                 continue
+            is_local = shard_path == self._local_path
             try:
                 shard = EdgeShard.load(str(shard_path))
                 results = shard.query(
@@ -327,24 +326,27 @@ class QdrantEdgeStorage:
                     )
                 )
                 all_scored.extend(
-                    (sp.payload or {}, float(sp.score), None) for sp in results
+                    (sp.payload or {}, float(sp.score), is_local) for sp in results
                 )
                 shard.close()
             except Exception:
                 _logger.debug("Search failed on %s", shard_path, exc_info=True)
 
-        seen: dict[
-            str, tuple[dict[str, Any], float, dict[str, list[float]] | None]
-        ] = {}
-        for payload, score, vec in all_scored:
+        seen: dict[str, tuple[dict[str, Any], float]] = {}
+        local_ids: set[str] = set()
+        for payload, score, is_local in all_scored:
             rid = payload["record_id"]
-            if rid not in seen or score > seen[rid][1]:
-                seen[rid] = (payload, score, vec)
+            if is_local:
+                local_ids.add(rid)
+                seen[rid] = (payload, score)
+            elif rid not in local_ids:
+                if rid not in seen or score > seen[rid][1]:
+                    seen[rid] = (payload, score)
 
         ranked = sorted(seen.values(), key=lambda x: x[1], reverse=True)
         out: list[tuple[MemoryRecord, float]] = []
-        for payload, score, vec in ranked:
-            record = self._payload_to_record(payload, vec)
+        for payload, score in ranked:
+            record = self._payload_to_record(payload)
             if categories and not any(c in record.categories for c in categories):
                 continue
             if metadata_filter and not all(
