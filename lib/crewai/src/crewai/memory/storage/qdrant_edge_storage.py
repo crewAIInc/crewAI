@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import atexit
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 import logging
 import os
 from pathlib import Path
@@ -214,7 +214,7 @@ class QdrantEdgeStorage:
 
         def _parse_dt(val: Any) -> datetime:
             if val is None:
-                return datetime.now(UTC).replace(tzinfo=None)
+                return datetime.now(timezone.utc).replace(tzinfo=None)
             if isinstance(val, datetime):
                 return val
             return datetime.fromisoformat(str(val).replace("Z", "+00:00"))
@@ -691,7 +691,7 @@ class QdrantEdgeStorage:
         """Update last_accessed to now for the given record IDs."""
         if not record_ids:
             return
-        now = datetime.now(UTC).replace(tzinfo=None).isoformat()
+        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         point_ids: list[int | uuid.UUID | str] = [
             _uuid_to_point_id(rid) for rid in record_ids
         ]

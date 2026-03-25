@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import importlib
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
@@ -279,8 +279,8 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
                     "categories": [],
                     "metadata": {},
                     "importance": 0.5,
-                    "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
-                    "last_accessed": datetime.now(UTC).replace(tzinfo=None).isoformat(),
+                    "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+                    "last_accessed": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                     "source": "",
                     "private": False,
                 },
