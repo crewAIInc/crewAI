@@ -212,7 +212,9 @@ class TraceBatchManager:
     def _mark_batch_as_failed(self, trace_batch_id: str, error_message: str) -> None:
         """Mark a trace batch as failed, routing to the correct endpoint."""
         if self.is_current_batch_ephemeral:
-            self.plus_api.mark_ephemeral_trace_batch_as_failed(trace_batch_id, error_message)
+            self.plus_api.mark_ephemeral_trace_batch_as_failed(
+                trace_batch_id, error_message
+            )
         else:
             self.plus_api.mark_trace_batch_as_failed(trace_batch_id, error_message)
 
@@ -409,16 +411,16 @@ class TraceBatchManager:
                 logger.error(
                     f"❌ Failed to finalize trace batch: {response.status_code} - {response.text}"
                 )
-                self._mark_batch_as_failed(
-                    self.trace_batch_id, response.text
-                )
+                self._mark_batch_as_failed(self.trace_batch_id, response.text)
 
         except Exception as e:
             logger.error(f"❌ Error finalizing trace batch: {e}")
             try:
                 self._mark_batch_as_failed(self.trace_batch_id, str(e))
             except Exception:
-                logger.debug("Could not mark trace batch as failed (network unavailable)")
+                logger.debug(
+                    "Could not mark trace batch as failed (network unavailable)"
+                )
 
     def _cleanup_batch_data(self) -> None:
         """Clean up batch data after successful finalization to free memory"""

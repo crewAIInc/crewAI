@@ -105,7 +105,9 @@ class FirstTimeTraceHandler:
                 )
 
                 if not self.batch_manager.trace_batch_id:
-                    self._gracefully_fail("Backend batch creation failed, cannot send events.")
+                    self._gracefully_fail(
+                        "Backend batch creation failed, cannot send events."
+                    )
                     self._reset_batch_state()
                     return
 
@@ -234,7 +236,9 @@ To enable tracing later, do any one of these:
 
         logger.debug(f"First-time trace error: {error_message}")
 
-    def _show_local_trace_message(self, events_count: int = 0, duration_ms: int = 0, batch_id: str | None = None) -> None:
+    def _show_local_trace_message(
+        self, events_count: int = 0, duration_ms: int = 0, batch_id: str | None = None
+    ) -> None:
         """Show message when traces were collected locally but couldn't be uploaded."""
         if self.batch_manager is None:
             return
