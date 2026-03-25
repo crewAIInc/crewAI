@@ -436,20 +436,17 @@ class Agent(BaseAgent):
         self,
         task: Task,
         context: str | None,
-        tools: list[BaseTool] | None,
     ) -> str:
         """Prepare common setup for task execution shared by sync and async paths.
 
-        Handles reasoning, date injection, prompt building, memory retrieval,
-        skill context, tool preparation, and training data.
+        Handles reasoning, date injection, prompt building, and memory retrieval.
 
         Args:
             task: Task to execute.
             context: Context to execute the task in.
-            tools: Tools to use for the task.
 
         Returns:
-            The fully prepared task prompt.
+            The task prompt after memory retrieval, ready for knowledge lookup.
         """
         get_env_context()
         if self.executor_class is not AgentExecutor:
@@ -463,8 +460,24 @@ class Agent(BaseAgent):
         task_prompt = task.prompt()
         task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
         task_prompt = format_task_with_context(task_prompt, context, self.i18n)
-        task_prompt = self._retrieve_memory_context(task, task_prompt)
+        return self._retrieve_memory_context(task, task_prompt)
 
+    def _finalize_task_prompt(
+        self,
+        task_prompt: str,
+        tools: list[BaseTool] | None,
+        task: Task,
+    ) -> str:
+        """Apply skill context, tool preparation, and training data to the task prompt.
+
+        Args:
+            task_prompt: The task prompt after memory and knowledge retrieval.
+            tools: Tools to use for the task.
+            task: Task to execute.
+
+        Returns:
+            The fully prepared task prompt.
+        """
         task_prompt = append_skill_context(self, task_prompt)
         prepare_tools(self, tools, task)
 
@@ -669,7 +682,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        task_prompt = self._prepare_task_execution(task, context, tools)
+        task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = handle_knowledge_retrieval(
@@ -680,6 +693,8 @@ class Agent(BaseAgent):
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
             self.crew.query_knowledge if self.crew else lambda *a, **k: None,
         )
+
+        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
             crewai_event_bus.emit(
@@ -793,12 +808,14 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        task_prompt = self._prepare_task_execution(task, context, tools)
+        task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
+
+        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
             crewai_event_bus.emit(
