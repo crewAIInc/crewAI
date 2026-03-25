@@ -16,6 +16,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
 
+from crewai_devtools.docs_check import docs_check
 from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
 
 
@@ -1353,6 +1354,7 @@ def release(version: str, dry_run: bool, no_edit: bool) -> None:
 cli.add_command(bump)
 cli.add_command(tag)
 cli.add_command(release)
+cli.add_command(docs_check)
 
 
 def main() -> None:
