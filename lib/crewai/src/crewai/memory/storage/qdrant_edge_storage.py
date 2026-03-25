@@ -429,9 +429,12 @@ class QdrantEdgeStorage:
         if categories or metadata_filter or older_than:
             scope_filter = self._build_scope_filter(scope_prefix)
             points = self._scroll_all(shard, filt=scope_filter)
+            allowed_ids: set[str] | None = set(record_ids) if record_ids else None
             to_delete: list[int | uuid.UUID | str] = []
             for pt in points:
                 record = self._payload_to_record(pt.payload or {})
+                if allowed_ids and record.id not in allowed_ids:
+                    continue
                 if categories and not any(c in record.categories for c in categories):
                     continue
                 if metadata_filter and not all(
