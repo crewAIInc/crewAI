@@ -90,11 +90,17 @@ class MemoryMatch(BaseModel):
     def format(self) -> str:
         """Format this match as a human-readable string including metadata.
 
+        Memory content is sanitized to mitigate indirect prompt-injection
+        attacks (see :pyfunc:`crewai.memory.utils.sanitize_memory_content`).
+
         Returns:
-            A multi-line string with score, content, categories, and non-empty
-            metadata fields.
+            A multi-line string with score, sanitized content, categories, and
+            non-empty metadata fields.
         """
-        lines = [f"- (score={self.score:.2f}) {self.record.content}"]
+        from crewai.memory.utils import sanitize_memory_content
+
+        sanitized = sanitize_memory_content(self.record.content)
+        lines = [f"- (score={self.score:.2f}) {sanitized}"]
         if self.record.categories:
             lines.append(f"  categories: {', '.join(self.record.categories)}")
         if self.record.metadata:
