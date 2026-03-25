@@ -1,5 +1,6 @@
 import base64
 from pathlib import Path
+from typing import Any
 
 from crewai import LLM
 from crewai.tools import BaseTool, EnvVar
@@ -58,7 +59,9 @@ class VisionTool(BaseTool):
     _model: str = PrivateAttr(default="gpt-4o-mini")
     _llm: LLM | None = PrivateAttr(default=None)
 
-    def __init__(self, llm: LLM | None = None, model: str = "gpt-4o-mini", **kwargs):
+    def __init__(
+        self, llm: LLM | None = None, model: str = "gpt-4o-mini", **kwargs: Any
+    ) -> None:
         """Initialize the vision tool.
 
         Args:
@@ -89,7 +92,7 @@ class VisionTool(BaseTool):
             self._llm = LLM(model=self._model, stop=["STOP", "END"])
         return self._llm
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         try:
             image_path_url = kwargs.get("image_path_url")
             if not image_path_url:

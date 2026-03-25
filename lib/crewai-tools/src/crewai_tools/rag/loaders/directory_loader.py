@@ -1,12 +1,13 @@
 import os
 from pathlib import Path
+from typing import Any
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
 
 
 class DirectoryLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         """Load and process all files from a directory recursively.
 
         Args:
@@ -32,7 +33,7 @@ class DirectoryLoader(BaseLoader):
 
         return self._process_directory(source_ref, kwargs)
 
-    def _process_directory(self, dir_path: str, kwargs: dict) -> LoaderResult:
+    def _process_directory(self, dir_path: str, kwargs: dict[str, Any]) -> LoaderResult:
         recursive: bool = kwargs.get("recursive", True)
         include_extensions: list[str] | None = kwargs.get("include_extensions", None)
         exclude_extensions: list[str] | None = kwargs.get("exclude_extensions", None)

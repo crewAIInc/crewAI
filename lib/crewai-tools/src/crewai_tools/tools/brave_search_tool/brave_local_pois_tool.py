@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -65,8 +65,8 @@ class BraveLocalPOIsTool(BraveSearchToolBase):
     def _refine_request_payload(self, params: dict[str, Any]) -> dict[str, Any]:
         return params
 
-    def _refine_response(self, response: LocalPOIsResponse) -> list[dict[str, Any]]:
-        results = response.get("results", [])
+    def _refine_response(self, response: dict[str, Any]) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = response.get("results", [])
         return [
             {
                 "title": result.get("title"),
@@ -76,7 +76,7 @@ class BraveLocalPOIsTool(BraveSearchToolBase):
                 "contact": result.get("contact", {}).get("telephone")
                 or result.get("contact", {}).get("email")
                 or None,
-                "opening_hours": _simplify_opening_hours(result),
+                "opening_hours": _simplify_opening_hours(cast(LocationResult, result)),
             }
             for result in results
         ]
@@ -97,9 +97,8 @@ class BraveLocalPOIsDescriptionTool(BraveSearchToolBase):
     def _refine_request_payload(self, params: dict[str, Any]) -> dict[str, Any]:
         return params
 
-    def _refine_response(self, response: LocalPOIsResponse) -> list[dict[str, Any]]:
-        # Make the response more concise, and easier to consume
-        results = response.get("results", [])
+    def _refine_response(self, response: dict[str, Any]) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = response.get("results", [])
         return [
             {
                 "id": result.get("id"),

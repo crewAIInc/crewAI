@@ -119,7 +119,7 @@ class QdrantVectorSearchTool(BaseTool):
                 )
             )()
         )
-        results = self.client.query_points(
+        results = self.client.query_points(  # type: ignore[union-attr]
             collection_name=self.qdrant_config.collection_name,
             query=query_vector,
             query_filter=search_filter,

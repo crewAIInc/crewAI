@@ -1,8 +1,8 @@
 """PDF loader for extracting text from PDF files."""
 
 import os
-import tempfile
 from pathlib import Path
+import tempfile
 from typing import Any
 from urllib.parse import urlparse
 
@@ -25,7 +25,7 @@ class PDFLoader(BaseLoader):
             return False
 
     @staticmethod
-    def _download_from_url(url: str, kwargs: dict) -> str:
+    def _download_from_url(url: str, kwargs: dict[str, Any]) -> str:
         """Download PDF from a URL to a temporary file and return its path.
 
         Args:

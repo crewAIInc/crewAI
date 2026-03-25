@@ -18,7 +18,6 @@ from docker import (  # type: ignore[import-untyped]
     from_env as docker_from_env,
 )
 from docker.errors import ImageNotFound, NotFound  # type: ignore[import-untyped]
-from docker.models.containers import Container  # type: ignore[import-untyped]
 from pydantic import BaseModel, Field
 from typing_extensions import Unpack
 
@@ -232,7 +231,7 @@ class CodeInterpreterTool(BaseTool):
         return self.run_code_safety(code, libraries_used)
 
     @staticmethod
-    def _install_libraries(container: Container, libraries: list[str]) -> None:
+    def _install_libraries(container: Any, libraries: list[str]) -> None:
         """Installs required Python libraries in the Docker container.
 
         Args:
@@ -242,7 +241,7 @@ class CodeInterpreterTool(BaseTool):
         for library in libraries:
             container.exec_run(["pip", "install", library])
 
-    def _init_docker_container(self) -> Container:
+    def _init_docker_container(self) -> Any:
         """Initializes and returns a Docker container for code execution.
 
         Stops and removes any existing container with the same name before creating
@@ -269,7 +268,7 @@ class CodeInterpreterTool(BaseTool):
             tty=True,
             working_dir="/workspace",
             name=container_name,
-            volumes={current_path: {"bind": "/workspace", "mode": "rw"}},  # type: ignore
+            volumes={current_path: {"bind": "/workspace", "mode": "rw"}},
         )
 
     @staticmethod
@@ -351,14 +350,14 @@ class CodeInterpreterTool(BaseTool):
         container = self._init_docker_container()
         self._install_libraries(container, libraries_used)
 
-        exec_result = container.exec_run(["python3", "-c", code])
+        exec_result: Any = container.exec_run(["python3", "-c", code])
 
         container.stop()
         container.remove()
 
         if exec_result.exit_code != 0:
             return f"Something went wrong while running the code: \n{exec_result.output.decode('utf-8')}"
-        return exec_result.output.decode("utf-8")
+        return str(exec_result.output.decode("utf-8"))
 
     @staticmethod
     def run_code_in_restricted_sandbox(code: str) -> str:
@@ -385,12 +384,12 @@ class CodeInterpreterTool(BaseTool):
         """
         Printer.print(
             "WARNING: Running code in INSECURE restricted sandbox (vulnerable to escape attacks)",
-            color="bold_red"
+            color="bold_red",
         )
         exec_locals: dict[str, Any] = {}
         try:
             SandboxPython.exec(code=code, locals_=exec_locals)
-            return exec_locals.get("result", "No result variable found.")
+            return exec_locals.get("result", "No result variable found.")  # type: ignore[no-any-return]
         except Exception as e:
             return f"An error occurred: {e!s}"
 
@@ -412,12 +411,14 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            subprocess.run([sys.executable, "-m", "pip", "install", library], check=False)  # noqa: S603
+            subprocess.run(  # noqa: S603
+                [sys.executable, "-m", "pip", "install", library], check=False
+            )
 
         # Execute the code
         try:
             exec_locals: dict[str, Any] = {}
             exec(code, {}, exec_locals)  # noqa: S102
-            return exec_locals.get("result", "No result variable found.")
+            return exec_locals.get("result", "No result variable found.")  # type: ignore[no-any-return]
         except Exception as e:
             return f"An error occurred: {e!s}"

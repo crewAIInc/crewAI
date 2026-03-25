@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 import inspect
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from crewai.tools.base_tool import BaseTool, EnvVar
 from pydantic import BaseModel
@@ -115,7 +115,8 @@ class ToolSpecExtractor:
         default_value = field.default
         if default_value is PydanticUndefined or default_value is None:
             if field.default_factory:
-                return field.default_factory()
+                factory = cast(Callable[[], Any], field.default_factory)
+                return factory()
             return None
 
         return default_value
