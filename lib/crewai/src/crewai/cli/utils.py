@@ -556,7 +556,9 @@ def _load_module_from_file(init_file: Path, module_name: str | None = None):
     Yields the loaded module or None if loading fails.
     """
     if module_name is None:
-        module_name = f"temp_module_{hashlib.sha256(str(init_file).encode()).hexdigest()[:8]}"
+        module_name = (
+            f"temp_module_{hashlib.sha256(str(init_file).encode()).hexdigest()[:8]}"
+        )
 
     spec = importlib.util.spec_from_file_location(module_name, init_file)
     if not spec or not spec.loader:
@@ -670,7 +672,9 @@ def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
             tools_metadata = []
             for name in exported_names:
                 obj = getattr(module, name, None)
-                if obj is None or not (inspect.isclass(obj) and issubclass(obj, BaseTool)):
+                if obj is None or not (
+                    inspect.isclass(obj) and issubclass(obj, BaseTool)
+                ):
                     continue
                 if tool_info := _extract_single_tool_metadata(obj):
                     tools_metadata.append(tool_info)
@@ -762,7 +766,9 @@ def _get_schema_generator() -> type:
     return SchemaGenerator
 
 
-def _extract_run_params_schema(args_schema_field: dict[str, Any] | None) -> dict[str, Any]:
+def _extract_run_params_schema(
+    args_schema_field: dict[str, Any] | None,
+) -> dict[str, Any]:
     """
     Extract JSON Schema for the tool's run parameters from args_schema field.
     """
@@ -772,27 +778,33 @@ def _extract_run_params_schema(args_schema_field: dict[str, Any] | None) -> dict
         return {}
 
     args_schema_class = args_schema_field.get("schema", {}).get("default")
-    if not (inspect.isclass(args_schema_class) and issubclass(args_schema_class, BaseModel)):
+    if not (
+        inspect.isclass(args_schema_class) and issubclass(args_schema_class, BaseModel)
+    ):
         return {}
 
     try:
-        return args_schema_class.model_json_schema(schema_generator=_get_schema_generator())
+        return args_schema_class.model_json_schema(
+            schema_generator=_get_schema_generator()
+        )
     except Exception:
         return {}
 
 
-_IGNORED_INIT_PARAMS = frozenset({
-    "name",
-    "description",
-    "env_vars",
-    "args_schema",
-    "description_updated",
-    "cache_function",
-    "result_as_answer",
-    "max_usage_count",
-    "current_usage_count",
-    "package_dependencies",
-})
+_IGNORED_INIT_PARAMS = frozenset(
+    {
+        "name",
+        "description",
+        "env_vars",
+        "args_schema",
+        "description_updated",
+        "cache_function",
+        "result_as_answer",
+        "max_usage_count",
+        "current_usage_count",
+        "package_dependencies",
+    }
+)
 
 
 def _extract_init_params_schema(tool_class: type) -> dict[str, Any]:

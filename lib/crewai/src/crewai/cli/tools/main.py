@@ -265,14 +265,18 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             console.print("[yellow]No tool metadata extracted.[/yellow]")
             return
 
-        console.print(f"\n[bold]Tools to be published ({len(tools_metadata)}):[/bold]\n")
+        console.print(
+            f"\n[bold]Tools to be published ({len(tools_metadata)}):[/bold]\n"
+        )
 
         for tool in tools_metadata:
             console.print(f"  [bold cyan]{tool.get('name', 'Unknown')}[/bold cyan]")
             if tool.get("module"):
                 console.print(f"    Module: {tool.get('module')}")
             console.print(f"    Name: {tool.get('humanized_name', 'N/A')}")
-            console.print(f"    Description: {tool.get('description', 'N/A')[:80]}{'...' if len(tool.get('description', '')) > 80 else ''}")
+            console.print(
+                f"    Description: {tool.get('description', 'N/A')[:80]}{'...' if len(tool.get('description', '')) > 80 else ''}"
+            )
 
             init_params = tool.get("init_params_schema", {}).get("properties", {})
             if init_params:
@@ -282,16 +286,26 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                     param_type = param_info.get("type", "any")
                     is_required = param_name in required
                     req_marker = "[red]*[/red]" if is_required else ""
-                    default = f" = {param_info['default']}" if "default" in param_info else ""
-                    console.print(f"      - {param_name}: {param_type}{default} {req_marker}")
+                    default = (
+                        f" = {param_info['default']}" if "default" in param_info else ""
+                    )
+                    console.print(
+                        f"      - {param_name}: {param_type}{default} {req_marker}"
+                    )
 
             env_vars = tool.get("env_vars", [])
             if env_vars:
                 console.print("    Environment variables:")
                 for env_var in env_vars:
                     req_marker = "[red]*[/red]" if env_var.get("required") else ""
-                    default = f" (default: {env_var['default']})" if env_var.get("default") else ""
-                    console.print(f"      - {env_var['name']}: {env_var.get('description', 'N/A')}{default} {req_marker}")
+                    default = (
+                        f" (default: {env_var['default']})"
+                        if env_var.get("default")
+                        else ""
+                    )
+                    console.print(
+                        f"      - {env_var['name']}: {env_var.get('description', 'N/A')}{default} {req_marker}"
+                    )
 
             console.print()
 
