@@ -125,7 +125,7 @@ class FirstTimeTraceHandler:
             if self.batch_manager.event_buffer:
                 send_status = self.batch_manager._send_events_to_backend()
                 if send_status == 500 and self.batch_manager.trace_batch_id:
-                    self.batch_manager.plus_api.mark_trace_batch_as_failed(
+                    self.batch_manager._mark_batch_as_failed(
                         self.batch_manager.trace_batch_id,
                         "Error sending events to backend",
                     )
