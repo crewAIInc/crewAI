@@ -106,6 +106,9 @@ a2a = [
 file-processing = [
     "crewai-files",
 ]
+qdrant-edge = [
+    "qdrant-edge-py>=0.6.0",
+]
 
 
 [project.scripts]
