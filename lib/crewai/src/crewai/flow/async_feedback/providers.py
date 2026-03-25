@@ -182,7 +182,7 @@ class ConsoleProvider:
                 console.print(message, style="yellow")
                 console.print()
 
-                response = input(">>> \n").strip()
+                response = input(">>> ").strip()
             else:
                 response = input(f"{message} ").strip()
 
