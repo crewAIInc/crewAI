@@ -79,6 +79,30 @@ class MemoryScope(BaseModel):
             private=private,
         )
 
+    def remember_many(
+      self,
+      contents: list[str],
+      scope: str | None = "/",
+      categories: list[str] | None = None,
+      metadata: dict[str, Any] | None = None,
+      importance: float | None = None,
+      source: str | None = None,
+      private: bool = False,
+      agent_role: str | None = None,
+    ) -> list[MemoryRecord]:
+      """Remember multiple items; scope is relative to this scope's root."""
+      path = self._scope_path(scope)
+      return self._memory.remember_many(
+        contents,
+        scope=path,
+        categories=categories,
+        metadata=metadata,
+        importance=importance,
+        source=source,
+        private=private,
+        agent_role=agent_role,
+      )
+
     def recall(
         self,
         query: str,
