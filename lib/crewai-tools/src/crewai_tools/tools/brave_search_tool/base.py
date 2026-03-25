@@ -240,10 +240,9 @@ class BraveSearchToolBase(BaseTool, ABC):
             # (e.g., 422 Unprocessable Entity, 400 Bad Request (OPTION_NOT_IN_PLAN))
             _raise_for_error(resp)
 
-        # All retries exhausted
-        if last_resp is not None:
-            _raise_for_error(last_resp)
-        return {}
+        # All retries exhausted — last_resp is always set when we reach here
+        _raise_for_error(last_resp or resp)
+        return {}  # unreachable; satisfies return type
 
     def _run(self, q: str | None = None, **params: Any) -> Any:
         # Allow positional usage: tool.run("latest Brave browser features")
