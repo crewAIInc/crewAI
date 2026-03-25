@@ -4,6 +4,48 @@ from __future__ import annotations
 
 import re
 
+# Maximum length for a single memory entry when injected into prompts.
+_MAX_MEMORY_CONTENT_LENGTH = 500
+
+# Boundary markers that wrap memory content in prompts so LLMs can
+# distinguish retrieved context from trusted instructions.
+MEMORY_BOUNDARY_START = "[RETRIEVED_MEMORY_START]"
+MEMORY_BOUNDARY_END = "[RETRIEVED_MEMORY_END]"
+
+
+def sanitize_memory_content(content: str, max_length: int = _MAX_MEMORY_CONTENT_LENGTH) -> str:
+    """Sanitize memory content before injecting it into a prompt.
+
+    This function mitigates indirect prompt-injection attacks by:
+    1. Collapsing excessive whitespace that could be used to visually
+       separate injected instructions from real prompt text.
+    2. Truncating overly long entries to prevent prompt-space exhaustion.
+    3. Wrapping the content in clearly marked boundary tokens so the LLM
+       can distinguish retrieved memory from trusted instructions.
+
+    Args:
+        content: Raw memory content string.
+        max_length: Maximum character length for the content body
+            (excluding boundary markers). Defaults to 500.
+
+    Returns:
+        Sanitized content string wrapped in boundary markers.
+    """
+    if not content:
+        return ""
+    # Collapse runs of 2+ newlines into a single newline
+    sanitized = re.sub(r"[\n\r]{2,}", "\n", content)
+    # Collapse runs of whitespace within lines
+    sanitized = re.sub(r"[ \t]{2,}", " ", sanitized)
+    # Strip leading/trailing whitespace
+    sanitized = sanitized.strip()
+    if not sanitized:
+        return ""
+    # Truncate to max_length
+    if len(sanitized) > max_length:
+        sanitized = sanitized[:max_length] + "..."
+    return f"{MEMORY_BOUNDARY_START}{sanitized}{MEMORY_BOUNDARY_END}"
+
 
 def sanitize_scope_name(name: str) -> str:
     """Sanitize a name for use in hierarchical scope paths.
