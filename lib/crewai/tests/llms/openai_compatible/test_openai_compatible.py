@@ -1,7 +1,7 @@
 """Tests for OpenAI-compatible providers."""
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -133,7 +133,7 @@ class TestOpenAICompatibleCompletion:
             with pytest.raises(ValueError, match="API key required"):
                 OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
         finally:
-            if original:
+            if original is not None:
                 os.environ[env_key] = original
 
     def test_api_key_from_env(self):
