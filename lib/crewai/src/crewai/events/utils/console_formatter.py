@@ -141,10 +141,8 @@ To update, run: uv sync --upgrade-package crewai"""
 
         # Don't show "disabled" message when the first-time handler will show
         # the trace prompt after execution completes (avoids confusing mid-flow messages)
-        if (
-            TraceCollectionListener._instance
-            and TraceCollectionListener._instance.first_time_handler.is_first_time
-        ):
+        listener = TraceCollectionListener._instance  # type: ignore[misc]
+        if listener and listener.first_time_handler.is_first_time:
             return
 
         if not is_tracing_enabled_in_context():
