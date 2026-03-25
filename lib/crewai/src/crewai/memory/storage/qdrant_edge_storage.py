@@ -780,7 +780,7 @@ class QdrantEdgeStorage:
                 os.kill(pid, 0)
                 continue
             except ProcessLookupError:
-                pass
+                _logger.debug("Worker %d is dead, shard is orphaned", pid)
             except PermissionError:
                 continue
 
