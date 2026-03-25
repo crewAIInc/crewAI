@@ -224,6 +224,58 @@ class TestHumanFeedbackMethods:
         assert method_map["handle_approved"]["has_human_feedback"] is False
         assert method_map["handle_rejected"]["has_human_feedback"] is False
 
+    def test_listen_plus_human_feedback_router_edges(self):
+        """Test that @listen + @human_feedback(emit=...) generates router edges.
+
+        This is the pattern used in the whitepaper generator:
+        a listener method that also acts as a router via @human_feedback(emit=[...]).
+        The serializer must generate edges from this method to listeners of its emit paths.
+        """
+
+        class ReviewFlow(Flow):
+            @start()
+            def generate(self):
+                return "content"
+
+            @listen(generate)
+            @human_feedback(
+                message="Review this:",
+                emit=["approved", "needs_changes", "cancelled"],
+                llm="gpt-4o-mini",
+            )
+            def review(self):
+                return "review result"
+
+            @listen("approved")
+            def handle_approved(self):
+                return "done"
+
+            @listen("needs_changes")
+            def handle_changes(self):
+                return "regenerating"
+
+            @listen("cancelled")
+            def handle_cancelled(self):
+                return "cancelled"
+
+        structure = flow_structure(ReviewFlow)
+
+        method_map = {m["name"]: m for m in structure["methods"]}
+        edge_set = {(e["from_method"], e["to_method"], e.get("condition")) for e in structure["edges"]}
+
+        # review should be detected as a router with the emit paths
+        assert method_map["review"]["type"] == "router"
+        assert set(method_map["review"]["router_paths"]) == {"approved", "needs_changes", "cancelled"}
+        assert method_map["review"]["has_human_feedback"] is True
+
+        # Should have listen edge: generate -> review
+        assert ("generate", "review", None) in edge_set
+
+        # Should have route edges from review to each listener
+        assert ("review", "handle_approved", "approved") in edge_set
+        assert ("review", "handle_changes", "needs_changes") in edge_set
+        assert ("review", "handle_cancelled", "cancelled") in edge_set
+
 
 class TestCrewReferences:
     """Test detection of Crew references in method bodies."""
