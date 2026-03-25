@@ -4,7 +4,6 @@ This module provides Pydantic models for configuring MCP servers with
 various transport types, similar to OpenAI's Agents SDK.
 """
 
-
 from pydantic import BaseModel, Field
 
 from crewai.mcp.filters import ToolFilter

@@ -12,14 +12,16 @@ from crewai.mcp.transports.base import BaseTransport, TransportType
 
 
 # Default allowlist of common MCP server runtimes.
-DEFAULT_ALLOWED_COMMANDS: frozenset[str] = frozenset({
-    "python",
-    "python3",
-    "node",
-    "npx",
-    "uvx",
-    "deno",
-})
+DEFAULT_ALLOWED_COMMANDS: frozenset[str] = frozenset(
+    {
+        "python",
+        "python3",
+        "node",
+        "npx",
+        "uvx",
+        "deno",
+    }
+)
 
 
 class StdioTransport(BaseTransport):
