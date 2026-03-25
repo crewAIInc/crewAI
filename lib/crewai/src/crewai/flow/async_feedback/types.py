@@ -83,10 +83,10 @@ class PendingFeedbackContext:
 
         if isinstance(value, BaseModel):
             return value.model_dump(mode="json")
-        if hasattr(value, "__dataclass_fields__"):
-            import dataclasses
+        import dataclasses
 
-            return dataclasses.asdict(value)
+        if dataclasses.is_dataclass(value) and not isinstance(value, type):
+            return PendingFeedbackContext._make_json_safe(dataclasses.asdict(value))
         return str(value)
 
     def to_dict(self) -> dict[str, Any]:
