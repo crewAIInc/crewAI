@@ -16,7 +16,7 @@ class BaseRAGStorage(ABC):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: ProviderSpec | BaseEmbeddingsProvider | None = None,
+        embedder_config: ProviderSpec | BaseEmbeddingsProvider[Any] | None = None,
         crew: Any = None,
     ):
         self.type = type

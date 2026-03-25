@@ -81,6 +81,7 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
     StartMethod,
 )
+from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import (
     FlowExecutionData,
@@ -99,6 +100,8 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 
 
 if TYPE_CHECKING:
@@ -110,6 +113,7 @@ if TYPE_CHECKING:
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.utilities.env import get_env_context
 from crewai.utilities.streaming import (
     TaskInfo,
     create_async_chunk_generator,
@@ -500,7 +504,7 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
 
     def index(
         self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None
-    ) -> int:  # type: ignore[override]
+    ) -> int:
         if stop is None:
             return self._list.index(value, start)
         return self._list.index(value, start, stop)
@@ -519,13 +523,13 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def copy(self) -> list[T]:
         return self._list.copy()
 
-    def __add__(self, other: list[T]) -> list[T]:
+    def __add__(self, other: list[T]) -> list[T]:  # type: ignore[override]
         return self._list + other
 
     def __radd__(self, other: list[T]) -> list[T]:
         return other + self._list
 
-    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:
+    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:  # type: ignore[override]
         with self._lock:
             self._list += list(other)
         return self
@@ -629,13 +633,13 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     def copy(self) -> dict[str, T]:
         return self._dict.copy()
 
-    def __or__(self, other: dict[str, T]) -> dict[str, T]:
+    def __or__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
         return self._dict | other
 
-    def __ror__(self, other: dict[str, T]) -> dict[str, T]:
+    def __ror__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
         return other | self._dict
 
-    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:
+    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:  # type: ignore[override]
         with self._lock:
             self._dict |= other
         return self
@@ -821,10 +825,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
-    memory: Any = (
-        None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
-    )
-    input_provider: Any = None  # InputProvider | None; per-flow override for self.ask()
+    memory: Memory | MemoryScope | MemorySlice | None = None
+    input_provider: InputProvider | None = None
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -903,9 +905,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
         # to avoid creating a wasteful standalone Memory instance.
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
-            from crewai.memory.unified_memory import Memory
+            from crewai.memory.utils import sanitize_scope_name
 
-            self.memory = Memory()
+            flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
+            self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -950,10 +953,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Raises:
             ValueError: If no memory is configured for this flow.
+            TypeError: If batch remember is attempted on a MemoryScope or MemorySlice.
         """
         if self.memory is None:
             raise ValueError("No memory configured for this flow")
         if isinstance(content, list):
+            if not isinstance(self.memory, Memory):
+                raise TypeError(
+                    "Batch remember requires a Memory instance, "
+                    f"got {type(self.memory).__name__}"
+                )
             return self.memory.remember_many(content, **kwargs)
         return self.memory.remember(content, **kwargs)
 
@@ -1309,7 +1318,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
-        llm = context.llm
+
+        # Try to get the live LLM from the re-imported decorator first.
+        # This preserves the fully-configured object (credentials, safety_settings, etc.)
+        # for same-process resume. For cross-process resume, fall back to the
+        # serialized context.llm which is now a dict with full config (or a legacy string).
+        from crewai.flow.human_feedback import _deserialize_llm_from_context
+
+        llm = None
+        method = self._methods.get(FlowMethodName(context.method_name))
+        if method is not None:
+            live_llm = getattr(method, "_hf_llm", None)
+            if live_llm is not None:
+                from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+
+                if isinstance(live_llm, BaseLLMClass):
+                    llm = live_llm
+
+        if llm is None:
+            llm = _deserialize_llm_from_context(context.llm)
 
         # Determine outcome
         collapsed_outcome: str | None = None
@@ -1770,6 +1797,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        get_env_context()
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2723,7 +2751,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     # ── User Input (self.ask) ────────────────────────────────────────
 
-    def _resolve_input_provider(self) -> Any:
+    def _resolve_input_provider(self) -> InputProvider:
         """Resolve the input provider using the priority chain.
 
         Resolution order:
@@ -3086,25 +3114,35 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
             )
-            response = llm_instance.call(messages=prompt)
-            response_clean = str(response).strip()
+            try:
+                response = llm_instance.call(
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                response_clean = str(response).strip()
 
-            # Exact match (case-insensitive)
-            for outcome in outcomes:
-                if outcome.lower() == response_clean.lower():
-                    return outcome
+                # Exact match (case-insensitive)
+                for outcome in outcomes:
+                    if outcome.lower() == response_clean.lower():
+                        return outcome
 
-            # Partial match
-            for outcome in outcomes:
-                if outcome.lower() in response_clean.lower():
-                    return outcome
+                # Partial match
+                for outcome in outcomes:
+                    if outcome.lower() in response_clean.lower():
+                        return outcome
 
-            # Fallback to first outcome
-            logger.warning(
-                f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
-                f"Falling back to first outcome: {outcomes[0]}"
-            )
-            return outcomes[0]
+                # Fallback to first outcome
+                logger.warning(
+                    f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
+
+            except Exception as fallback_err:
+                logger.warning(
+                    f"Simple prompting also failed: {fallback_err}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
 
     def _log_flow_event(
         self,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
 import contextvars
+from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -23,8 +24,10 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
+    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
@@ -64,7 +67,10 @@ from crewai.mcp import MCPServerConfig
 from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -74,6 +80,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
@@ -141,7 +148,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    step_callback: Any | None = Field(
+    step_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
@@ -149,10 +156,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | Any = Field(
+    llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: str | None = Field(
@@ -192,13 +199,23 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    reasoning: bool = Field(
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+    )
+    planning: bool = Field(
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
     )
+    reasoning: bool = Field(
+        default=False,
+        description="[DEPRECATED: Use planning_config instead] Whether the agent should reflect and create a plan before executing a task.",
+        deprecated=True,
+    )
     max_reasoning_attempts: int | None = Field(
         default=None,
-        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        description="[DEPRECATED: Use planning_config.max_attempts instead] Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        deprecated=True,
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -265,7 +282,27 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        self.set_skills()
+
+        # Handle backward compatibility: convert reasoning=True to planning_config
+        if self.reasoning and self.planning_config is None:
+            import warnings
+
+            warnings.warn(
+                "The 'reasoning' parameter is deprecated. Use 'planning_config=PlanningConfig()' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.planning_config = PlanningConfig(
+                max_attempts=self.max_reasoning_attempts,
+            )
+
         return self
+
+    @property
+    def planning_enabled(self) -> bool:
+        """Check if planning is enabled for this agent."""
+        return self.planning_config is not None or self.planning
 
     def _setup_agent_executor(self) -> None:
         if not self.cache_handler:
@@ -290,6 +327,76 @@ class Agent(BaseAgent):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 
+    def set_skills(
+        self,
+        resolved_crew_skills: list[SkillModel] | None = None,
+    ) -> None:
+        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+
+        Path entries trigger discovery and activation. Pre-loaded Skill objects
+        below INSTRUCTIONS level are activated. Crew-level skills are merged in
+        with event emission so observability is consistent regardless of origin.
+
+        Args:
+            resolved_crew_skills: Pre-resolved crew skills (already discovered
+                and activated). When provided, avoids redundant discovery per agent.
+        """
+        from crewai.crew import Crew
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.skill_events import SkillActivatedEvent
+
+        if resolved_crew_skills is None:
+            crew_skills: list[Path | SkillModel] | None = (
+                self.crew.skills
+                if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
+                else None
+            )
+        else:
+            crew_skills = list(resolved_crew_skills)
+
+        if not self.skills and not crew_skills:
+            return
+
+        needs_work = self.skills and any(
+            isinstance(s, Path)
+            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
+            for s in self.skills
+        )
+        if not needs_work and not crew_skills:
+            return
+
+        seen: set[str] = set()
+        resolved: list[Path | SkillModel] = []
+        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+
+        if crew_skills:
+            items.extend(crew_skills)
+
+        for item in items:
+            if isinstance(item, Path):
+                discovered = discover_skills(item, source=self)
+                for skill in discovered:
+                    if skill.name not in seen:
+                        seen.add(skill.name)
+                        resolved.append(activate_skill(skill, source=self))
+            elif isinstance(item, SkillModel):
+                if item.name not in seen:
+                    seen.add(item.name)
+                    activated = activate_skill(item, source=self)
+                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                        crewai_event_bus.emit(
+                            self,
+                            event=SkillActivatedEvent(
+                                from_agent=self,
+                                skill_name=item.name,
+                                skill_path=item.path,
+                                disclosure_level=item.disclosure_level,
+                            ),
+                        )
+                    resolved.append(activated)
+
+        self.skills = resolved if resolved else None
+
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
         if getattr(self, "memory", None):
@@ -310,7 +417,7 @@ class Agent(BaseAgent):
         return (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
-            and self.llm.supports_function_calling()
+            and self.llm.supports_function_calling()  # type: ignore[union-attr]
             and len(tools) > 0
         )
 
@@ -335,7 +442,12 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
+        get_env_context()
+        # Only call handle_reasoning for legacy CrewAgentExecutor
+        # For AgentExecutor, planning is handled in AgentExecutor.generate_plan()
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(self, task)
+
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -405,6 +517,8 @@ class Agent(BaseAgent):
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
             self.crew.query_knowledge if self.crew else lambda *a, **k: None,
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)
@@ -577,7 +691,10 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(
+                self, task
+            )  # we need this till CrewAgentExecutor migrates to AgentExecutor
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -642,6 +759,8 @@ class Agent(BaseAgent):
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
+
+        task_prompt = append_skill_context(self, task_prompt)
 
         prepare_tools(self, tools, task)
         task_prompt = apply_training_data(self, task_prompt)
@@ -1304,6 +1423,8 @@ class Agent(BaseAgent):
                     ),
                 )
 
+        formatted_messages = append_skill_context(self, formatted_messages)
+
         # Build the input dict for the executor
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1423,17 +1544,19 @@ class Agent(BaseAgent):
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
-    def _execute_and_build_output(
+    def _build_output_from_result(
         self,
+        result: dict[str, Any],
         executor: AgentExecutor,
-        inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent and build the output object.
+        """Build a LiteAgentOutput from an executor result dict.
+
+        Shared logic used by both sync and async execution paths.
 
         Args:
+            result: The result dictionary from executor.invoke / invoke_async.
             executor: The executor instance.
-            inputs: Input dictionary for execution.
             response_format: Optional response format.
 
         Returns:
@@ -1441,8 +1564,6 @@ class Agent(BaseAgent):
         """
         import json
 
-        # Execute the agent (this is called from sync path, so invoke returns dict)
-        result = cast(dict[str, Any], executor.invoke(inputs))
         output = result.get("output", "")
 
         # Handle response format conversion
@@ -1490,13 +1611,29 @@ class Agent(BaseAgent):
             else str(raw_output)
         )
 
+        todo_results = LiteAgentOutput.from_todo_items(executor.state.todos.items)
+
         return LiteAgentOutput(
             raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
+            messages=list(executor.state.messages),
+            plan=executor.state.plan,
+            todos=todo_results,
+            replan_count=executor.state.replan_count,
+            last_replan_reason=executor.state.last_replan_reason,
         )
+
+    def _execute_and_build_output(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent synchronously and build the output object."""
+        result = cast(dict[str, Any], executor.invoke(inputs))
+        return self._build_output_from_result(result, executor, response_format)
 
     async def _execute_and_build_output_async(
         self,
@@ -1504,77 +1641,9 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent asynchronously and build the output object.
-
-        This is the async version of _execute_and_build_output that uses
-        invoke_async() for native async execution within event loops.
-
-        Args:
-            executor: The executor instance.
-            inputs: Input dictionary for execution.
-            response_format: Optional response format.
-
-        Returns:
-            LiteAgentOutput with raw output, formatted result, and metrics.
-        """
-        import json
-
-        # Execute the agent asynchronously
+        """Execute the agent asynchronously and build the output object."""
         result = await executor.invoke_async(inputs)
-        output = result.get("output", "")
-
-        # Handle response format conversion
-        formatted_result: BaseModel | None = None
-        raw_output: str
-
-        if isinstance(output, BaseModel):
-            formatted_result = output
-            raw_output = output.model_dump_json()
-        elif response_format:
-            raw_output = str(output) if not isinstance(output, str) else output
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
-
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
-
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
-        else:
-            raw_output = str(output) if not isinstance(output, str) else output
-
-        # Get token usage metrics
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
-
-        raw_str = (
-            raw_output
-            if isinstance(raw_output, str)
-            else raw_output.model_dump_json()
-            if isinstance(raw_output, BaseModel)
-            else str(raw_output)
-        )
-
-        return LiteAgentOutput(
-            raw=raw_str,
-            pydantic=formatted_result,
-            agent_role=self.role,
-            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
-        )
+        return self._build_output_from_result(result, executor, response_format)
 
     def _process_kickoff_guardrail(
         self,

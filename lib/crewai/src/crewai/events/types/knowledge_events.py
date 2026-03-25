@@ -11,7 +11,7 @@ class KnowledgeEventBase(BaseEvent):
     agent_role: str | None = None
     agent_id: str | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._set_agent_params(data)
         self._set_task_params(data)

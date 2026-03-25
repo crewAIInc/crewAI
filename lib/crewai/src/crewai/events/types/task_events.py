@@ -4,6 +4,15 @@ from crewai.events.base_events import BaseEvent
 from crewai.tasks.task_output import TaskOutput
 
 
+def _set_task_fingerprint(event: BaseEvent, task: Any) -> None:
+    """Set fingerprint data on an event from a task object."""
+    if task is not None and task.fingerprint:
+        event.source_fingerprint = task.fingerprint.uuid_str
+        event.source_type = "task"
+        if task.fingerprint.metadata:
+            event.fingerprint_metadata = task.fingerprint.metadata
+
+
 class TaskStartedEvent(BaseEvent):
     """Event emitted when a task starts"""
 
@@ -11,17 +20,9 @@ class TaskStartedEvent(BaseEvent):
     context: str | None
     task: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
-            self.source_fingerprint = self.task.fingerprint.uuid_str
-            self.source_type = "task"
-            if (
-                hasattr(self.task.fingerprint, "metadata")
-                and self.task.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.task.fingerprint.metadata
+        _set_task_fingerprint(self, self.task)
 
 
 class TaskCompletedEvent(BaseEvent):
@@ -31,17 +32,9 @@ class TaskCompletedEvent(BaseEvent):
     type: str = "task_completed"
     task: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
-            self.source_fingerprint = self.task.fingerprint.uuid_str
-            self.source_type = "task"
-            if (
-                hasattr(self.task.fingerprint, "metadata")
-                and self.task.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.task.fingerprint.metadata
+        _set_task_fingerprint(self, self.task)
 
 
 class TaskFailedEvent(BaseEvent):
@@ -51,17 +44,9 @@ class TaskFailedEvent(BaseEvent):
     type: str = "task_failed"
     task: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
-            self.source_fingerprint = self.task.fingerprint.uuid_str
-            self.source_type = "task"
-            if (
-                hasattr(self.task.fingerprint, "metadata")
-                and self.task.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.task.fingerprint.metadata
+        _set_task_fingerprint(self, self.task)
 
 
 class TaskEvaluationEvent(BaseEvent):
@@ -71,14 +56,6 @@ class TaskEvaluationEvent(BaseEvent):
     evaluation_type: str
     task: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
-            self.source_fingerprint = self.task.fingerprint.uuid_str
-            self.source_type = "task"
-            if (
-                hasattr(self.task.fingerprint, "metadata")
-                and self.task.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.task.fingerprint.metadata
+        _set_task_fingerprint(self, self.task)

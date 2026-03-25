@@ -23,6 +23,7 @@ from crewai.mcp.config import (
     MCPServerSSE,
     MCPServerStdio,
 )
+from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
@@ -285,6 +286,7 @@ class MCPToolResolver:
         independent transport so that parallel tool executions never share
         state.
         """
+        transport: BaseTransport
         if isinstance(mcp_config, MCPServerStdio):
             transport = StdioTransport(
                 command=mcp_config.command,

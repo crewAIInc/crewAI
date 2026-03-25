@@ -8,6 +8,7 @@ potentially unsafe operations and importing restricted modules.
 import importlib.util
 import os
 import subprocess
+import sys
 from types import ModuleType
 from typing import Any, ClassVar, TypedDict
 
@@ -17,7 +18,6 @@ from docker import (  # type: ignore[import-untyped]
     from_env as docker_from_env,
 )
 from docker.errors import ImageNotFound, NotFound  # type: ignore[import-untyped]
-from docker.models.containers import Container  # type: ignore[import-untyped]
 from pydantic import BaseModel, Field
 from typing_extensions import Unpack
 
@@ -50,11 +50,16 @@ class CodeInterpreterSchema(BaseModel):
 
 
 class SandboxPython:
-    """A restricted Python execution environment for running code safely.
+    """INSECURE: A restricted Python execution environment with known vulnerabilities.
 
-    This class provides methods to safely execute Python code by restricting access to
-    potentially dangerous modules and built-in functions. It creates a sandboxed
-    environment where harmful operations are blocked.
+    WARNING: This class does NOT provide real security isolation and is vulnerable to
+    sandbox escape attacks via Python object introspection. Attackers can recover the
+    original __import__ function and bypass all restrictions.
+
+    DO NOT USE for untrusted code execution. Use Docker containers instead.
+
+    This class attempts to restrict access to dangerous modules and built-in functions
+    but provides no real security boundary against a motivated attacker.
     """
 
     BLOCKED_MODULES: ClassVar[set[str]] = {
@@ -226,7 +231,7 @@ class CodeInterpreterTool(BaseTool):
         return self.run_code_safety(code, libraries_used)
 
     @staticmethod
-    def _install_libraries(container: Container, libraries: list[str]) -> None:
+    def _install_libraries(container: Any, libraries: list[str]) -> None:
         """Installs required Python libraries in the Docker container.
 
         Args:
@@ -236,7 +241,7 @@ class CodeInterpreterTool(BaseTool):
         for library in libraries:
             container.exec_run(["pip", "install", library])
 
-    def _init_docker_container(self) -> Container:
+    def _init_docker_container(self) -> Any:
         """Initializes and returns a Docker container for code execution.
 
         Stops and removes any existing container with the same name before creating
@@ -263,7 +268,7 @@ class CodeInterpreterTool(BaseTool):
             tty=True,
             working_dir="/workspace",
             name=container_name,
-            volumes={current_path: {"bind": "/workspace", "mode": "rw"}},  # type: ignore
+            volumes={current_path: {"bind": "/workspace", "mode": "rw"}},
         )
 
     @staticmethod
@@ -299,8 +304,8 @@ class CodeInterpreterTool(BaseTool):
     def run_code_safety(self, code: str, libraries_used: list[str]) -> str:
         """Runs code in the safest available environment.
 
-        Attempts to run code in Docker if available, falls back to a restricted
-        sandbox if Docker is not available.
+        Requires Docker to be available for secure code execution. Fails closed
+        if Docker is not available to prevent sandbox escape vulnerabilities.
 
         Args:
             code: The Python code to execute as a string.
@@ -308,10 +313,24 @@ class CodeInterpreterTool(BaseTool):
 
         Returns:
             The output of the executed code as a string.
+
+        Raises:
+            RuntimeError: If Docker is not available, as the restricted sandbox
+                         is vulnerable to escape attacks and should not be used
+                         for untrusted code execution.
         """
         if self._check_docker_available():
             return self.run_code_in_docker(code, libraries_used)
-        return self.run_code_in_restricted_sandbox(code)
+
+        error_msg = (
+            "Docker is required for safe code execution but is not available. "
+            "The restricted sandbox fallback has been removed due to security vulnerabilities "
+            "that allow sandbox escape via Python object introspection. "
+            "Please install Docker (https://docs.docker.com/get-docker/) or use unsafe_mode=True "
+            "if you trust the code source and understand the security risks."
+        )
+        Printer.print(error_msg, color="bold_red")
+        raise RuntimeError(error_msg)
 
     def run_code_in_docker(self, code: str, libraries_used: list[str]) -> str:
         """Runs Python code in a Docker container for safe isolation.
@@ -331,21 +350,30 @@ class CodeInterpreterTool(BaseTool):
         container = self._init_docker_container()
         self._install_libraries(container, libraries_used)
 
-        exec_result = container.exec_run(["python3", "-c", code])
+        exec_result: Any = container.exec_run(["python3", "-c", code])
 
         container.stop()
         container.remove()
 
         if exec_result.exit_code != 0:
             return f"Something went wrong while running the code: \n{exec_result.output.decode('utf-8')}"
-        return exec_result.output.decode("utf-8")
+        return str(exec_result.output.decode("utf-8"))
 
     @staticmethod
     def run_code_in_restricted_sandbox(code: str) -> str:
-        """Runs Python code in a restricted sandbox environment.
+        """DEPRECATED AND INSECURE: Runs Python code in a restricted sandbox environment.
 
-        Executes the code with restricted access to potentially dangerous modules and
-        built-in functions for basic safety when Docker is not available.
+        WARNING: This method is vulnerable to sandbox escape attacks via Python object
+        introspection and should NOT be used for untrusted code execution. It has been
+        deprecated and is only kept for backward compatibility with trusted code.
+
+        The "restricted" environment can be bypassed by attackers who can:
+        - Use object graph introspection to recover the original __import__ function
+        - Access any Python module including os, subprocess, sys, etc.
+        - Execute arbitrary commands on the host system
+
+        Use run_code_in_docker() for secure code execution, or run_code_unsafe()
+        if you explicitly acknowledge the security risks.
 
         Args:
             code: The Python code to execute as a string.
@@ -354,11 +382,14 @@ class CodeInterpreterTool(BaseTool):
             The value of the 'result' variable from the executed code,
             or an error message if execution failed.
         """
-        Printer.print("Running code in restricted sandbox", color="yellow")
+        Printer.print(
+            "WARNING: Running code in INSECURE restricted sandbox (vulnerable to escape attacks)",
+            color="bold_red",
+        )
         exec_locals: dict[str, Any] = {}
         try:
             SandboxPython.exec(code=code, locals_=exec_locals)
-            return exec_locals.get("result", "No result variable found.")
+            return exec_locals.get("result", "No result variable found.")  # type: ignore[no-any-return]
         except Exception as e:
             return f"An error occurred: {e!s}"
 
@@ -380,12 +411,14 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            os.system(f"pip install {library}")  # noqa: S605
+            subprocess.run(  # noqa: S603
+                [sys.executable, "-m", "pip", "install", library], check=False
+            )
 
         # Execute the code
         try:
             exec_locals: dict[str, Any] = {}
             exec(code, {}, exec_locals)  # noqa: S102
-            return exec_locals.get("result", "No result variable found.")
+            return exec_locals.get("result", "No result variable found.")  # type: ignore[no-any-return]
         except Exception as e:
             return f"An error occurred: {e!s}"

@@ -106,7 +106,7 @@ class FileCompressorTool(BaseTool):
         return True
 
     @staticmethod
-    def _compress_zip(input_path: str, output_path: str):
+    def _compress_zip(input_path: str, output_path: str) -> None:
         """Compresses input into a zip archive."""
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
@@ -119,7 +119,7 @@ class FileCompressorTool(BaseTool):
                         zipf.write(full_path, arcname)
 
     @staticmethod
-    def _compress_tar(input_path: str, output_path: str, format: str):
+    def _compress_tar(input_path: str, output_path: str, format: str) -> None:
         """Compresses input into a tar archive with the given format."""
         format_mode = {
             "tar": "w",

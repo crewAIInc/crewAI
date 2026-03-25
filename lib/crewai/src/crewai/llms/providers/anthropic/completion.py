@@ -222,6 +222,7 @@ class AnthropicCompletion(BaseLLM):
         self.previous_thinking_blocks: list[ThinkingBlock] = []
         self.response_format = response_format
         # Tool search config
+        self.tool_search: AnthropicToolSearchConfig | None
         if tool_search is True:
             self.tool_search = AnthropicToolSearchConfig()
         elif isinstance(tool_search, AnthropicToolSearchConfig):
@@ -255,6 +256,19 @@ class AnthropicCompletion(BaseLLM):
             self.stop_sequences = value
         else:
             self.stop_sequences = []
+
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Anthropic-specific fields."""
+        config = super().to_config_dict()
+        if self.max_tokens != 4096:  # non-default
+            config["max_tokens"] = self.max_tokens
+        if self.max_retries != 2:  # non-default
+            config["max_retries"] = self.max_retries
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
+        return config
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get client parameters."""
@@ -618,6 +632,50 @@ class AnthropicCompletion(BaseLLM):
             return redacted_block
         return None
 
+    @staticmethod
+    def _convert_image_blocks(content: Any) -> Any:
+        """Convert OpenAI-style image_url blocks to Anthropic image blocks.
+
+        Upstream code (e.g. StepExecutor) uses the standard ``image_url``
+        format with a ``data:`` URI.  Anthropic rejects that — it requires
+        ``{"type": "image", "source": {"type": "base64", ...}}``.
+
+        Non-list content and blocks that are not ``image_url`` are passed
+        through unchanged.
+        """
+        if not isinstance(content, list):
+            return content
+
+        converted: list[dict[str, Any]] = []
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "image_url":
+                converted.append(block)
+                continue
+
+            image_info = block.get("image_url", {})
+            url = image_info.get("url", "") if isinstance(image_info, dict) else ""
+            if url.startswith("data:") and ";base64," in url:
+                # Parse  data:<media_type>;base64,<data>
+                header, b64_data = url.split(";base64,", 1)
+                media_type = (
+                    header.split("data:", 1)[1] if "data:" in header else "image/png"
+                )
+                converted.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": b64_data,
+                        },
+                    }
+                )
+            else:
+                # Non-data URI — pass through as-is (Anthropic supports url source)
+                converted.append(block)
+
+        return converted
+
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | None]:
@@ -656,10 +714,11 @@ class AnthropicCompletion(BaseLLM):
                 tool_call_id = message.get("tool_call_id", "")
                 if not tool_call_id:
                     raise ValueError("Tool message missing required tool_call_id")
+                tool_content = self._convert_image_blocks(content) if content else ""
                 tool_result = {
                     "type": "tool_result",
                     "tool_use_id": tool_call_id,
-                    "content": content if content else "",
+                    "content": tool_content,
                 }
                 pending_tool_results.append(tool_result)
             elif role == "assistant":
@@ -718,7 +777,12 @@ class AnthropicCompletion(BaseLLM):
 
                 role_str = role if role is not None else "user"
                 if isinstance(content, list):
-                    formatted_messages.append({"role": role_str, "content": content})
+                    formatted_messages.append(
+                        {
+                            "role": role_str,
+                            "content": self._convert_image_blocks(content),
+                        }
+                    )
                 else:
                     content_str = content if content is not None else ""
                     formatted_messages.append(
@@ -1703,7 +1767,14 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             True if the model supports images and PDFs.
         """
-        return "claude-3" in self.model.lower() or "claude-4" in self.model.lower()
+        model_lower = self.model.lower()
+        return (
+            "claude-3" in model_lower
+            or "claude-4" in model_lower
+            or "claude-sonnet-4" in model_lower
+            or "claude-opus-4" in model_lower
+            or "claude-haiku-4" in model_lower
+        )
 
     def get_file_uploader(self) -> Any:
         """Get an Anthropic file uploader using this LLM's clients.

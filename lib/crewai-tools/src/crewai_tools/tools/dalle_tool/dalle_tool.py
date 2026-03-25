@@ -1,8 +1,8 @@
 import json
-from typing import Literal
+from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
-from openai import Omit, OpenAI
+from openai import OpenAI
 from pydantic import BaseModel, Field
 
 
@@ -33,9 +33,9 @@ class DallETool(BaseTool):
         ]
         | None
     ) = "1024x1024"
-    quality: (
-        Literal["standard", "hd", "low", "medium", "high", "auto"] | None | Omit
-    ) = "standard"
+    quality: Literal["standard", "hd", "low", "medium", "high", "auto"] | None = (
+        "standard"
+    )
     n: int = 1
 
     env_vars: list[EnvVar] = Field(
@@ -48,7 +48,7 @@ class DallETool(BaseTool):
         ]
     )
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         client = OpenAI()
 
         image_description = kwargs.get("image_description")

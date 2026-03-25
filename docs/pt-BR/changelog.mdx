@@ -4,6 +4,102 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="23 mar 2026">
+  ## v1.11.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar o serializer flow_structure() para introspecção da classe Flow.
+
+  ### Correções de Bugs
+  - Corrigir vulnerabilidades de segurança atualizando pypdf, tinytag e langchain-core.
+  - Preservar a configuração completa do LLM durante a retomada do HITL para provedores que não são da OpenAI.
+  - Prevenir a travessia de caminho no FileWriterTool.
+  - Corrigir a falha do lock_store quando o pacote redis não está instalado.
+  - Passar cache_function de BaseTool para CrewStructuredTool.
+
+  ### Documentação
+  - Adicionar guia de publicação de ferramentas personalizadas com traduções.
+  - Atualizar changelog e versão para v1.11.0.
+  - Adicionar documentação de ouvintes de eventos ausentes.
+
+  ### Refatoração
+  - Substituir urllib por requests no carregador de pdf.
+  - Substituir campos de callback e modelo do tipo Any por tipos serializáveis.
+
+  ## Contribuidores
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="18 mar 2026">
+  ## v1.11.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.11.0rc2
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="17 mar 2026">
+  ## v1.11.0rc2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Aprimorar o manuseio e a serialização das respostas do LLM.
+  - Atualizar dependências transitivas vulneráveis (authlib, PyJWT, snowflake-connector-python).
+  - Substituir `os.system` por `subprocess.run` na instalação do pip em modo inseguro.
+
+  ### Documentação
+  - Atualizar a página da Ferramenta de Pesquisa Exa com nomes, descrições e opções de configuração aprimoradas.
+  - Adicionar Servidores MCP Personalizados no Guia de Como Fazer.
+  - Atualizar a documentação dos coletores OTEL.
+  - Atualizar a documentação do MCP.
+  - Atualizar o changelog e a versão para v1.11.0rc1.
+
+  ## Contributors
+
+  @10ishq, @greysonlalonde, @joaomdmoura, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="15 mar 2026">
+  ## v1.11.0rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar autenticação de token da API Plus
+  - Implementar padrão de execução de plano
+
+  ### Correções de Bugs
+  - Resolver problema de escape do sandbox do interpretador de código
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2rc2
+
+  ## Contribuidores
+
+  @Copilot, @greysonlalonde, @lorenzejay, @theCyberTech
+
+</Update>
+
 <Update label="14 mar 2026">
   ## v1.10.2rc2
 

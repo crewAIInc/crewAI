@@ -76,7 +76,7 @@ Please provide ONLY the {field_name} field value as described:
 
 Respond with ONLY the requested information, nothing else.
 """
-        return self.llm.call(
+        result: str = self.llm.call(
             [
                 {
                     "role": "system",
@@ -85,6 +85,7 @@ Respond with ONLY the requested information, nothing else.
                 {"role": "user", "content": prompt},
             ]
         )
+        return result
 
     def _process_field_value(self, response: str, field_type: type | None) -> Any:
         response = response.strip()
@@ -104,7 +105,8 @@ Respond with ONLY the requested information, nothing else.
     def _parse_list(self, response: str) -> list[Any]:
         try:
             if response.startswith("["):
-                return json.loads(response)
+                parsed: list[Any] = json.loads(response)
+                return parsed
 
             items: list[str] = [
                 item.strip() for item in response.split("\n") if item.strip()

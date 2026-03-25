@@ -28,7 +28,7 @@ class ContextualAICreateAgentTool(BaseTool):
         default_factory=lambda: ["contextual-client"]
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         try:
             from contextual import ContextualAI

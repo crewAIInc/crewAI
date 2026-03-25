@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
@@ -26,7 +28,7 @@ class DirectorySearchTool(RagTool):
     )
     args_schema: type[BaseModel] = DirectorySearchToolSchema
 
-    def __init__(self, directory: str | None = None, **kwargs):
+    def __init__(self, directory: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if directory is not None:
             self.add(directory)
@@ -34,7 +36,7 @@ class DirectorySearchTool(RagTool):
             self.args_schema = FixedDirectorySearchToolSchema
             self._generate_description()
 
-    def add(self, directory: str) -> None:
+    def add(self, directory: str) -> None:  # type: ignore[override]
         super().add(directory, data_type=DataType.DIRECTORY)
 
     def _run(  # type: ignore[override]

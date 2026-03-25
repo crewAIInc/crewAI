@@ -31,7 +31,7 @@ class MongoDBVectorSearchConfig(BaseModel):
         default=None,
         description="List of MQL match expressions comparing an indexed field",
     )
-    post_filter_pipeline: list[dict] | None = Field(
+    post_filter_pipeline: list[dict[str, Any]] | None = Field(
         default=None,
         description="Pipeline of MongoDB aggregation stages to filter/process results after $vectorSearch.",
     )
@@ -105,7 +105,7 @@ class MongoDBVectorSearchTool(BaseTool):
     )
     package_dependencies: list[str] = Field(default_factory=lambda: ["mongdb"])
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if not MONGODB_AVAILABLE:
             import click
@@ -120,6 +120,7 @@ class MongoDBVectorSearchTool(BaseTool):
             else:
                 raise ImportError("You are missing the 'mongodb' crewai tool.")
 
+        self._openai_client: AzureOpenAI | Client
         if "AZURE_OPENAI_ENDPOINT" in os.environ:
             self._openai_client = AzureOpenAI()
         elif "OPENAI_API_KEY" in os.environ:
@@ -132,7 +133,7 @@ class MongoDBVectorSearchTool(BaseTool):
         from pymongo import MongoClient
         from pymongo.driver_info import DriverInfo
 
-        self._client = MongoClient(
+        self._client: MongoClient[dict[str, Any]] = MongoClient(
             self.connection_string,
             driver=DriverInfo(name="CrewAI", version=version("crewai-tools")),
         )
@@ -236,7 +237,7 @@ class MongoDBVectorSearchTool(BaseTool):
     def _bulk_embed_and_insert_texts(
         self,
         texts: list[str],
-        metadatas: list[dict],
+        metadatas: list[dict[str, Any]],
         ids: list[str],
     ) -> list[str]:
         """Bulk insert single batch of texts, embeddings, and ids."""
@@ -315,16 +316,18 @@ class MongoDBVectorSearchTool(BaseTool):
             logger.error(f"Error: {e}")
             return ""
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup clients on deletion."""
         try:
-            if hasattr(self, "_client") and self._client:
-                self._client.close()
+            client: Any = getattr(self, "_client", None)
+            if client is not None:
+                client.close()
         except Exception as e:
             logger.error(f"Error: {e}")
 
         try:
-            if hasattr(self, "_openai_client") and self._openai_client:
-                self._openai_client.close()
+            openai_client: Any = getattr(self, "_openai_client", None)
+            if openai_client is not None:
+                openai_client.close()
         except Exception as e:
             logger.error(f"Error: {e}")

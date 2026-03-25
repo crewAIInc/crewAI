@@ -15,7 +15,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
     A class to handle deployment-related operations for CrewAI projects.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the DeployCommand with project name and API client.
         """
@@ -67,7 +67,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             uuid (Optional[str]): The UUID of the crew to deploy.
         """
-        self._start_deployment_span = self._telemetry.start_deployment_span(uuid)
+        self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
         if uuid:
             response = self.plus_api_client.deploy_by_uuid(uuid)
@@ -84,9 +84,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         Create a new crew deployment.
         """
-        self._create_crew_deployment_span = (
-            self._telemetry.create_crew_deployment_span()
-        )
+        self._telemetry.create_crew_deployment_span()
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
 
@@ -236,7 +234,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to get logs for.
             log_type (str): The type of logs to retrieve (default: "deployment").
         """
-        self._get_crew_logs_span = self._telemetry.get_crew_logs_span(uuid, log_type)
+        self._telemetry.get_crew_logs_span(uuid, log_type)
         console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
@@ -257,7 +255,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             uuid (Optional[str]): The UUID of the crew to remove.
         """
-        self._remove_crew_span = self._telemetry.remove_crew_span(uuid)
+        self._telemetry.remove_crew_span(uuid)
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:

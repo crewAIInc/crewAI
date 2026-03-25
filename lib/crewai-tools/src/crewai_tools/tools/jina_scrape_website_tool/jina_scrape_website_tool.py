@@ -1,3 +1,5 @@
+from typing import Any
+
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import requests
@@ -15,14 +17,14 @@ class JinaScrapeWebsiteTool(BaseTool):
     args_schema: type[BaseModel] = JinaScrapeWebsiteToolInput
     website_url: str | None = None
     api_key: str | None = None
-    headers: dict = Field(default_factory=dict)
+    headers: dict[str, str] = Field(default_factory=dict)
 
     def __init__(
         self,
         website_url: str | None = None,
         api_key: str | None = None,
-        custom_headers: dict | None = None,
-        **kwargs,
+        custom_headers: dict[str, str] | None = None,
+        **kwargs: Any,
     ):
         super().__init__(**kwargs)
         if website_url is not None:

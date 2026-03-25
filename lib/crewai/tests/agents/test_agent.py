@@ -1456,7 +1456,7 @@ def test_agent_execute_task_with_tool():
     )
 
     result = agent.execute_task(task)
-    assert "you should always think about what to do" in result
+    assert "test query" in result
 
 
 @pytest.mark.vcr()
@@ -1475,9 +1475,9 @@ def test_agent_execute_task_with_custom_llm():
     )
 
     result = agent.execute_task(task)
-    assert "In circuits they thrive" in result
-    assert "Artificial minds awake" in result
-    assert "Future's coded drive" in result
+    assert "Artificial minds" in result
+    assert "Code and circuits" in result
+    assert "Future undefined" in result
 
 
 @pytest.mark.vcr()
@@ -1690,7 +1690,10 @@ def test_agent_with_knowledge_sources_works_with_copy():
         with patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
         ) as mock_knowledge_storage:
+            from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+
             mock_knowledge_storage_instance = mock_knowledge_storage.return_value
+            mock_knowledge_storage_instance.__class__ = BaseKnowledgeStorage
             agent.knowledge_storage = mock_knowledge_storage_instance
 
             agent_copy = agent.copy()

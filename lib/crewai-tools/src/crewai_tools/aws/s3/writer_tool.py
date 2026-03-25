@@ -45,6 +45,6 @@ class S3WriterTool(BaseTool):
         except ClientError as e:
             return f"Error writing file to S3: {e!s}"
 
-    def _parse_s3_path(self, file_path: str) -> tuple:
+    def _parse_s3_path(self, file_path: str) -> tuple[str, str]:
         parts = file_path.replace("s3://", "").split("/", 1)
         return parts[0], parts[1]

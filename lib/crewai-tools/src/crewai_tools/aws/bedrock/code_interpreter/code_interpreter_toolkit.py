@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def extract_output_from_stream(response):
+def extract_output_from_stream(response: dict[str, Any]) -> str:
     """Extract output from code interpreter response stream.
 
     Args:
@@ -143,8 +143,8 @@ class ExecuteCodeTool(BaseTool):
     args_schema: type[BaseModel] = ExecuteCodeInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(
@@ -198,8 +198,8 @@ class ExecuteCommandTool(BaseTool):
     args_schema: type[BaseModel] = ExecuteCommandInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, command: str, thread_id: str = "default") -> str:
@@ -231,8 +231,8 @@ class ReadFilesTool(BaseTool):
     args_schema: type[BaseModel] = ReadFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, paths: list[str], thread_id: str = "default") -> str:
@@ -264,8 +264,8 @@ class ListFilesTool(BaseTool):
     args_schema: type[BaseModel] = ListFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, directory_path: str = "", thread_id: str = "default") -> str:
@@ -297,8 +297,8 @@ class DeleteFilesTool(BaseTool):
     args_schema: type[BaseModel] = DeleteFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, paths: list[str], thread_id: str = "default") -> str:
@@ -330,8 +330,8 @@ class WriteFilesTool(BaseTool):
     args_schema: type[BaseModel] = WriteFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, files: list[dict[str, str]], thread_id: str = "default") -> str:
@@ -365,8 +365,8 @@ class StartCommandTool(BaseTool):
     args_schema: type[BaseModel] = StartCommandInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, command: str, thread_id: str = "default") -> str:
@@ -398,8 +398,8 @@ class GetTaskTool(BaseTool):
     args_schema: type[BaseModel] = GetTaskInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, task_id: str, thread_id: str = "default") -> str:
@@ -431,8 +431,8 @@ class StopTaskTool(BaseTool):
     args_schema: type[BaseModel] = StopTaskInput
     toolkit: Any = Field(default=None, exclude=True)
 
-    def __init__(self, toolkit):
-        super().__init__()
+    def __init__(self, toolkit: CodeInterpreterToolkit, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         self.toolkit = toolkit
 
     def _run(self, task_id: str, thread_id: str = "default") -> str:

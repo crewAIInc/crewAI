@@ -1,5 +1,7 @@
 """Task output representation and formatting."""
 
+from __future__ import annotations
+
 import json
 from typing import Any
 
@@ -44,7 +46,7 @@ class TaskOutput(BaseModel):
     messages: list[LLMMessage] = Field(description="Messages of the task", default=[])
 
     @model_validator(mode="after")
-    def set_summary(self):
+    def set_summary(self) -> TaskOutput:
         """Set the summary field based on the description.
 
         Returns:

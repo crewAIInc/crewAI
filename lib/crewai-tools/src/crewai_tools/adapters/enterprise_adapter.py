@@ -136,7 +136,7 @@ class EnterpriseActionTool(BaseTool):
             enum_values = schema["enum"]
             if not enum_values:
                 return self._map_json_type_to_python(json_type)
-            return Literal[tuple(enum_values)]  # type: ignore[return-value]
+            return Literal[tuple(enum_values)]
 
         if json_type == "array":
             items_schema = schema.get("items", {"type": "string"})
@@ -155,7 +155,7 @@ class EnterpriseActionTool(BaseTool):
         full_model_name = f"{self._base_name}{model_name}"
 
         if full_model_name in self._model_registry:
-            return self._model_registry[full_model_name]
+            return cast(type[Any], self._model_registry[full_model_name])
 
         properties = schema.get("properties", {})
         required_fields = schema.get("required", [])
@@ -178,19 +178,19 @@ class EnterpriseActionTool(BaseTool):
             field_definitions[prop_name] = self._create_field_definition(
                 prop_type,
                 is_required,
-                prop_desc,  # type: ignore[arg-type]
+                prop_desc,
             )
 
         try:
             nested_model = create_model(full_model_name, **field_definitions)  # type: ignore[call-overload]
             self._model_registry[full_model_name] = nested_model
-            return nested_model
+            return cast(type[Any], nested_model)
         except Exception:
             return dict
 
     def _create_field_definition(
         self, field_type: type[Any] | _SpecialForm, is_required: bool, description: str
-    ) -> tuple:
+    ) -> tuple[type[Any] | _SpecialForm, Any]:
         """Create Pydantic field definition based on type and requirement."""
         if is_required:
             return (field_type, Field(description=description))
@@ -232,7 +232,7 @@ class EnterpriseActionTool(BaseTool):
             return any(t.get("type") == "null" for t in schema["anyOf"])
         return schema.get("type") == "null"
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         """Execute the specific enterprise action with validated parameters."""
         try:
             cleaned_kwargs = {}
@@ -280,8 +280,8 @@ class EnterpriseActionKitToolAdapter:
     ):
         """Initialize the adapter with an enterprise action token."""
         self._set_enterprise_action_token(enterprise_action_token)
-        self._actions_schema = {}  # type: ignore[var-annotated]
-        self._tools = None
+        self._actions_schema: dict[str, Any] = {}
+        self._tools: list[BaseTool] | None = None
         self.enterprise_api_base_url = (
             enterprise_api_base_url or get_enterprise_api_base_url()
         )
@@ -293,7 +293,7 @@ class EnterpriseActionKitToolAdapter:
             self._create_tools()
         return self._tools or []
 
-    def _fetch_actions(self):
+    def _fetch_actions(self) -> None:
         """Fetch available actions from the API."""
         try:
             actions_url = f"{self.enterprise_api_base_url}/actions"
@@ -379,9 +379,9 @@ class EnterpriseActionKitToolAdapter:
 
         return descriptions
 
-    def _create_tools(self):
+    def _create_tools(self) -> None:
         """Create BaseTool instances for each action."""
-        tools = []
+        tools: list[BaseTool] = []
 
         for action_name, action_schema in self._actions_schema.items():
             function_details = action_schema.get("function", {})
@@ -403,7 +403,7 @@ class EnterpriseActionKitToolAdapter:
                 description=full_description,
                 action_name=action_name,
                 action_schema=action_schema,
-                enterprise_action_token=self.enterprise_action_token,
+                enterprise_action_token=self.enterprise_action_token or "",
                 enterprise_api_base_url=self.enterprise_api_base_url,
             )
 
@@ -411,7 +411,7 @@ class EnterpriseActionKitToolAdapter:
 
         self._tools = tools
 
-    def _set_enterprise_action_token(self, enterprise_action_token: str | None):
+    def _set_enterprise_action_token(self, enterprise_action_token: str | None) -> None:
         if enterprise_action_token and not enterprise_action_token.startswith("PK_"):
             warnings.warn(
                 "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs.crewai.com/en/enterprise/features/integrations.",
@@ -423,10 +423,15 @@ class EnterpriseActionKitToolAdapter:
             "CREWAI_ENTERPRISE_TOOLS_TOKEN"
         )
 
-        self.enterprise_action_token = token
+        self.enterprise_action_token: str | None = token
 
-    def __enter__(self):
+    def __enter__(self) -> list[BaseTool]:
         return self.tools()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         pass

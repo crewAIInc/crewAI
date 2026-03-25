@@ -15,21 +15,18 @@ class CrewBaseEvent(BaseEvent):
     crew_name: str | None
     crew: Crew | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        self.set_crew_fingerprint()
+        self._set_crew_fingerprint()
 
-    def set_crew_fingerprint(self) -> None:
-        if self.crew and hasattr(self.crew, "fingerprint") and self.crew.fingerprint:
+    def _set_crew_fingerprint(self) -> None:
+        if self.crew is not None and self.crew.fingerprint:
             self.source_fingerprint = self.crew.fingerprint.uuid_str
             self.source_type = "crew"
-            if (
-                hasattr(self.crew.fingerprint, "metadata")
-                and self.crew.fingerprint.metadata
-            ):
+            if self.crew.fingerprint.metadata:
                 self.fingerprint_metadata = self.crew.fingerprint.metadata
 
-    def to_json(self, exclude: set[str] | None = None):
+    def to_json(self, exclude: set[str] | None = None) -> Any:
         if exclude is None:
             exclude = set()
         exclude.add("crew")

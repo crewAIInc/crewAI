@@ -5,6 +5,7 @@ import urllib.request
 import warnings
 
 from crewai.agent.core import Agent
+from crewai.agent.planning_config import PlanningConfig
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
@@ -41,7 +42,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.10.2rc2"
+__version__ = "1.11.1"
 _telemetry_submitted = False
 
 
@@ -102,6 +103,7 @@ __all__ = [
     "Knowledge",
     "LLMGuardrail",
     "Memory",
+    "PlanningConfig",
     "Process",
     "Task",
     "TaskOutput",

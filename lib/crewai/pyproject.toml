@@ -42,6 +42,7 @@ dependencies = [
     "mcp~=1.26.0",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
+    "pyyaml~=6.0",
     "lancedb>=0.29.2",
 ]
 
@@ -53,7 +54,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.10.2rc2",
+    "crewai-tools==1.11.1",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -82,7 +83,7 @@ voyageai = [
     "voyageai~=0.3.5",
 ]
 litellm = [
-    "litellm>=1.74.9,<3",
+    "litellm>=1.74.9,<=1.82.6",
 ]
 bedrock = [
     "boto3~=1.40.45",

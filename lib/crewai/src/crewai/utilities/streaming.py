@@ -60,7 +60,9 @@ def _extract_tool_call_info(
             StreamChunkType.TOOL_CALL,
             ToolCallChunk(
                 tool_id=event.tool_call.id,
-                tool_name=sanitize_tool_name(event.tool_call.function.name),
+                tool_name=sanitize_tool_name(event.tool_call.function.name)
+                if event.tool_call.function.name
+                else None,
                 arguments=event.tool_call.function.arguments,
                 index=event.tool_call.index,
             ),

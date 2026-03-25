@@ -39,7 +39,7 @@ class GuardrailResult(BaseModel):
 
     @field_validator("result", "error")
     @classmethod
-    def validate_result_error_exclusivity(cls, v: Any, info) -> Any:
+    def validate_result_error_exclusivity(cls, v: Any, info: Any) -> Any:
         """Ensure that result and error are mutually exclusive based on success.
 
         Args:

@@ -60,7 +60,7 @@ class PendingFeedbackContext:
     emit: list[str] | None = None
     default_outcome: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    llm: str | None = None
+    llm: dict[str, Any] | str | None = None
     requested_at: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:

@@ -67,6 +67,7 @@ except ImportError:
         return []
 
 
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -124,7 +125,7 @@ class Task(BaseModel):
         description="Configuration for the agent",
         default=None,
     )
-    callback: Any | None = Field(
+    callback: SerializableCallable | None = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
     agent: BaseAgent | None = Field(
@@ -579,7 +580,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
             result = await agent.aexecute_task(
                 task=self,
                 context=context,
@@ -661,12 +662,12 @@ class Task(BaseModel):
                 self._save_file(content)
             crewai_event_bus.emit(
                 self,
-                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
+                TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
@@ -693,7 +694,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -776,12 +777,12 @@ class Task(BaseModel):
                 self._save_file(content)
             crewai_event_bus.emit(
                 self,
-                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
+                TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)

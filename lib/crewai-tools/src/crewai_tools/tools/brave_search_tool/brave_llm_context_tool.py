@@ -3,7 +3,6 @@ from typing import Any
 from pydantic import BaseModel
 
 from crewai_tools.tools.brave_search_tool.base import BraveSearchToolBase
-from crewai_tools.tools.brave_search_tool.response_types import LLMContext
 from crewai_tools.tools.brave_search_tool.schemas import (
     LLMContextHeaders,
     LLMContextParams,
@@ -27,6 +26,6 @@ class BraveLLMContextTool(BraveSearchToolBase):
     def _refine_request_payload(self, params: dict[str, Any]) -> dict[str, Any]:
         return params
 
-    def _refine_response(self, response: LLMContext.Response) -> LLMContext.Response:
+    def _refine_response(self, response: dict[str, Any]) -> Any:
         """The LLM Context response schema is fairly simple. Return as is."""
         return response

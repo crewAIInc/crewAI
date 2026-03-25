@@ -346,6 +346,23 @@ class BedrockCompletion(BaseLLM):
         # Handle inference profiles for newer models
         self.model_id = model
 
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Bedrock-specific fields."""
+        config = super().to_config_dict()
+        # NOTE: AWS credentials (access_key, secret_key, session_token) are
+        # intentionally excluded — they must come from env on resume.
+        if self.region_name and self.region_name != "us-east-1":
+            config["region_name"] = self.region_name
+        if self.max_tokens is not None:
+            config["max_tokens"] = self.max_tokens
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.top_k is not None:
+            config["top_k"] = self.top_k
+        if self.guardrail_config:
+            config["guardrail_config"] = self.guardrail_config
+        return config
+
     @property
     def stop(self) -> list[str]:
         """Get stop sequences sent to the API."""
@@ -1847,7 +1864,10 @@ class BedrockCompletion(BaseLLM):
             converse_messages.append({"role": "user", "content": pending_tool_results})
 
         # CRITICAL: Handle model-specific conversation requirements
-        # Cohere and some other models require conversation to end with user message
+        # Cohere and some other models require conversation to end with user message.
+        # Anthropic models on Bedrock also reject assistant messages in the final
+        # position when tools are present ("pre-filling the assistant response is
+        # not supported").
         if converse_messages:
             last_message = converse_messages[-1]
             if last_message["role"] == "assistant":
@@ -1872,6 +1892,22 @@ class BedrockCompletion(BaseLLM):
                         {
                             "role": "user",
                             "content": [{"text": "Continue your response."}],
+                        }
+                    )
+                # Anthropic (Claude) models reject assistant-last messages when
+                # tools are in the request. Append a user message so the
+                # Converse API accepts the payload.
+                elif (
+                    "anthropic" in self.model.lower() or "claude" in self.model.lower()
+                ):
+                    converse_messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "text": "Please continue and provide your final answer."
+                                }
+                            ],
                         }
                     )
 
@@ -2083,12 +2119,18 @@ class BedrockCompletion(BaseLLM):
         model_lower = self.model.lower()
         vision_models = (
             "anthropic.claude-3",
+            "anthropic.claude-sonnet-4",
+            "anthropic.claude-opus-4",
+            "anthropic.claude-haiku-4",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
             "us.amazon.nova-lite",
             "us.amazon.nova-pro",
             "us.amazon.nova-premier",
+            "us.anthropic.claude-sonnet-4",
+            "us.anthropic.claude-opus-4",
+            "us.anthropic.claude-haiku-4",
         )
         return any(model_lower.startswith(m) for m in vision_models)
 
