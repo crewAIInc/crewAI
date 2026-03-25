@@ -2,21 +2,34 @@
 
 from __future__ import annotations
 
+import importlib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
 
-qdrant_edge = pytest.importorskip("qdrant_edge")
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("qdrant_edge") is None,
+    reason="qdrant-edge-py not installed",
+)
 
-from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
+if TYPE_CHECKING:
+    from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
+
 from crewai.memory.types import MemoryRecord
+
+
+def _make_storage(path: str, vector_dim: int = 4) -> QdrantEdgeStorage:
+    from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
+
+    return QdrantEdgeStorage(path=path, vector_dim=vector_dim)
 
 
 @pytest.fixture
 def storage(tmp_path: Path) -> QdrantEdgeStorage:
-    return QdrantEdgeStorage(path=str(tmp_path / "edge"), vector_dim=4)
+    return _make_storage(str(tmp_path / "edge"))
 
 
 def _rec(
@@ -194,7 +207,7 @@ def test_reset_scoped(storage: QdrantEdgeStorage) -> None:
 
 
 def test_flush_to_central(tmp_path: Path) -> None:
-    s = QdrantEdgeStorage(path=str(tmp_path / "edge"), vector_dim=4)
+    s = _make_storage(str(tmp_path / "edge"))
     s.save([_rec(content="to sync")])
     assert s._local_has_data
     s.flush_to_central()
@@ -205,7 +218,7 @@ def test_flush_to_central(tmp_path: Path) -> None:
 
 
 def test_dual_shard_search(tmp_path: Path) -> None:
-    s = QdrantEdgeStorage(path=str(tmp_path / "edge"), vector_dim=4)
+    s = _make_storage(str(tmp_path / "edge"))
     # Save and flush to central.
     s.save([_rec(content="central record", scope="/a")])
     s.flush_to_central()
@@ -221,11 +234,11 @@ def test_dual_shard_search(tmp_path: Path) -> None:
 
 
 def test_close_lifecycle(tmp_path: Path) -> None:
-    s = QdrantEdgeStorage(path=str(tmp_path / "edge"), vector_dim=4)
+    s = _make_storage(str(tmp_path / "edge"))
     s.save([_rec(content="persisted")])
     s.close()
     # Reopen a new storage — should find the record in central.
-    s2 = QdrantEdgeStorage(path=str(tmp_path / "edge"), vector_dim=4)
+    s2 = _make_storage(str(tmp_path / "edge"))
     results = s2.search([0.1, 0.2, 0.3, 0.4], limit=5)
     assert len(results) == 1
     assert results[0][0].content == "persisted"
@@ -236,7 +249,7 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     base = tmp_path / "edge"
     # Create a fake orphaned shard using a PID that doesn't exist.
     fake_pid = 99999999
-    s1 = QdrantEdgeStorage(path=str(base), vector_dim=4)
+    s1 = _make_storage(str(base))
     # Manually create a shard at the orphaned path.
     orphan_path = base / f"worker-{fake_pid}"
     orphan_path.mkdir(parents=True, exist_ok=True)
@@ -279,7 +292,7 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
     s1.close()
 
     # Creating a new storage should detect and recover the orphaned shard.
-    s2 = QdrantEdgeStorage(path=str(base), vector_dim=4)
+    s2 = _make_storage(str(base))
     assert not orphan_path.exists()
     # The orphaned record should now be in central.
     results = s2.search([0.5, 0.5, 0.5, 0.5], limit=5)
@@ -297,7 +310,7 @@ def test_memory_with_qdrant_edge(tmp_path: Path) -> None:
     mock_embedder = MagicMock()
     mock_embedder.side_effect = lambda texts: [[0.1, 0.2, 0.3, 0.4] for _ in texts]
 
-    storage = QdrantEdgeStorage(path=str(tmp_path / "edge"), vector_dim=4)
+    storage = _make_storage(str(tmp_path / "edge"))
     m = Memory(
         storage=storage,
         llm=MagicMock(),
@@ -332,6 +345,8 @@ def test_memory_string_storage_qdrant_edge(tmp_path: Path) -> None:
             llm=MagicMock(),
             embedder=mock_embedder,
         )
+        from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
+
         assert isinstance(m._storage, QdrantEdgeStorage)
         m.close()
     finally:
