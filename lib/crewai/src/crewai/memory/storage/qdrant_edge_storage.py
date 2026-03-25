@@ -56,7 +56,9 @@ def _uuid_to_point_id(uuid_str: str) -> int:
     try:
         return uuid.UUID(uuid_str).int % (2**63 - 1)
     except ValueError:
-        return int.from_bytes(uuid_str.encode()[:8].ljust(8, b"\x00")) % (2**63 - 1)
+        return int.from_bytes(uuid_str.encode()[:8].ljust(8, b"\x00"), "big") % (
+            2**63 - 1
+        )
 
 
 def _build_scope_ancestors(scope: str) -> list[str]:
