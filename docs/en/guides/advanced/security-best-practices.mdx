@@ -117,7 +117,19 @@ For sensitive operations (for example financial actions, production mutations, o
 - Before external side effects (emails, tickets, writes)
 - Before policy/security exceptions
 
-You can implement approvals in your flow logic by pausing before a sensitive step, collecting reviewer input, and resuming only on approval.
+CrewAI supports human approval at the task layer with `human_input=True`, which is a good fit for sensitive steps that should pause for review before completion.
+
+```python
+from crewai import Task
+
+sensitive_task = Task(
+    description="Execute production database migration",
+    expected_output="Migration result confirmation",
+    human_input=True,
+)
+```
+
+For reviewability after the fact, consider enabling `verbose=True` on agents involved in sensitive flows so execution details are easier to inspect during debugging and incident review.
 
 ## Operational checklist
 
@@ -128,6 +140,7 @@ Use this quick checklist before production rollout:
 - [ ] Delegation is disabled unless explicitly required
 - [ ] High-impact tasks use `output_pydantic` and precise `expected_output`
 - [ ] Human approval gates exist for sensitive actions
+- [ ] Agent runs are logged or traced for post-incident review
 
 ## Related resources
 
