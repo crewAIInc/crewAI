@@ -1401,6 +1401,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
+        if emit and collapsed_outcome is None:
+            collapsed_outcome = default_outcome or emit[0]
+            result.outcome = collapsed_outcome
+
         try:
             if emit and collapsed_outcome:
                 self._method_outputs.append(collapsed_outcome)
