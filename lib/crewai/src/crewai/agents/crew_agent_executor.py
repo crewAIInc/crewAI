@@ -847,7 +847,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            func_args = (
+                func_info.get("arguments")
+                or tool_call.get("input")
+                or "{}"
+            )
             return call_id, func_name, func_args
         return None
 
