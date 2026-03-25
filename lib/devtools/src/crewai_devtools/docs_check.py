@@ -390,7 +390,10 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
             continue
 
         rel_path = action_item.file
-        en_path = docs_dir / "en" / rel_path
+        en_path = (docs_dir / "en" / rel_path).resolve()
+        if not en_path.is_relative_to(docs_dir.resolve()):
+            console.print(f"  [red]✗ Skipping unsafe path: {rel_path!r}[/red]")
+            continue
         console.print(f"\n[bold]Processing:[/bold] {rel_path}")
 
         content: str = ""
@@ -441,8 +444,11 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
         if not content:
             continue
 
+        resolved_docs = docs_dir.resolve()
         for lang in _TRANSLATION_LANGS:
-            lang_path = docs_dir / lang / rel_path
+            lang_path = (docs_dir / lang / rel_path).resolve()
+            if not lang_path.is_relative_to(resolved_docs):
+                continue
 
             with console.status(f"  [cyan]Translating to {_LANGUAGE_NAMES[lang]}..."):
                 translated = _translate_doc(content, lang, client)
