@@ -1,16 +1,16 @@
 """Qdrant Edge storage backend for the unified memory system.
 
 Uses a write-local/sync-central pattern for safe multi-process access.
-Each worker process writes to its own
-local shard (keyed by PID). Reads fan out to both local and central
-shards, merging results. On close, local records are synced to the
-central shard under a cross-process lock.
+Each worker process writes to its own local shard (keyed by PID). Reads
+fan out to both local and central shards, merging results. On close,
+local records are flushed to the shared central shard.
 """
 
 from __future__ import annotations
 
+import asyncio
 import atexit
-from datetime import datetime
+from datetime import UTC, datetime
 import logging
 import os
 from pathlib import Path
@@ -80,8 +80,7 @@ class QdrantEdgeStorage:
 
     Each worker process gets its own local shard for writes.
     Reads merge results from both local and central shards. On close,
-    local records are flushed to the shared central shard under a
-    cross-process lock.
+    local records are flushed to the shared central shard.
     """
 
     def __init__(
@@ -215,7 +214,7 @@ class QdrantEdgeStorage:
 
         def _parse_dt(val: Any) -> datetime:
             if val is None:
-                return datetime.utcnow()
+                return datetime.now(UTC).replace(tzinfo=None)
             if isinstance(val, datetime):
                 return val
             return datetime.fromisoformat(str(val).replace("Z", "+00:00"))
@@ -645,8 +644,8 @@ class QdrantEdgeStorage:
 
     def count(self, scope_prefix: str | None = None) -> int:
         """Count records in scope (and subscopes)."""
+        filt = self._build_scope_filter(scope_prefix)
         if not self._local_has_data:
-            filt = self._build_scope_filter(scope_prefix)
             if self._central_path.exists():
                 try:
                     shard = EdgeShard.load(str(self._central_path))
@@ -656,7 +655,18 @@ class QdrantEdgeStorage:
                 except Exception:
                     _logger.debug("count failed on central", exc_info=True)
             return 0
-        return len(self.list_records(scope_prefix=scope_prefix, limit=50_000))
+        seen_ids: set[str] = set()
+        for shard_path in (self._local_path, self._central_path):
+            if not shard_path.exists():
+                continue
+            try:
+                shard = EdgeShard.load(str(shard_path))
+                for pt in self._scroll_all(shard, filt=filt):
+                    seen_ids.add(pt.payload["record_id"])
+                shard.close()
+            except Exception:
+                _logger.debug("count failed on %s", shard_path, exc_info=True)
+        return len(seen_ids)
 
     def reset(self, scope_prefix: str | None = None) -> None:
         """Reset (delete all) memories in scope."""
@@ -674,7 +684,7 @@ class QdrantEdgeStorage:
         """Update last_accessed to now for the given record IDs."""
         if not record_ids:
             return
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).replace(tzinfo=None).isoformat()
         point_ids: list[int | uuid.UUID | str] = [
             _uuid_to_point_id(rid) for rid in record_ids
         ]
@@ -790,7 +800,7 @@ class QdrantEdgeStorage:
 
     async def asave(self, records: list[MemoryRecord]) -> None:
         """Save memory records asynchronously."""
-        self.save(records)
+        await asyncio.to_thread(self.save, records)
 
     async def asearch(
         self,
@@ -802,7 +812,8 @@ class QdrantEdgeStorage:
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
         """Search for memories asynchronously."""
-        return self.search(
+        return await asyncio.to_thread(
+            self.search,
             query_embedding,
             scope_prefix=scope_prefix,
             categories=categories,
@@ -820,7 +831,8 @@ class QdrantEdgeStorage:
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
         """Delete memories asynchronously."""
-        return self.delete(
+        return await asyncio.to_thread(
+            self.delete,
             scope_prefix=scope_prefix,
             categories=categories,
             record_ids=record_ids,

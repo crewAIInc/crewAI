@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -266,8 +266,8 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
                     "categories": [],
                     "metadata": {},
                     "importance": 0.5,
-                    "created_at": datetime.utcnow().isoformat(),
-                    "last_accessed": datetime.utcnow().isoformat(),
+                    "created_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
+                    "last_accessed": datetime.now(UTC).replace(tzinfo=None).isoformat(),
                     "source": "",
                     "private": False,
                 },
