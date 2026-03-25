@@ -11,7 +11,7 @@ import pytest
 qdrant_edge = pytest.importorskip("qdrant_edge")
 
 from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
-from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.types import MemoryRecord
 
 
 @pytest.fixture
