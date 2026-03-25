@@ -1,0 +1,493 @@
+---
+title: تكامل Google Contacts
+description: "إدارة جهات الاتصال والدليل مع تكامل Google Contacts لـ CrewAI."
+icon: "address-book"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إدارة جهات الاتصال ومعلومات الدليل عبر Google Contacts. يمكنك الوصول إلى جهات الاتصال الشخصية، والبحث في أشخاص الدليل، وإنشاء معلومات الاتصال وتحديثها، وإدارة مجموعات جهات الاتصال باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Google Contacts، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Google مع إمكانية الوصول إلى Google Contacts
+- ربط حساب Google الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Google Contacts
+
+### 1. ربط حساب Google الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Google Contacts** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة للوصول إلى جهات الاتصال والدليل
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="google_contacts/get_contacts">
+    **الوصف:** استرجاع جهات اتصال المستخدم من Google Contacts.
+
+    **المعاملات:**
+    - `pageSize` (integer, اختياري): عدد جهات الاتصال المراد إرجاعها (الحد الأقصى 1000). الحد الأدنى: 1، الحد الأقصى: 1000
+    - `pageToken` (string, اختياري): رمز الصفحة المراد استرجاعها.
+    - `personFields` (string, اختياري): الحقول المراد تضمينها (مثال: 'names,emailAddresses,phoneNumbers'). الافتراضي: names,emailAddresses,phoneNumbers
+    - `requestSyncToken` (boolean, اختياري): ما إذا كان يجب أن تتضمن الاستجابة رمز مزامنة. الافتراضي: false
+    - `sortOrder` (string, اختياري): ترتيب الفرز للاتصالات. الخيارات: LAST_MODIFIED_ASCENDING, LAST_MODIFIED_DESCENDING, FIRST_NAME_ASCENDING, LAST_NAME_ASCENDING
+
+  </Accordion>
+
+  <Accordion title="google_contacts/search_contacts">
+    **الوصف:** البحث عن جهات اتصال باستخدام سلسلة استعلام.
+
+    **المعاملات:**
+    - `query` (string, مطلوب): سلسلة استعلام البحث
+    - `readMask` (string, مطلوب): الحقول المراد قراءتها (مثال: 'names,emailAddresses,phoneNumbers')
+    - `pageSize` (integer, اختياري): عدد النتائج المراد إرجاعها. الحد الأدنى: 1، الحد الأقصى: 30
+    - `pageToken` (string, اختياري): رمز يحدد صفحة النتائج المراد إرجاعها.
+    - `sources` (array, اختياري): المصادر المراد البحث فيها. الخيارات: READ_SOURCE_TYPE_CONTACT, READ_SOURCE_TYPE_PROFILE. الافتراضي: READ_SOURCE_TYPE_CONTACT
+
+  </Accordion>
+
+  <Accordion title="google_contacts/list_directory_people">
+    **الوصف:** عرض قائمة الأشخاص في دليل المستخدم المصادق عليه.
+
+    **المعاملات:**
+    - `sources` (array, مطلوب): مصادر الدليل المراد البحث فيها. الخيارات: DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE, DIRECTORY_SOURCE_TYPE_DOMAIN_CONTACT. الافتراضي: DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE
+    - `pageSize` (integer, اختياري): عدد الأشخاص المراد إرجاعهم. الحد الأدنى: 1، الحد الأقصى: 1000
+    - `pageToken` (string, اختياري): رمز يحدد صفحة النتائج المراد إرجاعها.
+    - `readMask` (string, اختياري): الحقول المراد قراءتها (مثال: 'names,emailAddresses')
+    - `requestSyncToken` (boolean, اختياري): ما إذا كان يجب أن تتضمن الاستجابة رمز مزامنة. الافتراضي: false
+    - `mergeSources` (array, اختياري): بيانات إضافية لدمجها في استجابات أشخاص الدليل. الخيارات: CONTACT
+
+  </Accordion>
+
+  <Accordion title="google_contacts/search_directory_people">
+    **الوصف:** البحث عن أشخاص في الدليل.
+
+    **المعاملات:**
+    - `query` (string, مطلوب): استعلام البحث
+    - `sources` (string, مطلوب): مصادر الدليل (استخدم 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE')
+    - `pageSize` (integer, اختياري): عدد النتائج المراد إرجاعها
+    - `readMask` (string, اختياري): الحقول المراد قراءتها
+
+  </Accordion>
+
+  <Accordion title="google_contacts/list_other_contacts">
+    **الوصف:** عرض جهات الاتصال الأخرى (غير الموجودة في جهات الاتصال الشخصية).
+
+    **المعاملات:**
+    - `pageSize` (integer, اختياري): عدد جهات الاتصال المراد إرجاعها. الحد الأدنى: 1، الحد الأقصى: 1000
+    - `pageToken` (string, اختياري): رمز يحدد صفحة النتائج المراد إرجاعها.
+    - `readMask` (string, اختياري): الحقول المراد قراءتها
+    - `requestSyncToken` (boolean, اختياري): ما إذا كان يجب أن تتضمن الاستجابة رمز مزامنة. الافتراضي: false
+
+  </Accordion>
+
+  <Accordion title="google_contacts/search_other_contacts">
+    **الوصف:** البحث في جهات الاتصال الأخرى.
+
+    **المعاملات:**
+    - `query` (string, مطلوب): استعلام البحث
+    - `readMask` (string, مطلوب): الحقول المراد قراءتها (مثال: 'names,emailAddresses')
+    - `pageSize` (integer, اختياري): عدد النتائج
+
+  </Accordion>
+
+  <Accordion title="google_contacts/get_person">
+    **الوصف:** الحصول على معلومات الاتصال لشخص واحد بواسطة اسم المورد.
+
+    **المعاملات:**
+    - `resourceName` (string, مطلوب): اسم المورد للشخص المراد الحصول عليه (مثال: 'people/c123456789')
+    - `personFields` (string, اختياري): الحقول المراد تضمينها (مثال: 'names,emailAddresses,phoneNumbers'). الافتراضي: names,emailAddresses,phoneNumbers
+
+  </Accordion>
+
+  <Accordion title="google_contacts/create_contact">
+    **الوصف:** إنشاء جهة اتصال جديدة في دفتر عناوين المستخدم.
+
+    **المعاملات:**
+    - `names` (array, اختياري): أسماء الشخص
+      ```json
+      [
+        {
+          "givenName": "John",
+          "familyName": "Doe",
+          "displayName": "John Doe"
+        }
+      ]
+      ```
+    - `emailAddresses` (array, اختياري): عناوين البريد الإلكتروني
+      ```json
+      [
+        {
+          "value": "john.doe@example.com",
+          "type": "work"
+        }
+      ]
+      ```
+    - `phoneNumbers` (array, اختياري): أرقام الهاتف
+      ```json
+      [
+        {
+          "value": "+1234567890",
+          "type": "mobile"
+        }
+      ]
+      ```
+    - `addresses` (array, اختياري): العناوين البريدية
+      ```json
+      [
+        {
+          "formattedValue": "123 Main St, City, State 12345",
+          "type": "home"
+        }
+      ]
+      ```
+    - `organizations` (array, اختياري): المؤسسات/الشركات
+      ```json
+      [
+        {
+          "name": "Company Name",
+          "title": "Job Title",
+          "type": "work"
+        }
+      ]
+      ```
+
+  </Accordion>
+
+  <Accordion title="google_contacts/update_contact">
+    **الوصف:** تحديث معلومات جهة اتصال موجودة.
+
+    **المعاملات:**
+    - `resourceName` (string, مطلوب): اسم المورد للشخص المراد تحديثه (مثال: 'people/c123456789')
+    - `updatePersonFields` (string, مطلوب): الحقول المراد تحديثها (مثال: 'names,emailAddresses,phoneNumbers')
+    - `names` (array, اختياري): أسماء الشخص
+    - `emailAddresses` (array, اختياري): عناوين البريد الإلكتروني
+    - `phoneNumbers` (array, اختياري): أرقام الهاتف
+
+  </Accordion>
+
+  <Accordion title="google_contacts/delete_contact">
+    **الوصف:** حذف جهة اتصال من دفتر عناوين المستخدم.
+
+    **المعاملات:**
+    - `resourceName` (string, مطلوب): اسم المورد للشخص المراد حذفه (مثال: 'people/c123456789')
+
+  </Accordion>
+
+  <Accordion title="google_contacts/batch_get_people">
+    **الوصف:** الحصول على معلومات عن عدة أشخاص في طلب واحد.
+
+    **المعاملات:**
+    - `resourceNames` (array, مطلوب): أسماء موارد الأشخاص المراد الحصول عليهم. الحد الأقصى: 200 عنصر
+    - `personFields` (string, اختياري): الحقول المراد تضمينها (مثال: 'names,emailAddresses,phoneNumbers'). الافتراضي: names,emailAddresses,phoneNumbers
+
+  </Accordion>
+
+  <Accordion title="google_contacts/list_contact_groups">
+    **الوصف:** عرض مجموعات جهات اتصال المستخدم (التصنيفات).
+
+    **المعاملات:**
+    - `pageSize` (integer, اختياري): عدد مجموعات جهات الاتصال المراد إرجاعها. الحد الأدنى: 1، الحد الأقصى: 1000
+    - `pageToken` (string, اختياري): رمز يحدد صفحة النتائج المراد إرجاعها.
+    - `groupFields` (string, اختياري): الحقول المراد تضمينها (مثال: 'name,memberCount,clientData'). الافتراضي: name,memberCount
+
+  </Accordion>
+
+  <Accordion title="google_contacts/get_contact_group">
+    **الوصف:** الحصول على مجموعة جهات اتصال محددة بواسطة اسم المورد.
+
+    **المعاملات:**
+    - `resourceName` (string, مطلوب): اسم المورد لمجموعة جهات الاتصال (مثال: 'contactGroups/myContactGroup')
+    - `maxMembers` (integer, اختياري): الحد الأقصى لعدد الأعضاء المراد تضمينهم. الحد الأدنى: 0، الحد الأقصى: 20000
+    - `groupFields` (string, اختياري): الحقول المراد تضمينها (مثال: 'name,memberCount,clientData'). الافتراضي: name,memberCount
+
+  </Accordion>
+
+  <Accordion title="google_contacts/create_contact_group">
+    **الوصف:** إنشاء مجموعة جهات اتصال جديدة (تصنيف).
+
+    **المعاملات:**
+    - `name` (string, مطلوب): اسم مجموعة جهات الاتصال
+    - `clientData` (array, اختياري): بيانات خاصة بالعميل
+      ```json
+      [
+        {
+          "key": "data_key",
+          "value": "data_value"
+        }
+      ]
+      ```
+
+  </Accordion>
+
+  <Accordion title="google_contacts/update_contact_group">
+    **الوصف:** تحديث معلومات مجموعة جهات اتصال.
+
+    **المعاملات:**
+    - `resourceName` (string, مطلوب): اسم المورد لمجموعة جهات الاتصال (مثال: 'contactGroups/myContactGroup')
+    - `name` (string, مطلوب): اسم مجموعة جهات الاتصال
+    - `clientData` (array, اختياري): بيانات خاصة بالعميل
+      ```json
+      [
+        {
+          "key": "data_key",
+          "value": "data_value"
+        }
+      ]
+      ```
+
+  </Accordion>
+
+  <Accordion title="google_contacts/delete_contact_group">
+    **الوصف:** حذف مجموعة جهات اتصال.
+
+    **المعاملات:**
+    - `resourceName` (string, مطلوب): اسم المورد لمجموعة جهات الاتصال المراد حذفها (مثال: 'contactGroups/myContactGroup')
+    - `deleteContacts` (boolean, اختياري): ما إذا كان يجب حذف جهات الاتصال في المجموعة أيضاً. الافتراضي: false
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Google Contacts
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Contacts capabilities
+contacts_agent = Agent(
+    role="Contact Manager",
+    goal="Manage contacts and directory information efficiently",
+    backstory="An AI assistant specialized in contact management and directory operations.",
+    apps=['google_contacts']  # All Google Contacts actions will be available
+)
+
+# Task to retrieve and organize contacts
+contact_management_task = Task(
+    description="Retrieve all contacts and organize them by company affiliation",
+    agent=contacts_agent,
+    expected_output="Contacts retrieved and organized by company with summary report"
+)
+
+# Run the task
+crew = Crew(
+    agents=[contacts_agent],
+    tasks=[contact_management_task]
+)
+
+crew.kickoff()
+```
+
+### البحث في الدليل وإدارته
+
+```python
+from crewai import Agent, Task, Crew
+
+directory_manager = Agent(
+    role="Directory Manager",
+    goal="Search and manage directory people and contacts",
+    backstory="An AI assistant that specializes in directory management and people search.",
+    apps=[
+        'google_contacts/search_directory_people',
+        'google_contacts/list_directory_people',
+        'google_contacts/search_contacts'
+    ]
+)
+
+# Task to search and manage directory
+directory_task = Task(
+    description="Search for team members in the company directory and create a team contact list",
+    agent=directory_manager,
+    expected_output="Team directory compiled with contact information"
+)
+
+crew = Crew(
+    agents=[directory_manager],
+    tasks=[directory_task]
+)
+
+crew.kickoff()
+```
+
+### إنشاء جهات الاتصال وتحديثاتها
+
+```python
+from crewai import Agent, Task, Crew
+
+contact_curator = Agent(
+    role="Contact Curator",
+    goal="Create and update contact information systematically",
+    backstory="An AI assistant that maintains accurate and up-to-date contact information.",
+    apps=['google_contacts']
+)
+
+# Task to create and update contacts
+curation_task = Task(
+    description="""
+    1. Search for existing contacts related to new business partners
+    2. Create new contacts for partners not in the system
+    3. Update existing contact information with latest details
+    4. Organize contacts into appropriate groups
+    """,
+    agent=contact_curator,
+    expected_output="Contact database updated with new partners and organized groups"
+)
+
+crew = Crew(
+    agents=[contact_curator],
+    tasks=[curation_task]
+)
+
+crew.kickoff()
+```
+
+### إدارة مجموعات جهات الاتصال
+
+```python
+from crewai import Agent, Task, Crew
+
+group_organizer = Agent(
+    role="Contact Group Organizer",
+    goal="Organize contacts into meaningful groups and categories",
+    backstory="An AI assistant that specializes in contact organization and group management.",
+    apps=['google_contacts']
+)
+
+# Task to organize contact groups
+organization_task = Task(
+    description="""
+    1. List all existing contact groups
+    2. Analyze contact distribution across groups
+    3. Create new groups for better organization
+    4. Move contacts to appropriate groups based on their information
+    """,
+    agent=group_organizer,
+    expected_output="Contacts organized into logical groups with improved structure"
+)
+
+crew = Crew(
+    agents=[group_organizer],
+    tasks=[organization_task]
+)
+
+crew.kickoff()
+```
+
+### إدارة جهات الاتصال الشاملة
+
+```python
+from crewai import Agent, Task, Crew
+
+contact_specialist = Agent(
+    role="Contact Management Specialist",
+    goal="Provide comprehensive contact management across all sources",
+    backstory="An AI assistant that handles all aspects of contact management including personal, directory, and other contacts.",
+    apps=['google_contacts']
+)
+
+# Complex contact management task
+comprehensive_task = Task(
+    description="""
+    1. Retrieve contacts from all sources (personal, directory, other)
+    2. Search for duplicate contacts and merge information
+    3. Update outdated contact information
+    4. Create missing contacts for important stakeholders
+    5. Organize contacts into meaningful groups
+    6. Generate a comprehensive contact report
+    """,
+    agent=contact_specialist,
+    expected_output="Complete contact management performed with unified contact database and detailed report"
+)
+
+crew = Crew(
+    agents=[contact_specialist],
+    tasks=[comprehensive_task]
+)
+
+crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+**أخطاء الصلاحيات**
+
+- تأكد من أن حساب Google الخاص بك لديه الصلاحيات المناسبة للوصول إلى جهات الاتصال
+- تحقق من أن اتصال OAuth يتضمن النطاقات المطلوبة لـ Google Contacts API
+- تحقق من منح صلاحيات الوصول للدليل لجهات اتصال المؤسسة
+
+**مشاكل صيغة اسم المورد**
+
+- تأكد من أن أسماء الموارد تتبع الصيغة الصحيحة (مثال: 'people/c123456789' لجهات الاتصال)
+- تحقق من أن أسماء موارد مجموعات جهات الاتصال تستخدم الصيغة 'contactGroups/groupId'
+- تأكد من وجود أسماء الموارد وإمكانية الوصول إليها
+
+**مشاكل البحث والاستعلام**
+
+- تأكد من صحة صيغة استعلامات البحث وعدم كونها فارغة
+- استخدم حقول readMask المناسبة للبيانات التي تحتاجها
+- تحقق من صحة تحديد مصادر البحث (جهات اتصال مقابل ملفات تعريف)
+
+**إنشاء جهات الاتصال وتحديثاتها**
+
+- تأكد من توفير الحقول المطلوبة عند إنشاء جهات الاتصال
+- تحقق من صحة صيغة عناوين البريد الإلكتروني وأرقام الهاتف
+- تأكد من أن معامل updatePersonFields يتضمن جميع الحقول التي يتم تحديثها
+
+**مشاكل الوصول إلى الدليل**
+
+- تأكد من أن لديك الصلاحيات المناسبة للوصول إلى دليل المؤسسة
+- تحقق من صحة تحديد مصادر الدليل
+- تأكد من أن مؤسستك تسمح بالوصول عبر API إلى معلومات الدليل
+
+**الترقيم والحدود**
+
+- انتبه لحدود حجم الصفحة (تختلف حسب نقطة النهاية)
+- استخدم pageToken للترقيم عبر مجموعات النتائج الكبيرة
+- احترم حدود معدل API وطبّق تأخيرات مناسبة
+
+**مجموعات جهات الاتصال والتنظيم**
+
+- تأكد من أن أسماء مجموعات جهات الاتصال فريدة عند إنشاء مجموعات جديدة
+- تحقق من وجود جهات الاتصال قبل إضافتها إلى المجموعات
+- تأكد من أن لديك صلاحيات تعديل مجموعات جهات الاتصال
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Google Contacts
+  أو استكشاف الأخطاء وإصلاحها.
+</Card>

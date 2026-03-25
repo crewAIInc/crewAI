@@ -1,0 +1,254 @@
+---
+title: تكامل Google Sheets
+description: "مزامنة بيانات جداول البيانات مع تكامل Google Sheets لـ CrewAI."
+icon: "google"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إدارة بيانات جداول البيانات عبر Google Sheets. اقرأ الصفوف، وأنشئ إدخالات جديدة، وحدّث البيانات الموجودة، وبسّط سير عمل إدارة البيانات باستخدام الأتمتة المدعومة بالذكاء الاصطناعي. مثالي لتتبع البيانات وإعداد التقارير وإدارة البيانات التعاونية.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Google Sheets، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Google مع إمكانية الوصول إلى Google Sheets
+- ربط حساب Google الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+- جداول بيانات بترويسات أعمدة مناسبة لعمليات البيانات
+
+## إعداد تكامل Google Sheets
+
+### 1. ربط حساب Google الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Google Sheets** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة للوصول إلى جداول البيانات
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="google_sheets/get_spreadsheet">
+    **الوصف:** استرجاع خصائص وبيانات جدول البيانات.
+
+    **المعاملات:**
+    - `spreadsheetId` (string, مطلوب): معرّف جدول البيانات المراد استرجاعه.
+    - `ranges` (array, اختياري): النطاقات المراد استرجاعها من جدول البيانات.
+    - `includeGridData` (boolean, اختياري): true إذا كان يجب إرجاع بيانات الشبكة. الافتراضي: false
+    - `fields` (string, اختياري): الحقول المراد تضمينها في الاستجابة.
+
+  </Accordion>
+
+  <Accordion title="google_sheets/get_values">
+    **الوصف:** إرجاع نطاق من القيم من جدول البيانات.
+
+    **المعاملات:**
+    - `spreadsheetId` (string, مطلوب): معرّف جدول البيانات المراد استرجاع البيانات منه.
+    - `range` (string, مطلوب): ترميز A1 أو R1C1 للنطاق المراد استرجاع القيم منه.
+    - `valueRenderOption` (string, اختياري): كيفية تمثيل القيم في الإخراج. الخيارات: FORMATTED_VALUE, UNFORMATTED_VALUE, FORMULA. الافتراضي: FORMATTED_VALUE
+    - `dateTimeRenderOption` (string, اختياري): كيفية تمثيل التواريخ والأوقات في الإخراج. الخيارات: SERIAL_NUMBER, FORMATTED_STRING. الافتراضي: SERIAL_NUMBER
+    - `majorDimension` (string, اختياري): البُعد الرئيسي للنتائج. الخيارات: ROWS, COLUMNS. الافتراضي: ROWS
+
+  </Accordion>
+
+  <Accordion title="google_sheets/update_values">
+    **الوصف:** تعيين القيم في نطاق من جدول البيانات.
+
+    **المعاملات:**
+    - `spreadsheetId` (string, مطلوب): معرّف جدول البيانات المراد تحديثه.
+    - `range` (string, مطلوب): ترميز A1 للنطاق المراد تحديثه.
+    - `values` (array, مطلوب): البيانات المراد كتابتها. كل مصفوفة تمثل صفاً.
+      ```json
+      [
+        ["Value1", "Value2", "Value3"],
+        ["Value4", "Value5", "Value6"]
+      ]
+      ```
+    - `valueInputOption` (string, اختياري): كيفية تفسير بيانات الإدخال. الخيارات: RAW, USER_ENTERED. الافتراضي: USER_ENTERED
+
+  </Accordion>
+
+  <Accordion title="google_sheets/append_values">
+    **الوصف:** إلحاق قيم بجدول البيانات.
+
+    **المعاملات:**
+    - `spreadsheetId` (string, مطلوب): معرّف جدول البيانات المراد تحديثه.
+    - `range` (string, مطلوب): ترميز A1 لنطاق البحث عن جدول بيانات منطقي.
+    - `values` (array, مطلوب): البيانات المراد إلحاقها. كل مصفوفة تمثل صفاً.
+      ```json
+      [
+        ["Value1", "Value2", "Value3"],
+        ["Value4", "Value5", "Value6"]
+      ]
+      ```
+    - `valueInputOption` (string, اختياري): كيفية تفسير بيانات الإدخال. الخيارات: RAW, USER_ENTERED. الافتراضي: USER_ENTERED
+    - `insertDataOption` (string, اختياري): كيفية إدراج بيانات الإدخال. الخيارات: OVERWRITE, INSERT_ROWS. الافتراضي: INSERT_ROWS
+
+  </Accordion>
+
+  <Accordion title="google_sheets/create_spreadsheet">
+    **الوصف:** إنشاء جدول بيانات جديد.
+
+    **المعاملات:**
+    - `title` (string, مطلوب): عنوان جدول البيانات الجديد.
+    - `sheets` (array, اختياري): الأوراق التي تشكل جزءاً من جدول البيانات.
+      ```json
+      [
+        {
+          "properties": {
+            "title": "Sheet1"
+          }
+        }
+      ]
+      ```
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Google Sheets
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Sheets capabilities
+sheets_agent = Agent(
+    role="Data Manager",
+    goal="Manage spreadsheet data and track information efficiently",
+    backstory="An AI assistant specialized in data management and spreadsheet operations.",
+    apps=['google_sheets']
+)
+
+# Task to add new data to a spreadsheet
+data_entry_task = Task(
+    description="Add a new customer record to the customer database spreadsheet with name, email, and signup date",
+    agent=sheets_agent,
+    expected_output="New customer record added successfully to the spreadsheet"
+)
+
+# Run the task
+crew = Crew(
+    agents=[sheets_agent],
+    tasks=[data_entry_task]
+)
+
+crew.kickoff()
+```
+
+### تصفية أدوات Google Sheets المحددة
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create agent with specific Google Sheets actions only
+data_collector = Agent(
+    role="Data Collector",
+    goal="Collect and organize data in spreadsheets",
+    backstory="An AI assistant that focuses on data collection and organization.",
+    apps=[
+        'google_sheets/get_values',
+        'google_sheets/update_values'
+    ]
+)
+
+# Task to collect and organize data
+data_collection = Task(
+    description="Retrieve current inventory data and add new product entries to the inventory spreadsheet",
+    agent=data_collector,
+    expected_output="Inventory data retrieved and new products added successfully"
+)
+
+crew = Crew(
+    agents=[data_collector],
+    tasks=[data_collection]
+)
+
+crew.kickoff()
+```
+
+### تحليل البيانات وإعداد التقارير
+
+```python
+from crewai import Agent, Task, Crew
+
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze spreadsheet data and generate insights",
+    backstory="An experienced data analyst who extracts insights from spreadsheet data.",
+    apps=['google_sheets']
+)
+
+# Task to analyze data and create reports
+analysis_task = Task(
+    description="""
+    1. Retrieve all sales data from the current month's spreadsheet
+    2. Analyze the data for trends and patterns
+    3. Create a summary report in a new row with key metrics
+    """,
+    agent=data_analyst,
+    expected_output="Sales data analyzed and summary report created with key insights"
+)
+
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+**أخطاء الصلاحيات**
+
+- تأكد من أن حساب Google الخاص بك لديه صلاحية التحرير على جداول البيانات المستهدفة
+- تحقق من أن اتصال OAuth يتضمن النطاقات المطلوبة لـ Google Sheets API
+- تأكد من مشاركة جداول البيانات مع الحساب المصادق عليه
+
+**مشاكل هيكل جدول البيانات**
+
+- تأكد من أن أوراق العمل تحتوي على ترويسات أعمدة مناسبة قبل إنشاء الصفوف أو تحديثها
+- تحقق من صحة ترميز النطاق (صيغة A1) للخلايا المستهدفة
+- تأكد من وجود معرّف جدول البيانات المحدد وإمكانية الوصول إليه
+
+**مشاكل نوع البيانات والصيغة**
+
+- تأكد من تطابق قيم البيانات مع الصيغة المتوقعة لكل عمود
+- استخدم صيغ التاريخ المناسبة لأعمدة التاريخ (يُنصح بصيغة ISO)
+- تحقق من صحة تنسيق القيم الرقمية لأعمدة الأرقام
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Google Sheets
+  أو استكشاف الأخطاء وإصلاحها.
+</Card>
