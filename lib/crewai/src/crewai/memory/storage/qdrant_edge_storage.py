@@ -397,16 +397,18 @@ class QdrantEdgeStorage:
     ) -> int:
         """Delete matching records from a shard at the given path."""
         shard = EdgeShard.load(str(shard_path))
-        deleted = self._delete_from_shard(
-            shard,
-            scope_prefix,
-            categories,
-            record_ids,
-            older_than,
-            metadata_filter,
-        )
-        shard.flush()
-        shard.close()
+        try:
+            deleted = self._delete_from_shard(
+                shard,
+                scope_prefix,
+                categories,
+                record_ids,
+                older_than,
+                metadata_filter,
+            )
+            shard.flush()
+        finally:
+            shard.close()
         return deleted
 
     def _delete_from_shard(
@@ -728,10 +730,12 @@ class QdrantEdgeStorage:
             for pt in points
         ]
         central = self._open_shard(self._central_path)
-        self._ensure_indexes(central)
-        central.update(UpdateOperation.upsert_points(qdrant_points))
-        central.flush()
-        central.close()
+        try:
+            self._ensure_indexes(central)
+            central.update(UpdateOperation.upsert_points(qdrant_points))
+            central.flush()
+        finally:
+            central.close()
 
     def flush_to_central(self) -> None:
         """Sync local shard records to the central shard."""
