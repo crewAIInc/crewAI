@@ -251,7 +251,7 @@ def add_docs_version(docs_json_path: Path, version: str) -> bool:
     return True
 
 
-ChangelogLang = Literal["en", "pt-BR", "ko"]
+ChangelogLang = Literal["en", "pt-BR", "ko", "ar"]
 
 _PT_BR_MONTHS: Final[dict[int, str]] = {
     1: "jan",
@@ -268,6 +268,21 @@ _PT_BR_MONTHS: Final[dict[int, str]] = {
     12: "dez",
 }
 
+_AR_MONTHS: Final[dict[int, str]] = {
+    1: "يناير",
+    2: "فبراير",
+    3: "مارس",
+    4: "أبريل",
+    5: "مايو",
+    6: "يونيو",
+    7: "يوليو",
+    8: "أغسطس",
+    9: "سبتمبر",
+    10: "أكتوبر",
+    11: "نوفمبر",
+    12: "ديسمبر",
+}
+
 _CHANGELOG_LOCALES: Final[
     dict[ChangelogLang, dict[Literal["link_text", "language_name"], str]]
 ] = {
@@ -282,6 +297,10 @@ _CHANGELOG_LOCALES: Final[
     "ko": {
         "link_text": "GitHub 릴리스 보기",
         "language_name": "Korean",
+    },
+    "ar": {
+        "link_text": "عرض الإصدار على GitHub",
+        "language_name": "Modern Standard Arabic",
     },
 }
 
@@ -340,6 +359,8 @@ def _format_changelog_date(lang: ChangelogLang) -> str:
         return f"{now.year}년 {now.month}월 {now.day}일"
     if lang == "pt-BR":
         return f"{now.day:02d} {_PT_BR_MONTHS[now.month]} {now.year}"
+    if lang == "ar":
+        return f"{now.day} {_AR_MONTHS[now.month]} {now.year}"
     return now.strftime("%b %d, %Y")
 
 
@@ -829,7 +850,7 @@ def _update_docs_and_create_pr(
         The docs branch name if a PR was created, None otherwise.
     """
     docs_json_path = cwd / "docs" / "docs.json"
-    changelog_langs: list[ChangelogLang] = ["en", "pt-BR", "ko"]
+    changelog_langs: list[ChangelogLang] = ["en", "pt-BR", "ko", "ar"]
 
     if not dry_run:
         docs_files_staged: list[str] = []
