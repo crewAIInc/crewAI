@@ -120,7 +120,7 @@ def optimize_image(
 
     with Image.open(io.BytesIO(content)) as img:
         if img.mode in ("RGBA", "LA", "P"):
-            img = img.convert("RGB")
+            img = img.convert("RGB")  # type: ignore[assignment]
             output_format = "JPEG"
         else:
             output_format = img.format or "JPEG"
