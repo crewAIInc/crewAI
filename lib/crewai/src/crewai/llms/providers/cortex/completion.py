@@ -48,6 +48,7 @@ CORTEX_CONTEXT_WINDOWS: Final[dict[str, int]] = {
     "claude-3-7-sonnet": 200_000,
     "claude-sonnet-4": 200_000,
     "claude-opus-4": 200_000,
+    "deepseek-r1": 128_000,
     "llama3.1-8b": 128_000,
     "llama3.1-70b": 128_000,
     "llama3.1-405b": 128_000,
@@ -257,6 +258,14 @@ class CortexCompletion(BaseLLM):
             headers=self._build_headers(),
         )
 
+    def close(self) -> None:
+        """Close the underlying httpx client to release connections."""
+        if hasattr(self, "client"):
+            self.client.close()
+
+    def __del__(self) -> None:
+        self.close()
+
     def _build_headers(self) -> dict[str, str]:
         return {
             "Content-Type": "application/json",
@@ -415,10 +424,13 @@ class CortexCompletion(BaseLLM):
             try:
                 response = self.client.post(url, json=payload)
 
-                # Refresh token and retry on 401
+                # Refresh token and retry on 401 — only useful for JWT
+                # (PAT/SPCS tokens don't refresh, so fail fast)
                 if response.status_code == 401 and attempt < self.max_retries:
-                    self._refresh_token()
-                    continue
+                    if self._token_type == "KEYPAIR_JWT":
+                        self._refresh_token()
+                        continue
+                    response.raise_for_status()
 
                 response.raise_for_status()
                 return response.json()

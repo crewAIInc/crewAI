@@ -1,4 +1,4 @@
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, get_args
 
 
 OpenAIModels: TypeAlias = Literal[
@@ -575,6 +575,7 @@ CortexModels: TypeAlias = Literal[
     "claude-3-7-sonnet",
     "claude-sonnet-4",
     "claude-opus-4",
+    "deepseek-r1",
     "llama3.1-8b",
     "llama3.1-70b",
     "llama3.1-405b",
@@ -596,28 +597,4 @@ CortexModels: TypeAlias = Literal[
     "snowflake-arctic",
 ]
 
-CORTEX_MODELS: list[CortexModels] = [
-    "claude-3-5-sonnet",
-    "claude-3-7-sonnet",
-    "claude-sonnet-4",
-    "claude-opus-4",
-    "llama3.1-8b",
-    "llama3.1-70b",
-    "llama3.1-405b",
-    "llama3.2-1b",
-    "llama3.2-3b",
-    "llama3.3-70b",
-    "llama4-maverick",
-    "llama4-scout",
-    "mistral-7b",
-    "mistral-large",
-    "mistral-large2",
-    "mixtral-8x7b",
-    "reka-core",
-    "reka-flash",
-    "jamba-instruct",
-    "jamba-1.5-mini",
-    "jamba-1.5-large",
-    "gemma-7b",
-    "snowflake-arctic",
-]
+CORTEX_MODELS: list[str] = list(get_args(CortexModels))

@@ -119,7 +119,7 @@ class TestCortexConstants:
     def test_known_models_in_constants(self):
         expected = [
             "claude-3-5-sonnet", "claude-3-7-sonnet", "llama3.1-70b",
-            "mistral-large2", "snowflake-arctic",
+            "mistral-large2", "snowflake-arctic", "deepseek-r1",
         ]
         for model in expected:
             assert model in CORTEX_MODELS, f"{model} missing from CORTEX_MODELS"
@@ -128,6 +128,12 @@ class TestCortexConstants:
         assert LLM._infer_provider_from_model("snowflake-arctic") == "cortex"
         assert LLM._infer_provider_from_model("llama3.1-70b") == "cortex"
         assert LLM._infer_provider_from_model("claude-3-5-sonnet") == "cortex"
+
+    def test_infer_provider_no_hijack_without_env(self):
+        """Without Snowflake env vars, short model names should NOT route to cortex."""
+        with patch.dict(os.environ, {}, clear=True):
+            assert LLM._infer_provider_from_model("claude-3-5-sonnet") != "cortex"
+            assert LLM._infer_provider_from_model("llama3.1-70b") != "cortex"
 
     def test_validate_model_in_constants(self):
         assert LLM._validate_model_in_constants("claude-3-5-sonnet", "cortex") is True
@@ -209,6 +215,20 @@ class TestCortexCompletionInit:
             base_url="https://custom.snowflake.example.com/",
         )
         assert llm.base_url == "https://custom.snowflake.example.com"
+
+    @patch("crewai.llms.providers.cortex.completion.httpx.Client")
+    @patch("crewai.llms.providers.cortex.completion.os.path.isfile", return_value=True)
+    def test_spcs_auto_detect(self, mock_isfile, mock_client_cls):
+        """SPCS token file at /snowflake/session/token should be auto-detected."""
+        from unittest.mock import mock_open
+        from crewai.llms.providers.cortex.completion import CortexCompletion
+
+        m = mock_open(read_data="spcs-session-token")
+        with patch.dict(os.environ, {"SNOWFLAKE_ACCOUNT": "testaccount"}, clear=True):
+            with patch("builtins.open", m):
+                llm = CortexCompletion(model="llama3.1-70b")
+                assert llm._token_type == "OAUTH"
+                assert llm._token == "spcs-session-token"
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +432,7 @@ class TestCortexRetry:
     """Test retry and error handling logic."""
 
     @patch("crewai.llms.providers.cortex.completion.httpx.Client")
-    def test_401_triggers_token_refresh(self, mock_client_cls):
+    def test_401_triggers_token_refresh_for_jwt(self, mock_client_cls):
         from crewai.llms.providers.cortex.completion import CortexCompletion
 
         mock_client = MagicMock()
@@ -425,10 +445,31 @@ class TestCortexRetry:
         mock_client_cls.return_value = mock_client
 
         llm = CortexCompletion(model="llama3.1-70b")
+        # Simulate JWT auth so the 401 retry path is exercised
+        llm._token_type = "KEYPAIR_JWT"
         result = llm.call("Test")
 
         assert result == "Recovered"
         assert mock_client.post.call_count == 2
+
+    @patch("crewai.llms.providers.cortex.completion.httpx.Client")
+    def test_401_pat_fails_fast(self, mock_client_cls):
+        """PAT auth should not retry on 401 — tokens don't refresh."""
+        from crewai.llms.providers.cortex.completion import CortexCompletion
+
+        mock_client = MagicMock()
+        mock_client.post.return_value = _mock_response(
+            {"error": "unauthorized"}, status_code=401
+        )
+        mock_client.headers = {}
+        mock_client_cls.return_value = mock_client
+
+        llm = CortexCompletion(model="llama3.1-70b")
+        assert llm._token_type == "PROGRAMMATIC_ACCESS_TOKEN"
+        with pytest.raises(RuntimeError, match="Cortex API"):
+            llm.call("Test")
+        # Should only attempt once — no retry for PAT 401
+        assert mock_client.post.call_count == 1
 
     @patch("crewai.llms.providers.cortex.completion.httpx.Client")
     def test_http_error_raises_runtime_error(self, mock_client_cls):

@@ -512,12 +512,24 @@ class LLM(BaseLLM):
             return True
 
         if provider == "cortex":
+            # Guard against matching when Snowflake is not configured —
+            # these prefixes overlap with other providers (e.g., claude-, gemma-).
+            if not (
+                os.getenv("SNOWFLAKE_ACCOUNT")
+                and (
+                    os.getenv("SNOWFLAKE_PAT")
+                    or os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH")
+                    or os.getenv("SNOWFLAKE_PRIVATE_KEY")
+                    or os.path.isfile("/snowflake/session/token")
+                )
+            ):
+                return False
             return any(
                 model_lower.startswith(prefix)
                 for prefix in [
                     "llama3.", "llama4-", "mistral-", "mixtral-", "snowflake-",
                     "reka-", "jamba-", "gemma-", "claude-3-5-sonnet", "claude-3-7-sonnet",
-                    "claude-sonnet-4", "claude-opus-4",
+                    "claude-sonnet-4", "claude-opus-4", "deepseek-",
                 ]
             )
 
@@ -592,7 +604,16 @@ class LLM(BaseLLM):
             return "azure"
 
         if model in CORTEX_MODELS:
-            return "cortex"
+            # Only infer cortex when Snowflake credentials are configured,
+            # otherwise short model names like "claude-3-5-sonnet" would hijack
+            # routing from other providers for users without a Snowflake account.
+            if os.getenv("SNOWFLAKE_ACCOUNT") and (
+                os.getenv("SNOWFLAKE_PAT")
+                or os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH")
+                or os.getenv("SNOWFLAKE_PRIVATE_KEY")
+                or os.path.isfile("/snowflake/session/token")
+            ):
+                return "cortex"
 
         return "openai"
 
