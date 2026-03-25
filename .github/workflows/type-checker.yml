@@ -41,7 +41,7 @@ jobs:
         run: uv sync --all-groups --all-extras
 
       - name: Run type checks
-        run: uv run mypy lib/crewai/src/crewai/ lib/crewai-tools/src/crewai_tools/
+        run: uv run mypy lib/
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'
