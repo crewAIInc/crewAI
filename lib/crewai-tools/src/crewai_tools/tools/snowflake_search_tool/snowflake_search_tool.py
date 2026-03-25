@@ -12,10 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 if TYPE_CHECKING:
     # Import types for type checking only
-    from snowflake.connector.connection import (  # type: ignore[import-not-found]
+    from snowflake.connector.connection import (
         SnowflakeConnection,
     )
-    from snowflake.connector.errors import (  # type: ignore[import-not-found]
+    from snowflake.connector.errors import (
         DatabaseError,
         OperationalError,
     )
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
-    import snowflake.connector  # type: ignore[import-not-found]
+    import snowflake.connector
 
     SNOWFLAKE_AVAILABLE = True
 except ImportError:
@@ -60,7 +60,7 @@ class SnowflakeConfig(BaseModel):
     def has_auth(self) -> bool:
         return bool(self.password or self.private_key_path)
 
-    def model_post_init(self, *args, **kwargs):
+    def model_post_init(self, *args: Any, **kwargs: Any) -> None:
         if not self.has_auth:
             raise ValueError("Either password or private_key_path must be provided")
 
@@ -115,7 +115,7 @@ class SnowflakeSearchTool(BaseTool):
         ]
     )
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         """Initialize SnowflakeSearchTool."""
         super().__init__(**data)
         self._initialize_snowflake()
@@ -268,7 +268,7 @@ class SnowflakeSearchTool(BaseTool):
             logger.error(f"Error executing query: {e!s}")
             raise
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup connections on deletion."""
         try:
             if self._connection_pool:

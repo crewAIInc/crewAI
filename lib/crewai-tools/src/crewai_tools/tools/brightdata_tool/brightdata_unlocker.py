@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from typing import Any
 
@@ -10,7 +12,7 @@ class BrightDataConfig(BaseModel):
     API_URL: str = "https://api.brightdata.com/request"
 
     @classmethod
-    def from_env(cls):
+    def from_env(cls) -> BrightDataConfig:
         return cls(
             API_URL=os.environ.get(
                 "BRIGHTDATA_API_URL", "https://api.brightdata.com/request"

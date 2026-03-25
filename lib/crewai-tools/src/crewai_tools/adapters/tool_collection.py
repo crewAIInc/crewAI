@@ -9,7 +9,7 @@ from crewai.tools import BaseTool
 T = TypeVar("T", bound=BaseTool)
 
 
-class ToolCollection(list, Generic[T]):
+class ToolCollection(list[T], Generic[T]):
     """A collection of tools that can be accessed by index or name.
 
     This class extends the built-in list to provide dictionary-like
@@ -34,7 +34,8 @@ class ToolCollection(list, Generic[T]):
     def __getitem__(self, key: int | str) -> T:  # type: ignore[override]
         if isinstance(key, str):
             return self._name_cache[key.lower()]
-        return super().__getitem__(key)
+        result: T = super().__getitem__(key)
+        return result
 
     def append(self, tool: T) -> None:
         super().append(tool)
@@ -54,7 +55,7 @@ class ToolCollection(list, Generic[T]):
             del self._name_cache[tool.name.lower()]
 
     def pop(self, index: int = -1) -> T:  # type: ignore[override]
-        tool = super().pop(index)
+        tool: T = super().pop(index)
         if tool.name.lower() in self._name_cache:
             del self._name_cache[tool.name.lower()]
         return tool

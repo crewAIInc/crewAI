@@ -9,7 +9,7 @@ from crewai_tools.rag.source_content import SourceContent
 
 
 class DOCXLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         try:
             from docx import Document as DocxDocument
         except ImportError as e:
@@ -33,7 +33,7 @@ class DOCXLoader(BaseLoader):
             )
 
     @staticmethod
-    def _download_from_url(url: str, kwargs: dict) -> str:
+    def _download_from_url(url: str, kwargs: dict[str, Any]) -> str:
         headers = kwargs.get(
             "headers",
             {

@@ -15,11 +15,11 @@ try:
     COUCHBASE_AVAILABLE = True
 except ImportError:
     COUCHBASE_AVAILABLE = False
-    search = Any
-    Cluster = Any
-    SearchOptions = Any
-    VectorQuery = Any
-    VectorSearch = Any
+    search = Any  # type: ignore[assignment,unused-ignore]
+    Cluster = Any  # type: ignore[assignment,unused-ignore]
+    SearchOptions = Any  # type: ignore[assignment,unused-ignore]
+    VectorQuery = Any  # type: ignore[assignment,unused-ignore]
+    VectorSearch = Any  # type: ignore[assignment,unused-ignore]
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation
@@ -41,7 +41,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
     name: str = "CouchbaseFTSVectorSearchTool"
     description: str = "A tool to search the Couchbase database for relevant information on internal documents."
     args_schema: type[BaseModel] = CouchbaseToolSchema
-    cluster: SkipValidation[Cluster] = Field(
+    cluster: SkipValidation[Any] = Field(
         description="An instance of the Couchbase Cluster connected to the desired Couchbase server.",
     )
     collection_name: str = Field(
@@ -136,7 +136,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
 
         return True
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize the CouchbaseFTSVectorSearchTool.
 
         Args:

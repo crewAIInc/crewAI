@@ -1,8 +1,13 @@
 """Utility functions for RAG loaders."""
 
+from typing import Any
+
 
 def load_from_url(
-    url: str, kwargs: dict, accept_header: str = "*/*", loader_name: str = "Loader"
+    url: str,
+    kwargs: dict[str, Any],
+    accept_header: str = "*/*",
+    loader_name: str = "Loader",
 ) -> str:
     """Load content from a URL.
 

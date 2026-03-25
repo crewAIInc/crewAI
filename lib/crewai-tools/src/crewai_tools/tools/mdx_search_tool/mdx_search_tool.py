@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
@@ -26,7 +28,7 @@ class MDXSearchTool(RagTool):
     )
     args_schema: type[BaseModel] = MDXSearchToolSchema
 
-    def __init__(self, mdx: str | None = None, **kwargs):
+    def __init__(self, mdx: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if mdx is not None:
             self.add(mdx)
@@ -34,7 +36,7 @@ class MDXSearchTool(RagTool):
             self.args_schema = FixedMDXSearchToolSchema
             self._generate_description()
 
-    def add(self, mdx: str) -> None:
+    def add(self, mdx: str) -> None:  # type: ignore[override]
         super().add(mdx, data_type=DataType.MDX)
 
     def _run(  # type: ignore[override]

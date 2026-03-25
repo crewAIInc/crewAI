@@ -6,7 +6,7 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel
 
 
-def strtobool(val) -> bool:
+def strtobool(val: str | bool) -> bool:
     if isinstance(val, bool):
         return val
     val = val.lower()
@@ -46,7 +46,10 @@ class FileWriterTool(BaseTool):
             # itself, since that is not a valid file target.
             real_directory = Path(directory).resolve()
             real_filepath = Path(filepath).resolve()
-            if not real_filepath.is_relative_to(real_directory) or real_filepath == real_directory:
+            if (
+                not real_filepath.is_relative_to(real_directory)
+                or real_filepath == real_directory
+            ):
                 return "Error: Invalid file path — the filename must not escape the target directory."
 
             if kwargs.get("directory"):
@@ -62,9 +65,7 @@ class FileWriterTool(BaseTool):
                 file.write(kwargs["content"])
             return f"Content successfully written to {real_filepath}"
         except FileExistsError:
-            return (
-                f"File {real_filepath} already exists and overwrite option was not passed."
-            )
+            return f"File {real_filepath} already exists and overwrite option was not passed."
         except KeyError as e:
             return f"An error occurred while accessing key: {e!s}"
         except Exception as e:

@@ -34,7 +34,7 @@ class PatronusEvalTool(BaseTool):
             stacklevel=2,
         )
 
-    def _init_run(self):
+    def _init_run(self) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
         evaluators_set = json.loads(
             requests.get(
                 "https://api.patronus.ai/v1/evaluators",
@@ -136,8 +136,9 @@ class PatronusEvalTool(BaseTool):
             "evaluators": evals,
         }
 
+        api_key = os.getenv("PATRONUS_API_KEY", "")
         headers = {
-            "X-API-KEY": os.getenv("PATRONUS_API_KEY"),
+            "X-API-KEY": api_key,
             "accept": "application/json",
             "content-type": "application/json",
         }

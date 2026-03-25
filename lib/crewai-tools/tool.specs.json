@@ -5664,6 +5664,10 @@
             "title": "Bucket Name",
             "type": "string"
           },
+          "cluster": {
+            "description": "An instance of the Couchbase Cluster connected to the desired Couchbase server.",
+            "title": "Cluster"
+          },
           "collection_name": {
             "description": "The name of the Couchbase collection to search",
             "title": "Collection Name",
@@ -5712,6 +5716,7 @@
           }
         },
         "required": [
+          "cluster",
           "collection_name",
           "scope_name",
           "bucket_name",
@@ -11460,7 +11465,9 @@
             "title": "Api Key"
           },
           "headers": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "type": "string"
+            },
             "title": "Headers",
             "type": "object"
           },
@@ -14180,7 +14187,20 @@
         },
         "properties": {
           "columns": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
             "title": "Columns",
             "type": "object"
           },
@@ -14190,7 +14210,10 @@
             "type": "string"
           },
           "tables": {
-            "items": {},
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
             "title": "Tables",
             "type": "array"
           }
@@ -14455,9 +14478,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonProductScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonProductScraperTool",
@@ -14680,9 +14707,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonSearchScraperTool",
@@ -14918,9 +14949,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsGoogleSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsGoogleSearchScraperTool",
@@ -15104,9 +15139,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsUniversalScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsUniversalScraperTool",
@@ -16418,6 +16457,112 @@
       "run_params_schema": {
         "properties": {},
         "title": "_ArgsSchemaPlaceholder",
+        "type": "object"
+      }
+    },
+    {
+      "description": "This tool is used to evaluate the model input and output using custom function evaluators.",
+      "env_vars": [],
+      "humanized_name": "Patronus Local Evaluator Tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "client": {
+            "default": null,
+            "title": "Client"
+          },
+          "evaluated_model_gold_answer": {
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluator": {
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluator",
+          "evaluated_model_gold_answer"
+        ],
+        "title": "PatronusLocalEvaluatorTool",
+        "type": "object"
+      },
+      "name": "PatronusLocalEvaluatorTool",
+      "package_dependencies": [
+        "patronus"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "evaluated_model_gold_answer": {
+            "description": "The agent's gold answer only if available",
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluated_model_input": {
+            "description": "The agent's task description in simple text",
+            "title": "Evaluated Model Input",
+            "type": "string"
+          },
+          "evaluated_model_output": {
+            "description": "The agent's output of the task",
+            "title": "Evaluated Model Output",
+            "type": "string"
+          },
+          "evaluated_model_retrieved_context": {
+            "description": "The agent's context",
+            "title": "Evaluated Model Retrieved Context",
+            "type": "string"
+          },
+          "evaluator": {
+            "description": "The registered local evaluator",
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluated_model_input",
+          "evaluated_model_output",
+          "evaluated_model_retrieved_context",
+          "evaluated_model_gold_answer",
+          "evaluator"
+        ],
+        "title": "FixedLocalEvaluatorToolSchema",
         "type": "object"
       }
     },
@@ -17801,7 +17946,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17826,7 +17973,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17921,7 +18070,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17934,7 +18085,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -19801,7 +19954,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -19917,7 +20072,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -20030,7 +20187,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -20155,7 +20314,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -21984,6 +22145,10 @@
             "default": null,
             "title": "Model Api Key"
           },
+          "model_name": {
+            "default": "anthropic.claude-3-7-sonnet-20240607",
+            "title": "Model Name"
+          },
           "project_id": {
             "anyOf": [
               {
@@ -23208,6 +23373,26 @@
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
           },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
           "extract_depth": {
             "default": "basic",
             "description": "The depth of extraction. 'basic' for basic extraction, 'advanced' for advanced extraction.",
@@ -23342,6 +23527,26 @@
             ],
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
+          },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
           },
           "days": {
             "default": 7,
@@ -23644,7 +23849,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {

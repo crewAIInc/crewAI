@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
@@ -26,7 +28,7 @@ class CSVSearchTool(RagTool):
     )
     args_schema: type[BaseModel] = CSVSearchToolSchema
 
-    def __init__(self, csv: str | None = None, **kwargs):
+    def __init__(self, csv: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if csv is not None:
             self.add(csv)
@@ -34,7 +36,7 @@ class CSVSearchTool(RagTool):
             self.args_schema = FixedCSVSearchToolSchema
             self._generate_description()
 
-    def add(self, csv: str) -> None:
+    def add(self, csv: str) -> None:  # type: ignore[override]
         super().add(csv, data_type=DataType.CSV)
 
     def _run(  # type: ignore[override]

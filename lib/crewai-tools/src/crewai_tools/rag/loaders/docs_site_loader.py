@@ -1,8 +1,9 @@
 """Documentation site loader."""
 
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import requests
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
@@ -12,7 +13,7 @@ from crewai_tools.rag.source_content import SourceContent
 class DocsSiteLoader(BaseLoader):
     """Loader for documentation websites."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         """Load content from a documentation site.
 
         Args:
@@ -53,7 +54,9 @@ class DocsSiteLoader(BaseLoader):
                 break
 
         if not main_content:
-            main_content = soup.find("body")
+            body = soup.find("body")
+            if isinstance(body, Tag):
+                main_content = body
 
         if not main_content:
             raise ValueError(
@@ -66,6 +69,8 @@ class DocsSiteLoader(BaseLoader):
         if headings:
             text_parts.append("Table of Contents:")
             for heading in headings[:15]:
+                if not isinstance(heading, Tag):
+                    continue
                 level = int(heading.name[1])
                 indent = "  " * (level - 1)
                 text_parts.append(f"{indent}- {heading.get_text(strip=True)}")
@@ -81,6 +86,8 @@ class DocsSiteLoader(BaseLoader):
             if nav:
                 links = nav.find_all("a", href=True)
                 for link in links[:20]:
+                    if not isinstance(link, Tag):
+                        continue
                     href = link.get("href", "")
                     if isinstance(href, str) and not href.startswith(
                         ("http://", "https://", "mailto:", "#")
