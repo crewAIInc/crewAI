@@ -104,6 +104,8 @@ Context about the change:
 
 {existing_content}
 
+{diff_context}
+
 Generate the full MDX file content:"""
 
 _UPDATE_DOC_PROMPT: Final[str] = """\
@@ -197,6 +199,7 @@ def _analyze_diff(diff: str, client: OpenAI) -> DocsAnalysis:
 def _generate_doc(
     reason: str,
     existing_content: str | None,
+    diff_context: str,
     client: OpenAI,
 ) -> str:
     """Generate a new documentation page.
@@ -204,6 +207,7 @@ def _generate_doc(
     Args:
         reason: Why this doc is needed.
         existing_content: Existing doc content for style reference, or None.
+        diff_context: The code diff to document.
         client: OpenAI client.
 
     Returns:
@@ -213,9 +217,14 @@ def _generate_doc(
     if existing_content:
         context = f"Reference existing doc for style:\n{existing_content[:5000]}"
 
+    diff_section = ""
+    if diff_context:
+        diff_section = f"Code changes:\n{diff_context[:10000]}"
+
     prompt = _GENERATE_DOC_PROMPT.format(
         reason=reason,
         existing_content=context,
+        diff_context=diff_section,
     )
 
     response = client.chat.completions.create(
@@ -410,7 +419,7 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
                     siblings = list(parent.glob("*.mdx"))
                     if siblings:
                         ref_content = siblings[0].read_text()
-                content = _generate_doc(action_item.reason, ref_content, client)
+                content = _generate_doc(action_item.reason, ref_content, diff, client)
 
             if dry_run:
                 console.print(f"  [dim][DRY RUN] Would create {en_path}[/dim]")
@@ -434,6 +443,10 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
                     diff,
                     client,
                 )
+
+            if not content:
+                console.print("  [yellow]⚠[/yellow] Empty response, skipping update")
+                continue
 
             if dry_run:
                 console.print(f"  [dim][DRY RUN] Would update {en_path}[/dim]")
