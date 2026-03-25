@@ -282,7 +282,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crew_memory",
-                crew.memory if isinstance(crew.memory, bool) else bool(crew.memory),
+                bool(crew.memory),
             )
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
