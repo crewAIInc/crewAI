@@ -173,13 +173,18 @@ class Memory(BaseModel):
         )
 
         if isinstance(self.storage, str):
-            from crewai.memory.storage.lancedb_storage import LanceDBStorage
+            if self.storage == "qdrant-edge":
+                from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
 
-            self._storage = (
-                LanceDBStorage()
-                if self.storage == "lancedb"
-                else LanceDBStorage(path=self.storage)
-            )
+                self._storage = QdrantEdgeStorage()
+            elif self.storage == "lancedb":
+                from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+                self._storage = LanceDBStorage()
+            else:
+                from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+                self._storage = LanceDBStorage(path=self.storage)
         else:
             self._storage = self.storage
 
@@ -293,8 +298,10 @@ class Memory(BaseModel):
             future.result()  # blocks until done; re-raises exceptions
 
     def close(self) -> None:
-        """Drain pending saves and shut down the background thread pool."""
+        """Drain pending saves, flush storage, and shut down the background thread pool."""
         self.drain_writes()
+        if hasattr(self._storage, "close"):
+            self._storage.close()
         self._save_pool.shutdown(wait=True)
 
     def _encode_batch(
