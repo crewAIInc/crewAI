@@ -1,8 +1,8 @@
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
 from threading import Condition, Lock
+import time
 from typing import Any
 import uuid
 
@@ -114,10 +114,10 @@ class TraceBatchManager:
         """Send batch initialization to backend"""
 
         if not skip_context_check and not is_tracing_enabled_in_context():
-            return
+            return None
 
         if not self.plus_api or not self.current_batch:
-            return
+            return None
 
         try:
             payload = {
@@ -167,14 +167,14 @@ class TraceBatchManager:
                     f"Error initializing trace batch: {e}. Continuing without tracing."
                 )
                 self.trace_batch_id = None
-                return
+                return None
 
             if response is None:
                 logger.warning(
                     "Trace batch initialization failed gracefully. Continuing without tracing."
                 )
                 self.trace_batch_id = None
-                return
+                return None
 
             # Fall back to ephemeral on auth failure (expired/revoked token)
             if response.status_code in [401, 403] and not use_ephemeral:

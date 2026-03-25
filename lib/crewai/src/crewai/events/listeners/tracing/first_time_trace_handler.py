@@ -1,7 +1,7 @@
+from datetime import datetime, timezone
 import logging
 import uuid
 import webbrowser
-from datetime import datetime, timezone
 
 from rich.console import Console
 from rich.panel import Panel

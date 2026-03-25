@@ -780,7 +780,7 @@ class TraceCollectionListener(BaseEventListener):
                 "crew_name": getattr(source, "name", "Unknown Crew"),
                 "crewai_version": get_crewai_version(),
             }
-            self.batch_manager.initialize_batch(user_context, execution_metadata)
+            self._initialize_batch(user_context, execution_metadata)
 
         self.batch_manager.begin_event_processing()
         try:
