@@ -793,13 +793,33 @@ class QdrantEdgeStorage:
                 points = self._scroll_all(orphan, with_vector=True)
                 orphan.close()
 
-                if points and self._config is not None:
-                    self._upsert_to_central(points)
+                if not points:
+                    shutil.rmtree(entry, ignore_errors=True)
+                    continue
+
+                if self._config is None:
+                    for pt in points:
+                        vec = pt.vector
+                        if isinstance(vec, dict) and VECTOR_NAME in vec:
+                            vec_data = vec[VECTOR_NAME]
+                            if isinstance(vec_data, list) and len(vec_data) > 0:
+                                self._vector_dim = len(vec_data)
+                                self._config = self._build_config(self._vector_dim)
+                                break
+
+                if self._config is None:
+                    _logger.warning(
+                        "Cannot recover orphaned shard %s: vector dimension unknown",
+                        entry,
+                    )
+                    continue
+
+                self._upsert_to_central(points)
+                shutil.rmtree(entry, ignore_errors=True)
             except Exception:
                 _logger.warning(
                     "Failed to recover orphaned shard %s", entry, exc_info=True
                 )
-            shutil.rmtree(entry, ignore_errors=True)
 
     async def asave(self, records: list[MemoryRecord]) -> None:
         """Save memory records asynchronously."""
