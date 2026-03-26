@@ -139,14 +139,14 @@ class Crew(FlowTrackable, BaseModel):
     tasks they should perform.
 
     Attributes:
-        tasks: list of tasks assigned to the crew.
-        agents: list of agents part of this crew.
+        tasks: List of tasks assigned to the crew.
+        agents: List of agents part of this crew.
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
-        memory: Whether the crew should use memory to store memories of it's
+        memory: Whether the crew should use memory to store memories of its
             execution.
         cache: Whether the crew should use a cache to store the results of the
-            tools execution.
+            tools' execution.
         function_calling_llm: The language model that will run the tool calling
             for all the agents.
         process: The process flow that the crew will follow (e.g., sequential,
@@ -157,9 +157,9 @@ class Crew(FlowTrackable, BaseModel):
             be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
-        task_callback: Callback to be executed after each task for every agents
+        task_callback: Callback to be executed after each task for every agent's
             execution.
-        step_callback: Callback to be executed after each step for every agents
+        step_callback: Callback to be executed after each step for every agent's
             execution.
         share_crew: Whether you want to share the complete crew information and
             execution with crewAI to make the library better, and allow us to
@@ -224,11 +224,11 @@ class Crew(FlowTrackable, BaseModel):
     share_crew: bool | None = Field(default=False)
     step_callback: SerializableCallable | None = Field(
         default=None,
-        description="Callback to be executed after each step for all agents execution.",
+        description="Callback to be executed after each step for all agents' execution.",
     )
     task_callback: SerializableCallable | None = Field(
         default=None,
-        description="Callback to be executed after each task for all agents execution.",
+        description="Callback to be executed after each task for all agents' execution.",
     )
     before_kickoff_callbacks: list[SerializableCallable] = Field(
         default_factory=list,
@@ -615,10 +615,19 @@ class Crew(FlowTrackable, BaseModel):
 
         Returns:
             A task instance.
+
+        Raises:
+            ValueError: If no agent with the specified role is found.
         """
-        task_agent = next(
-            agt for agt in self.agents if agt.role == task_config["agent"]
-        )
+        agent_role = task_config["agent"]
+        try:
+            task_agent = next(agt for agt in self.agents if agt.role == agent_role)
+        except StopIteration:
+            available_roles = [agt.role for agt in self.agents]
+            raise ValueError(
+                f"Agent with role '{agent_role}' not found in crew. "
+                f"Available roles: {', '.join(available_roles)}"
+            ) from None
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
