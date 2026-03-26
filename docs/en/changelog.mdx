@@ -4,6 +4,51 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Mar 25, 2026">
+  ## v1.12.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0)
+
+  ## What's Changed
+
+  ### Features
+  - Add Qdrant Edge storage backend for memory system
+  - Add docs-check command to analyze changes and generate docs with translations
+  - Add Arabic language support to changelog and release tooling
+  - Add modern standard Arabic translation of all documentation
+  - Add logout command in CLI
+  - Implement agent skills
+  - Implement automatic root_scope for hierarchical memory isolation
+  - Implement native OpenAI-compatible providers (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### Bug Fixes
+  - Fix bad credentials for traces batch push (404)
+  - Resolve multiple bugs in HITL flow system
+  - Resolve mypy errors in crewai-files and add all packages to CI type checks
+  - Resolve all strict mypy errors across crewai-tools package
+  - Resolve all mypy errors across crewai package
+  - Fix memory saving in agent
+  - Fix usage of __router_paths__ for listener+router methods in FlowMeta
+  - Raise value error on no file support
+  - Correct litellm quarantine wording in docs
+  - Use None check instead of isinstance for memory in human feedback learn
+  - Pin litellm upper bound to last tested version (1.82.6)
+
+  ### Documentation
+  - Update changelog and version for v1.12.0
+  - Add CONTRIBUTING.md
+  - Add guide for using CrewAI without LiteLLM
+
+  ### Refactoring
+  - Refactor to deduplicate sync/async task execution and kickoff in agent
+  - Simplify internal plumbing from litellm (token counting, callbacks, feature detection, errors)
+
+  ## Contributors
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @nicoferdi96
+
+</Update>
+
 <Update label="Mar 26, 2026">
   ## v1.12.0a3
 
