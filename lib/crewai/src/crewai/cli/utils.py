@@ -708,6 +708,8 @@ def _extract_single_tool_metadata(tool_class: type) -> dict[str, Any] | None:
             module_path = relative_path.with_suffix("")
             if module_path.parts[0] == "src":
                 module_path = Path(*module_path.parts[1:])
+            if module_path.name == "__init__":
+                module_path = module_path.parent
             module = ".".join(module_path.parts)
         except (TypeError, ValueError):
             module = tool_class.__module__
@@ -735,7 +737,13 @@ def _unwrap_schema(schema: Mapping[str, Any] | dict[str, Any]) -> dict[str, Any]
     Unwrap nested schema structures to get to the actual schema definition.
     """
     result: dict[str, Any] = dict(schema)
-    while result.get("type") in {"function-after", "default"} and "schema" in result:
+    while (
+        result.get("type")
+        in {"function-after", "function-before", "function-wrap", "default"}
+        and "schema" in result
+    ):
+        result = dict(result["schema"])
+    if result.get("type") == "definitions" and "schema" in result:
         result = dict(result["schema"])
     return result
 

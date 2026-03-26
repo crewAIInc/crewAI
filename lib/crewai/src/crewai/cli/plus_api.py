@@ -83,7 +83,7 @@ class PlusAPI:
             "description": description,
             "available_exports": available_exports,
             "tools_metadata": {"package": handle, "tools": tools_metadata}
-            if tools_metadata
+            if tools_metadata is not None
             else None,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
