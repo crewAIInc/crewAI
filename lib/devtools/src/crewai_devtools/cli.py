@@ -609,24 +609,26 @@ def get_github_contributors(commit_range: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _poll_pr_until_merged(branch_name: str, label: str) -> None:
-    """Poll a GitHub PR until it is merged. Exit if closed without merging."""
+def _poll_pr_until_merged(
+    branch_name: str, label: str, repo: str | None = None
+) -> None:
+    """Poll a GitHub PR until it is merged. Exit if closed without merging.
+
+    Args:
+        branch_name: Branch name to look up the PR.
+        label: Human-readable label for status messages.
+        repo: Optional GitHub repo (owner/name) for cross-repo PRs.
+    """
     console.print(f"[cyan]Waiting for {label} to be merged...[/cyan]")
+    cmd = ["gh", "pr", "view", branch_name]
+    if repo:
+        cmd.extend(["--repo", repo])
+    cmd.extend(["--json", "state", "--jq", ".state"])
+
     while True:
         time.sleep(10)
         try:
-            state = run_command(
-                [
-                    "gh",
-                    "pr",
-                    "view",
-                    branch_name,
-                    "--json",
-                    "state",
-                    "--jq",
-                    ".state",
-                ]
-            )
+            state = run_command(cmd)
         except subprocess.CalledProcessError:
             state = ""
 
@@ -988,7 +990,7 @@ def _create_tag_and_release(
 
 _ENTERPRISE_REPO: Final[str | None] = os.getenv("ENTERPRISE_REPO")
 _ENTERPRISE_VERSION_DIRS: Final[tuple[str, ...]] = tuple(
-    d for d in os.getenv("ENTERPRISE_VERSION_DIRS", "").split(",") if d
+    d.strip() for d in os.getenv("ENTERPRISE_VERSION_DIRS", "").split(",") if d.strip()
 )
 _ENTERPRISE_CREWAI_DEP_PATH: Final[str | None] = os.getenv("ENTERPRISE_CREWAI_DEP_PATH")
 
@@ -1164,38 +1166,7 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         )
         console.print("[green]✓[/green] Enterprise bump PR created")
 
-        # poll using --repo flag so it works from any cwd
-        console.print("[cyan]Waiting for enterprise bump PR to be merged...[/cyan]")
-        while True:
-            time.sleep(10)
-            try:
-                state = run_command(
-                    [
-                        "gh",
-                        "pr",
-                        "view",
-                        branch_name,
-                        "--repo",
-                        enterprise_repo,
-                        "--json",
-                        "state",
-                        "--jq",
-                        ".state",
-                    ]
-                )
-            except subprocess.CalledProcessError:
-                state = ""
-
-            if state == "MERGED":
-                break
-            if state == "CLOSED":
-                console.print(
-                    "[red]✗[/red] Enterprise bump PR was closed without merging"
-                )
-                sys.exit(1)
-            console.print("[dim]Still waiting for enterprise bump PR to merge...[/dim]")
-
-        console.print("[green]✓[/green] Enterprise bump PR merged")
+        _poll_pr_until_merged(branch_name, "enterprise bump PR", repo=enterprise_repo)
 
         # --- tag and release ---
         run_command(["git", "checkout", "main"], cwd=repo_dir)
@@ -1258,23 +1229,35 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
 
     if wait:
         console.print("[cyan]Waiting for PyPI publish workflow to complete...[/cyan]")
-        # Give GitHub time to register the run
-        time.sleep(5)
+        run_id = ""
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            time.sleep(5)
+            try:
+                run_id = run_command(
+                    [
+                        "gh",
+                        "run",
+                        "list",
+                        "--workflow=publish.yml",
+                        "--limit=1",
+                        "--json=databaseId,status",
+                        '--jq=.[] | select(.status != "completed") | .databaseId',
+                    ]
+                )
+            except subprocess.CalledProcessError:
+                continue
+            if run_id:
+                break
+
+        if not run_id:
+            console.print(
+                "[red]Error:[/red] Could not find an active PyPI publish workflow run"
+            )
+            sys.exit(1)
+
         try:
-            run_id = run_command(
-                [
-                    "gh",
-                    "run",
-                    "list",
-                    "--workflow=publish.yml",
-                    "--limit=1",
-                    "--json=databaseId",
-                    "--jq=.[0].databaseId",
-                ]
-            )
-            run_command(
-                ["gh", "run", "watch", run_id, "--exit-status"],
-            )
+            run_command(["gh", "run", "watch", run_id, "--exit-status"])
         except subprocess.CalledProcessError as e:
             console.print(f"[red]✗[/red] PyPI publish workflow failed: {e}")
             sys.exit(1)
