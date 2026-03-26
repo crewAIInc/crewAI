@@ -1,6 +1,5 @@
 """Tests for AMP MCP config fetching and tool resolution."""
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
