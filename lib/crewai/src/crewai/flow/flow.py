@@ -883,7 +883,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history: list[HumanFeedbackResult] = []
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
-        self._human_feedback_method_output: Any = None  # Stashed real output from @human_feedback with emit
+        self._human_feedback_method_output: Any = (
+            None  # Stashed real output from @human_feedback with emit
+        )
         self.suppress_flow_events: bool = suppress_flow_events
 
         # User input history (for self.ask())
