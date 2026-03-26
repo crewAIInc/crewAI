@@ -701,6 +701,15 @@
                       "maxAllowedSelections": {
                         "type": "integer",
                         "description": "The maximum number of options that the user is allowed to select."
+                      },
+                      "variant": {
+                        "type": "string",
+                        "enum": ["checkbox", "chips"],
+                        "description": "The visual variant for the selection UI."
+                      },
+                      "filterable": {
+                        "type": "boolean",
+                        "description": "Whether options can be filtered by typing."
                       }
                     },
                     "required": ["selections", "options"]

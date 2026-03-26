@@ -32,7 +32,10 @@ from crewai.a2a.extensions.a2ui.models import (
     UserAction,
 )
 from crewai.a2a.extensions.a2ui.server_extension import A2UIServerExtension
-from crewai.a2a.extensions.a2ui.validator import validate_a2ui_message
+from crewai.a2a.extensions.a2ui.validator import (
+    validate_a2ui_event,
+    validate_a2ui_message,
+)
 
 
 __all__ = [
@@ -64,5 +67,6 @@ __all__ = [
     "TextField",
     "UserAction",
     "Video",
+    "validate_a2ui_event",
     "validate_a2ui_message",
 ]
