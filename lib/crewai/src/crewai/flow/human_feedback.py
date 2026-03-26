@@ -591,6 +591,13 @@ def human_feedback(
                 ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
+                # Stash the real method output for final flow result when emit is set
+                # (result is the collapsed outcome string for routing, but we want to
+                # preserve the actual method output as the flow's final result)
+                # Uses per-method dict for concurrency safety and to handle None returns
+                if emit:
+                    self._human_feedback_method_outputs[func.__name__] = method_output
+
                 return result
 
             wrapper: Any = async_wrapper
@@ -614,6 +621,13 @@ def human_feedback(
                     and raw_feedback.strip()
                 ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
+
+                # Stash the real method output for final flow result when emit is set
+                # (result is the collapsed outcome string for routing, but we want to
+                # preserve the actual method output as the flow's final result)
+                # Uses per-method dict for concurrency safety and to handle None returns
+                if emit:
+                    self._human_feedback_method_outputs[func.__name__] = method_output
 
                 return result
 
