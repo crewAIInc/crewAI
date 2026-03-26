@@ -38,7 +38,7 @@ agent = Agent(
     llm="gpt-4o",
     a2a=A2AServerConfig(
         url="https://your-server.com",
-        extensions=[A2UIServerExtension()],
+        server_extensions=[A2UIServerExtension()],
     ),
 )
 ```
@@ -69,7 +69,7 @@ agent = Agent(
     llm="gpt-4o",
     a2a=A2AClientConfig(
         endpoint="https://dashboard-agent.example.com/.well-known/agent-card.json",
-        extensions=[A2UIClientExtension()],
+        client_extensions=[A2UIClientExtension()],
     ),
 )
 ```
