@@ -1072,8 +1072,82 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
     return False
 
 
+_DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
+
 _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
+
+
+def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
+    """Update the deployment test repo to pin the new crewai version.
+
+    Clones the repo, updates the crewai[tools] pin in pyproject.toml,
+    regenerates the lockfile, commits, and pushes directly to main.
+
+    Args:
+        version: New crewai version string.
+        is_prerelease: Whether this is a pre-release version.
+    """
+    console.print(
+        f"\n[bold cyan]Updating {_DEPLOYMENT_TEST_REPO} to {version}[/bold cyan]"
+    )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo_dir = Path(tmp) / "crew_deployment_test"
+        run_command(["gh", "repo", "clone", _DEPLOYMENT_TEST_REPO, str(repo_dir)])
+        console.print(f"[green]✓[/green] Cloned {_DEPLOYMENT_TEST_REPO}")
+
+        pyproject = repo_dir / "pyproject.toml"
+        content = pyproject.read_text()
+        new_content = re.sub(
+            r'"crewai\[tools\]==[^"]+"',
+            f'"crewai[tools]=={version}"',
+            content,
+        )
+        if new_content == content:
+            console.print(
+                "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
+            )
+            return
+        pyproject.write_text(new_content)
+        console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+
+        lock_cmd = [
+            "uv",
+            "lock",
+            "--refresh-package",
+            "crewai",
+            "--refresh-package",
+            "crewai-tools",
+        ]
+        if is_prerelease:
+            lock_cmd.append("--prerelease=allow")
+
+        max_retries = 10
+        for attempt in range(1, max_retries + 1):
+            try:
+                run_command(lock_cmd, cwd=repo_dir)
+                break
+            except subprocess.CalledProcessError:
+                if attempt == max_retries:
+                    console.print(
+                        f"[red]Error:[/red] uv lock failed after {max_retries} attempts"
+                    )
+                    raise
+                console.print(
+                    f"[yellow]uv lock failed (attempt {attempt}/{max_retries}),"
+                    f" retrying in {_PYPI_POLL_INTERVAL}s...[/yellow]"
+                )
+                time.sleep(_PYPI_POLL_INTERVAL)
+        console.print("[green]✓[/green] Lockfile updated")
+
+        run_command(["git", "add", "pyproject.toml", "uv.lock"], cwd=repo_dir)
+        run_command(
+            ["git", "commit", "-m", f"chore: bump crewai to {version}"],
+            cwd=repo_dir,
+        )
+        run_command(["git", "push"], cwd=repo_dir)
+        console.print(f"[green]✓[/green] Pushed to {_DEPLOYMENT_TEST_REPO}")
 
 
 def _wait_for_pypi(package: str, version: str) -> None:
@@ -1776,7 +1850,8 @@ def release(
 
         if not dry_run:
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
-            _trigger_pypi_publish(tag_name, wait=not skip_enterprise)
+            _trigger_pypi_publish(tag_name, wait=True)
+            _update_deployment_test_repo(version, is_prerelease)
 
         if not skip_enterprise:
             _release_enterprise(version, is_prerelease, dry_run)
