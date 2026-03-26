@@ -2,8 +2,10 @@
 
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Final, Literal
 
@@ -444,7 +446,6 @@ def update_template_dependencies(templates_dir: Path, new_version: str) -> list[
     Returns:
         List of paths that were updated.
     """
-    import re
 
     updated = []
     for pyproject in templates_dir.rglob("pyproject.toml"):
@@ -984,6 +985,217 @@ def _create_tag_and_release(
     console.print(f"[green]✓[/green] Created GitHub {release_type} for {tag_name}")
 
 
+_ENTERPRISE_REPO: Final[str | None] = os.getenv("ENTERPRISE_REPO")
+_ENTERPRISE_VERSION_DIRS: Final[tuple[str, ...]] = tuple(
+    d for d in os.getenv("ENTERPRISE_VERSION_DIRS", "").split(",") if d
+)
+_ENTERPRISE_CREWAI_DEP_PATH: Final[str | None] = os.getenv("ENTERPRISE_CREWAI_DEP_PATH")
+
+
+def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
+    """Update the crewai[tools] pin in an enterprise pyproject.toml.
+
+    Args:
+        pyproject_path: Path to the pyproject.toml file.
+        version: New crewai version string.
+
+    Returns:
+        True if the file was modified.
+    """
+    if not pyproject_path.exists():
+        return False
+
+    content = pyproject_path.read_text()
+    new_content = re.sub(
+        r'"crewai(\[tools\])?(==|>=)[^"]*"',
+        lambda m: f'"crewai{(m.group(1) or "")!s}=={version}"',
+        content,
+    )
+    if new_content != content:
+        pyproject_path.write_text(new_content)
+        return True
+    return False
+
+
+def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> None:
+    """Clone the enterprise repo, bump versions, and create a release PR.
+
+    Expects ENTERPRISE_REPO, ENTERPRISE_VERSION_DIRS, and
+    ENTERPRISE_CREWAI_DEP_PATH to be validated before calling.
+
+    Args:
+        version: New version string.
+        is_prerelease: Whether this is a pre-release version.
+        dry_run: Show what would be done without making changes.
+    """
+    if (
+        not _ENTERPRISE_REPO
+        or not _ENTERPRISE_VERSION_DIRS
+        or not _ENTERPRISE_CREWAI_DEP_PATH
+    ):
+        console.print("[red]Error:[/red] Enterprise env vars not configured")
+        sys.exit(1)
+
+    enterprise_repo: str = _ENTERPRISE_REPO
+    enterprise_dep_path: str = _ENTERPRISE_CREWAI_DEP_PATH
+
+    console.print(
+        f"\n[bold cyan]Phase 3: Releasing {enterprise_repo} {version}[/bold cyan]"
+    )
+
+    if dry_run:
+        console.print(f"[dim][DRY RUN][/dim] Would clone {enterprise_repo}")
+        for d in _ENTERPRISE_VERSION_DIRS:
+            console.print(f"[dim][DRY RUN][/dim] Would update versions in {d}")
+        console.print(
+            f"[dim][DRY RUN][/dim] Would update crewai[tools] dep in "
+            f"{enterprise_dep_path}"
+        )
+        console.print(
+            "[dim][DRY RUN][/dim] Would create bump PR, wait for merge, "
+            "then tag and release"
+        )
+        return
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo_dir = Path(tmp) / enterprise_repo.split("/")[-1]
+        console.print(f"Cloning {enterprise_repo}...")
+        run_command(["gh", "repo", "clone", enterprise_repo, str(repo_dir)])
+        console.print(f"[green]✓[/green] Cloned {enterprise_repo}")
+
+        # --- bump versions ---
+        for rel_dir in _ENTERPRISE_VERSION_DIRS:
+            pkg_dir = repo_dir / rel_dir
+            if not pkg_dir.exists():
+                console.print(
+                    f"[yellow]Warning:[/yellow] {rel_dir} not found, skipping"
+                )
+                continue
+
+            for vfile in find_version_files(pkg_dir):
+                if update_version_in_file(vfile, version):
+                    console.print(
+                        f"[green]✓[/green] Updated: {vfile.relative_to(repo_dir)}"
+                    )
+
+            pyproject = pkg_dir / "pyproject.toml"
+            if pyproject.exists():
+                if update_pyproject_dependencies(pyproject, version):
+                    console.print(
+                        f"[green]✓[/green] Updated deps in: "
+                        f"{pyproject.relative_to(repo_dir)}"
+                    )
+
+        # --- update crewai[tools] pin ---
+        enterprise_pyproject = repo_dir / enterprise_dep_path
+        if _update_enterprise_crewai_dep(enterprise_pyproject, version):
+            console.print(
+                f"[green]✓[/green] Updated crewai[tools] dep in {enterprise_dep_path}"
+            )
+
+        console.print("\nSyncing workspace...")
+        run_command(["uv", "sync"], cwd=repo_dir)
+        console.print("[green]✓[/green] Workspace synced")
+
+        # --- branch, commit, push, PR ---
+        branch_name = f"feat/bump-version-{version}"
+        run_command(["git", "checkout", "-b", branch_name], cwd=repo_dir)
+        run_command(["git", "add", "."], cwd=repo_dir)
+        run_command(
+            ["git", "commit", "-m", f"feat: bump versions to {version}"],
+            cwd=repo_dir,
+        )
+        console.print("[green]✓[/green] Changes committed")
+
+        run_command(["git", "push", "-u", "origin", branch_name], cwd=repo_dir)
+        console.print("[green]✓[/green] Branch pushed")
+
+        run_command(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--repo",
+                enterprise_repo,
+                "--base",
+                "main",
+                "--title",
+                f"feat: bump versions to {version}",
+                "--body",
+                "",
+            ],
+            cwd=repo_dir,
+        )
+        console.print("[green]✓[/green] Enterprise bump PR created")
+
+        # poll using --repo flag so it works from any cwd
+        console.print("[cyan]Waiting for enterprise bump PR to be merged...[/cyan]")
+        while True:
+            time.sleep(10)
+            try:
+                state = run_command(
+                    [
+                        "gh",
+                        "pr",
+                        "view",
+                        branch_name,
+                        "--repo",
+                        enterprise_repo,
+                        "--json",
+                        "state",
+                        "--jq",
+                        ".state",
+                    ]
+                )
+            except subprocess.CalledProcessError:
+                state = ""
+
+            if state == "MERGED":
+                break
+            if state == "CLOSED":
+                console.print(
+                    "[red]✗[/red] Enterprise bump PR was closed without merging"
+                )
+                sys.exit(1)
+            console.print("[dim]Still waiting for enterprise bump PR to merge...[/dim]")
+
+        console.print("[green]✓[/green] Enterprise bump PR merged")
+
+        # --- tag and release ---
+        run_command(["git", "checkout", "main"], cwd=repo_dir)
+        run_command(["git", "pull"], cwd=repo_dir)
+
+        tag_name = version
+        run_command(
+            ["git", "tag", "-a", tag_name, "-m", f"Release {version}"],
+            cwd=repo_dir,
+        )
+        run_command(["git", "push", "origin", tag_name], cwd=repo_dir)
+        console.print(f"[green]✓[/green] Pushed tag {tag_name}")
+
+        gh_cmd = [
+            "gh",
+            "release",
+            "create",
+            tag_name,
+            "--repo",
+            enterprise_repo,
+            "--title",
+            tag_name,
+            "--notes",
+            f"Release {version}",
+        ]
+        if is_prerelease:
+            gh_cmd.append("--prerelease")
+
+        run_command(gh_cmd)
+        release_type = "prerelease" if is_prerelease else "release"
+        console.print(
+            f"[green]✓[/green] Created GitHub {release_type} for "
+            f"{enterprise_repo} {tag_name}"
+        )
+
+
 def _trigger_pypi_publish(tag_name: str) -> None:
     """Trigger the PyPI publish GitHub Actions workflow."""
     with console.status("[cyan]Triggering PyPI publish workflow..."):
@@ -1032,6 +1244,15 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
         no_push: Don't push changes to remote.
         no_commit: Don't commit changes (just update files).
     """
+    console.print(
+        f"\n[yellow]Note:[/yellow] [bold]devtools bump[/bold] only bumps versions "
+        f"in this repo. It will not tag, publish to PyPI, or release enterprise.\n"
+        f"If you want a full end-to-end release, run "
+        f"[bold]devtools release {version}[/bold] instead."
+    )
+    if not Confirm.ask("Continue with bump only?", default=True):
+        sys.exit(0)
+
     try:
         check_gh_installed()
 
@@ -1136,6 +1357,16 @@ def tag(dry_run: bool, no_edit: bool) -> None:
         dry_run: Show what would be done without making changes.
         no_edit: Skip editing release notes.
     """
+    console.print(
+        "\n[yellow]Note:[/yellow] [bold]devtools tag[/bold] only tags and creates "
+        "a GitHub release for this repo. It will not bump versions, publish to "
+        "PyPI, or release enterprise.\n"
+        "If you want a full end-to-end release, run "
+        "[bold]devtools release <version>[/bold] instead."
+    )
+    if not Confirm.ask("Continue with tag only?", default=True):
+        sys.exit(0)
+
     try:
         cwd = Path.cwd()
         lib_dir = cwd / "lib"
@@ -1226,20 +1457,43 @@ def tag(dry_run: bool, no_edit: bool) -> None:
     "--dry-run", is_flag=True, help="Show what would be done without making changes"
 )
 @click.option("--no-edit", is_flag=True, help="Skip editing release notes")
-def release(version: str, dry_run: bool, no_edit: bool) -> None:
+@click.option(
+    "--skip-enterprise",
+    is_flag=True,
+    help="Skip the enterprise release phase",
+)
+def release(version: str, dry_run: bool, no_edit: bool, skip_enterprise: bool) -> None:
     """Full release: bump versions, tag, and publish a GitHub release.
 
     Combines bump and tag into a single workflow. Creates a version bump PR,
     waits for it to be merged, then generates release notes, updates docs,
-    creates the tag, and publishes a GitHub release.
+    creates the tag, and publishes a GitHub release. Then bumps versions and
+    releases the enterprise repo.
 
     Args:
         version: New version to set (e.g., 1.0.0, 1.0.0a1).
         dry_run: Show what would be done without making changes.
         no_edit: Skip editing release notes.
+        skip_enterprise: Skip the enterprise release phase.
     """
     try:
         check_gh_installed()
+
+        if not skip_enterprise:
+            missing: list[str] = []
+            if not _ENTERPRISE_REPO:
+                missing.append("ENTERPRISE_REPO")
+            if not _ENTERPRISE_VERSION_DIRS:
+                missing.append("ENTERPRISE_VERSION_DIRS")
+            if not _ENTERPRISE_CREWAI_DEP_PATH:
+                missing.append("ENTERPRISE_CREWAI_DEP_PATH")
+            if missing:
+                console.print(
+                    f"[red]Error:[/red] Missing required environment variable(s): "
+                    f"{', '.join(missing)}\n"
+                    f"Set them or pass --skip-enterprise to skip the enterprise release."
+                )
+                sys.exit(1)
 
         cwd = Path.cwd()
         lib_dir = cwd / "lib"
@@ -1338,6 +1592,9 @@ def release(version: str, dry_run: bool, no_edit: bool) -> None:
         if not dry_run:
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
             _trigger_pypi_publish(tag_name)
+
+        if not skip_enterprise:
+            _release_enterprise(version, is_prerelease, dry_run)
 
         console.print(f"\n[green]✓[/green] Release [bold]{version}[/bold] complete!")
 
