@@ -1159,7 +1159,17 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         _wait_for_pypi("crewai", version)
 
         console.print("\nSyncing workspace...")
-        run_command(["uv", "sync"], cwd=repo_dir)
+        run_command(
+            [
+                "uv",
+                "sync",
+                "--refresh-package",
+                "crewai",
+                "--refresh-package",
+                "crewai-tools",
+            ],
+            cwd=repo_dir,
+        )
         console.print("[green]✓[/green] Workspace synced")
 
         # --- branch, commit, push, PR ---
