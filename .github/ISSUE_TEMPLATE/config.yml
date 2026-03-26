@@ -1,1 +1,8 @@
 blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/crewAIInc/crewAI/security/advisories/new
+    about: Use private reporting only for vulnerabilities. If needed, email security@crewai.com.
+  - name: Security policy
+    url: https://github.com/crewAIInc/crewAI/security/policy
+    about: Review the full vulnerability disclosure process and response commitments.
