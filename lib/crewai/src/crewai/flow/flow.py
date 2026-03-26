@@ -883,6 +883,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history: list[HumanFeedbackResult] = []
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
+        # Per-method stash for real @human_feedback output (keyed by method name)
+        # Used to decouple routing outcome from method return value when emit is set
+        self._human_feedback_method_outputs: dict[str, Any] = {}
         self.suppress_flow_events: bool = suppress_flow_events
 
         # User input history (for self.ask())
@@ -1223,9 +1226,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Mark that we're resuming execution
         instance._is_execution_resuming = True
 
-        # Mark the method as completed (it ran before pausing)
-        instance._completed_methods.add(FlowMethodName(pending_context.method_name))
-
         return instance
 
     @property
@@ -1380,7 +1380,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history.append(result)
         self.last_human_feedback = result
 
-        # Clear pending context after processing
+        self._completed_methods.add(FlowMethodName(context.method_name))
+
         self._pending_feedback_context = None
 
         # Clear pending feedback from persistence
@@ -1403,7 +1404,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
-        final_result: Any = result
+        if emit and collapsed_outcome is None:
+            collapsed_outcome = default_outcome or emit[0]
+            result.outcome = collapsed_outcome
+
         try:
             if emit and collapsed_outcome:
                 self._method_outputs.append(collapsed_outcome)
@@ -1421,7 +1425,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if isinstance(e, HumanFeedbackPending):
-                # Auto-save pending feedback (create default persistence if needed)
+                self._pending_feedback_context = e.context
+
                 if self._persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
@@ -1454,6 +1459,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Return the pending exception instead of raising
                 return e
             raise
+
+        final_result = self._method_outputs[-1] if self._method_outputs else result
 
         # Emit flow finished
         crewai_event_bus.emit(
@@ -2286,6 +2293,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 result = await result
 
             self._method_outputs.append(result)
+
+            # For @human_feedback methods with emit, the result is the collapsed outcome
+            # (e.g., "approved") used for routing. But we want the actual method output
+            # to be the stored result (for final flow output). Replace the last entry
+            # if a stashed output exists. Dict-based stash is concurrency-safe and
+            # handles None return values (presence in dict = stashed, not value).
+            if method_name in self._human_feedback_method_outputs:
+                self._method_outputs[-1] = self._human_feedback_method_outputs.pop(
+                    method_name
+                )
+
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
             )
@@ -2314,7 +2332,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if isinstance(e, HumanFeedbackPending):
                 e.context.method_name = method_name
 
-                # Auto-save pending feedback (create default persistence if needed)
                 if self._persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
@@ -3133,10 +3150,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     if outcome.lower() == response_clean.lower():
                         return outcome
 
-                # Partial match
+                # Partial match (longest wins, first on length ties)
+                response_lower = response_clean.lower()
+                best_outcome: str | None = None
+                best_len = -1
                 for outcome in outcomes:
-                    if outcome.lower() in response_clean.lower():
-                        return outcome
+                    if outcome.lower() in response_lower and len(outcome) > best_len:
+                        best_outcome = outcome
+                        best_len = len(outcome)
+                if best_outcome is not None:
+                    return best_outcome
 
                 # Fallback to first outcome
                 logger.warning(
