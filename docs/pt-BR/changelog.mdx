@@ -5,6 +5,46 @@ icon: "clock"
 mode: "wide"
 ---
 <Update label="25 mar 2026">
+  ## v1.12.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar request_id ao HumanFeedbackRequestedEvent
+  - Adicionar backend de armazenamento Qdrant Edge para sistema de memória
+  - Adicionar comando docs-check para analisar mudanças e gerar documentação com traduções
+  - Adicionar suporte ao idioma árabe para changelog e ferramentas de lançamento
+  - Adicionar tradução em árabe padrão moderno de toda a documentação
+  - Adicionar comando de logout na CLI
+  - Adicionar habilidades de agente
+  - Implementar root_scope automático para isolamento hierárquico de memória
+  - Implementar provedores nativos compatíveis com OpenAI (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### Correções de Bugs
+  - Corrigir credenciais incorretas para envio em lote de traces (404)
+  - Resolver múltiplos bugs no sistema de fluxo HITL
+  - Corrigir salvamento de memória do agente
+  - Resolver todos os erros estritos do mypy no pacote crewai
+  - Corrigir uso de __router_paths__ para métodos listener+router em FlowMeta
+  - Corrigir erro de valor em caso de suporte a nenhum arquivo
+  - Corrigir redação da quarentena do litellm na documentação
+  - Corrigir todos os erros do mypy em crewai-files e adicionar todos os pacotes às verificações de tipo do CI
+  - Fixar limite superior do litellm na última versão testada (1.82.6)
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.12.0
+  - Adicionar CONTRIBUTING.md
+  - Adicionar guia para usar CrewAI sem LiteLLM
+
+  ## Contribuidores
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @nicoferdi96
+
+</Update>
+
+<Update label="25 mar 2026">
   ## v1.12.0
 
   [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0)
