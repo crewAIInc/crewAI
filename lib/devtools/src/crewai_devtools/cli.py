@@ -1253,7 +1253,10 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
                 ]
             )
         except subprocess.CalledProcessError:
-            pass
+            console.print(
+                "[yellow]Note:[/yellow] Could not determine previous workflow run; "
+                "continuing without previous run ID"
+            )
 
     with console.status("[cyan]Triggering PyPI publish workflow..."):
         try:
