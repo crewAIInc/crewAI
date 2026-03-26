@@ -1237,6 +1237,24 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
         tag_name: The release tag to publish.
         wait: Block until the workflow run completes.
     """
+    # Capture the latest run ID before triggering so we can detect the new one
+    prev_run_id = ""
+    if wait:
+        try:
+            prev_run_id = run_command(
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--workflow=publish.yml",
+                    "--limit=1",
+                    "--json=databaseId",
+                    "--jq=.[0].databaseId",
+                ]
+            )
+        except subprocess.CalledProcessError:
+            pass
+
     with console.status("[cyan]Triggering PyPI publish workflow..."):
         try:
             run_command(
@@ -1268,18 +1286,18 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
                         "list",
                         "--workflow=publish.yml",
                         "--limit=1",
-                        "--json=databaseId,status",
-                        '--jq=.[] | select(.status != "completed") | .databaseId',
+                        "--json=databaseId",
+                        "--jq=.[0].databaseId",
                     ]
                 )
             except subprocess.CalledProcessError:
                 continue
-            if run_id:
+            if run_id and run_id != prev_run_id:
                 break
 
-        if not run_id:
+        if not run_id or run_id == prev_run_id:
             console.print(
-                "[red]Error:[/red] Could not find an active PyPI publish workflow run"
+                "[red]Error:[/red] Could not find the PyPI publish workflow run"
             )
             sys.exit(1)
 
