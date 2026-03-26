@@ -1167,6 +1167,8 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
                 "crewai",
                 "--refresh-package",
                 "crewai-tools",
+                "--refresh-package",
+                "crewai-files",
             ],
             cwd=repo_dir,
         )
