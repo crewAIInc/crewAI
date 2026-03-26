@@ -168,7 +168,7 @@ class SnowflakeSearchTool(BaseTool):
         with self._pool_lock:
             if self._connection_pool:
                 return self._connection_pool.pop()
-        return await asyncio.get_event_loop().run_in_executor(
+        return await asyncio.get_running_loop().run_in_executor(
             self._thread_pool, self._create_connection
         )
 

@@ -47,7 +47,7 @@ class BrowserSessionManager:
         Returns:
             An async browser instance specific to the thread
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         while True:
             with self._lock:
                 if thread_id in self._async_sessions:
