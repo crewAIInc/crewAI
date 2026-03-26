@@ -726,3 +726,31 @@ class TestHumanFeedbackFinalOutputPreservation:
         # _method_outputs should contain the real output
         assert len(flow._method_outputs) == 1
         assert flow._method_outputs[0] == {"data": "real output"}
+
+    @patch("builtins.input", return_value="looks good")
+    @patch("builtins.print")
+    def test_none_return_value_is_preserved(self, mock_print, mock_input):
+        """A method returning None should preserve None as flow output, not the outcome string."""
+
+        class NoneReturnFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def process(self):
+                # Method does work but returns None (implicit)
+                pass
+
+        flow = NoneReturnFlow()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value=""),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+        ):
+            result = flow.kickoff()
+
+        # Final output should be None (the method's real return), not "approved"
+        assert result is None, f"Expected None, got {result!r}"
+        assert flow.last_human_feedback.outcome == "approved"

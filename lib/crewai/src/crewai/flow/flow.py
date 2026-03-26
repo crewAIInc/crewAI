@@ -883,9 +883,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history: list[HumanFeedbackResult] = []
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
-        self._human_feedback_method_output: Any = (
-            None  # Stashed real output from @human_feedback with emit
-        )
+        # Per-method stash for real @human_feedback output (keyed by method name)
+        # Used to decouple routing outcome from method return value when emit is set
+        self._human_feedback_method_outputs: dict[str, Any] = {}
         self.suppress_flow_events: bool = suppress_flow_events
 
         # User input history (for self.ask())
@@ -2297,10 +2297,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # For @human_feedback methods with emit, the result is the collapsed outcome
             # (e.g., "approved") used for routing. But we want the actual method output
             # to be the stored result (for final flow output). Replace the last entry
-            # if a stashed output exists.
-            if self._human_feedback_method_output is not None:
-                self._method_outputs[-1] = self._human_feedback_method_output
-                self._human_feedback_method_output = None
+            # if a stashed output exists. Dict-based stash is concurrency-safe and
+            # handles None return values (presence in dict = stashed, not value).
+            if method_name in self._human_feedback_method_outputs:
+                self._method_outputs[-1] = self._human_feedback_method_outputs.pop(
+                    method_name
+                )
 
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1

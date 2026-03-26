@@ -594,8 +594,9 @@ def human_feedback(
                 # Stash the real method output for final flow result when emit is set
                 # (result is the collapsed outcome string for routing, but we want to
                 # preserve the actual method output as the flow's final result)
+                # Uses per-method dict for concurrency safety and to handle None returns
                 if emit:
-                    self._human_feedback_method_output = method_output
+                    self._human_feedback_method_outputs[func.__name__] = method_output
 
                 return result
 
@@ -624,8 +625,9 @@ def human_feedback(
                 # Stash the real method output for final flow result when emit is set
                 # (result is the collapsed outcome string for routing, but we want to
                 # preserve the actual method output as the flow's final result)
+                # Uses per-method dict for concurrency safety and to handle None returns
                 if emit:
-                    self._human_feedback_method_output = method_output
+                    self._human_feedback_method_outputs[func.__name__] = method_output
 
                 return result
 
