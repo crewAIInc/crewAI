@@ -239,7 +239,8 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         if base_url:
             resolved = base_url
         elif config.base_url_env:
-            resolved = os.getenv(config.base_url_env, config.base_url)
+            env_value = os.getenv(config.base_url_env)
+            resolved = env_value if env_value else config.base_url
         else:
             resolved = config.base_url
 
@@ -274,9 +275,11 @@ class OpenAICompatibleCompletion(OpenAICompletion):
     def supports_function_calling(self) -> bool:
         """Check if the provider supports function calling.
 
-        All modern OpenAI-compatible providers support function calling.
+        Delegates to the parent OpenAI implementation which handles
+        edge cases like o1 models (which may be routed through
+        OpenRouter or other compatible providers).
 
         Returns:
-            True, as all supported providers have function calling support.
+            Whether the model supports function calling.
         """
-        return True
+        return super().supports_function_calling()

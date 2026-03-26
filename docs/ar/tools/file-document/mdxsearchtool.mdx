@@ -1,0 +1,72 @@
+---
+title: بحث RAG في MDX
+description: أداة `MDXSearchTool` مصممة للبحث في ملفات MDX وإرجاع النتائج الأكثر صلة.
+icon: markdown
+mode: "wide"
+---
+
+# `MDXSearchTool`
+
+<Note>
+    أداة MDXSearchTool في تطوير مستمر. قد تُضاف ميزات أو تُزال، وقد تتغير الوظائف بشكل غير متوقع أثناء تحسين الأداة.
+</Note>
+
+## الوصف
+
+أداة البحث في MDX هي مكوّن من حزمة `crewai_tools` يهدف إلى تسهيل استخراج لغة Markdown المتقدمة. تتيح للمستخدمين البحث بفعالية واستخراج المعلومات ذات الصلة من ملفات MD باستخدام عمليات بحث قائمة على الاستعلامات. هذه الأداة لا تُقدَّر بثمن لمهام تحليل البيانات وإدارة المعلومات والبحث، حيث تبسط عملية العثور على معلومات محددة داخل مجموعات مستندات كبيرة.
+
+## التثبيت
+
+قبل استخدام أداة البحث في MDX، تأكد من تثبيت حزمة `crewai_tools`. إذا لم تكن مثبتة، يمكنك تثبيتها بالأمر التالي:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال على الاستخدام
+
+لاستخدام أداة البحث في MDX، يجب أولاً إعداد متغيرات البيئة اللازمة. ثم قم بدمج الأداة في مشروع crewAI الخاص بك لبدء أبحاث السوق. فيما يلي مثال أساسي لكيفية القيام بذلك:
+
+```python Code
+from crewai_tools import MDXSearchTool
+
+# Initialize the tool to search any MDX content it learns about during execution
+tool = MDXSearchTool()
+
+# OR
+
+# Initialize the tool with a specific MDX file path for an exclusive search within that document
+tool = MDXSearchTool(mdx='path/to/your/document.mdx')
+```
+
+## المعاملات
+
+- mdx: **اختياري**. يحدد مسار ملف MDX للبحث. يمكن تقديمه أثناء التهيئة.
+
+## تخصيص النموذج والتضمينات
+
+تستخدم الأداة افتراضياً OpenAI للتضمينات والتلخيص. للتخصيص، استخدم قاموس تكوين كما هو موضح أدناه:
+
+```python Code
+from chromadb.config import Settings
+
+tool = MDXSearchTool(
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
+)
+```
