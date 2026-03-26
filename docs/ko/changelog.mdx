@@ -5,6 +5,46 @@ icon: "clock"
 mode: "wide"
 ---
 <Update label="2026년 3월 25일">
+  ## v1.12.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - HumanFeedbackRequestedEvent에 request_id 추가
+  - 메모리 시스템을 위한 Qdrant Edge 저장소 백엔드 추가
+  - 변경 사항을 분석하고 번역된 문서와 함께 문서를 생성하는 docs-check 명령어 추가
+  - 변경 로그 및 릴리스 도구에 아랍어 지원 추가
+  - 모든 문서에 대한 현대 표준 아랍어 번역 추가
+  - CLI에 로그아웃 명령어 추가
+  - 에이전트 기술 추가
+  - 계층적 메모리 격리를 위한 자동 root_scope 구현
+  - OpenAI 호환 네이티브 제공자 구현 (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### 버그 수정
+  - 트레이스 배치 푸시에 대한 잘못된 자격 증명 수정 (404)
+  - HITL 흐름 시스템의 여러 버그 해결
+  - 에이전트 메모리 저장 수정
+  - crewai 패키지 전반에 걸쳐 모든 엄격한 mypy 오류 해결
+  - FlowMeta의 listener+router 메서드에 대한 __router_paths__ 사용 수정
+  - 파일 지원이 없는 경우 값 오류 수정
+  - 문서에서 litellm 격리 단어 수정
+  - crewai-files의 모든 mypy 오류 수정 및 모든 패키지를 CI 유형 검사에 추가
+  - litellm의 상한을 마지막 테스트된 버전 (1.82.6)으로 고정
+
+  ### 문서
+  - v1.12.0에 대한 변경 로그 및 버전 업데이트
+  - CONTRIBUTING.md 추가
+  - LiteLLM 없이 CrewAI를 사용하는 가이드 추가
+
+  ## 기여자
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @nicoferdi96
+
+</Update>
+
+<Update label="2026년 3월 25일">
   ## v1.12.0
 
   [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0)
