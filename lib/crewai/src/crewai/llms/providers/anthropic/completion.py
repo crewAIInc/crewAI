@@ -469,9 +469,15 @@ class AnthropicCompletion(BaseLLM):
             "stream": self.stream,
         }
 
-        # Add system message if present
+        # Add system message if present, with prompt caching
         if system_message:
-            params["system"] = system_message
+            params["system"] = [
+                {
+                    "type": "text",
+                    "text": system_message,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
 
         # Add optional parameters if set
         if self.temperature is not None:
@@ -496,6 +502,10 @@ class AnthropicCompletion(BaseLLM):
             ]
             if self.tool_search is not None and len(regular_tools) >= 2:
                 converted_tools = self._apply_tool_search(converted_tools)
+
+
+            if converted_tools:
+                converted_tools[-1]["cache_control"] = {"type": "ephemeral"}
 
             params["tools"] = converted_tools
 
