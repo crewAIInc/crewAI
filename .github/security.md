@@ -9,4 +9,4 @@ Please submit reports to **crewai-vdp-ess@submit.bugcrowd.com**
 
 - **Please do not** disclose vulnerabilities via public GitHub issues, pull requests,
   or social media
-- Reports submitted outside of this channel will not be reviewed and will be dismissed
+- Reports submitted via channels other than this Bugcrowd submission email will not be reviewed and will be dismissed
