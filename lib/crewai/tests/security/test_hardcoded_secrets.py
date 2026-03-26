@@ -10,8 +10,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from crewai.cli.create_flow import create_flow
 from crewai.llms.providers.openai_compatible.completion import (
     OPENAI_COMPATIBLE_PROVIDERS,
