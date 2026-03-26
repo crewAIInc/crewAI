@@ -363,11 +363,11 @@ def build_embedder(spec):  # type: ignore[no-untyped-def]
         # From dictionary specification
         embedder = build_embedder({
             "provider": "openai",
-            "config": {"api_key": "sk-..."}
+            "config": {"api_key": os.environ["OPENAI_API_KEY"]}
         })
 
         # From provider instance
-        provider = OpenAIProvider(api_key="sk-...")
+        provider = OpenAIProvider(api_key=os.environ["OPENAI_API_KEY"])
         embedder = build_embedder(provider)
     """
     if isinstance(spec, BaseEmbeddingsProvider):

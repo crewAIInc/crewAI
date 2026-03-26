@@ -4,9 +4,10 @@ from crewai import Agent, Crew, Task
 from multion_tool import MultiOnTool  # type: ignore[import-not-found]
 
 
-os.environ["OPENAI_API_KEY"] = "Your Key"
+if not os.environ.get("OPENAI_API_KEY"):
+    raise ValueError("Please set the OPENAI_API_KEY environment variable")
 
-multion_browse_tool = MultiOnTool(api_key="Your Key")
+multion_browse_tool = MultiOnTool(api_key=os.environ.get("MULTION_API_KEY", ""))
 
 # Create a new agent
 Browser = Agent(
