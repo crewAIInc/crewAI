@@ -156,12 +156,24 @@ def update_version_in_file(file_path: Path, new_version: str) -> bool:
     return False
 
 
-def update_pyproject_dependencies(file_path: Path, new_version: str) -> bool:
+_DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
+    "crewai",
+    "crewai-tools",
+    "crewai-devtools",
+]
+
+
+def update_pyproject_dependencies(
+    file_path: Path,
+    new_version: str,
+    extra_packages: list[str] | None = None,
+) -> bool:
     """Update workspace dependency versions in pyproject.toml.
 
     Args:
         file_path: Path to pyproject.toml file.
         new_version: New version string.
+        extra_packages: Additional package names to update beyond the defaults.
 
     Returns:
         True if any dependencies were updated, False otherwise.
@@ -173,7 +185,7 @@ def update_pyproject_dependencies(file_path: Path, new_version: str) -> bool:
     lines = content.splitlines()
     updated = False
 
-    workspace_packages = ["crewai", "crewai-tools", "crewai-devtools"]
+    workspace_packages = _DEFAULT_WORKSPACE_PACKAGES + (extra_packages or [])
 
     for i, line in enumerate(lines):
         for pkg in workspace_packages:
@@ -1005,6 +1017,11 @@ _ENTERPRISE_VERSION_DIRS: Final[tuple[str, ...]] = tuple(
     d.strip() for d in os.getenv("ENTERPRISE_VERSION_DIRS", "").split(",") if d.strip()
 )
 _ENTERPRISE_CREWAI_DEP_PATH: Final[str | None] = os.getenv("ENTERPRISE_CREWAI_DEP_PATH")
+_ENTERPRISE_EXTRA_PACKAGES: Final[tuple[str, ...]] = tuple(
+    p.strip()
+    for p in os.getenv("ENTERPRISE_EXTRA_PACKAGES", "").split(",")
+    if p.strip()
+)
 
 
 def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
@@ -1124,7 +1141,9 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
 
             pyproject = pkg_dir / "pyproject.toml"
             if pyproject.exists():
-                if update_pyproject_dependencies(pyproject, version):
+                if update_pyproject_dependencies(
+                    pyproject, version, extra_packages=list(_ENTERPRISE_EXTRA_PACKAGES)
+                ):
                     console.print(
                         f"[green]✓[/green] Updated deps in: "
                         f"{pyproject.relative_to(repo_dir)}"
