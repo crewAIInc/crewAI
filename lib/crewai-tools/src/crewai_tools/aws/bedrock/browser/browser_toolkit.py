@@ -96,9 +96,7 @@ class BrowserBaseTool(BaseTool):
 
                     loop = asyncio.get_running_loop()
                     nest_asyncio.apply(loop)
-                    result: str = loop.run_until_complete(
-                        self._arun(*args, **kwargs)
-                    )
+                    result: str = loop.run_until_complete(self._arun(*args, **kwargs))
                     return result
                 except Exception as e:
                     return f"Error in patched _run: {e!s}"
