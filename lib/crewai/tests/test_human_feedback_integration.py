@@ -708,7 +708,7 @@ class TestEdgeCases:
     @patch("builtins.input", return_value="")
     @patch("builtins.print")
     def test_empty_feedback_first_outcome_fallback(self, mock_print, mock_input):
-        """Test that empty feedback without default uses first outcome."""
+        """Test that empty feedback without default uses first outcome for routing, but returns method output."""
 
         class FallbackFlow(Flow):
             @start()
@@ -726,12 +726,15 @@ class TestEdgeCases:
         with patch.object(flow, "_request_human_feedback", return_value=""):
             result = flow.kickoff()
 
-        assert result == "first"  # Falls back to first outcome
+        # Flow result is the method's return value, NOT the collapsed outcome
+        assert result == "content"
+        # But outcome is still set to first for routing purposes
+        assert flow.last_human_feedback.outcome == "first"
 
     @patch("builtins.input", return_value="whitespace only   ")
     @patch("builtins.print")
     def test_whitespace_only_feedback_treated_as_empty(self, mock_print, mock_input):
-        """Test that whitespace-only feedback is treated as empty."""
+        """Test that whitespace-only feedback is treated as empty for routing, but returns method output."""
 
         class WhitespaceFlow(Flow):
             @start()
@@ -749,7 +752,10 @@ class TestEdgeCases:
         with patch.object(flow, "_request_human_feedback", return_value="   "):
             result = flow.kickoff()
 
-        assert result == "reject"  # Uses default because feedback is empty after strip
+        # Flow result is the method's return value, NOT the collapsed outcome
+        assert result == "content"
+        # But outcome is set to default because feedback is empty after strip
+        assert flow.last_human_feedback.outcome == "reject"
 
     @patch("builtins.input", return_value="feedback")
     @patch("builtins.print")

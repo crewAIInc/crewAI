@@ -883,6 +883,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history: list[HumanFeedbackResult] = []
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
+        self._human_feedback_method_output: Any = None  # Stashed real output from @human_feedback with emit
         self.suppress_flow_events: bool = suppress_flow_events
 
         # User input history (for self.ask())
@@ -2290,6 +2291,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 result = await result
 
             self._method_outputs.append(result)
+
+            # For @human_feedback methods with emit, the result is the collapsed outcome
+            # (e.g., "approved") used for routing. But we want the actual method output
+            # to be the stored result (for final flow output). Replace the last entry
+            # if a stashed output exists.
+            if self._human_feedback_method_output is not None:
+                self._method_outputs[-1] = self._human_feedback_method_output
+                self._human_feedback_method_output = None
+
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
             )
