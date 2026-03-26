@@ -503,7 +503,6 @@ class AnthropicCompletion(BaseLLM):
             if self.tool_search is not None and len(regular_tools) >= 2:
                 converted_tools = self._apply_tool_search(converted_tools)
 
-
             if converted_tools:
                 converted_tools[-1]["cache_control"] = {"type": "ephemeral"}
 
