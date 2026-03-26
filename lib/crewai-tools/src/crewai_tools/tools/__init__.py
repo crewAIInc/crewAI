@@ -46,6 +46,9 @@ from crewai_tools.tools.couchbase_tool.couchbase_tool import (
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
 )
+from crewai_tools.tools.crw_tool.crw_crawl_tool import CrwCrawlWebsiteTool
+from crewai_tools.tools.crw_tool.crw_map_tool import CrwMapWebsiteTool
+from crewai_tools.tools.crw_tool.crw_scrape_tool import CrwScrapeWebsiteTool
 from crewai_tools.tools.csv_search_tool.csv_search_tool import CSVSearchTool
 from crewai_tools.tools.dalle_tool.dalle_tool import DallETool
 from crewai_tools.tools.databricks_query_tool.databricks_query_tool import (
@@ -218,6 +221,9 @@ __all__ = [
     "ContextualAIRerankTool",
     "CouchbaseFTSVectorSearchTool",
     "CrewaiPlatformTools",
+    "CrwCrawlWebsiteTool",
+    "CrwMapWebsiteTool",
+    "CrwScrapeWebsiteTool",
     "DOCXSearchTool",
     "DallETool",
     "DatabricksQueryTool",
