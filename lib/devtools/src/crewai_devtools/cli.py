@@ -434,11 +434,28 @@ def update_changelog(
     return True
 
 
-def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
-    """Update crewai dependency versions in CLI template pyproject.toml files.
+def _pin_crewai_deps(content: str, version: str) -> str:
+    """Replace crewai dependency version pins in a pyproject.toml string.
 
     Handles both pinned (==) and minimum (>=) version specifiers,
     as well as extras like [tools].
+
+    Args:
+        content: File content to transform.
+        version: New version string.
+
+    Returns:
+        Transformed content.
+    """
+    return re.sub(
+        r'"crewai(\[tools\])?(==|>=)[^"]*"',
+        lambda m: f'"crewai{(m.group(1) or "")!s}=={version}"',
+        content,
+    )
+
+
+def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
+    """Update crewai dependency versions in CLI template pyproject.toml files.
 
     Args:
         templates_dir: Path to the CLI templates directory.
@@ -447,15 +464,10 @@ def update_template_dependencies(templates_dir: Path, new_version: str) -> list[
     Returns:
         List of paths that were updated.
     """
-
     updated = []
     for pyproject in templates_dir.rglob("pyproject.toml"):
         content = pyproject.read_text()
-        new_content = re.sub(
-            r'"crewai(\[tools\])?(==|>=)[^"]*"',
-            lambda m: f'"crewai{(m.group(1) or "")!s}=={new_version}"',
-            content,
-        )
+        new_content = _pin_crewai_deps(content, new_version)
         if new_content != content:
             pyproject.write_text(new_content)
             updated.append(pyproject)
@@ -1009,11 +1021,7 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
         return False
 
     content = pyproject_path.read_text()
-    new_content = re.sub(
-        r'"crewai(\[tools\])?(==|>=)[^"]*"',
-        lambda m: f'"crewai{(m.group(1) or "")!s}=={version}"',
-        content,
-    )
+    new_content = _pin_crewai_deps(content, version)
     if new_content != content:
         pyproject_path.write_text(new_content)
         return True
