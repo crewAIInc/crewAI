@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from functools import lru_cache, reduce
 import hashlib
@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import sys
+import types
 from typing import Any, cast, get_type_hints
 
 import click
@@ -549,7 +550,9 @@ def build_env_with_tool_repository_credentials(
 
 
 @contextmanager
-def _load_module_from_file(init_file: Path, module_name: str | None = None):
+def _load_module_from_file(
+    init_file: Path, module_name: str | None = None
+) -> Generator[types.ModuleType | None, None, None]:
     """
     Context manager for loading a module from file with automatic cleanup.
 
@@ -692,7 +695,7 @@ def _extract_single_tool_metadata(tool_class: type) -> dict[str, Any] | None:
     Extract metadata from a single tool class.
     """
     try:
-        core_schema = tool_class.__pydantic_core_schema__
+        core_schema = cast(Any, tool_class).__pydantic_core_schema__
         if not core_schema:
             return None
 
@@ -812,7 +815,7 @@ def _extract_init_params_schema(tool_class: type) -> dict[str, Any]:
     Extract JSON Schema for the tool's __init__ parameters, filtering out base fields.
     """
     try:
-        json_schema = tool_class.model_json_schema(
+        json_schema: dict[str, Any] = cast(Any, tool_class).model_json_schema(
             schema_generator=_get_schema_generator(), mode="serialization"
         )
         filtered_properties = {
