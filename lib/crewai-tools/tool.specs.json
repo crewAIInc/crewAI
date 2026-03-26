@@ -2893,6 +2893,119 @@
       }
     },
     {
+      "description": "Load a webpage using Browserless smart scrape and return its content. Automatically handles JavaScript rendering, anti-bot measures, and captchas.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API token for Browserless services",
+          "name": "BROWSERLESS_API_TOKEN",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Base URL for Browserless instance",
+          "name": "BROWSERLESS_BASE_URL",
+          "required": false
+        }
+      ],
+      "humanized_name": "Browserless web load tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "api_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Token"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Url"
+          },
+          "formats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Formats",
+            "type": "array"
+          },
+          "timeout": {
+            "default": 60000,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "title": "BrowserlessLoadTool",
+        "type": "object"
+      },
+      "name": "BrowserlessLoadTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "url": {
+            "description": "Website URL to load",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "BrowserlessLoadToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a CSV's content.",
       "env_vars": [],
       "humanized_name": "Search a CSV's content",

@@ -1,0 +1,60 @@
+---
+title: Browserless Web Loader
+description: Browserless is a cloud browser automation platform with smart scraping, JavaScript rendering, and automatic captcha solving.
+icon: browser
+mode: "wide"
+---
+
+# `BrowserlessLoadTool`
+
+## Description
+
+[Browserless](https://browserless.io) is a cloud browser automation platform that provides headless browser infrastructure for web scraping and automation.
+
+The `BrowserlessLoadTool` uses the Browserless [`/smart-scrape`](https://docs.browserless.io/rest-apis/smart-scrape) API, which automatically cascades through multiple strategies to get the best results:
+
+1. **HTTP fetch** - Direct HTTP request (fastest)
+2. **HTTP proxy** - HTTP with proxy for geo-restricted or anti-bot protected sites
+3. **Browser** - Full headless browser for JavaScript-rendered content
+4. **Browser + Captcha** - Browser with automatic captcha solving
+
+Supported output formats: `markdown`, `html`, `screenshot`, `pdf`, `links`.
+
+## Installation
+
+- Get an API token from [browserless.io](https://browserless.io) and set it in environment variables (`BROWSERLESS_API_TOKEN`).
+- Install `crewai[tools]`:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+No additional packages are required - the tool uses the Browserless REST API directly.
+
+## Example
+
+Utilize the BrowserlessLoadTool as follows to allow your agent to load websites:
+
+```python Code
+from crewai_tools import BrowserlessLoadTool
+
+# tool = BrowserlessLoadTool(formats=["html"]) -- With HTML format
+# tool = BrowserlessLoadTool(formats=["markdown", "links"]) -- With multiple formats
+tool = BrowserlessLoadTool() # Default with markdown format
+result = tool.run(url="https://example.com")
+print("=== Markdown Output ===")
+print(result[:500])
+print()
+
+```
+
+## Arguments
+
+The following parameters can be used to customize the `BrowserlessLoadTool`'s behavior:
+
+| Argument      | Type         | Description                                                                                              |
+|:--------------|:-------------|:---------------------------------------------------------------------------------------------------------|
+| **api_token** | `string`     | Browserless API token. Default is `BROWSERLESS_API_TOKEN` env variable.                      |
+| **base_url**  | `string`     | _Optional_. Browserless instance URL. Default is `BROWSERLESS_BASE_URL` env variable or the cloud URL.   |
+| **formats**   | `list[str]`  | _Optional_. Output formats to request. Default is `["markdown"]`.                                        |
+| **timeout**   | `int`        | _Optional_. Request timeout in milliseconds. Default is `60000`.                                         |
