@@ -1,6 +1,7 @@
 """Stdio transport for MCP servers running as local processes."""
 
 import asyncio
+from collections.abc import Set
 import os
 import subprocess
 from typing import Any
@@ -10,12 +11,30 @@ from typing_extensions import Self
 from crewai.mcp.transports.base import BaseTransport, TransportType
 
 
+# Default allowlist of common MCP server runtimes.
+DEFAULT_ALLOWED_COMMANDS: frozenset[str] = frozenset(
+    {
+        "python",
+        "python3",
+        "node",
+        "npx",
+        "uvx",
+        "deno",
+    }
+)
+
+
 class StdioTransport(BaseTransport):
     """Stdio transport for connecting to local MCP servers.
 
     This transport connects to MCP servers running as local processes,
     communicating via standard input/output streams. Supports Python,
     Node.js, and other command-line servers.
+
+    An optional ``allowed_commands`` parameter restricts which executables
+    can be launched.  It defaults to :data:`DEFAULT_ALLOWED_COMMANDS` which
+    covers the most common MCP server runtimes.  Pass ``None`` to disable
+    the check entirely.
 
     Example:
         ```python
@@ -34,6 +53,7 @@ class StdioTransport(BaseTransport):
         command: str,
         args: list[str] | None = None,
         env: dict[str, str] | None = None,
+        allowed_commands: Set[str] | None = DEFAULT_ALLOWED_COMMANDS,
         **kwargs: Any,
     ) -> None:
         """Initialize stdio transport.
@@ -42,9 +62,22 @@ class StdioTransport(BaseTransport):
             command: Command to execute (e.g., "python", "node", "npx").
             args: Command arguments (e.g., ["server.py"] or ["-y", "@mcp/server"]).
             env: Environment variables to pass to the process.
+            allowed_commands: Optional set of allowed executable base names.
+                Defaults to :data:`DEFAULT_ALLOWED_COMMANDS`.  Pass ``None``
+                to disable the allowlist check.
             **kwargs: Additional transport options.
         """
         super().__init__(**kwargs)
+
+        if allowed_commands is not None:
+            base_command = os.path.basename(command)
+            if base_command not in allowed_commands:
+                raise ValueError(
+                    f"Command '{command}' (resolved to '{base_command}') is not in "
+                    f"the allowed commands list: {sorted(allowed_commands)}. "
+                    f"Pass allowed_commands=None to disable this check."
+                )
+
         self.command = command
         self.args = args or []
         self.env = env or {}
