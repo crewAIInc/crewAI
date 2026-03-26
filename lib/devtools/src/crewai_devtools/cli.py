@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 from typing import Final, Literal
+from urllib.request import urlopen
 
 import click
 from dotenv import load_dotenv
@@ -1017,6 +1018,39 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
     return False
 
 
+_PYPI_POLL_INTERVAL: Final[int] = 15
+_PYPI_POLL_TIMEOUT: Final[int] = 600
+
+
+def _wait_for_pypi(package: str, version: str) -> None:
+    """Poll PyPI until a specific package version is available.
+
+    Args:
+        package: PyPI package name.
+        version: Version string to wait for.
+    """
+    url = f"https://pypi.org/pypi/{package}/{version}/json"
+    deadline = time.monotonic() + _PYPI_POLL_TIMEOUT
+
+    console.print(f"[cyan]Waiting for {package}=={version} to appear on PyPI...[/cyan]")
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(url) as resp:  # noqa: S310
+                if resp.status == 200:
+                    console.print(
+                        f"[green]✓[/green] {package}=={version} is available on PyPI"
+                    )
+                    return
+        except Exception:  # noqa: S110
+            pass
+        time.sleep(_PYPI_POLL_INTERVAL)
+
+    console.print(
+        f"[red]Error:[/red] Timed out waiting for {package}=={version} on PyPI"
+    )
+    sys.exit(1)
+
+
 def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> None:
     """Clone the enterprise repo, bump versions, and create a release PR.
 
@@ -1092,6 +1126,8 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
             console.print(
                 f"[green]✓[/green] Updated crewai[tools] dep in {enterprise_dep_path}"
             )
+
+        _wait_for_pypi("crewai", version)
 
         console.print("\nSyncing workspace...")
         run_command(["uv", "sync"], cwd=repo_dir)
@@ -1196,8 +1232,13 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         )
 
 
-def _trigger_pypi_publish(tag_name: str) -> None:
-    """Trigger the PyPI publish GitHub Actions workflow."""
+def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
+    """Trigger the PyPI publish GitHub Actions workflow.
+
+    Args:
+        tag_name: The release tag to publish.
+        wait: Block until the workflow run completes.
+    """
     with console.status("[cyan]Triggering PyPI publish workflow..."):
         try:
             run_command(
@@ -1214,6 +1255,30 @@ def _trigger_pypi_publish(tag_name: str) -> None:
             console.print(f"[red]✗[/red] Triggered PyPI publish workflow: {e}")
             sys.exit(1)
     console.print("[green]✓[/green] Triggered PyPI publish workflow")
+
+    if wait:
+        console.print("[cyan]Waiting for PyPI publish workflow to complete...[/cyan]")
+        # Give GitHub time to register the run
+        time.sleep(5)
+        try:
+            run_id = run_command(
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--workflow=publish.yml",
+                    "--limit=1",
+                    "--json=databaseId",
+                    "--jq=.[0].databaseId",
+                ]
+            )
+            run_command(
+                ["gh", "run", "watch", run_id, "--exit-status"],
+            )
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]✗[/red] PyPI publish workflow failed: {e}")
+            sys.exit(1)
+        console.print("[green]✓[/green] PyPI publish workflow completed")
 
 
 # ---------------------------------------------------------------------------
@@ -1591,7 +1656,7 @@ def release(version: str, dry_run: bool, no_edit: bool, skip_enterprise: bool) -
 
         if not dry_run:
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
-            _trigger_pypi_publish(tag_name)
+            _trigger_pypi_publish(tag_name, wait=not skip_enterprise)
 
         if not skip_enterprise:
             _release_enterprise(version, is_prerelease, dry_run)
