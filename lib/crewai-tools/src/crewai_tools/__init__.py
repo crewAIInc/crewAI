@@ -10,6 +10,12 @@ from crewai_tools.aws.s3.writer_tool import S3WriterTool
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.oixa_protocol_tool.oixa_protocol_tool import (
+    OIXACreateAuctionTool,
+    OIXADeliverOutputTool,
+    OIXAListAuctionsTool,
+    OIXAPlaceBidTool,
+)
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
 from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
     BraveLLMContextTool,
