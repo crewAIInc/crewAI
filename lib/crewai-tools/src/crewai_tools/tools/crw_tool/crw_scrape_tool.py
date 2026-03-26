@@ -25,8 +25,8 @@ class CrwScrapeWebsiteTool(BaseTool):
     Configuration options:
         formats (list[str]): Output formats. Default: ["markdown"]
             Options: "markdown", "html", "rawHtml", "plainText", "links", "json"
-        only_main_content (bool): Strip nav/footer/sidebar. Default: True
-        render_js (bool|None): None=auto, True=force JS, False=HTTP only. Default: None
+        onlyMainContent (bool): Strip nav/footer/sidebar. Default: True
+        renderJs (bool|None): None=auto, True=force JS, False=HTTP only. Default: None
         wait_for (int): ms to wait after JS rendering. Default: None
         include_tags (list[str]): CSS selectors to include. Default: []
         exclude_tags (list[str]): CSS selectors to exclude. Default: []

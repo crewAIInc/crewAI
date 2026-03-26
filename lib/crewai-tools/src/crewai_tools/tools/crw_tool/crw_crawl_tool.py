@@ -29,7 +29,7 @@ class CrwCrawlWebsiteTool(BaseTool):
         max_depth (int): Maximum link-follow depth. Default: 2
         max_pages (int): Maximum pages to scrape. Default: 10
         formats (list[str]): Output formats per page. Default: ["markdown"]
-        only_main_content (bool): Strip boilerplate. Default: True
+        onlyMainContent (bool): Strip boilerplate. Default: True
     """
 
     model_config = ConfigDict(
@@ -43,8 +43,8 @@ class CrwCrawlWebsiteTool(BaseTool):
     args_schema: type[BaseModel] = CrwCrawlWebsiteToolSchema
     api_url: str = "http://localhost:3000"
     api_key: str | None = None
-    poll_interval: int = 2
-    max_wait: int = 300
+    poll_interval: int = Field(default=2, gt=0)
+    max_wait: int = Field(default=300, gt=0)
     config: dict[str, Any] = Field(
         default_factory=lambda: {
             "maxDepth": 2,
@@ -136,7 +136,13 @@ class CrwCrawlWebsiteTool(BaseTool):
                 return "\n\n---\n\n".join(combined) if combined else "No content found."
 
             if status_data["status"] == "failed":
-                raise RuntimeError("CRW crawl job failed")
+                error_detail = (
+                    status_data.get("error")
+                    or status_data.get("message")
+                    or status_data.get("reason")
+                    or str(status_data)
+                )
+                raise RuntimeError(f"CRW crawl job failed: {error_detail}")
 
         raise TimeoutError(
             f"CRW crawl did not complete within {self.max_wait} seconds"

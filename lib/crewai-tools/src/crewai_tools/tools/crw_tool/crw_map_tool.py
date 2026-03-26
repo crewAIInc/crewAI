@@ -23,8 +23,8 @@ class CrwMapWebsiteTool(BaseTool):
         config: Map configuration options.
 
     Configuration options:
-        max_depth (int): Maximum discovery depth. Default: 2
-        use_sitemap (bool): Also read sitemap.xml. Default: True
+        maxDepth (int): Maximum discovery depth. Default: 2
+        useSitemap (bool): Also read sitemap.xml. Default: True
     """
 
     model_config = ConfigDict(
