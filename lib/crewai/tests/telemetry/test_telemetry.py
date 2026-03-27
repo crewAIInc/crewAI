@@ -1,6 +1,6 @@
 import os
 import threading
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
@@ -159,3 +159,89 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
     )
+
+
+@pytest.mark.telemetry
+class TestCrewMemoryTelemetrySerialization:
+    """Regression tests for https://github.com/crewAIInc/crewAI/issues/4703"""
+
+    def _create_telemetry(self):
+        with patch.dict(
+            os.environ,
+            {"CREWAI_DISABLE_TELEMETRY": "false", "OTEL_SDK_DISABLED": "false"},
+        ):
+            with patch("crewai.telemetry.telemetry.TracerProvider"):
+                return Telemetry()
+
+    def _make_mock_crew(self, memory_value):
+        crew = Mock()
+        crew.memory = memory_value
+        crew.share_crew = False
+        crew.agents = []
+        crew.tasks = []
+        crew.process = "sequential"
+        crew.fingerprint = None
+        return crew
+
+    def test_custom_memory_object_does_not_crash(self):
+        """crew_creation should not raise when crew.memory is a non-bool object."""
+        telemetry = self._create_telemetry()
+        crew = self._make_mock_crew(memory_value=Mock())
+
+        # Should not raise; before the fix this would cause:
+        # "Invalid type Mock for attribute 'crew_memory' value."
+        telemetry.crew_creation(crew, inputs=None)
+
+    def test_custom_memory_object_serialized_as_bool(self):
+        """crew.memory should be converted to a bool for the telemetry span."""
+        telemetry = self._create_telemetry()
+        memory_object = Mock()  # truthy non-bool
+        crew = self._make_mock_crew(memory_value=memory_object)
+
+        captured = {}
+        original_add = telemetry._add_attribute
+
+        def spy_add(span, key, value):
+            captured[key] = value
+            original_add(span, key, value)
+
+        telemetry._add_attribute = spy_add
+        telemetry.crew_creation(crew, inputs=None)
+
+        assert "crew_memory" in captured
+        assert captured["crew_memory"] is True
+        assert type(captured["crew_memory"]) is bool
+
+    def test_bool_memory_passes_through_unchanged(self):
+        """crew.memory=True should remain True (not get re-wrapped)."""
+        telemetry = self._create_telemetry()
+        crew = self._make_mock_crew(memory_value=True)
+
+        captured = {}
+        original_add = telemetry._add_attribute
+
+        def spy_add(span, key, value):
+            captured[key] = value
+            original_add(span, key, value)
+
+        telemetry._add_attribute = spy_add
+        telemetry.crew_creation(crew, inputs=None)
+
+        assert captured["crew_memory"] is True
+
+    def test_false_memory_passes_through_unchanged(self):
+        """crew.memory=False should remain False."""
+        telemetry = self._create_telemetry()
+        crew = self._make_mock_crew(memory_value=False)
+
+        captured = {}
+        original_add = telemetry._add_attribute
+
+        def spy_add(span, key, value):
+            captured[key] = value
+            original_add(span, key, value)
+
+        telemetry._add_attribute = spy_add
+        telemetry.crew_creation(crew, inputs=None)
+
+        assert captured["crew_memory"] is False
