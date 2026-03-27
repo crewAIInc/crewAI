@@ -676,13 +676,19 @@ class AnthropicCompletion(BaseLLM):
 
         return converted
 
+    @staticmethod
+    def _extract_stop_reason(response: Message | BetaMessage) -> str | None:
+        """Extract stop_reason from an Anthropic response, returning None if absent."""
+        raw = getattr(response, "stop_reason", None)
+        return raw if isinstance(raw, str) else None
+
     def _warn_if_truncated(
         self,
         response: Message | BetaMessage,
         from_agent: Any | None = None,
     ) -> None:
         """Log a warning if the response was truncated due to max_tokens."""
-        stop_reason = getattr(response, "stop_reason", None)
+        stop_reason = self._extract_stop_reason(response)
         if stop_reason == "max_tokens":
             agent_hint = f" [{from_agent.role}]" if from_agent else ""
             logging.warning(
@@ -872,7 +878,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
-        stop_reason = getattr(response, "stop_reason", None)
+        stop_reason = self._extract_stop_reason(response)
         self._warn_if_truncated(response, from_agent)
 
         if _is_pydantic_model_class(response_model) and response.content:
@@ -1098,7 +1104,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
-        stop_reason = getattr(final_message, "stop_reason", None)
+        stop_reason = self._extract_stop_reason(final_message)
         self._warn_if_truncated(final_message, from_agent)
 
         if _is_pydantic_model_class(response_model):
@@ -1302,7 +1308,7 @@ class AnthropicCompletion(BaseLLM):
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
-            stop_reason = getattr(final_response, "stop_reason", None)
+            stop_reason = self._extract_stop_reason(final_response)
             self._warn_if_truncated(final_response, from_agent)
 
             final_content = ""
@@ -1410,7 +1416,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
-        stop_reason = getattr(response, "stop_reason", None)
+        stop_reason = self._extract_stop_reason(response)
         self._warn_if_truncated(response, from_agent)
 
         if _is_pydantic_model_class(response_model) and response.content:
@@ -1614,7 +1620,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
-        stop_reason = getattr(final_message, "stop_reason", None)
+        stop_reason = self._extract_stop_reason(final_message)
         self._warn_if_truncated(final_message, from_agent)
 
         if _is_pydantic_model_class(response_model):
@@ -1715,7 +1721,7 @@ class AnthropicCompletion(BaseLLM):
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
-            stop_reason = getattr(final_response, "stop_reason", None)
+            stop_reason = self._extract_stop_reason(final_response)
             self._warn_if_truncated(final_response, from_agent)
 
             final_content = ""
