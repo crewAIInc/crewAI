@@ -26,6 +26,7 @@ dependencies = [
     # Authentication and Security
     "python-dotenv~=1.1.1",
     "pyjwt>=2.9.0,<3",
+    "pyotp>=2.9.0",
     # TUI
     "textual>=7.5.0",
     # Configuration and Utils
