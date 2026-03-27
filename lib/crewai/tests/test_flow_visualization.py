@@ -333,9 +333,9 @@ def test_visualization_plot_method():
     """Test that flow.plot() method works."""
     flow = SimpleFlow()
 
-    html_file = flow.plot("test_plot.html", show=False)
-
-    assert os.path.exists(html_file)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        html_file = flow.plot("test_plot.html", show=False, output_dir=tmp_dir)
+        assert os.path.exists(html_file)
 
 
 def test_router_paths_to_string_conditions():
@@ -668,3 +668,93 @@ def test_no_warning_for_properly_typed_router(caplog):
     warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
     assert not any("Could not determine return paths" in msg for msg in warning_messages)
     assert not any("Found listeners waiting for triggers" in msg for msg in warning_messages)
+
+
+def test_plot_saves_to_current_working_directory():
+    """Test that plot() saves the HTML file to the current working directory by default.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4991
+    """
+    flow = SimpleFlow()
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_dir)
+            html_file = flow.plot("test_cwd_plot.html", show=False)
+
+            # The returned path must live inside the CWD, not a hidden temp dir
+            assert Path(html_file).parent == Path(tmp_dir)
+            assert os.path.exists(html_file)
+            assert html_file == str(Path(tmp_dir) / "test_cwd_plot.html")
+        finally:
+            os.chdir(original_cwd)
+
+
+def test_plot_saves_to_explicit_output_dir():
+    """Test that plot() saves files to a user-specified output directory."""
+    flow = SimpleFlow()
+
+    with tempfile.TemporaryDirectory() as output_dir:
+        html_file = flow.plot(
+            "custom_output.html", show=False, output_dir=output_dir
+        )
+
+        assert Path(html_file).parent == Path(output_dir)
+        assert os.path.exists(html_file)
+
+        # CSS and JS companion files should also be in the same directory
+        html_path = Path(html_file)
+        css_file = html_path.parent / f"{html_path.stem}_style.css"
+        js_file = html_path.parent / f"{html_path.stem}_script.js"
+        assert css_file.exists()
+        assert js_file.exists()
+
+
+def test_render_interactive_saves_to_cwd_by_default():
+    """Test that render_interactive() writes to CWD when output_dir is None.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4991
+    """
+    flow = SimpleFlow()
+    structure = build_flow_structure(flow)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_dir)
+            html_file = visualize_flow_structure(
+                structure, "cwd_test.html", show=False
+            )
+
+            assert Path(html_file).parent == Path(tmp_dir)
+            assert os.path.exists(html_file)
+        finally:
+            os.chdir(original_cwd)
+
+
+def test_render_interactive_saves_to_specified_output_dir():
+    """Test that render_interactive() writes to the specified output_dir."""
+    flow = SimpleFlow()
+    structure = build_flow_structure(flow)
+
+    with tempfile.TemporaryDirectory() as output_dir:
+        html_file = visualize_flow_structure(
+            structure, "output_dir_test.html", show=False, output_dir=output_dir
+        )
+
+        assert Path(html_file).parent == Path(output_dir)
+        assert os.path.exists(html_file)
+
+        with open(html_file, "r", encoding="utf-8") as f:
+            html_content = f.read()
+        assert "<!DOCTYPE html>" in html_content
+
+
+def test_plot_returned_path_is_absolute():
+    """Test that the path returned by plot() is always absolute."""
+    flow = SimpleFlow()
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        html_file = flow.plot("abs_path_test.html", show=False, output_dir=tmp_dir)
+        assert os.path.isabs(html_file)
