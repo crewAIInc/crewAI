@@ -175,7 +175,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     else self.stop
                 )
             )
-            if merged_stop != (existing_stop if isinstance(existing_stop, list) else []):
+            if merged_stop != (
+                existing_stop if isinstance(existing_stop, list) else []
+            ):
                 self.llm = copy.copy(self.llm)
                 self.llm.stop = merged_stop
 
