@@ -124,6 +124,31 @@ class InternalInstructor(Generic[T]):
         pydantic_model = self.to_pydantic()
         return pydantic_model.model_dump_json(indent=2)
 
+    def _get_llm_extra_kwargs(self) -> dict[str, Any]:
+        """Extract extra keyword arguments from the LLM for forwarding to litellm.
+
+        This ensures that provider-specific parameters like api_base and base_url
+        are forwarded to litellm completion calls, which is critical for remote
+        providers (e.g., remote Ollama servers).
+
+        Returns:
+            A dict of extra keyword arguments to pass to the completion call.
+        """
+        if self.llm is None or isinstance(self.llm, str):
+            return {}
+
+        # Only forward these kwargs for litellm-backed clients; non-litellm
+        # instructor clients (from_provider) don't accept them and would raise.
+        if not getattr(self.llm, "is_litellm", False):
+            return {}
+
+        extra: dict[str, Any] = {}
+        for attr in ("api_base", "base_url", "api_key"):
+            value = getattr(self.llm, attr, None)
+            if value is not None:
+                extra[attr] = value
+        return extra
+
     def to_pydantic(self) -> T:
         """Generate structured output using the specified Pydantic model.
 
@@ -145,6 +170,9 @@ class InternalInstructor(Generic[T]):
         else:
             model_name = self.llm.model
 
+        extra_kwargs = self._get_llm_extra_kwargs()
+
         return self._client.chat.completions.create(  # type: ignore[no-any-return]
-            model=model_name, response_model=self.model, messages=messages
+            model=model_name, response_model=self.model, messages=messages,
+            **extra_kwargs,
         )

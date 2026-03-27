@@ -2237,6 +2237,67 @@ class LLM(BaseLLM):
                 "Please remove response_format or use a supported model."
             )
 
+    def _is_ollama_model(self) -> bool:
+        """Check if the model uses an Ollama provider.
+
+        Returns:
+            True if the model string indicates an Ollama provider.
+        """
+        model_lower = self.model.lower()
+        return model_lower.startswith(("ollama/", "ollama_chat/"))
+
+    def _get_ollama_base_url(self) -> str | None:
+        """Get the base URL for the Ollama server.
+
+        Returns the configured api_base or base_url if set, otherwise None
+        (indicating the default localhost would be used by litellm).
+
+        Returns:
+            The Ollama server base URL, or None if not explicitly configured.
+        """
+        return self.api_base or self.base_url
+
+    def _check_ollama_function_calling(self) -> bool:
+        """Query a remote Ollama server to check if the model supports function calling.
+
+        This is used as a fallback when litellm's built-in check fails because it
+        cannot reach a remote Ollama server (it defaults to localhost:11434).
+
+        Returns:
+            True if the remote Ollama model supports function calling (tools), False otherwise.
+        """
+        ollama_url = self._get_ollama_base_url()
+        if not ollama_url:
+            return False
+
+        # Extract the model name without the provider prefix
+        model_name = self.model
+        if "/" in model_name:
+            model_name = model_name.split("/", 1)[1]
+
+        try:
+            url = f"{ollama_url.rstrip('/')}/api/show"
+            response = httpx.post(url, json={"name": model_name}, timeout=5.0)
+            if response.status_code == 200:
+                data = response.json()
+                # Check model capabilities/template for tool support
+                model_info = data.get("model_info", {})
+                template = data.get("template", "")
+
+                # Check if any key in model_info contains tool-related capabilities
+                for key, value in model_info.items():
+                    if "tool" in key.lower() and value is True:
+                        return True
+
+                # Check if the template mentions tools
+                if "tools" in template.lower() or ".ToolCalls" in template:
+                    return True
+
+            return False
+        except Exception as e:
+            logging.debug(f"Failed to query remote Ollama for function calling support: {e!s}")
+            return False
+
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling.
 
@@ -2250,9 +2311,19 @@ class LLM(BaseLLM):
 
         try:
             provider = self._get_custom_llm_provider()
-            return litellm.utils.supports_function_calling(
+            result = litellm.utils.supports_function_calling(
                 self.model, custom_llm_provider=provider
             )
+            if result:
+                return True
+
+            # Fallback: For Ollama models with a remote base_url, litellm's check
+            # fails because it tries to query localhost:11434. Query the remote
+            # Ollama server directly instead.
+            if self._is_ollama_model() and self._get_ollama_base_url():
+                return self._check_ollama_function_calling()
+
+            return False
         except Exception as e:
             logging.error(f"Failed to check function calling support: {e!s}")
             return True  # Default to True for modern models
