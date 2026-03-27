@@ -5036,7 +5036,7 @@
             "type": "object"
           }
         },
-        "description": "A tool for executing Python code in isolated environments.\n\nThis tool provides functionality to run Python code either in a Docker container\nfor safe isolation or directly in a restricted sandbox. It can handle installing\nPython packages and executing arbitrary Python code.",
+        "description": "A tool for executing Python code in isolated environments.\n\nThis tool provides functionality to run Python code either in a Docker container\nfor safe isolation, in a sandlock process sandbox for lightweight kernel-level\nisolation, or directly in a restricted sandbox. It can handle installing\nPython packages and executing arbitrary Python code.\n\nAttributes:\n    execution_backend: The execution backend to use. One of ``\"auto\"``,\n        ``\"docker\"``, ``\"sandlock\"``, or ``\"unsafe\"``. Defaults to ``\"auto\"``\n        which tries Docker first, then sandlock, then raises an error.\n    sandbox_fs_read: List of filesystem paths to allow read access in sandlock.\n    sandbox_fs_write: List of filesystem paths to allow write access in sandlock.\n    sandbox_max_memory_mb: Maximum memory in MB for sandlock execution.\n    sandbox_max_processes: Maximum number of processes for sandlock execution.\n    sandbox_timeout: Timeout in seconds for sandlock execution.\n\nExample::\n\n    # Auto-select best available backend\n    tool = CodeInterpreterTool()\n    result = tool.run(code=\"print('hello')\", libraries_used=[])\n\n    # Explicitly use sandlock with custom policy\n    tool = CodeInterpreterTool(\n        execution_backend=\"sandlock\",\n        sandbox_fs_read=[\"/usr/lib/python3\"],\n        sandbox_fs_write=[\"/tmp/output\"],\n        sandbox_max_memory_mb=256,\n    )\n    result = tool.run(code=\"print(2 + 2)\", libraries_used=[])",
         "properties": {
           "code": {
             "anyOf": [
@@ -5054,6 +5054,67 @@
             "default": "code-interpreter:latest",
             "title": "Default Image Tag",
             "type": "string"
+          },
+          "execution_backend": {
+            "default": "auto",
+            "enum": [
+              "auto",
+              "docker",
+              "sandlock",
+              "unsafe"
+            ],
+            "title": "Execution Backend",
+            "type": "string"
+          },
+          "sandbox_fs_read": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sandbox Fs Read",
+            "type": "array"
+          },
+          "sandbox_fs_write": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sandbox Fs Write",
+            "type": "array"
+          },
+          "sandbox_max_memory_mb": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sandbox Max Memory Mb"
+          },
+          "sandbox_max_processes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sandbox Max Processes"
+          },
+          "sandbox_timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sandbox Timeout"
           },
           "unsafe_mode": {
             "default": false,
