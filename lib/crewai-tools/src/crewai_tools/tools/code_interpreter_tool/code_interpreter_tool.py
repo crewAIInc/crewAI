@@ -408,7 +408,7 @@ class CodeInterpreterTool(BaseTool):
         Returns:
             A sandlock Policy object configured with the appropriate restrictions.
         """
-        from sandlock import Policy  # type: ignore[import-untyped,import-not-found]
+        from sandlock import Policy  # type: ignore[import-untyped]
 
         # Default readable paths for Python execution
         default_readable = [
@@ -474,7 +474,7 @@ class CodeInterpreterTool(BaseTool):
                 "(pip install sandlock) and you are running on Linux 5.13+."
             )
 
-        from sandlock import Sandbox  # type: ignore[import-untyped,import-not-found]
+        from sandlock import Sandbox  # type: ignore[import-untyped]
 
         Printer.print(
             "Running code in sandlock sandbox (Landlock + seccomp-bpf)",
