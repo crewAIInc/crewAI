@@ -157,6 +157,7 @@ def test_task_callback_returns_task_output():
             "raw": "exported_ok",
             "pydantic": None,
             "json_dict": None,
+            "proof_links": {},
             "agent": researcher.role,
             "summary": "Give me a list of 5 interesting ideas to explore...",
             "name": task.name or task.description,
@@ -165,6 +166,125 @@ def test_task_callback_returns_task_output():
             "messages": [],
         }
         assert output_dict == expected_output
+
+
+def test_task_callback_can_attach_proof_links():
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    proof_links = {
+        "proof": "https://example.com/proof/tx-123",
+        "preview": "https://example.com/preview/tx-123",
+        "download": "https://example.com/download/tx-123",
+    }
+
+    def attach_receipts(output: TaskOutput) -> None:
+        output.proof_links = proof_links
+
+    task = Task(
+        description="Return a short summary.",
+        expected_output="A short summary.",
+        agent=researcher,
+        callback=attach_receipts,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "A short summary."
+        result = task.execute_sync(agent=researcher)
+
+    assert result.proof_links == proof_links
+    assert task.output is not None
+    assert task.output.proof_links == proof_links
+
+
+def test_replay_preserves_proof_links():
+    from crewai.tasks.output_format import OutputFormat
+
+    agent = Agent(
+        role="test_agent",
+        backstory="Test Description",
+        goal="Test Goal",
+        allow_delegation=False,
+    )
+    task1 = Task(
+        description="Context Task",
+        expected_output="Say Task Output",
+        agent=agent,
+    )
+    task2 = Task(
+        description="Test Task",
+        expected_output="Say Hi",
+        agent=agent,
+        context=[task1],
+    )
+
+    proof_links = {
+        "proof": "https://example.com/proof/run-42",
+        "preview": "https://example.com/preview/run-42",
+        "download": "https://example.com/download/run-42",
+    }
+
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        proof_links=proof_links,
+        output_format=OutputFormat.RAW,
+        messages=[],
+    )
+
+    replay_output = TaskOutput(
+        description="Replay Output",
+        raw="replayed",
+        agent="test_agent",
+        messages=[],
+    )
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "proof_links": context_output.proof_links,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {},
+            },
+        ],
+    ):
+        with patch.object(Task, "execute_sync", return_value=replay_output):
+            crew.replay(str(task2.id))
+
+    assert crew.tasks[0].output is not None
+    assert crew.tasks[0].output.proof_links == proof_links
 
 
 def test_execute_with_agent():
