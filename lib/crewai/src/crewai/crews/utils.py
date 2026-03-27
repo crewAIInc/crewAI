@@ -347,11 +347,18 @@ def prepare_kickoff(
 class StreamingContext:
     """Container for streaming state and holders used during crew execution."""
 
-    def __init__(self, use_async: bool = False) -> None:
+    def __init__(
+        self,
+        use_async: bool = False,
+        tasks: list[Any] | None = None,
+    ) -> None:
         """Initialize streaming context.
 
         Args:
             use_async: Whether to use async streaming mode.
+            tasks: Optional list of Task objects used to build a
+                task-id-to-index mapping so that stream chunks carry
+                the correct ``task_index``.
         """
         self.result_holder: list[CrewOutput] = []
         self.current_task_info: TaskInfo = {
@@ -361,8 +368,18 @@ class StreamingContext:
             "agent_role": "",
             "agent_id": "",
         }
+        # Build a task_id -> index mapping so the stream handler can
+        # resolve task_index from the event's task_id.
+        task_id_to_index: dict[str, int] | None = None
+        if tasks:
+            task_id_to_index = {
+                str(t.id): idx for idx, t in enumerate(tasks)
+            }
         self.state: StreamingState = create_streaming_state(
-            self.current_task_info, self.result_holder, use_async=use_async
+            self.current_task_info,
+            self.result_holder,
+            use_async=use_async,
+            task_id_to_index=task_id_to_index,
         )
         self.output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
 
@@ -370,8 +387,14 @@ class StreamingContext:
 class ForEachStreamingContext:
     """Container for streaming state used in for_each crew execution methods."""
 
-    def __init__(self) -> None:
-        """Initialize for_each streaming context."""
+    def __init__(self, tasks: list[Any] | None = None) -> None:
+        """Initialize for_each streaming context.
+
+        Args:
+            tasks: Optional list of Task objects used to build a
+                task-id-to-index mapping so that stream chunks carry
+                the correct ``task_index``.
+        """
         self.result_holder: list[list[CrewOutput]] = [[]]
         self.current_task_info: TaskInfo = {
             "index": 0,
@@ -380,8 +403,16 @@ class ForEachStreamingContext:
             "agent_role": "",
             "agent_id": "",
         }
+        task_id_to_index: dict[str, int] | None = None
+        if tasks:
+            task_id_to_index = {
+                str(t.id): idx for idx, t in enumerate(tasks)
+            }
         self.state: StreamingState = create_streaming_state(
-            self.current_task_info, self.result_holder, use_async=True
+            self.current_task_info,
+            self.result_holder,
+            use_async=True,
+            task_id_to_index=task_id_to_index,
         )
         self.output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
 
@@ -414,7 +445,7 @@ async def run_for_each_async(
     crew_copies = [crew.copy() for _ in inputs]
 
     if crew.stream:
-        ctx = ForEachStreamingContext()
+        ctx = ForEachStreamingContext(tasks=crew.tasks)
 
         async def run_all_crews() -> None:
             try:

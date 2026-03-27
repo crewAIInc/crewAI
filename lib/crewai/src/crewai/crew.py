@@ -704,7 +704,7 @@ class Crew(FlowTrackable, BaseModel):
         get_env_context()
         if self.stream:
             enable_agent_streaming(self.agents)
-            ctx = StreamingContext()
+            ctx = StreamingContext(tasks=self.tasks)
 
             def run_crew() -> None:
                 """Execute the crew and capture the result."""
@@ -830,7 +830,7 @@ class Crew(FlowTrackable, BaseModel):
 
         if self.stream:
             enable_agent_streaming(self.agents)
-            ctx = StreamingContext(use_async=True)
+            ctx = StreamingContext(use_async=True, tasks=self.tasks)
 
             async def run_crew() -> None:
                 try:
@@ -901,7 +901,7 @@ class Crew(FlowTrackable, BaseModel):
         """
         if self.stream:
             enable_agent_streaming(self.agents)
-            ctx = StreamingContext(use_async=True)
+            ctx = StreamingContext(use_async=True, tasks=self.tasks)
 
             async def run_crew() -> None:
                 try:
