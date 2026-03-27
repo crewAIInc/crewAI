@@ -676,6 +676,20 @@ class AnthropicCompletion(BaseLLM):
 
         return converted
 
+    def _warn_if_truncated(
+        self,
+        response: Message | BetaMessage,
+        from_agent: Any | None = None,
+    ) -> None:
+        """Log a warning if the response was truncated due to max_tokens."""
+        stop_reason = getattr(response, "stop_reason", None)
+        if stop_reason == "max_tokens":
+            agent_hint = f" [{from_agent.role}]" if from_agent else ""
+            logging.warning(
+                f"Truncated response{agent_hint}: stop_reason='max_tokens'. "
+                f"Consider increasing max_tokens (current: {self.max_tokens})."
+            )
+
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | None]:
@@ -858,6 +872,9 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
+        stop_reason = getattr(response, "stop_reason", None)
+        self._warn_if_truncated(response, from_agent)
+
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
@@ -869,6 +886,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            stop_reason=stop_reason,
                         )
                         return structured_data
             else:
@@ -884,6 +902,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            stop_reason=stop_reason,
                         )
                         return structured_data
 
@@ -906,6 +925,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        stop_reason=stop_reason,
                     )
                     return list(tool_uses)
 
@@ -937,6 +957,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            stop_reason=stop_reason,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1077,6 +1098,9 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
+        stop_reason = getattr(final_message, "stop_reason", None)
+        self._warn_if_truncated(final_message, from_agent)
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1086,6 +1110,7 @@ class AnthropicCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    stop_reason=stop_reason,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1100,6 +1125,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        stop_reason=stop_reason,
                     )
                     return structured_data
 
@@ -1129,6 +1155,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            stop_reason=stop_reason,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1275,6 +1302,9 @@ class AnthropicCompletion(BaseLLM):
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
+            stop_reason = getattr(final_response, "stop_reason", None)
+            self._warn_if_truncated(final_response, from_agent)
+
             final_content = ""
             thinking_blocks: list[ThinkingBlock] = []
 
@@ -1299,6 +1329,7 @@ class AnthropicCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
+                stop_reason=stop_reason,
             )
 
             # Log combined token usage
@@ -1379,6 +1410,9 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
+        stop_reason = getattr(response, "stop_reason", None)
+        self._warn_if_truncated(response, from_agent)
+
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
@@ -1390,6 +1424,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            stop_reason=stop_reason,
                         )
                         return structured_data
             else:
@@ -1405,6 +1440,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            stop_reason=stop_reason,
                         )
                         return structured_data
 
@@ -1425,6 +1461,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        stop_reason=stop_reason,
                     )
                     return list(tool_uses)
 
@@ -1448,6 +1485,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            stop_reason=stop_reason,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1576,6 +1614,9 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
+        stop_reason = getattr(final_message, "stop_reason", None)
+        self._warn_if_truncated(final_message, from_agent)
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1585,6 +1626,7 @@ class AnthropicCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    stop_reason=stop_reason,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1599,6 +1641,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        stop_reason=stop_reason,
                     )
                     return structured_data
 
@@ -1627,6 +1670,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            stop_reason=stop_reason,
         )
 
         return full_response
@@ -1671,6 +1715,9 @@ class AnthropicCompletion(BaseLLM):
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
+            stop_reason = getattr(final_response, "stop_reason", None)
+            self._warn_if_truncated(final_response, from_agent)
+
             final_content = ""
             if final_response.content:
                 for content_block in final_response.content:
@@ -1685,6 +1732,7 @@ class AnthropicCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
+                stop_reason=stop_reason,
             )
 
             total_usage = {
