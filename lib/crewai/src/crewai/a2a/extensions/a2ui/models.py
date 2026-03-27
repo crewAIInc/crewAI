@@ -42,10 +42,6 @@ class MapEntry(BaseModel):
     value_boolean: bool | None = Field(
         default=None, alias="valueBoolean", description="Boolean value."
     )
-    value_map: list[MapEntry] | None = Field(
-        default=None, alias="valueMap", description="Nested map entries."
-    )
-
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
@@ -83,7 +79,7 @@ class Styles(BaseModel):
         description="Primary color as a hex string.",
     )
 
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class ComponentEntry(BaseModel):
