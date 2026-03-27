@@ -7,10 +7,14 @@ from pydantic import BaseModel, Field
 
 
 class BrowserlessLoadToolSchema(BaseModel):
+    """Input schema for BrowserlessLoadTool."""
+
     url: str = Field(description="Website URL to load")
 
 
 class BrowserlessLoadTool(BaseTool):
+    """Tool for loading webpages via Browserless smart scrape API."""
+
     name: str = "Browserless web load tool"
     description: str = (
         "Load a webpage using Browserless smart scrape and return its content. "
@@ -44,6 +48,18 @@ class BrowserlessLoadTool(BaseTool):
         timeout: int = 60000,
         **kwargs: Any,
     ) -> None:
+        """Initialize BrowserlessLoadTool.
+
+        Args:
+            api_token: Browserless API token. Falls back to BROWSERLESS_API_TOKEN env var.
+            base_url: Browserless instance URL. Falls back to BROWSERLESS_BASE_URL env var.
+            formats: Output formats to request (e.g. "markdown", "html", "links").
+            timeout: Request timeout in milliseconds.
+            **kwargs: Additional arguments passed to BaseTool.
+
+        Raises:
+            EnvironmentError: If no API token is provided or found in environment.
+        """
         super().__init__(**kwargs)
         self.api_token = api_token or os.getenv("BROWSERLESS_API_TOKEN")
         self.base_url = (
@@ -62,6 +78,14 @@ class BrowserlessLoadTool(BaseTool):
             )
 
     def _run(self, url: str) -> str:
+        """Scrape the given URL and return its content.
+
+        Args:
+            url: The webpage URL to scrape.
+
+        Returns:
+            The scraped content in the requested format.
+        """
         endpoint = f"{self.base_url}/smart-scrape/"
         params = {"token": self.api_token}
         payload = {"url": url, "formats": self.formats}
