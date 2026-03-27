@@ -826,7 +826,12 @@ class Task(BaseModel):
 
                 # Text files are always auto-injected (inlined as text), even
                 # when the model does not support multimodal input.
-                text_prefixes = ("text/", "application/json", "application/xml", "application/x-yaml")
+                text_prefixes = (
+                    "text/",
+                    "application/json",
+                    "application/xml",
+                    "application/x-yaml",
+                )
 
                 def is_auto_injected(content_type: str) -> bool:
                     if any(content_type.startswith(t) for t in text_prefixes):
