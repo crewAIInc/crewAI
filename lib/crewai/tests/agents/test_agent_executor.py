@@ -905,6 +905,88 @@ class TestNativeToolExecution:
         assert executor.check_native_todo_completion() == "todo_satisfied"
 
 
+class TestParseNativeToolCall:
+    """Test _parse_native_tool_call for various tool call formats."""
+
+    @pytest.fixture
+    def executor(self):
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        llm = Mock()
+        llm.supports_stop_words.return_value = True
+        task = Mock()
+        task.name = "Test"
+        task.description = "Test"
+        task.human_input = False
+        task.response_model = None
+        crew = Mock()
+        crew._memory = None
+        crew.verbose = False
+        crew._train = False
+        agent = Mock()
+        agent.id = "test-agent-id"
+        agent.role = "Test Agent"
+        agent.verbose = False
+        agent.key = "test-key"
+        prompt = {"prompt": "Test"}
+        tools_handler = Mock()
+        tools_handler.cache = None
+        return CrewAgentExecutor(
+            llm=llm,
+            task=task,
+            crew=crew,
+            agent=agent,
+            prompt=prompt,
+            max_iter=10,
+            tools=[],
+            tools_names="",
+            stop_words=[],
+            tools_description="",
+            tools_handler=tools_handler,
+        )
+
+    def test_parses_openai_function_format(self, executor):
+        """OpenAI format: {"function": {"name": "x", "arguments": "{}"}}."""
+        call = {"id": "call_1", "function": {"name": "my_tool", "arguments": '{"q": "hello"}'}}
+        result = executor._parse_native_tool_call(call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_1"
+        assert func_name == "my_tool"
+        assert func_args == '{"q": "hello"}'
+
+    def test_parses_bedrock_format_with_input(self, executor):
+        """Bedrock format: {"name": "...", "input": {...}, "toolUseId": "..."}."""
+        call = {"name": "search", "input": {"query": "test"}, "toolUseId": "bedrock_1"}
+        result = executor._parse_native_tool_call(call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "bedrock_1"
+        assert func_name == "search"
+        assert func_args == {"query": "test"}
+
+    def test_bedrock_input_not_dropped_when_function_key_missing(self, executor):
+        """Regression: func_info.get('arguments', '{}') returned truthy '{}' preventing
+        fallthrough to tool_call['input']."""
+        call = {"name": "my_tool", "input": {"search_query": "test"}, "toolUseId": "abc"}
+        result = executor._parse_native_tool_call(call)
+        assert result is not None
+        _, func_name, func_args = result
+        assert func_name == "my_tool"
+        # The critical assertion: input args must NOT be dropped
+        assert func_args == {"search_query": "test"}
+        assert func_args != "{}"
+
+    def test_falls_back_to_empty_string_when_no_args(self, executor):
+        """When neither function.arguments nor input is present, fallback to '{}'."""
+        call = {"id": "call_empty", "function": {"name": "noop"}}
+        result = executor._parse_native_tool_call(call)
+        assert result is not None
+        _, func_name, func_args = result
+        assert func_name == "noop"
+        assert func_args == "{}"
+
+
 class TestPlannerObserver:
     def test_observe_fallback_is_conservative_on_llm_error(self):
         llm = Mock()
