@@ -476,6 +476,35 @@ __all__ = ['MyTool']
     assert env_vars[1]["default"] == "default_value"
 
 
+def test_extract_tools_metadata_with_env_vars_field_default_factory(temp_project_dir):
+    """Test that extract_tools_metadata extracts env_vars declared with Field(default_factory=...)."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+from crewai.tools.base_tool import EnvVar
+from pydantic import Field
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(name="MY_TOOL_API", description="API token for my tool", required=True),
+        ]
+    )
+
+__all__ = ['MyTool']
+""",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 1
+    env_vars = metadata[0]["env_vars"]
+    assert len(env_vars) == 1
+    assert env_vars[0]["name"] == "MY_TOOL_API"
+    assert env_vars[0]["description"] == "API token for my tool"
+    assert env_vars[0]["required"] is True
+
+
 def test_extract_tools_metadata_with_custom_init_params(temp_project_dir):
     """Test that extract_tools_metadata extracts init_params_schema with custom params."""
     create_init_file(

@@ -850,6 +850,19 @@ def _extract_env_vars(env_vars_field: dict[str, Any] | None) -> list[dict[str, A
     if not env_vars_field:
         return []
 
+    schema = env_vars_field.get("schema", {})
+    default = schema.get("default")
+    if default is None:
+        default_factory = schema.get("default_factory")
+        if callable(default_factory):
+            try:
+                default = default_factory()
+            except Exception:
+                default = []
+
+    if not isinstance(default, list):
+        return []
+
     return [
         {
             "name": env_var.name,
@@ -857,6 +870,6 @@ def _extract_env_vars(env_vars_field: dict[str, Any] | None) -> list[dict[str, A
             "required": env_var.required,
             "default": env_var.default,
         }
-        for env_var in env_vars_field.get("schema", {}).get("default", [])
+        for env_var in default
         if isinstance(env_var, EnvVar)
     ]
