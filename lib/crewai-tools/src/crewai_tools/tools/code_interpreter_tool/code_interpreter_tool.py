@@ -429,7 +429,7 @@ class CodeInterpreterTool(BaseTool):
                 default_readable.append(path)
 
         fs_readable = list(set(default_readable + self.sandbox_fs_read))
-        fs_writable = list(set([work_dir] + self.sandbox_fs_write))
+        fs_writable = list(set([work_dir, *self.sandbox_fs_write]))
 
         policy_kwargs: dict[str, Any] = {
             "fs_readable": fs_readable,
