@@ -2245,6 +2245,9 @@ class OpenAICompletion(BaseLLM):
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
+        model_lower = self.model.lower() if self.model else ""
+        if "gpt-5" in model_lower:
+            return False
         return not self.is_o1_model
 
     def get_context_window_size(self) -> int:

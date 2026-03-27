@@ -682,6 +682,126 @@ def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provid
     assert "Paris" in result
 
 
+@pytest.mark.vcr()
+def test_litellm_gpt5_call_succeeds_without_stop_error():
+    """
+    Integration test: GPT-5 call succeeds when stop words are configured,
+    because stop is omitted from API params and applied client-side.
+    """
+    llm = LLM(model="gpt-5", stop=["Observation:"], is_litellm=True)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_litellm_gpt5_does_not_send_stop_in_params():
+    """
+    Test that the LiteLLM fallback path does not include 'stop' in API params
+    for GPT-5.x models, since they reject it at the API level.
+    """
+    llm = LLM(model="openai/gpt-5.2", stop=["Observation:"], is_litellm=True)
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+
+    assert params.get("stop") is None, (
+        "GPT-5.x models should not have 'stop' in API params"
+    )
+
+
+def test_litellm_non_gpt5_sends_stop_in_params():
+    """
+    Test that the LiteLLM fallback path still includes 'stop' in API params
+    for models that support it.
+    """
+    llm = LLM(model="gpt-4o", stop=["Observation:"], is_litellm=True)
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+
+    assert params.get("stop") == ["Observation:"], (
+        "Non-GPT-5 models should have 'stop' in API params"
+    )
+
+
+def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):
+    """
+    Test that the retry logic catches LiteLLM's UnsupportedParamsError format
+    ("does not support parameters") in addition to the OpenAI API format.
+    """
+    llm = LLM(model="openai/gpt-5.2", stop=["Observation:"], is_litellm=True)
+
+    litellm_error = Exception(
+        "litellm.UnsupportedParamsError: openai does not support parameters: "
+        "['stop'], for model=openai/gpt-5.2."
+    )
+
+    call_count = 0
+
+    try:
+        import litellm
+    except ImportError:
+        pytest.skip("litellm is not installed; skipping LiteLLM retry test")
+
+    def mock_completion(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise litellm_error
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Paris", tool_calls=None))],
+            usage=MagicMock(
+                prompt_tokens=10,
+                completion_tokens=5,
+                total_tokens=15,
+            ),
+        )
+
+    with patch("litellm.completion", side_effect=mock_completion):
+        with caplog.at_level(logging.INFO):
+            result = llm.call("What is the capital of France?")
+
+    assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert "stop" in llm.additional_params.get("additional_drop_params", [])
+
+
+def test_litellm_retry_catches_openai_api_stop_error(caplog):
+    """
+    Test that the retry logic still catches the OpenAI API error format
+    ("Unsupported parameter: 'stop'").
+    """
+    llm = LLM(model="openai/gpt-5.2", stop=["Observation:"], is_litellm=True)
+
+    api_error = Exception(
+        "Unsupported parameter: 'stop' is not supported with this model."
+    )
+
+    call_count = 0
+
+    def mock_completion(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise api_error
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Paris", tool_calls=None))],
+            usage=MagicMock(
+                prompt_tokens=10,
+                completion_tokens=5,
+                total_tokens=15,
+            ),
+        )
+
+    with patch("litellm.completion", side_effect=mock_completion):
+        with caplog.at_level(logging.INFO):
+            llm.call("What is the capital of France?")
+
+    assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert "stop" in llm.additional_params.get("additional_drop_params", [])
+
+
 @pytest.fixture
 def ollama_llm():
     return LLM(model="ollama/llama3.2:3b", is_litellm=True)
