@@ -21,7 +21,7 @@ dev = [
     "pytest-timeout==2.4.0",
     "pytest-xdist==3.8.0",
     "pytest-split==0.10.0",
-    "types-requests~=2.31.0.6",
+    "types-requests~=2.32.4.20260324",
     "types-pyyaml==6.0.*",
     "types-regex==2026.1.15.*",
     "types-appdirs==1.4.*",
