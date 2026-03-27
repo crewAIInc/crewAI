@@ -680,6 +680,14 @@ class LLM(BaseLLM):
         self.seed = seed
         self.logprobs = logprobs
         self.top_logprobs = top_logprobs
+        # Sync base_url and api_base so that litellm always receives the
+        # custom endpoint regardless of which parameter the caller supplied.
+        # When both are provided, api_base wins (it is the litellm-native name).
+        if api_base and not base_url:
+            base_url = api_base
+        elif base_url and not api_base:
+            api_base = base_url
+
         self.base_url = base_url
         self.api_base = api_base
         self.api_version = api_version
