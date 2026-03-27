@@ -474,7 +474,7 @@ class CodeInterpreterTool(BaseTool):
                 "(pip install sandlock) and you are running on Linux 5.13+."
             )
 
-        from sandlock import Sandbox  # type: ignore[import-untyped]
+        from sandlock import Sandbox
 
         Printer.print(
             "Running code in sandlock sandbox (Landlock + seccomp-bpf)",
