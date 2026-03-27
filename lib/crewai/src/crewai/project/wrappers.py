@@ -363,12 +363,6 @@ class CacheHandlerMethod(DecoratedMethod[P, R]):
     is_cache_handler: bool = True
 
 
-class CrewMethod(DecoratedMethod[P, R]):
-    """Wrapper for methods marked as the main crew execution point."""
-
-    is_crew: bool = True
-
-
 class OutputClass(Generic[T]):
     """Base wrapper for classes marked as output format."""
 

@@ -56,15 +56,6 @@ def get_processor() -> ContentProcessorProvider:
     return _default_processor
 
 
-def set_processor(processor: ContentProcessorProvider) -> None:
-    """Set the content processor for the current context.
-
-    Args:
-        processor: The content processor to use.
-    """
-    _content_processor.set(processor)
-
-
 def process_content(content: str, context: dict[str, Any] | None = None) -> str:
     """Process content using the registered processor.
 

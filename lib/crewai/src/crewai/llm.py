@@ -15,7 +15,6 @@ from typing import (
     Final,
     Literal,
     TextIO,
-    TypedDict,
     cast,
 )
 
@@ -318,17 +317,6 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
 ]
-
-
-class Delta(TypedDict):
-    content: str | None
-    role: str | None
-
-
-class StreamingChoices(TypedDict):
-    delta: Delta
-    index: int
-    finish_reason: str | None
 
 
 class FunctionArgs(BaseModel):

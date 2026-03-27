@@ -60,6 +60,4 @@ def reset_current_task_id(token: contextvars.Token[str | None]) -> None:
     _current_task_id.reset(token)
 
 
-def get_current_task_id() -> str | None:
-    """Get the current task ID from the context."""
-    return _current_task_id.get()
+
