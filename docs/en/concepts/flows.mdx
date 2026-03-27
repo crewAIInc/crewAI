@@ -341,6 +341,69 @@ flow.kickoff()
 
 By providing both unstructured and structured state management options, CrewAI Flows empowers developers to build AI workflows that are both flexible and robust, catering to a wide range of application requirements.
 
+## File Inputs
+
+Flows support file inputs through the `crewai-files` package, enabling you to build workflows that process images, PDFs, and other file types. When you use file types like `ImageFile` or `PDFFile` in your flow state, they integrate seamlessly with both local development and the CrewAI Platform.
+
+<Note type="info" title="Optional Dependency">
+File support requires the optional `crewai-files` package. Install it with:
+
+```bash
+uv add 'crewai[file-processing]'
+```
+</Note>
+
+### Using File Types in Flow State
+
+You can include file types directly in your structured flow state:
+
+```python
+from pydantic import BaseModel
+from crewai.flow.flow import Flow, start
+from crewai_files import ImageFile, PDFFile
+
+class DocumentProcessingState(BaseModel):
+    document: PDFFile        # Renders as file upload in CrewAI Platform
+    cover_image: ImageFile   # Renders as image upload
+    title: str = ""          # Renders as text input
+
+class DocumentFlow(Flow[DocumentProcessingState]):
+    @start()
+    def process_document(self):
+        # Access the file - works with URLs, paths, or uploaded files
+        content = self.state.document.read()
+        # Or pass to an agent with VisionTool, etc.
+        return {"processed": True}
+```
+
+### CrewAI Platform Integration
+
+When you deploy a flow to the CrewAI Platform (AMP), file fields in your state automatically render as file upload dropzones in the UI. This makes it easy to build user-facing applications that accept file uploads without any additional frontend work.
+
+| State Field Type | Platform UI Rendering |
+|:-----------------|:----------------------|
+| `ImageFile` | Image upload dropzone |
+| `PDFFile` | PDF upload dropzone |
+| `AudioFile` | Audio upload dropzone |
+| `VideoFile` | Video upload dropzone |
+| `TextFile` | Text file upload dropzone |
+| `str`, `int`, etc. | Standard form inputs |
+
+### API Usage
+
+When calling your flow via API, you can pass URL strings directly for file fields. Pydantic automatically coerces URLs into the appropriate file type:
+
+```python
+# API request body - URLs are automatically converted to file objects
+{
+    "document": "https://example.com/report.pdf",
+    "cover_image": "https://example.com/cover.png",
+    "title": "Q4 Report"
+}
+```
+
+For more details on file types, sources, and provider support, see the [Files documentation](/en/concepts/files).
+
 ## Flow Persistence
 
 The @persist decorator enables automatic state persistence in CrewAI Flows, allowing you to maintain flow state across restarts or different workflow executions. This decorator can be applied at either the class level or method level, providing flexibility in how you manage state persistence.

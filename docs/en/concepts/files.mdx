@@ -134,6 +134,29 @@ result = flow.kickoff(
 )
 ```
 
+You can also define file types directly in your flow state for structured file handling:
+
+```python
+from pydantic import BaseModel
+from crewai.flow.flow import Flow, start
+from crewai_files import ImageFile, PDFFile
+
+class DocumentState(BaseModel):
+    document: PDFFile
+    cover_image: ImageFile
+    title: str = ""
+
+class DocumentFlow(Flow[DocumentState]):
+    @start()
+    def process(self):
+        content = self.state.document.read()
+        return {"processed": True}
+```
+
+<Note type="info" title="CrewAI Platform Integration">
+When deploying flows to the CrewAI Platform (AMP), file fields in your state automatically render as file upload dropzones in the UI. For API usage, you can pass URL strings directly and Pydantic coerces them to file objects automatically. See [Flows - File Inputs](/en/concepts/flows#file-inputs) for details.
+</Note>
+
 ### With Standalone Agents
 
 Pass files directly to agent kickoff:
