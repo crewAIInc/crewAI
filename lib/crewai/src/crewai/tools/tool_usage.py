@@ -10,7 +10,7 @@ import time
 from typing import TYPE_CHECKING, Any, Literal
 
 import json5
-from json_repair import repair_json  # type: ignore[import-untyped]
+from json_repair import repair_json
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import (
