@@ -158,6 +158,7 @@ class ToolUsage:
 
             except Exception as e:
                 error = getattr(e, "message", str(e))
+                self._last_execution_errored = True
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
@@ -210,6 +211,7 @@ class ToolUsage:
                 )
             except Exception as e:
                 error = getattr(e, "message", str(e))
+                self._last_execution_errored = True
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
