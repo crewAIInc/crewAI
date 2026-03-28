@@ -24,5 +24,5 @@ class CacheTools(BaseModel):
     def hit_cache(self, key: str) -> str | None:
         split = key.split("tool:")
         tool = split[1].split("|input:")[0].strip()
-        tool_input = split[1].split("|input:")[1].strip()
-        return self.cache_handler.read(tool, tool_input)
+        tool_input_data = split[1].split("|input:")[1].strip()
+        return self.cache_handler.read(tool, tool_input_data)
