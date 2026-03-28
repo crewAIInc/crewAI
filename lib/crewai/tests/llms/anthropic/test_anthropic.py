@@ -1463,3 +1463,217 @@ def test_tool_search_saves_input_tokens():
         f"Expected tool_search ({usage_search.prompt_tokens}) to use fewer input tokens "
         f"than no search ({usage_no_search.prompt_tokens})"
     )
+
+
+def test_anthropic_warns_on_max_tokens_truncation():
+    """Test that a warning is logged when Anthropic response has stop_reason='max_tokens'."""
+    import logging
+
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    with patch.object(llm.client.messages, "create") as mock_create:
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="truncated response")]
+        mock_response.content[0].type = "text"
+        mock_response.stop_reason = "max_tokens"
+        mock_response.usage = MagicMock(
+            input_tokens=100, output_tokens=4096, cache_read_input_tokens=0
+        )
+        mock_create.return_value = mock_response
+
+        with patch("crewai.llms.providers.anthropic.completion.logging") as mock_logging:
+            result = llm.call("Tell me a very long story")
+
+            assert result == "truncated response"
+            mock_logging.warning.assert_called_once()
+            warning_msg = mock_logging.warning.call_args[0][0]
+            assert "stop_reason='max_tokens'" in warning_msg
+            assert "Consider increasing max_tokens" in warning_msg
+
+
+def test_anthropic_no_warning_on_end_turn():
+    """Test that no truncation warning is logged when stop_reason is 'end_turn'."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    with patch.object(llm.client.messages, "create") as mock_create:
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="complete response")]
+        mock_response.content[0].type = "text"
+        mock_response.stop_reason = "end_turn"
+        mock_response.usage = MagicMock(
+            input_tokens=50, output_tokens=25, cache_read_input_tokens=0
+        )
+        mock_create.return_value = mock_response
+
+        with patch("crewai.llms.providers.anthropic.completion.logging") as mock_logging:
+            result = llm.call("Hello")
+
+            assert result == "complete response"
+            mock_logging.warning.assert_not_called()
+
+
+def test_anthropic_truncation_warning_includes_agent_role():
+    """Test that the truncation warning includes the agent role when available."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_agent = MagicMock()
+    mock_agent.role = "Research Analyst"
+
+    with patch.object(llm.client.messages, "create") as mock_create:
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="truncated")]
+        mock_response.content[0].type = "text"
+        mock_response.stop_reason = "max_tokens"
+        mock_response.usage = MagicMock(
+            input_tokens=100, output_tokens=4096, cache_read_input_tokens=0
+        )
+        mock_create.return_value = mock_response
+
+        with patch("crewai.llms.providers.anthropic.completion.logging") as mock_logging:
+            llm.call("Tell me everything", from_agent=mock_agent)
+
+            mock_logging.warning.assert_called_once()
+            warning_msg = mock_logging.warning.call_args[0][0]
+            assert "[Research Analyst]" in warning_msg
+            assert "stop_reason='max_tokens'" in warning_msg
+
+
+def test_anthropic_stop_reason_in_completed_event():
+    """Test that stop_reason is included in the LLMCallCompletedEvent."""
+    from crewai.events.types.llm_events import LLMCallCompletedEvent
+    from crewai.events import crewai_event_bus
+
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    captured_events = []
+
+    def capture_event(source, event):
+        if isinstance(event, LLMCallCompletedEvent):
+            captured_events.append(event)
+
+    crewai_event_bus.register_handler(LLMCallCompletedEvent, capture_event)
+
+    try:
+        with patch.object(llm.client.messages, "create") as mock_create:
+            mock_response = MagicMock()
+            mock_response.content = [MagicMock(text="truncated response")]
+            mock_response.content[0].type = "text"
+            mock_response.stop_reason = "max_tokens"
+            mock_response.usage = MagicMock(
+                input_tokens=100, output_tokens=4096, cache_read_input_tokens=0
+            )
+            mock_create.return_value = mock_response
+
+            llm.call("Tell me a long story")
+
+            crewai_event_bus.flush(timeout=5.0)
+
+            assert len(captured_events) >= 1
+            event = captured_events[-1]
+            assert event.stop_reason == "max_tokens"
+    finally:
+        crewai_event_bus.off(LLMCallCompletedEvent, capture_event)
+
+
+def test_anthropic_stop_reason_none_when_normal_completion():
+    """Test that stop_reason is None in event when response completes normally."""
+    from crewai.events.types.llm_events import LLMCallCompletedEvent
+    from crewai.events import crewai_event_bus
+
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    captured_events = []
+
+    def capture_event(source, event):
+        if isinstance(event, LLMCallCompletedEvent):
+            captured_events.append(event)
+
+    crewai_event_bus.register_handler(LLMCallCompletedEvent, capture_event)
+
+    try:
+        with patch.object(llm.client.messages, "create") as mock_create:
+            mock_response = MagicMock()
+            mock_response.content = [MagicMock(text="complete response")]
+            mock_response.content[0].type = "text"
+            mock_response.stop_reason = "end_turn"
+            mock_response.usage = MagicMock(
+                input_tokens=50, output_tokens=25, cache_read_input_tokens=0
+            )
+            mock_create.return_value = mock_response
+
+            llm.call("Hello")
+
+            crewai_event_bus.flush(timeout=5.0)
+
+            assert len(captured_events) >= 1
+            event = captured_events[-1]
+            assert event.stop_reason == "end_turn"
+    finally:
+        crewai_event_bus.off(LLMCallCompletedEvent, capture_event)
+
+
+def test_anthropic_tool_use_conversation_warns_on_truncation():
+    """Test that _handle_tool_use_conversation warns when the follow-up response is truncated."""
+    from anthropic.types import ToolUseBlock, TextBlock
+
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    # Mock initial response with tool use
+    mock_initial_response = MagicMock()
+    mock_tool_block = MagicMock(spec=ToolUseBlock)
+    mock_tool_block.type = "tool_use"
+    mock_tool_block.id = "tool_123"
+    mock_tool_block.name = "get_data"
+    mock_tool_block.input = {"query": "test"}
+    mock_initial_response.content = [mock_tool_block]
+
+    # Mock final response with max_tokens truncation
+    mock_final_response = MagicMock()
+    mock_text_block = MagicMock(spec=TextBlock)
+    mock_text_block.text = "truncated tool result"
+    mock_text_block.type = "text"
+    mock_final_response.content = [mock_text_block]
+    mock_final_response.stop_reason = "max_tokens"
+    mock_final_response.usage = MagicMock(
+        input_tokens=200, output_tokens=4096, cache_read_input_tokens=0
+    )
+
+    with patch.object(llm.client.messages, "create", return_value=mock_final_response):
+        with patch("crewai.llms.providers.anthropic.completion.logging") as mock_logging:
+
+            def mock_tool_fn(**kwargs):
+                return "tool output"
+
+            result = llm._handle_tool_use_conversation(
+                initial_response=mock_initial_response,
+                tool_uses=[mock_tool_block],
+                params={"messages": [{"role": "user", "content": "test"}], "model": "claude-3-5-sonnet-20241022", "max_tokens": 4096},
+                available_functions={"get_data": mock_tool_fn},
+            )
+
+            assert result == "truncated tool result"
+            mock_logging.warning.assert_called_once()
+            warning_msg = mock_logging.warning.call_args[0][0]
+            assert "stop_reason='max_tokens'" in warning_msg
+
+
+def test_llm_call_completed_event_has_stop_reason_field():
+    """Test that LLMCallCompletedEvent has the stop_reason field with correct default."""
+    from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallType
+
+    # Default stop_reason should be None
+    event = LLMCallCompletedEvent(
+        response="test",
+        call_type=LLMCallType.LLM_CALL,
+        call_id="test-id",
+    )
+    assert event.stop_reason is None
+
+    # stop_reason can be set
+    event_with_reason = LLMCallCompletedEvent(
+        response="test",
+        call_type=LLMCallType.LLM_CALL,
+        call_id="test-id",
+        stop_reason="max_tokens",
+    )
+    assert event_with_reason.stop_reason == "max_tokens"
