@@ -215,6 +215,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
+        # Reset per-task execution state so that consecutive invocations on the
+        # same executor instance do not inherit message history or iteration
+        # counts from previous tasks.
+        self.messages = []
+        self.iterations = 0
+
         self._setup_messages(inputs)
 
         self._inject_multimodal_files(inputs)
@@ -1119,6 +1125,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
+        # Reset per-task execution state so that consecutive async invocations
+        # on the same executor instance do not inherit message history or
+        # iteration counts from previous tasks.
+        self.messages = []
+        self.iterations = 0
+
         self._setup_messages(inputs)
 
         await self._ainject_multimodal_files(inputs)
