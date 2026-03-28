@@ -62,6 +62,7 @@ class GeminiCompletion(BaseLLM):
         use_vertexai: bool | None = None,
         response_format: type[BaseModel] | None = None,
         thinking_config: types.ThinkingConfig | None = None,
+        thinking_budget: int | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
@@ -98,6 +99,10 @@ class GeminiCompletion(BaseLLM):
                            Controls thought output via include_thoughts, thinking_budget,
                            and thinking_level. When None, thinking models automatically
                            get include_thoughts=True so thought content is surfaced.
+                           Takes precedence over thinking_budget if both are provided.
+            thinking_budget: Token budget for thinking (e.g., 8192). Shorthand for creating
+                           a ThinkingConfig with include_thoughts=True and the given budget.
+                           Ignored if thinking_config is provided.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -145,12 +150,18 @@ class GeminiCompletion(BaseLLM):
         )
 
         self.thinking_config = thinking_config
+        if self.thinking_config is None and thinking_budget is not None:
+            self.thinking_config = types.ThinkingConfig(
+                include_thoughts=True, thinking_budget=thinking_budget
+            )
         if (
             self.thinking_config is None
             and version_match
             and float(version_match.group(1)) >= 2.5
         ):
-            self.thinking_config = types.ThinkingConfig(include_thoughts=True)
+            self.thinking_config = types.ThinkingConfig(
+                include_thoughts=True, thinking_budget=8192
+            )
 
     @property
     def stop(self) -> list[str]:
