@@ -1,0 +1,256 @@
+---
+title: Debugging Multi-Agent Crews with the WFGY 16-Problem Map
+description: Diagnose common CrewAI multi-agent failures with a 16-problem checklist and concrete recovery patterns.
+icon: bug
+mode: "wide"
+---
+
+This guide adapts the [WFGY ProblemMap (No.1 to No.16)](https://github.com/onestardao/WFGY/blob/main/ProblemMap/README.md) into CrewAI debugging workflows.
+
+Use it when a crew starts failing in ways that are hard to name (drift, role confusion, memory loss, deadlocks, or unstable outputs).
+
+## How to Use This Checklist
+
+1. Capture one failed run (task outputs, tool calls, and trace timeline).
+2. Map the failure to one or more WFGY numbers.
+3. Apply the matching CrewAI pattern in the table.
+4. Re-run the same input and compare behavior before and after.
+
+<Tip>
+WFGY numbering is stable. Keep the original number in your incident notes (for example, `No.13 + No.7`) so repeated failures can be triaged quickly.
+</Tip>
+
+## WFGY No.1 to No.16 in CrewAI Terms
+
+| WFGY problem | CrewAI symptom | Suggested fix / pattern |
+| --- | --- | --- |
+| `No.1` Hallucination and chunk drift | Research task returns plausible but wrong evidence; final answer invents details | Add source-grounding guardrails, require citations in `expected_output`, and split retrieval from synthesis |
+| `No.2` Interpretation collapse | Retrieved context is correct, but agent reasoning misreads it | Add an evidence extraction task before reasoning; pass structured context (`output_json` or `output_pydantic`) |
+| `No.3` Long reasoning chains | Deep multi-step workflows drift or degrade after many handoffs | Break into shorter tasks with checkpoints and validation between phases |
+| `No.4` Bluffing and overconfidence | Agent responds confidently even when data is missing or stale | Add explicit uncertainty policy in task prompt and guardrail fallback (`INSUFFICIENT_EVIDENCE`) |
+| `No.5` Semantic not equal to embedding | Top-k retrieval looks relevant but misses intent | Tighten retrieval query design, add metadata filters, and verify relevance before synthesis |
+| `No.6` Logic collapse and recovery | Agent enters dead-end loops or inconsistent plans | Add bounded retries, alternate path tasks, and explicit recovery prompts |
+| `No.7` Memory breaks across sessions | Crew forgets prior decisions between runs or long workflows | Persist critical state (memory, files, knowledge) and add recap tasks at boundaries |
+| `No.8` Debugging is a black box | Hard to explain why a tool or answer was chosen | Enable tracing, verbose mode, and event listeners for tool and task visibility |
+| `No.9` Entropy collapse | Outputs become incoherent or contradictory mid-run | Reduce task scope, enforce structured outputs, and summarize context between stages |
+| `No.10` Creative freeze | Outputs are flat, repetitive, or overly literal | Use divergence then convergence task design with explicit ideation criteria |
+| `No.11` Symbolic collapse | Formal specs, constraints, or abstract logic are mishandled | Add constraint checklists and machine-validated output schemas |
+| `No.12` Philosophical recursion | Agent loops in meta-analysis instead of finishing work | Add stop conditions, done criteria, and anti-recursion instructions |
+| `No.13` Multi-agent chaos | Role drift, duplicated work, or agents overwrite each other | Make ownership explicit, narrow role scopes, and separate artifacts by task |
+| `No.14` Bootstrap ordering | Crew starts before tools, memory, or dependencies are ready | Add preflight tasks and dependency readiness checks before kickoff |
+| `No.15` Deployment deadlock | Circular waits in async/human-in-the-loop pipelines | Add timeouts, escalation paths, and non-circular control flow |
+| `No.16` Pre-deploy collapse | First production run fails from missing secrets or version skew | Run startup smoke tests and environment validation before real traffic |
+
+## High-Frequency CrewAI Patterns
+
+These pairings are especially common in multi-agent crews:
+
+- `No.1 + No.4`: Wrong evidence plus confident delivery.
+- `No.3 + No.9`: Long-chain drift and coherence collapse.
+- `No.7 + No.10`: Memory breaks followed by low-quality repetitive outputs.
+- `No.13` (often with `No.7`): Role drift and cross-agent overwrite.
+
+## Example 1: No.13 Multi-Agent Chaos (Role Drift)
+
+### Broken Pattern
+
+```python
+from crewai import Agent, Crew, Process, Task
+
+researcher = Agent(
+    role="General AI Worker",
+    goal="Complete any request end-to-end",
+    allow_delegation=True,
+    verbose=True,
+)
+
+writer = Agent(
+    role="General AI Worker",
+    goal="Complete any request end-to-end",
+    allow_delegation=True,
+    verbose=True,
+)
+
+reviewer = Agent(
+    role="General AI Worker",
+    goal="Complete any request end-to-end",
+    allow_delegation=True,
+    verbose=True,
+)
+
+deliver_task = Task(
+    description="Research, write, and review a policy memo in one pass.",
+    expected_output="Final policy memo",
+    agent=researcher,
+)
+
+crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[deliver_task],
+    process=Process.sequential,
+    verbose=True,
+)
+
+crew.kickoff()
+```
+
+Typical failure:
+
+- Agents have overlapping roles, so ownership is unclear.
+- Delegation creates parallel rewrites of the same artifact.
+- Final output combines conflicting assumptions.
+
+### Fixed Pattern
+
+```python
+from pydantic import BaseModel
+from crewai import Agent, Crew, Process, Task
+
+
+class ResearchPacket(BaseModel):
+    claims: list[str]
+    sources: list[str]
+
+
+researcher = Agent(
+    role="Evidence Researcher",
+    goal="Collect verifiable evidence with source links",
+    allow_delegation=False,
+)
+
+writer = Agent(
+    role="Policy Writer",
+    goal="Draft a memo only from provided evidence",
+    allow_delegation=False,
+)
+
+reviewer = Agent(
+    role="Quality Reviewer",
+    goal="Reject unsupported claims and enforce consistency",
+    allow_delegation=False,
+)
+
+research_task = Task(
+    description="Collect evidence and sources for the memo topic.",
+    expected_output="Structured claims with source URLs",
+    output_pydantic=ResearchPacket,
+    agent=researcher,
+)
+
+draft_task = Task(
+    description="Write the memo using only the research packet.",
+    expected_output="Draft memo with citations",
+    context=[research_task],
+    agent=writer,
+)
+
+review_task = Task(
+    description="Review the draft and reject unsupported claims.",
+    expected_output="Final memo with only supported claims",
+    context=[research_task, draft_task],
+    agent=reviewer,
+    guardrail="Every non-trivial claim must map to a source in research_task.",
+)
+
+crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[research_task, draft_task, review_task],
+    process=Process.sequential,
+)
+
+crew.kickoff()
+```
+
+Why this works:
+
+- One owner per artifact.
+- Explicit handoff points via `context`.
+- Guardrail blocks unsupported merges.
+
+## Example 2: No.1 and No.4 (Retrieval Drift + Overconfidence)
+
+### Broken Pattern
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import SerperDevTool
+
+analyst = Agent(
+    role="Market Analyst",
+    goal="Answer quickly and confidently",
+    tools=[SerperDevTool()],
+    verbose=True,
+)
+
+qa_task = Task(
+    description="What is the latest enterprise AI spending forecast?",
+    expected_output="A concise forecast answer",
+    agent=analyst,
+)
+
+Crew(agents=[analyst], tasks=[qa_task]).kickoff()
+```
+
+Typical failure:
+
+- Retrieval is broad and not time-bounded.
+- Agent states uncertain claims as facts.
+
+### Fixed Pattern
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+
+researcher = Agent(
+    role="Evidence Researcher",
+    goal="Find recent and citable evidence",
+    tools=[SerperDevTool()],
+)
+
+analyst = Agent(
+    role="Forecast Analyst",
+    goal="Answer strictly from provided evidence",
+)
+
+evidence_task = Task(
+    description=(
+        "Collect 3 to 5 sources published in the last 12 months about "
+        "enterprise AI spending forecasts."
+    ),
+    expected_output="Bulleted claims with one source URL and date per claim",
+    agent=researcher,
+    guardrail="Each claim must include a source URL and publication date.",
+)
+
+answer_task = Task(
+    description=(
+        "Answer using only evidence_task. If evidence is insufficient, respond "
+        "with INSUFFICIENT_EVIDENCE and one follow-up question."
+    ),
+    expected_output="Final answer with inline citations",
+    context=[evidence_task],
+    agent=analyst,
+    guardrail="Every non-trivial claim must include a citation from evidence_task.",
+)
+
+Crew(
+    agents=[researcher, analyst],
+    tasks=[evidence_task, answer_task],
+    process=Process.sequential,
+).kickoff()
+```
+
+Why this works:
+
+- Retrieval quality is validated before synthesis.
+- Confidence is conditioned on available evidence.
+- Missing evidence is handled explicitly instead of guessed.
+
+## Related CrewAI Docs
+
+- [Tasks and Guardrails](/en/concepts/tasks#task-guardrails)
+- [Memory](/en/concepts/memory)
+- [Collaboration](/en/concepts/collaboration)
+- [Tracing and Observability](/en/observability/tracing)
+
