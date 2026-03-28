@@ -392,6 +392,11 @@ class AnotherFlow(Flow[dict]):
    - States are automatically saved to a local SQLite database
    - Robust error handling ensures clear messages if database operations fail
 
+3. **Optional Kalki Backend**
+   - Use `KalkiFlowPersistence` to checkpoint flow state into a running Kalki service
+   - Useful when you already operate Kalki for high-throughput, shared log storage
+   - Supports regular state checkpoints and pending-feedback resume markers
+
 3. **Error Handling**
    - Comprehensive error messages for database operations
    - Automatic state validation during save and load
@@ -403,6 +408,18 @@ class AnotherFlow(Flow[dict]):
 - **Automatic ID**: The `id` field is automatically added if not present
 - **State Recovery**: Failed or restarted flows can automatically reload their previous state
 - **Custom Implementation**: You can provide your own FlowPersistence implementation for specialized storage needs
+
+Example with Kalki:
+
+```python
+from crewai.flow.persistence import KalkiFlowPersistence, persist
+
+kalki = KalkiFlowPersistence(target="127.0.0.1:50051")
+
+@persist(kalki)
+class MyFlow(Flow[MyState]):
+    ...
+```
 
 ### Technical Advantages
 
