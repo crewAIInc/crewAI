@@ -142,9 +142,16 @@ class InternalInstructor(Generic[T]):
 
         if isinstance(self.llm, str):
             model_name = self.llm
+            extra_kwargs: dict = {}
         else:
             model_name = self.llm.model
+            extra_kwargs = {}
+            for attr in ("api_base", "base_url", "api_key", "api_version"):
+                val = getattr(self.llm, attr, None)
+                if val is not None:
+                    extra_kwargs[attr] = val
 
         return self._client.chat.completions.create(  # type: ignore[no-any-return]
-            model=model_name, response_model=self.model, messages=messages
+            model=model_name, response_model=self.model, messages=messages,
+            **extra_kwargs
         )

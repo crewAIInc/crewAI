@@ -1024,3 +1024,22 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+def test_supports_function_calling_passes_api_base():
+    """api_base should be forwarded to litellm.utils.supports_function_calling."""
+    from unittest.mock import patch, MagicMock
+
+    llm = LLM(
+        model="ollama_chat/llama3",
+        api_base="http://my-remote-ollama:11434",
+    )
+
+    with patch("litellm.utils.supports_function_calling", return_value=True) as mock_sfc:
+        result = llm.supports_function_calling()
+
+    assert result is True
+    call_kwargs = mock_sfc.call_args[1]
+    assert call_kwargs.get("api_base") == "http://my-remote-ollama:11434", (
+        "api_base must be forwarded so remote Ollama is queried at the right URL"
+    )
