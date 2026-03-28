@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-import tempfile
 from typing import Any, ClassVar
 import webbrowser
 
@@ -208,17 +207,22 @@ def render_interactive(
 ) -> str:
     """Create interactive HTML visualization of Flow structure.
 
-    Generates three output files in a temporary directory: HTML template,
-    CSS stylesheet, and JavaScript. Optionally opens the visualization in
-    default browser.
+    Generates three output files in the resolved output directory: HTML
+    template, CSS stylesheet, and JavaScript. Optionally opens the
+    visualization in the default browser.
+
+    The output directory is resolved as follows:
+
+    * If *filename* contains a directory component, that directory is used.
+    * Otherwise the current working directory is used.
 
     Args:
         dag: FlowStructure to visualize.
-        filename: Output HTML filename (basename only, no path).
+        filename: Output HTML filename or path (default: "flow_dag.html").
         show: Whether to open in browser.
 
     Returns:
-        Absolute path to generated HTML file in temporary directory.
+        Absolute path to generated HTML file.
     """
     node_positions = calculate_node_positions(dag)
 
@@ -403,12 +407,13 @@ def render_interactive(
         extensions=[CSSExtension, JSExtension],
     )
 
-    temp_dir = Path(tempfile.mkdtemp(prefix="crewai_flow_"))
-    output_path = temp_dir / Path(filename).name
+    output_path = Path(filename) if Path(filename).is_absolute() else Path.cwd() / Path(filename).name
+    output_dir = output_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
     css_filename = output_path.stem + "_style.css"
-    css_output_path = temp_dir / css_filename
+    css_output_path = output_dir / css_filename
     js_filename = output_path.stem + "_script.js"
-    js_output_path = temp_dir / js_filename
+    js_output_path = output_dir / js_filename
 
     css_file = template_dir / "style.css"
     css_content = css_file.read_text(encoding="utf-8")
