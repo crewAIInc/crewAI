@@ -11,6 +11,7 @@ Requires: pyotp>=2.9.0
 
 from __future__ import annotations
 
+import asyncio
 from abc import abstractmethod
 from collections.abc import MutableMapping
 import logging
@@ -247,3 +248,108 @@ class TOTPClientAuthScheme(ClientAuthScheme):
         headers[TOTP_HEADER] = totp.now()
 
         return headers
+
+
+# ---------------------------------------------------------------------------
+# CallContextBuilder integration
+# ---------------------------------------------------------------------------
+
+try:
+    from a2a.server.apps.jsonrpc import CallContextBuilder
+    from a2a.server.context import ServerCallContext, User
+    from starlette.requests import Request
+
+    class _TOTPAuthenticatedUser(User):
+        """Authenticated user representation for TOTP-validated requests."""
+
+        def __init__(self, user: AuthenticatedUser) -> None:
+            self._user = user
+
+        @property
+        def is_authenticated(self) -> bool:
+            return True
+
+        @property
+        def user_name(self) -> str:
+            return self._user.token or ""
+
+    class TOTPCallContextBuilder(CallContextBuilder):
+        """CallContextBuilder that validates TOTP alongside bearer token auth.
+
+        Extracts the bearer token from the Authorization header and the TOTP
+        code from the X-TOTP header, then validates both via the underlying
+        TOTPServerAuthScheme.
+
+        The ``build()`` method is synchronous (per the CallContextBuilder
+        interface) but the auth scheme is async. This is bridged via
+        ``asyncio.run()`` in a fresh event loop when no loop is running, or
+        via a new thread when called from within an existing async context.
+
+        Attributes:
+            auth_scheme: The TOTP server auth scheme to validate against.
+        """
+
+        def __init__(self, auth_scheme: TOTPServerAuthScheme) -> None:
+            self.auth_scheme = auth_scheme
+
+        def build(self, request: Request) -> ServerCallContext:
+            """Build a ServerCallContext by validating bearer + TOTP headers.
+
+            Args:
+                request: The incoming Starlette request.
+
+            Returns:
+                ServerCallContext with authenticated user on success.
+
+            Raises:
+                HTTPException: 401 on missing/invalid credentials.
+            """
+            # Extract bearer token
+            auth_header = request.headers.get("Authorization", "")
+            if not auth_header.startswith("Bearer "):
+                logger.debug(
+                    "TOTP context build failed",
+                    extra={"reason": "missing_authorization_header", "scheme": "totp"},
+                )
+                raise HTTPException(
+                    status_code=HTTP_401_UNAUTHORIZED,
+                    detail="Missing or invalid Authorization header",
+                )
+            token = auth_header[7:]  # Strip "Bearer "
+
+            # Extract TOTP code
+            totp_code = request.headers.get(TOTP_HEADER)
+
+            # Run async authentication in sync context
+            authenticated_user = self._run_async(
+                self.auth_scheme.authenticate_with_totp(token, totp_code)
+            )
+
+            return ServerCallContext(
+                user=_TOTPAuthenticatedUser(authenticated_user),
+            )
+
+        @staticmethod
+        def _run_async(coro):  # noqa: ANN001, ANN205
+            """Run an async coroutine from a synchronous context.
+
+            Uses ``asyncio.run()`` when no event loop is running.
+            Falls back to running in a separate thread when called
+            from within an existing async event loop.
+            """
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # No running loop — safe to use asyncio.run
+                return asyncio.run(coro)
+
+            # Already inside an async context — run in a new thread
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
+
+except ImportError:
+    # a2a-sdk not installed — CallContextBuilder unavailable
+    pass

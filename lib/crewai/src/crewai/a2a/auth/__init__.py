@@ -20,6 +20,11 @@ from crewai.a2a.auth.server_schemes import (
 )
 from crewai.a2a.auth.totp_scheme import TOTPClientAuthScheme, TOTPServerAuthScheme
 
+try:
+    from crewai.a2a.auth.totp_scheme import TOTPCallContextBuilder
+except ImportError:
+    pass
+
 
 __all__ = [
     "APIKeyAuth",
@@ -36,6 +41,7 @@ __all__ = [
     "ServerAuthScheme",
     "SimpleTokenAuth",
     "TLSConfig",
+    "TOTPCallContextBuilder",
     "TOTPClientAuthScheme",
     "TOTPServerAuthScheme",
 ]

@@ -10,6 +10,7 @@ import pytest
 
 from crewai.a2a.auth.server_schemes import AuthenticatedUser, SimpleTokenAuth
 from crewai.a2a.auth.totp_scheme import (
+    TOTPCallContextBuilder,
     TOTPClientAuthScheme,
     TOTPServerAuthScheme,
 )
@@ -188,3 +189,65 @@ async def test_client_no_seed_raises() -> None:
     async with httpx.AsyncClient() as client:
         with pytest.raises(ValueError, match="No TOTP seed configured"):
             await client_scheme.apply_auth(client, {})
+
+
+# --- CallContextBuilder Tests ---
+
+
+def _make_request(headers: dict[str, str]) -> MagicMock:
+    """Create a mock Starlette Request with the given headers."""
+    request = MagicMock()
+    request.headers = headers
+    return request
+
+
+class TestTOTPCallContextBuilder:
+    """Tests for TOTPCallContextBuilder."""
+
+    def test_valid_bearer_and_totp(self, shared_seed_scheme: TOTPServerAuthScheme) -> None:
+        """Valid bearer token + valid TOTP → builds context successfully."""
+        totp = pyotp.TOTP(SHARED_SEED)
+        code = totp.now()
+
+        builder = TOTPCallContextBuilder(auth_scheme=shared_seed_scheme)
+        request = _make_request({
+            "Authorization": f"Bearer {VALID_TOKEN}",
+            "X-TOTP": code,
+        })
+
+        ctx = builder.build(request)
+
+        assert ctx.user.is_authenticated is True
+        assert ctx.user.user_name == VALID_TOKEN
+
+    def test_missing_authorization_header(self, shared_seed_scheme: TOTPServerAuthScheme) -> None:
+        """Missing Authorization header → 401."""
+        builder = TOTPCallContextBuilder(auth_scheme=shared_seed_scheme)
+        request = _make_request({"X-TOTP": "123456"})
+
+        with pytest.raises(Exception) as exc_info:
+            builder.build(request)
+        assert exc_info.value.status_code == 401
+
+    def test_missing_totp_header(self, shared_seed_scheme: TOTPServerAuthScheme) -> None:
+        """Missing X-TOTP header → 401."""
+        builder = TOTPCallContextBuilder(auth_scheme=shared_seed_scheme)
+        request = _make_request({"Authorization": f"Bearer {VALID_TOKEN}"})
+
+        with pytest.raises(Exception) as exc_info:
+            builder.build(request)
+        assert exc_info.value.status_code == 401
+        assert "Missing X-TOTP" in str(exc_info.value.detail)
+
+    def test_invalid_totp_code(self, shared_seed_scheme: TOTPServerAuthScheme) -> None:
+        """Invalid TOTP code → 401."""
+        builder = TOTPCallContextBuilder(auth_scheme=shared_seed_scheme)
+        request = _make_request({
+            "Authorization": f"Bearer {VALID_TOKEN}",
+            "X-TOTP": "000000",
+        })
+
+        with pytest.raises(Exception) as exc_info:
+            builder.build(request)
+        assert exc_info.value.status_code == 401
+        assert "Invalid TOTP" in str(exc_info.value.detail)
