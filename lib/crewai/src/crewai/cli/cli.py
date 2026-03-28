@@ -104,7 +104,7 @@ def version(tools: bool) -> None:
     """Show the installed version of crewai."""
     try:
         crewai_version = get_version("crewai")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         crewai_version = "unknown version"
     click.echo(f"crewai version: {crewai_version}")
 
@@ -112,7 +112,7 @@ def version(tools: bool) -> None:
         try:
             tools_version = get_version("crewai")
             click.echo(f"crewai tools version: {tools_version}")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             click.echo("crewai tools not installed")
 
 
