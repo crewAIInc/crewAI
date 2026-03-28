@@ -824,7 +824,18 @@ class Task(BaseModel):
                     api: str | None = getattr(self.agent.llm, "api", None)
                     supported_types = get_supported_content_types(provider, api)
 
+                # Text files are always auto-injected (inlined as text), even
+                # when the model does not support multimodal input.
+                text_prefixes = (
+                    "text/",
+                    "application/json",
+                    "application/xml",
+                    "application/x-yaml",
+                )
+
                 def is_auto_injected(content_type: str) -> bool:
+                    if any(content_type.startswith(t) for t in text_prefixes):
+                        return True
                     return any(content_type.startswith(t) for t in supported_types)
 
                 auto_injected_files = {

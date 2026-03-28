@@ -37,7 +37,7 @@ from crewai.types.usage_metrics import UsageMetrics
 
 
 try:
-    from crewai_files import format_multimodal_content
+    from crewai_files import TextFile, format_multimodal_content
 
     HAS_CREWAI_FILES = True
 except ImportError:
@@ -635,6 +635,10 @@ class BaseLLM(ABC):
         For each message with a `files` field, formats the files into
         provider-specific content blocks and updates the message content.
 
+        Text files (TextFile instances or files with text/* / application/json /
+        application/xml / application/x-yaml content types) are always inlined
+        as text content, even when the model does not support multimodal input.
+
         Args:
             messages: List of messages that may contain file attachments.
 
@@ -644,12 +648,61 @@ class BaseLLM(ABC):
         if not HAS_CREWAI_FILES:
             return messages
 
-        if not self.supports_multimodal():
-            if any(msg.get("files") for msg in messages):
+        is_multimodal = self.supports_multimodal()
+
+        if not is_multimodal:
+            # Inline text files as text; reject non-text files
+            has_non_text = False
+            for msg in messages:
+                files = msg.get("files")
+                if not files:
+                    continue
+
+                text_parts: list[str] = []
+                non_text_files: dict[str, Any] = {}
+                for name, file_input in files.items():
+                    if self._is_text_file(file_input):
+                        try:
+                            content = file_input.read_text()
+                            text_parts.append(
+                                f"--- Content of file '{name}' ---\n{content}"
+                            )
+                        except Exception:
+                            # If reading fails, fall back to tool-based access
+                            non_text_files[name] = file_input
+                    else:
+                        non_text_files[name] = file_input
+
+                if non_text_files:
+                    has_non_text = True
+
+                # Append inlined text content to the message
+                if text_parts:
+                    existing_content = msg.get("content", "")
+                    inlined = "\n\n".join(text_parts)
+                    if isinstance(existing_content, str):
+                        msg["content"] = (
+                            f"{existing_content}\n\n{inlined}"
+                            if existing_content
+                            else inlined
+                        )
+                    elif isinstance(existing_content, list):
+                        msg["content"] = [
+                            *existing_content,
+                            self.format_text_content(inlined),
+                        ]
+
+                # Keep only non-text files (for tool-based access)
+                if non_text_files:
+                    msg["files"] = non_text_files
+                else:
+                    msg.pop("files", None)
+
+            if has_non_text:
                 raise ValueError(
                     f"Model '{self.model}' does not support multimodal input, "
-                    "but files were provided via 'input_files'. "
-                    "Use a vision-capable model or remove the file inputs."
+                    "but non-text files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the non-text file inputs."
                 )
             return messages
 
@@ -679,6 +732,25 @@ class BaseLLM(ABC):
             msg.pop("files", None)
 
         return messages
+
+    @staticmethod
+    def _is_text_file(file_input: Any) -> bool:
+        """Check whether a file input is a text file.
+
+        Returns True for TextFile instances or files whose content_type
+        starts with ``text/`` or matches common text-based MIME types
+        (application/json, application/xml, application/x-yaml).
+        """
+        if HAS_CREWAI_FILES and isinstance(file_input, TextFile):
+            return True
+        content_type = getattr(file_input, "content_type", "")
+        if content_type.startswith("text/"):
+            return True
+        return content_type in (
+            "application/json",
+            "application/xml",
+            "application/x-yaml",
+        )
 
     @staticmethod
     def _validate_structured_output(
