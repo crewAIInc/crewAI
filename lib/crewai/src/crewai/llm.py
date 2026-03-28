@@ -753,7 +753,7 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop or None,
+            "stop": self.stop if (self.stop and not self._is_reasoning_model()) else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -1718,7 +1718,15 @@ class LLM(BaseLLM):
                     ),
                 )
         return None
+    # List of reasoning models that don't support the 'stop' parameter
+    REASONING_MODELS_WITHOUT_STOP = ("o1", "o3", "o4-mini")
 
+
+    def _is_reasoning_model(self) -> bool:
+        """Check if model doesn't support the 'stop' parameter."""
+        model_name = self.model.split("/")[-1].lower()
+        return model_name.startswith(self.REASONING_MODELS_WITHOUT_STOP)
+    
     def call(
         self,
         messages: str | list[LLMMessage],
@@ -1830,6 +1838,13 @@ class LLM(BaseLLM):
                     ) and "'stop'" in str(e)
 
                     if unsupported_stop:
+                        # Guard against infinite retry loop: if 'stop' was already
+                        # dropped on a previous attempt, don't retry again.
+                        _drop_params = self.additional_params.get("additional_drop_params", [])
+                        already_dropped = isinstance(_drop_params, list) and "stop" in _drop_params
+                        if already_dropped:
+                            raise
+
                         if (
                             "additional_drop_params" in self.additional_params
                             and isinstance(
@@ -1966,6 +1981,13 @@ class LLM(BaseLLM):
                     ) and "'stop'" in str(e)
 
                     if unsupported_stop:
+                        # Guard against infinite retry loop: if 'stop' was already
+                        # dropped on a previous attempt, don't retry again.
+                        _drop_params = self.additional_params.get("additional_drop_params", [])
+                        already_dropped = isinstance(_drop_params, list) and "stop" in _drop_params
+                        if already_dropped:
+                            raise
+
                         if (
                             "additional_drop_params" in self.additional_params
                             and isinstance(
