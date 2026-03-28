@@ -45,9 +45,9 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
             model_name="gemini-embedding-001"
         )
 
-        # Using API key (new SDK only)
+        # Using API key from environment variable (new SDK only)
         embedder = GoogleGenAIVertexEmbeddingFunction(
-            api_key="your-api-key",
+            api_key=os.environ["GOOGLE_API_KEY"],
             model_name="gemini-embedding-001"
         )
     """
