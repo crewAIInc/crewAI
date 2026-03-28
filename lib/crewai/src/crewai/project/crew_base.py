@@ -114,6 +114,7 @@ class TaskConfig(TypedDict, total=False):
     name: str
     description: str
     expected_output: str
+    priority: int
 
     # Agent and context
     agent: str
