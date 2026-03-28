@@ -6,9 +6,10 @@ from typing import Any, ClassVar
 import urllib.error
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import Element
 
 from crewai.tools import BaseTool, EnvVar
+from defusedxml.ElementTree import fromstring
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -92,7 +93,7 @@ class ArxivPaperTool(BaseTool):
             logger.error(f"Error fetching data from Arxiv: {e}")
             raise
 
-        root = ET.fromstring(data)  # noqa: S314
+        root = fromstring(data)
         papers = []
 
         for entry in root.findall(self.ATOM_NAMESPACE + "entry"):
@@ -123,11 +124,11 @@ class ArxivPaperTool(BaseTool):
         return papers
 
     @staticmethod
-    def _get_element_text(entry: ET.Element, element_name: str) -> str | None:
+    def _get_element_text(entry: Element, element_name: str) -> str | None:
         elem = entry.find(f"{ArxivPaperTool.ATOM_NAMESPACE}{element_name}")
         return elem.text.strip() if elem is not None and elem.text else None
 
-    def _extract_pdf_url(self, entry: ET.Element) -> str | None:
+    def _extract_pdf_url(self, entry: Element) -> str | None:
         for link in entry.findall(self.ATOM_NAMESPACE + "link"):
             if link.attrib.get("title", "").lower() == "pdf":
                 return link.attrib.get("href")
