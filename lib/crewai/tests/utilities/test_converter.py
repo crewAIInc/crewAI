@@ -952,3 +952,96 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+def test_strip_markdown_code_blocks():
+    """Test that markdown code blocks are correctly stripped from JSON responses."""
+    from crewai.utilities.converter import strip_markdown_code_blocks
+    
+    # Test JSON wrapped in markdown code blocks with language specifier
+    markdown_json_with_lang = '''```json
+{
+  "name": "John",
+  "age": 30
+}
+```'''
+    result = strip_markdown_code_blocks(markdown_json_with_lang)
+    expected = '{\n  "name": "John",\n  "age": 30\n}'
+    assert result == expected
+    
+    # Test JSON wrapped in markdown code blocks without language specifier
+    markdown_json_no_lang = '''```
+{
+  "name": "Jane", 
+  "age": 25
+}
+```'''
+    result = strip_markdown_code_blocks(markdown_json_no_lang)
+    expected = '{\n  "name": "Jane", \n  "age": 25\n}'
+    assert result == expected
+    
+    # Test regular JSON should remain unchanged
+    regular_json = '{"name": "Bob", "age": 35}'
+    result = strip_markdown_code_blocks(regular_json)
+    assert result == regular_json
+    
+    # Test empty string
+    assert strip_markdown_code_blocks("") == ""
+    
+    # Test string without code blocks
+    no_blocks = "This is just text"
+    assert strip_markdown_code_blocks(no_blocks) == no_blocks
+
+
+def test_converter_handles_markdown_json():
+    """Test that Converter can handle JSON wrapped in markdown code blocks."""
+    # Mock LLM that doesn't support function calling and returns markdown JSON
+    mock_llm = Mock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.call.return_value = '''```json
+{
+  "name": "Test User",
+  "age": 42
+}
+```'''
+    
+    converter = Converter(
+        llm=mock_llm,
+        text="Convert this text",
+        model=SimpleModel,
+        instructions="Convert to JSON",
+        max_attempts=1
+    )
+    
+    # This should successfully parse the markdown-wrapped JSON
+    result = converter.to_pydantic()
+    assert isinstance(result, SimpleModel)
+    assert result.name == "Test User"
+    assert result.age == 42
+
+
+def test_handle_partial_json_with_markdown():
+    """Test that handle_partial_json correctly processes markdown-wrapped JSON."""
+    from crewai.utilities.converter import handle_partial_json
+    
+    markdown_json = '''Here is your JSON response:
+
+```json
+{
+  "name": "Alice",
+  "age": 28
+}
+```
+
+That should work!'''
+    
+    result = handle_partial_json(
+        result=markdown_json,
+        model=SimpleModel,
+        is_json_output=False,
+        agent=None
+    )
+    
+    assert isinstance(result, SimpleModel)
+    assert result.name == "Alice"
+    assert result.age == 28
