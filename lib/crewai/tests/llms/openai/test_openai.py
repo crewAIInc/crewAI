@@ -1523,6 +1523,69 @@ def test_openai_stop_words_not_applied_to_structured_output():
     assert "Observation:" in result.observation
 
 
+def test_openai_gpt5_models_do_not_support_stop_words():
+    """
+    Test that GPT-5 family models do not support stop words via the API.
+    GPT-5 models reject the 'stop' parameter, so stop words must be
+    applied client-side only.
+    """
+    gpt5_models = [
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
+        "gpt-5-pro",
+        "gpt-5.1",
+        "gpt-5.1-chat",
+        "gpt-5.2",
+        "gpt-5.2-chat",
+    ]
+
+    for model_name in gpt5_models:
+        llm = OpenAICompletion(model=model_name)
+        assert llm.supports_stop_words() == False, (
+            f"Expected {model_name} to NOT support stop words"
+        )
+
+
+def test_openai_non_gpt5_models_support_stop_words():
+    """
+    Test that non-GPT-5 models still support stop words normally.
+    """
+    supported_models = [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4.1",
+        "gpt-4.1-mini",
+        "gpt-4-turbo",
+    ]
+
+    for model_name in supported_models:
+        llm = OpenAICompletion(model=model_name)
+        assert llm.supports_stop_words() == True, (
+            f"Expected {model_name} to support stop words"
+        )
+
+
+def test_openai_gpt5_still_applies_stop_words_client_side():
+    """
+    Test that GPT-5 models still truncate responses at stop words client-side
+    via _apply_stop_words(), even though they don't send 'stop' to the API.
+    """
+    llm = OpenAICompletion(
+        model="gpt-5.2",
+        stop=["Observation:", "Final Answer:"],
+    )
+
+    assert llm.supports_stop_words() == False
+
+    response = "I need to search.\n\nAction: search\nObservation: Found results"
+    result = llm._apply_stop_words(response)
+
+    assert "Observation:" not in result
+    assert "Found results" not in result
+    assert "I need to search" in result
+
+
 def test_openai_stop_words_still_applied_to_regular_responses():
     """
     Test that stop words ARE still applied for regular (non-structured) responses.
