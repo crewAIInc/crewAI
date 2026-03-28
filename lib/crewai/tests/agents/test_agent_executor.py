@@ -879,6 +879,80 @@ class TestNativeToolExecution:
         assert len(tool_messages) == 1
         assert tool_messages[0]["tool_call_id"] == "call_1"
 
+    def test_execute_native_tool_result_as_answer_not_honored_on_error(
+        self, mock_dependencies
+    ):
+        """Test that result_as_answer is NOT honored when the tool errors.
+
+        Regression test for https://github.com/crewAIInc/crewAI/issues/5156
+        When a tool with result_as_answer=True raises an exception during
+        native tool execution, the agent should NOT treat the error as
+        the final answer.
+        """
+        executor = AgentExecutor(**mock_dependencies)
+
+        def failing_tool() -> str:
+            raise RuntimeError("Tool execution failed")
+
+        result_tool = Mock()
+        result_tool.name = "failing_tool"
+        result_tool.result_as_answer = True
+        result_tool.max_usage_count = None
+        result_tool.current_usage_count = 0
+
+        executor.original_tools = [result_tool]
+        executor._available_functions = {"failing_tool": failing_tool}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "failing_tool", "arguments": "{}"},
+            },
+        ]
+
+        result = executor.execute_native_tool()
+
+        # The tool errored, so it should NOT be treated as final answer
+        assert result == "native_tool_completed", (
+            "Expected 'native_tool_completed' (not 'tool_result_is_final') "
+            "when a result_as_answer tool errors"
+        )
+        assert not executor.state.is_finished, (
+            "Agent state should NOT be finished when tool errored"
+        )
+
+    def test_execute_native_tool_result_as_answer_honored_on_success(
+        self, mock_dependencies
+    ):
+        """Test that result_as_answer IS honored when the tool succeeds."""
+        executor = AgentExecutor(**mock_dependencies)
+
+        def success_tool() -> str:
+            return "final answer from tool"
+
+        result_tool = Mock()
+        result_tool.name = "success_tool"
+        result_tool.result_as_answer = True
+        result_tool.max_usage_count = None
+        result_tool.current_usage_count = 0
+
+        executor.original_tools = [result_tool]
+        executor._available_functions = {"success_tool": success_tool}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "success_tool", "arguments": "{}"},
+            },
+        ]
+
+        result = executor.execute_native_tool()
+
+        assert result == "tool_result_is_final", (
+            "Expected 'tool_result_is_final' when result_as_answer tool succeeds"
+        )
+        assert executor.state.is_finished is True
+        assert isinstance(executor.state.current_answer, AgentFinish)
+        assert executor.state.current_answer.output == "final answer from tool"
+
     def test_check_native_todo_completion_requires_current_todo(
         self, mock_dependencies
     ):

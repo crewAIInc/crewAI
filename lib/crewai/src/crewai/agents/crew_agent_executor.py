@@ -1072,6 +1072,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "error_occurred": error_event_emitted,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1082,6 +1083,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        error_occurred = execution_result.get("error_occurred", False)
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1098,10 +1100,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 color="green",
             )
 
+        # Don't honor result_as_answer when the tool execution errored;
+        # let the agent reflect on the error instead.
         if (
             original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
+            and not error_occurred
         ):
             return AgentFinish(
                 thought="Tool result is the final answer",
