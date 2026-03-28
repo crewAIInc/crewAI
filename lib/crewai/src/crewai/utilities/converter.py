@@ -21,7 +21,31 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_MARKDOWN_CODE_BLOCK_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"```(?:json)?\s*\n(.*?)\n\s*```", re.DOTALL | re.IGNORECASE
+)
 _I18N = get_i18n()
+
+
+def _strip_markdown_code_blocks(text: str) -> str:
+    """Strip markdown code block wrappers from a string if present.
+
+    LLMs sometimes wrap JSON output in markdown code blocks like
+    triple-backtick json markers which causes JSON parsing to fail.
+    This function removes those wrappers while preserving the inner
+    content.
+
+    Args:
+        text: The text that may contain markdown code block wrappers.
+
+    Returns:
+        The text with markdown code block wrappers removed, or the
+        original text if no wrappers were found.
+    """
+    match = _MARKDOWN_CODE_BLOCK_PATTERN.search(text)
+    if match:
+        return match.group(1).strip()
+    return text
 
 
 class ConverterError(Exception):
@@ -65,7 +89,9 @@ class Converter(OutputConverter):
                 if isinstance(response, BaseModel):
                     result = response
                 else:
-                    result = self.model.model_validate_json(response)
+                    result = self.model.model_validate_json(
+                        _strip_markdown_code_blocks(response)
+                    )
             else:
                 response = self.llm.call(
                     [
@@ -75,7 +101,9 @@ class Converter(OutputConverter):
                 )
                 try:
                     # Try to directly validate the response JSON
-                    result = self.model.model_validate_json(response)
+                    result = self.model.model_validate_json(
+                        _strip_markdown_code_blocks(response)
+                    )
                 except ValidationError:
                     # If direct validation fails, attempt to extract valid JSON
                     result = handle_partial_json(  # type: ignore[assignment]
@@ -185,6 +213,7 @@ def convert_to_model(
         )
 
     try:
+        result = _strip_markdown_code_blocks(result)
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(
             result=escaped_result, model=model, is_json_output=bool(output_json)
@@ -254,6 +283,7 @@ def handle_partial_json(
     Returns:
         The converted result as a dict, BaseModel, or original string.
     """
+    result = _strip_markdown_code_blocks(result)
     match = _JSON_PATTERN.search(result)
     if match:
         try:
