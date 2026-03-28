@@ -16,6 +16,8 @@ import time
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
 
+from pydantic import ConfigDict
+
 from crewai.mcp.client import MCPClient
 from crewai.mcp.config import (
     MCPServerConfig,
@@ -621,4 +623,5 @@ class MCPToolResolver:
             json_schema,
             model_name=model_name,
             enrich_descriptions=True,
+            __config__=ConfigDict(extra="ignore"),
         )
