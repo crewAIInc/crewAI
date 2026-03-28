@@ -305,6 +305,15 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
+    trained_agents_file: str | None = Field(
+        default=None,
+        description=(
+            "Path to a custom trained agents data file (.pkl) to use during "
+            "inference. When set, agents will load training suggestions from "
+            "this file instead of the default 'trained_agents_data.pkl'. "
+            "This should match the filename used during `crew.train()`."
+        ),
+    )
     token_usage: UsageMetrics | None = Field(
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
