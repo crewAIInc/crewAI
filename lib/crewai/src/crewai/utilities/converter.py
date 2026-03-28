@@ -21,7 +21,22 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_CODE_FENCE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"```(?:json)?\s*\n?(.*?)\n?\s*```", re.DOTALL
+)
 _I18N = get_i18n()
+
+
+def _strip_code_fences(text: str) -> str:
+    """Strip markdown code fences from a string if present.
+
+    Handles patterns like ```json\\n{...}\\n``` and ```{...}```.
+    Returns the inner content if fences are found, otherwise the original text.
+    """
+    match = _CODE_FENCE_PATTERN.search(text)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
 
 
 class ConverterError(Exception):
@@ -65,7 +80,9 @@ class Converter(OutputConverter):
                 if isinstance(response, BaseModel):
                     result = response
                 else:
-                    result = self.model.model_validate_json(response)
+                    result = self.model.model_validate_json(
+                        _strip_code_fences(response)
+                    )
             else:
                 response = self.llm.call(
                     [
@@ -74,8 +91,11 @@ class Converter(OutputConverter):
                     ]
                 )
                 try:
-                    # Try to directly validate the response JSON
-                    result = self.model.model_validate_json(response)
+                    # Try to directly validate the response JSON,
+                    # stripping markdown code fences if present
+                    result = self.model.model_validate_json(
+                        _strip_code_fences(response)
+                    )
                 except ValidationError:
                     # If direct validation fails, attempt to extract valid JSON
                     result = handle_partial_json(  # type: ignore[assignment]
