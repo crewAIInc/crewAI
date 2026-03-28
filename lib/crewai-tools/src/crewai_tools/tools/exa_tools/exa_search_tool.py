@@ -101,6 +101,7 @@ class EXASearchTool(BaseTool):
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
         self.client = Exa(**client_kwargs)
+        self.client.headers["x-exa-integration"] = "crewai"
         self.content = content
         self.summary = summary
         self.type = type
