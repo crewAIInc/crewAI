@@ -1,0 +1,92 @@
+# Conceptual Example of an Agentic AI Workflow using CrewAI
+
+from crewai import Agent, Task, Crew
+
+# -----------------------------
+# Agent Definitions
+# -----------------------------
+
+symptom_collector = Agent(
+    role="Symptom Collector",
+    goal="Extract and normalize symptoms from patient input",
+    backstory=(
+        "You are a healthcare intake assistant responsible for "
+        "identifying and structuring symptoms described by patients."
+    ),
+    verbose=True
+)
+
+risk_assessor = Agent(
+    role="Risk Assessment Agent",
+    goal="Analyze symptoms and determine risk level",
+    backstory=(
+        "You are a medical triage specialist who evaluates symptom "
+        "combinations and classifies the risk level as low, medium, or high."
+    ),
+    verbose=True
+)
+
+care_advisor = Agent(
+    role="Care Advisor",
+    goal="Provide guidance based on the assessed risk level",
+    backstory=(
+        "You are a healthcare advisor responsible for recommending "
+        "appropriate next steps such as rest, monitoring symptoms, "
+        "or seeking medical consultation."
+    ),
+    verbose=True
+)
+
+# -----------------------------
+# Task Definitions
+# -----------------------------
+
+collect_symptoms_task = Task(
+    description=(
+        "Extract symptoms from the following patient input and "
+        "convert them into a structured list:\n"
+        "{patient_input}"
+    ),
+    agent=symptom_collector,
+    expected_output="A structured list of symptoms."
+)
+
+risk_assessment_task = Task(
+    description=(
+        "Analyze the extracted symptoms and classify the health risk "
+        "as LOW, MEDIUM, or HIGH."
+    ),
+    agent=risk_assessor,
+    expected_output="Risk level classification with reasoning."
+)
+
+care_advice_task = Task(
+    description=(
+        "Based on the assessed risk level, suggest the appropriate "
+        "next steps for the patient."
+    ),
+    agent=care_advisor,
+    expected_output="Recommended healthcare guidance."
+)
+
+# -----------------------------
+# Crew Definition
+# -----------------------------
+
+crew = Crew(
+    agents=[symptom_collector, risk_assessor, care_advisor],
+    tasks=[collect_symptoms_task, risk_assessment_task, care_advice_task],
+    verbose=True
+)
+
+# -----------------------------
+# Execution
+# -----------------------------
+
+result = crew.kickoff(
+    inputs={
+        "patient_input": "I have fever, cough, and headache"
+    }
+)
+
+print(result)
