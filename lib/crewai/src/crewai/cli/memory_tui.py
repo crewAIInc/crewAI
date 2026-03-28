@@ -362,7 +362,7 @@ class MemoryTUI(App[None]):
         panel.loading = True
         try:
             scope = self._selected_scope if self._selected_scope != "/" else None
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             matches = await loop.run_in_executor(
                 None,
                 lambda: self._memory.recall(query, scope=scope, limit=10, depth="deep"),

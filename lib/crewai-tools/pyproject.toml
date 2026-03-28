@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "João Moura", email = "joaomdmoura@gmail.com" },
 ]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.15"
 dependencies = [
     "pytube~=15.0.0",
     "requests~=2.32.5",

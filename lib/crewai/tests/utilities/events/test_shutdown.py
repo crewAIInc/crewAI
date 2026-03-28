@@ -271,7 +271,7 @@ async def test_mixed_sync_async_handler_execution():
                     timeout=5
                 )
 
-        await asyncio.get_event_loop().run_in_executor(None, wait_for_completion)
+        await asyncio.get_running_loop().run_in_executor(None, wait_for_completion)
 
         assert len(sync_executed) == 5
         assert len(async_executed) == 5
