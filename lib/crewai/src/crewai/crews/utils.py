@@ -345,7 +345,14 @@ def prepare_kickoff(
 
 
 class StreamingContext:
-    """Container for streaming state and holders used during crew execution."""
+    """Container for streaming state and holders used during crew execution.
+
+    Subscribes to ``TaskStartedEvent`` so that every ``StreamChunk`` emitted
+    during a task carries the correct ``task_index``, ``task_name`` and
+    ``task_id`` fields.  Without this, all chunks appear to belong to task 0
+    with empty name/id because ``current_task_info`` was never updated as the
+    crew moved from one task to the next.
+    """
 
     def __init__(self, use_async: bool = False) -> None:
         """Initialize streaming context.
@@ -353,6 +360,9 @@ class StreamingContext:
         Args:
             use_async: Whether to use async streaming mode.
         """
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.task_events import TaskStartedEvent
+
         self.result_holder: list[CrewOutput] = []
         self.current_task_info: TaskInfo = {
             "index": 0,
@@ -365,6 +375,35 @@ class StreamingContext:
             self.current_task_info, self.result_holder, use_async=use_async
         )
         self.output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+        # Track task index across calls so we can increment it on each new task
+        self._task_index: int = -1
+
+        def _on_task_started(source: Any, event: TaskStartedEvent) -> None:
+            """Update current_task_info in-place when a new task starts.
+
+            Mutating the dict in-place is intentional: the streaming state
+            holds a reference to the same dict object, so changes here are
+            immediately visible to the chunk-generation handler.
+            """
+            self._task_index += 1
+            task = getattr(event, "task", None)
+            self.current_task_info["index"] = self._task_index
+            self.current_task_info["name"] = (
+                getattr(task, "name", None) or getattr(task, "description", "") or ""
+            )
+            self.current_task_info["id"] = str(getattr(task, "id", "") or "")
+            if task is not None and getattr(task, "agent", None) is not None:
+                agent = task.agent
+                self.current_task_info["agent_role"] = str(
+                    getattr(agent, "role", "") or ""
+                )
+                self.current_task_info["agent_id"] = str(
+                    getattr(agent, "id", "") or ""
+                )
+
+        self._task_started_handler = _on_task_started
+        crewai_event_bus.register_handler(TaskStartedEvent, _on_task_started)
 
 
 class ForEachStreamingContext:
