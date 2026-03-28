@@ -87,7 +87,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         max_iter (int): Maximum iterations for an agent to execute a task.
         agent_executor: An instance of the CrewAgentExecutor class.
         llm (Any): Language model that will run the agent.
-        crew (Any): Crew to which the agent belongs.
+        crew (Any | None): Crew to which the agent belongs.
         i18n (I18N): Internationalization settings.
         cache_handler ([CacheHandler]): An instance of the CacheHandler class.
         tools_handler ([ToolsHandler]): An instance of the ToolsHandler class.

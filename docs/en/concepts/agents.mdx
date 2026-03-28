@@ -43,6 +43,7 @@ The Visual Agent Builder enables:
 | **Role**                                | `role`                   | `str`                                 | Defines the agent's function and expertise within the crew.                                              |
 | **Goal**                                | `goal`                   | `str`                                 | The individual objective that guides the agent's decision-making.                                        |
 | **Backstory**                           | `backstory`              | `str`                                 | Provides context and personality to the agent, enriching interactions.                                   |
+| **Crew** _(optional)_                   | `crew`                   | `Optional[Crew]`                      | The crew to which this agent belongs. Set automatically when agent is added to a crew.                   |
 | **LLM** _(optional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Language model that powers the agent. Defaults to the model specified in `OPENAI_MODEL_NAME` or "gpt-4". |
 | **Tools** _(optional)_                  | `tools`                  | `List[BaseTool]`                      | Capabilities or functions available to the agent. Defaults to an empty list.                             |
 | **Function Calling LLM** _(optional)_   | `function_calling_llm`   | `Optional[Any]`                       | Language model for tool calling, overrides crew's LLM if specified.                                      |
