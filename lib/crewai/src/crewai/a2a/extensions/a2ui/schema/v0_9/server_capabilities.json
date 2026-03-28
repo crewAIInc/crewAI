@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2ui.org/specification/v0_9/server_capabilities.json",
+  "title": "A2UI Server Capabilities Schema",
+  "description": "A schema for the server capabilities object, which is used by an A2UI server (or Agent) to advertise its supported UI features to clients. This can be embedded in an Agent Card for A2A or used in other transport protocols like MCP.",
+  "type": "object",
+  "properties": {
+    "v0.9": {
+      "type": "object",
+      "description": "The server capabilities structure for version 0.9 of the A2UI protocol.",
+      "properties": {
+        "supportedCatalogIds": {
+          "type": "array",
+          "description": "An array of strings, where each string is an ID identifying a Catalog Definition Schema that the server can generate. This is not necessarily a resolvable URI.",
+          "items": { "type": "string" }
+        },
+        "acceptsInlineCatalogs": {
+          "type": "boolean",
+          "description": "A boolean indicating if the server can accept an 'inlineCatalogs' array in the client's a2uiClientCapabilities. If omitted, this defaults to false.",
+          "default": false
+        }
+      }
+    }
+  },
+  "required": ["v0.9"]
+}
