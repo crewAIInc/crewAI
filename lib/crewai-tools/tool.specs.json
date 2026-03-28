@@ -5664,10 +5664,6 @@
             "title": "Bucket Name",
             "type": "string"
           },
-          "cluster": {
-            "description": "An instance of the Couchbase Cluster connected to the desired Couchbase server.",
-            "title": "Cluster"
-          },
           "collection_name": {
             "description": "The name of the Couchbase collection to search",
             "title": "Collection Name",
@@ -5716,7 +5712,6 @@
           }
         },
         "required": [
-          "cluster",
           "collection_name",
           "scope_name",
           "bucket_name",
@@ -14478,13 +14473,9 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonProductScraperConfig"
-          },
-          "oxylabs_api": {
-            "title": "Oxylabs Api"
           }
         },
         "required": [
-          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonProductScraperTool",
@@ -14707,13 +14698,9 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonSearchScraperConfig"
-          },
-          "oxylabs_api": {
-            "title": "Oxylabs Api"
           }
         },
         "required": [
-          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonSearchScraperTool",
@@ -14949,13 +14936,9 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsGoogleSearchScraperConfig"
-          },
-          "oxylabs_api": {
-            "title": "Oxylabs Api"
           }
         },
         "required": [
-          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsGoogleSearchScraperTool",
@@ -15139,13 +15122,9 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsUniversalScraperConfig"
-          },
-          "oxylabs_api": {
-            "title": "Oxylabs Api"
           }
         },
         "required": [
-          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsUniversalScraperTool",
@@ -23373,26 +23352,6 @@
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
           },
-          "async_client": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Async Client"
-          },
-          "client": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Client"
-          },
           "extract_depth": {
             "default": "basic",
             "description": "The depth of extraction. 'basic' for basic extraction, 'advanced' for advanced extraction.",
@@ -23527,26 +23486,6 @@
             ],
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
-          },
-          "async_client": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Async Client"
-          },
-          "client": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Client"
           },
           "days": {
             "default": 7,
