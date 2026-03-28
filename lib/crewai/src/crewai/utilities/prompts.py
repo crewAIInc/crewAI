@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal, TypedDict
+from xml.sax.saxutils import escape as xml_escape
 
 from pydantic import BaseModel, Field
 
@@ -154,8 +155,18 @@ class Prompts(BaseModel):
             else:
                 prompt = f"{system}\n{prompt}"
 
+        # Wrap agent-provided values in XML tags to clearly delineate them
+        # within the prompt structure. Values are XML-escaped first so that
+        # characters like < > & in the content cannot break out of the tags.
+        # This helps the LLM distinguish system instructions from interpolated
+        # values and reduces the risk of prompt injection when agent properties
+        # originate from external sources (e.g., user input, another agent's
+        # output, configuration files, or A2A agent cards).
         return (
-            prompt.replace("{goal}", self.agent.goal)
-            .replace("{role}", self.agent.role)
-            .replace("{backstory}", self.agent.backstory)
+            prompt.replace("{goal}", f"<goal>{xml_escape(self.agent.goal)}</goal>")
+            .replace("{role}", f"<role>{xml_escape(self.agent.role)}</role>")
+            .replace(
+                "{backstory}",
+                f"<backstory>{xml_escape(self.agent.backstory)}</backstory>",
+            )
         )
