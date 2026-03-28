@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from crewai.tools import BaseTool
 from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 from crewai.utilities.string_utils import sanitize_tool_name
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from crewai_tools.adapters.tool_collection import ToolCollection
 
@@ -51,7 +51,14 @@ try:
             """
             tool_name = sanitize_tool_name(mcp_tool.name)
             tool_description = mcp_tool.description or ""
-            args_model = create_model_from_schema(mcp_tool.inputSchema)
+            # Use extra="ignore" so that CrewAI's injected fields (e.g.
+            # security_context) don't trigger Pydantic validation errors.
+            # MCP tools are defined by external servers whose inputSchema
+            # cannot include CrewAI-internal fields.
+            args_model = create_model_from_schema(
+                mcp_tool.inputSchema,
+                __config__=ConfigDict(extra="ignore"),
+            )
 
             class CrewAIMCPTool(BaseTool):
                 name: str = tool_name
