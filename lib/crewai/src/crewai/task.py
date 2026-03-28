@@ -226,6 +226,7 @@ class Task(BaseModel):
     _guardrail_retry_counts: dict[int, int] = PrivateAttr(
         default_factory=dict,
     )
+    _execution_index: int | None = PrivateAttr(default=None)
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
