@@ -761,6 +761,57 @@ memory = Memory(
 - **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
 
 
+## Community Memory Backends
+
+The CrewAI community has built alternative memory backends. These are maintained independently and may have different APIs or storage patterns.
+
+### crewai-soul (Markdown-Native Memory)
+
+[crewai-soul](https://github.com/menonpg/crewai-soul) stores memories in human-readable markdown files (`SOUL.md` + `MEMORY.md`) that you can edit and version-control with git.
+
+**When to use:**
+- You need to read/audit what your agents remember
+- Memory should be tracked in git alongside code
+- You want to manually edit memories when needed
+- You prefer file-based storage over databases
+
+**Installation:**
+
+```bash
+pip install crewai-soul
+```
+
+**Standalone usage:**
+
+```python
+from crewai_soul import SoulMemory
+
+memory = SoulMemory()
+memory.remember("We decided to use PostgreSQL.")
+matches = memory.recall("database decision")
+```
+
+After running, check `MEMORY.md`:
+
+```markdown
+# Memory Log
+
+## YYYY-MM-DD HH:MM:SS UTC
+We decided to use PostgreSQL.
+```
+
+**Features:**
+- RAG + RLM hybrid retrieval via [soul-agent](https://github.com/menonpg/soul.py)
+- Human-readable markdown files
+- Git-versionable memory
+- Managed cloud option ([SoulMate](https://menonpg.github.io/soulmate)) for production
+- Database schema intelligence via [soul-schema](https://github.com/menonpg/soul-schema)
+
+**Links:**
+- [GitHub](https://github.com/menonpg/crewai-soul)
+- [PyPI](https://pypi.org/project/crewai-soul/)
+
+
 ## Discovery
 
 Inspect the scope hierarchy, categories, and records:
