@@ -1,0 +1,68 @@
+---
+title: Aegis 통합
+description: Aegis로 CrewAI에 거버넌스, 프롬프트 인젝션 탐지, PII 마스킹을 추가하세요
+icon: shield-halved
+mode: "wide"
+---
+
+# CrewAI와 Aegis 통합
+
+이 가이드는 **Aegis**를 **CrewAI**와 통합하여 프롬프트 인젝션 탐지, PII 마스킹, 정책 기반 코드(policy-as-code) 등의 거버넌스 가드레일을 에이전트 워크플로우에 추가하는 방법을 설명합니다.
+
+> **Aegis란?** [Aegis](https://github.com/Acacian/aegis)는 AI 에이전트를 위한 오픈소스 거버넌스 런타임입니다. 주요 프레임워크 자동 계측, 프롬프트 인젝션 탐지(107개 패턴), PII 마스킹, 정책 기반 코드 적용, 전체 감사 추적 기능을 제공합니다. PyPI를 통해 설치: `pip install agent-aegis`.
+
+## 시작하기
+
+### 1단계: 의존성 설치
+
+```python
+%pip install agent-aegis crewai crewai_tools
+```
+
+### 2단계: Aegis 초기화
+
+```python
+import aegis
+
+# 지원되는 모든 프레임워크 자동 계측 (CrewAI, LangChain 등)
+aegis.auto_instrument()
+```
+
+### 3단계: CrewAI 애플리케이션 생성
+
+평소처럼 CrewAI 애플리케이션을 생성하세요. Aegis가 투명하게 LLM 호출을 가로채 거버넌스 정책을 적용합니다.
+
+```python
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Researcher",
+    goal="AI 거버넌스에 대한 정확한 정보를 찾기",
+    backstory="AI 안전 전문 연구원입니다.",
+)
+
+task = Task(
+    description="AI 에이전트 거버넌스의 최신 트렌드를 연구하세요.",
+    expected_output="AI 거버넌스 트렌드에 대한 간결한 요약.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task], share_crew=False)
+result = crew.kickoff()
+```
+
+## 주요 기능
+
+| 기능 | 설명 |
+|---|---|
+| **자동 계측** | 한 줄 설정, CrewAI 앱 코드 변경 불필요 |
+| **프롬프트 인젝션 탐지** | 107개 탐지 패턴으로 악성 입력 차단 |
+| **PII 마스킹** | 이메일, 전화번호, SSN 자동 마스킹 |
+| **정책 기반 코드** | YAML 기반 거버넌스 정책 |
+| **감사 추적** | 모든 LLM 상호작용의 완전한 로그 |
+
+## 참고
+
+- [Aegis 문서](https://acacian.github.io/aegis/)
+- [Aegis PyPI](https://pypi.org/project/agent-aegis/)
+- [Aegis GitHub](https://github.com/Acacian/aegis)

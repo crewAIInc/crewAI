@@ -1,0 +1,67 @@
+---
+title: تكامل Aegis
+description: أضف الحوكمة واكتشاف حقن الموجهات وإخفاء المعلومات الشخصية إلى CrewAI باستخدام Aegis
+icon: shield-halved
+mode: "wide"
+---
+
+# دمج Aegis مع CrewAI
+
+يوضح هذا الدليل كيفية دمج **Aegis** مع **CrewAI** لإضافة حواجز حماية الحوكمة -- بما في ذلك اكتشاف حقن الموجهات وإخفاء المعلومات الشخصية والسياسة كرمز -- إلى سير عمل الوكلاء الخاص بك.
+
+> **ما هو Aegis؟** [Aegis](https://github.com/Acacian/aegis) هو نظام حوكمة مفتوح المصدر لوكلاء الذكاء الاصطناعي. يوفر أدوات قياس تلقائية للأطر الشائعة، واكتشاف حقن الموجهات (107 أنماط)، وإخفاء المعلومات الشخصية، وتنفيذ السياسة كرمز، ومسار تدقيق كامل. التثبيت عبر PyPI: `pip install agent-aegis`.
+
+## البدء
+
+### الخطوة 1: تثبيت التبعيات
+
+```python
+%pip install agent-aegis crewai crewai_tools
+```
+
+### الخطوة 2: تهيئة Aegis
+
+```python
+import aegis
+
+aegis.auto_instrument()
+```
+
+### الخطوة 3: إنشاء تطبيق CrewAI
+
+أنشئ تطبيق CrewAI كالمعتاد. يعترض Aegis بشفافية مكالمات LLM لفرض سياسات الحوكمة.
+
+```python
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Researcher",
+    goal="البحث عن معلومات دقيقة حول حوكمة الذكاء الاصطناعي",
+    backstory="أنت باحث خبير في أمان الذكاء الاصطناعي.",
+)
+
+task = Task(
+    description="ابحث عن أحدث الاتجاهات في حوكمة وكلاء الذكاء الاصطناعي.",
+    expected_output="ملخص موجز لاتجاهات حوكمة الذكاء الاصطناعي.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task], share_crew=False)
+result = crew.kickoff()
+```
+
+## الميزات الرئيسية
+
+| الميزة | الوصف |
+|---|---|
+| **أدوات القياس التلقائية** | إعداد بسطر واحد |
+| **اكتشاف حقن الموجهات** | 107 أنماط اكتشاف |
+| **إخفاء المعلومات الشخصية** | إخفاء تلقائي للبريد الإلكتروني والهاتف |
+| **السياسة كرمز** | سياسات حوكمة قائمة على YAML |
+| **مسار التدقيق** | سجل كامل لجميع تفاعلات LLM |
+
+## المراجع
+
+- [وثائق Aegis](https://acacian.github.io/aegis/)
+- [Aegis على PyPI](https://pypi.org/project/agent-aegis/)
+- [مستودع GitHub لـ Aegis](https://github.com/Acacian/aegis)

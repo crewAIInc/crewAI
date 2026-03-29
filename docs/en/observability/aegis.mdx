@@ -1,0 +1,115 @@
+---
+title: Aegis Integration
+description: Add governance, prompt injection detection, and PII masking to CrewAI with Aegis
+icon: shield-halved
+mode: "wide"
+---
+
+# Integrate Aegis with CrewAI
+
+This guide shows how to integrate **Aegis** with **CrewAI** to add governance guardrails -- including prompt injection detection, PII masking, and policy-as-code -- to your agent workflows.
+
+> **What is Aegis?** [Aegis](https://github.com/Acacian/aegis) is an open-source governance runtime for AI agents. It provides auto-instrumentation for popular frameworks, prompt injection detection (107 patterns), PII masking, policy-as-code enforcement, and a complete audit trail. Install via PyPI: `pip install agent-aegis`.
+
+## Get Started
+
+We'll walk through instrumenting a CrewAI application with Aegis governance.
+
+### Step 1: Install Dependencies
+
+```python
+%pip install agent-aegis crewai crewai_tools
+```
+
+### Step 2: Initialize Aegis
+
+Aegis auto-instruments CrewAI with a single call. No manual patching required.
+
+```python
+import aegis
+
+# Auto-instrument all supported frameworks (CrewAI, LangChain, etc.)
+aegis.auto_instrument()
+```
+
+### Step 3: Create a CrewAI Application
+
+Create your CrewAI application as usual. Aegis transparently intercepts LLM calls to enforce governance policies.
+
+```python
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find accurate information about AI governance",
+    backstory="You're an expert researcher specializing in AI safety.",
+)
+
+task = Task(
+    description="Research the latest trends in AI agent governance.",
+    expected_output="A concise summary of AI governance trends.",
+    agent=researcher,
+)
+
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    share_crew=False,
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+### Step 4: Configure Governance Policies
+
+Aegis supports policy-as-code via YAML configuration:
+
+```yaml
+# policy.yaml
+version: "1.0"
+guardrails:
+  injection_detection:
+    enabled: true
+    action: block
+  pii_masking:
+    enabled: true
+    mask_types: [email, phone, ssn]
+  cost_limit:
+    max_cost_per_request: 0.50
+```
+
+Load the policy when initializing:
+
+```python
+import aegis
+
+aegis.auto_instrument()
+instance = aegis.init(policy_path="policy.yaml")
+```
+
+### Step 5: Review the Audit Trail
+
+Every LLM interaction is logged to the audit trail. You can query it programmatically:
+
+```python
+instance = aegis.get()
+# Access audit logs for compliance and debugging
+```
+
+## Key Features
+
+| Feature | Description |
+|---|---|
+| **Auto-instrumentation** | One-line setup, no code changes to your CrewAI app |
+| **Prompt Injection Detection** | 107 detection patterns, blocks malicious inputs |
+| **PII Masking** | Automatically redacts emails, phone numbers, SSNs |
+| **Policy-as-Code** | YAML-based governance policies |
+| **Audit Trail** | Complete log of all LLM interactions |
+| **Cost Controls** | Per-request and per-session cost limits |
+
+## References
+
+- [Aegis Documentation](https://acacian.github.io/aegis/)
+- [Aegis on PyPI](https://pypi.org/project/agent-aegis/)
+- [Aegis GitHub Repository](https://github.com/Acacian/aegis)

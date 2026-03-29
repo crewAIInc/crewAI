@@ -1,0 +1,68 @@
+---
+title: Integração Aegis
+description: Adicione governança, detecção de injeção de prompt e mascaramento de PII ao CrewAI com Aegis
+icon: shield-halved
+mode: "wide"
+---
+
+# Integrar Aegis com CrewAI
+
+Este guia mostra como integrar o **Aegis** com o **CrewAI** para adicionar guardrails de governança -- incluindo detecção de injeção de prompt, mascaramento de PII e política como código -- aos seus fluxos de trabalho de agentes.
+
+> **O que é o Aegis?** [Aegis](https://github.com/Acacian/aegis) é um runtime de governança de código aberto para agentes de IA. Ele fornece auto-instrumentação para frameworks populares, detecção de injeção de prompt (107 padrões), mascaramento de PII, aplicação de política como código e trilha de auditoria completa. Instale via PyPI: `pip install agent-aegis`.
+
+## Começando
+
+### Passo 1: Instalar Dependências
+
+```python
+%pip install agent-aegis crewai crewai_tools
+```
+
+### Passo 2: Inicializar o Aegis
+
+```python
+import aegis
+
+# Auto-instrumentar todos os frameworks suportados (CrewAI, LangChain, etc.)
+aegis.auto_instrument()
+```
+
+### Passo 3: Criar uma Aplicação CrewAI
+
+Crie sua aplicação CrewAI normalmente. O Aegis intercepta chamadas LLM de forma transparente para aplicar políticas de governança.
+
+```python
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Researcher",
+    goal="Encontrar informações precisas sobre governança de IA",
+    backstory="Você é um pesquisador especialista em segurança de IA.",
+)
+
+task = Task(
+    description="Pesquise as últimas tendências em governança de agentes de IA.",
+    expected_output="Um resumo conciso das tendências de governança de IA.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task], share_crew=False)
+result = crew.kickoff()
+```
+
+## Recursos Principais
+
+| Recurso | Descrição |
+|---|---|
+| **Auto-instrumentação** | Configuração em uma linha, sem alterações no código |
+| **Detecção de Injeção de Prompt** | 107 padrões de detecção |
+| **Mascaramento de PII** | Mascara automaticamente emails, telefones, SSNs |
+| **Política como Código** | Políticas de governança baseadas em YAML |
+| **Trilha de Auditoria** | Log completo de todas as interações LLM |
+
+## Referências
+
+- [Documentação Aegis](https://acacian.github.io/aegis/)
+- [Aegis no PyPI](https://pypi.org/project/agent-aegis/)
+- [Repositório GitHub do Aegis](https://github.com/Acacian/aegis)
