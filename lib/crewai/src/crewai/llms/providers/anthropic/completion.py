@@ -41,6 +41,7 @@ TOOL_SEARCH_TOOL_TYPES: Final[tuple[str, ...]] = (
     "tool_search_tool_bm25_20251119",
 )
 
+ANTHROPIC_DEFAULT_MAX_TOKENS: Final[int] = 4096
 ANTHROPIC_FILES_API_BETA: Final = "files-api-2025-04-14"
 ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
 
@@ -158,7 +159,8 @@ class AnthropicCompletion(BaseLLM):
         timeout: float | None = None,
         max_retries: int = 2,
         temperature: float | None = None,
-        max_tokens: int = 4096,  # Required for Anthropic
+        max_tokens: int | None = None,
+        max_completion_tokens: int | None = None,
         top_p: float | None = None,
         stop_sequences: list[str] | None = None,
         stream: bool = False,
@@ -178,7 +180,10 @@ class AnthropicCompletion(BaseLLM):
             timeout: Request timeout in seconds
             max_retries: Maximum number of retries
             temperature: Sampling temperature (0-1)
-            max_tokens: Maximum tokens in response (required for Anthropic)
+            max_tokens: Maximum tokens in response (required for Anthropic).
+                Takes precedence over max_completion_tokens.
+            max_completion_tokens: Alias for max_tokens (OpenAI-style parameter name).
+                Used when max_tokens is not explicitly set.
             top_p: Nucleus sampling parameter
             stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
             stream: Enable streaming responses
@@ -213,8 +218,10 @@ class AnthropicCompletion(BaseLLM):
 
         self.async_client = AsyncAnthropic(**async_client_params)
 
-        # Store completion parameters
-        self.max_tokens = max_tokens
+        # Store completion parameters.
+        # Resolve max output tokens: explicit max_tokens wins, then
+        # max_completion_tokens (OpenAI-style alias), then Anthropic default.
+        self.max_tokens = max_tokens or max_completion_tokens or ANTHROPIC_DEFAULT_MAX_TOKENS
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []

@@ -109,6 +109,56 @@ def test_anthropic_completion_initialization_parameters():
     assert llm.top_p == 0.9
 
 
+def test_anthropic_max_completion_tokens_sent_to_api():
+    """
+    Test that max_completion_tokens (OpenAI-style param) is forwarded to the
+    Anthropic API as max_tokens when max_tokens itself is not set.
+    """
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        max_completion_tokens=150,
+        api_key="test-key",
+    )
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    assert isinstance(llm, AnthropicCompletion)
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+    assert params["max_tokens"] == 150
+
+
+def test_anthropic_max_tokens_takes_precedence_over_max_completion_tokens():
+    """
+    Test that explicit max_tokens takes precedence over max_completion_tokens.
+    """
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        max_tokens=2000,
+        max_completion_tokens=150,
+        api_key="test-key",
+    )
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.max_tokens == 2000
+
+
+def test_anthropic_default_max_tokens_when_neither_set():
+    """
+    Test that default 4096 is used when neither max_tokens nor max_completion_tokens is set.
+    """
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        api_key="test-key",
+    )
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.max_tokens == 4096
+
+
 def test_anthropic_specific_parameters():
     """
     Test Anthropic-specific parameters like stop_sequences and streaming
