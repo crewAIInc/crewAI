@@ -190,7 +190,7 @@ class OpenAICompletion(BaseLLM):
         base_url: str | None = None,
         organization: str | None = None,
         project: str | None = None,
-        timeout: float | None = None,
+        timeout: float | None = 60.0,  # Default 60s timeout to prevent hanging requests
         max_retries: int = 2,
         default_headers: dict[str, str] | None = None,
         default_query: dict[str, Any] | None = None,
