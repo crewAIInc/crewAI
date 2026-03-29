@@ -132,6 +132,22 @@ class AgentSIMWaitForOtpTool(BaseTool):
         ]
     )
 
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        try:
+            import agentsim  # noqa: F401
+        except ImportError:
+            raise ImportError(
+                "`agentsim-sdk` package not found. Install with: pip install agentsim-sdk"
+            ) from None
+
+        api_key = os.getenv("AGENTSIM_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "AGENTSIM_API_KEY environment variable is required. "
+                "Get a key at https://agentsim.dev/dashboard"
+            )
+
     def _run(self, session_id: str, timeout: int = 60) -> str:
         import agentsim
 
@@ -169,6 +185,22 @@ class AgentSIMReleaseTool(BaseTool):
             ),
         ]
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        try:
+            import agentsim  # noqa: F401
+        except ImportError:
+            raise ImportError(
+                "`agentsim-sdk` package not found. Install with: pip install agentsim-sdk"
+            ) from None
+
+        api_key = os.getenv("AGENTSIM_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "AGENTSIM_API_KEY environment variable is required. "
+                "Get a key at https://agentsim.dev/dashboard"
+            )
 
     def _run(self, session_id: str) -> str:
         import agentsim

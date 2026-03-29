@@ -30,7 +30,11 @@ export AGENTSIM_API_KEY=asm_live_...
 
 ```python
 from crewai import Agent, Crew, Task
-from crewai_tools import AgentSIMProvisionTool, AgentSIMWaitForOtpTool, AgentSIMReleaseTool
+from crewai_tools.tools.agentsim_tool import (
+    AgentSIMProvisionTool,
+    AgentSIMWaitForOtpTool,
+    AgentSIMReleaseTool,
+)
 
 tools = [AgentSIMProvisionTool(), AgentSIMWaitForOtpTool(), AgentSIMReleaseTool()]
 
