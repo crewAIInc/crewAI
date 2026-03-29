@@ -10,11 +10,52 @@ API key: https://agentsim.dev/dashboard
 Docs: https://agentsim.dev
 """
 
+import asyncio
 import os
-from typing import Any
+from typing import Any, Optional
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+
+
+# ── Shared validation ──────────────────────────────────────────────
+
+
+def _validate_agentsim_env() -> None:
+    """Check agentsim-sdk is installed and API key is set. Called at tool init."""
+    try:
+        import agentsim  # noqa: F401
+    except ImportError:
+        raise ImportError(
+            "`agentsim-sdk` package not found. Install with: pip install agentsim-sdk"
+        ) from None
+
+    if not os.getenv("AGENTSIM_API_KEY"):
+        raise ValueError(
+            "AGENTSIM_API_KEY environment variable is required. "
+            "Get a key at https://agentsim.dev/dashboard"
+        )
+
+
+def _get_client():
+    """Create a configured AgentSimClient."""
+    from agentsim.client import AgentSimClient
+
+    return AgentSimClient(
+        api_key=os.environ["AGENTSIM_API_KEY"],
+    )
+
+
+def _run_async(coro):
+    """Run an async coroutine synchronously."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+# ── Input schemas ──────────────────────────────────────────────────
 
 
 class ProvisionInput(BaseModel):
@@ -50,6 +91,9 @@ class ReleaseInput(BaseModel):
     )
 
 
+# ── Tools ──────────────────────────────────────────────────────────
+
+
 class AgentSIMProvisionTool(BaseTool):
     """Provision a real carrier-grade mobile phone number via AgentSIM.
 
@@ -80,30 +124,21 @@ class AgentSIMProvisionTool(BaseTool):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        try:
-            import agentsim  # noqa: F401
-        except ImportError:
-            raise ImportError(
-                "`agentsim-sdk` package not found. Install with: pip install agentsim-sdk"
-            ) from None
-
-        api_key = os.getenv("AGENTSIM_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "AGENTSIM_API_KEY environment variable is required. "
-                "Get a key at https://agentsim.dev/dashboard"
-            )
+        _validate_agentsim_env()
 
     def _run(self, country: str = "US", agent_id: str = "crewai-agent") -> str:
-        import agentsim
-
-        agentsim.configure(api_key=os.environ["AGENTSIM_API_KEY"])
-        result = agentsim.provision_sync(agent_id=agent_id, country=country)
-        return (
-            f"Phone number: {result.number} | "
-            f"session_id: {result.session_id} | "
-            f"carrier: T-Mobile | line_type: mobile"
-        )
+        client = _get_client()
+        try:
+            result = _run_async(
+                client.provision(agent_id=agent_id, country=country)
+            )
+            return (
+                f"Phone number: {result.number} | "
+                f"session_id: {result.session_id} | "
+                f"carrier: T-Mobile | line_type: mobile"
+            )
+        finally:
+            _run_async(client.aclose())
 
 
 class AgentSIMWaitForOtpTool(BaseTool):
@@ -134,32 +169,24 @@ class AgentSIMWaitForOtpTool(BaseTool):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        try:
-            import agentsim  # noqa: F401
-        except ImportError:
-            raise ImportError(
-                "`agentsim-sdk` package not found. Install with: pip install agentsim-sdk"
-            ) from None
-
-        api_key = os.getenv("AGENTSIM_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "AGENTSIM_API_KEY environment variable is required. "
-                "Get a key at https://agentsim.dev/dashboard"
-            )
+        _validate_agentsim_env()
 
     def _run(self, session_id: str, timeout: int = 60) -> str:
-        import agentsim
+        from agentsim import OtpTimeoutError
 
-        agentsim.configure(api_key=os.environ["AGENTSIM_API_KEY"])
+        client = _get_client()
         try:
-            otp = agentsim.wait_for_otp_sync(session_id=session_id, timeout=timeout)
+            otp = _run_async(
+                client.wait_for_otp(session_id=session_id, timeout=timeout)
+            )
             return f"OTP received: {otp.otp_code}"
-        except agentsim.OtpTimeoutError:
+        except OtpTimeoutError:
             return (
                 "OTP timed out. Make sure the phone number was submitted to the "
                 "target service before calling this tool. You can try again."
             )
+        finally:
+            _run_async(client.aclose())
 
 
 class AgentSIMReleaseTool(BaseTool):
@@ -188,23 +215,12 @@ class AgentSIMReleaseTool(BaseTool):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        try:
-            import agentsim  # noqa: F401
-        except ImportError:
-            raise ImportError(
-                "`agentsim-sdk` package not found. Install with: pip install agentsim-sdk"
-            ) from None
-
-        api_key = os.getenv("AGENTSIM_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "AGENTSIM_API_KEY environment variable is required. "
-                "Get a key at https://agentsim.dev/dashboard"
-            )
+        _validate_agentsim_env()
 
     def _run(self, session_id: str) -> str:
-        import agentsim
-
-        agentsim.configure(api_key=os.environ["AGENTSIM_API_KEY"])
-        agentsim.release_sync(session_id=session_id)
-        return f"Phone number released (session: {session_id})."
+        client = _get_client()
+        try:
+            _run_async(client.release(session_id=session_id))
+            return f"Phone number released (session: {session_id})."
+        finally:
+            _run_async(client.aclose())
