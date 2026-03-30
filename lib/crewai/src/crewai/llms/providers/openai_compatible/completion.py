@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 import os
 from typing import Any
 
+from pydantic import model_validator
+
 from crewai.llms.providers.openai.completion import OpenAICompletion
 
 
@@ -140,31 +142,13 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         )
     """
 
-    def __init__(
-        self,
-        model: str,
-        provider: str,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        default_headers: dict[str, str] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize OpenAI-compatible completion client.
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_provider_config(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
 
-        Args:
-            model: The model identifier.
-            provider: The provider name (must be in OPENAI_COMPATIBLE_PROVIDERS).
-            api_key: Optional API key override. If not provided, uses the
-                provider's configured environment variable.
-            base_url: Optional base URL override. If not provided, uses the
-                provider's configured default or environment variable.
-            default_headers: Optional headers to merge with provider defaults.
-            **kwargs: Additional arguments passed to OpenAICompletion.
-
-        Raises:
-            ValueError: If the provider is not supported or required API key
-                is missing.
-        """
+        provider = data.get("provider", "")
         config = OPENAI_COMPATIBLE_PROVIDERS.get(provider)
         if config is None:
             supported = ", ".join(sorted(OPENAI_COMPATIBLE_PROVIDERS.keys()))
@@ -173,21 +157,15 @@ class OpenAICompatibleCompletion(OpenAICompletion):
                 f"Supported providers: {supported}"
             )
 
-        resolved_api_key = self._resolve_api_key(api_key, config, provider)
-        resolved_base_url = self._resolve_base_url(base_url, config, provider)
-        resolved_headers = self._resolve_headers(default_headers, config)
-
-        super().__init__(
-            model=model,
-            provider=provider,
-            api_key=resolved_api_key,
-            base_url=resolved_base_url,
-            default_headers=resolved_headers,
-            **kwargs,
+        data["api_key"] = cls._resolve_api_key(data.get("api_key"), config, provider)
+        data["base_url"] = cls._resolve_base_url(data.get("base_url"), config, provider)
+        data["default_headers"] = cls._resolve_headers(
+            data.get("default_headers"), config
         )
+        return data
 
+    @staticmethod
     def _resolve_api_key(
-        self,
         api_key: str | None,
         config: ProviderConfig,
         provider: str,
@@ -220,8 +198,8 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
         return config.default_api_key
 
+    @staticmethod
     def _resolve_base_url(
-        self,
         base_url: str | None,
         config: ProviderConfig,
         provider: str,
@@ -249,8 +227,8 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
         return resolved
 
+    @staticmethod
     def _resolve_headers(
-        self,
         headers: dict[str, str] | None,
         config: ProviderConfig,
     ) -> dict[str, str] | None:
