@@ -14,7 +14,7 @@ from datetime import datetime
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Final, Literal
 import uuid
 
 from pydantic import (
@@ -25,6 +25,7 @@ from pydantic import (
     PrivateAttr,
     model_validator,
 )
+from typing_extensions import TypedDict
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
