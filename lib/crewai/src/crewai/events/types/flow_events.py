@@ -178,12 +178,15 @@ class HumanFeedbackRequestedEvent(FlowEvent):
         output: The method output shown to the human for review.
         message: The message displayed when requesting feedback.
         emit: Optional list of possible outcomes for routing.
+        request_id: Platform-assigned identifier for this feedback request,
+            used for correlating the request across system boundaries.
     """
 
     method_name: str
     output: Any
     message: str
     emit: list[str] | None = None
+    request_id: str | None = None
     type: str = "human_feedback_requested"
 
 
@@ -198,9 +201,12 @@ class HumanFeedbackReceivedEvent(FlowEvent):
         method_name: Name of the method that received feedback.
         feedback: The raw text feedback provided by the human.
         outcome: The collapsed outcome string (if emit was specified).
+        request_id: Platform-assigned identifier for this feedback request,
+            used for correlating the response back to its originating request.
     """
 
     method_name: str
     feedback: str
     outcome: str | None = None
+    request_id: str | None = None
     type: str = "human_feedback_received"
