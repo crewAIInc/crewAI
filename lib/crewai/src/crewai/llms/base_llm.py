@@ -141,8 +141,12 @@ class BaseLLM(BaseModel, ABC):
             name = "stop"
         try:
             super().__setattr__(name, value)
-        except (ValueError, AttributeError):
+        except ValueError:
+            if name in self.model_fields:
+                raise  # Re-raise validation errors on declared fields
             # Fallback for attributes not declared as fields (e.g. mock patching)
+            object.__setattr__(self, name, value)
+        except AttributeError:
             object.__setattr__(self, name, value)
 
     def __delattr__(self, name: str) -> None:
