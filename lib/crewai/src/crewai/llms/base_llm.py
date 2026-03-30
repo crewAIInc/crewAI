@@ -157,17 +157,12 @@ class BaseLLM(BaseModel, ABC):
 
     @property
     def stop_sequences(self) -> list[str]:
-        """Alias for ``stop`` — kept for backward compatibility with provider APIs."""
-        return self.stop
+        """Alias for ``stop`` — kept for backward compatibility with provider APIs.
 
-    @stop_sequences.setter
-    def stop_sequences(self, value: list[str] | str | None) -> None:
-        if value is None:
-            self.stop = []
-        elif isinstance(value, str):
-            self.stop = [value]
-        else:
-            self.stop = list(value)
+        Writes are handled by ``__setattr__``, which normalizes and redirects
+        ``stop_sequences`` assignments to the ``stop`` field.
+        """
+        return self.stop
 
     _token_usage: dict[str, int] = PrivateAttr(
         default_factory=lambda: {
