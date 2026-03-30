@@ -36,7 +36,12 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms.base_llm import BaseLLM, get_current_call_id, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    get_current_call_id,
+    llm_call_context,
+)
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -347,7 +352,7 @@ class LLM(BaseLLM):
     presence_penalty: float | None = None
     frequency_penalty: float | None = None
     logit_bias: dict[int, float] | None = None
-    response_format: type[BaseModel] | None = None
+    response_format: JsonResponseFormat | type[BaseModel] | None = None
     seed: int | None = None
     logprobs: int | None = None
     top_logprobs: int | None = None
