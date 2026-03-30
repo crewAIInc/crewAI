@@ -298,7 +298,8 @@ class BedrockCompletion(BaseLLM):
         data["model_id"] = model
         return data
 
-    def model_post_init(self, __context: Any) -> None:
+    @model_validator(mode="after")
+    def _init_clients(self) -> BedrockCompletion:
         config = Config(
             read_timeout=300,
             retries={"max_attempts": 3, "mode": "adaptive"},
@@ -312,6 +313,7 @@ class BedrockCompletion(BaseLLM):
         )
         self._client = session.client("bedrock-runtime", config=config)
         self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
+        return self
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""

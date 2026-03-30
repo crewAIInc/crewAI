@@ -114,8 +114,10 @@ class GeminiCompletion(BaseLLM):
 
         return data
 
-    def model_post_init(self, __context: Any) -> None:
+    @model_validator(mode="after")
+    def _init_client(self) -> GeminiCompletion:
         self._client = self._initialize_client(self.use_vertexai)
+        return self
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Gemini/Vertex-specific fields."""

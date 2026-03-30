@@ -648,12 +648,14 @@ class LLM(BaseLLM):
         data["is_anthropic"] = cls._is_anthropic_model(model)
         return data
 
-    def model_post_init(self, __context: Any) -> None:
+    @model_validator(mode="after")
+    def _init_litellm(self) -> LLM:
         self.is_litellm = True
         if LITELLM_AVAILABLE:
             litellm.drop_params = True
         self.set_callbacks(self.callbacks or [])
         self.set_env_callbacks()
+        return self
 
     @staticmethod
     def _is_anthropic_model(model: str) -> bool:

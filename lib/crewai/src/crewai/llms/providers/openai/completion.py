@@ -237,7 +237,8 @@ class OpenAICompletion(BaseLLM):
         data["is_gpt4_model"] = "gpt-4" in model.lower()
         return data
 
-    def model_post_init(self, __context: Any) -> None:
+    @model_validator(mode="after")
+    def _init_clients(self) -> OpenAICompletion:
         client_config = self._get_client_params()
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
@@ -253,6 +254,7 @@ class OpenAICompletion(BaseLLM):
             async_client_config["http_client"] = async_http_client
 
         self._async_client = AsyncOpenAI(**async_client_config)
+        return self
 
     @property
     def last_response_id(self) -> str | None:

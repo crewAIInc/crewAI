@@ -136,7 +136,8 @@ class AzureCompletion(BaseLLM):
         )
         return data
 
-    def model_post_init(self, __context: Any) -> None:
+    @model_validator(mode="after")
+    def _init_clients(self) -> AzureCompletion:
         if not self.api_key:
             raise ValueError("Azure API key is required.")
         client_kwargs: dict[str, Any] = {
@@ -148,6 +149,7 @@ class AzureCompletion(BaseLLM):
 
         self._client = ChatCompletionsClient(**client_kwargs)
         self._async_client = AsyncChatCompletionsClient(**client_kwargs)
+        return self
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Azure-specific fields."""

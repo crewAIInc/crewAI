@@ -185,7 +185,8 @@ class AnthropicCompletion(BaseLLM):
             data["tool_search"] = None
         return data
 
-    def model_post_init(self, __context: Any) -> None:
+    @model_validator(mode="after")
+    def _init_clients(self) -> AnthropicCompletion:
         self._client = Anthropic(**self._get_client_params())
 
         async_client_params = self._get_client_params()
@@ -195,6 +196,7 @@ class AnthropicCompletion(BaseLLM):
             async_client_params["http_client"] = async_http_client
 
         self._async_client = AsyncAnthropic(**async_client_params)
+        return self
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
