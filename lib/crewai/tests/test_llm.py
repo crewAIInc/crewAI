@@ -1024,3 +1024,109 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+def test_non_streaming_response_no_keyerror_when_messages_missing_from_params():
+    """Test that _handle_non_streaming_response does not raise KeyError when
+    params dict lacks a 'messages' key. Covers the fix for issue #5164."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    mock_message = MagicMock()
+    mock_message.content = "Test response"
+    mock_message.tool_calls = []
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+
+    with patch("litellm.completion", return_value=mock_response):
+        # Pass params WITHOUT "messages" key — before the fix this raised KeyError
+        result = llm._handle_non_streaming_response(params={"model": "gpt-4o-mini"})
+
+    assert result == "Test response"
+
+
+def test_non_streaming_response_uses_validated_messages_for_litellm_response_model():
+    """Test that _handle_non_streaming_response uses the locally validated
+    'messages' variable (not params['messages']) in the response_model + is_litellm
+    branch. Covers the fix for issue #5164."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    class DummyModel(BaseModel):
+        answer: str
+
+    messages = [{"role": "user", "content": "test"}]
+    params = {"model": "gpt-4o-mini", "messages": messages}
+
+    mock_result = MagicMock()
+    mock_result.model_dump_json.return_value = '{"answer": "ok"}'
+
+    with patch(
+        "crewai.utilities.internal_instructor.InternalInstructor"
+    ) as MockInstructor:
+        instance = MockInstructor.return_value
+        instance.to_pydantic.return_value = mock_result
+
+        result = llm._handle_non_streaming_response(
+            params=params, response_model=DummyModel
+        )
+
+    assert result == '{"answer": "ok"}'
+
+
+def test_non_streaming_response_with_response_model_no_keyerror():
+    """Test that _handle_non_streaming_response does not raise KeyError
+    in the response_model + is_litellm branch when messages key is missing.
+    Before the fix, this would raise KeyError at the _handle_emit_call_events call."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    class DummyModel(BaseModel):
+        answer: str
+
+    # No "messages" key in params — should raise ValueError, not KeyError
+    params = {"model": "gpt-4o-mini"}
+
+    with pytest.raises(ValueError, match="Messages are required"):
+        llm._handle_non_streaming_response(params=params, response_model=DummyModel)
+
+
+@pytest.mark.asyncio
+async def test_async_non_streaming_response_no_keyerror_when_messages_missing():
+    """Test that _ahandle_non_streaming_response does not raise KeyError when
+    params dict lacks a 'messages' key. Covers the async fix for issue #5164."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    mock_message = MagicMock()
+    mock_message.content = "Async response"
+    mock_message.tool_calls = []
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+
+    with patch("litellm.acompletion", return_value=mock_response):
+        result = await llm._ahandle_non_streaming_response(
+            params={"model": "gpt-4o-mini"}
+        )
+
+    assert result == "Async response"
+
+
+@pytest.mark.asyncio
+async def test_async_non_streaming_response_with_response_model_no_keyerror():
+    """Test that _ahandle_non_streaming_response does not raise KeyError
+    in the response_model + is_litellm branch when messages key is missing.
+    Covers the async fix for issue #5164."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    class DummyModel(BaseModel):
+        answer: str
+
+    params = {"model": "gpt-4o-mini"}
+
+    with pytest.raises(ValueError, match="Messages are required"):
+        await llm._ahandle_non_streaming_response(
+            params=params, response_model=DummyModel
+        )
