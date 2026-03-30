@@ -1830,7 +1830,7 @@ def test_openai_responses_api_cached_prompt_tokens_with_tools():
         }
     ]
 
-    llm = OpenAICompletion(model="gpt-4.1", api='response')
+    llm = OpenAICompletion(model="gpt-4.1", api='responses')
 
     # First call with tool
     llm.call(
