@@ -131,12 +131,12 @@ class BaseLLM(BaseModel, ABC):
     additional_params: dict[str, Any] = Field(default_factory=dict)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name in ("stop", "stop_sequences") and not isinstance(value, list):
+        if name in ("stop", "stop_sequences"):
             if value is None:
                 value = []
             elif isinstance(value, str):
                 value = [value]
-            else:
+            elif not isinstance(value, list):
                 value = list(value)
             name = "stop"
         try:
