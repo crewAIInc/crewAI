@@ -73,7 +73,8 @@ class GeminiCompletion(BaseLLM):
             )
 
         # Normalize stop_sequences from stop kwarg
-        seqs = data.pop("stop_sequences", None) or data.get("stop") or []
+        popped = data.pop("stop_sequences", None)
+        seqs = popped if popped is not None else (data.get("stop") or [])
         if isinstance(seqs, str):
             seqs = [seqs]
         data["stop"] = seqs

@@ -185,7 +185,8 @@ class BaseLLM(BaseModel, ABC):
             raise ValueError("Model name is required and cannot be empty")
 
         # Normalize stop: accept str, list, or None; also accept stop_sequences alias
-        stop = data.pop("stop_sequences", None) or data.get("stop")
+        stop_seqs = data.pop("stop_sequences", None)
+        stop = stop_seqs if stop_seqs is not None else data.get("stop")
         if stop is None:
             data["stop"] = []
         elif isinstance(stop, str):
