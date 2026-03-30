@@ -366,8 +366,10 @@ class OnboardingFlow(Flow[OnboardingState]):
 When deployed on **CrewAI Platform**, file-typed fields automatically render as file upload dropzones in the UI. Users can drag and drop files, which are then passed to your flow.
 
 **Kicking off with files via API:**
-- **Multipart**: `POST /kickoff/multipart` with files embedded in the request
-- **Separate upload**: `POST /files` first to upload files, then `POST /kickoff` with the returned URLs
+
+The `/kickoff` endpoint auto-detects the request format:
+- **JSON body** → normal kickoff
+- **multipart/form-data** → file upload + kickoff
 
 API users can also pass URL strings directly to file-typed fields—Pydantic coerces them automatically.
 
@@ -378,7 +380,8 @@ API users can also pass URL strings directly to file-typed fields—Pydantic coe
 Send files directly with the kickoff request:
 
 ```bash
-curl -X POST https://your-deployment.crewai.com/kickoff/multipart \
+# With files (multipart) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
   -H 'Authorization: Bearer YOUR_TOKEN' \
   -F 'inputs={"company_name": "Einstein"}' \
   -F 'cnh_image=@/path/to/document.jpg'
@@ -386,7 +389,17 @@ curl -X POST https://your-deployment.crewai.com/kickoff/multipart \
 
 Files are automatically stored and converted to `FileInput` objects. The agent receives the file with provider-specific optimization (inline base64, file upload API, or URL reference depending on the LLM provider).
 
-#### Option 2: Separate upload + kickoff
+#### Option 2: JSON kickoff (no files)
+
+```bash
+# Without files (JSON) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}}'
+```
+
+#### Option 3: Separate upload + kickoff
 
 Upload files first, then reference them:
 
