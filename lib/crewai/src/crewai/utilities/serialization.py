@@ -109,12 +109,12 @@ def to_serializable(
         return repr(obj)
 
     # Handle regular classes with __dict__ (non-Pydantic)
+    # Note: Don't propagate exclude to recursive calls, matching Pydantic fallback behavior
     if hasattr(obj, "__dict__"):
         try:
             return {
                 _to_serializable_key(k): to_serializable(
                     v,
-                    exclude=exclude,
                     max_depth=max_depth,
                     _current_depth=_current_depth + 1,
                     _ancestors=new_ancestors,

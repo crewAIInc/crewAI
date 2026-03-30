@@ -909,6 +909,23 @@ class TraceCollectionListener(BaseEventListener):
         if event_type == "llm_call_completed":
             return _serialize_for_trace(event)
 
+        # Error events need agent/task identification extracted before generic
+        # serialization strips them (agent/task are in TRACE_EXCLUDE_FIELDS)
+        if event_type == "agent_execution_error":
+            event_data = _serialize_for_trace(event)
+            if event.agent:
+                event_data["agent_role"] = getattr(event.agent, "role", None)
+                event_data["agent_id"] = str(getattr(event.agent, "id", ""))
+            return event_data
+        if event_type == "task_failed":
+            event_data = _serialize_for_trace(event)
+            if event.task:
+                event_data["task_name"] = getattr(event.task, "name", None) or getattr(
+                    event.task, "description", None
+                )
+                event_data["task_id"] = str(getattr(event.task, "id", ""))
+            return event_data
+
         # For all other events, use lightweight serialization
         return _serialize_for_trace(event)
 
