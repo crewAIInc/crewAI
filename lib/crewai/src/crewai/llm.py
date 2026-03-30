@@ -653,8 +653,8 @@ class LLM(BaseLLM):
         self.is_litellm = True
         if LITELLM_AVAILABLE:
             litellm.drop_params = True
-        self.set_callbacks(self.callbacks or [])
-        self.set_env_callbacks()
+            self.set_callbacks(self.callbacks or [])
+            self.set_env_callbacks()
         return self
 
     @staticmethod
