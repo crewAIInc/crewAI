@@ -3,21 +3,18 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import Any, TypedDict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
-
-
-if TYPE_CHECKING:
-    from crewai.llms.hooks.base import BaseInterceptor
 
 
 try:
@@ -76,109 +73,81 @@ class AzureCompletion(BaseLLM):
     offering native function calling, streaming support, and proper Azure authentication.
     """
 
-    def __init__(
-        self,
-        model: str,
-        api_key: str | None = None,
-        endpoint: str | None = None,
-        api_version: str | None = None,
-        timeout: float | None = None,
-        max_retries: int = 2,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        frequency_penalty: float | None = None,
-        presence_penalty: float | None = None,
-        max_tokens: int | None = None,
-        stop: list[str] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        response_format: type[BaseModel] | None = None,
-        **kwargs: Any,
-    ):
-        """Initialize Azure AI Inference chat completion client.
+    endpoint: str | None = None
+    api_version: str | None = None
+    timeout: float | None = None
+    max_retries: int = 2
+    top_p: float | None = None
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    max_tokens: int | None = None
+    stream: bool = False
+    interceptor: BaseInterceptor[Any, Any] | None = None
+    response_format: type[BaseModel] | None = None
+    is_openai_model: bool = False
+    is_azure_openai_endpoint: bool = False
 
-        Args:
-            model: Azure deployment name or model name
-            api_key: Azure API key (defaults to AZURE_API_KEY env var)
-            endpoint: Azure endpoint URL (defaults to AZURE_ENDPOINT env var)
-            api_version: Azure API version (defaults to AZURE_API_VERSION env var)
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retries
-            temperature: Sampling temperature (0-2)
-            top_p: Nucleus sampling parameter
-            frequency_penalty: Frequency penalty (-2 to 2)
-            presence_penalty: Presence penalty (-2 to 2)
-            max_tokens: Maximum tokens in response
-            stop: Stop sequences
-            stream: Enable streaming responses
-            interceptor: HTTP interceptor (not yet supported for Azure).
-            response_format: Pydantic model for structured output. Used as default when
-                           response_model is not passed to call()/acall() methods.
-                           Only works with OpenAI models deployed on Azure.
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    _client: Any = PrivateAttr(default=None)
+    _async_client: Any = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_azure_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        if data.get("interceptor") is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for Azure AI Inference provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        super().__init__(
-            model=model, temperature=temperature, stop=stop or [], **kwargs
-        )
-
-        self.api_key = api_key or os.getenv("AZURE_API_KEY")
-        self.endpoint = (
-            endpoint
+        # Resolve env vars
+        data["api_key"] = data.get("api_key") or os.getenv("AZURE_API_KEY")
+        data["endpoint"] = (
+            data.get("endpoint")
             or os.getenv("AZURE_ENDPOINT")
             or os.getenv("AZURE_OPENAI_ENDPOINT")
             or os.getenv("AZURE_API_BASE")
         )
-        self.api_version = api_version or os.getenv("AZURE_API_VERSION") or "2024-06-01"
-        self.timeout = timeout
-        self.max_retries = max_retries
+        data["api_version"] = (
+            data.get("api_version") or os.getenv("AZURE_API_VERSION") or "2024-06-01"
+        )
 
-        if not self.api_key:
+        if not data["api_key"]:
             raise ValueError(
                 "Azure API key is required. Set AZURE_API_KEY environment variable or pass api_key parameter."
             )
-        if not self.endpoint:
+        if not data["endpoint"]:
             raise ValueError(
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
             )
 
-        # Validate and potentially fix Azure OpenAI endpoint URL
-        self.endpoint = self._validate_and_fix_endpoint(self.endpoint, model)
+        model = data.get("model", "")
+        data["endpoint"] = AzureCompletion._validate_and_fix_endpoint(
+            data["endpoint"], model
+        )
+        data["is_openai_model"] = any(
+            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
+        )
+        data["is_azure_openai_endpoint"] = (
+            "openai.azure.com" in data["endpoint"]
+            and "/openai/deployments/" in data["endpoint"]
+        )
+        return data
 
-        # Build client kwargs
-        client_kwargs = {
+    def model_post_init(self, __context: Any) -> None:
+        if not self.api_key:
+            raise ValueError("Azure API key is required.")
+        client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
             "credential": AzureKeyCredential(self.api_key),
         }
-
-        # Add api_version if specified (primarily for Azure OpenAI endpoints)
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
 
-        self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
-
-        self.async_client = AsyncChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
-
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-        self.max_tokens = max_tokens
-        self.stream = stream
-        self.response_format = response_format
-
-        self.is_openai_model = any(
-            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
-        )
-
-        self.is_azure_openai_endpoint = (
-            "openai.azure.com" in self.endpoint
-            and "/openai/deployments/" in self.endpoint
-        )
+        self._client = ChatCompletionsClient(**client_kwargs)
+        self._async_client = AsyncChatCompletionsClient(**client_kwargs)
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Azure-specific fields."""
@@ -731,7 +700,7 @@ class AzureCompletion(BaseLLM):
         """Handle non-streaming chat completion."""
         try:
             # Cast params to Any to avoid type checking issues with TypedDict unpacking
-            response: ChatCompletions = self.client.complete(**params)  # type: ignore[assignment,arg-type]
+            response: ChatCompletions = self._client.complete(**params)
             return self._process_completion_response(
                 response=response,
                 params=params,
@@ -926,7 +895,7 @@ class AzureCompletion(BaseLLM):
         tool_calls: dict[int, dict[str, Any]] = {}
 
         usage_data = {"total_tokens": 0}
-        for update in self.client.complete(**params):  # type: ignore[arg-type]
+        for update in self._client.complete(**params):
             if isinstance(update, StreamingChatCompletionsUpdate):
                 if update.usage:
                     usage = update.usage
@@ -967,7 +936,7 @@ class AzureCompletion(BaseLLM):
         """Handle non-streaming chat completion asynchronously."""
         try:
             # Cast params to Any to avoid type checking issues with TypedDict unpacking
-            response: ChatCompletions = await self.async_client.complete(**params)  # type: ignore[assignment,arg-type]
+            response: ChatCompletions = await self._async_client.complete(**params)
             return self._process_completion_response(
                 response=response,
                 params=params,
@@ -993,8 +962,8 @@ class AzureCompletion(BaseLLM):
 
         usage_data = {"total_tokens": 0}
 
-        stream = await self.async_client.complete(**params)  # type: ignore[arg-type]
-        async for update in stream:  # type: ignore[union-attr]
+        stream = await self._async_client.complete(**params)
+        async for update in stream:
             if isinstance(update, StreamingChatCompletionsUpdate):
                 if hasattr(update, "usage") and update.usage:
                     usage = update.usage
@@ -1110,8 +1079,8 @@ class AzureCompletion(BaseLLM):
         This ensures proper cleanup of the underlying aiohttp session
         to avoid unclosed connector warnings.
         """
-        if hasattr(self.async_client, "close"):
-            await self.async_client.close()
+        if hasattr(self._async_client, "close"):
+            await self._async_client.close()
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""
