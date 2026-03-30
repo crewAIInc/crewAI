@@ -371,6 +371,44 @@ When deployed on **CrewAI Platform**, file-typed fields automatically render as 
 
 API users can also pass URL strings directly to file-typed fields—Pydantic coerces them automatically.
 
+### API Usage
+
+#### Option 1: Multipart kickoff (recommended)
+
+Send files directly with the kickoff request:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff/multipart \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"company_name": "Einstein"}' \
+  -F 'cnh_image=@/path/to/document.jpg'
+```
+
+Files are automatically stored and converted to `FileInput` objects. The agent receives the file with provider-specific optimization (inline base64, file upload API, or URL reference depending on the LLM provider).
+
+#### Option 2: Separate upload + kickoff
+
+Upload files first, then reference them:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/document.jpg' \
+  -F 'field_name=cnh_image'
+# Returns: {"url": "https://...", "field_name": "cnh_image"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}, "inputFiles": {"cnh_image": "https://..."}}'
+```
+
+#### On CrewAI Platform
+
+When using the Platform UI, file-typed fields automatically render as drag-and-drop upload zones. No API calls needed—just drop the file and click Run.
+
 ## Flow Persistence
 
 The @persist decorator enables automatic state persistence in CrewAI Flows, allowing you to maintain flow state across restarts or different workflow executions. This decorator can be applied at either the class level or method level, providing flexibility in how you manage state persistence.
