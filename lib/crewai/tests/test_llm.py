@@ -1144,3 +1144,145 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+# ---------------------------------------------------------------------------
+# Tests for base_url / api_base syncing (Issue #5139)
+# ---------------------------------------------------------------------------
+
+
+class TestBaseUrlApiBaseSync:
+    """Verify that base_url and api_base are kept in sync so litellm
+    always receives the custom endpoint regardless of which parameter
+    the caller supplies."""
+
+    def test_base_url_syncs_to_api_base(self):
+        """When only base_url is provided, api_base should be set to the same value."""
+        llm = LLM(
+            model="openai/some-custom-model",
+            base_url="https://api.scaleway.ai/v1",
+            is_litellm=True,
+        )
+        assert llm.base_url == "https://api.scaleway.ai/v1"
+        assert llm.api_base == "https://api.scaleway.ai/v1"
+
+    def test_api_base_syncs_to_base_url(self):
+        """When only api_base is provided, base_url should be set to the same value."""
+        llm = LLM(
+            model="openai/some-custom-model",
+            api_base="https://api.nebius.ai/v1",
+            is_litellm=True,
+        )
+        assert llm.api_base == "https://api.nebius.ai/v1"
+        assert llm.base_url == "https://api.nebius.ai/v1"
+
+    def test_both_provided_preserves_values(self):
+        """When both base_url and api_base are provided, both should keep their values."""
+        llm = LLM(
+            model="openai/some-custom-model",
+            base_url="https://base-url.example.com/v1",
+            api_base="https://api-base.example.com/v1",
+            is_litellm=True,
+        )
+        assert llm.base_url == "https://base-url.example.com/v1"
+        assert llm.api_base == "https://api-base.example.com/v1"
+
+    def test_neither_provided_stays_none(self):
+        """When neither base_url nor api_base is provided, both remain None."""
+        llm = LLM(model="gpt-4", is_litellm=True)
+        assert llm.base_url is None
+        assert llm.api_base is None
+
+    def test_prepare_completion_params_includes_api_base_from_base_url(self):
+        """_prepare_completion_params should include api_base when only base_url was set."""
+        llm = LLM(
+            model="openai/mistral-small",
+            base_url="https://api.scaleway.ai/v1",
+            api_key="scw-test-key",
+            is_litellm=True,
+        )
+        params = llm._prepare_completion_params("Hello")
+        assert params["api_base"] == "https://api.scaleway.ai/v1"
+        assert params["api_key"] == "scw-test-key"
+
+    def test_multi_provider_params_are_independent(self):
+        """Two LLM instances with different providers should have independent params."""
+        llm_scaleway = LLM(
+            model="openai/mistral-small",
+            base_url="https://api.scaleway.ai/v1",
+            api_key="scw-key",
+            is_litellm=True,
+        )
+        llm_nebius = LLM(
+            model="openai/qwen3",
+            base_url="https://api.nebius.ai/v1",
+            api_key="nebius-key",
+            is_litellm=True,
+        )
+
+        params_scw = llm_scaleway._prepare_completion_params("Hello")
+        params_neb = llm_nebius._prepare_completion_params("Hello")
+
+        assert params_scw["api_base"] == "https://api.scaleway.ai/v1"
+        assert params_scw["api_key"] == "scw-key"
+        assert params_neb["api_base"] == "https://api.nebius.ai/v1"
+        assert params_neb["api_key"] == "nebius-key"
+
+    def test_litellm_completion_receives_api_base_from_base_url(self):
+        """litellm.completion should receive api_base when LLM was created with base_url."""
+        llm = LLM(
+            model="openai/mistral-small",
+            base_url="https://api.scaleway.ai/v1",
+            api_key="scw-test-key",
+            is_litellm=True,
+        )
+
+        with patch("litellm.completion") as mocked_completion:
+            mock_message = MagicMock()
+            mock_message.content = "Test response"
+            mock_choice = MagicMock()
+            mock_choice.message = mock_message
+            mock_response = MagicMock()
+            mock_response.choices = [mock_choice]
+            mock_response.usage = {
+                "prompt_tokens": 5,
+                "completion_tokens": 5,
+                "total_tokens": 10,
+            }
+            mocked_completion.return_value = mock_response
+
+            llm.call("Hello")
+
+            _, kwargs = mocked_completion.call_args
+            assert kwargs["api_base"] == "https://api.scaleway.ai/v1"
+            assert kwargs["api_key"] == "scw-test-key"
+
+    def test_copy_preserves_synced_base_url(self):
+        """Shallow copy should preserve the synced base_url / api_base."""
+        import copy
+
+        llm = LLM(
+            model="openai/mistral-small",
+            base_url="https://api.scaleway.ai/v1",
+            api_key="scw-key",
+            is_litellm=True,
+        )
+        llm_copy = copy.copy(llm)
+        assert llm_copy.base_url == "https://api.scaleway.ai/v1"
+        assert llm_copy.api_base == "https://api.scaleway.ai/v1"
+        assert llm_copy.api_key == "scw-key"
+
+    def test_deepcopy_preserves_synced_base_url(self):
+        """Deep copy should preserve the synced base_url / api_base."""
+        import copy
+
+        llm = LLM(
+            model="openai/mistral-small",
+            base_url="https://api.scaleway.ai/v1",
+            api_key="scw-key",
+            is_litellm=True,
+        )
+        llm_copy = copy.deepcopy(llm)
+        assert llm_copy.base_url == "https://api.scaleway.ai/v1"
+        assert llm_copy.api_base == "https://api.scaleway.ai/v1"
+        assert llm_copy.api_key == "scw-key"
