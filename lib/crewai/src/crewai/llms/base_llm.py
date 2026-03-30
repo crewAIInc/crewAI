@@ -184,14 +184,16 @@ class BaseLLM(BaseModel, ABC):
         if not data.get("model"):
             raise ValueError("Model name is required and cannot be empty")
 
-        # Normalize stop: accept str, list, or None
-        stop = data.get("stop")
+        # Normalize stop: accept str, list, or None; also accept stop_sequences alias
+        stop = data.pop("stop_sequences", None) or data.get("stop")
         if stop is None:
             data["stop"] = []
         elif isinstance(stop, str):
             data["stop"] = [stop]
-        elif not isinstance(stop, list):
-            data["stop"] = []
+        elif isinstance(stop, list):
+            data["stop"] = stop
+        else:
+            data["stop"] = list(stop)
 
         # Default provider
         if not data.get("provider"):

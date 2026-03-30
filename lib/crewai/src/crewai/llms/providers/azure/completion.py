@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from typing import Any, TypedDict
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
@@ -130,10 +131,11 @@ class AzureCompletion(BaseLLM):
         data["is_openai_model"] = any(
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
         )
+        parsed = urlparse(data["endpoint"])
+        hostname = parsed.hostname or ""
         data["is_azure_openai_endpoint"] = (
-            "openai.azure.com" in data["endpoint"]
-            and "/openai/deployments/" in data["endpoint"]
-        )
+            hostname == "openai.azure.com" or hostname.endswith(".openai.azure.com")
+        ) and "/openai/deployments/" in data["endpoint"]
         return data
 
     @model_validator(mode="after")
@@ -186,7 +188,11 @@ class AzureCompletion(BaseLLM):
         Returns:
             Validated and potentially corrected endpoint URL
         """
-        if "openai.azure.com" in endpoint and "/openai/deployments/" not in endpoint:
+        ep_host = urlparse(endpoint).hostname or ""
+        is_azure_openai = ep_host == "openai.azure.com" or ep_host.endswith(
+            ".openai.azure.com"
+        )
+        if is_azure_openai and "/openai/deployments/" not in endpoint:
             endpoint = endpoint.rstrip("/")
 
             if not endpoint.endswith("/openai/deployments"):
