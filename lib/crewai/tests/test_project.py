@@ -1,5 +1,6 @@
 from typing import Any, ClassVar
-from unittest.mock import Mock, patch
+from typing import Any
+from unittest.mock import Mock, create_autospec, patch
 
 import pytest
 from crewai.agent import Agent
@@ -372,8 +373,11 @@ def test_internal_crew_with_mcp():
     mock_adapter = Mock()
     mock_adapter.tools = ToolCollection([simple_tool, another_simple_tool])
 
-    mock_llm = Mock()
-    mock_llm.__class__ = BaseLLM
+    class _StubLLM(BaseLLM):
+        def call(self, *a: Any, **kw: Any) -> str:
+            return ""
+
+    mock_llm = create_autospec(_StubLLM(model="stub"), instance=True)
 
     with (
         patch("crewai_tools.MCPServerAdapter", return_value=mock_adapter) as adapter_mock,
