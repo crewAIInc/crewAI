@@ -292,6 +292,7 @@ class MCPToolResolver:
                 command=mcp_config.command,
                 args=mcp_config.args,
                 env=mcp_config.env,
+                allowed_commands=mcp_config.allowed_commands,
             )
             server_name = f"{mcp_config.command}_{'_'.join(mcp_config.args)}"
         elif isinstance(mcp_config, MCPServerHTTP):

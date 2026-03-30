@@ -9,6 +9,22 @@ from typing_extensions import Self
 
 from crewai.mcp.transports.base import BaseTransport, TransportType
 
+# Default allowlist for common MCP server runtimes.
+# Covers the vast majority of MCP server launch commands.
+# Pass ``allowed_commands=None`` to disable validation entirely.
+DEFAULT_ALLOWED_COMMANDS: frozenset[str] = frozenset(
+    {
+        "python",
+        "python3",
+        "node",
+        "npx",
+        "uvx",
+        "uv",
+        "deno",
+        "docker",
+    }
+)
+
 
 class StdioTransport(BaseTransport):
     """Stdio transport for connecting to local MCP servers.
@@ -34,6 +50,7 @@ class StdioTransport(BaseTransport):
         command: str,
         args: list[str] | None = None,
         env: dict[str, str] | None = None,
+        allowed_commands: frozenset[str] | None = DEFAULT_ALLOWED_COMMANDS,
         **kwargs: Any,
     ) -> None:
         """Initialize stdio transport.
@@ -42,9 +59,24 @@ class StdioTransport(BaseTransport):
             command: Command to execute (e.g., "python", "node", "npx").
             args: Command arguments (e.g., ["server.py"] or ["-y", "@mcp/server"]).
             env: Environment variables to pass to the process.
+            allowed_commands: Optional frozenset of allowed command basenames.
+                Defaults to ``DEFAULT_ALLOWED_COMMANDS`` which includes common
+                runtimes (python, node, npx, uvx, uv, deno, docker).  Pass
+                ``None`` to disable the check entirely.
             **kwargs: Additional transport options.
         """
         super().__init__(**kwargs)
+
+        if allowed_commands is not None:
+            base_command = os.path.basename(command)
+            if base_command not in allowed_commands:
+                raise ValueError(
+                    f"Command '{command}' is not in the allowed commands list: "
+                    f"{sorted(allowed_commands)}. "
+                    f"To allow this command, add it to allowed_commands or pass "
+                    f"allowed_commands=None to disable this check."
+                )
+
         self.command = command
         self.args = args or []
         self.env = env or {}
