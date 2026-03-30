@@ -137,7 +137,8 @@ TRACE_EXCLUDE_FIELDS = {
     "tasks",
     "context",
     # Heavy fields not needed in individual trace events
-    "tools",
+    # NOTE: "tools" intentionally NOT here - LLMCallStartedEvent.tools is lightweight
+    # (list of tool schemas). Agent.tools is excluded in _build_crew_started_data.
     "llm",
     "function_calling_llm",
     "step_callback",
@@ -176,15 +177,6 @@ def _serialize_for_trace(
 
 class TraceCollectionListener(BaseEventListener):
     """Trace collection listener that orchestrates trace collection."""
-
-    complex_events: ClassVar[list[str]] = [
-        "task_started",
-        "task_completed",
-        "llm_call_started",
-        "llm_call_completed",
-        "agent_execution_started",
-        "agent_execution_completed",
-    ]
 
     _instance: Self | None = None
     _initialized: bool = False

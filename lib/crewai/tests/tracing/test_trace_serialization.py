@@ -5,7 +5,7 @@ objects, reducing event sizes from 50-100KB to a few KB per event.
 """
 
 import uuid
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -14,7 +14,6 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
     _serialize_for_trace,
 )
-from crewai.events.listeners.tracing.utils import safe_serialize_to_dict
 
 
 class TestTraceExcludeFields:
@@ -26,9 +25,13 @@ class TestTraceExcludeFields:
         assert back_refs.issubset(TRACE_EXCLUDE_FIELDS)
 
     def test_contains_heavy_fields(self):
-        """Verify heavy objects are excluded."""
+        """Verify heavy objects are excluded.
+
+        Note: 'tools' is NOT in TRACE_EXCLUDE_FIELDS because LLMCallStartedEvent.tools
+        is a lightweight list of tool schemas. Agent.tools exclusion is handled
+        explicitly in _build_crew_started_data.
+        """
         heavy_fields = {
-            "tools",
             "llm",
             "function_calling_llm",
             "step_callback",
@@ -40,6 +43,8 @@ class TestTraceExcludeFields:
             "knowledge_sources",
         }
         assert heavy_fields.issubset(TRACE_EXCLUDE_FIELDS)
+        # tools is NOT excluded globally - LLM events need it
+        assert "tools" not in TRACE_EXCLUDE_FIELDS
 
 
 class TestSerializeForTrace:
@@ -68,15 +73,20 @@ class TestSerializeForTrace:
 
         assert "agent" not in result or result.get("agent") is None
 
-    def test_excludes_tools_field(self):
-        """Verify tools field is excluded from serialization."""
-        event = MagicMock()
-        event.tools = [MagicMock(), MagicMock()]
-        event.tool_name = "test_tool"
+    def test_preserves_tools_field(self):
+        """Verify tools field is preserved for LLM events (lightweight schemas)."""
 
+        class EventWithTools:
+            def __init__(self):
+                self.tools = [{"name": "search", "description": "Search tool"}]
+                self.tool_name = "test_tool"
+
+        event = EventWithTools()
         result = _serialize_for_trace(event)
 
-        assert "tools" not in result or result.get("tools") is None
+        # tools should be preserved (lightweight for LLM events)
+        assert "tools" in result
+        assert result["tools"] == [{"name": "search", "description": "Search tool"}]
 
     def test_preserves_scalar_fields(self):
         """Verify scalar fields needed by AMP frontend are preserved."""
@@ -216,7 +226,11 @@ class TestBuildEventData:
         assert "crew" not in result
 
     def test_llm_call_started_excludes_heavy_fields(self, listener):
-        """Verify llm_call_started uses lightweight serialization."""
+        """Verify llm_call_started uses lightweight serialization.
+
+        LLMCallStartedEvent.tools is a lightweight list of tool schemas (dicts),
+        not heavy Agent.tools objects, so it should be preserved.
+        """
 
         class MockLLMEvent:
             def __init__(self):
@@ -226,7 +240,8 @@ class TestBuildEventData:
                 # Heavy fields that should be excluded
                 self.crew = MagicMock()
                 self.agent = MagicMock()
-                self.tools = [MagicMock()]
+                # LLM event tools are lightweight schemas (dicts), should be kept
+                self.tools = [{"name": "search", "description": "Search tool"}]
 
         mock_event = MockLLMEvent()
 
@@ -238,7 +253,8 @@ class TestBuildEventData:
         # Heavy fields should be excluded
         assert "crew" not in result or result.get("crew") is None
         assert "agent" not in result or result.get("agent") is None
-        assert "tools" not in result or result.get("tools") is None
+        # LLM tools (lightweight schemas) should be preserved
+        assert result.get("tools") == [{"name": "search", "description": "Search tool"}]
 
     def test_llm_call_completed_excludes_heavy_fields(self, listener):
         """Verify llm_call_completed uses lightweight serialization."""
@@ -456,7 +472,10 @@ class TestNonCrewStartedEvents:
         return TraceCollectionListener()
 
     def test_generic_event_no_crew(self, listener):
-        """Verify generic events exclude crew object."""
+        """Verify generic events exclude crew object.
+
+        Note: 'tools' is now preserved since LLMCallStartedEvent.tools is lightweight.
+        """
 
         class GenericEvent:
             def __init__(self):
@@ -466,7 +485,8 @@ class TestNonCrewStartedEvents:
                 self.crew = MagicMock()
                 self.agents = [MagicMock()]
                 self.tasks = [MagicMock()]
-                self.tools = [MagicMock()]
+                # tools is now preserved (for LLM events it's lightweight)
+                self.tools = [{"name": "search"}]
 
         mock_event = GenericEvent()
 
@@ -480,7 +500,8 @@ class TestNonCrewStartedEvents:
         assert "crew" not in result or result.get("crew") is None
         assert "agents" not in result or result.get("agents") is None
         assert "tasks" not in result or result.get("tasks") is None
-        assert "tools" not in result or result.get("tools") is None
+        # tools is now preserved (lightweight for LLM events)
+        assert result.get("tools") == [{"name": "search"}]
 
     def test_crew_kickoff_completed_no_full_crew(self, listener):
         """Verify crew_kickoff_completed doesn't repeat full crew structure."""
