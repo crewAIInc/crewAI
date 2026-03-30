@@ -702,7 +702,7 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop or None,
+            "stop": (self.stop or None) if self.supports_stop_words() else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -1774,9 +1774,11 @@ class LLM(BaseLLM):
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:
-                    unsupported_stop = "Unsupported parameter" in str(
-                        e
-                    ) and "'stop'" in str(e)
+                    error_str = str(e)
+                    unsupported_stop = "'stop'" in error_str and (
+                        "Unsupported parameter" in error_str
+                        or "does not support parameters" in error_str
+                    )
 
                     if unsupported_stop:
                         if (
@@ -1910,9 +1912,11 @@ class LLM(BaseLLM):
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:
-                    unsupported_stop = "Unsupported parameter" in str(
-                        e
-                    ) and "'stop'" in str(e)
+                    error_str = str(e)
+                    unsupported_stop = "'stop'" in error_str and (
+                        "Unsupported parameter" in error_str
+                        or "does not support parameters" in error_str
+                    )
 
                     if unsupported_stop:
                         if (
@@ -2212,6 +2216,10 @@ class LLM(BaseLLM):
         Note: This method is only used by the litellm fallback path.
         Native providers override this method with their own implementation.
         """
+        model_lower = self.model.lower() if self.model else ""
+        if "gpt-5" in model_lower:
+            return False
+
         if not LITELLM_AVAILABLE or get_supported_openai_params is None:
             # When litellm is not available, assume stop words are supported
             return True
