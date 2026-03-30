@@ -103,6 +103,28 @@ def to_serializable(
                 }
             except Exception:
                 return repr(obj)
+
+    # Callables (functions, methods, lambdas) should fall through to repr
+    if callable(obj):
+        return repr(obj)
+
+    # Handle regular classes with __dict__ (non-Pydantic)
+    if hasattr(obj, "__dict__"):
+        try:
+            return {
+                _to_serializable_key(k): to_serializable(
+                    v,
+                    exclude=exclude,
+                    max_depth=max_depth,
+                    _current_depth=_current_depth + 1,
+                    _ancestors=new_ancestors,
+                )
+                for k, v in obj.__dict__.items()
+                if k not in exclude and not k.startswith("_")
+            }
+        except Exception:
+            return repr(obj)
+
     return repr(obj)
 
 

@@ -126,6 +126,54 @@ from crewai.events.types.tool_usage_events import (
 from crewai.events.utils.console_formatter import ConsoleFormatter
 
 
+# Fields to exclude from trace serialization to reduce redundant data.
+# These back-references and heavy objects create massive bloat when serialized
+# repeatedly across events (crew->agents->tasks->agent creates circular refs).
+TRACE_EXCLUDE_FIELDS = {
+    # Back-references that create redundant/circular data
+    "crew",
+    "agent",
+    "agents",
+    "tasks",
+    "context",
+    # Heavy fields not needed in individual trace events
+    "tools",
+    "llm",
+    "function_calling_llm",
+    "step_callback",
+    "task_callback",
+    "crew_callback",
+    "callbacks",
+    "_memory",
+    "_cache",
+    "_rpm_controller",
+    "_request_within_rpm_limit",
+    "_token_process",
+    "knowledge_sources",
+}
+
+
+def _serialize_for_trace(
+    event: Any, extra_exclude: set[str] | None = None
+) -> dict[str, Any]:
+    """Serialize an event for tracing, excluding redundant back-references.
+
+    Keeps all scalar fields (agent_role, task_name, etc.) that the AMP frontend uses.
+    Replaces heavy nested objects with lightweight ID references to reduce trace bloat.
+
+    Args:
+        event: The event object to serialize.
+        extra_exclude: Additional fields to exclude beyond TRACE_EXCLUDE_FIELDS.
+
+    Returns:
+        A dictionary with the serialized event data.
+    """
+    exclude = TRACE_EXCLUDE_FIELDS.copy()
+    if extra_exclude:
+        exclude.update(extra_exclude)
+    return safe_serialize_to_dict(event, exclude=exclude)
+
+
 class TraceCollectionListener(BaseEventListener):
     """Trace collection listener that orchestrates trace collection."""
 
@@ -810,9 +858,17 @@ class TraceCollectionListener(BaseEventListener):
     def _build_event_data(
         self, event_type: str, event: Any, source: Any
     ) -> dict[str, Any]:
-        """Build event data"""
-        if event_type not in self.complex_events:
-            return safe_serialize_to_dict(event)
+        """Build event data with optimized serialization to reduce trace bloat.
+
+        For most events, excludes heavy nested objects (crew, agents, tasks, tools)
+        that would create massive redundant data. Only crew_kickoff_started gets
+        the full crew structure as a one-time dump.
+        """
+        # crew_kickoff_started is special: include full crew structure ONCE
+        if event_type == "crew_kickoff_started":
+            return self._build_crew_started_data(event)
+
+        # Complex events have custom handling that already extracts only needed fields
         if event_type == "task_started":
             task_name = event.task.name or event.task.description
             task_display_name = (
@@ -853,19 +909,84 @@ class TraceCollectionListener(BaseEventListener):
                 "agent_backstory": event.agent.backstory,
             }
         if event_type == "llm_call_started":
-            event_data = safe_serialize_to_dict(event)
+            event_data = _serialize_for_trace(event)
             event_data["task_name"] = event.task_name or getattr(
                 event, "task_description", None
             )
             return event_data
         if event_type == "llm_call_completed":
-            return safe_serialize_to_dict(event)
+            return _serialize_for_trace(event)
 
-        return {
-            "event_type": event_type,
-            "event": safe_serialize_to_dict(event),
-            "source": source,
-        }
+        # For all other events, use lightweight serialization
+        return _serialize_for_trace(event)
+
+    def _build_crew_started_data(self, event: Any) -> dict[str, Any]:
+        """Build comprehensive crew structure for crew_kickoff_started event.
+
+        This is the ONE place where we serialize the full crew structure.
+        Subsequent events use lightweight references to avoid redundancy.
+        """
+        event_data = _serialize_for_trace(event)
+
+        # Add full crew structure with optimized agent/task serialization
+        crew = getattr(event, "crew", None)
+        if crew is not None:
+            # Serialize agents with tools (first occurrence only)
+            agents_data = []
+            for agent in getattr(crew, "agents", []) or []:
+                agent_data = {
+                    "id": str(getattr(agent, "id", "")),
+                    "role": getattr(agent, "role", ""),
+                    "goal": getattr(agent, "goal", ""),
+                    "backstory": getattr(agent, "backstory", ""),
+                    "verbose": getattr(agent, "verbose", False),
+                    "allow_delegation": getattr(agent, "allow_delegation", False),
+                    "max_iter": getattr(agent, "max_iter", None),
+                    "max_rpm": getattr(agent, "max_rpm", None),
+                }
+                # Include tool names (not full tool objects)
+                tools = getattr(agent, "tools", None)
+                if tools:
+                    agent_data["tool_names"] = [
+                        getattr(t, "name", str(t)) for t in tools
+                    ]
+                agents_data.append(agent_data)
+
+            # Serialize tasks with lightweight agent references
+            tasks_data = []
+            for task in getattr(crew, "tasks", []) or []:
+                task_data = {
+                    "id": str(getattr(task, "id", "")),
+                    "name": getattr(task, "name", None),
+                    "description": getattr(task, "description", ""),
+                    "expected_output": getattr(task, "expected_output", ""),
+                    "async_execution": getattr(task, "async_execution", False),
+                    "human_input": getattr(task, "human_input", False),
+                }
+                # Replace full agent with lightweight reference
+                task_agent = getattr(task, "agent", None)
+                if task_agent:
+                    task_data["agent_ref"] = {
+                        "id": str(getattr(task_agent, "id", "")),
+                        "role": getattr(task_agent, "role", ""),
+                    }
+                # Replace context tasks with lightweight references
+                context_tasks = getattr(task, "context", None)
+                if context_tasks:
+                    task_data["context_task_ids"] = [
+                        str(getattr(ct, "id", "")) for ct in context_tasks
+                    ]
+                tasks_data.append(task_data)
+
+            event_data["crew_structure"] = {
+                "agents": agents_data,
+                "tasks": tasks_data,
+                "process": str(getattr(crew, "process", "")),
+                "verbose": getattr(crew, "verbose", False),
+                "memory": getattr(crew, "memory", False),
+            }
+
+        return event_data
 
     def _show_tracing_disabled_message(self) -> None:
         """Show a message when tracing is disabled."""
