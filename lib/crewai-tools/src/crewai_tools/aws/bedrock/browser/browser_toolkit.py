@@ -94,11 +94,9 @@ class BrowserBaseTool(BaseTool):
                 try:
                     import nest_asyncio  # type: ignore[import-untyped]
 
-                    loop = asyncio.get_event_loop()
+                    loop = asyncio.get_running_loop()
                     nest_asyncio.apply(loop)
-                    result: str = asyncio.get_event_loop().run_until_complete(
-                        self._arun(*args, **kwargs)
-                    )
+                    result: str = loop.run_until_complete(self._arun(*args, **kwargs))
                     return result
                 except Exception as e:
                     return f"Error in patched _run: {e!s}"
@@ -118,7 +116,7 @@ class BrowserBaseTool(BaseTool):
     def _is_in_asyncio_loop(self) -> bool:
         """Check if we're currently in an asyncio event loop."""
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             return loop.is_running()
         except RuntimeError:
             return False
@@ -544,14 +542,13 @@ class BrowserToolkit:
     def _nest_current_loop(self) -> None:
         """Apply nest_asyncio if we're in an asyncio loop."""
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                try:
-                    import nest_asyncio
+            loop = asyncio.get_running_loop()
+            try:
+                import nest_asyncio
 
-                    nest_asyncio.apply(loop)
-                except Exception as e:
-                    logger.warning(f"Failed to apply nest_asyncio: {e!s}")
+                nest_asyncio.apply(loop)
+            except Exception as e:
+                logger.warning(f"Failed to apply nest_asyncio: {e!s}")
         except RuntimeError:
             pass
 
