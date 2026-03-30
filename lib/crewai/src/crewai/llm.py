@@ -20,8 +20,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -63,8 +62,6 @@ except ImportError:
 
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
-    from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -342,6 +339,27 @@ class AccumulatedToolArgs(BaseModel):
 
 class LLM(BaseLLM):
     completion_cost: float | None = None
+    timeout: float | int | None = None
+    top_p: float | None = None
+    n: int | None = None
+    max_completion_tokens: int | None = None
+    max_tokens: int | float | None = None
+    presence_penalty: float | None = None
+    frequency_penalty: float | None = None
+    logit_bias: dict[int, float] | None = None
+    response_format: type[BaseModel] | None = None
+    seed: int | None = None
+    logprobs: int | None = None
+    top_logprobs: int | None = None
+    api_base: str | None = None
+    api_version: str | None = None
+    callbacks: list[Any] | None = None
+    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    stream: bool = False
+    interceptor: Any = None
+    thinking: Any = None
+    context_window_size: int = 0
+    is_anthropic: bool = False
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
         """Factory method that routes to native SDK or falls back to LiteLLM.
@@ -436,10 +454,7 @@ class LLM(BaseLLM):
             logger.error(error_msg)
             raise ImportError(error_msg) from None
 
-        instance = object.__new__(cls)
-        super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
-        instance.is_litellm = True
-        return instance
+        return object.__new__(cls)
 
     @classmethod
     def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
@@ -624,88 +639,20 @@ class LLM(BaseLLM):
 
         return None
 
-    def __init__(
-        self,
-        model: str,
-        timeout: float | int | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        n: int | None = None,
-        stop: str | list[str] | None = None,
-        max_completion_tokens: int | None = None,
-        max_tokens: int | float | None = None,
-        presence_penalty: float | None = None,
-        frequency_penalty: float | None = None,
-        logit_bias: dict[int, float] | None = None,
-        response_format: type[BaseModel] | None = None,
-        seed: int | None = None,
-        logprobs: int | None = None,
-        top_logprobs: int | None = None,
-        base_url: str | None = None,
-        api_base: str | None = None,
-        api_version: str | None = None,
-        api_key: str | None = None,
-        callbacks: list[Any] | None = None,
-        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
-        prefer_upload: bool = False,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize LLM instance.
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_llm_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        model = data.get("model", "")
+        data["is_anthropic"] = cls._is_anthropic_model(model)
+        return data
 
-        Note: This __init__ method is only called for fallback instances.
-        Native provider instances handle their own initialization in their respective classes.
-        """
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            api_key=api_key,
-            base_url=base_url,
-            timeout=timeout,
-            **kwargs,
-        )
-        self.model = model
-        self.timeout = timeout
-        self.temperature = temperature
-        self.top_p = top_p
-        self.n = n
-        self.max_completion_tokens = max_completion_tokens
-        self.max_tokens = max_tokens
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.logit_bias = logit_bias
-        self.response_format = response_format
-        self.seed = seed
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.base_url = base_url
-        self.api_base = api_base
-        self.api_version = api_version
-        self.api_key = api_key
-        self.callbacks = callbacks
-        self.context_window_size = 0
-        self.reasoning_effort = reasoning_effort
-        self.prefer_upload = prefer_upload
-        self.additional_params = {
-            k: v for k, v in kwargs.items() if k not in ("is_litellm", "provider")
-        }
-        self.is_anthropic = self._is_anthropic_model(model)
-        self.stream = stream
-        self.interceptor = interceptor
-
-        litellm.drop_params = True
-
-        # Normalize self.stop to always be a list[str]
-        if stop is None:
-            self.stop: list[str] = []
-        elif isinstance(stop, str):
-            self.stop = [stop]
-        else:
-            self.stop = stop
-
-        self.set_callbacks(callbacks or [])
+    def model_post_init(self, __context: Any) -> None:
+        self.is_litellm = True
+        if LITELLM_AVAILABLE:
+            litellm.drop_params = True
+        self.set_callbacks(self.callbacks or [])
         self.set_env_callbacks()
 
     @staticmethod
@@ -2434,7 +2381,7 @@ class LLM(BaseLLM):
             **filtered_params,
         )
 
-    def __deepcopy__(self, memo: dict[int, Any] | None) -> LLM:
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> LLM:
         """Create a deep copy of the LLM instance."""
         import copy
 
