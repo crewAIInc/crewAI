@@ -899,6 +899,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_args, func_name, call_id, original_tool
         )
         if parse_error is not None:
+            parse_error["is_error"] = True
             return parse_error
 
         if original_tool is None:
@@ -920,6 +921,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             max_usage_reached = True
 
         from_cache = False
+        is_error = True  # "Tool not found" is the default error state
         result: str = "Tool not found"
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache:
@@ -933,6 +935,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     else cached_result
                 )
                 from_cache = True
+                is_error = False
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
         started_at = datetime.now()
@@ -1011,6 +1014,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 result = (
                     str(raw_result) if not isinstance(raw_result, str) else raw_result
                 )
+                is_error = False
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 if self.task:
@@ -1072,6 +1076,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "is_error": is_error,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1082,6 +1087,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        is_error = cast(bool, execution_result.get("is_error", False))
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1098,8 +1104,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 color="green",
             )
 
+        # result_as_answer only applies to successful tool outputs.
+        # If the tool errored, let the agent reflect on the error instead.
         if (
-            original_tool
+            not is_error
+            and original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
         ):
