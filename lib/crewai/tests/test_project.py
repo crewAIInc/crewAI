@@ -1,5 +1,4 @@
 from typing import Any, ClassVar
-from typing import Any
 from unittest.mock import Mock, create_autospec, patch
 
 import pytest
