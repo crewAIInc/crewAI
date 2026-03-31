@@ -150,6 +150,7 @@
                     "group": "Core Concepts",
                     "pages": [
                       "en/concepts/agents",
+                      "en/concepts/agent-capabilities",
                       "en/concepts/tasks",
                       "en/concepts/crews",
                       "en/concepts/flows",
