@@ -4,6 +4,8 @@ from typing import Any
 import urllib.request
 import warnings
 
+from pydantic import PydanticUserError
+
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
 from crewai.crew import Crew
@@ -117,7 +119,7 @@ try:
             "ToolResult": _ToolResult,
         },
     )
-except Exception:
+except (ImportError, PydanticUserError):
     import logging as _logging
 
     _logging.getLogger(__name__).warning(
