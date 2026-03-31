@@ -1692,9 +1692,27 @@ def test_agent_with_knowledge_sources_works_with_copy():
         ) as mock_knowledge_storage:
             from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 
-            mock_knowledge_storage_instance = mock_knowledge_storage.return_value
-            mock_knowledge_storage_instance.__class__ = BaseKnowledgeStorage
-            agent.knowledge_storage = mock_knowledge_storage_instance
+            class _StubStorage(BaseKnowledgeStorage):
+                def search(self, query, limit=5, metadata_filter=None, score_threshold=0.6):
+                    return []
+
+                async def asearch(self, query, limit=5, metadata_filter=None, score_threshold=0.6):
+                    return []
+
+                def save(self, documents):
+                    pass
+
+                async def asave(self, documents):
+                    pass
+
+                def reset(self):
+                    pass
+
+                async def areset(self):
+                    pass
+
+            mock_knowledge_storage.return_value = _StubStorage()
+            agent.knowledge_storage = _StubStorage()
 
             agent_copy = agent.copy()
 
