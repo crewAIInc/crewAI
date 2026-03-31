@@ -2,9 +2,9 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, SerializationInfo, field_serializer
 
-from crewai.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent, _is_trace_context, _trace_agent_ref
 
 
 class ToolUsageEvent(BaseEvent):
@@ -25,6 +25,11 @@ class ToolUsageEvent(BaseEvent):
     from_agent: Any | None = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("agent")
+    @classmethod
+    def _serialize_agent(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_agent_ref(v) if _is_trace_context(info) else v
 
     def __init__(self, **data: Any) -> None:
         if data.get("from_task"):
@@ -98,6 +103,11 @@ class ToolExecutionErrorEvent(BaseEvent):
     tool_args: dict[str, Any]
     tool_class: Callable[..., Any]
     agent: Any | None = None
+
+    @field_serializer("agent")
+    @classmethod
+    def _serialize_agent(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_agent_ref(v) if _is_trace_context(info) else v
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
