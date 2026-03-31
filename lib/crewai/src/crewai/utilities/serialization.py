@@ -116,8 +116,6 @@ def to_serializable(
                 }
             except Exception:
                 return repr(obj)
-    if callable(obj):
-        return repr(obj)
     return repr(obj)
 
 
