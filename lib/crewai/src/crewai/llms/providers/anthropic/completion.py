@@ -811,6 +811,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            usage=usage,
                         )
                         return structured_data
             else:
@@ -826,6 +827,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            usage=usage,
                         )
                         return structured_data
 
@@ -848,6 +850,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return list(tool_uses)
 
@@ -879,6 +882,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1028,6 +1032,7 @@ class AnthropicCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1042,6 +1047,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return structured_data
 
@@ -1071,6 +1077,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1241,6 +1248,7 @@ class AnthropicCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
+                usage=follow_up_usage,
             )
 
             # Log combined token usage
@@ -1332,6 +1340,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            usage=usage,
                         )
                         return structured_data
             else:
@@ -1347,6 +1356,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
+                            usage=usage,
                         )
                         return structured_data
 
@@ -1367,6 +1377,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return list(tool_uses)
 
@@ -1390,6 +1401,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1527,6 +1539,7 @@ class AnthropicCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1541,6 +1554,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return structured_data
 
@@ -1569,6 +1583,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage,
         )
 
         return full_response
@@ -1627,6 +1642,7 @@ class AnthropicCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
+                usage=follow_up_usage,
             )
 
             total_usage = {

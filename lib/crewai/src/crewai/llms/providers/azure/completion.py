@@ -569,6 +569,7 @@ class AzureCompletion(BaseLLM):
         params: AzureCompletionParams,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
@@ -594,6 +595,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
 
             return structured_data
@@ -643,6 +645,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
             return list(message.tool_calls)
 
@@ -680,6 +683,7 @@ class AzureCompletion(BaseLLM):
                 params=params,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage,
             )
 
         content = self._apply_stop_words(content)
@@ -691,6 +695,7 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -794,7 +799,7 @@ class AzureCompletion(BaseLLM):
         self,
         full_response: str,
         tool_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, Any] | None,
         params: AzureCompletionParams,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -806,7 +811,7 @@ class AzureCompletion(BaseLLM):
         Args:
             full_response: The complete streamed response content
             tool_calls: Dictionary of tool calls accumulated during streaming
-            usage_data: Token usage data from the stream
+            usage_data: Token usage data from the stream, or None if unavailable
             params: Completion parameters containing messages
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
@@ -816,7 +821,8 @@ class AzureCompletion(BaseLLM):
         Returns:
             Final response content after processing, or structured output
         """
-        self._track_token_usage_internal(usage_data)
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         # Handle structured output validation
         if response_model and self.is_openai_model:
@@ -826,6 +832,7 @@ class AzureCompletion(BaseLLM):
                 params=params,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage_data,
             )
 
         # If there are tool_calls but no available_functions, return them
@@ -848,6 +855,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_data,
             )
             return formatted_tool_calls
 
@@ -884,6 +892,7 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage_data,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -902,7 +911,7 @@ class AzureCompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, Any] | None = None
         for update in self._client.complete(**params):
             if isinstance(update, StreamingChatCompletionsUpdate):
                 if update.usage:
@@ -968,7 +977,7 @@ class AzureCompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, Any] | None = None
 
         stream = await self._async_client.complete(**params)
         async for update in stream:

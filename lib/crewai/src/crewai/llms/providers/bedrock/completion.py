@@ -664,8 +664,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             # Track token usage according to AWS response format
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -705,6 +706,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -727,6 +729,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -806,6 +809,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return self._invoke_after_llm_call_hooks(
@@ -936,6 +940,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
             response = self._client.converse_stream(
@@ -1045,6 +1050,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1112,6 +1118,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                             if "trace" in metadata:
@@ -1141,6 +1148,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return full_response
@@ -1252,8 +1260,9 @@ class BedrockCompletion(BaseLLM):
                 **body,
             )
 
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -1292,6 +1301,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -1314,6 +1324,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -1388,6 +1399,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return text_content
@@ -1508,6 +1520,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
             async_client = await self._ensure_async_client()
@@ -1619,6 +1632,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1691,6 +1705,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                         if "trace" in metadata:
@@ -1720,6 +1735,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return self._invoke_after_llm_call_hooks(
