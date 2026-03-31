@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import json
 import os
 import time
+from typing import Any
 
 from crewai.tools import BaseTool
 from dotenv import load_dotenv
@@ -42,17 +43,17 @@ class BedrockInvokeAgentTool(BaseTool):
         enable_trace: bool = False,
         end_session: bool = False,
         description: str | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the BedrockInvokeAgentTool with agent configuration.
 
         Args:
-            agent_id (str): The unique identifier of the Bedrock agent
-            agent_alias_id (str): The unique identifier of the agent alias
-            session_id (str): The unique identifier of the session
-            enable_trace (bool): Whether to enable trace for the agent invocation
-            end_session (bool): Whether to end the session with the agent
-            description (Optional[str]): Custom description for the tool
+            agent_id: The unique identifier of the Bedrock agent.
+            agent_alias_id: The unique identifier of the agent alias.
+            session_id: The unique identifier of the session.
+            enable_trace: Whether to enable trace for the agent invocation.
+            end_session: Whether to end the session with the agent.
+            description: Custom description for the tool.
         """
         super().__init__(**kwargs)
 
@@ -72,7 +73,7 @@ class BedrockInvokeAgentTool(BaseTool):
         # Validate parameters
         self._validate_parameters()
 
-    def _validate_parameters(self):
+    def _validate_parameters(self) -> None:
         """Validate the parameters according to AWS API requirements."""
         try:
             # Validate agent_id

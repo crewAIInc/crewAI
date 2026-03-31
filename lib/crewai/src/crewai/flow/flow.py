@@ -17,6 +17,7 @@ from collections.abc import (
     ValuesView,
 )
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 import copy
 import enum
 import inspect
@@ -80,6 +81,7 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
     StartMethod,
 )
+from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import (
     FlowExecutionData,
@@ -98,6 +100,8 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 
 
 if TYPE_CHECKING:
@@ -109,6 +113,7 @@ if TYPE_CHECKING:
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.utilities.env import get_env_context
 from crewai.utilities.streaming import (
     TaskInfo,
     create_async_chunk_generator,
@@ -497,7 +502,9 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._list)
 
-    def index(self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None) -> int:  # type: ignore[override]
+    def index(
+        self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None
+    ) -> int:
         if stop is None:
             return self._list.index(value, start)
         return self._list.index(value, start, stop)
@@ -516,13 +523,13 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def copy(self) -> list[T]:
         return self._list.copy()
 
-    def __add__(self, other: list[T]) -> list[T]:
+    def __add__(self, other: list[T]) -> list[T]:  # type: ignore[override]
         return self._list + other
 
     def __radd__(self, other: list[T]) -> list[T]:
         return other + self._list
 
-    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:
+    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:  # type: ignore[override]
         with self._lock:
             self._list += list(other)
         return self
@@ -626,13 +633,13 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     def copy(self) -> dict[str, T]:
         return self._dict.copy()
 
-    def __or__(self, other: dict[str, T]) -> dict[str, T]:
+    def __or__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
         return self._dict | other
 
-    def __ror__(self, other: dict[str, T]) -> dict[str, T]:
+    def __ror__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
         return other | self._dict
 
-    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:
+    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:  # type: ignore[override]
         with self._lock:
             self._dict |= other
         return self
@@ -771,11 +778,19 @@ class FlowMeta(type):
                         and attr_value.__is_router__
                     ):
                         routers.add(attr_name)
-                        possible_returns = get_possible_return_constants(attr_value)
-                        if possible_returns:
-                            router_paths[attr_name] = possible_returns
+                        # First check for explicit __router_paths__ (set by @human_feedback(emit=[...]))
+                        if (
+                            hasattr(attr_value, "__router_paths__")
+                            and attr_value.__router_paths__
+                        ):
+                            router_paths[attr_name] = attr_value.__router_paths__
                         else:
-                            router_paths[attr_name] = []
+                            # Fall back to source code analysis for @router methods
+                            possible_returns = get_possible_return_constants(attr_value)
+                            if possible_returns:
+                                router_paths[attr_name] = possible_returns
+                            else:
+                                router_paths[attr_name] = []
 
                 # Handle start methods that are also routers (e.g., @human_feedback with emit)
                 if (
@@ -818,10 +833,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
-    memory: Any = (
-        None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
-    )
-    input_provider: Any = None  # InputProvider | None; per-flow override for self.ask()
+    memory: Memory | MemoryScope | MemorySlice | None = None
+    input_provider: InputProvider | None = None
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -870,6 +883,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history: list[HumanFeedbackResult] = []
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
+        # Per-method stash for real @human_feedback output (keyed by method name)
+        # Used to decouple routing outcome from method return value when emit is set
+        self._human_feedback_method_outputs: dict[str, Any] = {}
         self.suppress_flow_events: bool = suppress_flow_events
 
         # User input history (for self.ask())
@@ -900,9 +916,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
         # to avoid creating a wasteful standalone Memory instance.
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
-            from crewai.memory.unified_memory import Memory
+            from crewai.memory.utils import sanitize_scope_name
 
-            self.memory = Memory()
+            flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
+            self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -947,10 +964,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Raises:
             ValueError: If no memory is configured for this flow.
+            TypeError: If batch remember is attempted on a MemoryScope or MemorySlice.
         """
         if self.memory is None:
             raise ValueError("No memory configured for this flow")
         if isinstance(content, list):
+            if not isinstance(self.memory, Memory):
+                raise TypeError(
+                    "Batch remember requires a Memory instance, "
+                    f"got {type(self.memory).__name__}"
+                )
             return self.memory.remember_many(content, **kwargs)
         return self.memory.remember(content, **kwargs)
 
@@ -1203,9 +1226,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Mark that we're resuming execution
         instance._is_execution_resuming = True
 
-        # Mark the method as completed (it ran before pausing)
-        instance._completed_methods.add(FlowMethodName(pending_context.method_name))
-
         return instance
 
     @property
@@ -1306,7 +1326,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
-        llm = context.llm
+
+        # Try to get the live LLM from the re-imported decorator first.
+        # This preserves the fully-configured object (credentials, safety_settings, etc.)
+        # for same-process resume. For cross-process resume, fall back to the
+        # serialized context.llm which is now a dict with full config (or a legacy string).
+        from crewai.flow.human_feedback import _deserialize_llm_from_context
+
+        llm = None
+        method = self._methods.get(FlowMethodName(context.method_name))
+        if method is not None:
+            live_llm = getattr(method, "_hf_llm", None)
+            if live_llm is not None:
+                from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+
+                if isinstance(live_llm, BaseLLMClass):
+                    llm = live_llm
+
+        if llm is None:
+            llm = _deserialize_llm_from_context(context.llm)
 
         # Determine outcome
         collapsed_outcome: str | None = None
@@ -1342,7 +1380,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history.append(result)
         self.last_human_feedback = result
 
-        # Clear pending context after processing
+        self._completed_methods.add(FlowMethodName(context.method_name))
+
         self._pending_feedback_context = None
 
         # Clear pending feedback from persistence
@@ -1365,7 +1404,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
-        final_result: Any = result
+        if emit and collapsed_outcome is None:
+            collapsed_outcome = default_outcome or emit[0]
+            result.outcome = collapsed_outcome
+
         try:
             if emit and collapsed_outcome:
                 self._method_outputs.append(collapsed_outcome)
@@ -1383,7 +1425,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if isinstance(e, HumanFeedbackPending):
-                # Auto-save pending feedback (create default persistence if needed)
+                self._pending_feedback_context = e.context
+
                 if self._persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
@@ -1416,6 +1459,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Return the pending exception instead of raising
                 return e
             raise
+
+        final_result = self._method_outputs[-1] if self._method_outputs else result
 
         # Emit flow finished
         crewai_event_bus.emit(
@@ -1767,6 +1812,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        get_env_context()
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -1811,8 +1857,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         try:
             asyncio.get_running_loop()
+            ctx = contextvars.copy_context()
             with ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(asyncio.run, _run_flow()).result()
+                return pool.submit(ctx.run, asyncio.run, _run_flow()).result()
         except RuntimeError:
             return asyncio.run(_run_flow())
 
@@ -2236,8 +2283,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 else:
                     # Run sync methods in thread pool for isolation
                     # This allows Agent.kickoff() to work synchronously inside Flow methods
-                    import contextvars
-
                     ctx = contextvars.copy_context()
                     result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
             finally:
@@ -2248,6 +2293,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 result = await result
 
             self._method_outputs.append(result)
+
+            # For @human_feedback methods with emit, the result is the collapsed outcome
+            # (e.g., "approved") used for routing. But we want the actual method output
+            # to be the stored result (for final flow output). Replace the last entry
+            # if a stashed output exists. Dict-based stash is concurrency-safe and
+            # handles None return values (presence in dict = stashed, not value).
+            if method_name in self._human_feedback_method_outputs:
+                self._method_outputs[-1] = self._human_feedback_method_outputs.pop(
+                    method_name
+                )
+
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
             )
@@ -2276,7 +2332,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if isinstance(e, HumanFeedbackPending):
                 e.context.method_name = method_name
 
-                # Auto-save pending feedback (create default persistence if needed)
                 if self._persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
@@ -2714,12 +2769,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if not isinstance(e, HumanFeedbackPending):
-                logger.error(f"Error executing listener {listener_name}: {e}")
+                if not getattr(e, "_flow_listener_logged", False):
+                    logger.error(f"Error executing listener {listener_name}: {e}")
+                    e._flow_listener_logged = True  # type: ignore[attr-defined]
             raise
 
     # ── User Input (self.ask) ────────────────────────────────────────
 
-    def _resolve_input_provider(self) -> Any:
+    def _resolve_input_provider(self) -> InputProvider:
         """Resolve the input provider using the priority chain.
 
         Resolution order:
@@ -2856,8 +2913,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Manual executor management to avoid shutdown(wait=True)
                 # deadlock when the provider call outlives the timeout.
                 executor = ThreadPoolExecutor(max_workers=1)
+                ctx = contextvars.copy_context()
                 future = executor.submit(
-                    provider.request_input, message, self, metadata
+                    ctx.run, provider.request_input, message, self, metadata
                 )
                 try:
                     raw = future.result(timeout=timeout)
@@ -3081,25 +3139,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
             )
-            response = llm_instance.call(messages=prompt)
-            response_clean = str(response).strip()
+            try:
+                response = llm_instance.call(
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                response_clean = str(response).strip()
 
-            # Exact match (case-insensitive)
-            for outcome in outcomes:
-                if outcome.lower() == response_clean.lower():
-                    return outcome
+                # Exact match (case-insensitive)
+                for outcome in outcomes:
+                    if outcome.lower() == response_clean.lower():
+                        return outcome
 
-            # Partial match
-            for outcome in outcomes:
-                if outcome.lower() in response_clean.lower():
-                    return outcome
+                # Partial match (longest wins, first on length ties)
+                response_lower = response_clean.lower()
+                best_outcome: str | None = None
+                best_len = -1
+                for outcome in outcomes:
+                    if outcome.lower() in response_lower and len(outcome) > best_len:
+                        best_outcome = outcome
+                        best_len = len(outcome)
+                if best_outcome is not None:
+                    return best_outcome
 
-            # Fallback to first outcome
-            logger.warning(
-                f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
-                f"Falling back to first outcome: {outcomes[0]}"
-            )
-            return outcomes[0]
+                # Fallback to first outcome
+                logger.warning(
+                    f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
+
+            except Exception as fallback_err:
+                logger.warning(
+                    f"Simple prompting also failed: {fallback_err}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
 
     def _log_flow_event(
         self,

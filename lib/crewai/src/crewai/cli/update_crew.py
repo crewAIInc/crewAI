@@ -1,5 +1,6 @@
 import os
 import shutil
+from typing import Any
 
 import tomli_w
 
@@ -11,7 +12,7 @@ def update_crew() -> None:
     migrate_pyproject("pyproject.toml", "pyproject.toml")
 
 
-def migrate_pyproject(input_file, output_file):
+def migrate_pyproject(input_file: str, output_file: str) -> None:
     """
     Migrate the pyproject.toml to the new format.
 
@@ -23,8 +24,7 @@ def migrate_pyproject(input_file, output_file):
     # Read the input pyproject.toml
     pyproject_data = read_toml()
 
-    # Initialize the new project structure
-    new_pyproject = {
+    new_pyproject: dict[str, Any] = {
         "project": {},
         "build-system": {"requires": ["hatchling"], "build-backend": "hatchling.build"},
     }

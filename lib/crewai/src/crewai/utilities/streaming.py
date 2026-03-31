@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
+import contextvars
 import queue
 import threading
 from typing import Any, NamedTuple
@@ -59,7 +60,9 @@ def _extract_tool_call_info(
             StreamChunkType.TOOL_CALL,
             ToolCallChunk(
                 tool_id=event.tool_call.id,
-                tool_name=sanitize_tool_name(event.tool_call.function.name),
+                tool_name=sanitize_tool_name(event.tool_call.function.name)
+                if event.tool_call.function.name
+                else None,
                 arguments=event.tool_call.function.arguments,
                 index=event.tool_call.index,
             ),
@@ -240,7 +243,8 @@ def create_chunk_generator(
     Yields:
         StreamChunk objects as they arrive.
     """
-    thread = threading.Thread(target=run_func, daemon=True)
+    ctx = contextvars.copy_context()
+    thread = threading.Thread(target=ctx.run, args=(run_func,), daemon=True)
     thread.start()
 
     try:

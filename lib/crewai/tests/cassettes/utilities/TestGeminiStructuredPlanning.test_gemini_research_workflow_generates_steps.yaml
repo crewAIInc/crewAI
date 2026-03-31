@@ -1,0 +1,613 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Create a focused execution plan for
+      the following task:\n\n## Task\nResearch the current state of the AI agent market:\n1.
+      Search for recent information about AI agents and their market trends\n2. Read
+      detailed content from a relevant industry source\n3. Generate a brief report
+      summarizing the key findings\n\nUse the available tools for each step.\n\n##
+      Expected Output\nComplete the task successfully\n\n## Available Tools\nweb_search,
+      read_website, generate_report\n\n## Instructions\nCreate ONLY the essential
+      steps needed to complete this task. Use the MINIMUM number of steps required
+      - do NOT pad your plan with unnecessary steps. Most tasks need only 2-5 steps.\n\nFor
+      each step:\n- State the specific action to take\n- Specify which tool to use
+      (if any)\n- Note dependencies on previous steps if this step requires their
+      output\n- If a step involves multiple items (e.g., research 3 competitors),
+      note this explicitly\n\nDo NOT include:\n- Setup or preparation steps that are
+      obvious\n- Verification steps unless critical\n- Documentation or cleanup steps
+      unless explicitly required\n- Generic steps like \"review results\" or \"finalize
+      output\"\n\nAfter your plan, state:\n- \"READY: I am ready to execute the task.\"
+      if the plan is complete\n- \"NOT READY: I need to refine my plan because [reason].\"
+      if you need more thinking"}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are a strategic planning assistant. Create minimal, effective
+      execution plans. Prefer fewer steps over more."}], "role": "user"}, "tools":
+      [{"functionDeclarations": [{"description": "Create or refine a reasoning plan
+      for a task with structured steps", "name": "create_reasoning_plan", "parameters_json_schema":
+      {"type": "object", "properties": {"plan": {"type": "string", "description":
+      "A brief summary of the overall plan."}, "steps": {"type": "array", "description":
+      "List of discrete steps to execute the plan", "items": {"type": "object", "properties":
+      {"step_number": {"type": "integer", "description": "Step number (1-based)"},
+      "description": {"type": "string", "description": "What to do in this step"},
+      "tool_to_use": {"type": ["string", "null"], "description": "Tool to use for
+      this step, or null if no tool needed"}, "depends_on": {"type": "array", "items":
+      {"type": "integer"}, "description": "Step numbers this step depends on (empty
+      array if none)"}}, "required": ["step_number", "description", "tool_to_use",
+      "depends_on"], "additionalProperties": false}}, "ready": {"type": "boolean",
+      "description": "Whether the agent is ready to execute the task."}}, "required":
+      ["plan", "steps", "ready"], "additionalProperties": false}}]}], "generationConfig":
+      {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2747'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"create_reasoning_plan\",\n
+        \             \"args\": {\n                \"steps\": [\n                  {\n
+        \                   \"step_number\": 1,\n                    \"tool_to_use\":
+        \"web_search\",\n                    \"depends_on\": [],\n                    \"description\":
+        \"Search for recent information on AI agent market trends.\"\n                  },\n
+        \                 {\n                    \"description\": \"Read detailed
+        content from a relevant industry source found in the search results.\",\n
+        \                   \"depends_on\": [\n                      1\n                    ],\n
+        \                   \"step_number\": 2,\n                    \"tool_to_use\":
+        \"read_website\"\n                  },\n                  {\n                    \"depends_on\":
+        [\n                      2\n                    ],\n                    \"step_number\":
+        3,\n                    \"tool_to_use\": \"generate_report\",\n                    \"description\":
+        \"Generate a brief report summarizing the key findings from the researched
+        content.\"\n                  }\n                ],\n                \"plan\":
+        \"Research the current state of the AI agent market and generate a summary
+        report.\",\n                \"ready\": true\n              }\n            },\n
+        \           \"thoughtSignature\": \"CsIIAXLI2nztq0xBScBM9fsnIBhVvD6CWKYYyj3khtIYTNl4oRbOYnH8LQBzET8fRrxiWqnxib7Nn/UVK29pvsHX7TacFxm0ieHb5gmb2lgqo4GpG0P2+HI4xo4vnibPl3OM+bl4M39/JOdBNBmYGUJETnzV++m8INVLIlOuRPGTXRDUOKLNfkyktsJRdNuO68OMu5WXDqrlbuppG1dsK+Y8cyvzDRoMTsYU1arFOZuyLisuhDQ7nTbdXQ8AO0Oc43MdYrSFmfeDBbsnrxDKBMPYtFVadggz4RwKIFvg3Fb9ORho2GkBUum8PNWHZCBXuAoU9FaVdDFVReduuTfZuBwy/Y6MS+8mnLqcQ1wADlg7DnzaOXmALxgfApTEL6YUvwVjVYI1dpCR5ACkFgNq6ecYYumrlZHuHE59p+XOHMhrzu9c99A0mtRvpkz1yu75dMACliSf/2fu4gCPRRLsgez7llp92g7+GzVkbwkRVlMcYQ+0l28sBsfBQd01lQR0vNNbK3JHf/chtCtrRIcgqqnUbTTqm5n8iPHFBWMdEa0L4I1WfPbiUSC9OGwwaoP+Ro6h/gPH9o96gjZQpCft1myrKtgl7dpOaSharMuDfulk2Wd5wJoZ9XR/fxVYQos8sNEIZq8O1cjOW9L74ryKMtw6hF8A4kxGLhOSgXwszNqHoLCLoX6Cz5vb2hZVkCWxq8yn5k3IrTcw/16Jdkx6oNWjHZJmJMz8vl85sUH1ZwZocWHWcUUMo33ZlsBnqPZxwnAj5CW+vQS/xCC7Kq1FciqosYyHgN43bm8JqnHL4qgBAEtDPVrFfaWBpzWWVfXQkX/EVApU/Jr3t9D3gz10CFPsV7d0lx0P7jur8u8Q9n8r2HEi320kNf1EX4YnDioX+nWmHPN203OCOHpDEcEQ89gECMk5M9Xu6EZ94rXmrZJtP5kc0k37fvMexlxIZPuUmV7RpoCTrMVqMyP93eIq9FY/9WsqHVlydumTfEMPI1WY5ObNeHJFhyu2Y6dGB3ONQL1bQ0oboNZujX/AhnauV0A8OS2wsA3yLVk0GFZpTISU+WQ2/Gm7t8CUIgKT3BV4JkYuyNBTONQPLitpfO+TEMcuNZlodinLvkBtBA8B0W55kOAK7y21I9znnNKONo87jg9kfoZMvYlb2DrO9YovQDDhdCZjxXr5VZqbhMH4tb8t5kP/1auCv1GfzV6RVSgyNVYnruqJKEtqgNbLid1FB9EH3Qu0A92HLqdGsuC3qRm2qfyMEmz7iYJ5n/WA5BertGZ/O0SGLEBftgEjQOJhj7flGTEio3yyCHyvw/yGP6S8F3+mPvVLO6/eWMCGm7ig/mG8pjnysRTQTjDv966XhU9SYpinoxTd5mEuWdIHKMZxtBK7qeKY369njKJOP2K220Rk9/Ii+KyzNvbzyobK6oMNcwXgHjO+ssbH+blVUbLai3UblQ==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        529,\n    \"candidatesTokenCount\": 169,\n    \"totalTokenCount\": 955,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 529\n      }\n    ],\n    \"thoughtsTokenCount\":
+        257\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"h0WCacqWA6WM_PUPl-niyQ0\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 03 Feb 2026 18:59:19 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2345
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Research the current
+      state of the AI agent market:\n1. Search for recent information about AI agents
+      and their market trends\n2. Read detailed content from a relevant industry source\n3.
+      Generate a brief report summarizing the key findings\n\nUse the available tools
+      for each step."}], "role": "user"}], "systemInstruction": {"parts": [{"text":
+      "You are Research Analyst. An experienced analyst skilled at gathering information
+      and synthesizing findings into actionable insights.\nYour personal goal is:
+      Conduct thorough research and produce insightful reports"}], "role": "user"},
+      "tools": [{"functionDeclarations": [{"description": "Search the web for information
+      on a given topic.\n\nArgs:\n    query: The search query to look up.\n\nReturns:\n    Search
+      results as a string.", "name": "web_search", "parameters_json_schema": {"properties":
+      {"query": {"title": "Query", "type": "string"}}, "required": ["query"], "type":
+      "object", "additionalProperties": false}}, {"description": "Read and extract
+      content from a website URL.\n\nArgs:\n    url: The URL of the website to read.\n\nReturns:\n    The
+      extracted content from the website.", "name": "read_website", "parameters_json_schema":
+      {"properties": {"url": {"title": "Url", "type": "string"}}, "required": ["url"],
+      "type": "object", "additionalProperties": false}}, {"description": "Generate
+      a structured report based on research findings.\n\nArgs:\n    title: The title
+      of the report.\n    findings: The research findings to include.\n\nReturns:\n    A
+      formatted report string.", "name": "generate_report", "parameters_json_schema":
+      {"properties": {"title": {"title": "Title", "type": "string"}, "findings": {"title":
+      "Findings", "type": "string"}}, "required": ["title", "findings"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1904'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"web_search\",\n
+        \             \"args\": {\n                \"query\": \"AI agent market trends
+        2023-2024\"\n              }\n            },\n            \"thoughtSignature\":
+        \"CoYEAXLI2nzmyDix3/QA+tMOiUwpDVoA5+RJoRW7kw3okJaVYCa5Usx7eBn4xowP7oXNynS4NfawCYqboufBXjHinq13UTcYg0Y74qIrza4KuctliGmf8G7S4QoS0Y3gqCHQKsxTdShQOg8wirnr8Rdu1eyrrhWE0XKk0HPA0Ssj7zUVoJBqHPqwyvkFyXkMtpcmtq9qXmZYfMFuSKRQnYLVLllL/BpOIL3w7MuofpviO85bvYk9gX0vsDjYWS6EdVEfC9k2BWGjhHaILXT9A1iwNPdDAg33SOC+BlPrGox0ghCr5qEKnBMZhUszqaUCykczFCq+xMIA3xDGNbTjicWb53sL/PXBYLsNty1giW3nKFe8+8eRpUsHUx7oQ82m4AUxKqk99mZjaLp8bHk+rERjFZErcw/pe/3190K0WGHH5ecB4amJCzZtVrQJ1oAZhb7/P1VZ57xmt1z/c1pQgjuvnV+cWE9blh5o6mNNFbFuzJDIO2k8qrFeeDwlCF8OOrxo8F+z1evg4yjZ1+9TLCVFTmZ0S0PI54FS5afb0RdPol2/ISNw7H/dtnO4z6LhT2NmlYqYZr8qfVoUD21rmI08NFs+f/6JW5+7eSQbax76SW+6A2IqqPPyF66MCpqtEzC+hpzVsCBcIQyRQWsdm+RNAs50gmqF6W3CcTPryWkeS7w9ORqxdiU=\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        319,\n    \"candidatesTokenCount\": 28,\n    \"totalTokenCount\": 461,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 319\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 114\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"iEWCaYyJENDn_uMP4q3N8QE\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 03 Feb 2026 18:59:20 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1193
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Research the current
+      state of the AI agent market:\n1. Search for recent information about AI agents
+      and their market trends\n2. Read detailed content from a relevant industry source\n3.
+      Generate a brief report summarizing the key findings\n\nUse the available tools
+      for each step."}], "role": "user"}, {"parts": [{"functionCall": {"args": {"query":
+      "AI agent market trends 2023-2024"}, "name": "web_search"}, "thoughtSignature":
+      "CoYEAXLI2nzmyDix3_QA-tMOiUwpDVoA5-RJoRW7kw3okJaVYCa5Usx7eBn4xowP7oXNynS4NfawCYqboufBXjHinq13UTcYg0Y74qIrza4KuctliGmf8G7S4QoS0Y3gqCHQKsxTdShQOg8wirnr8Rdu1eyrrhWE0XKk0HPA0Ssj7zUVoJBqHPqwyvkFyXkMtpcmtq9qXmZYfMFuSKRQnYLVLllL_BpOIL3w7MuofpviO85bvYk9gX0vsDjYWS6EdVEfC9k2BWGjhHaILXT9A1iwNPdDAg33SOC-BlPrGox0ghCr5qEKnBMZhUszqaUCykczFCq-xMIA3xDGNbTjicWb53sL_PXBYLsNty1giW3nKFe8-8eRpUsHUx7oQ82m4AUxKqk99mZjaLp8bHk-rERjFZErcw_pe_3190K0WGHH5ecB4amJCzZtVrQJ1oAZhb7_P1VZ57xmt1z_c1pQgjuvnV-cWE9blh5o6mNNFbFuzJDIO2k8qrFeeDwlCF8OOrxo8F-z1evg4yjZ1-9TLCVFTmZ0S0PI54FS5afb0RdPol2_ISNw7H_dtnO4z6LhT2NmlYqYZr8qfVoUD21rmI08NFs-f_6JW5-7eSQbax76SW-6A2IqqPPyF66MCpqtEzC-hpzVsCBcIQyRQWsdm-RNAs50gmqF6W3CcTPryWkeS7w9ORqxdiU="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "web_search", "response":
+      {"result": "Search results for ''AI agent market trends 2023-2024'': Found 3
+      relevant articles about the topic including market analysis, competitor data,
+      and industry trends."}}}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are Research Analyst. An experienced analyst skilled at gathering
+      information and synthesizing findings into actionable insights.\nYour personal
+      goal is: Conduct thorough research and produce insightful reports"}], "role":
+      "user"}, "tools": [{"functionDeclarations": [{"description": "Search the web
+      for information on a given topic.\n\nArgs:\n    query: The search query to look
+      up.\n\nReturns:\n    Search results as a string.", "name": "web_search", "parameters_json_schema":
+      {"properties": {"query": {"title": "Query", "type": "string"}}, "required":
+      ["query"], "type": "object", "additionalProperties": false}}, {"description":
+      "Read and extract content from a website URL.\n\nArgs:\n    url: The URL of
+      the website to read.\n\nReturns:\n    The extracted content from the website.",
+      "name": "read_website", "parameters_json_schema": {"properties": {"url": {"title":
+      "Url", "type": "string"}}, "required": ["url"], "type": "object", "additionalProperties":
+      false}}, {"description": "Generate a structured report based on research findings.\n\nArgs:\n    title:
+      The title of the report.\n    findings: The research findings to include.\n\nReturns:\n    A
+      formatted report string.", "name": "generate_report", "parameters_json_schema":
+      {"properties": {"title": {"title": "Title", "type": "string"}, "findings": {"title":
+      "Findings", "type": "string"}}, "required": ["title", "findings"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3015'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"web_search\",\n
+        \             \"args\": {\n                \"query\": \"latest reports AI
+        agent market analysis\"\n              }\n            },\n            \"thoughtSignature\":
+        \"CpwGAXLI2nybmVGffIN1k+T5M2HmQNlvybZRPoo/ysgNARa+9nrPdRoBZ9RC+Dee9KSk1o7O+IU9l0sWCTirQYcroEhXon+JIQUVTed/L0s//sBOR+hJnZWoaG5ucsfJQvovAQba2Wb7uViEkdySvHfRApF0atewbC+TCKZrxDAQ6Naby8nwUTauJPKlgsBsZVnlViRfIbF7pom1zvXD+d5htjMiuJr1nOuSH0EGQWC4TUiuJD23hgockzhmIpbU/bStn8PFIQNsySEzl6H5sZdlD4auwCMCD2Q+Ur05w1uLv7n8GoSZn5dkdXLR5R7dZ+kkX+xP4w841Ih2gc6rBKT5tSedN01AuJsK65NSfOXZBwakxs58WZXDQXnIQe4d2QThAX3nPdUmhvVI6sHX+ZdtQZIrhE7hRf9j/T/wvvrUao5VDv+mxXd9bcPEV2BzSXkvkAB1SbJ+5wN7Qb2j31lkiUu5uRnZOiVxL5iCS+8Z/jEl4NjpGithbcPoNpFIDOeiE/f8kf7tQJDX+YNquPbYZRJHvIfLalVQndVGNlZVN2jXT3Wwo8So3vmzIDFVjV+pj7tSRNK8hTITm6bfHS+XUZqJdm7eHCzhonyJ7/tl7LbsstPXoZU3ZN50tNpXYOK+NzgzU7iwd9SaHVXgzQRdujWgHuBmSiSd9qNHvdaNwgARVTnMj3VYpehgIuaYMzQmgM99TdC/zmzcqHa5VZSnHKHqMIVc9gjRvVwz4DUm6VLLnKnVYFClM6gofmUI6s9fThiR5EdfimaDTlRlzh6Df33jAbRA9rUTDH6uE+DjiopCvXuHjmQqK9Smyxt2vTao9H7AYIRN7yWmdVoaG0tUSL2XQ31wIW3cEyhz7ihQwFYKJnOkQ3/CiU6KV+4ldk9UY/vKWSgItVTTE6G8Di0iviiCAkmL59Uj7vnIp80+U9rDIK7WhxpAWlrDA6cGQT2LGAXQ2liXtLa31nXyfvCezhtSS8jSVm4SHaiU+INvYtpq2Q7nXPTFbjjZooyC5FePGqAH1T+sRYbR02jaa572/NuwFgBCObTfqO8G5A==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        400,\n    \"candidatesTokenCount\": 20,\n    \"totalTokenCount\": 589,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 400\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 169\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"ikWCacqBG8ve_uMPj4KFyAY\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 03 Feb 2026 18:59:22 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2125
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Research the current
+      state of the AI agent market:\n1. Search for recent information about AI agents
+      and their market trends\n2. Read detailed content from a relevant industry source\n3.
+      Generate a brief report summarizing the key findings\n\nUse the available tools
+      for each step."}], "role": "user"}, {"parts": [{"functionCall": {"args": {"query":
+      "AI agent market trends 2023-2024"}, "name": "web_search"}, "thoughtSignature":
+      "CoYEAXLI2nzmyDix3_QA-tMOiUwpDVoA5-RJoRW7kw3okJaVYCa5Usx7eBn4xowP7oXNynS4NfawCYqboufBXjHinq13UTcYg0Y74qIrza4KuctliGmf8G7S4QoS0Y3gqCHQKsxTdShQOg8wirnr8Rdu1eyrrhWE0XKk0HPA0Ssj7zUVoJBqHPqwyvkFyXkMtpcmtq9qXmZYfMFuSKRQnYLVLllL_BpOIL3w7MuofpviO85bvYk9gX0vsDjYWS6EdVEfC9k2BWGjhHaILXT9A1iwNPdDAg33SOC-BlPrGox0ghCr5qEKnBMZhUszqaUCykczFCq-xMIA3xDGNbTjicWb53sL_PXBYLsNty1giW3nKFe8-8eRpUsHUx7oQ82m4AUxKqk99mZjaLp8bHk-rERjFZErcw_pe_3190K0WGHH5ecB4amJCzZtVrQJ1oAZhb7_P1VZ57xmt1z_c1pQgjuvnV-cWE9blh5o6mNNFbFuzJDIO2k8qrFeeDwlCF8OOrxo8F-z1evg4yjZ1-9TLCVFTmZ0S0PI54FS5afb0RdPol2_ISNw7H_dtnO4z6LhT2NmlYqYZr8qfVoUD21rmI08NFs-f_6JW5-7eSQbax76SW-6A2IqqPPyF66MCpqtEzC-hpzVsCBcIQyRQWsdm-RNAs50gmqF6W3CcTPryWkeS7w9ORqxdiU="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "web_search", "response":
+      {"result": "Search results for ''AI agent market trends 2023-2024'': Found 3
+      relevant articles about the topic including market analysis, competitor data,
+      and industry trends."}}}], "role": "user"}, {"parts": [{"functionCall": {"args":
+      {"query": "latest reports AI agent market analysis"}, "name": "web_search"},
+      "thoughtSignature": "CpwGAXLI2nybmVGffIN1k-T5M2HmQNlvybZRPoo_ysgNARa-9nrPdRoBZ9RC-Dee9KSk1o7O-IU9l0sWCTirQYcroEhXon-JIQUVTed_L0s__sBOR-hJnZWoaG5ucsfJQvovAQba2Wb7uViEkdySvHfRApF0atewbC-TCKZrxDAQ6Naby8nwUTauJPKlgsBsZVnlViRfIbF7pom1zvXD-d5htjMiuJr1nOuSH0EGQWC4TUiuJD23hgockzhmIpbU_bStn8PFIQNsySEzl6H5sZdlD4auwCMCD2Q-Ur05w1uLv7n8GoSZn5dkdXLR5R7dZ-kkX-xP4w841Ih2gc6rBKT5tSedN01AuJsK65NSfOXZBwakxs58WZXDQXnIQe4d2QThAX3nPdUmhvVI6sHX-ZdtQZIrhE7hRf9j_T_wvvrUao5VDv-mxXd9bcPEV2BzSXkvkAB1SbJ-5wN7Qb2j31lkiUu5uRnZOiVxL5iCS-8Z_jEl4NjpGithbcPoNpFIDOeiE_f8kf7tQJDX-YNquPbYZRJHvIfLalVQndVGNlZVN2jXT3Wwo8So3vmzIDFVjV-pj7tSRNK8hTITm6bfHS-XUZqJdm7eHCzhonyJ7_tl7LbsstPXoZU3ZN50tNpXYOK-NzgzU7iwd9SaHVXgzQRdujWgHuBmSiSd9qNHvdaNwgARVTnMj3VYpehgIuaYMzQmgM99TdC_zmzcqHa5VZSnHKHqMIVc9gjRvVwz4DUm6VLLnKnVYFClM6gofmUI6s9fThiR5EdfimaDTlRlzh6Df33jAbRA9rUTDH6uE-DjiopCvXuHjmQqK9Smyxt2vTao9H7AYIRN7yWmdVoaG0tUSL2XQ31wIW3cEyhz7ihQwFYKJnOkQ3_CiU6KV-4ldk9UY_vKWSgItVTTE6G8Di0iviiCAkmL59Uj7vnIp80-U9rDIK7WhxpAWlrDA6cGQT2LGAXQ2liXtLa31nXyfvCezhtSS8jSVm4SHaiU-INvYtpq2Q7nXPTFbjjZooyC5FePGqAH1T-sRYbR02jaa572_NuwFgBCObTfqO8G5A=="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "web_search", "response":
+      {"result": "Search results for ''latest reports AI agent market analysis'':
+      Found 3 relevant articles about the topic including market analysis, competitor
+      data, and industry trends."}}}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are Research Analyst. An experienced analyst skilled at gathering
+      information and synthesizing findings into actionable insights.\nYour personal
+      goal is: Conduct thorough research and produce insightful reports"}], "role":
+      "user"}, "tools": [{"functionDeclarations": [{"description": "Search the web
+      for information on a given topic.\n\nArgs:\n    query: The search query to look
+      up.\n\nReturns:\n    Search results as a string.", "name": "web_search", "parameters_json_schema":
+      {"properties": {"query": {"title": "Query", "type": "string"}}, "required":
+      ["query"], "type": "object", "additionalProperties": false}}, {"description":
+      "Read and extract content from a website URL.\n\nArgs:\n    url: The URL of
+      the website to read.\n\nReturns:\n    The extracted content from the website.",
+      "name": "read_website", "parameters_json_schema": {"properties": {"url": {"title":
+      "Url", "type": "string"}}, "required": ["url"], "type": "object", "additionalProperties":
+      false}}, {"description": "Generate a structured report based on research findings.\n\nArgs:\n    title:
+      The title of the report.\n    findings: The research findings to include.\n\nReturns:\n    A
+      formatted report string.", "name": "generate_report", "parameters_json_schema":
+      {"properties": {"title": {"title": "Title", "type": "string"}, "findings": {"title":
+      "Findings", "type": "string"}}, "required": ["title", "findings"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4512'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"read_website\",\n
+        \             \"args\": {\n                \"url\": \"https://www.example.com/ai-agent-market-report\"\n
+        \             }\n            },\n            \"thoughtSignature\": \"CooPAXLI2nzYy6ki8YJo4RDDzryK6qtkbIEWXCh0ZjpoRX2fgNghUrxXZUwrsrbrwEpccdvWCDpb5ZkwYMNuzMi4yRUsjfcebfd2VCwQgvWnWmitj3taAcLCUDIJX5pGt0L2O8V6ehWmrANQHGw6Qc/QVx5dMlSFeFKHtfc1M95CJz2BxZd3lnuKLCEu7LCCiqIDdd1o1y/EcGsl7OHai6WyQJg49Cvcww//Z+kfSVoAPGNedTYPIf4ImttMyofV8+yczI0IGjhFzE0Qk1Pvo84O9NyOufpPELeKY8l1yfZgSZEL0sUA6weqf1P/xzNKt6h96Rh1KpAx5iTGFtqOWJrJ8OP+ZdGJ+rA+xZQuTRtKbW/e60rC5kPgJnkhWCp1p7HTLgTGwpzzxztqL0ggURaWw8GJw8S41BcM5mFEA+a7ivMWPMLdMk6h5gr/Y8JTnLSRZFoZYHkY9bTcAFPc9gapyFlKkQDciYet/MHe2zfE7ycx0e8c0W7ISoYPHpXW/WxNekMiNdfx1eg/mEX/Y0Vjc70p+HtbnEGaBoZWJSo+cJtZdA4sNJaIuEnnVTtAdAtnoxJUOyr2jrKDAsSjHmVoeLARZO2/DuJKsEVNHzsNPMw4SrBq1DkG52Aof7KcskOfW2OyoZEUnIf23IRabKflUG/7dHGqYfLtkWRApWZYBy2eQILwsmXJ4xx27S7/02Jl0D8rX3vOQhjS7lTjrXvy8wU3biUFvbnqJuLj3ACLn7Hn1axe4dB7zIpYC1di63DDs1fQp79d2VaGRC+tVMKiQu/+yC6nCM4j8JSnpBNgvyhq3ilAr/iDHD6GkbxdBBChFbZl0KY+WkrcZpPp2g2m/beiQuzF+cM6RuaqF2W0TEjVT+OZ1ivObreXFVFWa9T5qFsTjV3E/SFlmrXdx6Kf8d0i9QeEwbzBIvvX3VNUdW1DJ95WylaUXFtljk/cqylri2j2WTPMTSV9fcM/a8UWoayUAuLzq8zgxd2Wvrm8uvGcaewAQT+yK+u5FsLFoKxaMkoakb2/1tjWfhn+MrbIoYOBIebUapUhADUJgGDTG7byEEQlbwNaa8rOZ5ZpdBrDXjtj1tsz6cqaEiCbtZWqei0myuMa0J6Z3FHoceSUgOACD/bHWSkzdW7LdKBKLxB25fKfD1hCLscE1skZ7nAEZWmrUzKz9yCiqAPfatQhHqnr3EchEB/dxbNXxCCT6IFxemhb9AsaQWjcTrlQJiuz8t4VMmu1slgEcrhweZ/PpxI/E74qvV9ljcFLcziW0BZaqepJMeBe2cLfVVki5R5kudQVuAcCEdkrwBDWAwZlO9aWTmiZ9+ggfl3F/63JzZXSM/NDc/2rJ1k65e+O+vyTzkrUwnSPnh4RPK6jeIul4SSLPgyZBwp0qHyTl4As8jpMe9Rbt0NRli6Z5eAr/IYdbicKo/pzqiupdxvu4u+jKt+F4KojU9avgWFAB01isHHO5Z1vzVJ6XDilWeah5DvHc1lkcPCXtbBGvykfFqJIBhthnFi0f/S4HV+IlOKwvKbfmL5GplD7H+DjUA5UdHjw8HoJa6uQxhbERy5dZlYqxN918aL147Afq4LuPoWUJULEsYULwUuA6HspemIKUltHacOAxZgP4OLVkB3zwssj8E6rMtU1puupHiL7J66fFaR3co71gzzlvl8R2Xi3xEQdpigxxCUAsZWMrSrITRBnKPKGF1CrFEhU6FP6bQAQ6UuhAdqLoJihwVnMTyY9fGUriwCkrQu5gK7ZQlnXyluV0J/5xWh4sOaPmwmeiUXMBPN0iGb7z24lyHaI3QXz3kGlJBnIFhseJTJo3ed66Z/LAf8I/hFC6s/sIioEmRgd4tm3Q1U05ETKrptnzo8Ac4AOTdJtbQv0uDQSkoefUbebu7x6L9Dns04VSvDPKLwlFQd81sl9DYmi9SPDxKT7S6gfG6WjJ9z35eNSR01QW1QIgAAhMU8UX4o7QQaXnUZxfZeYRMXlzu/xb4KSREvc/FeLJ+IvnPFgzryAgLi/Sipl//Eul0sjrREPYJE1GxBOIoURGa+Bsmc3yy8aWArxv/HGpbLzwjmH8TaMvB3P/4tkvT+5IjJlpe0UrR1ssqasUtwfH9yWv5+4i+EdJrJ/SJ4Hl1Vlj9zi9lEFr33Zs96kn8ZOkBHp0m7Sxr5xP+krSxQkROIpu0d02kIqQ3nob+kGbnAf0zkmH6pS3H4mG2Zksu8KcGvghx7XTl3qBOJ+ZY4vlev2cSMBfMmnbUHKvMlz4YsmTGR1JPntDguA8UJJ1UZCex4E/W3KcHwd4qvzqgMZNjdarIvGjlmnKmoL1RV7EqUsBkpk+jauY0SqoWsIIf4b6O9Y3fQRRJURLeIfGCTmlxl+df+4yjqUhxUXTaQsX2KlEJ3tZK+ZI9FdKMzqPip2oMFwf2XfLIyIuRA0NU5fDRIxqPUzYv6RQ+zhXXB1QscsAtyf1t+LsaVw//1Vfj6V3Ups4pNyiwMAZg1z9DaIHht++VfgCdqT4RLcaGI8eEDrjkOc9G/iLkLBCfOB7EZkcXT20Lc1Silxa++dZsaYp5Tni8dz6f5YWg==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        465,\n    \"candidatesTokenCount\": 29,\n    \"totalTokenCount\": 916,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 465\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 422\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"jUWCadDOIdi8_uMPxuOu4Ak\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 03 Feb 2026 18:59:25 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=3079
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Research the current
+      state of the AI agent market:\n1. Search for recent information about AI agents
+      and their market trends\n2. Read detailed content from a relevant industry source\n3.
+      Generate a brief report summarizing the key findings\n\nUse the available tools
+      for each step."}], "role": "user"}, {"parts": [{"functionCall": {"args": {"query":
+      "AI agent market trends 2023-2024"}, "name": "web_search"}, "thoughtSignature":
+      "CoYEAXLI2nzmyDix3_QA-tMOiUwpDVoA5-RJoRW7kw3okJaVYCa5Usx7eBn4xowP7oXNynS4NfawCYqboufBXjHinq13UTcYg0Y74qIrza4KuctliGmf8G7S4QoS0Y3gqCHQKsxTdShQOg8wirnr8Rdu1eyrrhWE0XKk0HPA0Ssj7zUVoJBqHPqwyvkFyXkMtpcmtq9qXmZYfMFuSKRQnYLVLllL_BpOIL3w7MuofpviO85bvYk9gX0vsDjYWS6EdVEfC9k2BWGjhHaILXT9A1iwNPdDAg33SOC-BlPrGox0ghCr5qEKnBMZhUszqaUCykczFCq-xMIA3xDGNbTjicWb53sL_PXBYLsNty1giW3nKFe8-8eRpUsHUx7oQ82m4AUxKqk99mZjaLp8bHk-rERjFZErcw_pe_3190K0WGHH5ecB4amJCzZtVrQJ1oAZhb7_P1VZ57xmt1z_c1pQgjuvnV-cWE9blh5o6mNNFbFuzJDIO2k8qrFeeDwlCF8OOrxo8F-z1evg4yjZ1-9TLCVFTmZ0S0PI54FS5afb0RdPol2_ISNw7H_dtnO4z6LhT2NmlYqYZr8qfVoUD21rmI08NFs-f_6JW5-7eSQbax76SW-6A2IqqPPyF66MCpqtEzC-hpzVsCBcIQyRQWsdm-RNAs50gmqF6W3CcTPryWkeS7w9ORqxdiU="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "web_search", "response":
+      {"result": "Search results for ''AI agent market trends 2023-2024'': Found 3
+      relevant articles about the topic including market analysis, competitor data,
+      and industry trends."}}}], "role": "user"}, {"parts": [{"functionCall": {"args":
+      {"query": "latest reports AI agent market analysis"}, "name": "web_search"},
+      "thoughtSignature": "CpwGAXLI2nybmVGffIN1k-T5M2HmQNlvybZRPoo_ysgNARa-9nrPdRoBZ9RC-Dee9KSk1o7O-IU9l0sWCTirQYcroEhXon-JIQUVTed_L0s__sBOR-hJnZWoaG5ucsfJQvovAQba2Wb7uViEkdySvHfRApF0atewbC-TCKZrxDAQ6Naby8nwUTauJPKlgsBsZVnlViRfIbF7pom1zvXD-d5htjMiuJr1nOuSH0EGQWC4TUiuJD23hgockzhmIpbU_bStn8PFIQNsySEzl6H5sZdlD4auwCMCD2Q-Ur05w1uLv7n8GoSZn5dkdXLR5R7dZ-kkX-xP4w841Ih2gc6rBKT5tSedN01AuJsK65NSfOXZBwakxs58WZXDQXnIQe4d2QThAX3nPdUmhvVI6sHX-ZdtQZIrhE7hRf9j_T_wvvrUao5VDv-mxXd9bcPEV2BzSXkvkAB1SbJ-5wN7Qb2j31lkiUu5uRnZOiVxL5iCS-8Z_jEl4NjpGithbcPoNpFIDOeiE_f8kf7tQJDX-YNquPbYZRJHvIfLalVQndVGNlZVN2jXT3Wwo8So3vmzIDFVjV-pj7tSRNK8hTITm6bfHS-XUZqJdm7eHCzhonyJ7_tl7LbsstPXoZU3ZN50tNpXYOK-NzgzU7iwd9SaHVXgzQRdujWgHuBmSiSd9qNHvdaNwgARVTnMj3VYpehgIuaYMzQmgM99TdC_zmzcqHa5VZSnHKHqMIVc9gjRvVwz4DUm6VLLnKnVYFClM6gofmUI6s9fThiR5EdfimaDTlRlzh6Df33jAbRA9rUTDH6uE-DjiopCvXuHjmQqK9Smyxt2vTao9H7AYIRN7yWmdVoaG0tUSL2XQ31wIW3cEyhz7ihQwFYKJnOkQ3_CiU6KV-4ldk9UY_vKWSgItVTTE6G8Di0iviiCAkmL59Uj7vnIp80-U9rDIK7WhxpAWlrDA6cGQT2LGAXQ2liXtLa31nXyfvCezhtSS8jSVm4SHaiU-INvYtpq2Q7nXPTFbjjZooyC5FePGqAH1T-sRYbR02jaa572_NuwFgBCObTfqO8G5A=="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "web_search", "response":
+      {"result": "Search results for ''latest reports AI agent market analysis'':
+      Found 3 relevant articles about the topic including market analysis, competitor
+      data, and industry trends."}}}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"url": "https://www.example.com/ai-agent-market-report"}, "name":
+      "read_website"}, "thoughtSignature": "CooPAXLI2nzYy6ki8YJo4RDDzryK6qtkbIEWXCh0ZjpoRX2fgNghUrxXZUwrsrbrwEpccdvWCDpb5ZkwYMNuzMi4yRUsjfcebfd2VCwQgvWnWmitj3taAcLCUDIJX5pGt0L2O8V6ehWmrANQHGw6Qc_QVx5dMlSFeFKHtfc1M95CJz2BxZd3lnuKLCEu7LCCiqIDdd1o1y_EcGsl7OHai6WyQJg49Cvcww__Z-kfSVoAPGNedTYPIf4ImttMyofV8-yczI0IGjhFzE0Qk1Pvo84O9NyOufpPELeKY8l1yfZgSZEL0sUA6weqf1P_xzNKt6h96Rh1KpAx5iTGFtqOWJrJ8OP-ZdGJ-rA-xZQuTRtKbW_e60rC5kPgJnkhWCp1p7HTLgTGwpzzxztqL0ggURaWw8GJw8S41BcM5mFEA-a7ivMWPMLdMk6h5gr_Y8JTnLSRZFoZYHkY9bTcAFPc9gapyFlKkQDciYet_MHe2zfE7ycx0e8c0W7ISoYPHpXW_WxNekMiNdfx1eg_mEX_Y0Vjc70p-HtbnEGaBoZWJSo-cJtZdA4sNJaIuEnnVTtAdAtnoxJUOyr2jrKDAsSjHmVoeLARZO2_DuJKsEVNHzsNPMw4SrBq1DkG52Aof7KcskOfW2OyoZEUnIf23IRabKflUG_7dHGqYfLtkWRApWZYBy2eQILwsmXJ4xx27S7_02Jl0D8rX3vOQhjS7lTjrXvy8wU3biUFvbnqJuLj3ACLn7Hn1axe4dB7zIpYC1di63DDs1fQp79d2VaGRC-tVMKiQu_-yC6nCM4j8JSnpBNgvyhq3ilAr_iDHD6GkbxdBBChFbZl0KY-WkrcZpPp2g2m_beiQuzF-cM6RuaqF2W0TEjVT-OZ1ivObreXFVFWa9T5qFsTjV3E_SFlmrXdx6Kf8d0i9QeEwbzBIvvX3VNUdW1DJ95WylaUXFtljk_cqylri2j2WTPMTSV9fcM_a8UWoayUAuLzq8zgxd2Wvrm8uvGcaewAQT-yK-u5FsLFoKxaMkoakb2_1tjWfhn-MrbIoYOBIebUapUhADUJgGDTG7byEEQlbwNaa8rOZ5ZpdBrDXjtj1tsz6cqaEiCbtZWqei0myuMa0J6Z3FHoceSUgOACD_bHWSkzdW7LdKBKLxB25fKfD1hCLscE1skZ7nAEZWmrUzKz9yCiqAPfatQhHqnr3EchEB_dxbNXxCCT6IFxemhb9AsaQWjcTrlQJiuz8t4VMmu1slgEcrhweZ_PpxI_E74qvV9ljcFLcziW0BZaqepJMeBe2cLfVVki5R5kudQVuAcCEdkrwBDWAwZlO9aWTmiZ9-ggfl3F_63JzZXSM_NDc_2rJ1k65e-O-vyTzkrUwnSPnh4RPK6jeIul4SSLPgyZBwp0qHyTl4As8jpMe9Rbt0NRli6Z5eAr_IYdbicKo_pzqiupdxvu4u-jKt-F4KojU9avgWFAB01isHHO5Z1vzVJ6XDilWeah5DvHc1lkcPCXtbBGvykfFqJIBhthnFi0f_S4HV-IlOKwvKbfmL5GplD7H-DjUA5UdHjw8HoJa6uQxhbERy5dZlYqxN918aL147Afq4LuPoWUJULEsYULwUuA6HspemIKUltHacOAxZgP4OLVkB3zwssj8E6rMtU1puupHiL7J66fFaR3co71gzzlvl8R2Xi3xEQdpigxxCUAsZWMrSrITRBnKPKGF1CrFEhU6FP6bQAQ6UuhAdqLoJihwVnMTyY9fGUriwCkrQu5gK7ZQlnXyluV0J_5xWh4sOaPmwmeiUXMBPN0iGb7z24lyHaI3QXz3kGlJBnIFhseJTJo3ed66Z_LAf8I_hFC6s_sIioEmRgd4tm3Q1U05ETKrptnzo8Ac4AOTdJtbQv0uDQSkoefUbebu7x6L9Dns04VSvDPKLwlFQd81sl9DYmi9SPDxKT7S6gfG6WjJ9z35eNSR01QW1QIgAAhMU8UX4o7QQaXnUZxfZeYRMXlzu_xb4KSREvc_FeLJ-IvnPFgzryAgLi_Sipl__Eul0sjrREPYJE1GxBOIoURGa-Bsmc3yy8aWArxv_HGpbLzwjmH8TaMvB3P_4tkvT-5IjJlpe0UrR1ssqasUtwfH9yWv5-4i-EdJrJ_SJ4Hl1Vlj9zi9lEFr33Zs96kn8ZOkBHp0m7Sxr5xP-krSxQkROIpu0d02kIqQ3nob-kGbnAf0zkmH6pS3H4mG2Zksu8KcGvghx7XTl3qBOJ-ZY4vlev2cSMBfMmnbUHKvMlz4YsmTGR1JPntDguA8UJJ1UZCex4E_W3KcHwd4qvzqgMZNjdarIvGjlmnKmoL1RV7EqUsBkpk-jauY0SqoWsIIf4b6O9Y3fQRRJURLeIfGCTmlxl-df-4yjqUhxUXTaQsX2KlEJ3tZK-ZI9FdKMzqPip2oMFwf2XfLIyIuRA0NU5fDRIxqPUzYv6RQ-zhXXB1QscsAtyf1t-LsaVw__1Vfj6V3Ups4pNyiwMAZg1z9DaIHht--VfgCdqT4RLcaGI8eEDrjkOc9G_iLkLBCfOB7EZkcXT20Lc1Silxa--dZsaYp5Tni8dz6f5YWg=="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "read_website", "response":
+      {"result": "Content from https://www.example.com/ai-agent-market-report: This
+      article discusses key insights about the topic including market size ($50B),
+      growth rate (15% YoY), and major players in the industry."}}}], "role": "user"}],
+      "systemInstruction": {"parts": [{"text": "You are Research Analyst. An experienced
+      analyst skilled at gathering information and synthesizing findings into actionable
+      insights.\nYour personal goal is: Conduct thorough research and produce insightful
+      reports"}], "role": "user"}, "tools": [{"functionDeclarations": [{"description":
+      "Search the web for information on a given topic.\n\nArgs:\n    query: The search
+      query to look up.\n\nReturns:\n    Search results as a string.", "name": "web_search",
+      "parameters_json_schema": {"properties": {"query": {"title": "Query", "type":
+      "string"}}, "required": ["query"], "type": "object", "additionalProperties":
+      false}}, {"description": "Read and extract content from a website URL.\n\nArgs:\n    url:
+      The URL of the website to read.\n\nReturns:\n    The extracted content from
+      the website.", "name": "read_website", "parameters_json_schema": {"properties":
+      {"url": {"title": "Url", "type": "string"}}, "required": ["url"], "type": "object",
+      "additionalProperties": false}}, {"description": "Generate a structured report
+      based on research findings.\n\nArgs:\n    title: The title of the report.\n    findings:
+      The research findings to include.\n\nReturns:\n    A formatted report string.",
+      "name": "generate_report", "parameters_json_schema": {"properties": {"title":
+      {"title": "Title", "type": "string"}, "findings": {"title": "Findings", "type":
+      "string"}}, "required": ["title", "findings"], "type": "object", "additionalProperties":
+      false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '7562'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"generate_report\",\n
+        \             \"args\": {\n                \"findings\": \"The AI agent market
+        is currently valued at $50 billion and is experiencing a strong growth rate
+        of 15% year-over-year. Key players in the industry are contributing to this
+        expansion, driven by increasing adoption across various sectors.\",\n                \"title\":
+        \"Current State of the AI Agent Market\"\n              }\n            },\n
+        \           \"thoughtSignature\": \"CuACAXLI2nzhub94iTgphfrBnaQV13Wv0+kRJj+l9jEDfxsyNg9eGnhxRfj4cued3Mgvv1CR9vkpfDV/V9x57TVWLNwPsVvsTgZKI0pwmV355sUCRKqAyfRBwDWhn0UAl9+sYNFCKUJCp8G5QBGfrar1lYLltX/z83d4O13Wn5Ugvxco9o4CdxnnPJOWkTPETRgXA/1HSdEiwGNqt0A3lKYkGRXQx+XyK54lDwmOBg+Yx4ZVgUxANXLK1z91NF/6cpmSVgoE2sL0VrIHISYs4XdUCj1fL3R7DpnZdrrZhmqnTjEgkeR1C3BR5GJeSUmg+kmqjPSPnP0NYiZo9H9SGL/ewGz3wg+GKcILAa4nD7/tfdqIMbAff8PJemwJE4ONT5zAmJ69/NFj0i1X01v04E8f2NdHewPSsKO5mptk5qzWxoW3G3uUhXccxk62EydTsESf6WRwolsmphaGgVE9AwuhzQ==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        557,\n    \"candidatesTokenCount\": 73,\n    \"totalTokenCount\": 700,\n    \"cachedContentTokenCount\":
+        330,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 557\n      }\n    ],\n    \"cacheTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 330\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 70\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"jkWCacGZMLrv_uMPibCHmQU\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 03 Feb 2026 18:59:26 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1224
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Research the current
+      state of the AI agent market:\n1. Search for recent information about AI agents
+      and their market trends\n2. Read detailed content from a relevant industry source\n3.
+      Generate a brief report summarizing the key findings\n\nUse the available tools
+      for each step."}], "role": "user"}, {"parts": [{"functionCall": {"args": {"query":
+      "AI agent market trends 2023-2024"}, "name": "web_search"}, "thoughtSignature":
+      "CoYEAXLI2nzmyDix3_QA-tMOiUwpDVoA5-RJoRW7kw3okJaVYCa5Usx7eBn4xowP7oXNynS4NfawCYqboufBXjHinq13UTcYg0Y74qIrza4KuctliGmf8G7S4QoS0Y3gqCHQKsxTdShQOg8wirnr8Rdu1eyrrhWE0XKk0HPA0Ssj7zUVoJBqHPqwyvkFyXkMtpcmtq9qXmZYfMFuSKRQnYLVLllL_BpOIL3w7MuofpviO85bvYk9gX0vsDjYWS6EdVEfC9k2BWGjhHaILXT9A1iwNPdDAg33SOC-BlPrGox0ghCr5qEKnBMZhUszqaUCykczFCq-xMIA3xDGNbTjicWb53sL_PXBYLsNty1giW3nKFe8-8eRpUsHUx7oQ82m4AUxKqk99mZjaLp8bHk-rERjFZErcw_pe_3190K0WGHH5ecB4amJCzZtVrQJ1oAZhb7_P1VZ57xmt1z_c1pQgjuvnV-cWE9blh5o6mNNFbFuzJDIO2k8qrFeeDwlCF8OOrxo8F-z1evg4yjZ1-9TLCVFTmZ0S0PI54FS5afb0RdPol2_ISNw7H_dtnO4z6LhT2NmlYqYZr8qfVoUD21rmI08NFs-f_6JW5-7eSQbax76SW-6A2IqqPPyF66MCpqtEzC-hpzVsCBcIQyRQWsdm-RNAs50gmqF6W3CcTPryWkeS7w9ORqxdiU="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "web_search", "response":
+      {"result": "Search results for ''AI agent market trends 2023-2024'': Found 3
+      relevant articles about the topic including market analysis, competitor data,
+      and industry trends."}}}], "role": "user"}, {"parts": [{"functionCall": {"args":
+      {"query": "latest reports AI agent market analysis"}, "name": "web_search"},
+      "thoughtSignature": "CpwGAXLI2nybmVGffIN1k-T5M2HmQNlvybZRPoo_ysgNARa-9nrPdRoBZ9RC-Dee9KSk1o7O-IU9l0sWCTirQYcroEhXon-JIQUVTed_L0s__sBOR-hJnZWoaG5ucsfJQvovAQba2Wb7uViEkdySvHfRApF0atewbC-TCKZrxDAQ6Naby8nwUTauJPKlgsBsZVnlViRfIbF7pom1zvXD-d5htjMiuJr1nOuSH0EGQWC4TUiuJD23hgockzhmIpbU_bStn8PFIQNsySEzl6H5sZdlD4auwCMCD2Q-Ur05w1uLv7n8GoSZn5dkdXLR5R7dZ-kkX-xP4w841Ih2gc6rBKT5tSedN01AuJsK65NSfOXZBwakxs58WZXDQXnIQe4d2QThAX3nPdUmhvVI6sHX-ZdtQZIrhE7hRf9j_T_wvvrUao5VDv-mxXd9bcPEV2BzSXkvkAB1SbJ-5wN7Qb2j31lkiUu5uRnZOiVxL5iCS-8Z_jEl4NjpGithbcPoNpFIDOeiE_f8kf7tQJDX-YNquPbYZRJHvIfLalVQndVGNlZVN2jXT3Wwo8So3vmzIDFVjV-pj7tSRNK8hTITm6bfHS-XUZqJdm7eHCzhonyJ7_tl7LbsstPXoZU3ZN50tNpXYOK-NzgzU7iwd9SaHVXgzQRdujWgHuBmSiSd9qNHvdaNwgARVTnMj3VYpehgIuaYMzQmgM99TdC_zmzcqHa5VZSnHKHqMIVc9gjRvVwz4DUm6VLLnKnVYFClM6gofmUI6s9fThiR5EdfimaDTlRlzh6Df33jAbRA9rUTDH6uE-DjiopCvXuHjmQqK9Smyxt2vTao9H7AYIRN7yWmdVoaG0tUSL2XQ31wIW3cEyhz7ihQwFYKJnOkQ3_CiU6KV-4ldk9UY_vKWSgItVTTE6G8Di0iviiCAkmL59Uj7vnIp80-U9rDIK7WhxpAWlrDA6cGQT2LGAXQ2liXtLa31nXyfvCezhtSS8jSVm4SHaiU-INvYtpq2Q7nXPTFbjjZooyC5FePGqAH1T-sRYbR02jaa572_NuwFgBCObTfqO8G5A=="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "web_search", "response":
+      {"result": "Search results for ''latest reports AI agent market analysis'':
+      Found 3 relevant articles about the topic including market analysis, competitor
+      data, and industry trends."}}}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"url": "https://www.example.com/ai-agent-market-report"}, "name":
+      "read_website"}, "thoughtSignature": "CooPAXLI2nzYy6ki8YJo4RDDzryK6qtkbIEWXCh0ZjpoRX2fgNghUrxXZUwrsrbrwEpccdvWCDpb5ZkwYMNuzMi4yRUsjfcebfd2VCwQgvWnWmitj3taAcLCUDIJX5pGt0L2O8V6ehWmrANQHGw6Qc_QVx5dMlSFeFKHtfc1M95CJz2BxZd3lnuKLCEu7LCCiqIDdd1o1y_EcGsl7OHai6WyQJg49Cvcww__Z-kfSVoAPGNedTYPIf4ImttMyofV8-yczI0IGjhFzE0Qk1Pvo84O9NyOufpPELeKY8l1yfZgSZEL0sUA6weqf1P_xzNKt6h96Rh1KpAx5iTGFtqOWJrJ8OP-ZdGJ-rA-xZQuTRtKbW_e60rC5kPgJnkhWCp1p7HTLgTGwpzzxztqL0ggURaWw8GJw8S41BcM5mFEA-a7ivMWPMLdMk6h5gr_Y8JTnLSRZFoZYHkY9bTcAFPc9gapyFlKkQDciYet_MHe2zfE7ycx0e8c0W7ISoYPHpXW_WxNekMiNdfx1eg_mEX_Y0Vjc70p-HtbnEGaBoZWJSo-cJtZdA4sNJaIuEnnVTtAdAtnoxJUOyr2jrKDAsSjHmVoeLARZO2_DuJKsEVNHzsNPMw4SrBq1DkG52Aof7KcskOfW2OyoZEUnIf23IRabKflUG_7dHGqYfLtkWRApWZYBy2eQILwsmXJ4xx27S7_02Jl0D8rX3vOQhjS7lTjrXvy8wU3biUFvbnqJuLj3ACLn7Hn1axe4dB7zIpYC1di63DDs1fQp79d2VaGRC-tVMKiQu_-yC6nCM4j8JSnpBNgvyhq3ilAr_iDHD6GkbxdBBChFbZl0KY-WkrcZpPp2g2m_beiQuzF-cM6RuaqF2W0TEjVT-OZ1ivObreXFVFWa9T5qFsTjV3E_SFlmrXdx6Kf8d0i9QeEwbzBIvvX3VNUdW1DJ95WylaUXFtljk_cqylri2j2WTPMTSV9fcM_a8UWoayUAuLzq8zgxd2Wvrm8uvGcaewAQT-yK-u5FsLFoKxaMkoakb2_1tjWfhn-MrbIoYOBIebUapUhADUJgGDTG7byEEQlbwNaa8rOZ5ZpdBrDXjtj1tsz6cqaEiCbtZWqei0myuMa0J6Z3FHoceSUgOACD_bHWSkzdW7LdKBKLxB25fKfD1hCLscE1skZ7nAEZWmrUzKz9yCiqAPfatQhHqnr3EchEB_dxbNXxCCT6IFxemhb9AsaQWjcTrlQJiuz8t4VMmu1slgEcrhweZ_PpxI_E74qvV9ljcFLcziW0BZaqepJMeBe2cLfVVki5R5kudQVuAcCEdkrwBDWAwZlO9aWTmiZ9-ggfl3F_63JzZXSM_NDc_2rJ1k65e-O-vyTzkrUwnSPnh4RPK6jeIul4SSLPgyZBwp0qHyTl4As8jpMe9Rbt0NRli6Z5eAr_IYdbicKo_pzqiupdxvu4u-jKt-F4KojU9avgWFAB01isHHO5Z1vzVJ6XDilWeah5DvHc1lkcPCXtbBGvykfFqJIBhthnFi0f_S4HV-IlOKwvKbfmL5GplD7H-DjUA5UdHjw8HoJa6uQxhbERy5dZlYqxN918aL147Afq4LuPoWUJULEsYULwUuA6HspemIKUltHacOAxZgP4OLVkB3zwssj8E6rMtU1puupHiL7J66fFaR3co71gzzlvl8R2Xi3xEQdpigxxCUAsZWMrSrITRBnKPKGF1CrFEhU6FP6bQAQ6UuhAdqLoJihwVnMTyY9fGUriwCkrQu5gK7ZQlnXyluV0J_5xWh4sOaPmwmeiUXMBPN0iGb7z24lyHaI3QXz3kGlJBnIFhseJTJo3ed66Z_LAf8I_hFC6s_sIioEmRgd4tm3Q1U05ETKrptnzo8Ac4AOTdJtbQv0uDQSkoefUbebu7x6L9Dns04VSvDPKLwlFQd81sl9DYmi9SPDxKT7S6gfG6WjJ9z35eNSR01QW1QIgAAhMU8UX4o7QQaXnUZxfZeYRMXlzu_xb4KSREvc_FeLJ-IvnPFgzryAgLi_Sipl__Eul0sjrREPYJE1GxBOIoURGa-Bsmc3yy8aWArxv_HGpbLzwjmH8TaMvB3P_4tkvT-5IjJlpe0UrR1ssqasUtwfH9yWv5-4i-EdJrJ_SJ4Hl1Vlj9zi9lEFr33Zs96kn8ZOkBHp0m7Sxr5xP-krSxQkROIpu0d02kIqQ3nob-kGbnAf0zkmH6pS3H4mG2Zksu8KcGvghx7XTl3qBOJ-ZY4vlev2cSMBfMmnbUHKvMlz4YsmTGR1JPntDguA8UJJ1UZCex4E_W3KcHwd4qvzqgMZNjdarIvGjlmnKmoL1RV7EqUsBkpk-jauY0SqoWsIIf4b6O9Y3fQRRJURLeIfGCTmlxl-df-4yjqUhxUXTaQsX2KlEJ3tZK-ZI9FdKMzqPip2oMFwf2XfLIyIuRA0NU5fDRIxqPUzYv6RQ-zhXXB1QscsAtyf1t-LsaVw__1Vfj6V3Ups4pNyiwMAZg1z9DaIHht--VfgCdqT4RLcaGI8eEDrjkOc9G_iLkLBCfOB7EZkcXT20Lc1Silxa--dZsaYp5Tni8dz6f5YWg=="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "read_website", "response":
+      {"result": "Content from https://www.example.com/ai-agent-market-report: This
+      article discusses key insights about the topic including market size ($50B),
+      growth rate (15% YoY), and major players in the industry."}}}], "role": "user"},
+      {"parts": [{"functionCall": {"args": {"findings": "The AI agent market is currently
+      valued at $50 billion and is experiencing a strong growth rate of 15% year-over-year.
+      Key players in the industry are contributing to this expansion, driven by increasing
+      adoption across various sectors.", "title": "Current State of the AI Agent Market"},
+      "name": "generate_report"}, "thoughtSignature": "CuACAXLI2nzhub94iTgphfrBnaQV13Wv0-kRJj-l9jEDfxsyNg9eGnhxRfj4cued3Mgvv1CR9vkpfDV_V9x57TVWLNwPsVvsTgZKI0pwmV355sUCRKqAyfRBwDWhn0UAl9-sYNFCKUJCp8G5QBGfrar1lYLltX_z83d4O13Wn5Ugvxco9o4CdxnnPJOWkTPETRgXA_1HSdEiwGNqt0A3lKYkGRXQx-XyK54lDwmOBg-Yx4ZVgUxANXLK1z91NF_6cpmSVgoE2sL0VrIHISYs4XdUCj1fL3R7DpnZdrrZhmqnTjEgkeR1C3BR5GJeSUmg-kmqjPSPnP0NYiZo9H9SGL_ewGz3wg-GKcILAa4nD7_tfdqIMbAff8PJemwJE4ONT5zAmJ69_NFj0i1X01v04E8f2NdHewPSsKO5mptk5qzWxoW3G3uUhXccxk62EydTsESf6WRwolsmphaGgVE9AwuhzQ=="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "generate_report",
+      "response": {"result": "# Current State of the AI Agent Market\n\n## Executive
+      Summary\nThe AI agent market is currently valued at $50 billion and is experiencing
+      a strong growth rate of 15% year-over-year. Key players in the industry are
+      contributing to this expansion, driven by increasing adoption across various
+      sectors.\n\n## Conclusion\nBased on the analysis, the market shows strong growth
+      potential."}}}], "role": "user"}], "systemInstruction": {"parts": [{"text":
+      "You are Research Analyst. An experienced analyst skilled at gathering information
+      and synthesizing findings into actionable insights.\nYour personal goal is:
+      Conduct thorough research and produce insightful reports"}], "role": "user"},
+      "tools": [{"functionDeclarations": [{"description": "Search the web for information
+      on a given topic.\n\nArgs:\n    query: The search query to look up.\n\nReturns:\n    Search
+      results as a string.", "name": "web_search", "parameters_json_schema": {"properties":
+      {"query": {"title": "Query", "type": "string"}}, "required": ["query"], "type":
+      "object", "additionalProperties": false}}, {"description": "Read and extract
+      content from a website URL.\n\nArgs:\n    url: The URL of the website to read.\n\nReturns:\n    The
+      extracted content from the website.", "name": "read_website", "parameters_json_schema":
+      {"properties": {"url": {"title": "Url", "type": "string"}}, "required": ["url"],
+      "type": "object", "additionalProperties": false}}, {"description": "Generate
+      a structured report based on research findings.\n\nArgs:\n    title: The title
+      of the report.\n    findings: The research findings to include.\n\nReturns:\n    A
+      formatted report string.", "name": "generate_report", "parameters_json_schema":
+      {"properties": {"title": {"title": "Title", "type": "string"}, "findings": {"title":
+      "Findings", "type": "string"}}, "required": ["title", "findings"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '8941'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The research on the current state
+        of the AI agent market has been completed. A report has been generated with
+        the following key findings:\\n\\n**Current State of the AI Agent Market**\\n\\n**Executive
+        Summary**\\nThe AI agent market is currently valued at $50 billion and is
+        experiencing a strong growth rate of 15% year-over-year. Key players in the
+        industry are contributing to this expansion, driven by increasing adoption
+        across various sectors.\\n\\n**Conclusion**\\nBased on the analysis, the market
+        shows strong growth potential.\",\n            \"thoughtSignature\": \"CpIDAXLI2nwVVOjjKtAsnvvRhuJU79oCZksDIi1i7PcIr+FkXVHX8sS8kM0optXLnRQWDRKKxUDKA9C1myhIfnDfc3ef44xc4UaczwM80/TbYanden25qpZRA2kztBz9HiWEPyGjeX8M/8BGAj7mh3q6hwPtTFtmhFTzlw190YQoZLELqOyQzTSECt8roXPdWN1XhU/NbHg4x+H3IFSQ2HZKxbY/JC6tx5FYYh444tIT4798iVHI5HOUVb1pfdLfV45ju/DOD+pTONuqVcTX+jgusjoaH32pdu4Q19atg5BR6zanqwv93vkYPXx0hF4rI8FHtV9jrqwtjLqzXvh7LANtNpCvO3HG++lIoeRTy5RzfYQRkLkrfuLWW+xkGDYQh+CQ7jbeurx344pHBjzZTVDaSNTA0QMTYwDH7YUkxIsyw5Hv1F8tpVvjgoKqvJnar1d/EvrbiOwygpiEZOrmPEn/DKp4qPk2+hhFS4JpcnNGva9cFM22ObwHydIQdoXHOX3wci0nhshAZ0e8hd5u820gfrya\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        727,\n    \"candidatesTokenCount\": 108,\n    \"totalTokenCount\": 910,\n
+        \   \"cachedContentTokenCount\": 375,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 727\n      }\n    ],\n
+        \   \"cacheTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 375\n      }\n    ],\n    \"thoughtsTokenCount\":
+        75\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"kUWCabvgOafg_uMP06Ga0QI\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 03 Feb 2026 18:59:30 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=3125
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

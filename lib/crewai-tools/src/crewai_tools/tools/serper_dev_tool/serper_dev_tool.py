@@ -160,7 +160,7 @@ class SerperDevTool(BaseTool):
         processed_results: list[OrganicResult] = []
         for result in organic_results[: self.n_results]:
             try:
-                result_data: OrganicResult = {  # type: ignore[typeddict-item]
+                result_data: OrganicResult = {
                     "title": result["title"],
                     "link": result["link"],
                     "snippet": result.get("snippet", ""),
@@ -168,7 +168,7 @@ class SerperDevTool(BaseTool):
                 }
 
                 if "sitelinks" in result:
-                    result_data["sitelinks"] = [  # type: ignore[typeddict-unknown-key]
+                    result_data["sitelinks"] = [
                         {
                             "title": sitelink.get("title", ""),
                             "link": sitelink.get("link", ""),
@@ -180,7 +180,7 @@ class SerperDevTool(BaseTool):
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed organic result: {result}")
                 continue
-        return processed_results  # type: ignore[return-value]
+        return processed_results
 
     def _process_people_also_ask(
         self, paa_results: list[dict[str, Any]]
@@ -189,7 +189,7 @@ class SerperDevTool(BaseTool):
         processed_results: list[PeopleAlsoAskResult] = []
         for result in paa_results[: self.n_results]:
             try:
-                result_data: PeopleAlsoAskResult = {  # type: ignore[typeddict-item]
+                result_data: PeopleAlsoAskResult = {
                     "question": result["question"],
                     "snippet": result.get("snippet", ""),
                     "title": result.get("title", ""),
@@ -199,7 +199,7 @@ class SerperDevTool(BaseTool):
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed PAA result: {result}")
                 continue
-        return processed_results  # type: ignore[return-value]
+        return processed_results
 
     def _process_related_searches(
         self, related_results: list[dict[str, Any]]
@@ -208,11 +208,11 @@ class SerperDevTool(BaseTool):
         processed_results: list[RelatedSearchResult] = []
         for result in related_results[: self.n_results]:
             try:
-                processed_results.append({"query": result["query"]})  # type: ignore[typeddict-item]
+                processed_results.append({"query": result["query"]})
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed related search result: {result}")
                 continue
-        return processed_results  # type: ignore[return-value]
+        return processed_results
 
     def _process_news_results(
         self, news_results: list[dict[str, Any]]
@@ -221,7 +221,7 @@ class SerperDevTool(BaseTool):
         processed_results: list[NewsResult] = []
         for result in news_results[: self.n_results]:
             try:
-                result_data: NewsResult = {  # type: ignore[typeddict-item]
+                result_data: NewsResult = {
                     "title": result["title"],
                     "link": result["link"],
                     "snippet": result.get("snippet", ""),
@@ -233,7 +233,7 @@ class SerperDevTool(BaseTool):
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed news result: {result}")
                 continue
-        return processed_results  # type: ignore[return-value]
+        return processed_results
 
     def _make_api_request(self, search_query: str, search_type: str) -> dict[str, Any]:
         """Make API request to Serper."""
@@ -262,7 +262,7 @@ class SerperDevTool(BaseTool):
             if not results:
                 logger.error("Empty response from Serper API")
                 raise ValueError("Empty response from Serper API")
-            return results
+            return dict(results)
         except requests.exceptions.RequestException as e:
             error_msg = f"Error making request to Serper API: {e}"
             if response is not None and hasattr(response, "content"):

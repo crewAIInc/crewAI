@@ -14,8 +14,6 @@ try:
     TAVILY_AVAILABLE = True
 except ImportError:
     TAVILY_AVAILABLE = False
-    TavilyClient = Any
-    AsyncTavilyClient = Any
 
 
 class TavilyExtractorToolSchema(BaseModel):
@@ -55,8 +53,8 @@ class TavilyExtractorTool(BaseTool):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    client: TavilyClient | None = None
-    async_client: AsyncTavilyClient | None = None
+    client: Any | None = None
+    async_client: Any | None = None
     name: str = "TavilyExtractorTool"
     description: str = "Extracts content from one or more web pages using the Tavily API. Returns structured data."
     args_schema: type[BaseModel] = TavilyExtractorToolSchema

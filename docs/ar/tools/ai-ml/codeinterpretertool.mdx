@@ -1,0 +1,210 @@
+---
+title: مفسّر الكود
+description: أداة `CodeInterpreterTool` هي أداة قوية مصممة لتنفيذ كود Python 3 في بيئة آمنة ومعزولة.
+icon: code-simple
+mode: "wide"
+---
+
+# `CodeInterpreterTool`
+
+## الوصف
+
+تمكّن `CodeInterpreterTool` وكلاء CrewAI من تنفيذ كود Python 3 الذي يولّدونه بشكل مستقل. هذه الوظيفة ذات قيمة خاصة لأنها تتيح للوكلاء إنشاء الكود وتنفيذه والحصول على النتائج واستخدام تلك المعلومات لاتخاذ القرارات والإجراءات اللاحقة.
+
+هناك عدة طرق لاستخدام هذه الأداة:
+
+### حاوية Docker (موصى بها)
+
+هذا هو الخيار الأساسي. يُنفَّذ الكود في حاوية Docker آمنة ومعزولة، مما يضمن السلامة بغض النظر عن محتواه.
+تأكد من تثبيت Docker وتشغيله على نظامك. إذا لم يكن لديك، يمكنك تثبيته من [هنا](https://docs.docker.com/get-docker/).
+
+### بيئة الحماية
+
+إذا لم يكن Docker متاحاً - إما غير مُثبّت أو غير قابل للوصول لأي سبب - سيُنفَّذ الكود في بيئة Python مقيدة تُسمى بيئة الحماية.
+هذه البيئة محدودة جداً، مع قيود صارمة على العديد من الوحدات والدوال المدمجة.
+
+### التنفيذ غير الآمن
+
+**غير موصى به للإنتاج**
+يسمح هذا الوضع بتنفيذ أي كود Python، بما في ذلك الاستدعاءات الخطيرة لـ `sys, os..` والوحدات المماثلة. [اطلع على](/ar/tools/ai-ml/codeinterpretertool#enabling-unsafe-mode) كيفية تفعيل هذا الوضع
+
+## التسجيل
+
+تسجّل `CodeInterpreterTool` استراتيجية التنفيذ المختارة في STDOUT
+
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت حزمة أدوات CrewAI:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `CodeInterpreterTool` مع وكيل CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import CodeInterpreterTool
+
+# Initialize the tool
+code_interpreter = CodeInterpreterTool()
+
+# Define an agent that uses the tool
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    tools=[code_interpreter],
+    verbose=True,
+)
+
+# Example task to generate and execute code
+coding_task = Task(
+    description="Write a Python function to calculate the Fibonacci sequence up to the 10th number and print the result.",
+    expected_output="The Fibonacci sequence up to the 10th number.",
+    agent=programmer_agent,
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[programmer_agent],
+    tasks=[coding_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff()
+```
+
+يمكنك أيضاً تفعيل تنفيذ الكود مباشرة عند إنشاء وكيل:
+
+```python Code
+from crewai import Agent
+
+# Create an agent with code execution enabled
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    allow_code_execution=True,  # This automatically adds the CodeInterpreterTool
+    verbose=True,
+)
+```
+
+### تفعيل `unsafe_mode`
+
+```python Code
+from crewai_tools import CodeInterpreterTool
+
+code = """
+import os
+os.system("ls -la")
+"""
+
+CodeInterpreterTool(unsafe_mode=True).run(code=code)
+```
+
+## المعاملات
+
+تقبل `CodeInterpreterTool` المعاملات التالية أثناء التهيئة:
+
+- **user_dockerfile_path**: اختياري. مسار ملف Dockerfile مخصص لاستخدامه لحاوية مفسّر الكود.
+- **user_docker_base_url**: اختياري. عنوان URL لبرنامج Docker daemon لتشغيل الحاوية.
+- **unsafe_mode**: اختياري. ما إذا كان سيتم تشغيل الكود مباشرة على الجهاز المضيف بدلاً من حاوية Docker أو بيئة الحماية. القيمة الافتراضية `False`. استخدم بحذر!
+- **default_image_tag**: اختياري. وسم صورة Docker الافتراضي. القيمة الافتراضية `code-interpreter:latest`
+
+عند استخدام الأداة مع وكيل، سيحتاج الوكيل لتقديم:
+
+- **code**: مطلوب. كود Python 3 المراد تنفيذه.
+- **libraries_used**: اختياري. قائمة المكتبات المستخدمة في الكود التي تحتاج إلى تثبيت. القيمة الافتراضية `[]`
+
+## مثال على التكامل مع الوكيل
+
+إليك مثالاً أكثر تفصيلاً عن كيفية دمج `CodeInterpreterTool` مع وكيل CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import CodeInterpreterTool
+
+# Initialize the tool
+code_interpreter = CodeInterpreterTool()
+
+# Define an agent that uses the tool
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze data using Python code",
+    backstory="""You are an expert data analyst who specializes in using Python
+    to analyze and visualize data. You can write efficient code to process
+    large datasets and extract meaningful insights.""",
+    tools=[code_interpreter],
+    verbose=True,
+)
+
+# Create a task for the agent
+analysis_task = Task(
+    description="""
+    Write Python code to:
+    1. Generate a random dataset of 100 points with x and y coordinates
+    2. Calculate the correlation coefficient between x and y
+    3. Create a scatter plot of the data
+    4. Print the correlation coefficient and save the plot as 'scatter.png'
+
+    Make sure to handle any necessary imports and print the results.
+    """,
+    expected_output="The correlation coefficient and confirmation that the scatter plot has been saved.",
+    agent=data_analyst,
+)
+
+# Run the task
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff()
+```
+
+## تفاصيل التنفيذ
+
+تستخدم `CodeInterpreterTool` حاوية Docker لإنشاء بيئة آمنة لتنفيذ الكود:
+
+```python Code
+class CodeInterpreterTool(BaseTool):
+    name: str = "Code Interpreter"
+    description: str = "Interprets Python3 code strings with a final print statement."
+    args_schema: Type[BaseModel] = CodeInterpreterSchema
+    default_image_tag: str = "code-interpreter:latest"
+
+    def _run(self, **kwargs) -> str:
+        code = kwargs.get("code", self.code)
+        libraries_used = kwargs.get("libraries_used", [])
+
+        if self.unsafe_mode:
+            return self.run_code_unsafe(code, libraries_used)
+        else:
+            return self.run_code_safety(code, libraries_used)
+```
+
+تقوم الأداة بالخطوات التالية:
+1. التحقق من وجود صورة Docker أو بنائها إذا لزم الأمر
+2. إنشاء حاوية Docker مع تركيب مجلد العمل الحالي
+3. تثبيت أي مكتبات مطلوبة حددها الوكيل
+4. تنفيذ كود Python في الحاوية
+5. إرجاع مخرجات تنفيذ الكود
+6. التنظيف عن طريق إيقاف الحاوية وإزالتها
+
+## اعتبارات الأمان
+
+بشكل افتراضي، تشغّل `CodeInterpreterTool` الكود في حاوية Docker معزولة، مما يوفر طبقة من الأمان. ومع ذلك، هناك بعض اعتبارات الأمان التي يجب مراعاتها:
+
+1. تمتلك حاوية Docker وصولاً إلى مجلد العمل الحالي، لذا قد يتم الوصول إلى ملفات حساسة.
+2. إذا لم تكن حاوية Docker متاحة وكان الكود يحتاج للتشغيل بأمان، سيُنفَّذ في بيئة حماية. لأسباب أمنية، لا يُسمح بتثبيت مكتبات عشوائية
+3. يسمح معامل `unsafe_mode` بتنفيذ الكود مباشرة على الجهاز المضيف، ويجب استخدامه فقط في بيئات موثوقة.
+4. كن حذراً عند السماح للوكلاء بتثبيت مكتبات عشوائية، لأنها قد تتضمن كوداً ضاراً.
+
+## الخلاصة
+
+توفر `CodeInterpreterTool` طريقة قوية لوكلاء CrewAI لتنفيذ كود Python في بيئة آمنة نسبياً. من خلال تمكين الوكلاء من كتابة وتشغيل الكود، توسّع قدراتهم في حل المشكلات بشكل كبير، خاصة للمهام التي تتضمن تحليل البيانات أو الحسابات أو أعمال حسابية أخرى. هذه الأداة مفيدة بشكل خاص للوكلاء الذين يحتاجون إلى إجراء عمليات معقدة يُعبَّر عنها بكفاءة أكبر في الكود مقارنة باللغة الطبيعية.

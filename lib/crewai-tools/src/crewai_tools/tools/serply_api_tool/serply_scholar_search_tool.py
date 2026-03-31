@@ -25,7 +25,7 @@ class SerplyScholarSearchTool(BaseTool):
     search_url: str = "https://api.serply.io/v1/scholar/"
     hl: str | None = "us"
     proxy_location: str | None = "US"
-    headers: dict | None = Field(default_factory=dict)
+    headers: dict[str, str] | None = Field(default_factory=dict)
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -36,7 +36,9 @@ class SerplyScholarSearchTool(BaseTool):
         ]
     )
 
-    def __init__(self, hl: str = "us", proxy_location: str | None = "US", **kwargs):
+    def __init__(
+        self, hl: str = "us", proxy_location: str | None = "US", **kwargs: Any
+    ) -> None:
         """param: hl (str): host Language code to display results in
             (reference https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages)
         proxy_location: (str): Specify the proxy location for the search, specifically for a specific country results.
@@ -48,7 +50,7 @@ class SerplyScholarSearchTool(BaseTool):
         self.headers = {
             "X-API-KEY": os.environ["SERPLY_API_KEY"],
             "User-Agent": "crew-tools",
-            "X-Proxy-Location": proxy_location,
+            "X-Proxy-Location": proxy_location or "US",
         }
 
     def _run(

@@ -8,10 +8,10 @@ from crewai.experimental.evaluation.experiment.result import ExperimentResults
 
 
 class ExperimentResultsDisplay:
-    def __init__(self):
+    def __init__(self) -> None:
         self.console = Console()
 
-    def summary(self, experiment_results: ExperimentResults):
+    def summary(self, experiment_results: ExperimentResults) -> None:
         total = len(experiment_results.results)
         passed = sum(1 for r in experiment_results.results if r.passed)
 
@@ -28,7 +28,9 @@ class ExperimentResultsDisplay:
 
         self.console.print(table)
 
-    def comparison_summary(self, comparison: dict[str, Any], baseline_timestamp: str):
+    def comparison_summary(
+        self, comparison: dict[str, Any], baseline_timestamp: str
+    ) -> None:
         self.console.print(
             Panel(
                 f"[bold]Comparison with baseline run from {baseline_timestamp}[/bold]",

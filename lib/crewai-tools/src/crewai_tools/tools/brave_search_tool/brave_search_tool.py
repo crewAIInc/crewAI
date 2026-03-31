@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 import os
 import time
@@ -10,8 +9,8 @@ from pydantic import BaseModel, Field
 from pydantic.types import StringConstraints
 import requests
 
-from crewai_tools.tools.brave_search_tool.schemas import WebSearchParams
 from crewai_tools.tools.brave_search_tool.base import _save_results_to_file
+from crewai_tools.tools.brave_search_tool.schemas import WebSearchParams
 
 
 load_dotenv()
@@ -51,7 +50,7 @@ class BraveSearchTool(BaseTool):
     _last_request_time: ClassVar[float] = 0
     _min_request_interval: ClassVar[float] = 1.0  # seconds
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         if "BRAVE_API_KEY" not in os.environ:
             raise ValueError(

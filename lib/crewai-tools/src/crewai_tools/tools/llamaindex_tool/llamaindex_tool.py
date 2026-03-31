@@ -17,11 +17,7 @@ class LlamaIndexTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         """Run tool."""
-        from llama_index.core.tools import (  # type: ignore[import-not-found]
-            BaseTool as LlamaBaseTool,
-        )
-
-        tool = cast(LlamaBaseTool, self.llama_index_tool)
+        tool = self.llama_index_tool
 
         if self.result_as_answer:
             return tool(*args, **kwargs).content
@@ -36,7 +32,6 @@ class LlamaIndexTool(BaseTool):
 
         if not isinstance(tool, LlamaBaseTool):
             raise ValueError(f"Expected a LlamaBaseTool, got {type(tool)}")
-        tool = cast(LlamaBaseTool, tool)
 
         if tool.metadata.fn_schema is None:
             raise ValueError(
@@ -64,9 +59,7 @@ class LlamaIndexTool(BaseTool):
         from llama_index.core.query_engine import (  # type: ignore[import-not-found]
             BaseQueryEngine,
         )
-        from llama_index.core.tools import (  # type: ignore[import-not-found]
-            QueryEngineTool,
-        )
+        from llama_index.core.tools import QueryEngineTool
 
         if not isinstance(query_engine, BaseQueryEngine):
             raise ValueError(f"Expected a BaseQueryEngine, got {type(query_engine)}")

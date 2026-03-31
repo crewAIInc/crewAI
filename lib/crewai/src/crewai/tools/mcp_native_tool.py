@@ -7,6 +7,7 @@ concurrently by the executor.
 
 import asyncio
 from collections.abc import Callable
+import contextvars
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -69,7 +70,7 @@ class MCPNativeTool(BaseTool):
         """Get the server name."""
         return self._server_name
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         """Execute tool using the MCP client session.
 
         Args:
@@ -84,9 +85,10 @@ class MCPNativeTool(BaseTool):
 
                 import concurrent.futures
 
+                ctx = contextvars.copy_context()
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     coro = self._run_async(**kwargs)
-                    future = executor.submit(asyncio.run, coro)
+                    future = executor.submit(ctx.run, asyncio.run, coro)
                     return future.result()
             except RuntimeError:
                 return asyncio.run(self._run_async(**kwargs))
@@ -96,7 +98,7 @@ class MCPNativeTool(BaseTool):
                 f"Error executing MCP tool {self.original_tool_name}: {e!s}"
             ) from e
 
-    async def _run_async(self, **kwargs) -> str:
+    async def _run_async(self, **kwargs: Any) -> str:
         """Async implementation of tool execution.
 
         A fresh ``MCPClient`` is created for every invocation so that

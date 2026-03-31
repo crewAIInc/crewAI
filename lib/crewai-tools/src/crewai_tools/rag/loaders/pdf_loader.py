@@ -2,9 +2,11 @@
 
 import os
 from pathlib import Path
-from typing import Any, cast
+import tempfile
+from typing import Any
 from urllib.parse import urlparse
-import urllib.request
+
+import requests
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
@@ -23,22 +25,34 @@ class PDFLoader(BaseLoader):
             return False
 
     @staticmethod
-    def _download_pdf(url: str) -> bytes:
-        """Download PDF content from a URL.
+    def _download_from_url(url: str, kwargs: dict[str, Any]) -> str:
+        """Download PDF from a URL to a temporary file and return its path.
 
         Args:
             url: The URL to download from.
+            kwargs: Optional dict that may contain custom headers.
 
         Returns:
-            The PDF content as bytes.
+            Path to the temporary file containing the PDF.
 
         Raises:
             ValueError: If the download fails.
         """
+        headers = kwargs.get(
+            "headers",
+            {
+                "Accept": "application/pdf",
+                "User-Agent": "Mozilla/5.0 (compatible; crewai-tools PDFLoader)",
+            },
+        )
 
         try:
-            with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310
-                return cast(bytes, response.read())
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+                temp_file.write(response.content)
+                return temp_file.name
         except Exception as e:
             raise ValueError(f"Failed to download PDF from {url}: {e!s}") from e
 
@@ -80,8 +94,8 @@ class PDFLoader(BaseLoader):
 
         try:
             if is_url:
-                pdf_bytes = self._download_pdf(file_path)
-                doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+                local_path = self._download_from_url(file_path, kwargs)
+                doc = pymupdf.open(local_path)
             else:
                 if not os.path.isfile(file_path):
                     raise FileNotFoundError(f"PDF file not found: {file_path}")

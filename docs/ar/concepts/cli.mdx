@@ -1,0 +1,287 @@
+---
+title: واجهة سطر الأوامر
+description: تعرّف على كيفية استخدام واجهة سطر أوامر CrewAI للتفاعل مع CrewAI.
+icon: terminal
+mode: "wide"
+---
+
+<Warning>
+  منذ الإصدار 0.140.0، بدأ CrewAI AMP عملية نقل مزود تسجيل الدخول.
+  لذلك، تم تحديث تدفق المصادقة عبر CLI. المستخدمون الذين يسجلون الدخول
+  باستخدام Google، أو الذين أنشأوا حساباتهم بعد 3 يوليو 2025 لن يتمكنوا
+  من تسجيل الدخول مع الإصدارات القديمة من مكتبة `crewai`.
+</Warning>
+
+## نظرة عامة
+
+توفر واجهة سطر أوامر CrewAI مجموعة من الأوامر للتفاعل مع CrewAI، مما يتيح لك إنشاء وتدريب وتشغيل وإدارة الأطقم والتدفقات.
+
+## التثبيت
+
+لاستخدام واجهة سطر أوامر CrewAI، تأكد من تثبيت CrewAI:
+
+```shell Terminal
+pip install crewai
+```
+
+## الاستخدام الأساسي
+
+الهيكل الأساسي لأمر CrewAI CLI هو:
+
+```shell Terminal
+crewai [COMMAND] [OPTIONS] [ARGUMENTS]
+```
+
+## الأوامر المتاحة
+
+### 1. إنشاء
+
+إنشاء طاقم أو تدفق جديد.
+
+```shell Terminal
+crewai create [OPTIONS] TYPE NAME
+```
+
+- `TYPE`: اختر بين "crew" أو "flow"
+- `NAME`: اسم الطاقم أو التدفق
+
+مثال:
+
+```shell Terminal
+crewai create crew my_new_crew
+crewai create flow my_new_flow
+```
+
+### 2. الإصدار
+
+عرض الإصدار المثبت من CrewAI.
+
+```shell Terminal
+crewai version [OPTIONS]
+```
+
+- `--tools`: (اختياري) عرض الإصدار المثبت من أدوات CrewAI
+
+### 3. التدريب
+
+تدريب الطاقم لعدد محدد من التكرارات.
+
+```shell Terminal
+crewai train [OPTIONS]
+```
+
+- `-n, --n_iterations INTEGER`: عدد تكرارات التدريب (افتراضي: 5)
+- `-f, --filename TEXT`: مسار ملف مخصص للتدريب (افتراضي: "trained_agents_data.pkl")
+
+### 4. الإعادة
+
+إعادة تنفيذ الطاقم من مهمة محددة.
+
+```shell Terminal
+crewai replay [OPTIONS]
+```
+
+- `-t, --task_id TEXT`: إعادة تنفيذ الطاقم من معرّف المهمة هذا، بما في ذلك جميع المهام اللاحقة
+
+### 5. سجل مخرجات المهام
+
+استرجاع أحدث مخرجات مهام crew.kickoff().
+
+```shell Terminal
+crewai log-tasks-outputs
+```
+
+### 6. إعادة تعيين الذاكرة
+
+إعادة تعيين ذاكرة الطاقم (طويلة، قصيرة، الكيانات، أحدث مخرجات التشغيل).
+
+```shell Terminal
+crewai reset-memories [OPTIONS]
+```
+
+- `-l, --long`: إعادة تعيين الذاكرة طويلة المدى
+- `-s, --short`: إعادة تعيين الذاكرة قصيرة المدى
+- `-e, --entities`: إعادة تعيين ذاكرة الكيانات
+- `-k, --kickoff-outputs`: إعادة تعيين أحدث مخرجات التشغيل
+- `-kn, --knowledge`: إعادة تعيين تخزين المعرفة
+- `-akn, --agent-knowledge`: إعادة تعيين تخزين معرفة الوكيل
+- `-a, --all`: إعادة تعيين جميع الذاكرات
+
+### 7. الاختبار
+
+اختبار الطاقم وتقييم النتائج.
+
+```shell Terminal
+crewai test [OPTIONS]
+```
+
+- `-n, --n_iterations INTEGER`: عدد تكرارات الاختبار (افتراضي: 3)
+- `-m, --model TEXT`: نموذج LLM لتشغيل الاختبارات (افتراضي: "gpt-4o-mini")
+
+### 8. التشغيل
+
+تشغيل الطاقم أو التدفق.
+
+```shell Terminal
+crewai run
+```
+
+<Note>
+  بدءًا من الإصدار 0.103.0، يمكن استخدام أمر `crewai run` لتشغيل
+  كل من الأطقم القياسية والتدفقات. للتدفقات، يكتشف تلقائيًا النوع
+  من pyproject.toml ويشغّل الأمر المناسب. هذه هي الطريقة الموصى بها
+  لتشغيل كل من الأطقم والتدفقات.
+</Note>
+
+### 9. الدردشة
+
+بدءًا من الإصدار `0.98.0`، عند تشغيل أمر `crewai chat`، تبدأ جلسة تفاعلية مع طاقمك. سيرشدك المساعد الذكي بطلب المدخلات اللازمة لتنفيذ الطاقم. بمجرد توفير جميع المدخلات، سينفذ الطاقم مهامه.
+
+```shell Terminal
+crewai chat
+```
+
+<Note>
+مهم: عيّن خاصية `chat_llm` في ملف `crew.py` لتفعيل هذا الأمر.
+
+```python
+@crew
+def crew(self) -> Crew:
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True,
+        chat_llm="gpt-4o",
+    )
+```
+</Note>
+
+### 10. النشر
+
+نشر الطاقم أو التدفق إلى [CrewAI AMP](https://app.crewai.com).
+
+- **المصادقة**: تحتاج لتكون مصادقًا للنشر إلى CrewAI AMP.
+
+  ```shell Terminal
+  crewai login
+  ```
+
+- **إنشاء نشر**:
+  ```shell Terminal
+  crewai deploy create
+  ```
+
+- **نشر الطاقم**:
+  ```shell Terminal
+  crewai deploy push
+  ```
+
+- **حالة النشر**:
+  ```shell Terminal
+  crewai deploy status
+  ```
+
+- **سجلات النشر**:
+  ```shell Terminal
+  crewai deploy logs
+  ```
+
+- **عرض النشرات**:
+  ```shell Terminal
+  crewai deploy list
+  ```
+
+- **حذف النشر**:
+  ```shell Terminal
+  crewai deploy remove
+  ```
+
+### 11. إدارة المؤسسة
+
+إدارة مؤسسات CrewAI AMP.
+
+```shell Terminal
+crewai org [COMMAND] [OPTIONS]
+```
+
+- `list`: عرض جميع المؤسسات
+- `current`: عرض المؤسسة النشطة حاليًا
+- `switch`: التبديل إلى مؤسسة محددة
+
+### 12. تسجيل الدخول
+
+المصادقة مع CrewAI AMP باستخدام تدفق رمز الجهاز الآمن.
+
+```shell Terminal
+crewai login
+```
+
+### 13. إدارة التهيئة
+
+إدارة إعدادات تهيئة CLI لـ CrewAI.
+
+```shell Terminal
+crewai config [COMMAND] [OPTIONS]
+```
+
+- `list`: عرض جميع معاملات التهيئة
+- `set`: تعيين معامل تهيئة
+- `reset`: إعادة تعيين جميع المعاملات إلى القيم الافتراضية
+
+### 14. إدارة التتبع
+
+إدارة تفضيلات جمع التتبع لعمليات الطاقم والتدفق.
+
+```shell Terminal
+crewai traces [COMMAND]
+```
+
+- `enable`: تفعيل جمع التتبع
+- `disable`: تعطيل جمع التتبع
+- `status`: عرض حالة جمع التتبع الحالية
+
+#### كيف يعمل التتبع
+
+يتم التحكم في جمع التتبع بفحص ثلاثة إعدادات بترتيب الأولوية:
+
+1. **علامة صريحة في الكود** (الأولوية الأعلى):
+   ```python
+   crew = Crew(agents=[...], tasks=[...], tracing=True)   # تفعيل دائمًا
+   crew = Crew(agents=[...], tasks=[...], tracing=False)  # تعطيل دائمًا
+   crew = Crew(agents=[...], tasks=[...])                 # فحص الأولويات الأدنى
+   ```
+
+2. **متغير البيئة** (الأولوية الثانية):
+   ```env
+   CREWAI_TRACING_ENABLED=true
+   ```
+
+3. **تفضيل المستخدم** (الأولوية الأدنى):
+   ```shell Terminal
+   crewai traces enable
+   ```
+
+<Note>
+**لتفعيل التتبع**، استخدم أيًا من هذه الطرق:
+- عيّن `tracing=True` في كود الطاقم/التدفق، أو
+- أضف `CREWAI_TRACING_ENABLED=true` إلى ملف `.env`، أو
+- شغّل `crewai traces enable`
+
+**لتعطيل التتبع**، استخدم أيًا من هذه الطرق:
+- عيّن `tracing=False` في كود الطاقم/التدفق، أو
+- أزل أو عيّن `false` لمتغير `CREWAI_TRACING_ENABLED`، أو
+- شغّل `crewai traces disable`
+</Note>
+
+<Tip>
+  يتعامل CrewAI CLI مع المصادقة لمستودع الأدوات تلقائيًا عند
+  إضافة حزم إلى مشروعك. فقط أضف `crewai` قبل أي أمر `uv`
+  لاستخدامه. مثلًا `crewai uv add requests`.
+</Tip>
+
+<Note>
+  تُخزن إعدادات التهيئة في `~/.config/crewai/settings.json`. بعض
+  الإعدادات مثل اسم المؤسسة ومعرّفها للقراءة فقط وتُدار من خلال
+  أوامر المصادقة والمؤسسة.
+</Note>

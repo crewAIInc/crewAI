@@ -23,7 +23,7 @@ class DirectoryReadTool(BaseTool):
     args_schema: type[BaseModel] = DirectoryReadToolSchema
     directory: str | None = None
 
-    def __init__(self, directory: str | None = None, **kwargs):
+    def __init__(self, directory: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if directory is not None:
             self.directory = directory

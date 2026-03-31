@@ -134,7 +134,8 @@ class InvokeCrewAIAutomationTool(BaseTool):
             json={"inputs": inputs},
             timeout=30,
         )
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     def _get_crew_status(self, crew_id: str) -> dict[str, Any]:
         """Get the status of a crew task.
@@ -153,9 +154,10 @@ class InvokeCrewAIAutomationTool(BaseTool):
             },
             timeout=30,
         )
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         """Execute the crew invocation tool."""
         if kwargs is None:
             kwargs = {}
@@ -172,7 +174,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
             try:
                 status_response = self._get_crew_status(crew_id=kickoff_id)
                 if status_response.get("state", "").lower() == "success":
-                    return status_response.get("result", "No result returned")
+                    return str(status_response.get("result", "No result returned"))
                 if status_response.get("state", "").lower() == "failed":
                     return f"Error: Crew task failed. Response: {status_response}"
             except Exception as e:

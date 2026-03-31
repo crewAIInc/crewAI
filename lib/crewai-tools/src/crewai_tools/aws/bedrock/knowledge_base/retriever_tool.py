@@ -44,16 +44,16 @@ class BedrockKBRetrieverTool(BaseTool):
         retrieval_configuration: dict[str, Any] | None = None,
         guardrail_configuration: dict[str, Any] | None = None,
         next_token: str | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the BedrockKBRetrieverTool with knowledge base configuration.
 
         Args:
-            knowledge_base_id (str): The unique identifier of the knowledge base to query
-            number_of_results (Optional[int], optional): The maximum number of results to return. Defaults to 5.
-            retrieval_configuration (Optional[Dict[str, Any]], optional): Configurations for the knowledge base query and retrieval process. Defaults to None.
-            guardrail_configuration (Optional[Dict[str, Any]], optional): Guardrail settings. Defaults to None.
-            next_token (Optional[str], optional): Token for retrieving the next batch of results. Defaults to None.
+            knowledge_base_id: The unique identifier of the knowledge base to query.
+            number_of_results: The maximum number of results to return.
+            retrieval_configuration: Configurations for the knowledge base query and retrieval process.
+            guardrail_configuration: Guardrail settings.
+            next_token: Token for retrieving the next batch of results.
         """
         super().__init__(**kwargs)
 
@@ -89,7 +89,7 @@ class BedrockKBRetrieverTool(BaseTool):
 
         return {"vectorSearchConfiguration": vector_search_config}
 
-    def _validate_parameters(self):
+    def _validate_parameters(self) -> None:
         """Validate the parameters according to AWS API requirements."""
         try:
             # Validate knowledge_base_id

@@ -1,5 +1,5 @@
 import re
-from typing import Final
+from typing import Any, Final
 
 from bs4 import BeautifulSoup
 import requests
@@ -13,7 +13,7 @@ _NEWLINE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\s+\n\s+")
 
 
 class WebPageLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         url = source_content.source
         headers = kwargs.get(
             "headers",

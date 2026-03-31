@@ -1,0 +1,87 @@
+---
+title: بروتوكول Agent-to-Agent (A2A)
+description: الـ Agents تفوّض المهام إلى Agents A2A بعيدة و/أو تعمل كـ Agents خادم متوافقة مع A2A.
+icon: network-wired
+mode: "wide"
+---
+
+## تفويض Agent A2A
+
+يعامل CrewAI [بروتوكول A2A](https://a2a-protocol.org/latest/) كبنية تفويض أساسية، مما يمكّن الـ Agents من تفويض المهام وطلب المعلومات والتعاون مع Agents بعيدة، وكذلك العمل كـ Agents خادم متوافقة مع A2A. في وضع العميل، تختار الـ Agents تلقائيًا بين التنفيذ المحلي والتفويض البعيد بناءً على متطلبات المهمة.
+
+## كيف يعمل
+
+عندما يُهيَّأ Agent بقدرات A2A:
+
+1. يحلل الـ Agent كل مهمة
+2. يقرر إما:
+   - معالجة المهمة مباشرة باستخدام قدراته الخاصة
+   - التفويض إلى Agent A2A بعيد للمعالجة المتخصصة
+3. إذا فوّض، يتواصل الـ Agent مع Agent A2A البعيد عبر البروتوكول
+4. تُعاد النتائج إلى سير عمل CrewAI
+
+<Note>
+  تفويض A2A يتطلب حزمة `a2a-sdk`. ثبّتها بـ: `uv add 'crewai[a2a]'` أو `pip install 'crewai[a2a]'`
+</Note>
+
+## التهيئة الأساسية
+
+<Warning>
+  `crewai.a2a.config.A2AConfig` مهمل وسيُزال في v2.0.0. استخدم `A2AClientConfig` للاتصال بـ Agents بعيدة و/أو `A2AServerConfig` لعرض الـ Agents كخوادم.
+</Warning>
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai.a2a import A2AClientConfig
+
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks efficiently",
+    backstory="Expert at delegating to specialized research agents",
+    llm="gpt-4o",
+    a2a=A2AClientConfig(
+        endpoint="https://example.com/.well-known/agent-card.json",
+        timeout=120,
+        max_turns=10
+    )
+)
+
+task = Task(
+    description="Research the latest developments in quantum computing",
+    expected_output="A comprehensive research report",
+    agent=agent
+)
+
+crew = Crew(agents=[agent], tasks=[task], verbose=True)
+result = crew.kickoff()
+```
+
+## خيارات تهيئة العميل
+
+راجع الملف الإنجليزي الأصلي للحصول على القائمة الكاملة لمعاملات `A2AClientConfig` وخيارات المصادقة وآليات التحديث وتهيئة الخادم.
+
+## أفضل الممارسات
+
+<CardGroup cols={2}>
+  <Card title="عيّن مهلات مناسبة" icon="clock">
+    هيّئ المهلات بناءً على أوقات استجابة Agent A2A المتوقعة.
+  </Card>
+
+  <Card title="حدّ جولات المحادثة" icon="comments">
+    استخدم `max_turns` لمنع التبادل المفرط.
+  </Card>
+
+  <Card title="استخدم معالجة أخطاء مرنة" icon="shield-check">
+    عيّن `fail_fast=False` لبيئات الإنتاج مع عدة Agents.
+  </Card>
+
+  <Card title="أمّن بيانات الاعتماد" icon="lock">
+    خزّن رموز المصادقة وبيانات الاعتماد كمتغيرات بيئة، ليس في الكود.
+  </Card>
+</CardGroup>
+
+## تعلم المزيد
+
+- [توثيق بروتوكول A2A](https://a2a-protocol.org)
+- [تطبيقات A2A النموذجية](https://github.com/a2aproject/a2a-samples)
+- [A2A Python SDK](https://github.com/a2aproject/a2a-python)

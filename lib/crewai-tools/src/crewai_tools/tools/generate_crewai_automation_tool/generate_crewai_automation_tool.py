@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -46,7 +47,7 @@ class GenerateCrewaiAutomationTool(BaseTool):
         ]
     )
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         input_data = GenerateCrewaiAutomationToolSchema(**kwargs)
         response = requests.post(  # noqa: S113
             f"{self.crewai_enterprise_url}/crewai_plus/api/v1/studio",
@@ -58,7 +59,7 @@ class GenerateCrewaiAutomationTool(BaseTool):
         studio_project_url = response.json().get("url")
         return f"Generated CrewAI Studio project URL: {studio_project_url}"
 
-    def _get_headers(self, organization_id: str | None = None) -> dict:
+    def _get_headers(self, organization_id: str | None = None) -> dict[str, str]:
         headers = {
             "Authorization": f"Bearer {self.personal_access_token}",
             "Content-Type": "application/json",

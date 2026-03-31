@@ -37,7 +37,7 @@ class PDFSearchTool(RagTool):
             self._generate_description()
         return self
 
-    def add(self, pdf: str) -> None:
+    def add(self, pdf: str) -> None:  # type: ignore[override]
         super().add(pdf, data_type=DataType.PDF_FILE)
 
     def _run(  # type: ignore[override]

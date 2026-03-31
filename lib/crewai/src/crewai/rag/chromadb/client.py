@@ -1,5 +1,8 @@
 """ChromaDB client implementation."""
 
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import AbstractContextManager, asynccontextmanager, nullcontext
 import logging
 from typing import Any
 
@@ -29,6 +32,7 @@ from crewai.rag.core.base_client import (
     BaseCollectionParams,
 )
 from crewai.rag.types import SearchResult
+from crewai.utilities.lock_store import lock as store_lock
 from crewai.utilities.logger_utils import suppress_logging
 
 
@@ -48,10 +52,11 @@ class ChromaDBClient(BaseClient):
     def __init__(
         self,
         client: ChromaDBClientType,
-        embedding_function: ChromaEmbeddingFunction,
+        embedding_function: ChromaEmbeddingFunction,  # type: ignore[type-arg]
         default_limit: int = 5,
         default_score_threshold: float = 0.6,
         default_batch_size: int = 100,
+        lock_name: str = "",
     ) -> None:
         """Initialize ChromaDBClient with client and embedding function.
 
@@ -61,12 +66,32 @@ class ChromaDBClient(BaseClient):
             default_limit: Default number of results to return in searches.
             default_score_threshold: Default minimum score for search results.
             default_batch_size: Default batch size for adding documents.
+            lock_name: Optional lock name for cross-process synchronization.
         """
         self.client = client
         self.embedding_function = embedding_function
         self.default_limit = default_limit
         self.default_score_threshold = default_score_threshold
         self.default_batch_size = default_batch_size
+        self._lock_name = lock_name
+
+    def _locked(self) -> AbstractContextManager[None]:
+        """Return a cross-process lock context manager, or nullcontext if no lock name."""
+        return store_lock(self._lock_name) if self._lock_name else nullcontext()
+
+    @asynccontextmanager
+    async def _alocked(self) -> AsyncIterator[None]:
+        """Async cross-process lock that acquires/releases in an executor."""
+        if not self._lock_name:
+            yield
+            return
+        lock_cm = store_lock(self._lock_name)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lock_cm.__enter__)
+        try:
+            yield
+        finally:
+            await loop.run_in_executor(None, lock_cm.__exit__, None, None, None)
 
     def create_collection(
         self, **kwargs: Unpack[ChromaDBCollectionCreateParams]
@@ -313,23 +338,24 @@ class ChromaDBClient(BaseClient):
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = self.client.get_or_create_collection(
-            name=_sanitize_collection_name(collection_name),
-            embedding_function=self.embedding_function,
-        )
-
-        prepared = _prepare_documents_for_chromadb(documents)
-
-        for i in range(0, len(prepared.ids), batch_size):
-            batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
-                prepared=prepared, start_index=i, batch_size=batch_size
+        with self._locked():
+            collection = self.client.get_or_create_collection(
+                name=_sanitize_collection_name(collection_name),
+                embedding_function=self.embedding_function,
             )
 
-            collection.upsert(
-                ids=batch_ids,
-                documents=batch_texts,
-                metadatas=batch_metadatas,  # type: ignore[arg-type]
-            )
+            prepared = _prepare_documents_for_chromadb(documents)
+
+            for i in range(0, len(prepared.ids), batch_size):
+                batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
+                    prepared=prepared, start_index=i, batch_size=batch_size
+                )
+
+                collection.upsert(
+                    ids=batch_ids,
+                    documents=batch_texts,
+                    metadatas=batch_metadatas,  # type: ignore[arg-type]
+                )
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection asynchronously.
@@ -363,22 +389,23 @@ class ChromaDBClient(BaseClient):
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = await self.client.get_or_create_collection(
-            name=_sanitize_collection_name(collection_name),
-            embedding_function=self.embedding_function,
-        )
-        prepared = _prepare_documents_for_chromadb(documents)
-
-        for i in range(0, len(prepared.ids), batch_size):
-            batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
-                prepared=prepared, start_index=i, batch_size=batch_size
+        async with self._alocked():
+            collection = await self.client.get_or_create_collection(
+                name=_sanitize_collection_name(collection_name),
+                embedding_function=self.embedding_function,
             )
+            prepared = _prepare_documents_for_chromadb(documents)
 
-            await collection.upsert(
-                ids=batch_ids,
-                documents=batch_texts,
-                metadatas=batch_metadatas,  # type: ignore[arg-type]
-            )
+            for i in range(0, len(prepared.ids), batch_size):
+                batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
+                    prepared=prepared, start_index=i, batch_size=batch_size
+                )
+
+                await collection.upsert(
+                    ids=batch_ids,
+                    documents=batch_texts,
+                    metadatas=batch_metadatas,  # type: ignore[arg-type]
+                )
 
     def search(
         self, **kwargs: Unpack[ChromaDBCollectionSearchParams]
@@ -531,7 +558,10 @@ class ChromaDBClient(BaseClient):
             )
 
         collection_name = kwargs["collection_name"]
-        self.client.delete_collection(name=_sanitize_collection_name(collection_name))
+        with self._locked():
+            self.client.delete_collection(
+                name=_sanitize_collection_name(collection_name)
+            )
 
     async def adelete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data asynchronously.
@@ -561,9 +591,10 @@ class ChromaDBClient(BaseClient):
             )
 
         collection_name = kwargs["collection_name"]
-        await self.client.delete_collection(
-            name=_sanitize_collection_name(collection_name)
-        )
+        async with self._alocked():
+            await self.client.delete_collection(
+                name=_sanitize_collection_name(collection_name)
+            )
 
     def reset(self) -> None:
         """Reset the vector database by deleting all collections and data.
@@ -586,7 +617,8 @@ class ChromaDBClient(BaseClient):
                 "Use areset() for AsyncClientAPI."
             )
 
-        self.client.reset()
+        with self._locked():
+            self.client.reset()
 
     async def areset(self) -> None:
         """Reset the vector database by deleting all collections and data asynchronously.
@@ -612,4 +644,5 @@ class ChromaDBClient(BaseClient):
                 "Use reset() for ClientAPI."
             )
 
-        await self.client.reset()
+        async with self._alocked():
+            await self.client.reset()

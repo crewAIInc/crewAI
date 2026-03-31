@@ -37,22 +37,22 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_06aa2adbbac5b2cc0069730cdcaa988195bd3d284445d2f4d2\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1769147612,\n  \"status\":
+      string: "{\n  \"id\": \"resp_0caf5bbcce78d9e300698e5009821c819285eb66e44b55093e\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1770934281,\n  \"status\":
         \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
-        \"developer\"\n  },\n  \"completed_at\": 1769147613,\n  \"error\": null,\n
+        \"developer\"\n  },\n  \"completed_at\": 1770934282,\n  \"error\": null,\n
         \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
         null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\": null,\n  \"model\":
-        \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n      \"id\": \"msg_06aa2adbbac5b2cc0069730cdd0a9c8195a25cd9c472be0e97\",\n
+        \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n      \"id\": \"msg_0caf5bbcce78d9e300698e5009c94c8192bad43e52974ab743\",\n
         \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
         [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
         [],\n          \"logprobs\": [],\n          \"text\": \"{\\\"result\\\":35,\\\"explanation\\\":\\\"Multiplying
-        5 by 7 involves adding 5 together seven times, which equals 35.\\\"}\"\n        }\n
+        5 by 7 gives you the total of 5 groups of 7, which equals 35.\\\"}\"\n        }\n
         \     ],\n      \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\":
         true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
         null,\n  \"prompt_cache_retention\": null,\n  \"reasoning\": {\n    \"effort\":
@@ -71,8 +71,8 @@ interactions:
         \   },\n    \"verbosity\": \"medium\"\n  },\n  \"tool_choice\": \"auto\",\n
         \ \"tools\": [],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
         \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 76,\n    \"input_tokens_details\":
-        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 30,\n    \"output_tokens_details\":
-        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 106\n  },\n
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 34,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 110\n  },\n
         \ \"user\": null,\n  \"metadata\": {}\n}"
     headers:
       CF-RAY:
@@ -82,11 +82,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 23 Jan 2026 05:53:33 GMT
+      - Thu, 12 Feb 2026 22:11:22 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -100,13 +98,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1187'
+      - '1049'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '1190'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-ratelimit-limit-requests:
       - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:

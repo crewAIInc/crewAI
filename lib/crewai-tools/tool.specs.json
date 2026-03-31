@@ -11465,7 +11465,9 @@
             "title": "Api Key"
           },
           "headers": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "type": "string"
+            },
             "title": "Headers",
             "type": "object"
           },
@@ -14185,7 +14187,20 @@
         },
         "properties": {
           "columns": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
             "title": "Columns",
             "type": "object"
           },
@@ -14195,7 +14210,10 @@
             "type": "string"
           },
           "tables": {
-            "items": {},
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
             "title": "Tables",
             "type": "array"
           }
@@ -16443,6 +16461,112 @@
       }
     },
     {
+      "description": "This tool is used to evaluate the model input and output using custom function evaluators.",
+      "env_vars": [],
+      "humanized_name": "Patronus Local Evaluator Tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "client": {
+            "default": null,
+            "title": "Client"
+          },
+          "evaluated_model_gold_answer": {
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluator": {
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluator",
+          "evaluated_model_gold_answer"
+        ],
+        "title": "PatronusLocalEvaluatorTool",
+        "type": "object"
+      },
+      "name": "PatronusLocalEvaluatorTool",
+      "package_dependencies": [
+        "patronus"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "evaluated_model_gold_answer": {
+            "description": "The agent's gold answer only if available",
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluated_model_input": {
+            "description": "The agent's task description in simple text",
+            "title": "Evaluated Model Input",
+            "type": "string"
+          },
+          "evaluated_model_output": {
+            "description": "The agent's output of the task",
+            "title": "Evaluated Model Output",
+            "type": "string"
+          },
+          "evaluated_model_retrieved_context": {
+            "description": "The agent's context",
+            "title": "Evaluated Model Retrieved Context",
+            "type": "string"
+          },
+          "evaluator": {
+            "description": "The registered local evaluator",
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluated_model_input",
+          "evaluated_model_output",
+          "evaluated_model_retrieved_context",
+          "evaluated_model_gold_answer",
+          "evaluator"
+        ],
+        "title": "FixedLocalEvaluatorToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool calls the Patronus Evaluation API that takes the following arguments:",
       "env_vars": [],
       "humanized_name": "Call Patronus API tool for evaluation of model inputs and outputs",
@@ -17822,7 +17946,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17847,7 +17973,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17942,7 +18070,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17955,7 +18085,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -19822,7 +19954,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -19938,7 +20072,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -20051,7 +20187,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -20176,7 +20314,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -22005,6 +22145,10 @@
             "default": null,
             "title": "Model Api Key"
           },
+          "model_name": {
+            "default": "anthropic.claude-3-7-sonnet-20240607",
+            "title": "Model Name"
+          },
           "project_id": {
             "anyOf": [
               {
@@ -23817,7 +23961,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {

@@ -15,7 +15,7 @@ class MCPEvent(BaseEvent):
     from_agent: Any | None = None
     from_task: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._set_agent_params(data)
         self._set_task_params(data)
