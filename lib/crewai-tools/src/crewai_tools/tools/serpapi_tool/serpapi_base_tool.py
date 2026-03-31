@@ -52,7 +52,7 @@ class SerpApiBaseTool(BaseTool):
         self, data: dict[str, Any] | list[Any], omit_patterns: list[str]
     ) -> None:
         if isinstance(data, dict):
-            for field in list(data.keys()):
+            for field in list(data):
                 if any(re.compile(p).match(field) for p in omit_patterns):
                     data.pop(field, None)
                 else:
