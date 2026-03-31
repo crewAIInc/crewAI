@@ -116,6 +116,23 @@ def to_serializable(
                 }
             except Exception:
                 return repr(obj)
+    if callable(obj):
+        return repr(obj)
+    if hasattr(obj, "__dict__"):
+        try:
+            return {
+                _to_serializable_key(k): to_serializable(
+                    v,
+                    max_depth=max_depth,
+                    _current_depth=_current_depth + 1,
+                    _ancestors=new_ancestors,
+                    context=context,
+                )
+                for k, v in obj.__dict__.items()
+                if not k.startswith("_")
+            }
+        except Exception:
+            return repr(obj)
     return repr(obj)
 
 
