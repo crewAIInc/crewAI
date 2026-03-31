@@ -220,13 +220,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         if self.llm:
             existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
-                set(
-                    existing_stop + self.stop_words
-                    if isinstance(existing_stop, list)
-                    else self.stop_words
-                )
-            )
+            if not isinstance(existing_stop, list):
+                existing_stop = []
+            self.llm.stop = list(set(existing_stop + self.stop_words))
 
         self._state = AgentExecutorState()
         self._max_method_calls = self.max_iter * 10
