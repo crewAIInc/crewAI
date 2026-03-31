@@ -1108,8 +1108,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         # result_as_answer only applies to successful tool outputs.
         # If the tool errored, let the agent reflect on the error instead.
+        # Two checks: (1) is_error flag from exception/parse failures,
+        # (2) string-based detection for tools that return error strings
+        # without raising exceptions (e.g., "Error performing search: ...").
         if (
             not is_error
+            and not self._looks_like_tool_error(result)
             and original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
@@ -1120,6 +1124,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 text=result,
             )
         return None
+
+    @staticmethod
+    def _looks_like_tool_error(result: str) -> bool:
+        """Check if a tool result string looks like an error.
+
+        Many built-in crewAI tools return error strings (e.g., 'Error
+        performing search: ...') instead of raising exceptions. This
+        heuristic catches those cases so result_as_answer doesn't treat
+        them as final agent output.
+        """
+        if not result:
+            return False
+        stripped = result.strip()
+        return stripped.startswith("Error ") or stripped.startswith("I encountered an error")
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent asynchronously with given inputs.
