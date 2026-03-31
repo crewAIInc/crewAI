@@ -555,6 +555,31 @@ class TzafonCompletion(BaseLLM):
 
         self._track_token_usage_internal(usage_data)
 
+        # Tool calls without available_functions: return raw tool calls
+        if tool_calls and not available_functions:
+            raw_tool_calls = [
+                {
+                    "id": call_data["id"],
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                }
+                for call_data in tool_calls.values()
+                if call_data["name"] and call_data["arguments"]
+            ]
+            if raw_tool_calls:
+                self._emit_call_completed_event(
+                    response=raw_tool_calls,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return raw_tool_calls
+
+        # Tool calls with available_functions: execute the tool
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
                 function_name = call_data["name"]
@@ -722,6 +747,31 @@ class TzafonCompletion(BaseLLM):
 
         self._track_token_usage_internal(usage_data)
 
+        # Tool calls without available_functions: return raw tool calls
+        if tool_calls and not available_functions:
+            raw_tool_calls = [
+                {
+                    "id": call_data["id"],
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                }
+                for call_data in tool_calls.values()
+                if call_data["name"] and call_data["arguments"]
+            ]
+            if raw_tool_calls:
+                self._emit_call_completed_event(
+                    response=raw_tool_calls,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return raw_tool_calls
+
+        # Tool calls with available_functions: execute the tool
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
                 function_name = call_data["name"]
@@ -842,6 +892,23 @@ class TzafonCompletion(BaseLLM):
                     return result
 
             content = message.content or ""
+
+            if self.response_format and isinstance(self.response_format, type):
+                try:
+                    structured_result = self._validate_structured_output(
+                        content, self.response_format
+                    )
+                    self._emit_call_completed_event(
+                        response=structured_result,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_result
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
+
             content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
