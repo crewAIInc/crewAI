@@ -17,7 +17,7 @@ CrewAI 에이전트는 **다섯 가지 고유한 기능 유형**으로 확장할
     **원격 도구 서버** — Model Context Protocol을 통해 에이전트를 외부 도구 서버에 연결합니다. 도구와 같은 효과이지만 외부에서 호스팅됩니다.
   </Card>
   <Card title="앱" icon="grid-2" color="#EC4899">
-    **플랫폼 통합** — CrewAI의 관리형 OAuth 레이어를 통해 에이전트를 SaaS 앱(Gmail, Slack, Jira, Salesforce)에 연결합니다.
+    **플랫폼 통합** — CrewAI 플랫폼을 통해 에이전트를 SaaS 앱(Gmail, Slack, Jira, Salesforce)에 연결합니다. 플랫폼 통합 토큰으로 로컬에서 실행됩니다.
   </Card>
   <Card title="스킬" icon="bolt" href="/ko/concepts/skills" color="#F59E0B">
     **도메인 전문성** — 에이전트 프롬프트에 지침, 가이드라인 및 참조 자료를 주입합니다. 스킬은 에이전트에게 *어떻게 생각할지*를 알려줍니다.
@@ -120,8 +120,8 @@ researcher = Agent(
 | **에이전트에게 액션 부여** | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **프롬프트 수정** | ❌ | ❌ | ❌ | ✅ | ✅ |
 | **코드 필요** | 예 | 설정만 | 설정만 | 마크다운만 | 설정만 |
-| **로컬 실행** | 예 | 경우에 따라 | 아니오 (AMP API) | N/A | 예 |
-| **API 키 필요** | 도구별 | 서버별 | AMP를 통한 OAuth | 아니오 | 임베더만 |
+| **로컬 실행** | 예 | 경우에 따라 | 예 (환경 변수 필요) | N/A | 예 |
+| **API 키 필요** | 도구별 | 서버별 | 통합 토큰 | 아니오 | 임베더만 |
 | **Agent에 설정** | `tools=[]` | `mcps=[]` | `apps=[]` | `skills=[]` | `knowledge_sources=[]` |
 | **Crew에 설정** | ❌ | ❌ | ❌ | `skills=[]` | `knowledge_sources=[]` |
 

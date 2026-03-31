@@ -17,7 +17,7 @@ CrewAI agents can be extended with **five distinct capability types**, each serv
     **Remote tool servers** — connect agents to external tool servers via the Model Context Protocol. Same effect as tools, but hosted externally.
   </Card>
   <Card title="Apps" icon="grid-2" color="#EC4899">
-    **Platform integrations** — connect agents to SaaS apps (Gmail, Slack, Jira, Salesforce) via CrewAI's managed OAuth layer.
+    **Platform integrations** — connect agents to SaaS apps (Gmail, Slack, Jira, Salesforce) via CrewAI's platform. Runs locally with a platform integration token.
   </Card>
   <Card title="Skills" icon="bolt" href="/en/concepts/skills" color="#F59E0B">
     **Domain expertise** — inject instructions, guidelines, and reference material into agent prompts. Skills tell agents *how to think*.
@@ -120,8 +120,8 @@ researcher = Agent(
 | **Gives agent actions** | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **Modifies prompt** | ❌ | ❌ | ❌ | ✅ | ✅ |
 | **Requires code** | Yes | Config only | Config only | Markdown only | Config only |
-| **Runs locally** | Yes | Depends | No (AMP API) | N/A | Yes |
-| **Needs API keys** | Per tool | Per server | OAuth via AMP | No | Embedder only |
+| **Runs locally** | Yes | Depends | Yes (with env var) | N/A | Yes |
+| **Needs API keys** | Per tool | Per server | Integration token | No | Embedder only |
 | **Set on Agent** | `tools=[]` | `mcps=[]` | `apps=[]` | `skills=[]` | `knowledge_sources=[]` |
 | **Set on Crew** | ❌ | ❌ | ❌ | `skills=[]` | `knowledge_sources=[]` |
 
