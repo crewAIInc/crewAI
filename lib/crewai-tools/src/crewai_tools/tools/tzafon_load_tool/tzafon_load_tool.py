@@ -162,5 +162,5 @@ class TzafonLoadTool(BaseTool):
                 await page.close()
                 await browser.close()
         finally:
-            await computer.terminate()
+            computer.terminate()
         return content

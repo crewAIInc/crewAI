@@ -315,6 +315,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "tzafon",
     # OpenAI-compatible providers
     "openrouter",
     "deepseek",
@@ -323,7 +324,6 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
-    "tzafon",
 ]
 
 
@@ -404,6 +404,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "tzafon": "tzafon",
                 # OpenAI-compatible providers
                 "openrouter": "openrouter",
                 "deepseek": "deepseek",
@@ -412,7 +413,6 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
-                "tzafon": "tzafon",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -640,6 +640,11 @@ class LLM(BaseLLM):
 
             return BedrockCompletion
 
+        if provider == "tzafon":
+            from crewai.llms.providers.tzafon.completion import TzafonCompletion
+
+            return TzafonCompletion
+
         # OpenAI-compatible providers
         openai_compatible_providers = {
             "openrouter",
@@ -649,7 +654,6 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
-            "tzafon",
         }
 
         if provider in openai_compatible_providers:
