@@ -2521,18 +2521,37 @@ class LLM(BaseLLM):
             True if the model likely supports images.
         """
         vision_prefixes = (
+            # OpenAI — GPT-4 vision models
             "gpt-4o",
             "gpt-4-turbo",
             "gpt-4-vision",
             "gpt-4.1",
+            # OpenAI — GPT-5 family (all support multimodal, see openai.com/index/introducing-gpt-5)
+            "gpt-5",
+            # Anthropic — all Claude 3+ models support vision (platform.claude.com/docs/en/build-with-claude/vision)
             "claude-3",
             "claude-4",
             "claude-sonnet-4",
             "claude-opus-4",
             "claude-haiku-4",
+            # Google — all Gemini models support multimodal
             "gemini",
+            # OpenAI — o-series reasoning models with vision
+            # o3 and o4-mini support multimodal (openai.com/index/thinking-with-images)
+            # o3-mini is text-only — handled via exclusion below
+            "o3",
+            "o4-mini",
+            "o4",
         )
+        # Text-only models that would otherwise match vision prefixes
+        text_only_models = ("o3-mini", "o1-mini", "o1-preview")
+
         model_lower = self.model.lower()
+
+        # Check exclusion first
+        if any(model_lower.startswith(m) or f"/{m}" in model_lower for m in text_only_models):
+            return False
+
         return any(
             model_lower.startswith(p) or f"/{p}" in model_lower for p in vision_prefixes
         )
