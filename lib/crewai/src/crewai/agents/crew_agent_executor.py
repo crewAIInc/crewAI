@@ -990,8 +990,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
+            is_error = True
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+            is_error = True
         elif not from_cache and func_name in available_functions:
             try:
                 raw_result = available_functions[func_name](**(args_dict or {}))
