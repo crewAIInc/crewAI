@@ -117,8 +117,13 @@ try:
             "ToolResult": _ToolResult,
         },
     )
-except Exception:  # noqa: S110
-    pass
+except Exception:
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning(
+        "AgentExecutor.model_rebuild() failed; forward refs may be unresolved.",
+        exc_info=True,
+    )
 
 __all__ = [
     "LLM",

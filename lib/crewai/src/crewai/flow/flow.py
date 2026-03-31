@@ -949,6 +949,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     def _flow_post_init(self) -> None:
         """Heavy initialization: state creation, events, memory, method registration."""
+        if getattr(self, "_flow_post_init_done", False):
+            return
+        object.__setattr__(self, "_flow_post_init_done", True)
+
         if self._state is None:
             self._state = self._create_initial_state()
 
