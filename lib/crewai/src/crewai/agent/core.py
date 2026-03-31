@@ -25,7 +25,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    InstanceOf,
     PrivateAttr,
     model_validator,
 )
@@ -167,10 +166,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | None = Field(
+    llm: str | BaseLLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
+    function_calling_llm: str | BaseLLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: str | None = Field(
