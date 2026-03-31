@@ -11,7 +11,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
+from openai import APIConnectionError, AsyncOpenAI, AsyncStream, NotFoundError, OpenAI, Stream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
@@ -202,7 +202,21 @@ class TzafonCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+
                 params = self._prepare_params(messages=formatted_messages, tools=tools)
+
+                if self.stream:
+                    return await self._ahandle_streaming(
+                        params=params,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
 
                 return await self._ahandle_completion(
                     params=params,
@@ -586,6 +600,173 @@ class TzafonCompletion(BaseLLM):
             params["messages"], full_response, from_agent
         )
 
+    async def _ahandle_streaming(
+        self,
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | BaseModel:
+        """Handle async streaming chat completion."""
+        full_response = ""
+        tool_calls: dict[int, dict[str, Any]] = {}
+
+        if response_model:
+            parse_params = {
+                k: v
+                for k, v in params.items()
+                if k not in ("response_format", "stream", "stream_options")
+            }
+            async with self.async_client.beta.chat.completions.stream(
+                **parse_params, response_format=response_model
+            ) as stream:
+                async for chunk in stream:
+                    response_id = chunk.id if hasattr(chunk, "id") else None
+                    if chunk.type == "content.delta":
+                        delta_content = chunk.delta
+                        if delta_content:
+                            self._emit_stream_chunk_event(
+                                chunk=delta_content,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                response_id=response_id,
+                            )
+
+                final_completion = await stream.get_final_completion()
+                if final_completion:
+                    usage = self._extract_token_usage(final_completion)
+                    self._track_token_usage_internal(usage)
+                    if final_completion.choices:
+                        parsed_result = final_completion.choices[0].message.parsed
+                        if parsed_result:
+                            self._emit_call_completed_event(
+                                response=parsed_result.model_dump_json(),
+                                call_type=LLMCallType.LLM_CALL,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                messages=params["messages"],
+                            )
+                            return parsed_result
+
+            return ""
+
+        completion_stream: AsyncStream[ChatCompletionChunk] = (
+            await self.async_client.chat.completions.create(**params)
+        )
+
+        usage_data: dict[str, Any] = {"total_tokens": 0}
+
+        async for completion_chunk in completion_stream:
+            response_id = (
+                completion_chunk.id if hasattr(completion_chunk, "id") else None
+            )
+
+            if hasattr(completion_chunk, "usage") and completion_chunk.usage:
+                usage_data = self._extract_token_usage(completion_chunk)
+                continue
+
+            if not completion_chunk.choices:
+                continue
+
+            choice = completion_chunk.choices[0]
+            chunk_delta: ChoiceDelta = choice.delta
+
+            if chunk_delta.content:
+                full_response += chunk_delta.content
+                self._emit_stream_chunk_event(
+                    chunk=chunk_delta.content,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_id=response_id,
+                )
+
+            if chunk_delta.tool_calls:
+                for tool_call in chunk_delta.tool_calls:
+                    tool_index = tool_call.index if tool_call.index is not None else 0
+                    if tool_index not in tool_calls:
+                        tool_calls[tool_index] = {
+                            "id": tool_call.id,
+                            "name": "",
+                            "arguments": "",
+                            "index": tool_index,
+                        }
+                    elif tool_call.id and not tool_calls[tool_index]["id"]:
+                        tool_calls[tool_index]["id"] = tool_call.id
+
+                    if tool_call.function and tool_call.function.name:
+                        tool_calls[tool_index]["name"] = tool_call.function.name
+                    if tool_call.function and tool_call.function.arguments:
+                        tool_calls[tool_index]["arguments"] += (
+                            tool_call.function.arguments
+                        )
+
+                    self._emit_stream_chunk_event(
+                        chunk=tool_call.function.arguments
+                        if tool_call.function and tool_call.function.arguments
+                        else "",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        tool_call={
+                            "id": tool_calls[tool_index]["id"],
+                            "function": {
+                                "name": tool_calls[tool_index]["name"],
+                                "arguments": tool_calls[tool_index]["arguments"],
+                            },
+                            "type": "function",
+                            "index": tool_calls[tool_index]["index"],
+                        },
+                        call_type=LLMCallType.TOOL_CALL,
+                        response_id=response_id,
+                    )
+
+        self._track_token_usage_internal(usage_data)
+
+        if tool_calls and available_functions:
+            for call_data in tool_calls.values():
+                function_name = call_data["name"]
+                arguments = call_data["arguments"]
+
+                if not function_name or not arguments:
+                    continue
+
+                if function_name not in available_functions:
+                    logging.warning(
+                        f"Function '{function_name}' not found in available functions"
+                    )
+                    continue
+
+                try:
+                    function_args = json.loads(arguments)
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse streamed tool arguments: {e}")
+                    continue
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if result is not None:
+                    return result
+
+        full_response = self._apply_stop_words(full_response)
+
+        self._emit_call_completed_event(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
+
     async def _ahandle_completion(
         self,
         params: dict[str, Any],
@@ -715,6 +896,10 @@ class TzafonCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Tzafon does not currently document multimodal support."""
         return False
+
+    def supports_function_calling(self) -> bool:
+        """Check if the model supports function calling."""
+        return True
 
     def _extract_token_usage(
         self, response: ChatCompletion | ChatCompletionChunk
