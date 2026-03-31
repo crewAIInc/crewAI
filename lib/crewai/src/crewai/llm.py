@@ -1990,7 +1990,8 @@ class LLM(BaseLLM):
         if isinstance(usage, dict):
             return usage
         if hasattr(usage, "model_dump"):
-            return usage.model_dump()
+            result: dict[str, Any] = usage.model_dump()
+            return result
         if hasattr(usage, "__dict__"):
             return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
         return None

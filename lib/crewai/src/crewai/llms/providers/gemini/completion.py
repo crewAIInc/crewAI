@@ -911,10 +911,10 @@ class GeminiCompletion(BaseLLM):
         chunk: GenerateContentResponse,
         full_response: str,
         function_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, int] | None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int]]:
+    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int] | None]:
         """Process a single streaming chunk.
 
         Args:
@@ -990,7 +990,7 @@ class GeminiCompletion(BaseLLM):
         self,
         full_response: str,
         function_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, int] | None,
         contents: list[types.Content],
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -1002,7 +1002,7 @@ class GeminiCompletion(BaseLLM):
         Args:
             full_response: The complete streamed response content
             function_calls: Dictionary of function calls accumulated during streaming
-            usage_data: Token usage data from the stream
+            usage_data: Token usage data from the stream, or None if unavailable
             contents: Original contents for event conversion
             available_functions: Available functions for function calling
             from_task: Task that initiated the call
@@ -1012,7 +1012,8 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Final response content after processing
         """
-        self._track_token_usage_internal(usage_data)
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         if response_model and function_calls:
             for call_data in function_calls.values():
@@ -1147,7 +1148,7 @@ class GeminiCompletion(BaseLLM):
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, int] | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
@@ -1226,7 +1227,7 @@ class GeminiCompletion(BaseLLM):
         """Handle async streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, int] | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents

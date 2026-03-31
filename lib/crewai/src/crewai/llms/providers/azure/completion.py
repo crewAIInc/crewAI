@@ -799,7 +799,7 @@ class AzureCompletion(BaseLLM):
         self,
         full_response: str,
         tool_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, Any] | None,
         params: AzureCompletionParams,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -811,7 +811,7 @@ class AzureCompletion(BaseLLM):
         Args:
             full_response: The complete streamed response content
             tool_calls: Dictionary of tool calls accumulated during streaming
-            usage_data: Token usage data from the stream
+            usage_data: Token usage data from the stream, or None if unavailable
             params: Completion parameters containing messages
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
@@ -821,7 +821,8 @@ class AzureCompletion(BaseLLM):
         Returns:
             Final response content after processing, or structured output
         """
-        self._track_token_usage_internal(usage_data)
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         # Handle structured output validation
         if response_model and self.is_openai_model:
@@ -910,7 +911,7 @@ class AzureCompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, Any] | None = None
         for update in self._client.complete(**params):
             if isinstance(update, StreamingChatCompletionsUpdate):
                 if update.usage:
@@ -976,7 +977,7 @@ class AzureCompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, Any] | None = None
 
         stream = await self._async_client.complete(**params)
         async for update in stream:

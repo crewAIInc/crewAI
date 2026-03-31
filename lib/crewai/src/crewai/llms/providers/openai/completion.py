@@ -1053,7 +1053,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
-        usage: dict[str, Any] = {"total_tokens": 0}
+        usage: dict[str, Any] | None = None
 
         stream = self._client.responses.create(**params)
         response_id_stream = None
@@ -1181,7 +1181,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
-        usage: dict[str, Any] = {"total_tokens": 0}
+        usage: dict[str, Any] | None = None
 
         stream = await self._async_client.responses.create(**params)
         response_id_stream = None
@@ -1713,7 +1713,7 @@ class OpenAICompletion(BaseLLM):
         self,
         full_response: str,
         tool_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, Any] | None,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -1724,7 +1724,7 @@ class OpenAICompletion(BaseLLM):
         Args:
             full_response: The accumulated text response from the stream.
             tool_calls: Accumulated tool calls from the stream, keyed by index.
-            usage_data: Token usage data from the stream.
+            usage_data: Token usage data from the stream, or None if unavailable.
             params: The completion parameters containing messages.
             available_functions: Available functions for tool calling.
             from_task: Task that initiated the call.
@@ -1735,7 +1735,8 @@ class OpenAICompletion(BaseLLM):
             tool execution result when available_functions is provided,
             or the text response string.
         """
-        self._track_token_usage_internal(usage_data)
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         if tool_calls and not available_functions:
             tool_calls_list = [
@@ -1864,7 +1865,7 @@ class OpenAICompletion(BaseLLM):
             self._client.chat.completions.create(**params)
         )
 
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, Any] | None = None
 
         for completion_chunk in completion_stream:
             response_id_stream = (
@@ -2106,7 +2107,7 @@ class OpenAICompletion(BaseLLM):
             ] = await self._async_client.chat.completions.create(**params)
 
             accumulated_content = ""
-            usage_data = {"total_tokens": 0}
+            usage_data: dict[str, Any] | None = None
             async for chunk in completion_stream:
                 response_id_stream = chunk.id if hasattr(chunk, "id") else None
 
@@ -2129,7 +2130,8 @@ class OpenAICompletion(BaseLLM):
                         response_id=response_id_stream,
                     )
 
-            self._track_token_usage_internal(usage_data)
+            if usage_data:
+                self._track_token_usage_internal(usage_data)
 
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)
@@ -2160,7 +2162,7 @@ class OpenAICompletion(BaseLLM):
             ChatCompletionChunk
         ] = await self._async_client.chat.completions.create(**params)
 
-        usage_data = {"total_tokens": 0}
+        usage_data = None
 
         async for chunk in stream:
             response_id_stream = chunk.id if hasattr(chunk, "id") else None
