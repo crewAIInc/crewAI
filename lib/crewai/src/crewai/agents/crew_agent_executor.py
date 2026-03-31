@@ -30,6 +30,7 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserError,
 )
+from crewai.agents.tools_handler import ToolsHandler
 from crewai.core.providers.human_input import ExecutorContext, get_provider
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.logging_events import (
@@ -45,6 +46,9 @@ from crewai.hooks.tool_hooks import (
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
 )
+from crewai.llms.base_llm import BaseLLM
+from crewai.tools.base_tool import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
     aget_llm_response,
     convert_tools_to_openai_schema,
@@ -66,27 +70,23 @@ from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
+from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import (
     aexecute_tool_and_check_finality,
     execute_tool_and_check_finality,
 )
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.types import LLMMessage
 
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
-    from crewai.agents.tools_handler import ToolsHandler
     from crewai.crew import Crew
-    from crewai.llms.base_llm import BaseLLM
     from crewai.task import Task
-    from crewai.tools.base_tool import BaseTool
-    from crewai.tools.structured_tool import CrewStructuredTool
     from crewai.tools.tool_types import ToolResult
-    from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
-    from crewai.utilities.types import LLMMessage
 
 
 class CrewAgentExecutor(BaseModel, CrewAgentExecutorMixin):

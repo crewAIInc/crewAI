@@ -6,6 +6,7 @@ import warnings
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
@@ -17,6 +18,9 @@ from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+
+
+CrewAgentExecutor.model_rebuild()
 
 
 def _suppress_pydantic_deprecation_warnings() -> None:
