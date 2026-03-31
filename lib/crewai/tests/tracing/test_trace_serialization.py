@@ -15,7 +15,7 @@ from pydantic import ConfigDict
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.base_events import _trace_agent_ref, _trace_task_ref, _trace_tool_names
 from crewai.events.listeners.tracing.utils import safe_serialize_to_dict
-from crewai.security import Fingerprint, SecurityConfig
+from crewai.security import SecurityConfig
 from crewai.utilities.serialization import to_serializable
 
 
