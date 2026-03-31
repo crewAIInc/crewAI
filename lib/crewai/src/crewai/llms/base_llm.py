@@ -460,6 +460,7 @@ class BaseLLM(BaseModel, ABC):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        stop_reason: str | None = None,
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
@@ -474,6 +475,7 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                stop_reason=stop_reason,
             ),
         )
 
