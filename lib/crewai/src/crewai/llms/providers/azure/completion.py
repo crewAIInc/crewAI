@@ -1221,14 +1221,16 @@ class AzureCompletion(BaseLLM):
     def last_response_id(self) -> str | None:
         """Get the last response ID from Responses API auto-chaining."""
         if self._responses_delegate is not None:
-            return self._responses_delegate.last_response_id
+            result: str | None = self._responses_delegate.last_response_id
+            return result
         return None
 
     @property
     def last_reasoning_items(self) -> list[Any] | None:
         """Get the last reasoning items from Responses API auto-chain reasoning."""
         if self._responses_delegate is not None:
-            return self._responses_delegate.last_reasoning_items
+            result: list[Any] | None = self._responses_delegate.last_reasoning_items
+            return result
         return None
 
     def reset_chain(self) -> None:
