@@ -158,6 +158,9 @@ class AgentExecutorState(BaseModel):
 class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
     """Agent Executor for both standalone agents and crew-bound agents.
 
+    _skip_auto_memory prevents Flow from eagerly allocating a Memory
+    instance — the executor uses agent/crew memory, not its own.
+
     Inherits from:
     - Flow[AgentExecutorState]: Provides flow orchestration capabilities
     - CrewAgentExecutorMixin: Provides memory methods (short/long/external term)
@@ -166,6 +169,8 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
     - Standalone mode: When crew and task are None (used by Agent.kickoff())
     - Crew mode: When crew and task are provided (used by Agent.execute_task())
     """
+
+    _skip_auto_memory: bool = True
 
     suppress_flow_events: bool = True  # always suppress for executor
     llm: BaseLLM = Field(exclude=True)
