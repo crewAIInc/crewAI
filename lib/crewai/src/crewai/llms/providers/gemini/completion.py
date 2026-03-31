@@ -665,6 +665,7 @@ class GeminiCompletion(BaseLLM):
         messages_for_event: list[LLMMessage],
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
@@ -690,6 +691,7 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages_for_event,
+                usage=usage,
             )
 
             return structured_data
@@ -705,6 +707,7 @@ class GeminiCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> str | BaseModel:
         """Finalize completion response with validation and event emission.
 
@@ -728,6 +731,7 @@ class GeminiCompletion(BaseLLM):
                 messages_for_event=messages_for_event,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage,
             )
 
         self._emit_call_completed_event(
@@ -736,6 +740,7 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages_for_event,
+            usage=usage,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -749,6 +754,7 @@ class GeminiCompletion(BaseLLM):
         contents: list[types.Content],
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> BaseModel:
         """Validate and emit event for structured_output tool call.
 
@@ -773,6 +779,7 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=self._convert_contents_to_dict(contents),
+                usage=usage,
             )
             return validated_data
         except Exception as e:
@@ -791,6 +798,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> str | Any:
         """Process response, execute function calls, and finalize completion.
 
@@ -831,6 +839,7 @@ class GeminiCompletion(BaseLLM):
                                 contents=contents,
                                 from_task=from_task,
                                 from_agent=from_agent,
+                                usage=usage,
                             )
 
                 # Filter out structured_output from function calls returned to executor
@@ -852,6 +861,7 @@ class GeminiCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=self._convert_contents_to_dict(contents),
+                        usage=usage,
                     )
                     return non_structured_output_parts
 
@@ -893,6 +903,7 @@ class GeminiCompletion(BaseLLM):
             response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
+            usage=usage,
         )
 
     def _process_stream_chunk(
@@ -900,10 +911,10 @@ class GeminiCompletion(BaseLLM):
         chunk: GenerateContentResponse,
         full_response: str,
         function_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, int] | None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int]]:
+    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int] | None]:
         """Process a single streaming chunk.
 
         Args:
@@ -979,7 +990,7 @@ class GeminiCompletion(BaseLLM):
         self,
         full_response: str,
         function_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, int] | None,
         contents: list[types.Content],
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -991,7 +1002,7 @@ class GeminiCompletion(BaseLLM):
         Args:
             full_response: The complete streamed response content
             function_calls: Dictionary of function calls accumulated during streaming
-            usage_data: Token usage data from the stream
+            usage_data: Token usage data from the stream, or None if unavailable
             contents: Original contents for event conversion
             available_functions: Available functions for function calling
             from_task: Task that initiated the call
@@ -1001,7 +1012,8 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Final response content after processing
         """
-        self._track_token_usage_internal(usage_data)
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         if response_model and function_calls:
             for call_data in function_calls.values():
@@ -1013,6 +1025,7 @@ class GeminiCompletion(BaseLLM):
                         contents=contents,
                         from_task=from_task,
                         from_agent=from_agent,
+                        usage=usage_data,
                     )
 
         non_structured_output_calls = {
@@ -1041,6 +1054,7 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=self._convert_contents_to_dict(contents),
+                usage=usage_data,
             )
             return formatted_function_calls
 
@@ -1081,6 +1095,7 @@ class GeminiCompletion(BaseLLM):
             response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
+            usage=usage_data,
         )
 
     def _handle_completion(
@@ -1118,6 +1133,7 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            usage=usage,
         )
 
     def _handle_streaming_completion(
@@ -1132,7 +1148,7 @@ class GeminiCompletion(BaseLLM):
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, int] | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
@@ -1196,6 +1212,7 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            usage=usage,
         )
 
     async def _ahandle_streaming_completion(
@@ -1210,7 +1227,7 @@ class GeminiCompletion(BaseLLM):
         """Handle async streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, int] | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
