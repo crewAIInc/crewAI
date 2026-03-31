@@ -1546,7 +1546,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         init_state = self.initial_state
 
-        if hasattr(self, "_initial_state_t"):
+        if init_state is None and hasattr(self, "_initial_state_t"):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
@@ -1591,32 +1591,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 new_state["id"] = str(uuid4())
             return cast(T, new_state)
 
-        # Handle BaseModel instance case
         if isinstance(init_state, BaseModel):
             model = init_state
-            if not hasattr(model, "id"):
-                raise ValueError("Flow state model must have an 'id' field")
-
-            # Create new instance with same values to avoid mutations
-            if hasattr(model, "model_dump"):
-                # Pydantic v2
+            if hasattr(model, "id"):
                 state_dict = model.model_dump()
-            elif hasattr(model, "dict"):
-                # Pydantic v1
-                state_dict = model.dict()
-            else:
-                # Fallback for other BaseModel implementations
-                state_dict = {
-                    k: v for k, v in model.__dict__.items() if not k.startswith("_")
-                }
+                if not state_dict.get("id"):
+                    state_dict["id"] = str(uuid4())
+                model_class = type(model)
+                return cast(T, model_class(**state_dict))
 
-            # Ensure id is set - generate UUID if empty
-            if not state_dict.get("id"):
-                state_dict["id"] = str(uuid4())
+            class StateWithId(FlowState, type(model)):  # type: ignore
+                pass
 
-            # Create new instance of the same class
-            model_class = type(model)
-            return cast(T, model_class(**state_dict))
+            state_dict = model.model_dump()
+            state_dict["id"] = str(uuid4())
+            return cast(T, StateWithId(**state_dict))
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
