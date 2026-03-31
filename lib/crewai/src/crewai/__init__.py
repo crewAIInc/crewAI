@@ -93,6 +93,33 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module 'crewai' has no attribute {name!r}")
 
 
+try:
+    from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
+    from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
+    from crewai.hooks.llm_hooks import LLMCallHookContext as _LLMCallHookContext
+    from crewai.tools.tool_types import ToolResult as _ToolResult
+    from crewai.utilities.prompts import (
+        StandardPromptResult as _StandardPromptResult,
+        SystemPromptResult as _SystemPromptResult,
+    )
+
+    _AgentExecutor.model_rebuild(
+        force=True,
+        _types_namespace={
+            "Agent": Agent,
+            "ToolsHandler": _ToolsHandler,
+            "Crew": Crew,
+            "BaseLLM": BaseLLM,
+            "Task": Task,
+            "StandardPromptResult": _StandardPromptResult,
+            "SystemPromptResult": _SystemPromptResult,
+            "LLMCallHookContext": _LLMCallHookContext,
+            "ToolResult": _ToolResult,
+        },
+    )
+except Exception:  # noqa: S110
+    pass
+
 __all__ = [
     "LLM",
     "Agent",

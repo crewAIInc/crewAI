@@ -39,9 +39,18 @@ from uuid import uuid4
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    ValidationError,
+    model_validator,
+)
+from pydantic._internal._model_construction import ModelMetaclass
 from rich.console import Console
 from rich.panel import Panel
+from typing_extensions import Self
 
 from crewai.events.base_events import reset_emission_counter
 from crewai.events.event_bus import crewai_event_bus
@@ -81,6 +90,7 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
     StartMethod,
 )
+from crewai.flow.human_feedback import HumanFeedbackResult
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import (
@@ -108,7 +118,6 @@ if TYPE_CHECKING:
     from crewai_files import FileInput
 
     from crewai.flow.async_feedback.types import PendingFeedbackContext
-    from crewai.flow.human_feedback import HumanFeedbackResult
     from crewai.llms.base_llm import BaseLLM
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
@@ -728,7 +737,7 @@ class StateProxy(Generic[T]):
         return result
 
 
-class FlowMeta(type):
+class FlowMeta(ModelMetaclass):
     def __new__(
         mcs,
         name: str,
@@ -736,6 +745,45 @@ class FlowMeta(type):
         namespace: dict[str, Any],
         **kwargs: Any,
     ) -> type:
+        parent_fields: set[str] = set()
+        for base in bases:
+            if hasattr(base, "model_fields"):
+                parent_fields.update(base.model_fields)
+
+        annotations = namespace.get("__annotations__", {})
+        _skip_types = (classmethod, staticmethod, property)
+
+        for base in bases:
+            if isinstance(base, ModelMetaclass):
+                continue
+            for attr_name in getattr(base, "__annotations__", {}):
+                if attr_name not in annotations and attr_name not in namespace:
+                    annotations[attr_name] = ClassVar
+
+        for attr_name, attr_value in namespace.items():
+            if isinstance(attr_value, property) and attr_name not in annotations:
+                for base in bases:
+                    base_ann = getattr(base, "__annotations__", {})
+                    if attr_name in base_ann:
+                        annotations[attr_name] = ClassVar
+
+        for attr_name, attr_value in list(namespace.items()):
+            if attr_name in annotations or attr_name.startswith("_"):
+                continue
+            if attr_name in parent_fields:
+                annotations[attr_name] = Any
+                if isinstance(attr_value, BaseModel):
+                    namespace[attr_name] = Field(
+                        default_factory=lambda v=attr_value: v, exclude=True
+                    )
+                continue
+            if callable(attr_value) or isinstance(
+                attr_value, (*_skip_types, FlowMethod)
+            ):
+                continue
+            annotations[attr_name] = ClassVar[type(attr_value)]
+        namespace["__annotations__"] = annotations
+
         cls = super().__new__(mcs, name, bases, namespace)
 
         start_methods = []
@@ -820,88 +868,95 @@ class FlowMeta(type):
         return cls
 
 
-class Flow(Generic[T], metaclass=FlowMeta):
+class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
     type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        ignored_types=(StartMethod, ListenMethod, RouterMethod),
+        revalidate_instances="never",
+    )
+    __hash__ = object.__hash__
 
     _start_methods: ClassVar[list[FlowMethodName]] = []
     _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
     _routers: ClassVar[set[FlowMethodName]] = set()
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
-    initial_state: type[T] | T | None = None
-    name: str | None = None
-    tracing: bool | None = None
-    stream: bool = False
-    memory: Memory | MemoryScope | MemorySlice | None = None
-    input_provider: InputProvider | None = None
 
-    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
-        class _FlowGeneric(cls):  # type: ignore
-            _initial_state_t = item
+    initial_state: Any = Field(default=None)
+    name: str | None = Field(default=None)
+    tracing: bool | None = Field(default=None)
+    stream: bool = Field(default=False)
+    memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
+    input_provider: InputProvider | None = Field(default=None)
+    suppress_flow_events: bool = Field(default=False)
+    human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
+    last_human_feedback: HumanFeedbackResult | None = Field(default=None)
+
+    persistence: Any = Field(default=None, exclude=True)
+    max_method_calls: int = Field(default=100, exclude=True)
+
+    _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
+        default_factory=dict
+    )
+    _method_execution_counts: dict[FlowMethodName, int] = PrivateAttr(
+        default_factory=dict
+    )
+    _pending_and_listeners: dict[PendingListenerKey, set[FlowMethodName]] = PrivateAttr(
+        default_factory=dict
+    )
+    _fired_or_listeners: set[FlowMethodName] = PrivateAttr(default_factory=set)
+    _method_outputs: list[Any] = PrivateAttr(default_factory=list)
+    _state_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
+    _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
+    _max_method_calls: int = PrivateAttr(default=100)
+    _persistence: FlowPersistence | None = PrivateAttr(default=None)
+    _is_execution_resuming: bool = PrivateAttr(default=False)
+    _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
+    _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
+    _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
+    _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
+    _state: Any = PrivateAttr(default=None)
+
+    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
+        class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
+            pass
 
         _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
+        _FlowGeneric._initial_state_t = item
         return _FlowGeneric
 
-    def __init__(
-        self,
-        persistence: FlowPersistence | None = None,
-        tracing: bool | None = None,
-        suppress_flow_events: bool = False,
-        max_method_calls: int = 100,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize a new Flow instance.
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Allow arbitrary attribute assignment for backward compat with plain class."""
+        if name in self.model_fields or name in self.__private_attributes__:
+            super().__setattr__(name, value)
+        else:
+            object.__setattr__(self, name, value)
 
-        Args:
-            persistence: Optional persistence backend for storing flow states
-            tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
-            suppress_flow_events: Whether to suppress flow event emissions (internal use)
-            max_method_calls: Maximum times a single method can be called per execution before raising RecursionError
-            **kwargs: Additional state values to initialize or override
-        """
-        # Initialize basic instance attributes
-        self._methods: dict[FlowMethodName, FlowMethod[Any, Any]] = {}
-        self._method_execution_counts: dict[FlowMethodName, int] = {}
-        self._pending_and_listeners: dict[PendingListenerKey, set[FlowMethodName]] = {}
-        self._fired_or_listeners: set[FlowMethodName] = (
-            set()
-        )  # Track OR listeners that already fired
-        self._method_outputs: list[Any] = []  # list to store all method outputs
-        self._state_lock = threading.Lock()
-        self._or_listeners_lock = threading.Lock()
-        self._completed_methods: set[FlowMethodName] = (
-            set()
-        )  # Track completed methods for reload
-        self._method_call_counts: dict[FlowMethodName, int] = {}
-        self._max_method_calls = max_method_calls
-        self._persistence: FlowPersistence | None = persistence
-        self._is_execution_resuming: bool = False
-        self._event_futures: list[Future[None]] = []
+    @model_validator(mode="after")
+    def _route_init_params(self) -> Self:
+        """Move constructor-surface fields into private attrs."""
+        self._persistence = self.persistence
+        self._max_method_calls = self.max_method_calls
+        return self
 
-        # Human feedback storage
-        self.human_feedback_history: list[HumanFeedbackResult] = []
-        self.last_human_feedback: HumanFeedbackResult | None = None
-        self._pending_feedback_context: PendingFeedbackContext | None = None
-        # Per-method stash for real @human_feedback output (keyed by method name)
-        # Used to decouple routing outcome from method return value when emit is set
-        self._human_feedback_method_outputs: dict[str, Any] = {}
-        self.suppress_flow_events: bool = suppress_flow_events
+    def model_post_init(self, __context: Any) -> None:
+        self._flow_post_init()
 
-        # User input history (for self.ask())
-        self._input_history: list[InputHistoryEntry] = []
+    def _flow_post_init(self) -> None:
+        """Heavy initialization: state creation, events, memory, method registration."""
+        if self._state is None:
+            self._state = self._create_initial_state()
 
-        # Initialize state with initial values
-        self._state = self._create_initial_state()
-        self.tracing = tracing
         tracing_enabled = should_enable_tracing(override=self.tracing)
         set_tracing_enabled(tracing_enabled)
 
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
-        # Apply any additional kwargs
-        if kwargs:
-            self._initialize_state(kwargs)
 
         if not self.suppress_flow_events:
             crewai_event_bus.emit(
@@ -1487,39 +1542,33 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         init_state = self.initial_state
 
-        # Handle case where initial_state is None but we have a type parameter
-        if init_state is None and hasattr(self, "_initial_state_t"):
+        if hasattr(self, "_initial_state_t"):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    # Create instance - FlowState auto-generates id via default_factory
                     instance = state_type()
-                    # Ensure id is set - generate UUID if empty
                     if not getattr(instance, "id", None):
                         object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if issubclass(state_type, BaseModel):
-                    # Create a new type with FlowState first for proper id default
+
                     class StateWithId(FlowState, state_type):  # type: ignore
                         pass
 
                     instance = StateWithId()
-                    # Ensure id is set - generate UUID if empty
                     if not getattr(instance, "id", None):
                         object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if state_type is dict:
                     return cast(T, {"id": str(uuid4())})
 
-        # Handle case where no initial state is provided
         if init_state is None:
             return cast(T, {"id": str(uuid4())})
 
-        # Handle case where initial_state is a type (class)
         if isinstance(init_state, type):
             state_class = init_state
             if issubclass(state_class, FlowState):
-                return state_class()
+                return cast(T, state_class())
             if issubclass(state_class, BaseModel):
                 model_fields = getattr(state_class, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
@@ -1527,7 +1576,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 model_instance = state_class()
                 if not getattr(model_instance, "id", None):
                     object.__setattr__(model_instance, "id", str(uuid4()))
-                return model_instance
+                return cast(T, model_instance)
             if init_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
@@ -1540,7 +1589,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         # Handle BaseModel instance case
         if isinstance(init_state, BaseModel):
-            model = cast(BaseModel, init_state)
+            model = init_state
             if not hasattr(model, "id"):
                 raise ValueError("Flow state model must have an 'id' field")
 
@@ -1576,17 +1625,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         if isinstance(self._state, BaseModel):
             try:
-                return self._state.model_copy(deep=True)
+                return cast(T, self._state.model_copy(deep=True))
             except (TypeError, AttributeError):
                 try:
                     state_dict = self._state.model_dump()
                     model_class = type(self._state)
-                    return model_class(**state_dict)
+                    return cast(T, model_class(**state_dict))
                 except Exception:
-                    return self._state.model_copy(deep=False)
+                    return cast(T, self._state.model_copy(deep=False))
         else:
             try:
-                return copy.deepcopy(self._state)
+                return cast(T, copy.deepcopy(self._state))
             except (TypeError, AttributeError):
                 return cast(T, self._state.copy())
 
@@ -1662,7 +1711,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, preserve existing fields unless overridden
             try:
-                model = cast(BaseModel, self._state)
+                model = self._state
                 # Get current state as dict
                 if hasattr(model, "model_dump"):
                     current_state = model.model_dump()
@@ -1713,7 +1762,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._state.update(stored_state)
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, create new instance with stored values
-            model = cast(BaseModel, self._state)
+            model = self._state
             if hasattr(model, "model_validate"):
                 # Pydantic v2
                 self._state = cast(T, type(model).model_validate(stored_state))
