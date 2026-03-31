@@ -4,6 +4,38 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="01 abr 2026">
+  ## v1.13.0a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Emitir dados de uso de token no LLMCallCompletedEvent
+  - Extrair e publicar metadados de ferramentas no AMP
+
+  ### Correções de Bugs
+  - Lidar com modelos GPT-5.x que não suportam o parâmetro de API `stop`
+
+  ### Documentação
+  - Corrigir imprecisões nas capacidades do agente em todas as línguas
+  - Adicionar visão geral das Capacidades do Agente e melhorar a documentação de Habilidades
+  - Adicionar um guia abrangente de configuração de SSO
+  - Atualizar o changelog e a versão para v1.13.0rc1
+
+  ### Refatoração
+  - Converter Flow para Pydantic BaseModel
+  - Converter classes LLM para Pydantic BaseModel
+  - Substituir InstanceOf[T] por anotações de tipo simples
+  - Remover métodos não utilizados
+
+  ## Contribuidores
+
+  @dependabot[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
 <Update label="27 mar 2026">
   ## v1.13.0rc1
 
