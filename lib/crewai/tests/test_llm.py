@@ -752,11 +752,7 @@ def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):
             raise litellm_error
         return MagicMock(
             choices=[MagicMock(message=MagicMock(content="Paris", tool_calls=None))],
-            usage=MagicMock(
-                prompt_tokens=10,
-                completion_tokens=5,
-                total_tokens=15,
-            ),
+            usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
         )
 
     with patch("litellm.completion", side_effect=mock_completion):
@@ -787,11 +783,7 @@ def test_litellm_retry_catches_openai_api_stop_error(caplog):
             raise api_error
         return MagicMock(
             choices=[MagicMock(message=MagicMock(content="Paris", tool_calls=None))],
-            usage=MagicMock(
-                prompt_tokens=10,
-                completion_tokens=5,
-                total_tokens=15,
-            ),
+            usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
         )
 
     with patch("litellm.completion", side_effect=mock_completion):
