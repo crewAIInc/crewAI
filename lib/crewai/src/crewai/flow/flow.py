@@ -45,12 +45,10 @@ from pydantic import (
     Field,
     PrivateAttr,
     ValidationError,
-    model_validator,
 )
 from pydantic._internal._model_construction import ModelMetaclass
 from rich.console import Console
 from rich.panel import Panel
-from typing_extensions import Self
 
 from crewai.events.base_events import reset_emission_counter
 from crewai.events.event_bus import crewai_event_bus
@@ -913,8 +911,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
     _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
-    _max_method_calls: int = PrivateAttr(default=100)
-    _persistence: FlowPersistence | None = PrivateAttr(default=None)
     _is_execution_resuming: bool = PrivateAttr(default=False)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
@@ -936,13 +932,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             super().__setattr__(name, value)
         else:
             object.__setattr__(self, name, value)
-
-    @model_validator(mode="after")
-    def _route_init_params(self) -> Self:
-        """Move constructor-surface fields into private attrs."""
-        self._persistence = self.persistence
-        self._max_method_calls = self.max_method_calls
-        return self
 
     def model_post_init(self, __context: Any) -> None:
         self._flow_post_init()
@@ -1444,8 +1433,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._pending_feedback_context = None
 
         # Clear pending feedback from persistence
-        if self._persistence:
-            self._persistence.clear_pending_feedback(context.flow_id)
+        if self.persistence:
+            self.persistence.clear_pending_feedback(context.flow_id)
 
         # Emit feedback received event
         crewai_event_bus.emit(
@@ -1486,17 +1475,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if isinstance(e, HumanFeedbackPending):
                 self._pending_feedback_context = e.context
 
-                if self._persistence is None:
+                if self.persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
-                    self._persistence = SQLiteFlowPersistence()
+                    self.persistence = SQLiteFlowPersistence()
 
                 state_data = (
                     self._state
                     if isinstance(self._state, dict)
                     else self._state.model_dump()
                 )
-                self._persistence.save_pending_feedback(
+                self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
                     state_data=state_data,
@@ -1980,7 +1969,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         try:
             # Reset flow state for fresh execution unless restoring from persistence
-            is_restoring = inputs and "id" in inputs and self._persistence is not None
+            is_restoring = inputs and "id" in inputs and self.persistence is not None
             if not is_restoring:
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
@@ -2006,9 +1995,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         setattr(self._state, "id", inputs["id"])  # noqa: B010
 
                 # If persistence is enabled, attempt to restore the stored state using the provided id.
-                if "id" in inputs and self._persistence is not None:
+                if "id" in inputs and self.persistence is not None:
                     restore_uuid = inputs["id"]
-                    stored_state = self._persistence.load_state(restore_uuid)
+                    stored_state = self.persistence.load_state(restore_uuid)
                     if stored_state:
                         self._log_flow_event(
                             f"Loading flow state from memory for UUID: {restore_uuid}"
@@ -2078,17 +2067,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                 if isinstance(e, HumanFeedbackPending):
                     # Auto-save pending feedback (create default persistence if needed)
-                    if self._persistence is None:
+                    if self.persistence is None:
                         from crewai.flow.persistence import SQLiteFlowPersistence
 
-                        self._persistence = SQLiteFlowPersistence()
+                        self.persistence = SQLiteFlowPersistence()
 
                     state_data = (
                         self._state
                         if isinstance(self._state, dict)
                         else self._state.model_dump()
                     )
-                    self._persistence.save_pending_feedback(
+                    self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
                         state_data=state_data,
@@ -2374,10 +2363,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if isinstance(e, HumanFeedbackPending):
                 e.context.method_name = method_name
 
-                if self._persistence is None:
+                if self.persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
-                    self._persistence = SQLiteFlowPersistence()
+                    self.persistence = SQLiteFlowPersistence()
 
                 # Emit paused event (not failed)
                 if not self.suppress_flow_events:
@@ -2738,9 +2727,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             - Catches and logs any exceptions during execution, preventing individual listener failures from breaking the entire flow
         """
         count = self._method_call_counts.get(listener_name, 0) + 1
-        if count > self._max_method_calls:
+        if count > self.max_method_calls:
             raise RecursionError(
-                f"Method '{listener_name}' has been called {self._max_method_calls} times in "
+                f"Method '{listener_name}' has been called {self.max_method_calls} times in "
                 f"this flow execution, which indicates an infinite loop. "
                 f"This commonly happens when a @listen label matches the "
                 f"method's own name."
@@ -2847,7 +2836,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         This is best-effort: if persistence is not configured, this is a no-op.
         """
-        if self._persistence is None:
+        if self.persistence is None:
             return
         try:
             state_data = (
@@ -2855,7 +2844,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if isinstance(self._state, dict)
                 else self._state.model_dump()
             )
-            self._persistence.save_state(
+            self.persistence.save_state(
                 flow_uuid=self.flow_id,
                 method_name="_ask_checkpoint",
                 state_data=state_data,

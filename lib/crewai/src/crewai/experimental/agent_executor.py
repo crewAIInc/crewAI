@@ -225,7 +225,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             self.llm.stop = list(set(existing_stop + self.stop_words))
 
         self._state = AgentExecutorState()
-        self._max_method_calls = self.max_iter * 10
+        self.max_method_calls = self.max_iter * 10
 
         current_tracing = is_tracing_enabled_in_context()
         self.tracing = current_tracing if current_tracing else None
