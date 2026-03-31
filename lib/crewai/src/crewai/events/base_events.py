@@ -2,7 +2,7 @@ from collections.abc import Iterator
 import contextvars
 from datetime import datetime, timezone
 import itertools
-from typing import Any
+from typing import Any, TypedDict
 import uuid
 
 from pydantic import BaseModel, Field, SerializationInfo
@@ -15,24 +15,34 @@ def _is_trace_context(info: SerializationInfo) -> bool:
     return bool(info.context and info.context.get("trace"))
 
 
-def _trace_agent_ref(agent: Any) -> dict[str, Any] | None:
+class AgentRef(TypedDict):
+    id: str
+    role: str
+
+
+class TaskRef(TypedDict):
+    id: str
+    name: str
+
+
+def _trace_agent_ref(agent: Any) -> AgentRef | None:
     """Return a lightweight agent reference for trace serialization."""
     if agent is None:
         return None
-    return {
-        "id": str(getattr(agent, "id", "")),
-        "role": getattr(agent, "role", ""),
-    }
+    return AgentRef(
+        id=str(getattr(agent, "id", "")),
+        role=getattr(agent, "role", ""),
+    )
 
 
-def _trace_task_ref(task: Any) -> dict[str, Any] | None:
+def _trace_task_ref(task: Any) -> TaskRef | None:
     """Return a lightweight task reference for trace serialization."""
     if task is None:
         return None
-    return {
-        "id": str(getattr(task, "id", "")),
-        "name": getattr(task, "name", None) or getattr(task, "description", ""),
-    }
+    return TaskRef(
+        id=str(getattr(task, "id", "")),
+        name=str(getattr(task, "name", None) or getattr(task, "description", "")),
+    )
 
 
 def _trace_tool_names(tools: Any) -> list[str] | None:
