@@ -1,6 +1,8 @@
 from typing import Any
 
-from crewai.events.base_events import BaseEvent
+from pydantic import SerializationInfo, field_serializer
+
+from crewai.events.base_events import BaseEvent, _is_trace_context, _trace_task_ref
 from crewai.tasks.task_output import TaskOutput
 
 
@@ -24,6 +26,11 @@ class TaskStartedEvent(BaseEvent):
         super().__init__(**data)
         _set_task_fingerprint(self, self.task)
 
+    @field_serializer("task")
+    @classmethod
+    def _serialize_task(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_task_ref(v) if _is_trace_context(info) else v
+
 
 class TaskCompletedEvent(BaseEvent):
     """Event emitted when a task completes"""
@@ -35,6 +42,11 @@ class TaskCompletedEvent(BaseEvent):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         _set_task_fingerprint(self, self.task)
+
+    @field_serializer("task")
+    @classmethod
+    def _serialize_task(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_task_ref(v) if _is_trace_context(info) else v
 
 
 class TaskFailedEvent(BaseEvent):
@@ -48,6 +60,11 @@ class TaskFailedEvent(BaseEvent):
         super().__init__(**data)
         _set_task_fingerprint(self, self.task)
 
+    @field_serializer("task")
+    @classmethod
+    def _serialize_task(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_task_ref(v) if _is_trace_context(info) else v
+
 
 class TaskEvaluationEvent(BaseEvent):
     """Event emitted when a task evaluation is completed"""
@@ -59,3 +76,8 @@ class TaskEvaluationEvent(BaseEvent):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         _set_task_fingerprint(self, self.task)
+
+    @field_serializer("task")
+    @classmethod
+    def _serialize_task(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_task_ref(v) if _is_trace_context(info) else v

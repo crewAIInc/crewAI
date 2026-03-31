@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING, Any
 
-from crewai.events.base_events import BaseEvent
+from pydantic import SerializationInfo, field_serializer
+
+from crewai.events.base_events import BaseEvent, _is_trace_context
 
 
 if TYPE_CHECKING:
@@ -25,6 +27,14 @@ class CrewBaseEvent(BaseEvent):
             self.source_type = "crew"
             if self.crew.fingerprint.metadata:
                 self.fingerprint_metadata = self.crew.fingerprint.metadata
+
+    @field_serializer("crew")
+    @classmethod
+    def _serialize_crew(cls, v: Any, info: SerializationInfo) -> Any:
+        """Exclude crew in trace context — crew_kickoff_started builds structure separately."""
+        if _is_trace_context(info):
+            return None
+        return v
 
     def to_json(self, exclude: set[str] | None = None) -> Any:
         if exclude is None:

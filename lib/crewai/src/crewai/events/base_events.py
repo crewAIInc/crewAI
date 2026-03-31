@@ -5,9 +5,41 @@ import itertools
 from typing import Any
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializationInfo
 
 from crewai.utilities.serialization import Serializable, to_serializable
+
+
+def _is_trace_context(info: SerializationInfo) -> bool:
+    """Check if serialization is happening in trace context."""
+    return bool(info.context and info.context.get("trace"))
+
+
+def _trace_agent_ref(agent: Any) -> dict[str, Any] | None:
+    """Return a lightweight agent reference for trace serialization."""
+    if agent is None:
+        return None
+    return {
+        "id": str(getattr(agent, "id", "")),
+        "role": getattr(agent, "role", ""),
+    }
+
+
+def _trace_task_ref(task: Any) -> dict[str, Any] | None:
+    """Return a lightweight task reference for trace serialization."""
+    if task is None:
+        return None
+    return {
+        "id": str(getattr(task, "id", "")),
+        "name": getattr(task, "name", None) or getattr(task, "description", ""),
+    }
+
+
+def _trace_tool_names(tools: Any) -> list[str] | None:
+    """Return a list of tool names for trace serialization."""
+    if not tools:
+        return None
+    return [getattr(t, "name", str(t)) for t in tools]
 
 
 _emission_counter: contextvars.ContextVar[Iterator[int]] = contextvars.ContextVar(

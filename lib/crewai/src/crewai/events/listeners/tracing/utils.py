@@ -429,10 +429,22 @@ def mark_first_execution_done(user_consented: bool = False) -> None:
         p.write_text(json.dumps(data, indent=2))
 
 
-def safe_serialize_to_dict(obj: Any, exclude: set[str] | None = None) -> dict[str, Any]:
-    """Safely serialize an object to a dictionary for event data."""
+def safe_serialize_to_dict(
+    obj: Any,
+    exclude: set[str] | None = None,
+    context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Safely serialize an object to a dictionary for event data.
+
+    Args:
+        obj: Object to serialize.
+        exclude: Set of keys to exclude from the result.
+        context: Optional context dict passed through to Pydantic's model_dump().
+            Field serializers can inspect this to customize output
+            (e.g. context={"trace": True} for lightweight trace serialization).
+    """
     try:
-        serialized = to_serializable(obj, exclude)
+        serialized = to_serializable(obj, exclude, context=context)
         if isinstance(serialized, dict):
             return serialized
         return {"serialized_data": serialized}

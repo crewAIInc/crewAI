@@ -1,7 +1,7 @@
 """Trace collection listener for orchestrating trace collection."""
 
 import os
-from typing import Any, ClassVar
+from typing import Any
 import uuid
 
 from typing_extensions import Self
@@ -126,17 +126,12 @@ from crewai.events.types.tool_usage_events import (
 from crewai.events.utils.console_formatter import ConsoleFormatter
 
 
+_TRACE_CONTEXT: dict[str, bool] = {"trace": True}
+"""Serialization context that triggers lightweight field serializers on event models."""
+
+
 class TraceCollectionListener(BaseEventListener):
     """Trace collection listener that orchestrates trace collection."""
-
-    complex_events: ClassVar[list[str]] = [
-        "task_started",
-        "task_completed",
-        "llm_call_started",
-        "llm_call_completed",
-        "agent_execution_started",
-        "agent_execution_completed",
-    ]
 
     _instance: Self | None = None
     _initialized: bool = False
@@ -810,9 +805,20 @@ class TraceCollectionListener(BaseEventListener):
     def _build_event_data(
         self, event_type: str, event: Any, source: Any
     ) -> dict[str, Any]:
-        """Build event data"""
-        if event_type not in self.complex_events:
-            return safe_serialize_to_dict(event)
+        """Build event data with context-based serialization to reduce trace bloat.
+
+        Field serializers on event models check for context={"trace": True} and
+        return lightweight references instead of full nested objects. This replaces
+        the old denylist approach with Pydantic v2's native context mechanism.
+
+        Only crew_kickoff_started gets a full crew structure (built separately).
+        Complex events (task_started, etc.) use custom projections for specific shapes.
+        All other events get context-aware serialization automatically.
+        """
+        if event_type == "crew_kickoff_started":
+            return self._build_crew_started_data(event)
+
+        # Complex events with custom projections (specific field shapes for AMP)
         if event_type == "task_started":
             task_name = event.task.name or event.task.description
             task_display_name = (
@@ -853,19 +859,78 @@ class TraceCollectionListener(BaseEventListener):
                 "agent_backstory": event.agent.backstory,
             }
         if event_type == "llm_call_started":
-            event_data = safe_serialize_to_dict(event)
+            event_data = safe_serialize_to_dict(event, context=_TRACE_CONTEXT)
             event_data["task_name"] = event.task_name or getattr(
                 event, "task_description", None
             )
             return event_data
         if event_type == "llm_call_completed":
-            return safe_serialize_to_dict(event)
+            return safe_serialize_to_dict(event, context=_TRACE_CONTEXT)
 
-        return {
-            "event_type": event_type,
-            "event": safe_serialize_to_dict(event),
-            "source": source,
-        }
+        # All other events: field serializers handle the heavy lifting
+        return safe_serialize_to_dict(event, context=_TRACE_CONTEXT)
+
+    def _build_crew_started_data(self, event: Any) -> dict[str, Any]:
+        """Build comprehensive crew structure for crew_kickoff_started event.
+
+        This is the ONE place where we serialize the full crew structure.
+        Subsequent events use lightweight references via field serializers.
+        """
+        event_data = safe_serialize_to_dict(event, context=_TRACE_CONTEXT)
+
+        crew = getattr(event, "crew", None)
+        if crew is not None:
+            agents_data = []
+            for agent in getattr(crew, "agents", []) or []:
+                agent_data = {
+                    "id": str(getattr(agent, "id", "")),
+                    "role": getattr(agent, "role", ""),
+                    "goal": getattr(agent, "goal", ""),
+                    "backstory": getattr(agent, "backstory", ""),
+                    "verbose": getattr(agent, "verbose", False),
+                    "allow_delegation": getattr(agent, "allow_delegation", False),
+                    "max_iter": getattr(agent, "max_iter", None),
+                    "max_rpm": getattr(agent, "max_rpm", None),
+                }
+                tools = getattr(agent, "tools", None)
+                if tools:
+                    agent_data["tool_names"] = [
+                        getattr(t, "name", str(t)) for t in tools
+                    ]
+                agents_data.append(agent_data)
+
+            tasks_data = []
+            for task in getattr(crew, "tasks", []) or []:
+                task_data = {
+                    "id": str(getattr(task, "id", "")),
+                    "name": getattr(task, "name", None),
+                    "description": getattr(task, "description", ""),
+                    "expected_output": getattr(task, "expected_output", ""),
+                    "async_execution": getattr(task, "async_execution", False),
+                    "human_input": getattr(task, "human_input", False),
+                }
+                task_agent = getattr(task, "agent", None)
+                if task_agent:
+                    task_data["agent_ref"] = {
+                        "id": str(getattr(task_agent, "id", "")),
+                        "role": getattr(task_agent, "role", ""),
+                    }
+                context_tasks = getattr(task, "context", None)
+                if context_tasks:
+                    task_data["context_task_ids"] = [
+                        str(getattr(ct, "id", "")) for ct in context_tasks
+                    ]
+                tasks_data.append(task_data)
+
+            event_data["crew_structure"] = {
+                "agents": agents_data,
+                "tasks": tasks_data,
+                "process": str(getattr(crew, "process", "")),
+                "verbose": getattr(crew, "verbose", False),
+                "memory": getattr(crew, "memory", False),
+            }
+
+        return event_data
 
     def _show_tracing_disabled_message(self) -> None:
         """Show a message when tracing is disabled."""
