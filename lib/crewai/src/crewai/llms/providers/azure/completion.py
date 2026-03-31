@@ -569,6 +569,7 @@ class AzureCompletion(BaseLLM):
         params: AzureCompletionParams,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
@@ -594,6 +595,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
 
             return structured_data
@@ -643,6 +645,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
             return list(message.tool_calls)
 
@@ -680,6 +683,7 @@ class AzureCompletion(BaseLLM):
                 params=params,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage,
             )
 
         content = self._apply_stop_words(content)
@@ -691,6 +695,7 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -826,6 +831,7 @@ class AzureCompletion(BaseLLM):
                 params=params,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage_data,
             )
 
         # If there are tool_calls but no available_functions, return them
@@ -848,6 +854,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_data,
             )
             return formatted_tool_calls
 
@@ -884,6 +891,7 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage_data,
         )
 
         return self._invoke_after_llm_call_hooks(

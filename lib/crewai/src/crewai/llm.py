@@ -970,21 +970,25 @@ class LLM(BaseLLM):
                     )
                     result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
+                    usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
                         response=structured_response,
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage_dict,
                     )
                     return structured_response
 
+                usage_dict = self._usage_to_dict(usage_info)
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage_dict,
                 )
                 return full_response
 
@@ -994,12 +998,14 @@ class LLM(BaseLLM):
                 return tool_result
 
             # --- 10) Emit completion event and return response
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_dict,
             )
             return full_response
 
@@ -1021,6 +1027,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
 
@@ -1172,6 +1179,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=None,
             )
             return structured_response
 
@@ -1202,6 +1210,8 @@ class LLM(BaseLLM):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
+        response_usage = self._usage_to_dict(getattr(response, "usage", None))
+
         # --- 2) Handle structured output response (when response_model is provided)
         if response_model is not None:
             # When using instructor/response_model, litellm returns a Pydantic model instance
@@ -1213,6 +1223,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1244,6 +1255,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
 
@@ -1267,6 +1279,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1316,6 +1329,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=None,
             )
             return structured_response
 
@@ -1342,6 +1356,8 @@ class LLM(BaseLLM):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
+        response_usage = self._usage_to_dict(getattr(response, "usage", None))
+
         if response_model is not None:
             if isinstance(response, BaseModel):
                 structured_response = response.model_dump_json()
@@ -1351,6 +1367,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1380,6 +1397,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
 
@@ -1402,6 +1420,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1548,12 +1567,14 @@ class LLM(BaseLLM):
                     if result is not None:
                         return result
 
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("messages"),
+                usage=usage_dict,
             )
             return full_response
 
@@ -1575,6 +1596,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("messages"),
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
             raise
@@ -1961,6 +1983,18 @@ class LLM(BaseLLM):
                     )
                     raise
 
+    @staticmethod
+    def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        if usage is None:
+            return None
+        if isinstance(usage, dict):
+            return usage
+        if hasattr(usage, "model_dump"):
+            return usage.model_dump()
+        if hasattr(usage, "__dict__"):
+            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        return None
+
     def _handle_emit_call_events(
         self,
         response: Any,
@@ -1968,6 +2002,7 @@ class LLM(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -1977,6 +2012,7 @@ class LLM(BaseLLM):
             from_task: Optional task object
             from_agent: Optional agent object
             messages: Optional messages object
+            usage: Optional token usage data
         """
         crewai_event_bus.emit(
             self,
@@ -1988,6 +2024,7 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                usage=usage,
             ),
         )
 

@@ -809,6 +809,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("input", []),
+                    usage=usage,
                 )
 
                 return parsed_result
@@ -821,6 +822,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("input", []),
+                    usage=usage,
                 )
                 return function_calls
 
@@ -858,6 +860,7 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params.get("input", []),
+                        usage=usage,
                     )
                     return structured_result
                 except ValueError as e:
@@ -871,6 +874,7 @@ class OpenAICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("input", []),
+                usage=usage,
             )
 
             content = self._invoke_after_llm_call_hooks(
@@ -941,6 +945,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("input", []),
+                    usage=usage,
                 )
 
                 return parsed_result
@@ -953,6 +958,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("input", []),
+                    usage=usage,
                 )
                 return function_calls
 
@@ -990,6 +996,7 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params.get("input", []),
+                        usage=usage,
                     )
                     return structured_result
                 except ValueError as e:
@@ -1003,6 +1010,7 @@ class OpenAICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("input", []),
+                usage=usage,
             )
 
         except NotFoundError as e:
@@ -1045,6 +1053,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
+        usage: dict[str, Any] = {"total_tokens": 0}
 
         stream = self._client.responses.create(**params)
         response_id_stream = None
@@ -1102,6 +1111,7 @@ class OpenAICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("input", []),
+                usage=usage,
             )
 
             return parsed_result
@@ -1138,6 +1148,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("input", []),
+                    usage=usage,
                 )
                 return structured_result
             except ValueError as e:
@@ -1151,6 +1162,7 @@ class OpenAICompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params.get("input", []),
+            usage=usage,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1169,6 +1181,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         function_calls: list[dict[str, Any]] = []
         final_response: Response | None = None
+        usage: dict[str, Any] = {"total_tokens": 0}
 
         stream = await self._async_client.responses.create(**params)
         response_id_stream = None
@@ -1226,6 +1239,7 @@ class OpenAICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("input", []),
+                usage=usage,
             )
 
             return parsed_result
@@ -1262,6 +1276,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("input", []),
+                    usage=usage,
                 )
                 return structured_result
             except ValueError as e:
@@ -1275,6 +1290,7 @@ class OpenAICompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params.get("input", []),
+            usage=usage,
         )
 
         return full_response
@@ -1580,6 +1596,7 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return parsed_object
 
@@ -1601,6 +1618,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage,
                 )
                 return list(message.tool_calls)
 
@@ -1639,6 +1657,7 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return structured_result
                 except ValueError as e:
@@ -1652,6 +1671,7 @@ class OpenAICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
 
             if usage.get("total_tokens", 0) > 0:
@@ -1736,6 +1756,7 @@ class OpenAICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_data,
             )
             return tool_calls_list
 
@@ -1778,6 +1799,7 @@ class OpenAICompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage_data,
         )
 
         return full_response
@@ -1831,6 +1853,7 @@ class OpenAICompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=params["messages"],
+                                usage=usage,
                             )
                             return parsed_result
 
@@ -1955,6 +1978,7 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return parsed_object
 
@@ -1978,6 +2002,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage,
                 )
                 return list(message.tool_calls)
 
@@ -2016,6 +2041,7 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage,
                     )
                     return structured_result
                 except ValueError as e:
@@ -2029,6 +2055,7 @@ class OpenAICompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
 
             if usage.get("total_tokens", 0) > 0:
@@ -2113,6 +2140,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage_data,
                 )
 
                 return parsed_object
@@ -2124,6 +2152,7 @@ class OpenAICompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage_data,
                 )
                 return accumulated_content
 
