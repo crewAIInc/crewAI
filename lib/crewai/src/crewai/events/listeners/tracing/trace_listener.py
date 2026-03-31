@@ -134,6 +134,7 @@ TRACE_EXCLUDE_FIELDS = {
     "crew",
     "agent",
     "agents",
+    "task",
     "tasks",
     "context",
     # Heavy fields not needed in individual trace events
