@@ -3463,6 +3463,7 @@
                     "group": "Conceitos-Chave",
                     "pages": [
                       "pt-BR/concepts/agents",
+                      "pt-BR/concepts/agent-capabilities",
                       "pt-BR/concepts/tasks",
                       "pt-BR/concepts/crews",
                       "pt-BR/concepts/flows",
@@ -6670,6 +6671,7 @@
                     "pages": [
                       "ko/concepts/agents",
                       "ko/concepts/tasks",
+                      "ko/concepts/agent-capabilities",
                       "ko/concepts/crews",
                       "ko/concepts/flows",
                       "ko/concepts/production-architecture",

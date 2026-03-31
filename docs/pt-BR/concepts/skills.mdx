@@ -1,27 +1,186 @@
 ---
 title: Skills
-description: Pacotes de skills baseados em sistema de arquivos que injetam contexto nos prompts dos agentes.
+description: Pacotes de skills baseados em sistema de arquivos que injetam expertise de domínio e instruções nos prompts dos agentes.
 icon: bolt
 mode: "wide"
 ---
 
 ## Visão Geral
 
-Skills são diretórios autocontidos que fornecem aos agentes instruções, referências e assets específicos de domínio. Cada skill é definida por um arquivo `SKILL.md` com frontmatter YAML e um corpo em markdown.
+Skills são diretórios autocontidos que fornecem aos agentes **instruções, diretrizes e material de referência específicos de domínio**. Cada skill é definida por um arquivo `SKILL.md` com frontmatter YAML e um corpo em markdown.
 
-Skills usam **divulgação progressiva** — metadados são carregados primeiro, instruções completas apenas quando ativadas, e catálogos de recursos apenas quando necessário.
+Quando ativada, as instruções de uma skill são injetadas diretamente no prompt da tarefa do agente — dando ao agente expertise sem exigir alterações de código.
 
-## Estrutura de Diretório
+<Note type="info" title="Skills vs Ferramentas — A Distinção Fundamental">
+**Skills NÃO são ferramentas.** Este é o ponto de confusão mais comum.
+
+- **Skills** injetam *instruções e contexto* no prompt do agente. Elas dizem ao agente *como pensar* sobre um problema.
+- **Ferramentas** dão ao agente *funções chamáveis* para tomar ações (buscar, ler arquivos, chamar APIs).
+
+Frequentemente você precisa de **ambos**: skills para expertise, ferramentas para ação. Eles são configurados independentemente e se complementam.
+</Note>
+
+---
+
+## Início Rápido
+
+### 1. Crie um Diretório de Skill
 
 ```
-my-skill/
-├── SKILL.md            # Obrigatório — frontmatter + instruções
-├── scripts/            # Opcional — scripts executáveis
-├── references/         # Opcional — documentos de referência
-└── assets/             # Opcional — arquivos estáticos (configs, dados)
+skills/
+└── code-review/
+    ├── SKILL.md          # Obrigatório — instruções
+    ├── references/       # Opcional — documentos de referência
+    │   └── style-guide.md
+    └── scripts/          # Opcional — scripts executáveis
 ```
 
-O nome do diretório deve corresponder ao campo `name` no `SKILL.md`.
+### 2. Escreva seu SKILL.md
+
+```markdown
+---
+name: code-review
+description: Guidelines for conducting thorough code reviews with focus on security and performance.
+metadata:
+  author: your-team
+  version: "1.0"
+---
+
+## Diretrizes de Code Review
+
+Ao revisar código, siga esta checklist:
+
+1. **Segurança**: Verifique vulnerabilidades de injeção, bypasses de autenticação e exposição de dados
+2. **Performance**: Procure por queries N+1, alocações desnecessárias e chamadas bloqueantes
+3. **Legibilidade**: Garanta nomenclatura clara, comentários apropriados e estilo consistente
+4. **Testes**: Verifique cobertura adequada de testes para novas funcionalidades
+
+### Níveis de Severidade
+- **Crítico**: Vulnerabilidades de segurança, riscos de perda de dados → bloquear merge
+- **Major**: Problemas de performance, erros de lógica → solicitar alterações
+- **Minor**: Questões de estilo, sugestões de nomenclatura → aprovar com comentários
+```
+
+### 3. Anexe a um Agente
+
+```python
+from crewai import Agent
+from crewai_tools import GithubSearchTool, FileReadTool
+
+reviewer = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["./skills"],                          # Injeta diretrizes de revisão
+    tools=[GithubSearchTool(), FileReadTool()],   # Permite ao agente ler código
+)
+```
+
+O agente agora tem tanto **expertise** (da skill) quanto **capacidades** (das ferramentas).
+
+---
+
+## Skills + Ferramentas: Trabalhando Juntos
+
+Aqui estão padrões comuns mostrando como skills e ferramentas se complementam:
+
+### Padrão 1: Apenas Skills (Expertise de Domínio, Sem Ações Necessárias)
+
+Use quando o agente precisa de instruções específicas mas não precisa chamar serviços externos:
+
+```python
+agent = Agent(
+    role="Technical Writer",
+    goal="Write clear API documentation",
+    backstory="Expert technical writer",
+    skills=["./skills/api-docs-style"],  # Diretrizes e templates de escrita
+    # Sem ferramentas necessárias — agente escreve baseado no contexto fornecido
+)
+```
+
+### Padrão 2: Apenas Ferramentas (Ações, Sem Expertise Especial)
+
+Use quando o agente precisa tomar ações mas não precisa de instruções específicas de domínio:
+
+```python
+from crewai_tools import SerperDevTool, ScrapeWebsiteTool
+
+agent = Agent(
+    role="Web Researcher",
+    goal="Find information about a topic",
+    backstory="Skilled at finding information online",
+    tools=[SerperDevTool(), ScrapeWebsiteTool()],  # Pode buscar e extrair dados
+    # Sem skills necessárias — pesquisa geral não precisa de diretrizes especiais
+)
+```
+
+### Padrão 3: Skills + Ferramentas (Expertise E Ações)
+
+O padrão mais comum no mundo real. A skill fornece *como* abordar o trabalho; ferramentas fornecem *o que* o agente pode fazer:
+
+```python
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+
+analyst = Agent(
+    role="Security Analyst",
+    goal="Audit infrastructure for vulnerabilities",
+    backstory="Expert in cloud security and compliance",
+    skills=["./skills/security-audit"],   # Metodologia e checklists de auditoria
+    tools=[
+        SerperDevTool(),                  # Pesquisar vulnerabilidades conhecidas
+        FileReadTool(),                   # Ler arquivos de configuração
+        CodeInterpreterTool(),            # Executar scripts de análise
+    ],
+)
+```
+
+### Padrão 4: Skills + MCPs
+
+Skills funcionam junto com servidores MCP da mesma forma que com ferramentas:
+
+```python
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze customer data and generate reports",
+    backstory="Expert data analyst with strong statistical background",
+    skills=["./skills/data-analysis"],           # Metodologia de análise
+    mcps=["https://data-warehouse.example.com/sse"],  # Acesso remoto a dados
+)
+```
+
+### Padrão 5: Skills + Apps
+
+Skills podem guiar como um agente usa integrações de plataforma:
+
+```python
+agent = Agent(
+    role="Customer Support Agent",
+    goal="Respond to customer inquiries professionally",
+    backstory="Experienced support representative",
+    skills=["./skills/support-playbook"],  # Templates de resposta e regras de escalação
+    apps=["gmail", "zendesk"],             # Pode enviar emails e atualizar tickets
+)
+```
+
+---
+
+## Skills no Nível do Crew
+
+Skills podem ser definidas no crew para aplicar a **todos os agentes**:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[research_task, write_task, review_task],
+    skills=["./skills"],  # Todos os agentes recebem essas skills
+)
+```
+
+Skills no nível do agente têm prioridade — se a mesma skill é descoberta em ambos os níveis, a versão do agente é usada.
+
+---
 
 ## Formato do SKILL.md
 
@@ -34,7 +193,7 @@ compatibility: crewai>=0.1.0          # opcional
 metadata:                              # opcional
   author: your-name
   version: "1.0"
-allowed-tools: web-search file-read   # opcional, delimitado por espaços
+allowed-tools: web-search file-read   # opcional, experimental
 ---
 
 Instruções para o agente vão aqui. Este corpo em markdown é injetado
@@ -43,57 +202,46 @@ no prompt do agente quando a skill é ativada.
 
 ### Campos do Frontmatter
 
-| Campo           | Obrigatório | Restrições                                                               |
+| Campo           | Obrigatório | Descrição                                                                |
 | :-------------- | :---------- | :----------------------------------------------------------------------- |
-| `name`          | Sim         | 1–64 chars. Alfanumérico minúsculo e hifens. Sem hifens iniciais/finais/consecutivos. Deve corresponder ao nome do diretório. |
+| `name`          | Sim         | 1–64 chars. Alfanumérico minúsculo e hifens. Deve corresponder ao nome do diretório. |
 | `description`   | Sim         | 1–1024 chars. Descreve o que a skill faz e quando usá-la.                |
 | `license`       | Não         | Nome da licença ou referência a um arquivo de licença incluído.           |
 | `compatibility` | Não         | Máx 500 chars. Requisitos de ambiente (produtos, pacotes, rede).          |
 | `metadata`      | Não         | Mapeamento arbitrário de chave-valor string.                              |
 | `allowed-tools` | Não         | Lista de ferramentas pré-aprovadas delimitada por espaços. Experimental.  |
 
-## Uso
+---
 
-### Skills no Nível do Agente
+## Estrutura de Diretório
 
-Passe caminhos de diretório de skills para um agente:
-
-```python
-from crewai import Agent
-
-agent = Agent(
-    role="Researcher",
-    goal="Find relevant information",
-    backstory="An expert researcher.",
-    skills=["./skills"],  # descobre todas as skills neste diretório
-)
+```
+my-skill/
+├── SKILL.md            # Obrigatório — frontmatter + instruções
+├── scripts/            # Opcional — scripts executáveis
+├── references/         # Opcional — documentos de referência
+└── assets/             # Opcional — arquivos estáticos (configs, dados)
 ```
 
-### Skills no Nível do Crew
+O nome do diretório deve corresponder ao campo `name` no `SKILL.md`. Os diretórios `scripts/`, `references/` e `assets/` estão disponíveis no `path` da skill para agentes que precisam referenciar arquivos diretamente.
 
-Caminhos de skills no crew são mesclados em todos os agentes:
+---
 
-```python
-from crewai import Crew
+## Skills Pré-carregadas
 
-crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    skills=["./skills"],
-)
-```
-
-### Skills Pré-carregadas
-
-Você também pode passar objetos `Skill` diretamente:
+Para mais controle, você pode descobrir e ativar skills programaticamente:
 
 ```python
 from pathlib import Path
 from crewai.skills import discover_skills, activate_skill
 
+# Descobrir todas as skills em um diretório
 skills = discover_skills(Path("./skills"))
+
+# Ativá-las (carrega o corpo completo do SKILL.md)
 activated = [activate_skill(s) for s in skills]
 
+# Passar para um agente
 agent = Agent(
     role="Researcher",
     goal="Find relevant information",
@@ -102,13 +250,57 @@ agent = Agent(
 )
 ```
 
+---
+
 ## Como as Skills São Carregadas
 
-Skills carregam progressivamente — apenas os dados necessários em cada etapa são lidos:
+Skills usam **divulgação progressiva** — carregando apenas o necessário em cada estágio:
 
-| Etapa            | O que é carregado                                  | Quando              |
-| :--------------- | :------------------------------------------------ | :------------------ |
-| Descoberta       | Nome, descrição, campos do frontmatter             | `discover_skills()` |
-| Ativação         | Texto completo do corpo do SKILL.md                | `activate_skill()` |
+| Estágio    | O que é carregado                     | Quando              |
+| :--------- | :------------------------------------ | :------------------ |
+| Descoberta | Nome, descrição, campos do frontmatter | `discover_skills()` |
+| Ativação   | Texto completo do corpo do SKILL.md    | `activate_skill()`  |
 
-Durante a execução normal do agente, skills são automaticamente descobertas e ativadas. Os diretórios `scripts/`, `references/` e `assets/` estão disponíveis no `path` da skill para agentes que precisam referenciar arquivos diretamente.
+Durante a execução normal do agente (passando caminhos de diretório via `skills=["./skills"]`), skills são automaticamente descobertas e ativadas. O carregamento progressivo só importa quando usando a API programática.
+
+---
+
+## Skills vs Knowledge
+
+Tanto skills quanto knowledge modificam o prompt do agente, mas servem propósitos diferentes:
+
+| Aspecto | Skills | Knowledge |
+| :--- | :--- | :--- |
+| **O que fornece** | Instruções, procedimentos, diretrizes | Fatos, dados, informações |
+| **Como é armazenado** | Arquivos Markdown (SKILL.md) | Embarcado em banco vetorial (ChromaDB) |
+| **Como é recuperado** | Corpo inteiro injetado no prompt | Busca semântica encontra trechos relevantes |
+| **Melhor para** | Metodologia, checklists, guias de estilo | Documentos da empresa, info de produto, dados de referência |
+| **Definido via** | `skills=["./skills"]` | `knowledge_sources=[source]` |
+
+**Regra prática:** Se o agente precisa seguir um *processo*, use uma skill. Se o agente precisa consultar *dados*, use knowledge.
+
+---
+
+## Perguntas Frequentes
+
+<AccordionGroup>
+  <Accordion title="Preciso definir skills E ferramentas?">
+    Depende do seu caso de uso. Skills e ferramentas são **independentes** — você pode usar qualquer um, ambos ou nenhum.
+
+    - **Apenas skills**: Quando o agente precisa de expertise mas não de ações externas (ex: escrever com diretrizes de estilo)
+    - **Apenas ferramentas**: Quando o agente precisa de ações mas não de metodologia especial (ex: busca simples na web)
+    - **Ambos**: Quando o agente precisa de expertise E ações (ex: auditoria de segurança com checklists específicas E capacidade de escanear código)
+  </Accordion>
+
+  <Accordion title="Skills fornecem ferramentas automaticamente?">
+    **Não.** O campo `allowed-tools` no SKILL.md é apenas metadado experimental — ele não provisiona nem injeta nenhuma ferramenta. Você deve sempre definir ferramentas separadamente via `tools=[]`, `mcps=[]` ou `apps=[]`.
+  </Accordion>
+
+  <Accordion title="O que acontece se eu definir a mesma skill tanto no agente quanto no crew?">
+    A skill no nível do agente tem prioridade. Skills são deduplicadas por nome — as skills do agente são processadas primeiro, então se o mesmo nome de skill aparece em ambos os níveis, a versão do agente é usada.
+  </Accordion>
+
+  <Accordion title="Qual o tamanho máximo do corpo do SKILL.md?">
+    Há um aviso suave em 50.000 caracteres, mas sem limite rígido. Mantenha skills focadas e concisas para melhores resultados — injeções de prompt muito grandes podem diluir a atenção do agente.
+  </Accordion>
+</AccordionGroup>
