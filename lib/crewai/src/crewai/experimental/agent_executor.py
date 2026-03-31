@@ -124,6 +124,7 @@ class AgentExecutorState(BaseModel):
     (todos, observations, replan tracking) in a single validated model.
     """
 
+    id: str = Field(default_factory=lambda: str(uuid4()))
     messages: list[LLMMessage] = Field(default_factory=list)
     iterations: int = Field(default=0)
     current_answer: AgentAction | AgentFinish | None = Field(default=None)
