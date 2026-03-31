@@ -818,7 +818,6 @@ class TraceCollectionListener(BaseEventListener):
         if event_type == "crew_kickoff_started":
             return self._build_crew_started_data(event)
 
-        # Complex events with custom projections (specific field shapes for AMP)
         if event_type == "task_started":
             task_name = event.task.name or event.task.description
             task_display_name = (
@@ -867,7 +866,6 @@ class TraceCollectionListener(BaseEventListener):
         if event_type == "llm_call_completed":
             return safe_serialize_to_dict(event, context=_TRACE_CONTEXT)
 
-        # All other events: field serializers handle the heavy lifting
         return safe_serialize_to_dict(event, context=_TRACE_CONTEXT)
 
     def _build_crew_started_data(self, event: Any) -> dict[str, Any]:
