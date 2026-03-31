@@ -481,6 +481,17 @@ def should_auto_collect_first_time_traces() -> bool:
     return is_first_execution()
 
 
+def _is_interactive_terminal() -> bool:
+    """Check if stdin is an interactive terminal.
+
+    Returns False in non-interactive contexts (CI, API servers, Docker, etc.)
+    to avoid blocking on prompts that no one can respond to.
+    """
+    import sys
+
+    return sys.stdin.isatty()
+
+
 def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
     """
     Prompt user if they want to see their traces with timeout.
@@ -490,6 +501,11 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return False
 
     if should_suppress_tracing_messages():
+        return False
+
+    # Skip prompt in non-interactive contexts (CI, API servers, Docker, etc.)
+    # This avoids blocking for 20 seconds when no one can respond
+    if not _is_interactive_terminal():
         return False
 
     try:
