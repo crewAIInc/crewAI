@@ -1978,3 +1978,150 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+class TestSharedLLMStopWordsMutation:
+    """Regression tests for shared LLM stop words mutation (issue #5141).
+
+    When multiple agents share the same LLM instance, each executor should
+    NOT mutate the shared LLM's stop words. Instead, each executor should
+    get its own copy of the LLM with the merged stop words.
+    """
+
+    @pytest.fixture
+    def shared_llm(self):
+        """Create a shared mock LLM with initial stop words."""
+        llm = Mock()
+        llm.supports_stop_words.return_value = True
+        llm.stop = ["Original:"]
+        return llm
+
+    @pytest.fixture
+    def base_deps(self, shared_llm):
+        """Create base dependencies using the shared LLM."""
+        task = Mock()
+        task.description = "Test task"
+
+        crew = Mock()
+        crew.verbose = False
+        crew._train = False
+
+        prompt = {"prompt": "Test {input}"}
+
+        return {
+            "llm": shared_llm,
+            "task": task,
+            "crew": crew,
+            "prompt": prompt,
+            "max_iter": 10,
+            "tools": [],
+            "tools_names": "",
+            "tools_description": "",
+            "tools_handler": Mock(),
+        }
+
+    def test_shared_llm_not_mutated_by_executor(self, shared_llm, base_deps):
+        """Creating an executor should NOT mutate the shared LLM's stop words."""
+        original_stop = list(shared_llm.stop)
+
+        agent = Mock()
+        agent.id = "agent-1"
+        agent.role = "Agent 1"
+        agent.verbose = False
+        agent.key = "key-1"
+
+        AgentExecutor(
+            **base_deps,
+            agent=agent,
+            stop_words=["Observation:"],
+        )
+
+        # The shared LLM's stop words must remain unchanged
+        assert shared_llm.stop == original_stop
+
+    def test_multiple_executors_do_not_accumulate_stop_words(
+        self, shared_llm, base_deps
+    ):
+        """Multiple executors sharing an LLM should not accumulate stop words."""
+        original_stop = list(shared_llm.stop)
+
+        agent_a = Mock()
+        agent_a.id = "agent-a"
+        agent_a.role = "Agent A"
+        agent_a.verbose = False
+        agent_a.key = "key-a"
+
+        agent_b = Mock()
+        agent_b.id = "agent-b"
+        agent_b.role = "Agent B"
+        agent_b.verbose = False
+        agent_b.key = "key-b"
+
+        exec_a = AgentExecutor(
+            **base_deps,
+            agent=agent_a,
+            stop_words=["StopA:"],
+        )
+
+        exec_b = AgentExecutor(
+            **base_deps,
+            agent=agent_b,
+            stop_words=["StopB:"],
+        )
+
+        # Shared LLM must be unmodified
+        assert shared_llm.stop == original_stop
+
+        # Each executor should have its own LLM copy with the correct merged stop words
+        assert exec_a.llm is not shared_llm
+        assert exec_b.llm is not shared_llm
+        assert exec_a.llm is not exec_b.llm
+
+        # exec_a should have Original: + StopA:
+        assert "Original:" in exec_a.llm.stop
+        assert "StopA:" in exec_a.llm.stop
+        assert "StopB:" not in exec_a.llm.stop
+
+        # exec_b should have Original: + StopB:
+        assert "Original:" in exec_b.llm.stop
+        assert "StopB:" in exec_b.llm.stop
+        assert "StopA:" not in exec_b.llm.stop
+
+    def test_executor_no_copy_when_no_new_stop_words(self, shared_llm, base_deps):
+        """Executor should not copy LLM when stop_words don't add anything new."""
+        # The shared LLM already has ["Original:"]
+        agent = Mock()
+        agent.id = "agent-1"
+        agent.role = "Agent 1"
+        agent.verbose = False
+        agent.key = "key-1"
+
+        executor = AgentExecutor(
+            **base_deps,
+            agent=agent,
+            stop_words=[],  # No new stop words
+        )
+
+        # When no new stop words are added, the LLM should not be copied
+        assert executor.llm is shared_llm
+
+    def test_stop_words_persist_across_multiple_kickoffs(self, shared_llm, base_deps):
+        """Stop words should not accumulate across multiple executor creations
+        (simulating multiple crew.kickoff() calls)."""
+        original_stop = list(shared_llm.stop)
+
+        for i in range(5):
+            agent = Mock()
+            agent.id = f"agent-{i}"
+            agent.role = f"Agent {i}"
+            agent.verbose = False
+            agent.key = f"key-{i}"
+
+            AgentExecutor(
+                **base_deps,
+                agent=agent,
+                stop_words=["Observation:"],
+            )
+
+        # After 5 executor creations, the shared LLM's stop words must be unchanged
+        assert shared_llm.stop == original_stop

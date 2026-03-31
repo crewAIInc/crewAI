@@ -2439,3 +2439,84 @@ def test_agent_mcps_accepts_legacy_prefix_with_tool():
         mcps=["crewai-amp:notion#get_page"],
     )
     assert agent.mcps == ["crewai-amp:notion#get_page"]
+
+
+class TestCrewAgentExecutorSharedLLMStopWords:
+    """Regression tests for shared LLM stop words mutation in CrewAgentExecutor (issue #5141).
+
+    When multiple agents share the same LLM instance, each CrewAgentExecutor
+    should NOT mutate the shared LLM's stop words.
+    """
+
+    def _make_executor(self, llm, stop_words):
+        """Helper to create a CrewAgentExecutor with minimal deps."""
+        from crewai.agents.tools_handler import ToolsHandler
+
+        agent = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+        )
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=agent,
+        )
+        return CrewAgentExecutor(
+            agent=agent,
+            task=task,
+            llm=llm,
+            crew=None,
+            prompt={"prompt": "Test {input} {tool_names} {tools}"},
+            max_iter=5,
+            tools=[],
+            tools_names="",
+            stop_words=stop_words,
+            tools_description="",
+            tools_handler=ToolsHandler(),
+        )
+
+    def test_shared_llm_not_mutated(self):
+        """Creating a CrewAgentExecutor should NOT mutate the shared LLM's stop words."""
+        shared_llm = LLM(model="gpt-4", stop=["Original:"])
+        original_stop = list(shared_llm.stop)
+
+        self._make_executor(shared_llm, stop_words=["Observation:"])
+
+        assert shared_llm.stop == original_stop
+
+    def test_multiple_executors_isolate_stop_words(self):
+        """Multiple executors sharing an LLM should each have isolated stop words."""
+        shared_llm = LLM(model="gpt-4", stop=["Original:"])
+        original_stop = list(shared_llm.stop)
+
+        exec_a = self._make_executor(shared_llm, stop_words=["StopA:"])
+        exec_b = self._make_executor(shared_llm, stop_words=["StopB:"])
+
+        # Shared LLM must be unmodified
+        assert shared_llm.stop == original_stop
+
+        # Each executor should have its own LLM copy
+        assert exec_a.llm is not shared_llm
+        assert exec_b.llm is not shared_llm
+        assert exec_a.llm is not exec_b.llm
+
+        # exec_a should have Original: + StopA: only
+        assert "Original:" in exec_a.llm.stop
+        assert "StopA:" in exec_a.llm.stop
+        assert "StopB:" not in exec_a.llm.stop
+
+        # exec_b should have Original: + StopB: only
+        assert "Original:" in exec_b.llm.stop
+        assert "StopB:" in exec_b.llm.stop
+        assert "StopA:" not in exec_b.llm.stop
+
+    def test_stop_words_do_not_accumulate_across_kickoffs(self):
+        """Simulating multiple kickoffs: stop words must not grow on the shared LLM."""
+        shared_llm = LLM(model="gpt-4", stop=["Original:"])
+        original_stop = list(shared_llm.stop)
+
+        for _ in range(5):
+            self._make_executor(shared_llm, stop_words=["Observation:"])
+
+        assert shared_llm.stop == original_stop

@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
+import copy
 from datetime import datetime
 import inspect
 import json
@@ -256,14 +257,23 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
         if self.llm:
-            existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
+            # Create a shallow copy of the LLM to avoid mutating the shared
+            # instance's stop words. When multiple agents share the same LLM,
+            # directly mutating stop words causes cross-agent state pollution
+            # where stop words accumulate across agents. (see #5141)
+            existing_stop = getattr(self.llm, "stop", []) or []
+            merged_stop = list(
                 set(
                     existing_stop + self.stop
                     if isinstance(existing_stop, list)
                     else self.stop
                 )
             )
+            if merged_stop != (
+                existing_stop if isinstance(existing_stop, list) else []
+            ):
+                self.llm = copy.copy(self.llm)
+                self.llm.stop = merged_stop
         self._state = AgentExecutorState()
 
         # Plan-and-Execute components (Phase 2)
