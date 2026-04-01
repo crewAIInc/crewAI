@@ -623,7 +623,7 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         for name, prop in (json_schema.get("properties", {}) or {}).items()
     }
 
-    effective_config = __config__ or ConfigDict(extra="forbid")
+    effective_config = __config__ or ConfigDict(extra="ignore")
 
     return create_model_base(
         effective_name,

@@ -882,3 +882,129 @@ class TestEndToEndMCPSchema:
         )
         assert obj.filters.date_from == datetime.date(2025, 1, 1)
         assert obj.filters.categories == ["news", "tech"]
+
+
+class TestExtraFieldsIgnored:
+    """Regression tests for OSS-9: security_context injection causing
+    extra_forbidden errors on MCP and integration tool schemas.
+
+    When the framework injects metadata like security_context into tool call
+    arguments, dynamically-created Pydantic models must ignore (not reject)
+    extra fields so that tool execution is not blocked.
+    """
+
+    SIMPLE_TOOL_SCHEMA: dict[str, Any] = {
+        "type": "object",
+        "title": "ExecuteSqlSchema",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "The SQL query to execute.",
+            },
+        },
+        "required": ["query"],
+    }
+
+    OUTLOOK_TOOL_SCHEMA: dict[str, Any] = {
+        "type": "object",
+        "title": "MicrosoftOutlookSendEmailSchema",
+        "properties": {
+            "to_recipients": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Array of recipient email addresses.",
+            },
+            "subject": {
+                "type": "string",
+                "description": "Email subject line.",
+            },
+            "body": {
+                "type": "string",
+                "description": "Email body content.",
+            },
+        },
+        "required": ["to_recipients", "subject", "body"],
+    }
+
+    SECURITY_CONTEXT_PAYLOAD: dict[str, Any] = {
+        "agent_fingerprint": {
+            "user_id": "test-user-123",
+            "session_id": "test-session-456",
+            "metadata": {},
+        },
+    }
+
+    def test_mcp_tool_schema_ignores_security_context(self) -> None:
+        """Reproduces OSS-9 Case 1: Databricks MCP execute_sql fails when
+        security_context is injected into tool args."""
+        Model = create_model_from_schema(self.SIMPLE_TOOL_SCHEMA)
+        # This previously raised: Extra inputs are not permitted
+        # [type=extra_forbidden, input_value={'agent_fingerprint': ...}]
+        obj = Model.model_validate(
+            {
+                "query": "SELECT * FROM my_table",
+                "security_context": self.SECURITY_CONTEXT_PAYLOAD,
+            }
+        )
+        assert obj.query == "SELECT * FROM my_table"
+        # security_context should be silently dropped, not present on the model
+        assert not hasattr(obj, "security_context")
+
+    def test_integration_tool_schema_ignores_security_context(self) -> None:
+        """Reproduces OSS-9 Case 2: Microsoft Outlook send_email fails when
+        security_context is injected into tool args."""
+        Model = create_model_from_schema(self.OUTLOOK_TOOL_SCHEMA)
+        obj = Model.model_validate(
+            {
+                "to_recipients": ["user@example.com"],
+                "subject": "Test",
+                "body": "Hello",
+                "security_context": self.SECURITY_CONTEXT_PAYLOAD,
+            }
+        )
+        assert obj.to_recipients == ["user@example.com"]
+        assert obj.subject == "Test"
+        assert not hasattr(obj, "security_context")
+
+    def test_arbitrary_extra_fields_ignored(self) -> None:
+        """Any unexpected extra field should be silently ignored, not just
+        security_context."""
+        Model = create_model_from_schema(self.SIMPLE_TOOL_SCHEMA)
+        obj = Model.model_validate(
+            {
+                "query": "SELECT 1",
+                "some_unknown_field": "should be dropped",
+                "another_extra": 42,
+            }
+        )
+        assert obj.query == "SELECT 1"
+        assert not hasattr(obj, "some_unknown_field")
+        assert not hasattr(obj, "another_extra")
+
+    def test_required_fields_still_enforced(self) -> None:
+        """Changing to extra=ignore must NOT weaken required field validation."""
+        Model = create_model_from_schema(self.SIMPLE_TOOL_SCHEMA)
+        with pytest.raises(Exception):
+            Model.model_validate({"security_context": self.SECURITY_CONTEXT_PAYLOAD})
+
+    def test_type_validation_still_enforced(self) -> None:
+        """Changing to extra=ignore must NOT weaken type validation."""
+        Model = create_model_from_schema(self.SIMPLE_TOOL_SCHEMA)
+        with pytest.raises(Exception):
+            Model.model_validate({"query": 12345})  # should be string
+
+    def test_explicit_extra_forbid_still_works(self) -> None:
+        """Callers can still opt into extra=forbid via __config__."""
+        from pydantic import ConfigDict
+
+        Model = create_model_from_schema(
+            self.SIMPLE_TOOL_SCHEMA,
+            __config__=ConfigDict(extra="forbid"),
+        )
+        with pytest.raises(Exception):
+            Model.model_validate(
+                {
+                    "query": "SELECT 1",
+                    "security_context": self.SECURITY_CONTEXT_PAYLOAD,
+                }
+            )
