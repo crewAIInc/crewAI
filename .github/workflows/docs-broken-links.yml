@@ -4,13 +4,13 @@ on:
   pull_request:
     paths:
       - "docs/**"
-      - "docs.json"
+      - "docs/docs.json"
   push:
     branches:
       - main
     paths:
       - "docs/**"
-      - "docs.json"
+      - "docs/docs.json"
   workflow_dispatch:
 
 jobs:
@@ -29,7 +29,5 @@ jobs:
         run: npm i -g mintlify
 
       - name: Run broken link checker
-        run: |
-          # Auto-answer the prompt with yes command
-          yes "" | mintlify broken-links || test $? -eq 141
         working-directory: ./docs
+        run: mintlify broken-links
