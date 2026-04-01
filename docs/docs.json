@@ -3339,7 +3339,8 @@
               }
             ]
           }
-        ]
+        ],
+        "default": true
       },
       {
         "language": "pt-BR",
