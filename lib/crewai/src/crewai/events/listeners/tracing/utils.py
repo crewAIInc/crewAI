@@ -490,10 +490,10 @@ def _is_interactive_terminal() -> bool:
     import sys
 
     try:
-        stdin = getattr(sys, 'stdin', None)
+        stdin = getattr(sys, "stdin", None)
         if stdin is None:
             return False
-        isatty = getattr(stdin, 'isatty', None)
+        isatty = getattr(stdin, "isatty", None)
         if not callable(isatty):
             return False
         return bool(isatty())

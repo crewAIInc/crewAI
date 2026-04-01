@@ -204,7 +204,11 @@ class TraceCollectionListener(BaseEventListener):
         # Skip registration entirely if tracing is disabled and not first-time user
         # This avoids overhead of 50+ handler registrations when tracing won't be used
         # Also check is_tracing_enabled_in_context() so per-run overrides (Crew(tracing=True)) still work
-        if not should_enable_tracing() and not is_tracing_enabled_in_context() and not should_auto_collect_first_time_traces():
+        if (
+            not should_enable_tracing()
+            and not is_tracing_enabled_in_context()
+            and not should_auto_collect_first_time_traces()
+        ):
             self._listeners_setup = True
             return
 
