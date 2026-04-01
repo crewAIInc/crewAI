@@ -127,18 +127,16 @@ class BaseAgentTool(BaseTool):
             logger.debug(
                 f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}"
             )
-            # DEBUG: Verify parent event ID propagation during delegation
             parent_id_before = get_current_parent_id()
             logger.debug(
-                f"[DELEGATION SCOPE] Before execute_task - parent_event_id: {parent_id_before}, "
-                f"delegating to agent: {self.sanitize_agent_name(selected_agent.role)}"
+                f"Delegation starting: parent_event_id={parent_id_before}, "
+                f"target_agent={self.sanitize_agent_name(selected_agent.role)}"
             )
             result = selected_agent.execute_task(task_with_assigned_agent, context)
-            # DEBUG: Verify scope chain after delegation completes
             parent_id_after = get_current_parent_id()
             logger.debug(
-                f"[DELEGATION SCOPE] After execute_task - parent_event_id: {parent_id_after}, "
-                f"delegation complete for agent: {self.sanitize_agent_name(selected_agent.role)}"
+                f"Delegation complete: parent_event_id={parent_id_after}, "
+                f"target_agent={self.sanitize_agent_name(selected_agent.role)}"
             )
             return result
         except Exception as e:
