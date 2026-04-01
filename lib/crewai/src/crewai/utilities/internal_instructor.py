@@ -98,7 +98,31 @@ class InternalInstructor(Generic[T]):
         else:
             provider = "openai"  # Default fallback
 
-        return instructor.from_provider(f"{provider}/{model_string}")
+        extra_kwargs = self._get_llm_extra_kwargs()
+
+        return instructor.from_provider(
+            f"{provider}/{model_string}", **extra_kwargs
+        )
+
+    def _get_llm_extra_kwargs(self) -> dict[str, Any]:
+        """Extract extra keyword arguments from the LLM to pass to the instructor client.
+
+        Forwards provider-specific configuration such as ``base_url`` and
+        ``api_key`` so that the instructor client connects to the correct
+        endpoint rather than defaulting to the provider's public API.
+
+        Returns:
+            Dictionary of extra keyword arguments for ``instructor.from_provider``.
+        """
+        if isinstance(self.llm, str) or self.llm is None:
+            return {}
+
+        extra: dict[str, Any] = {}
+        for attr in ("base_url", "api_key"):
+            value = getattr(self.llm, attr, None)
+            if value is not None:
+                extra[attr] = value
+        return extra
 
     def _extract_provider(self) -> str:
         """Extract provider from LLM model name.
