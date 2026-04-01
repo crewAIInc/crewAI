@@ -793,6 +793,10 @@ class TestTraceListenerSetup:
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
             ),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_interactive_terminal",
+                return_value=True,
+            ),
             patch("threading.Thread") as mock_thread,
         ):
             from crewai.events.listeners.tracing.utils import (

@@ -85,6 +85,8 @@ class CrewAIEventsBus:
     _shutting_down: bool
     _pending_futures: set[Future[Any]]
     _futures_lock: threading.Lock
+    _executor_initialized: bool
+    _has_pending_events: bool
 
     def __new__(cls) -> Self:
         """Create or return the singleton instance.
@@ -102,8 +104,9 @@ class CrewAIEventsBus:
     def _initialize(self) -> None:
         """Initialize the event bus internal state.
 
-        Creates handler dictionaries and starts a dedicated background
-        event loop for async handler execution.
+        Creates handler dictionaries. The thread pool executor and event loop
+        are lazily initialized on first emit() to avoid overhead when events
+        are never emitted.
         """
         self._shutting_down = False
         self._rwlock = RWLock()
@@ -115,19 +118,37 @@ class CrewAIEventsBus:
             type[BaseEvent], dict[Handler, list[Depends[Any]]]
         ] = {}
         self._execution_plan_cache: dict[type[BaseEvent], ExecutionPlan] = {}
-        self._sync_executor = ThreadPoolExecutor(
-            max_workers=10,
-            thread_name_prefix="CrewAISyncHandler",
-        )
         self._console = ConsoleFormatter()
+        # Lazy initialization flags - executor and loop created on first emit
+        self._executor_initialized = False
+        self._has_pending_events = False
 
-        self._loop = asyncio.new_event_loop()
-        self._loop_thread = threading.Thread(
-            target=self._run_loop,
-            name="CrewAIEventsLoop",
-            daemon=True,
-        )
-        self._loop_thread.start()
+    def _ensure_executor_initialized(self) -> None:
+        """Lazily initialize the thread pool executor and event loop.
+
+        Called on first emit() to avoid startup overhead when events are never used.
+        Thread-safe via double-checked locking.
+        """
+        if self._executor_initialized:
+            return
+
+        with self._instance_lock:
+            if self._executor_initialized:
+                return
+
+            self._sync_executor = ThreadPoolExecutor(
+                max_workers=10,
+                thread_name_prefix="CrewAISyncHandler",
+            )
+
+            self._loop = asyncio.new_event_loop()
+            self._loop_thread = threading.Thread(
+                target=self._run_loop,
+                name="CrewAIEventsLoop",
+                daemon=True,
+            )
+            self._loop_thread.start()
+            self._executor_initialized = True
 
     def _track_future(self, future: Future[Any]) -> Future[Any]:
         """Track a future and set up automatic cleanup when it completes.
@@ -431,6 +452,15 @@ class CrewAIEventsBus:
             sync_handlers = self._sync_handlers.get(event_type, frozenset())
             async_handlers = self._async_handlers.get(event_type, frozenset())
 
+        # Skip executor initialization if no handlers exist for this event
+        if not sync_handlers and not async_handlers:
+            return None
+
+        # Lazily initialize executor and event loop only when handlers exist
+        self._ensure_executor_initialized()
+        # Track that we have pending events for flush optimization
+        self._has_pending_events = True
+
         if has_dependencies:
             return self._track_future(
                 asyncio.run_coroutine_threadsafe(
@@ -474,6 +504,10 @@ class CrewAIEventsBus:
         Returns:
             True if all handlers completed, False if timeout occurred.
         """
+        # Skip flush entirely if no events were ever emitted
+        if not self._has_pending_events:
+            return True
+
         with self._futures_lock:
             futures_to_wait = list(self._pending_futures)
 
@@ -629,6 +663,9 @@ class CrewAIEventsBus:
 
         with self._rwlock.w_locked():
             self._shutting_down = True
+            # Check if executor was ever initialized (lazy init optimization)
+            if not self._executor_initialized:
+                return
             loop = getattr(self, "_loop", None)
 
         if loop is None or loop.is_closed():
