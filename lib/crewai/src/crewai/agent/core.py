@@ -25,6 +25,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    InstanceOf,
     PrivateAttr,
     model_validator,
 )
@@ -113,6 +114,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.crew import Crew
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
@@ -266,6 +268,9 @@ class Agent(BaseAgent):
         A2A (Agent-to-Agent) configuration for delegating tasks to remote agents.
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
+    )
+    agent_executor: InstanceOf[CrewAgentExecutor] | InstanceOf[AgentExecutor] | None = (
+        Field(default=None, description="An instance of the CrewAgentExecutor class.")
     )
     executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
         default=CrewAgentExecutor,
@@ -777,14 +782,18 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        return self.agent_executor.invoke(
-            {
-                "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
-                "ask_for_human_input": task.human_input,
-            }
-        )["output"]
+        result = cast(
+            dict[str, Any],
+            self.agent_executor.invoke(
+                {
+                    "input": task_prompt,
+                    "tool_names": self.agent_executor.tools_names,
+                    "tools": self.agent_executor.tools_description,
+                    "ask_for_human_input": task.human_input,
+                }
+            ),
+        )
+        return result["output"]
 
     async def aexecute_task(
         self,
@@ -955,7 +964,7 @@ class Agent(BaseAgent):
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
-                tools=parsed_tools,  # type: ignore[arg-type]
+                tools=parsed_tools,
                 raw_tools=raw_tools,
                 prompt=prompt,
                 stop_words=stop_words,
@@ -967,7 +976,7 @@ class Agent(BaseAgent):
                 task=task,  # type: ignore[arg-type]
                 i18n=self.i18n,
                 agent=self,
-                crew=self.crew,
+                crew=cast(Crew, self.crew),
                 tools=parsed_tools,
                 prompt=prompt,
                 original_tools=raw_tools,
@@ -991,7 +1000,7 @@ class Agent(BaseAgent):
     def _update_executor_parameters(
         self,
         task: Task | None,
-        tools: list[BaseTool],
+        tools: list[CrewStructuredTool],
         raw_tools: list[BaseTool],
         prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
@@ -1007,11 +1016,17 @@ class Agent(BaseAgent):
             stop_words: Stop words list.
             rpm_limit_fn: RPM limit callback function.
         """
+        if self.agent_executor is None:
+            raise RuntimeError("Agent executor is not initialized.")
+
         self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        self.agent_executor.stop_words = stop_words
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.stop_words = stop_words
+        else:
+            self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -1787,21 +1802,3 @@ class Agent(BaseAgent):
             LiteAgentOutput: The result of the agent execution.
         """
         return await self.kickoff_async(messages, response_format, input_files)
-
-
-try:
-    from crewai.a2a.config import (
-        A2AClientConfig as _A2AClientConfig,
-        A2AConfig as _A2AConfig,
-        A2AServerConfig as _A2AServerConfig,
-    )
-
-    Agent.model_rebuild(
-        _types_namespace={
-            "A2AConfig": _A2AConfig,
-            "A2AClientConfig": _A2AClientConfig,
-            "A2AServerConfig": _A2AServerConfig,
-        }
-    )
-except ImportError:
-    pass

@@ -266,7 +266,7 @@ class Crew(FlowTrackable, BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: str | BaseLLM | Any | None = Field(
+    planning_llm: str | BaseLLM | None = Field(
         default=None,
         description=(
             "Language model that will run the AgentPlanner if planning is True."
@@ -287,7 +287,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge object."
         ),
     )
-    chat_llm: str | BaseLLM | Any | None = Field(
+    chat_llm: str | BaseLLM | None = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
@@ -1311,7 +1311,7 @@ class Crew(FlowTrackable, BaseModel):
             and hasattr(agent, "multimodal")
             and getattr(agent, "multimodal", False)
         ):
-            if not (agent.llm and agent.llm.supports_multimodal()):
+            if not (isinstance(agent.llm, BaseLLM) and agent.llm.supports_multimodal()):
                 tools = self._add_multimodal_tools(agent, tools)
 
         if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
@@ -1328,7 +1328,11 @@ class Crew(FlowTrackable, BaseModel):
         files = get_all_files(self.id, task.id)
         if files:
             supported_types: list[str] = []
-            if agent and agent.llm and agent.llm.supports_multimodal():
+            if (
+                agent
+                and isinstance(agent.llm, BaseLLM)
+                and agent.llm.supports_multimodal()
+            ):
                 provider = (
                     getattr(agent.llm, "provider", None)
                     or getattr(agent.llm, "model", None)
@@ -1781,17 +1785,10 @@ class Crew(FlowTrackable, BaseModel):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
 
-        if (
-            self.manager_agent
-            and hasattr(self.manager_agent, "llm")
-            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
-        ):
+        if self.manager_agent:
             if isinstance(self.manager_agent.llm, BaseLLM):
                 llm_usage = self.manager_agent.llm.get_token_usage_summary()
-            else:
-                llm_usage = self.manager_agent.llm._token_process.get_summary()
-
-            total_usage_metrics.add_usage_metrics(llm_usage)
+                total_usage_metrics.add_usage_metrics(llm_usage)
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
