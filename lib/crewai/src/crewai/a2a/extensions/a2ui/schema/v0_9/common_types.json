@@ -237,7 +237,7 @@
       },
       "required": ["call"],
       "oneOf": [
-        { "$ref": "catalog.json#/$defs/anyFunction" }
+        { "$ref": "basic_catalog.json#/$defs/anyFunction" }
       ]
     },
     "CheckRule": {

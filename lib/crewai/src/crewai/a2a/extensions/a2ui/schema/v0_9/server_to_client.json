@@ -30,7 +30,7 @@
               "type": "string"
             },
             "theme": {
-              "$ref": "catalog.json#/$defs/theme",
+              "$ref": "basic_catalog.json#/$defs/theme",
               "description": "Theme parameters for the surface (e.g., {'primaryColor': '#FF0000'}). These must validate against the 'theme' schema defined in the catalog."
             },
             "sendDataModel": {
@@ -65,7 +65,7 @@
               "description": "A list containing all UI components for the surface.",
               "minItems": 1,
               "items": {
-                "$ref": "catalog.json#/$defs/anyComponent"
+                "$ref": "basic_catalog.json#/$defs/anyComponent"
               }
             }
           },
