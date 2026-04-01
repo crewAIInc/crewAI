@@ -5,19 +5,20 @@ from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
 
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
     InstanceOf,
     PrivateAttr,
-    field_serializer,
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
@@ -48,6 +49,16 @@ from crewai.utilities.string_utils import interpolate_only
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
+
+
+def _validate_crew_ref(value: Any) -> Any:
+    return value
+
+
+def _serialize_crew_ref(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value.id) if hasattr(value, "id") else str(value)
 
 
 _SLUG_RE: Final[re.Pattern[str]] = re.compile(
@@ -168,9 +179,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     llm: str | BaseLLM | None = Field(
         default=None, description="Language model that will run the agent."
     )
-    crew: Crew | None = Field(
-        default=None, description="Crew to which the agent belongs."
-    )
+    crew: Annotated[
+        Crew | str | None,
+        BeforeValidator(_validate_crew_ref),
+        PlainSerializer(
+            _serialize_crew_ref, return_type=str | None, when_used="always"
+        ),
+    ] = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(
         default_factory=get_i18n, description="Internationalization settings."
     )
@@ -233,11 +248,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
         min_length=1,
     )
-
-    @field_serializer("crew")
-    @classmethod
-    def _serialize_crew(cls, v: Crew | None) -> str | None:
-        return str(v.id) if v else None
 
     @model_validator(mode="before")
     @classmethod

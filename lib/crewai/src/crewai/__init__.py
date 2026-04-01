@@ -145,12 +145,17 @@ try:
         "ToolResult": _ToolResult,
     }
 
+    _resolve_namespace = {
+        **_full_namespace,
+        **sys.modules[_BaseAgent.__module__].__dict__,
+    }
+
     for _mod_name in (
         _BaseAgent.__module__,
         Agent.__module__,
         _AgentExecutor.__module__,
     ):
-        sys.modules[_mod_name].__dict__.update(_full_namespace)
+        sys.modules[_mod_name].__dict__.update(_resolve_namespace)
 
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
