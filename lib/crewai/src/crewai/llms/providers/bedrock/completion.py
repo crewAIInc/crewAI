@@ -7,7 +7,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
         ToolTypeDef,
     )
 
-    from crewai.llms.hooks.base import BaseInterceptor
+from crewai.llms.hooks.base import BaseInterceptor
 
 
 try:
@@ -228,129 +228,97 @@ class BedrockCompletion(BaseLLM):
     - Model-specific conversation format handling (e.g., Cohere requirements)
     """
 
-    def __init__(
-        self,
-        model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
-        aws_session_token: str | None = None,
-        region_name: str | None = None,
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-        top_p: float | None = None,
-        top_k: int | None = None,
-        stop_sequences: Sequence[str] | None = None,
-        stream: bool = False,
-        guardrail_config: dict[str, Any] | None = None,
-        additional_model_request_fields: dict[str, Any] | None = None,
-        additional_model_response_field_paths: list[str] | None = None,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        response_format: type[BaseModel] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize AWS Bedrock completion client.
+    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_session_token: str | None = None
+    region_name: str | None = None
+    max_tokens: int | None = None
+    top_p: float | None = None
+    top_k: int | None = None
+    stream: bool = False
+    guardrail_config: dict[str, Any] | None = None
+    additional_model_request_fields: dict[str, Any] | None = None
+    additional_model_response_field_paths: list[str] | None = None
+    interceptor: BaseInterceptor[Any, Any] | None = None
+    response_format: type[BaseModel] | None = None
+    is_claude_model: bool = False
+    supports_tools: bool = True
+    supports_streaming: bool = True
+    model_id: str = ""
 
-        Args:
-            model: The Bedrock model ID to use
-            aws_access_key_id: AWS access key (defaults to environment variable)
-            aws_secret_access_key: AWS secret key (defaults to environment variable)
-            aws_session_token: AWS session token for temporary credentials
-            region_name: AWS region name
-            temperature: Sampling temperature for response generation
-            max_tokens: Maximum tokens to generate
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter (Claude models only)
-            stop_sequences: List of sequences that stop generation
-            stream: Whether to use streaming responses
-            guardrail_config: Guardrail configuration for content filtering
-            additional_model_request_fields: Model-specific request parameters
-            additional_model_response_field_paths: Custom response field paths
-            interceptor: HTTP interceptor (not yet supported for Bedrock).
-            response_format: Pydantic model for structured output. Used as default when
-                           response_model is not passed to call()/acall() methods.
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    _client: Any = PrivateAttr(default=None)
+    _async_exit_stack: Any = PrivateAttr(default=None)
+    _async_client_initialized: bool = PrivateAttr(default=False)
+    _async_client: Any = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_bedrock_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        if data.get("interceptor") is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for AWS Bedrock provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        # Extract provider from kwargs to avoid duplicate argument
-        kwargs.pop("provider", None)
+        # Force provider to bedrock
+        data.pop("provider", None)
+        data["provider"] = "bedrock"
 
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            stop=stop_sequences or [],
-            provider="bedrock",
-            **kwargs,
+        # Normalize stop_sequences from stop kwarg
+        popped = data.pop("stop_sequences", None)
+        seqs = popped if popped is not None else (data.get("stop") or [])
+        if isinstance(seqs, str):
+            seqs = [seqs]
+        elif isinstance(seqs, Sequence) and not isinstance(seqs, list):
+            seqs = list(seqs)
+        data["stop"] = seqs
+
+        # Resolve env vars
+        data["aws_access_key_id"] = data.get("aws_access_key_id") or os.getenv(
+            "AWS_ACCESS_KEY_ID"
         )
-
-        # Configure client with timeouts and retries following AWS best practices
-        config = Config(
-            read_timeout=300,
-            retries={
-                "max_attempts": 3,
-                "mode": "adaptive",
-            },
-            tcp_keepalive=True,
+        data["aws_secret_access_key"] = data.get("aws_secret_access_key") or os.getenv(
+            "AWS_SECRET_ACCESS_KEY"
         )
-
-        self.region_name = (
-            region_name
+        data["aws_session_token"] = data.get("aws_session_token") or os.getenv(
+            "AWS_SESSION_TOKEN"
+        )
+        data["region_name"] = (
+            data.get("region_name")
             or os.getenv("AWS_DEFAULT_REGION")
             or os.getenv("AWS_REGION_NAME")
             or "us-east-1"
         )
 
-        self.aws_access_key_id = aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
-        self.aws_secret_access_key = aws_secret_access_key or os.getenv(
-            "AWS_SECRET_ACCESS_KEY"
-        )
-        self.aws_session_token = aws_session_token or os.getenv("AWS_SESSION_TOKEN")
+        model = data.get("model", "anthropic.claude-3-5-sonnet-20241022-v2:0")
+        data["is_claude_model"] = "claude" in model.lower()
+        data["model_id"] = model
+        return data
 
-        # Initialize Bedrock client with proper configuration
+    @model_validator(mode="after")
+    def _init_clients(self) -> BedrockCompletion:
+        config = Config(
+            read_timeout=300,
+            retries={"max_attempts": 3, "mode": "adaptive"},
+            tcp_keepalive=True,
+        )
         session = Session(
             aws_access_key_id=self.aws_access_key_id,
             aws_secret_access_key=self.aws_secret_access_key,
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
-
-        self.client = session.client("bedrock-runtime", config=config)
-
+        self._client = session.client("bedrock-runtime", config=config)
         self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
-        self._async_client_initialized = False
-
-        # Store completion parameters
-        self.max_tokens = max_tokens
-        self.top_p = top_p
-        self.top_k = top_k
-        self.stream = stream
-        self.stop_sequences = stop_sequences
-        self.response_format = response_format
-
-        # Store advanced features (optional)
-        self.guardrail_config = guardrail_config
-        self.additional_model_request_fields = additional_model_request_fields
-        self.additional_model_response_field_paths = (
-            additional_model_response_field_paths
-        )
-
-        # Model-specific settings
-        self.is_claude_model = "claude" in model.lower()
-        self.supports_tools = True  # Converse API supports tools for most models
-        self.supports_streaming = True
-
-        # Handle inference profiles for newer models
-        self.model_id = model
+        return self
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""
         config = super().to_config_dict()
-        # NOTE: AWS credentials (access_key, secret_key, session_token) are
-        # intentionally excluded — they must come from env on resume.
         if self.region_name and self.region_name != "us-east-1":
             config["region_name"] = self.region_name
         if self.max_tokens is not None:
@@ -362,30 +330,6 @@ class BedrockCompletion(BaseLLM):
         if self.guardrail_config:
             config["guardrail_config"] = self.guardrail_config
         return config
-
-    @property
-    def stop(self) -> list[str]:
-        """Get stop sequences sent to the API."""
-        return [] if self.stop_sequences is None else list(self.stop_sequences)
-
-    @stop.setter
-    def stop(self, value: Sequence[str] | str | None) -> None:
-        """Set stop sequences.
-
-        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-        are properly sent to the Bedrock API.
-
-        Args:
-            value: Stop sequences as a Sequence, single string, or None
-        """
-        if value is None:
-            self.stop_sequences = []
-        elif isinstance(value, str):
-            self.stop_sequences = [value]
-        elif isinstance(value, Sequence):
-            self.stop_sequences = list(value)
-        else:
-            self.stop_sequences = []
 
     def call(
         self,
@@ -710,7 +654,7 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self.client.converse(
+            response = self._client.converse(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -720,8 +664,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             # Track token usage according to AWS response format
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -761,6 +706,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -783,6 +729,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -862,6 +809,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return self._invoke_after_llm_call_hooks(
@@ -992,15 +940,16 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
-            response = self.client.converse_stream(
+            response = self._client.converse_stream(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
                     cast(object, messages),
                 ),
-                **body,  # type: ignore[arg-type]
+                **body,
             )
 
             stream = response.get("stream")
@@ -1101,6 +1050,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1168,6 +1118,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                             if "trace" in metadata:
@@ -1197,6 +1148,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return full_response
@@ -1308,8 +1260,9 @@ class BedrockCompletion(BaseLLM):
                 **body,
             )
 
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -1348,6 +1301,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -1370,6 +1324,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -1444,6 +1399,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return text_content
@@ -1564,6 +1520,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
             async_client = await self._ensure_async_client()
@@ -1675,6 +1632,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1747,6 +1705,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                         if "trace" in metadata:
@@ -1776,6 +1735,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return self._invoke_after_llm_call_hooks(

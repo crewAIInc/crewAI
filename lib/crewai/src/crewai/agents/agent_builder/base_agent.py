@@ -12,7 +12,6 @@ from pydantic import (
     UUID4,
     BaseModel,
     Field,
-    InstanceOf,
     PrivateAttr,
     field_validator,
     model_validator,
@@ -185,7 +184,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="Knowledge sources for the agent.",
     )
-    knowledge_storage: InstanceOf[BaseKnowledgeStorage] | None = Field(
+    knowledge_storage: BaseKnowledgeStorage | None = Field(
         default=None,
         description="Custom knowledge storage for the agent.",
     )

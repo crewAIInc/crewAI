@@ -14,10 +14,18 @@ from datetime import datetime
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal
 import uuid
 
-from pydantic import BaseModel
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    model_validator,
+)
+from typing_extensions import TypedDict
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
@@ -51,6 +59,12 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
+class JsonResponseFormat(TypedDict):
+    """Response format requesting raw JSON output (e.g. ``{"type": "json_object"}``)."""
+
+    type: Literal["json_object"]
+
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
@@ -82,7 +96,7 @@ def get_current_call_id() -> str:
     return call_id
 
 
-class BaseLLM(ABC):
+class BaseLLM(BaseModel, ABC):
     """Abstract base class for LLM implementations.
 
     This class defines the interface that all LLM implementations must follow.
@@ -101,56 +115,100 @@ class BaseLLM(ABC):
         additional_params: Additional provider-specific parameters.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
+
+    model: str
+    temperature: float | None = None
+    api_key: str | None = None
+    base_url: str | None = None
+    provider: str = Field(default="openai")
+    prefer_upload: bool = False
     is_litellm: bool = False
+    stop: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("stop", "stop_sequences"),
+    )
+    additional_params: dict[str, Any] = Field(default_factory=dict)
 
-    def __init__(
-        self,
-        model: str,
-        temperature: float | None = None,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        provider: str | None = None,
-        prefer_upload: bool = False,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize the BaseLLM with default attributes.
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in ("stop", "stop_sequences"):
+            if value is None:
+                value = []
+            elif isinstance(value, str):
+                value = [value]
+            elif not isinstance(value, list):
+                value = list(value)
+            name = "stop"
+        try:
+            super().__setattr__(name, value)
+        except ValueError:
+            if name in self.model_fields:
+                raise  # Re-raise validation errors on declared fields
+            # Fallback for attributes not declared as fields (e.g. mock patching)
+            object.__setattr__(self, name, value)
+        except AttributeError:
+            object.__setattr__(self, name, value)
 
-        Args:
-            model: The model identifier/name.
-            temperature: Optional temperature setting for response generation.
-            stop: Optional list of stop sequences for generation.
-            prefer_upload: Whether to prefer file upload over inline base64.
-            **kwargs: Additional provider-specific parameters.
+    def __delattr__(self, name: str) -> None:
+        try:
+            super().__delattr__(name)
+        except AttributeError:
+            object.__delattr__(self, name)
+
+    @property
+    def stop_sequences(self) -> list[str]:
+        """Alias for ``stop`` — kept for backward compatibility with provider APIs.
+
+        Writes are handled by ``__setattr__``, which normalizes and redirects
+        ``stop_sequences`` assignments to the ``stop`` field.
         """
-        if not model:
-            raise ValueError("Model name is required and cannot be empty")
+        return self.stop
 
-        self.model = model
-        self.temperature = temperature
-        self.api_key = api_key
-        self.base_url = base_url
-        self.prefer_upload = prefer_upload
-        # Store additional parameters for provider-specific use
-        self.additional_params = kwargs
-        self._provider = provider or "openai"
-
-        stop = kwargs.pop("stop", None)
-        if stop is None:
-            self.stop: list[str] = []
-        elif isinstance(stop, str):
-            self.stop = [stop]
-        elif isinstance(stop, list):
-            self.stop = stop
-        else:
-            self.stop = []
-
-        self._token_usage = {
+    _token_usage: dict[str, int] = PrivateAttr(
+        default_factory=lambda: {
             "total_tokens": 0,
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "successful_requests": 0,
             "cached_prompt_tokens": 0,
         }
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_init_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        if not data.get("model"):
+            raise ValueError("Model name is required and cannot be empty")
+
+        # Normalize stop: accept str, list, or None; also accept stop_sequences alias
+        stop_seqs = data.pop("stop_sequences", None)
+        stop = stop_seqs if stop_seqs is not None else data.get("stop")
+        if stop is None:
+            data["stop"] = []
+        elif isinstance(stop, str):
+            data["stop"] = [stop]
+        elif isinstance(stop, list):
+            data["stop"] = stop
+        else:
+            data["stop"] = list(stop)
+
+        # Default provider
+        if not data.get("provider"):
+            data["provider"] = "openai"
+
+        # Collect unknown kwargs into additional_params
+        known_fields = set(cls.model_fields.keys())
+        extras = {k: v for k, v in data.items() if k not in known_fields}
+        for k in extras:
+            data.pop(k)
+        existing = data.get("additional_params") or {}
+        existing.update(extras)
+        data["additional_params"] = existing
+
+        return data
 
     def to_config_dict(self) -> dict[str, Any]:
         """Serialize this LLM to a dict that can reconstruct it via ``LLM(**config)``.
@@ -173,16 +231,6 @@ class BaseLLM(ABC):
             config["stop"] = self.stop
 
         return config
-
-    @property
-    def provider(self) -> str:
-        """Get the provider of the LLM."""
-        return self._provider
-
-    @provider.setter
-    def provider(self, value: str) -> None:
-        """Set the provider of the LLM."""
-        self._provider = value
 
     @abstractmethod
     def call(
@@ -412,6 +460,7 @@ class BaseLLM(ABC):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
@@ -426,6 +475,7 @@ class BaseLLM(ABC):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                usage=usage,
             ),
         )
 

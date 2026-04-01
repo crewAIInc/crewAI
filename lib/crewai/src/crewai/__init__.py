@@ -4,6 +4,8 @@ from typing import Any
 import urllib.request
 import warnings
 
+from pydantic import PydanticUserError
+
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
 from crewai.crew import Crew
@@ -42,7 +44,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.13.0rc1"
+__version__ = "1.13.0a5"
 _telemetry_submitted = False
 
 
@@ -92,6 +94,38 @@ def __getattr__(name: str) -> Any:
         return val
     raise AttributeError(f"module 'crewai' has no attribute {name!r}")
 
+
+try:
+    from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
+    from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
+    from crewai.hooks.llm_hooks import LLMCallHookContext as _LLMCallHookContext
+    from crewai.tools.tool_types import ToolResult as _ToolResult
+    from crewai.utilities.prompts import (
+        StandardPromptResult as _StandardPromptResult,
+        SystemPromptResult as _SystemPromptResult,
+    )
+
+    _AgentExecutor.model_rebuild(
+        force=True,
+        _types_namespace={
+            "Agent": Agent,
+            "ToolsHandler": _ToolsHandler,
+            "Crew": Crew,
+            "BaseLLM": BaseLLM,
+            "Task": Task,
+            "StandardPromptResult": _StandardPromptResult,
+            "SystemPromptResult": _SystemPromptResult,
+            "LLMCallHookContext": _LLMCallHookContext,
+            "ToolResult": _ToolResult,
+        },
+    )
+except (ImportError, PydanticUserError):
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning(
+        "AgentExecutor.model_rebuild() failed; forward refs may be unresolved.",
+        exc_info=True,
+    )
 
 __all__ = [
     "LLM",
