@@ -1,0 +1,29 @@
+[project]
+name = "crewai-a2a"
+dynamic = ["version"]
+description = "Agent-to-Agent (A2A) protocol communication for CrewAI"
+readme = "README.md"
+authors = [
+    { name = "Joao Moura", email = "joao@crewai.com" }
+]
+requires-python = ">=3.10, <3.14"
+dependencies = [
+    "crewai==1.13.0a6",
+    "a2a-sdk~=0.3.10",
+    "httpx-auth~=0.23.1",
+    "httpx-sse~=0.4.0",
+    "aiocache[redis,memcached]~=0.12.3",
+    "pydantic~=2.11.9",
+    "pyjwt>=2.9.0,<3",
+    "httpx~=0.28.1",
+]
+
+[tool.uv.sources]
+crewai = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_a2a/__init__.py"

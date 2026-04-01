@@ -187,6 +187,7 @@ _DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
     "crewai",
     "crewai-tools",
     "crewai-devtools",
+    "crewai-a2a",
 ]
 
 
