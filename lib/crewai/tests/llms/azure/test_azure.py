@@ -1522,6 +1522,8 @@ def test_azure_responses_api_forwards_parameters():
         max_tokens=1000,
         reasoning_effort="high",
         seed=42,
+        frequency_penalty=0.3,
+        presence_penalty=0.6,
     )
 
     delegate = llm._responses_delegate
@@ -1538,6 +1540,8 @@ def test_azure_responses_api_forwards_parameters():
     assert delegate.max_tokens == 1000
     assert delegate.reasoning_effort == "high"
     assert delegate.seed == 42
+    assert delegate.frequency_penalty == 0.3
+    assert delegate.presence_penalty == 0.6
 
 
 def test_azure_responses_api_call_delegates_to_openai():

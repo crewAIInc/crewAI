@@ -250,6 +250,10 @@ class AzureCompletion(BaseLLM):
             delegate_kwargs["response_format"] = self.response_format
         if self.stop:
             delegate_kwargs["stop"] = self.stop
+        if self.frequency_penalty is not None:
+            delegate_kwargs["frequency_penalty"] = self.frequency_penalty
+        if self.presence_penalty is not None:
+            delegate_kwargs["presence_penalty"] = self.presence_penalty
 
         self._responses_delegate = OpenAICompletion(**delegate_kwargs)
 
