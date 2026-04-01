@@ -9,8 +9,8 @@ import pytest_asyncio
 from a2a.client import ClientFactory
 from a2a.types import AgentCard, Message, Part, Role, TaskState, TextPart
 
-from crewai.a2a.updates.polling.handler import PollingHandler
-from crewai.a2a.updates.streaming.handler import StreamingHandler
+from crewai_a2a.updates.polling.handler import PollingHandler
+from crewai_a2a.updates.streaming.handler import StreamingHandler
 
 
 A2A_TEST_ENDPOINT = os.getenv("A2A_TEST_ENDPOINT", "http://localhost:9999")
@@ -184,8 +184,8 @@ class TestA2APushNotificationHandler:
         from a2a.types import Task, TaskStatus
         from pydantic import AnyHttpUrl
 
-        from crewai.a2a.updates.push_notifications.config import PushNotificationConfig
-        from crewai.a2a.updates.push_notifications.handler import PushNotificationHandler
+        from crewai_a2a.updates.push_notifications.config import PushNotificationConfig
+        from crewai_a2a.updates.push_notifications.handler import PushNotificationHandler
 
         completed_task = Task(
             id="task-123",
@@ -248,8 +248,8 @@ class TestA2APushNotificationHandler:
         from a2a.types import Task, TaskStatus
         from pydantic import AnyHttpUrl
 
-        from crewai.a2a.updates.push_notifications.config import PushNotificationConfig
-        from crewai.a2a.updates.push_notifications.handler import PushNotificationHandler
+        from crewai_a2a.updates.push_notifications.config import PushNotificationConfig
+        from crewai_a2a.updates.push_notifications.handler import PushNotificationHandler
 
         mock_store = MagicMock()
         mock_store.wait_for_result = AsyncMock(return_value=None)
@@ -303,7 +303,7 @@ class TestA2APushNotificationHandler:
         """Test that push handler fails gracefully without config."""
         from unittest.mock import MagicMock
 
-        from crewai.a2a.updates.push_notifications.handler import PushNotificationHandler
+        from crewai_a2a.updates.push_notifications.handler import PushNotificationHandler
 
         mock_client = MagicMock()
 

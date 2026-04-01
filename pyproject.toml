@@ -179,6 +179,7 @@ members = [
     "lib/crewai-tools",
     "lib/devtools",
     "lib/crewai-files",
+    "lib/crewai-a2a",
 ]
 
 
@@ -187,3 +188,4 @@ crewai = { workspace = true }
 crewai-tools = { workspace = true }
 crewai-devtools = { workspace = true }
 crewai-files = { workspace = true }
+crewai-a2a = { workspace = true }

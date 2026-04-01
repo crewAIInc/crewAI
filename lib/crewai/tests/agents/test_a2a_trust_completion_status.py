@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crewai.a2a.config import A2AConfig
+from crewai_a2a.config import A2AConfig
 
 try:
     from a2a.types import Message, Role
@@ -27,8 +27,8 @@ def _create_mock_agent_card(name: str = "Test", url: str = "http://test-endpoint
 @pytest.mark.skipif(not A2A_SDK_INSTALLED, reason="Requires a2a-sdk to be installed")
 def test_trust_remote_completion_status_true_returns_directly():
     """When trust_remote_completion_status=True and A2A returns completed, return result directly."""
-    from crewai.a2a.wrapper import _delegate_to_a2a
-    from crewai.a2a.types import AgentResponseProtocol
+    from crewai_a2a.wrapper import _delegate_to_a2a
+    from crewai_a2a.types import AgentResponseProtocol
     from crewai import Agent, Task
 
     a2a_config = A2AConfig(
@@ -51,8 +51,8 @@ def test_trust_remote_completion_status_true_returns_directly():
         a2a_ids = ["http://test-endpoint.com/"]
 
     with (
-        patch("crewai.a2a.wrapper.execute_a2a_delegation") as mock_execute,
-        patch("crewai.a2a.wrapper._fetch_agent_cards_concurrently") as mock_fetch,
+        patch("crewai_a2a.wrapper.execute_a2a_delegation") as mock_execute,
+        patch("crewai_a2a.wrapper._fetch_agent_cards_concurrently") as mock_fetch,
     ):
         mock_card = _create_mock_agent_card()
         mock_fetch.return_value = ({"http://test-endpoint.com/": mock_card}, {})
@@ -83,7 +83,7 @@ def test_trust_remote_completion_status_true_returns_directly():
 @pytest.mark.skipif(not A2A_SDK_INSTALLED, reason="Requires a2a-sdk to be installed")
 def test_trust_remote_completion_status_false_continues_conversation():
     """When trust_remote_completion_status=False and A2A returns completed, ask server agent."""
-    from crewai.a2a.wrapper import _delegate_to_a2a
+    from crewai_a2a.wrapper import _delegate_to_a2a
     from crewai import Agent, Task
 
     a2a_config = A2AConfig(
@@ -116,8 +116,8 @@ def test_trust_remote_completion_status_false_continues_conversation():
         return "unexpected"
 
     with (
-        patch("crewai.a2a.wrapper.execute_a2a_delegation") as mock_execute,
-        patch("crewai.a2a.wrapper._fetch_agent_cards_concurrently") as mock_fetch,
+        patch("crewai_a2a.wrapper.execute_a2a_delegation") as mock_execute,
+        patch("crewai_a2a.wrapper._fetch_agent_cards_concurrently") as mock_fetch,
     ):
         mock_card = _create_mock_agent_card()
         mock_fetch.return_value = ({"http://test-endpoint.com/": mock_card}, {})

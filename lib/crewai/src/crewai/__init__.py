@@ -4,7 +4,7 @@ from typing import Any
 import urllib.request
 import warnings
 
-from pydantic import PydanticUserError
+from pydantic import PydanticUndefinedAnnotation, PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
@@ -119,11 +119,11 @@ try:
             "ToolResult": _ToolResult,
         },
     )
-except (ImportError, PydanticUserError):
+except (ImportError, PydanticUserError, PydanticUndefinedAnnotation):
     import logging as _logging
 
-    _logging.getLogger(__name__).warning(
-        "AgentExecutor.model_rebuild() failed; forward refs may be unresolved.",
+    _logging.getLogger(__name__).debug(
+        "AgentExecutor.model_rebuild() deferred; forward refs may be unresolved.",
         exc_info=True,
     )
 
