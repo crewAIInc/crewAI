@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install libsecret for Mintlify CLI
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-0
+
       - name: Install Mintlify CLI
         run: npm install -g mint@latest
 
