@@ -2237,7 +2237,9 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/a2a-agent-delegation",
+                      "en/learn/a2ui"
                     ]
                   },
                   {
@@ -3174,7 +3176,9 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/a2a-agent-delegation",
+                      "en/learn/a2ui"
                     ]
                   },
                   {
