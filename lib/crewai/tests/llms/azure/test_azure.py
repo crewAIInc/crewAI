@@ -1,13 +1,14 @@
 import os
 import sys
 import types
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock, Mock, AsyncMock
 import pytest
 
 from crewai.llm import LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
+from crewai.llms.providers.azure.completion import AzureCompletion
 
 
 @pytest.fixture
@@ -1403,3 +1404,466 @@ def test_azure_stop_words_still_applied_to_regular_responses():
         assert "Observation:" not in result
         assert "Found results" not in result
         assert "I need to search for more information" in result
+
+
+# =============================================================================
+# Azure Responses API Tests
+# =============================================================================
+
+
+def test_azure_responses_api_initialization():
+    """Test that AzureCompletion can be initialized with api='responses'."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        instructions="You are a helpful assistant.",
+        store=True,
+    )
+
+    assert llm.api == "responses"
+    assert llm.instructions == "You are a helpful assistant."
+    assert llm.store is True
+    assert llm.model == "gpt-4o"
+    assert llm._responses_delegate is not None
+
+
+def test_azure_responses_api_default_is_completions():
+    """Test that the default API is 'completions' for backward compatibility."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    assert llm.api == "completions"
+    assert llm._responses_delegate is None
+
+
+def test_azure_responses_api_delegate_is_openai_completion():
+    """Test that the Responses API delegate is an OpenAICompletion instance."""
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    assert isinstance(llm._responses_delegate, OpenAICompletion)
+    assert llm._responses_delegate.api == "responses"
+    assert llm._responses_delegate.model == "gpt-4o"
+
+
+def test_azure_responses_api_base_url_construction():
+    """Test that the Azure base URL is correctly constructed for Responses API."""
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        api_version="2025-03-01-preview",
+    )
+
+    delegate = llm._responses_delegate
+    assert isinstance(delegate, OpenAICompletion)
+    assert delegate.base_url == "https://my-resource.openai.azure.com/openai/v1/?api-version=2025-03-01-preview"
+
+
+def test_azure_responses_api_base_url_strips_deployment_suffix():
+    """Test that deployment suffix is stripped from endpoint for Responses API base URL."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com/openai/deployments/gpt-4o",
+    )
+
+    delegate = llm._responses_delegate
+    assert "my-resource.openai.azure.com/openai/v1/" in delegate.base_url
+    assert "/openai/deployments/" not in delegate.base_url
+
+
+def test_azure_responses_api_base_url_with_trailing_slash():
+    """Test that endpoint with trailing slash is handled correctly."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com/",
+        api_version="2025-03-01-preview",
+    )
+
+    delegate = llm._responses_delegate
+    assert delegate.base_url == "https://my-resource.openai.azure.com/openai/v1/?api-version=2025-03-01-preview"
+
+
+def test_azure_responses_api_forwards_parameters():
+    """Test that Responses API parameters are forwarded to the delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        instructions="Be helpful",
+        store=True,
+        previous_response_id="resp_abc123",
+        include=["reasoning.encrypted_content"],
+        builtin_tools=["web_search_preview"],
+        parse_tool_outputs=True,
+        auto_chain=True,
+        auto_chain_reasoning=True,
+        temperature=0.5,
+        top_p=0.9,
+        max_tokens=1000,
+        reasoning_effort="high",
+        seed=42,
+    )
+
+    delegate = llm._responses_delegate
+    assert delegate.instructions == "Be helpful"
+    assert delegate.store is True
+    assert delegate.previous_response_id == "resp_abc123"
+    assert delegate.include == ["reasoning.encrypted_content"]
+    assert delegate.builtin_tools == ["web_search_preview"]
+    assert delegate.parse_tool_outputs is True
+    assert delegate.auto_chain is True
+    assert delegate.auto_chain_reasoning is True
+    assert delegate.temperature == 0.5
+    assert delegate.top_p == 0.9
+    assert delegate.max_tokens == 1000
+    assert delegate.reasoning_effort == "high"
+    assert delegate.seed == 42
+
+
+def test_azure_responses_api_call_delegates_to_openai():
+    """Test that call() with api='responses' delegates to the OpenAI delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    with patch.object(llm._responses_delegate, "call", return_value="responses result") as mock_call:
+        result = llm.call("Hello, world!")
+        mock_call.assert_called_once_with(
+            messages="Hello, world!",
+            tools=None,
+            callbacks=None,
+            available_functions=None,
+            from_task=None,
+            from_agent=None,
+            response_model=None,
+        )
+        assert result == "responses result"
+
+
+@pytest.mark.asyncio
+async def test_azure_responses_api_acall_delegates_to_openai():
+    """Test that acall() with api='responses' delegates to the OpenAI delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    with patch.object(
+        llm._responses_delegate, "acall", new_callable=AsyncMock, return_value="async responses result"
+    ) as mock_acall:
+        result = await llm.acall("Hello async!")
+        mock_acall.assert_called_once_with(
+            messages="Hello async!",
+            tools=None,
+            callbacks=None,
+            available_functions=None,
+            from_task=None,
+            from_agent=None,
+            response_model=None,
+        )
+        assert result == "async responses result"
+
+
+def test_azure_responses_api_call_with_tools():
+    """Test that call() with api='responses' forwards tools to the delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather",
+            "parameters": {
+                "type": "object",
+                "properties": {"location": {"type": "string"}},
+                "required": ["location"],
+            },
+        }
+    ]
+
+    available_functions = {"get_weather": lambda location: f"Sunny in {location}"}
+
+    with patch.object(llm._responses_delegate, "call", return_value="Weather result") as mock_call:
+        result = llm.call(
+            messages=[{"role": "user", "content": "What's the weather?"}],
+            tools=tools,
+            available_functions=available_functions,
+        )
+        mock_call.assert_called_once()
+        call_kwargs = mock_call.call_args
+        assert call_kwargs.kwargs["tools"] == tools
+        assert call_kwargs.kwargs["available_functions"] == available_functions
+        assert result == "Weather result"
+
+
+def test_azure_responses_api_completions_not_affected():
+    """Test that completions API path is unaffected when api='completions'."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    assert llm.api == "completions"
+    assert llm._responses_delegate is None
+    assert llm._client is not None
+    assert llm._async_client is not None
+
+
+def test_azure_responses_api_via_llm_factory():
+    """Test that api='responses' works when creating via LLM factory."""
+    llm = LLM(
+        model="azure/gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    assert isinstance(llm, AzureCompletion)
+    assert llm.api == "responses"
+    assert llm._responses_delegate is not None
+
+
+def test_azure_responses_api_to_config_dict():
+    """Test that to_config_dict() includes api field when set to 'responses'."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        reasoning_effort="high",
+    )
+
+    config = llm.to_config_dict()
+    assert config["api"] == "responses"
+    assert config["reasoning_effort"] == "high"
+
+
+def test_azure_completions_api_to_config_dict_no_api_field():
+    """Test that to_config_dict() does not include api when default 'completions'."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    config = llm.to_config_dict()
+    assert "api" not in config
+
+
+def test_azure_responses_api_last_response_id():
+    """Test that last_response_id property delegates to the OpenAI delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        auto_chain=True,
+    )
+
+    # Initially None
+    assert llm.last_response_id is None
+
+    # Mock the delegate's last_response_id
+    llm._responses_delegate._last_response_id = "resp_xyz789"
+    assert llm.last_response_id == "resp_xyz789"
+
+
+def test_azure_responses_api_reset_chain():
+    """Test that reset_chain() delegates to the OpenAI delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        auto_chain=True,
+    )
+
+    # Set a response ID on the delegate
+    llm._responses_delegate._last_response_id = "resp_xyz789"
+    assert llm.last_response_id == "resp_xyz789"
+
+    # Reset the chain
+    llm.reset_chain()
+    assert llm.last_response_id is None
+
+
+def test_azure_responses_api_last_response_id_without_delegate():
+    """Test that last_response_id returns None when no delegate (completions mode)."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    assert llm.last_response_id is None
+
+
+def test_azure_responses_api_reset_chain_without_delegate():
+    """Test that reset_chain() is a no-op when no delegate (completions mode)."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    # Should not raise
+    llm.reset_chain()
+
+
+def test_azure_responses_api_with_structured_output():
+    """Test that structured output (response_model) is forwarded to the delegate."""
+    from pydantic import BaseModel, Field
+
+    class MathAnswer(BaseModel):
+        result: int = Field(description="The numerical result")
+        explanation: str = Field(description="Brief explanation")
+
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    mock_answer = MathAnswer(result=42, explanation="The answer to everything")
+    with patch.object(llm._responses_delegate, "call", return_value=mock_answer) as mock_call:
+        result = llm.call("What is the answer?", response_model=MathAnswer)
+        mock_call.assert_called_once()
+        call_kwargs = mock_call.call_args
+        assert call_kwargs is not None
+        assert call_kwargs.kwargs["response_model"] == MathAnswer
+        assert isinstance(result, MathAnswer)
+        assert result.result == 42
+
+
+def test_azure_responses_api_streaming_forwarded():
+    """Test that stream=True is forwarded to the Responses API delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        stream=True,
+    )
+
+    assert llm._responses_delegate.stream is True
+
+
+def test_azure_responses_api_max_completion_tokens_forwarded():
+    """Test that max_completion_tokens is forwarded to the delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        max_completion_tokens=500,
+    )
+
+    assert llm._responses_delegate.max_completion_tokens == 500
+
+
+def test_azure_responses_api_default_api_version_in_url():
+    """Test that the api_version is included in the Responses API base URL."""
+    with patch.dict(os.environ, {}, clear=False):
+        # Remove AZURE_API_VERSION if set to ensure we get the code default
+        env = os.environ.copy()
+        env.pop("AZURE_API_VERSION", None)
+        with patch.dict(os.environ, env, clear=True):
+            llm = AzureCompletion(
+                model="gpt-4o",
+                api="responses",
+                api_key="test-key",
+                endpoint="https://my-resource.openai.azure.com",
+            )
+
+            assert "api-version=" in llm._responses_delegate.base_url
+            assert "api-version=2024-06-01" in llm._responses_delegate.base_url
+
+
+def test_azure_responses_api_custom_api_version_in_url():
+    """Test that custom api_version is used in URL when specified."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        api_version="2025-03-01-preview",
+    )
+
+    assert "api-version=2025-03-01-preview" in llm._responses_delegate.base_url
+
+
+def test_azure_responses_api_no_chat_clients_created():
+    """Test that Chat Completions clients are NOT created when api='responses'."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+    )
+
+    # In responses mode, the native Azure clients should not be initialized
+    assert llm._client is None
+    assert llm._async_client is None
+    assert llm._responses_delegate is not None
+
+
+def test_azure_responses_api_stop_words_forwarded():
+    """Test that stop words are forwarded to the delegate."""
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        stop=["STOP"],
+    )
+
+    assert llm._responses_delegate.stop == ["STOP"]
+
+
+def test_azure_responses_api_response_format_forwarded():
+    """Test that response_format is forwarded to the delegate."""
+    from pydantic import BaseModel
+
+    class MyFormat(BaseModel):
+        answer: str
+
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api="responses",
+        api_key="test-key",
+        endpoint="https://my-resource.openai.azure.com",
+        response_format=MyFormat,
+    )
+
+    assert llm._responses_delegate.response_format == MyFormat
