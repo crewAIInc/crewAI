@@ -14281,10 +14281,349 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "JsonResponseFormat": {
+            "description": "Response format requesting raw JSON output (e.g. ``{\"type\": \"json_object\"}``).",
+            "properties": {
+              "type": {
+                "const": "json_object",
+                "title": "Type",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "title": "JsonResponseFormat",
+            "type": "object"
+          },
+          "LLM": {
+            "properties": {
+              "additional_params": {
+                "additionalProperties": true,
+                "title": "Additional Params",
+                "type": "object"
+              },
+              "api_base": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Base"
+              },
+              "api_key": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Key"
+              },
+              "api_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Version"
+              },
+              "base_url": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Base Url"
+              },
+              "callbacks": {
+                "anyOf": [
+                  {
+                    "items": {},
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Callbacks"
+              },
+              "completion_cost": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Completion Cost"
+              },
+              "context_window_size": {
+                "default": 0,
+                "title": "Context Window Size",
+                "type": "integer"
+              },
+              "frequency_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Frequency Penalty"
+              },
+              "interceptor": {
+                "default": null,
+                "title": "Interceptor"
+              },
+              "is_anthropic": {
+                "default": false,
+                "title": "Is Anthropic",
+                "type": "boolean"
+              },
+              "is_litellm": {
+                "default": false,
+                "title": "Is Litellm",
+                "type": "boolean"
+              },
+              "logit_bias": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logit Bias"
+              },
+              "logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logprobs"
+              },
+              "max_completion_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Completion Tokens"
+              },
+              "max_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Tokens"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "n": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "N"
+              },
+              "prefer_upload": {
+                "default": false,
+                "title": "Prefer Upload",
+                "type": "boolean"
+              },
+              "presence_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Presence Penalty"
+              },
+              "provider": {
+                "default": "openai",
+                "title": "Provider",
+                "type": "string"
+              },
+              "reasoning_effort": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reasoning Effort"
+              },
+              "response_format": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/JsonResponseFormat"
+                  },
+                  {},
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Response Format"
+              },
+              "seed": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Seed"
+              },
+              "stop": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Stop",
+                "type": "array"
+              },
+              "stream": {
+                "default": false,
+                "title": "Stream",
+                "type": "boolean"
+              },
+              "temperature": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Temperature"
+              },
+              "thinking": {
+                "default": null,
+                "title": "Thinking"
+              },
+              "timeout": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Timeout"
+              },
+              "top_logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top Logprobs"
+              },
+              "top_p": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top P"
+              }
+            },
+            "required": [
+              "model"
+            ],
+            "title": "LLM",
+            "type": "object"
           }
         },
         "description": "A tool for performing Optical Character Recognition on images.\n\nThis tool leverages LLMs to extract text from images. It can process\nboth local image files and images available via URLs.\n\nAttributes:\n    name (str): Name of the tool.\n    description (str): Description of the tool's functionality.\n    args_schema (Type[BaseModel]): Pydantic schema for input validation.\n\nPrivate Attributes:\n    _llm (Optional[LLM]): Language model instance for making API calls.",
-        "properties": {},
+        "properties": {
+          "llm": {
+            "$ref": "#/$defs/LLM"
+          }
+        },
         "title": "OCRTool",
         "type": "object"
       },

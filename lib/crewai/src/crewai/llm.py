@@ -20,8 +20,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -37,7 +36,12 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms.base_llm import BaseLLM, get_current_call_id, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    get_current_call_id,
+    llm_call_context,
+)
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -63,8 +67,6 @@ except ImportError:
 
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
-    from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -343,6 +345,27 @@ class AccumulatedToolArgs(BaseModel):
 
 class LLM(BaseLLM):
     completion_cost: float | None = None
+    timeout: float | int | None = None
+    top_p: float | None = None
+    n: int | None = None
+    max_completion_tokens: int | None = None
+    max_tokens: int | float | None = None
+    presence_penalty: float | None = None
+    frequency_penalty: float | None = None
+    logit_bias: dict[int, float] | None = None
+    response_format: JsonResponseFormat | type[BaseModel] | None = None
+    seed: int | None = None
+    logprobs: int | None = None
+    top_logprobs: int | None = None
+    api_base: str | None = None
+    api_version: str | None = None
+    callbacks: list[Any] | None = None
+    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    stream: bool = False
+    interceptor: Any = None
+    thinking: Any = None
+    context_window_size: int = 0
+    is_anthropic: bool = False
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
         """Factory method that routes to native SDK or falls back to LiteLLM.
@@ -438,10 +461,7 @@ class LLM(BaseLLM):
             logger.error(error_msg)
             raise ImportError(error_msg) from None
 
-        instance = object.__new__(cls)
-        super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
-        instance.is_litellm = True
-        return instance
+        return object.__new__(cls)
 
     @classmethod
     def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
@@ -637,89 +657,23 @@ class LLM(BaseLLM):
 
         return None
 
-    def __init__(
-        self,
-        model: str,
-        timeout: float | int | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        n: int | None = None,
-        stop: str | list[str] | None = None,
-        max_completion_tokens: int | None = None,
-        max_tokens: int | float | None = None,
-        presence_penalty: float | None = None,
-        frequency_penalty: float | None = None,
-        logit_bias: dict[int, float] | None = None,
-        response_format: type[BaseModel] | None = None,
-        seed: int | None = None,
-        logprobs: int | None = None,
-        top_logprobs: int | None = None,
-        base_url: str | None = None,
-        api_base: str | None = None,
-        api_version: str | None = None,
-        api_key: str | None = None,
-        callbacks: list[Any] | None = None,
-        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
-        prefer_upload: bool = False,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize LLM instance.
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_llm_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        model = data.get("model", "")
+        data["is_anthropic"] = cls._is_anthropic_model(model)
+        return data
 
-        Note: This __init__ method is only called for fallback instances.
-        Native provider instances handle their own initialization in their respective classes.
-        """
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            api_key=api_key,
-            base_url=base_url,
-            timeout=timeout,
-            **kwargs,
-        )
-        self.model = model
-        self.timeout = timeout
-        self.temperature = temperature
-        self.top_p = top_p
-        self.n = n
-        self.max_completion_tokens = max_completion_tokens
-        self.max_tokens = max_tokens
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.logit_bias = logit_bias
-        self.response_format = response_format
-        self.seed = seed
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.base_url = base_url
-        self.api_base = api_base
-        self.api_version = api_version
-        self.api_key = api_key
-        self.callbacks = callbacks
-        self.context_window_size = 0
-        self.reasoning_effort = reasoning_effort
-        self.prefer_upload = prefer_upload
-        self.additional_params = {
-            k: v for k, v in kwargs.items() if k not in ("is_litellm", "provider")
-        }
-        self.is_anthropic = self._is_anthropic_model(model)
-        self.stream = stream
-        self.interceptor = interceptor
-
-        litellm.drop_params = True
-
-        # Normalize self.stop to always be a list[str]
-        if stop is None:
-            self.stop: list[str] = []
-        elif isinstance(stop, str):
-            self.stop = [stop]
-        else:
-            self.stop = stop
-
-        self.set_callbacks(callbacks or [])
-        self.set_env_callbacks()
+    @model_validator(mode="after")
+    def _init_litellm(self) -> LLM:
+        self.is_litellm = True
+        if LITELLM_AVAILABLE:
+            litellm.drop_params = True
+            self.set_callbacks(self.callbacks or [])
+            self.set_env_callbacks()
+        return self
 
     @staticmethod
     def _is_anthropic_model(model: str) -> bool:
@@ -766,7 +720,7 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop or None,
+            "stop": (self.stop or None) if self.supports_stop_words() else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -1029,21 +983,25 @@ class LLM(BaseLLM):
                     )
                     result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
+                    usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
                         response=structured_response,
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage_dict,
                     )
                     return structured_response
 
+                usage_dict = self._usage_to_dict(usage_info)
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage_dict,
                 )
                 return full_response
 
@@ -1053,12 +1011,14 @@ class LLM(BaseLLM):
                 return tool_result
 
             # --- 10) Emit completion event and return response
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_dict,
             )
             return full_response
 
@@ -1080,6 +1040,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
 
@@ -1231,6 +1192,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=None,
             )
             return structured_response
 
@@ -1261,6 +1223,8 @@ class LLM(BaseLLM):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
+        response_usage = self._usage_to_dict(getattr(response, "usage", None))
+
         # --- 2) Handle structured output response (when response_model is provided)
         if response_model is not None:
             # When using instructor/response_model, litellm returns a Pydantic model instance
@@ -1272,6 +1236,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1303,6 +1268,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
 
@@ -1326,6 +1292,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1375,6 +1342,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=None,
             )
             return structured_response
 
@@ -1401,6 +1369,8 @@ class LLM(BaseLLM):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
+        response_usage = self._usage_to_dict(getattr(response, "usage", None))
+
         if response_model is not None:
             if isinstance(response, BaseModel):
                 structured_response = response.model_dump_json()
@@ -1410,6 +1380,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1439,6 +1410,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
 
@@ -1461,6 +1433,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1607,12 +1580,14 @@ class LLM(BaseLLM):
                     if result is not None:
                         return result
 
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("messages"),
+                usage=usage_dict,
             )
             return full_response
 
@@ -1634,6 +1609,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("messages"),
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
             raise
@@ -1838,9 +1814,11 @@ class LLM(BaseLLM):
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:
-                    unsupported_stop = "Unsupported parameter" in str(
-                        e
-                    ) and "'stop'" in str(e)
+                    error_str = str(e)
+                    unsupported_stop = "'stop'" in error_str and (
+                        "Unsupported parameter" in error_str
+                        or "does not support parameters" in error_str
+                    )
 
                     if unsupported_stop:
                         if (
@@ -1974,9 +1952,11 @@ class LLM(BaseLLM):
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:
-                    unsupported_stop = "Unsupported parameter" in str(
-                        e
-                    ) and "'stop'" in str(e)
+                    error_str = str(e)
+                    unsupported_stop = "'stop'" in error_str and (
+                        "Unsupported parameter" in error_str
+                        or "does not support parameters" in error_str
+                    )
 
                     if unsupported_stop:
                         if (
@@ -2016,6 +1996,19 @@ class LLM(BaseLLM):
                     )
                     raise
 
+    @staticmethod
+    def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        if usage is None:
+            return None
+        if isinstance(usage, dict):
+            return usage
+        if hasattr(usage, "model_dump"):
+            result: dict[str, Any] = usage.model_dump()
+            return result
+        if hasattr(usage, "__dict__"):
+            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        return None
+
     def _handle_emit_call_events(
         self,
         response: Any,
@@ -2023,6 +2016,7 @@ class LLM(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -2032,6 +2026,7 @@ class LLM(BaseLLM):
             from_task: Optional task object
             from_agent: Optional agent object
             messages: Optional messages object
+            usage: Optional token usage data
         """
         crewai_event_bus.emit(
             self,
@@ -2043,6 +2038,7 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                usage=usage,
             ),
         )
 
@@ -2276,6 +2272,10 @@ class LLM(BaseLLM):
         Note: This method is only used by the litellm fallback path.
         Native providers override this method with their own implementation.
         """
+        model_lower = self.model.lower() if self.model else ""
+        if "gpt-5" in model_lower:
+            return False
+
         if not LITELLM_AVAILABLE or get_supported_openai_params is None:
             # When litellm is not available, assume stop words are supported
             return True
@@ -2447,7 +2447,7 @@ class LLM(BaseLLM):
             **filtered_params,
         )
 
-    def __deepcopy__(self, memo: dict[int, Any] | None) -> LLM:
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> LLM:
         """Create a deep copy of the LLM instance."""
         import copy
 

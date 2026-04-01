@@ -1,27 +1,186 @@
 ---
 title: Skills
-description: Filesystem-based skill packages that inject context into agent prompts.
+description: Filesystem-based skill packages that inject domain expertise and instructions into agent prompts.
 icon: bolt
 mode: "wide"
 ---
 
 ## Overview
 
-Skills are self-contained directories that provide agents with domain-specific instructions, references, and assets. Each skill is defined by a `SKILL.md` file with YAML frontmatter and a markdown body.
+Skills are self-contained directories that provide agents with **domain-specific instructions, guidelines, and reference material**. Each skill is defined by a `SKILL.md` file with YAML frontmatter and a markdown body.
 
-Skills use **progressive disclosure** — metadata is loaded first, full instructions only when activated, and resource catalogs only when needed.
+When activated, a skill's instructions are injected directly into the agent's task prompt — giving the agent expertise without requiring any code changes.
 
-## Directory Structure
+<Note type="info" title="Skills vs Tools — The Key Distinction">
+**Skills are NOT tools.** This is the most common point of confusion.
+
+- **Skills** inject *instructions and context* into the agent's prompt. They tell the agent *how to think* about a problem.
+- **Tools** give the agent *callable functions* to take action (search, read files, call APIs).
+
+You often need **both**: skills for expertise, tools for action. They are configured independently and complement each other.
+</Note>
+
+---
+
+## Quick Start
+
+### 1. Create a Skill Directory
 
 ```
-my-skill/
-├── SKILL.md            # Required — frontmatter + instructions
-├── scripts/            # Optional — executable scripts
-├── references/         # Optional — reference documents
-└── assets/             # Optional — static files (configs, data)
+skills/
+└── code-review/
+    ├── SKILL.md          # Required — instructions
+    ├── references/       # Optional — reference docs
+    │   └── style-guide.md
+    └── scripts/          # Optional — executable scripts
 ```
 
-The directory name must match the `name` field in `SKILL.md`.
+### 2. Write Your SKILL.md
+
+```markdown
+---
+name: code-review
+description: Guidelines for conducting thorough code reviews with focus on security and performance.
+metadata:
+  author: your-team
+  version: "1.0"
+---
+
+## Code Review Guidelines
+
+When reviewing code, follow this checklist:
+
+1. **Security**: Check for injection vulnerabilities, auth bypasses, and data exposure
+2. **Performance**: Look for N+1 queries, unnecessary allocations, and blocking calls
+3. **Readability**: Ensure clear naming, appropriate comments, and consistent style
+4. **Testing**: Verify adequate test coverage for new functionality
+
+### Severity Levels
+- **Critical**: Security vulnerabilities, data loss risks → block merge
+- **Major**: Performance issues, logic errors → request changes
+- **Minor**: Style issues, naming suggestions → approve with comments
+```
+
+### 3. Attach to an Agent
+
+```python
+from crewai import Agent
+from crewai_tools import GithubSearchTool, FileReadTool
+
+reviewer = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["./skills"],                          # Injects review guidelines
+    tools=[GithubSearchTool(), FileReadTool()],   # Lets agent read code
+)
+```
+
+The agent now has both **expertise** (from the skill) and **capabilities** (from the tools).
+
+---
+
+## Skills + Tools: Working Together
+
+Here are common patterns showing how skills and tools complement each other:
+
+### Pattern 1: Skills Only (Domain Expertise, No Actions Needed)
+
+Use when the agent needs specific instructions but doesn't need to call external services:
+
+```python
+agent = Agent(
+    role="Technical Writer",
+    goal="Write clear API documentation",
+    backstory="Expert technical writer",
+    skills=["./skills/api-docs-style"],  # Writing guidelines and templates
+    # No tools needed — agent writes based on provided context
+)
+```
+
+### Pattern 2: Tools Only (Actions, No Special Expertise)
+
+Use when the agent needs to take action but doesn't need domain-specific instructions:
+
+```python
+from crewai_tools import SerperDevTool, ScrapeWebsiteTool
+
+agent = Agent(
+    role="Web Researcher",
+    goal="Find information about a topic",
+    backstory="Skilled at finding information online",
+    tools=[SerperDevTool(), ScrapeWebsiteTool()],  # Can search and scrape
+    # No skills needed — general research doesn't need special guidelines
+)
+```
+
+### Pattern 3: Skills + Tools (Expertise AND Actions)
+
+The most common real-world pattern. The skill provides *how* to approach the work; tools provide *what* the agent can do:
+
+```python
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+
+analyst = Agent(
+    role="Security Analyst",
+    goal="Audit infrastructure for vulnerabilities",
+    backstory="Expert in cloud security and compliance",
+    skills=["./skills/security-audit"],   # Audit methodology and checklists
+    tools=[
+        SerperDevTool(),                  # Research known vulnerabilities
+        FileReadTool(),                   # Read config files
+        CodeInterpreterTool(),            # Run analysis scripts
+    ],
+)
+```
+
+### Pattern 4: Skills + MCPs
+
+Skills work alongside MCP servers the same way they work with tools:
+
+```python
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze customer data and generate reports",
+    backstory="Expert data analyst with strong statistical background",
+    skills=["./skills/data-analysis"],           # Analysis methodology
+    mcps=["https://data-warehouse.example.com/sse"],  # Remote data access
+)
+```
+
+### Pattern 5: Skills + Apps
+
+Skills can guide how an agent uses platform integrations:
+
+```python
+agent = Agent(
+    role="Customer Support Agent",
+    goal="Respond to customer inquiries professionally",
+    backstory="Experienced support representative",
+    skills=["./skills/support-playbook"],  # Response templates and escalation rules
+    apps=["gmail", "zendesk"],             # Can send emails and update tickets
+)
+```
+
+---
+
+## Crew-Level Skills
+
+Skills can be set on a crew to apply to **all agents**:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[research_task, write_task, review_task],
+    skills=["./skills"],  # All agents get these skills
+)
+```
+
+Agent-level skills take priority — if the same skill is discovered at both levels, the agent's version is used.
+
+---
 
 ## SKILL.md Format
 
@@ -34,7 +193,7 @@ compatibility: crewai>=0.1.0          # optional
 metadata:                              # optional
   author: your-name
   version: "1.0"
-allowed-tools: web-search file-read   # optional, space-delimited
+allowed-tools: web-search file-read   # optional, experimental
 ---
 
 Instructions for the agent go here. This markdown body is injected
@@ -43,57 +202,46 @@ into the agent's prompt when the skill is activated.
 
 ### Frontmatter Fields
 
-| Field           | Required | Constraints                                                              |
+| Field           | Required | Description                                                              |
 | :-------------- | :------- | :----------------------------------------------------------------------- |
-| `name`          | Yes      | 1–64 chars. Lowercase alphanumeric and hyphens. No leading/trailing/consecutive hyphens. Must match directory name. |
+| `name`          | Yes      | 1–64 chars. Lowercase alphanumeric and hyphens. Must match directory name. |
 | `description`   | Yes      | 1–1024 chars. Describes what the skill does and when to use it.          |
 | `license`       | No       | License name or reference to a bundled license file.                     |
 | `compatibility` | No       | Max 500 chars. Environment requirements (products, packages, network).   |
 | `metadata`      | No       | Arbitrary string key-value mapping.                                      |
 | `allowed-tools` | No       | Space-delimited list of pre-approved tools. Experimental.                |
 
-## Usage
+---
 
-### Agent-level Skills
+## Directory Structure
 
-Pass skill directory paths to an agent:
-
-```python
-from crewai import Agent
-
-agent = Agent(
-    role="Researcher",
-    goal="Find relevant information",
-    backstory="An expert researcher.",
-    skills=["./skills"],  # discovers all skills in this directory
-)
+```
+my-skill/
+├── SKILL.md            # Required — frontmatter + instructions
+├── scripts/            # Optional — executable scripts
+├── references/         # Optional — reference documents
+└── assets/             # Optional — static files (configs, data)
 ```
 
-### Crew-level Skills
+The directory name must match the `name` field in `SKILL.md`. The `scripts/`, `references/`, and `assets/` directories are available on the skill's `path` for agents that need to reference files directly.
 
-Skill paths on a crew are merged into every agent:
+---
 
-```python
-from crewai import Crew
+## Pre-loading Skills
 
-crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    skills=["./skills"],
-)
-```
-
-### Pre-loaded Skills
-
-You can also pass `Skill` objects directly:
+For more control, you can discover and activate skills programmatically:
 
 ```python
 from pathlib import Path
 from crewai.skills import discover_skills, activate_skill
 
+# Discover all skills in a directory
 skills = discover_skills(Path("./skills"))
+
+# Activate them (loads full SKILL.md body)
 activated = [activate_skill(s) for s in skills]
 
+# Pass to an agent
 agent = Agent(
     role="Researcher",
     goal="Find relevant information",
@@ -102,14 +250,57 @@ agent = Agent(
 )
 ```
 
+---
+
 ## How Skills Are Loaded
 
-Skills load progressively — only the data needed at each stage is read:
+Skills use **progressive disclosure** — only loading what's needed at each stage:
 
-| Stage            | What's loaded                                     | When               |
-| :--------------- | :------------------------------------------------ | :----------------- |
-| Discovery        | Name, description, frontmatter fields             | `discover_skills()` |
-| Activation       | Full SKILL.md body text                           | `activate_skill()` |
+| Stage      | What's loaded                         | When                |
+| :--------- | :------------------------------------ | :------------------ |
+| Discovery  | Name, description, frontmatter fields | `discover_skills()` |
+| Activation | Full SKILL.md body text               | `activate_skill()`  |
 
-During normal agent execution, skills are automatically discovered and activated. The `scripts/`, `references/`, and `assets/` directories are available on the skill's `path` for agents that need to reference files directly.
+During normal agent execution (passing directory paths via `skills=["./skills"]`), skills are automatically discovered and activated. The progressive loading only matters when using the programmatic API.
 
+---
+
+## Skills vs Knowledge
+
+Both skills and knowledge modify the agent's prompt, but they serve different purposes:
+
+| Aspect | Skills | Knowledge |
+| :--- | :--- | :--- |
+| **What it provides** | Instructions, procedures, guidelines | Facts, data, information |
+| **How it's stored** | Markdown files (SKILL.md) | Embedded in vector store (ChromaDB) |
+| **How it's retrieved** | Entire body injected into prompt | Semantic search finds relevant chunks |
+| **Best for** | Methodology, checklists, style guides | Company docs, product info, reference data |
+| **Set via** | `skills=["./skills"]` | `knowledge_sources=[source]` |
+
+**Rule of thumb:** If the agent needs to follow a *process*, use a skill. If the agent needs to reference *data*, use knowledge.
+
+---
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="Do I need to set skills AND tools?">
+    It depends on your use case. Skills and tools are **independent** — you can use either, both, or neither.
+
+    - **Skills alone**: When the agent needs expertise but no external actions (e.g., writing with style guidelines)
+    - **Tools alone**: When the agent needs actions but no special methodology (e.g., simple web search)
+    - **Both**: When the agent needs expertise AND actions (e.g., security audit with specific checklists AND ability to scan code)
+  </Accordion>
+
+  <Accordion title="Do skills automatically provide tools?">
+    **No.** The `allowed-tools` field in SKILL.md is experimental metadata only — it does not provision or inject any tools. You must always set tools separately via `tools=[]`, `mcps=[]`, or `apps=[]`.
+  </Accordion>
+
+  <Accordion title="What happens if I set the same skill on both an agent and its crew?">
+    The agent-level skill takes priority. Skills are deduplicated by name — the agent's skills are processed first, so if the same skill name appears at both levels, the agent's version is used.
+  </Accordion>
+
+  <Accordion title="How large can a SKILL.md body be?">
+    There's a soft warning at 50,000 characters, but no hard limit. Keep skills focused and concise for best results — large prompt injections can dilute the agent's attention.
+  </Accordion>
+</AccordionGroup>

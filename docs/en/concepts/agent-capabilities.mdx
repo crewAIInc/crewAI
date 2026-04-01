@@ -1,0 +1,147 @@
+---
+title: "Agent Capabilities"
+description: "Understand the five ways to extend CrewAI agents: Tools, MCPs, Apps, Skills, and Knowledge."
+icon: puzzle-piece
+mode: "wide"
+---
+
+## Overview
+
+CrewAI agents can be extended with **five distinct capability types**, each serving a different purpose. Understanding when to use each one — and how they work together — is key to building effective agents.
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/en/concepts/tools" color="#3B82F6">
+    **Callable functions** — give agents the ability to take action. Web searches, file operations, API calls, code execution.
+  </Card>
+  <Card title="MCP Servers" icon="plug" href="/en/mcp/overview" color="#8B5CF6">
+    **Remote tool servers** — connect agents to external tool servers via the Model Context Protocol. Same effect as tools, but hosted externally.
+  </Card>
+  <Card title="Apps" icon="grid-2" color="#EC4899">
+    **Platform integrations** — connect agents to SaaS apps (Gmail, Slack, Jira, Salesforce) via CrewAI's platform. Runs locally with a platform integration token.
+  </Card>
+  <Card title="Skills" icon="bolt" href="/en/concepts/skills" color="#F59E0B">
+    **Domain expertise** — inject instructions, guidelines, and reference material into agent prompts. Skills tell agents *how to think*.
+  </Card>
+  <Card title="Knowledge" icon="book" href="/en/concepts/knowledge" color="#10B981">
+    **Retrieved facts** — provide agents with data from documents, files, and URLs via semantic search (RAG). Knowledge gives agents *what to know*.
+  </Card>
+</CardGroup>
+
+---
+
+## The Key Distinction
+
+The most important thing to understand: **these capabilities fall into two categories**.
+
+### Action Capabilities (Tools, MCPs, Apps)
+
+These give agents the ability to **do things** — call APIs, read files, search the web, send emails. At execution time, all three resolve into the same internal format (`BaseTool` instances) and appear in a unified tool list the agent can call.
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool
+
+agent = Agent(
+    role="Researcher",
+    goal="Find and compile market data",
+    backstory="Expert market analyst",
+    tools=[SerperDevTool(), FileReadTool()],  # Local tools
+    mcps=["https://mcp.example.com/sse"],     # Remote MCP server tools
+    apps=["gmail", "google_sheets"],           # Platform integrations
+)
+```
+
+### Context Capabilities (Skills, Knowledge)
+
+These modify the agent's **prompt** — injecting expertise, instructions, or retrieved data before the agent starts reasoning. They don't give agents new actions; they shape how agents think and what information they have access to.
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Security Auditor",
+    goal="Audit cloud infrastructure for vulnerabilities",
+    backstory="Expert in cloud security with 10 years of experience",
+    skills=["./skills/security-audit"],        # Domain instructions
+    knowledge_sources=[pdf_source, url_source], # Retrieved facts
+)
+```
+
+---
+
+## When to Use What
+
+| You need...                                       | Use               | Example                                  |
+| :------------------------------------------------ | :---------------- | :--------------------------------------- |
+| Agent to search the web                           | **Tools**         | `tools=[SerperDevTool()]`                |
+| Agent to call a remote API via MCP                | **MCPs**          | `mcps=["https://api.example.com/sse"]`   |
+| Agent to send emails via Gmail                    | **Apps**          | `apps=["gmail"]`                         |
+| Agent to follow specific procedures               | **Skills**        | `skills=["./skills/code-review"]`        |
+| Agent to reference company docs                   | **Knowledge**     | `knowledge_sources=[pdf_source]`         |
+| Agent to search the web AND follow review guidelines | **Tools + Skills** | Use both together                     |
+
+---
+
+## Combining Capabilities
+
+In practice, agents often use **multiple capability types together**. Here's a realistic example:
+
+```python
+from crewai import Agent
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+
+# A fully-equipped research agent
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Produce comprehensive market analysis reports",
+    backstory="Expert analyst with deep industry knowledge",
+
+    # ACTION: What the agent can DO
+    tools=[
+        SerperDevTool(),         # Search the web
+        FileReadTool(),          # Read local files
+        CodeInterpreterTool(),   # Run Python code for analysis
+    ],
+    mcps=["https://data-api.example.com/sse"],  # Access remote data API
+    apps=["google_sheets"],                      # Write to Google Sheets
+
+    # CONTEXT: What the agent KNOWS
+    skills=["./skills/research-methodology"],    # How to conduct research
+    knowledge_sources=[company_docs],            # Company-specific data
+)
+```
+
+---
+
+## Comparison Table
+
+| Feature | Tools | MCPs | Apps | Skills | Knowledge |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Gives agent actions** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Modifies prompt** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Requires code** | Yes | Config only | Config only | Markdown only | Config only |
+| **Runs locally** | Yes | Depends | Yes (with env var) | N/A | Yes |
+| **Needs API keys** | Per tool | Per server | Integration token | No | Embedder only |
+| **Set on Agent** | `tools=[]` | `mcps=[]` | `apps=[]` | `skills=[]` | `knowledge_sources=[]` |
+| **Set on Crew** | ❌ | ❌ | ❌ | `skills=[]` | `knowledge_sources=[]` |
+
+---
+
+## Deep Dives
+
+Ready to learn more about each capability type?
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/en/concepts/tools">
+    Create custom tools, use the 75+ OSS catalog, configure caching and async execution.
+  </Card>
+  <Card title="MCP Integration" icon="plug" href="/en/mcp/overview">
+    Connect to MCP servers via stdio, SSE, or HTTP. Filter tools, configure auth.
+  </Card>
+  <Card title="Skills" icon="bolt" href="/en/concepts/skills">
+    Build skill packages with SKILL.md, inject domain expertise, use progressive disclosure.
+  </Card>
+  <Card title="Knowledge" icon="book" href="/en/concepts/knowledge">
+    Add knowledge from PDFs, CSVs, URLs, and more. Configure embedders and retrieval.
+  </Card>
+</CardGroup>
