@@ -22,7 +22,6 @@ from pydantic import (
     UUID4,
     BaseModel,
     Field,
-    InstanceOf,
     Json,
     PrivateAttr,
     field_validator,
@@ -176,7 +175,7 @@ class Crew(FlowTrackable, BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default_factory=CacheHandler)
+    _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
     _memory: Memory | MemoryScope | MemorySlice | None = PrivateAttr(default=None)
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
@@ -210,13 +209,13 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: str | InstanceOf[BaseLLM] | None = Field(
+    manager_llm: str | BaseLLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
     manager_agent: BaseAgent | None = Field(
         description="Custom agent that will be used as manager.", default=None
     )
-    function_calling_llm: str | InstanceOf[LLM] | None = Field(
+    function_calling_llm: str | LLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
@@ -267,7 +266,7 @@ class Crew(FlowTrackable, BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    planning_llm: str | BaseLLM | Any | None = Field(
         default=None,
         description=(
             "Language model that will run the AgentPlanner if planning is True."
@@ -288,7 +287,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge object."
         ),
     )
-    chat_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    chat_llm: str | BaseLLM | Any | None = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
@@ -1800,7 +1799,7 @@ class Crew(FlowTrackable, BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: str | InstanceOf[BaseLLM],
+        eval_llm: str | BaseLLM,
         inputs: dict[str, Any] | None = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations.

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
 from crewai.utilities.i18n import I18N, get_i18n
 
