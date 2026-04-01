@@ -146,6 +146,36 @@ curl -X GET \
   https://your-crew-url.crewai.com/status/abcd1234-5678-90ef-ghij-klmnopqrstuv
 ```
 
+## Stopping a Running Execution
+
+You can stop or cancel a running crew or flow execution at any time using the stop endpoint. This is useful when you need to abort a long-running execution or cancel one that is no longer needed.
+
+### Stop an Execution
+
+Send a POST request with the `kickoff_id` of the execution you want to stop:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  https://your-crew-url.crewai.com/stop/abcd1234-5678-90ef-ghij-klmnopqrstuv
+```
+
+**Success Response:**
+
+```json
+{"status": "stopped", "kickoffId": "abcd1234-5678-90ef-ghij-klmnopqrstuv"}
+```
+
+**Error Response** (when the execution has already finished):
+
+```json
+{"detail": "Cannot stop execution. Current state: SUCCESS"}
+```
+
+<Note>
+  You cannot stop executions that have already completed (`SUCCESS`), failed (`FAILURE`), or been revoked (`REVOKED`). The API returns a `400` status code in those cases.
+</Note>
+
 ## Handling Executions
 
 ### Long-Running Executions
