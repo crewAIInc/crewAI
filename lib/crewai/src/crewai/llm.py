@@ -2537,8 +2537,9 @@ class LLM(BaseLLM):
             # Google — all Gemini models support multimodal
             "gemini",
             # OpenAI — o-series reasoning models with vision
-            # o3 and o4-mini support multimodal (openai.com/index/thinking-with-images)
-            # o3-mini is text-only — handled via exclusion below
+            # o1, o3, o4, o4-mini support multimodal (openai.com/index/thinking-with-images)
+            # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
+            "o1",
             "o3",
             "o4-mini",
             "o4",
@@ -2549,7 +2550,10 @@ class LLM(BaseLLM):
         model_lower = self.model.lower()
 
         # Check exclusion first
-        if any(model_lower.startswith(m) or f"/{m}" in model_lower for m in text_only_models):
+        if any(
+            model_lower.startswith(m) or f"/{m}" in model_lower
+            for m in text_only_models
+        ):
             return False
 
         return any(
