@@ -1,27 +1,186 @@
 ---
 title: 스킬
-description: 에이전트 프롬프트에 컨텍스트를 주입하는 파일 시스템 기반 스킬 패키지.
+description: 에이전트 프롬프트에 도메인 전문성과 지침을 주입하는 파일 시스템 기반 스킬 패키지.
 icon: bolt
 mode: "wide"
 ---
 
 ## 개요
 
-스킬은 에이전트에게 도메인별 지침, 참조 자료, 에셋을 제공하는 자체 포함 디렉터리입니다. 각 스킬은 YAML 프론트매터와 마크다운 본문이 포함된 `SKILL.md` 파일로 정의됩니다.
+스킬은 에이전트에게 **도메인별 지침, 가이드라인 및 참조 자료**를 제공하는 자체 포함 디렉터리입니다. 각 스킬은 YAML 프론트매터와 마크다운 본문이 포함된 `SKILL.md` 파일로 정의됩니다.
 
-스킬은 **점진적 공개**를 사용합니다 — 메타데이터가 먼저 로드되고, 활성화 시에만 전체 지침이 로드되며, 필요할 때만 리소스 카탈로그가 로드됩니다.
+활성화되면 스킬의 지침이 에이전트의 작업 프롬프트에 직접 주입됩니다 — 코드 변경 없이 에이전트에게 전문성을 부여합니다.
 
-## 디렉터리 구조
+<Note type="info" title="스킬 vs 도구 — 핵심 구분">
+**스킬은 도구가 아닙니다.** 이것이 가장 흔한 혼동 포인트입니다.
+
+- **스킬**은 에이전트의 프롬프트에 *지침과 컨텍스트*를 주입합니다. 에이전트에게 문제에 대해 *어떻게 생각할지*를 알려줍니다.
+- **도구**는 에이전트에게 행동을 취할 수 있는 *호출 가능한 함수*를 제공합니다 (검색, 파일 읽기, API 호출).
+
+흔히 **둘 다** 필요합니다: 전문성을 위한 스킬과 행동을 위한 도구. 이들은 독립적으로 구성되며 서로 보완합니다.
+</Note>
+
+---
+
+## 빠른 시작
+
+### 1. 스킬 디렉터리 생성
 
 ```
-my-skill/
-├── SKILL.md            # 필수 — 프론트매터 + 지침
-├── scripts/            # 선택 — 실행 가능한 스크립트
-├── references/         # 선택 — 참조 문서
-└── assets/             # 선택 — 정적 파일 (설정, 데이터)
+skills/
+└── code-review/
+    ├── SKILL.md          # 필수 — 지침
+    ├── references/       # 선택 — 참조 문서
+    │   └── style-guide.md
+    └── scripts/          # 선택 — 실행 가능한 스크립트
 ```
 
-디렉터리 이름은 `SKILL.md`의 `name` 필드와 일치해야 합니다.
+### 2. SKILL.md 작성
+
+```markdown
+---
+name: code-review
+description: Guidelines for conducting thorough code reviews with focus on security and performance.
+metadata:
+  author: your-team
+  version: "1.0"
+---
+
+## 코드 리뷰 가이드라인
+
+코드를 리뷰할 때 이 체크리스트를 따르세요:
+
+1. **보안**: 인젝션 취약점, 인증 우회, 데이터 노출 확인
+2. **성능**: N+1 쿼리, 불필요한 할당, 블로킹 호출 확인
+3. **가독성**: 명확한 네이밍, 적절한 주석, 일관된 스타일 보장
+4. **테스트**: 새로운 기능에 대한 적절한 테스트 커버리지 확인
+
+### 심각도 수준
+- **크리티컬**: 보안 취약점, 데이터 손실 위험 → 머지 차단
+- **메이저**: 성능 문제, 로직 오류 → 변경 요청
+- **마이너**: 스타일 문제, 네이밍 제안 → 코멘트와 함께 승인
+```
+
+### 3. 에이전트에 연결
+
+```python
+from crewai import Agent
+from crewai_tools import GithubSearchTool, FileReadTool
+
+reviewer = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["./skills"],                          # 리뷰 가이드라인 주입
+    tools=[GithubSearchTool(), FileReadTool()],   # 에이전트가 코드를 읽을 수 있게 함
+)
+```
+
+이제 에이전트는 **전문성** (스킬에서)과 **기능** (도구에서) 모두를 갖추게 됩니다.
+
+---
+
+## 스킬 + 도구: 함께 작동하기
+
+스킬과 도구가 어떻게 보완하는지 보여주는 일반적인 패턴입니다:
+
+### 패턴 1: 스킬만 (도메인 전문성, 액션 불필요)
+
+에이전트가 특정 지침이 필요하지만 외부 서비스를 호출할 필요가 없을 때 사용:
+
+```python
+agent = Agent(
+    role="Technical Writer",
+    goal="Write clear API documentation",
+    backstory="Expert technical writer",
+    skills=["./skills/api-docs-style"],  # 작성 가이드라인 및 템플릿
+    # 도구 불필요 — 에이전트가 제공된 컨텍스트를 기반으로 작성
+)
+```
+
+### 패턴 2: 도구만 (액션, 특별한 전문성 불필요)
+
+에이전트가 행동을 취해야 하지만 도메인별 지침이 필요 없을 때 사용:
+
+```python
+from crewai_tools import SerperDevTool, ScrapeWebsiteTool
+
+agent = Agent(
+    role="Web Researcher",
+    goal="Find information about a topic",
+    backstory="Skilled at finding information online",
+    tools=[SerperDevTool(), ScrapeWebsiteTool()],  # 검색 및 스크래핑 가능
+    # 스킬 불필요 — 일반 연구에는 특별한 가이드라인이 필요 없음
+)
+```
+
+### 패턴 3: 스킬 + 도구 (전문성 AND 액션)
+
+가장 일반적인 실제 패턴. 스킬은 작업에 *어떻게* 접근할지를 제공하고, 도구는 에이전트가 *무엇을* 할 수 있는지를 제공합니다:
+
+```python
+from crewai_tools import SerperDevTool, FileReadTool, CodeInterpreterTool
+
+analyst = Agent(
+    role="Security Analyst",
+    goal="Audit infrastructure for vulnerabilities",
+    backstory="Expert in cloud security and compliance",
+    skills=["./skills/security-audit"],   # 감사 방법론 및 체크리스트
+    tools=[
+        SerperDevTool(),                  # 알려진 취약점 조사
+        FileReadTool(),                   # 설정 파일 읽기
+        CodeInterpreterTool(),            # 분석 스크립트 실행
+    ],
+)
+```
+
+### 패턴 4: 스킬 + MCP
+
+스킬은 도구와 마찬가지로 MCP 서버와 함께 작동합니다:
+
+```python
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze customer data and generate reports",
+    backstory="Expert data analyst with strong statistical background",
+    skills=["./skills/data-analysis"],           # 분석 방법론
+    mcps=["https://data-warehouse.example.com/sse"],  # 원격 데이터 접근
+)
+```
+
+### 패턴 5: 스킬 + 앱
+
+스킬은 에이전트가 플랫폼 통합을 사용하는 방법을 안내할 수 있습니다:
+
+```python
+agent = Agent(
+    role="Customer Support Agent",
+    goal="Respond to customer inquiries professionally",
+    backstory="Experienced support representative",
+    skills=["./skills/support-playbook"],  # 응답 템플릿 및 에스컬레이션 규칙
+    apps=["gmail", "zendesk"],             # 이메일 전송 및 티켓 업데이트 가능
+)
+```
+
+---
+
+## 크루 레벨 스킬
+
+스킬을 크루에 설정하여 **모든 에이전트**에 적용할 수 있습니다:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[research_task, write_task, review_task],
+    skills=["./skills"],  # 모든 에이전트가 이 스킬을 받음
+)
+```
+
+에이전트 레벨 스킬이 우선합니다 — 동일한 스킬이 양쪽 레벨에서 발견되면 에이전트의 버전이 사용됩니다.
+
+---
 
 ## SKILL.md 형식
 
@@ -34,7 +193,7 @@ compatibility: crewai>=0.1.0          # 선택
 metadata:                              # 선택
   author: your-name
   version: "1.0"
-allowed-tools: web-search file-read   # 선택, 공백으로 구분
+allowed-tools: web-search file-read   # 선택, 실험적
 ---
 
 에이전트를 위한 지침이 여기에 들어갑니다. 이 마크다운 본문은
@@ -43,57 +202,46 @@ allowed-tools: web-search file-read   # 선택, 공백으로 구분
 
 ### 프론트매터 필드
 
-| 필드             | 필수   | 제약 조건                                                                |
+| 필드             | 필수   | 설명                                                                     |
 | :-------------- | :----- | :----------------------------------------------------------------------- |
-| `name`          | 예     | 1–64자. 소문자 영숫자와 하이픈. 선행/후행/연속 하이픈 불가. 디렉터리 이름과 일치 필수. |
+| `name`          | 예     | 1–64자. 소문자 영숫자와 하이픈. 디렉터리 이름과 일치 필수.                  |
 | `description`   | 예     | 1–1024자. 스킬이 무엇을 하고 언제 사용하는지 설명.                          |
 | `license`       | 아니오  | 라이선스 이름 또는 번들된 라이선스 파일 참조.                                |
 | `compatibility` | 아니오  | 최대 500자. 환경 요구 사항 (제품, 패키지, 네트워크).                         |
 | `metadata`      | 아니오  | 임의의 문자열 키-값 매핑.                                                  |
 | `allowed-tools` | 아니오  | 공백으로 구분된 사전 승인 도구 목록. 실험적.                                 |
 
-## 사용법
+---
 
-### 에이전트 레벨 스킬
+## 디렉터리 구조
 
-에이전트에 스킬 디렉터리 경로를 전달합니다:
-
-```python
-from crewai import Agent
-
-agent = Agent(
-    role="Researcher",
-    goal="Find relevant information",
-    backstory="An expert researcher.",
-    skills=["./skills"],  # 이 디렉터리의 모든 스킬을 검색
-)
+```
+my-skill/
+├── SKILL.md            # 필수 — 프론트매터 + 지침
+├── scripts/            # 선택 — 실행 가능한 스크립트
+├── references/         # 선택 — 참조 문서
+└── assets/             # 선택 — 정적 파일 (설정, 데이터)
 ```
 
-### 크루 레벨 스킬
+디렉터리 이름은 `SKILL.md`의 `name` 필드와 일치해야 합니다. `scripts/`, `references/`, `assets/` 디렉터리는 파일을 직접 참조해야 하는 에이전트를 위해 스킬의 `path`에서 사용할 수 있습니다.
 
-크루의 스킬 경로는 모든 에이전트에 병합됩니다:
+---
 
-```python
-from crewai import Crew
+## 사전 로드된 스킬
 
-crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    skills=["./skills"],
-)
-```
-
-### 사전 로드된 스킬
-
-`Skill` 객체를 직접 전달할 수도 있습니다:
+더 세밀한 제어를 위해 프로그래밍 방식으로 스킬을 검색하고 활성화할 수 있습니다:
 
 ```python
 from pathlib import Path
 from crewai.skills import discover_skills, activate_skill
 
+# 디렉터리의 모든 스킬 검색
 skills = discover_skills(Path("./skills"))
+
+# 활성화 (전체 SKILL.md 본문 로드)
 activated = [activate_skill(s) for s in skills]
 
+# 에이전트에 전달
 agent = Agent(
     role="Researcher",
     goal="Find relevant information",
@@ -102,13 +250,57 @@ agent = Agent(
 )
 ```
 
+---
+
 ## 스킬 로드 방식
 
-스킬은 점진적으로 로드됩니다 — 각 단계에서 필요한 데이터만 읽습니다:
+스킬은 **점진적 공개**를 사용합니다 — 각 단계에서 필요한 것만 로드합니다:
 
-| 단계              | 로드되는 내용                                      | 시점                |
-| :--------------- | :------------------------------------------------ | :----------------- |
-| 검색              | 이름, 설명, 프론트매터 필드                          | `discover_skills()` |
-| 활성화            | 전체 SKILL.md 본문 텍스트                           | `activate_skill()` |
+| 단계     | 로드되는 내용                          | 시점                |
+| :------- | :------------------------------------ | :------------------ |
+| 검색     | 이름, 설명, 프론트매터 필드             | `discover_skills()` |
+| 활성화   | 전체 SKILL.md 본문 텍스트              | `activate_skill()`  |
 
-일반적인 에이전트 실행 중에 스킬은 자동으로 검색되고 활성화됩니다. `scripts/`, `references/`, `assets/` 디렉터리는 파일을 직접 참조해야 하는 에이전트를 위해 스킬의 `path`에서 사용할 수 있습니다.
+일반적인 에이전트 실행 중(`skills=["./skills"]`로 디렉터리 경로 전달 시) 스킬은 자동으로 검색되고 활성화됩니다. 점진적 로딩은 프로그래밍 API를 사용할 때만 관련됩니다.
+
+---
+
+## 스킬 vs 지식
+
+스킬과 지식 모두 에이전트의 프롬프트를 수정하지만, 서로 다른 목적을 가지고 있습니다:
+
+| 측면 | 스킬 | 지식 |
+| :--- | :--- | :--- |
+| **제공하는 것** | 지침, 절차, 가이드라인 | 사실, 데이터, 정보 |
+| **저장 방식** | 마크다운 파일 (SKILL.md) | 벡터 스토어에 임베딩 (ChromaDB) |
+| **검색 방식** | 전체 본문이 프롬프트에 주입 | 시맨틱 검색으로 관련 청크 찾기 |
+| **적합한 용도** | 방법론, 체크리스트, 스타일 가이드 | 회사 문서, 제품 정보, 참조 데이터 |
+| **설정 방법** | `skills=["./skills"]` | `knowledge_sources=[source]` |
+
+**경험 법칙:** 에이전트가 *프로세스*를 따라야 하면 스킬을 사용하세요. 에이전트가 *데이터*를 참조해야 하면 지식을 사용하세요.
+
+---
+
+## 자주 묻는 질문
+
+<AccordionGroup>
+  <Accordion title="스킬과 도구를 모두 설정해야 하나요?">
+    사용 사례에 따라 다릅니다. 스킬과 도구는 **독립적**입니다 — 둘 중 하나, 둘 다, 또는 아무것도 사용하지 않을 수 있습니다.
+
+    - **스킬만**: 에이전트가 전문성은 필요하지만 외부 액션이 필요 없을 때 (예: 스타일 가이드라인으로 작성)
+    - **도구만**: 에이전트가 액션은 필요하지만 특별한 방법론이 필요 없을 때 (예: 간단한 웹 검색)
+    - **둘 다**: 에이전트가 전문성 AND 액션이 필요할 때 (예: 특정 체크리스트로 보안 감사 AND 코드 스캔 기능)
+  </Accordion>
+
+  <Accordion title="스킬이 자동으로 도구를 제공하나요?">
+    **아니요.** SKILL.md의 `allowed-tools` 필드는 실험적 메타데이터일 뿐 — 도구를 프로비저닝하거나 주입하지 않습니다. 항상 `tools=[]`, `mcps=[]` 또는 `apps=[]`를 통해 별도로 도구를 설정해야 합니다.
+  </Accordion>
+
+  <Accordion title="에이전트와 크루 모두에 같은 스킬을 설정하면 어떻게 되나요?">
+    에이전트 레벨 스킬이 우선합니다. 스킬은 이름으로 중복 제거됩니다 — 에이전트의 스킬이 먼저 처리되므로, 같은 스킬 이름이 양쪽 레벨에 나타나면 에이전트의 버전이 사용됩니다.
+  </Accordion>
+
+  <Accordion title="SKILL.md 본문의 최대 크기는 얼마인가요?">
+    50,000자에서 소프트 경고가 있지만 하드 리밋은 없습니다. 최상의 결과를 위해 스킬을 집중적이고 간결하게 유지하세요 — 너무 큰 프롬프트 주입은 에이전트의 주의를 분산시킬 수 있습니다.
+  </Accordion>
+</AccordionGroup>

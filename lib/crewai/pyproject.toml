@@ -43,7 +43,7 @@ dependencies = [
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
     "pyyaml~=6.0",
-    "lancedb>=0.29.2",
+    "lancedb>=0.29.2,<0.30.1",
 ]
 
 [project.urls]
@@ -54,7 +54,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.12.2",
+    "crewai-tools==1.13.0a6",
 ]
 embeddings = [
     "tiktoken~=0.8.0"

@@ -65,7 +65,7 @@ class RecallFlow(Flow[RecallState]):
 
     _skip_auto_memory: bool = True
 
-    initial_state = RecallState
+    initial_state: type[RecallState] = RecallState
 
     def __init__(
         self,

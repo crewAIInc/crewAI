@@ -156,6 +156,33 @@ def update_version_in_file(file_path: Path, new_version: str) -> bool:
     return False
 
 
+def update_pyproject_version(file_path: Path, new_version: str) -> bool:
+    """Update the [project] version field in a pyproject.toml file.
+
+    Args:
+        file_path: Path to pyproject.toml file.
+        new_version: New version string.
+
+    Returns:
+        True if version was updated, False otherwise.
+    """
+    if not file_path.exists():
+        return False
+
+    content = file_path.read_text()
+    new_content = re.sub(
+        r'^(version\s*=\s*")[^"]+(")',
+        rf"\g<1>{new_version}\2",
+        content,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if new_content != content:
+        file_path.write_text(new_content)
+        return True
+    return False
+
+
 _DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
     "crewai",
     "crewai-tools",
@@ -1045,8 +1072,82 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
     return False
 
 
+_DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
+
 _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
+
+
+def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
+    """Update the deployment test repo to pin the new crewai version.
+
+    Clones the repo, updates the crewai[tools] pin in pyproject.toml,
+    regenerates the lockfile, commits, and pushes directly to main.
+
+    Args:
+        version: New crewai version string.
+        is_prerelease: Whether this is a pre-release version.
+    """
+    console.print(
+        f"\n[bold cyan]Updating {_DEPLOYMENT_TEST_REPO} to {version}[/bold cyan]"
+    )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo_dir = Path(tmp) / "crew_deployment_test"
+        run_command(["gh", "repo", "clone", _DEPLOYMENT_TEST_REPO, str(repo_dir)])
+        console.print(f"[green]✓[/green] Cloned {_DEPLOYMENT_TEST_REPO}")
+
+        pyproject = repo_dir / "pyproject.toml"
+        content = pyproject.read_text()
+        new_content = re.sub(
+            r'"crewai\[tools\]==[^"]+"',
+            f'"crewai[tools]=={version}"',
+            content,
+        )
+        if new_content == content:
+            console.print(
+                "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
+            )
+            return
+        pyproject.write_text(new_content)
+        console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+
+        lock_cmd = [
+            "uv",
+            "lock",
+            "--refresh-package",
+            "crewai",
+            "--refresh-package",
+            "crewai-tools",
+        ]
+        if is_prerelease:
+            lock_cmd.append("--prerelease=allow")
+
+        max_retries = 10
+        for attempt in range(1, max_retries + 1):
+            try:
+                run_command(lock_cmd, cwd=repo_dir)
+                break
+            except subprocess.CalledProcessError:
+                if attempt == max_retries:
+                    console.print(
+                        f"[red]Error:[/red] uv lock failed after {max_retries} attempts"
+                    )
+                    raise
+                console.print(
+                    f"[yellow]uv lock failed (attempt {attempt}/{max_retries}),"
+                    f" retrying in {_PYPI_POLL_INTERVAL}s...[/yellow]"
+                )
+                time.sleep(_PYPI_POLL_INTERVAL)
+        console.print("[green]✓[/green] Lockfile updated")
+
+        run_command(["git", "add", "pyproject.toml", "uv.lock"], cwd=repo_dir)
+        run_command(
+            ["git", "commit", "-m", f"chore: bump crewai to {version}"],
+            cwd=repo_dir,
+        )
+        run_command(["git", "push"], cwd=repo_dir)
+        console.print(f"[green]✓[/green] Pushed to {_DEPLOYMENT_TEST_REPO}")
 
 
 def _wait_for_pypi(package: str, version: str) -> None:
@@ -1141,6 +1242,11 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
 
             pyproject = pkg_dir / "pyproject.toml"
             if pyproject.exists():
+                if update_pyproject_version(pyproject, version):
+                    console.print(
+                        f"[green]✓[/green] Updated version in: "
+                        f"{pyproject.relative_to(repo_dir)}"
+                    )
                 if update_pyproject_dependencies(
                     pyproject, version, extra_packages=list(_ENTERPRISE_EXTRA_PACKAGES)
                 ):
@@ -1159,7 +1265,35 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         _wait_for_pypi("crewai", version)
 
         console.print("\nSyncing workspace...")
-        run_command(["uv", "sync"], cwd=repo_dir)
+        sync_cmd = [
+            "uv",
+            "sync",
+            "--refresh-package",
+            "crewai",
+            "--refresh-package",
+            "crewai-tools",
+            "--refresh-package",
+            "crewai-files",
+        ]
+        if is_prerelease:
+            sync_cmd.append("--prerelease=allow")
+
+        max_retries = 10
+        for attempt in range(1, max_retries + 1):
+            try:
+                run_command(sync_cmd, cwd=repo_dir)
+                break
+            except subprocess.CalledProcessError:
+                if attempt == max_retries:
+                    console.print(
+                        f"[red]Error:[/red] uv sync failed after {max_retries} attempts"
+                    )
+                    raise
+                console.print(
+                    f"[yellow]uv sync failed (attempt {attempt}/{max_retries}),"
+                    f" retrying in {_PYPI_POLL_INTERVAL}s...[/yellow]"
+                )
+                time.sleep(_PYPI_POLL_INTERVAL)
         console.print("[green]✓[/green] Workspace synced")
 
         # --- branch, commit, push, PR ---
@@ -1175,7 +1309,7 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         run_command(["git", "push", "-u", "origin", branch_name], cwd=repo_dir)
         console.print("[green]✓[/green] Branch pushed")
 
-        run_command(
+        pr_url = run_command(
             [
                 "gh",
                 "pr",
@@ -1192,6 +1326,7 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
             cwd=repo_dir,
         )
         console.print("[green]✓[/green] Enterprise bump PR created")
+        console.print(f"[cyan]PR URL:[/cyan] {pr_url}")
 
         _poll_pr_until_merged(branch_name, "enterprise bump PR", repo=enterprise_repo)
 
@@ -1558,7 +1693,18 @@ def tag(dry_run: bool, no_edit: bool) -> None:
     is_flag=True,
     help="Skip the enterprise release phase",
 )
-def release(version: str, dry_run: bool, no_edit: bool, skip_enterprise: bool) -> None:
+@click.option(
+    "--skip-to-enterprise",
+    is_flag=True,
+    help="Skip phases 1 & 2, run only the enterprise release phase",
+)
+def release(
+    version: str,
+    dry_run: bool,
+    no_edit: bool,
+    skip_enterprise: bool,
+    skip_to_enterprise: bool,
+) -> None:
     """Full release: bump versions, tag, and publish a GitHub release.
 
     Combines bump and tag into a single workflow. Creates a version bump PR,
@@ -1571,11 +1717,19 @@ def release(version: str, dry_run: bool, no_edit: bool, skip_enterprise: bool) -
         dry_run: Show what would be done without making changes.
         no_edit: Skip editing release notes.
         skip_enterprise: Skip the enterprise release phase.
+        skip_to_enterprise: Skip phases 1 & 2, run only the enterprise release phase.
     """
     try:
         check_gh_installed()
 
-        if not skip_enterprise:
+        if skip_enterprise and skip_to_enterprise:
+            console.print(
+                "[red]Error:[/red] Cannot use both --skip-enterprise "
+                "and --skip-to-enterprise"
+            )
+            sys.exit(1)
+
+        if not skip_enterprise or skip_to_enterprise:
             missing: list[str] = []
             if not _ENTERPRISE_REPO:
                 missing.append("ENTERPRISE_REPO")
@@ -1593,6 +1747,15 @@ def release(version: str, dry_run: bool, no_edit: bool, skip_enterprise: bool) -
 
         cwd = Path.cwd()
         lib_dir = cwd / "lib"
+
+        is_prerelease = _is_prerelease(version)
+
+        if skip_to_enterprise:
+            _release_enterprise(version, is_prerelease, dry_run)
+            console.print(
+                f"\n[green]✓[/green] Enterprise release [bold]{version}[/bold] complete!"
+            )
+            return
 
         if not dry_run:
             console.print("Checking git status...")
@@ -1687,7 +1850,8 @@ def release(version: str, dry_run: bool, no_edit: bool, skip_enterprise: bool) -
 
         if not dry_run:
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
-            _trigger_pypi_publish(tag_name, wait=not skip_enterprise)
+            _trigger_pypi_publish(tag_name, wait=True)
+            _update_deployment_test_repo(version, is_prerelease)
 
         if not skip_enterprise:
             _release_enterprise(version, is_prerelease, dry_run)
