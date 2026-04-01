@@ -1,0 +1,44 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      host:
+      - localhost:9999
+    method: GET
+    uri: http://localhost:9999/.well-known/agent-card.json
+  response:
+    body:
+      string: '{"capabilities":{"streaming":true},"defaultInputModes":["text"],"defaultOutputModes":["text"],"description":"An
+        AI assistant powered by OpenAI GPT with calculator and time tools. Ask questions,
+        perform calculations, or get the current time in any timezone.","name":"GPT
+        Assistant","preferredTransport":"JSONRPC","protocolVersion":"0.3.0","skills":[{"description":"Have
+        a general conversation with the AI assistant. Ask questions, get explanations,
+        or just chat.","examples":["Hello, how are you?","Explain quantum computing
+        in simple terms","What can you help me with?"],"id":"conversation","name":"General
+        Conversation","tags":["chat","conversation","general"]},{"description":"Perform
+        mathematical calculations including arithmetic, exponents, and more.","examples":["What
+        is 25 * 17?","Calculate 2^10","What''s (100 + 50) / 3?"],"id":"calculator","name":"Calculator","tags":["math","calculator","arithmetic"]},{"description":"Get
+        the current date and time in any timezone.","examples":["What time is it?","What''s
+        the current time in Tokyo?","What''s today''s date in New York?"],"id":"time","name":"Current
+        Time","tags":["time","date","timezone"]}],"url":"http://localhost:9999/","version":"1.0.0"}'
+    headers:
+      content-length:
+      - '1198'
+      content-type:
+      - application/json
+      date:
+      - Tue, 06 Jan 2026 14:17:00 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,14 +1,12 @@
 """Test A2A wrapper is only applied when a2a is passed to Agent."""
 
-from unittest.mock import patch
-
-import pytest
-
 from crewai import Agent
 from crewai_a2a.config import A2AConfig
+import pytest
+
 
 try:
-    import a2a  # noqa: F401
+    import a2a
 
     A2A_SDK_INSTALLED = True
 except ImportError:
@@ -106,6 +104,9 @@ def test_wrapper_is_applied_differently_per_instance():
         a2a=a2a_config,
     )
 
-    assert agent_without_a2a.execute_task.__func__ is not agent_with_a2a.execute_task.__func__
+    assert (
+        agent_without_a2a.execute_task.__func__
+        is not agent_with_a2a.execute_task.__func__
+    )
     assert not hasattr(agent_without_a2a.execute_task, "__wrapped__")
     assert hasattr(agent_with_a2a.execute_task, "__wrapped__")

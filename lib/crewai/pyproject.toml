@@ -98,7 +98,7 @@ anthropic = [
     "anthropic~=0.73.0",
 ]
 a2a = [
-    "crewai-a2a",
+    "crewai-a2a==1.13.0a6",
 ]
 file-processing = [
     "crewai-files",

@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import os
 
-import pytest
-
 from crewai import Agent
 from crewai_a2a.config import A2AClientConfig
+import pytest
 
 
 A2A_TEST_ENDPOINT = os.getenv(
@@ -50,9 +49,7 @@ class TestAgentA2AKickoff:
 
     @pytest.mark.skip(reason="VCR cassette matching issue with agent card caching")
     @pytest.mark.vcr()
-    def test_agent_kickoff_with_calculator_skill(
-        self, researcher_agent: Agent
-    ) -> None:
+    def test_agent_kickoff_with_calculator_skill(self, researcher_agent: Agent) -> None:
         """Test that agent can delegate calculation to A2A server."""
         result = researcher_agent.kickoff(
             "Ask the remote A2A agent to calculate 25 times 17."
@@ -149,9 +146,7 @@ class TestAgentA2AKickoff:
 
     @pytest.mark.skip(reason="VCR cassette matching issue with agent card caching")
     @pytest.mark.vcr()
-    def test_agent_kickoff_with_list_messages(
-        self, researcher_agent: Agent
-    ) -> None:
+    def test_agent_kickoff_with_list_messages(self, researcher_agent: Agent) -> None:
         """Test that agent.kickoff() works with list of messages."""
         messages = [
             {
