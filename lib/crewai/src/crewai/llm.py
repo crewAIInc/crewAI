@@ -2533,8 +2533,6 @@ class LLM(BaseLLM):
             "claude-sonnet-4",
             "claude-opus-4",
             "claude-haiku-4",
-            "claude-sonnet-5",
-            "claude-5",
             # Google — all Gemini models support multimodal
             "gemini",
             # xAI — Grok models support vision
