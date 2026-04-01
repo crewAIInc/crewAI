@@ -1220,7 +1220,8 @@ class AzureCompletion(BaseLLM):
     def last_response_id(self) -> str | None:
         """Get the last response ID from auto-chaining (Responses API only)."""
         if self._responses_delegate is not None:
-            return self._responses_delegate.last_response_id
+            rid: str | None = self._responses_delegate.last_response_id
+            return rid
         return None
 
     def reset_chain(self) -> None:
