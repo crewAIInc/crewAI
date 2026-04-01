@@ -489,7 +489,16 @@ def _is_interactive_terminal() -> bool:
     """
     import sys
 
-    return sys.stdin.isatty()
+    try:
+        stdin = getattr(sys, 'stdin', None)
+        if stdin is None:
+            return False
+        isatty = getattr(stdin, 'isatty', None)
+        if not callable(isatty):
+            return False
+        return bool(isatty())
+    except Exception:
+        return False
 
 
 def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:

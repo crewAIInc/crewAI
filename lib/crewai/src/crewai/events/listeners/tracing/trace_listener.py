@@ -17,7 +17,7 @@ from crewai.events.listeners.tracing.first_time_trace_handler import (
 from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled,
+    is_tracing_enabled_in_context,
     safe_serialize_to_dict,
     should_auto_collect_first_time_traces,
     should_enable_tracing,
@@ -203,7 +203,8 @@ class TraceCollectionListener(BaseEventListener):
 
         # Skip registration entirely if tracing is disabled and not first-time user
         # This avoids overhead of 50+ handler registrations when tracing won't be used
-        if not should_enable_tracing() and not should_auto_collect_first_time_traces():
+        # Also check is_tracing_enabled_in_context() so per-run overrides (Crew(tracing=True)) still work
+        if not should_enable_tracing() and not is_tracing_enabled_in_context() and not should_auto_collect_first_time_traces():
             self._listeners_setup = True
             return
 

@@ -417,11 +417,6 @@ class CrewAIEventsBus:
             ...     await asyncio.wrap_future(future)  # In async test
             ...     # or future.result(timeout=5.0) in sync code
         """
-        # Lazily initialize executor and event loop on first emit
-        self._ensure_executor_initialized()
-        # Track that we have pending events for flush optimization
-        self._has_pending_events = True
-
         event.previous_event_id = get_last_event_id()
         event.triggered_by_event_id = get_triggering_event_id()
         event.emission_sequence = get_next_emission_sequence()
@@ -456,6 +451,15 @@ class CrewAIEventsBus:
             has_dependencies = event_type in self._handler_dependencies
             sync_handlers = self._sync_handlers.get(event_type, frozenset())
             async_handlers = self._async_handlers.get(event_type, frozenset())
+
+        # Skip executor initialization if no handlers exist for this event
+        if not sync_handlers and not async_handlers:
+            return None
+
+        # Lazily initialize executor and event loop only when handlers exist
+        self._ensure_executor_initialized()
+        # Track that we have pending events for flush optimization
+        self._has_pending_events = True
 
         if has_dependencies:
             return self._track_future(
