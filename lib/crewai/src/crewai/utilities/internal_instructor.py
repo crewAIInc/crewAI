@@ -100,9 +100,7 @@ class InternalInstructor(Generic[T]):
 
         extra_kwargs = self._get_llm_extra_kwargs()
 
-        return instructor.from_provider(
-            f"{provider}/{model_string}", **extra_kwargs
-        )
+        return instructor.from_provider(f"{provider}/{model_string}", **extra_kwargs)
 
     def _get_llm_extra_kwargs(self) -> dict[str, Any]:
         """Extract extra keyword arguments from the LLM to pass to the instructor client.
