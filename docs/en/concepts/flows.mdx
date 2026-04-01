@@ -724,7 +724,7 @@ The `request_input` method can return:
 #### Auto-Checkpoint Behavior
 
 <Note>
-When [persistence](#flow-persistence) is configured, the flow state is automatically saved **before** each `self.ask()` call. If the process restarts while waiting for input, the flow can resume from the checkpoint without losing progress.
+When persistence is configured, the flow state is automatically saved **before** each `self.ask()` call. If the process restarts while waiting for input, the flow can resume from the checkpoint without losing progress.
 </Note>
 
 #### `self.ask()` vs `@human_feedback`
