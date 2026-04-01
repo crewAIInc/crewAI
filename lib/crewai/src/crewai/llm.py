@@ -2518,23 +2518,35 @@ class LLM(BaseLLM):
             "gpt-4-turbo",
             "gpt-4-vision",
             "gpt-4.1",
-            # OpenAI — GPT-5 family (all support multimodal, see openai.com/index/introducing-gpt-5)
+            # OpenAI — GPT-5 family (all variants support multimodal)
             "gpt-5",
-            # Anthropic — all Claude 3+ models support vision (platform.claude.com/docs/en/build-with-claude/vision)
-            "claude-3",
-            "claude-4",
-            "claude-sonnet-4",
-            "claude-opus-4",
-            "claude-haiku-4",
-            # Google — all Gemini models support multimodal
-            "gemini",
             # OpenAI — o-series reasoning models with vision
-            # o1, o3, o4, o4-mini support multimodal (openai.com/index/thinking-with-images)
+            # o1, o3, o4, o4-mini support multimodal
             # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
             "o1",
             "o3",
             "o4-mini",
             "o4",
+            # Anthropic — Claude 3+ models support vision
+            "claude-3",
+            "claude-4",
+            "claude-sonnet-4",
+            "claude-opus-4",
+            "claude-haiku-4",
+            "claude-sonnet-5",
+            "claude-5",
+            # Google — all Gemini models support multimodal
+            "gemini",
+            # xAI — Grok models support vision
+            "grok",
+            # Mistral — Pixtral vision model
+            "pixtral",
+            # Open-source vision models
+            "llava",
+            # Alibaba — Qwen vision-language models
+            "qwen-vl",
+            "qwen2-vl",
+            "qwen3-vl",
         )
         # Text-only models that would otherwise match vision prefixes
         text_only_models = ("o3-mini", "o1-mini", "o1-preview")
