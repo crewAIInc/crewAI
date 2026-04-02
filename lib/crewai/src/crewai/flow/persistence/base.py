@@ -5,14 +5,24 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
 
 
-class FlowPersistence(ABC):
+_persistence_registry: dict[str, type[FlowPersistence]] = {}
+
+
+class FlowPersistence(BaseModel, ABC):
+    persistence_type: str = Field(default="base")
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if not getattr(cls, "__abstractmethods__", set()):
+            _persistence_registry[cls.__name__] = cls
+
     """Abstract base class for flow state persistence.
 
     This class defines the interface that all persistence implementations must follow.
@@ -95,7 +105,7 @@ class FlowPersistence(ABC):
         """
         return None
 
-    def clear_pending_feedback(self, flow_uuid: str) -> None:  # noqa: B027
+    def clear_pending_feedback(self, flow_uuid: str) -> None:
         """Clear the pending feedback marker after successful resume.
 
         This is called after feedback is received and the flow resumes.

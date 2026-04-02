@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
@@ -10,7 +10,9 @@ from pathlib import Path
 import re
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
+    Literal,
     cast,
 )
 import uuid
@@ -21,12 +23,14 @@ from opentelemetry.context import attach, detach
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
     Json,
     PrivateAttr,
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from rich.console import Console
 from rich.panel import Panel
@@ -36,6 +40,8 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from crewai_files import FileInput
     from opentelemetry.trace import Span
+
+    from crewai.context import ExecutionContext
 
 try:
     from crewai_files import get_supported_content_types
@@ -49,7 +55,12 @@ except ImportError:
 
 
 from crewai.agent import Agent
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import (
+    BaseAgent,
+    _resolve_agent,
+    _serialize_llm_ref,
+    _validate_llm_ref,
+)
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.crews.crew_output import CrewOutput
 from crewai.crews.utils import (
@@ -132,6 +143,12 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
+def _resolve_agents(value: Any, info: Any) -> Any:
+    if not isinstance(value, list):
+        return value
+    return [_resolve_agent(a, info) for a in value]
+
+
 class Crew(FlowTrackable, BaseModel):
     """
     Represents a group of agents, defining how they should collaborate and the
@@ -170,6 +187,8 @@ class Crew(FlowTrackable, BaseModel):
             fingerprinting.
     """
 
+    entity_type: Literal["crew"] = "crew"
+
     __hash__ = object.__hash__
     _execution_span: Span | None = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr()
@@ -191,7 +210,10 @@ class Crew(FlowTrackable, BaseModel):
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
     tasks: list[Task] = Field(default_factory=list)
-    agents: list[BaseAgent] = Field(default_factory=list)
+    agents: Annotated[
+        list[BaseAgent],
+        BeforeValidator(_resolve_agents),
+    ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
     memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
@@ -209,15 +231,20 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: str | BaseLLM | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
-    manager_agent: BaseAgent | None = Field(
-        description="Custom agent that will be used as manager.", default=None
-    )
-    function_calling_llm: str | LLM | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
+    manager_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
+    manager_agent: Annotated[
+        BaseAgent | None,
+        BeforeValidator(_resolve_agent),
+    ] = Field(description="Custom agent that will be used as manager.", default=None)
+    function_calling_llm: Annotated[
+        str | LLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     share_crew: bool | None = Field(default=False)
@@ -266,7 +293,11 @@ class Crew(FlowTrackable, BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: str | BaseLLM | None = Field(
+    planning_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(
         default=None,
         description=(
             "Language model that will run the AgentPlanner if planning is True."
@@ -287,7 +318,11 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge object."
         ),
     )
-    chat_llm: str | BaseLLM | None = Field(
+    chat_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
@@ -313,14 +348,20 @@ class Crew(FlowTrackable, BaseModel):
         description="Whether to enable tracing for the crew. True=always enable, False=always disable, None=check environment/user settings.",
     )
 
+    execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint_inputs: dict[str, Any] | None = Field(default=None)
+    checkpoint_train: bool | None = Field(default=None)
+    checkpoint_kickoff_event_id: str | None = Field(default=None)
+
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
+    def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
         """Prevent manual setting of the 'id' field by users."""
-        if v:
+        if v and not (info.context or {}).get("from_checkpoint"):
             raise PydanticCustomError(
                 "may_not_set_field", "The 'id' field cannot be set by the user.", {}
             )
+        return v
 
     @field_validator("config", mode="before")
     @classmethod
@@ -1388,7 +1429,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         tools: list[BaseTool],
         task_agent: BaseAgent,
-        agents: list[BaseAgent],
+        agents: Sequence[BaseAgent],
     ) -> list[BaseTool]:
         if hasattr(task_agent, "get_delegation_tools"):
             delegation_tools = task_agent.get_delegation_tools(agents)
