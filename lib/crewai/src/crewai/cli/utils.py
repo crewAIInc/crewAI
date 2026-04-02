@@ -484,8 +484,12 @@ def get_flows(flow_path: str = "main.py") -> list[Flow[Any]]:
             if flow_instances:
                 break
 
-    except Exception:  # noqa: S110
-        pass
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).debug(
+            f"Could not load tool repository credentials: {e}"
+        )
 
     return flow_instances
 
@@ -545,6 +549,31 @@ def build_env_with_tool_repository_credentials(
     env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
         settings.tool_repository_password or ""
     )
+
+    return env
+
+
+def build_env_with_all_tool_credentials() -> dict[str, Any]:
+    """
+    Build environment dict with credentials for all tool repository indexes
+    found in pyproject.toml's [tool.uv.sources] section.
+
+    Returns:
+        dict: Environment variables with credentials for all private indexes.
+    """
+    env = os.environ.copy()
+    try:
+        pyproject_data = read_toml()
+        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+        for source_config in sources.values():
+            if isinstance(source_config, dict):
+                index = source_config.get("index")
+                if index:
+                    index_env = build_env_with_tool_repository_credentials(index)
+                    env.update(index_env)
+    except Exception:  # noqa: S110
+        pass
 
     return env
 
