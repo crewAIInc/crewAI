@@ -8,6 +8,9 @@ from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
+    aconvert_to_model,
+    aconvert_with_instructions,
+    ahandle_partial_json,
     convert_to_model,
     convert_with_instructions,
     create_converter,
@@ -952,3 +955,351 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+# ============================================================
+# Async converter tests (issue #5230)
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_ato_pydantic_with_function_calling() -> None:
+    """Test that ato_pydantic uses llm.acall instead of llm.call."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.acall = AsyncMock(return_value='{"name": "Eve", "age": 35}')
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Eve, Age: 35",
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = await converter.ato_pydantic()
+
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Eve"
+    assert output.age == 35
+
+    # Verify acall was used, not call
+    llm.acall.assert_called_once()
+    assert not hasattr(llm, "call") or not llm.call.called
+
+
+@pytest.mark.asyncio
+async def test_ato_pydantic_without_function_calling() -> None:
+    """Test that ato_pydantic uses llm.acall for non-function-calling LLMs."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(return_value='{"name": "Alice", "age": 30}')
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Alice, Age: 30",
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = await converter.ato_pydantic()
+
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Alice"
+    assert output.age == 30
+    llm.acall.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_ato_json_without_function_calling() -> None:
+    """Test that ato_json uses llm.acall instead of llm.call."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(return_value='{"name": "Bob", "age": 40}')
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Bob, Age: 40",
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = await converter.ato_json()
+
+    assert isinstance(output, str)
+    llm.acall.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_ato_pydantic_retry_logic() -> None:
+    """Test that ato_pydantic retries on failure using acall."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(
+        side_effect=[
+            "Invalid JSON",
+            "Still invalid",
+            '{"name": "Retry Alice", "age": 30}',
+        ]
+    )
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Retry Alice, Age: 30",
+        model=SimpleModel,
+        instructions="Convert this text.",
+        max_attempts=3,
+    )
+
+    output = await converter.ato_pydantic()
+
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Retry Alice"
+    assert output.age == 30
+    assert llm.acall.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_ato_pydantic_error_after_max_attempts() -> None:
+    """Test that ato_pydantic raises ConverterError after max attempts."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(return_value="Invalid JSON")
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Alice, Age: 30",
+        model=SimpleModel,
+        instructions="Convert this text.",
+        max_attempts=3,
+    )
+
+    with pytest.raises(ConverterError) as exc_info:
+        await converter.ato_pydantic()
+
+    assert "Failed to convert text into a Pydantic model" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_ato_json_retry_logic() -> None:
+    """Test that ato_json retries on failure using acall."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(
+        side_effect=[
+            Exception("LLM error"),
+            Exception("LLM error again"),
+            '{"name": "Bob", "age": 40}',
+        ]
+    )
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Bob, Age: 40",
+        model=SimpleModel,
+        instructions="Convert this text.",
+        max_attempts=3,
+    )
+
+    output = await converter.ato_json()
+
+    assert isinstance(output, str)
+    assert llm.acall.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_aconvert_to_model_with_valid_json() -> None:
+    """Test aconvert_to_model with valid JSON (no LLM call needed)."""
+    result = '{"name": "John", "age": 30}'
+    output = await aconvert_to_model(result, SimpleModel, None, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "John"
+    assert output.age == 30
+
+
+@pytest.mark.asyncio
+async def test_aconvert_to_model_with_no_model() -> None:
+    """Test aconvert_to_model returns plain text when no model specified."""
+    result = "Plain text"
+    output = await aconvert_to_model(result, None, None, None)
+    assert output == "Plain text"
+
+
+@pytest.mark.asyncio
+async def test_aconvert_to_model_with_json_output() -> None:
+    """Test aconvert_to_model returns dict when output_json is specified."""
+    result = '{"name": "John", "age": 30}'
+    output = await aconvert_to_model(result, None, SimpleModel, None)
+    assert isinstance(output, dict)
+    assert output == {"name": "John", "age": 30}
+
+
+@pytest.mark.asyncio
+async def test_aconvert_with_instructions_success() -> None:
+    """Test aconvert_with_instructions uses async converter methods."""
+    from unittest.mock import AsyncMock
+
+    mock_agent = Mock()
+    mock_agent.function_calling_llm = None
+    mock_agent.llm = Mock()
+
+    with patch("crewai.utilities.converter.create_converter") as mock_create_converter, \
+         patch("crewai.utilities.converter.get_conversion_instructions") as mock_get_instructions:
+        mock_get_instructions.return_value = "Instructions"
+        mock_converter = Mock()
+        mock_converter.ato_pydantic = AsyncMock(
+            return_value=SimpleModel(name="David", age=50)
+        )
+        mock_create_converter.return_value = mock_converter
+
+        result = "Some text to convert"
+        output = await aconvert_with_instructions(result, SimpleModel, False, mock_agent)
+
+        assert isinstance(output, SimpleModel)
+        assert output.name == "David"
+        assert output.age == 50
+        mock_converter.ato_pydantic.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_aconvert_with_instructions_json_output() -> None:
+    """Test aconvert_with_instructions uses ato_json for JSON output."""
+    from unittest.mock import AsyncMock
+
+    mock_agent = Mock()
+    mock_agent.function_calling_llm = None
+    mock_agent.llm = Mock()
+
+    with patch("crewai.utilities.converter.create_converter") as mock_create_converter, \
+         patch("crewai.utilities.converter.get_conversion_instructions") as mock_get_instructions:
+        mock_get_instructions.return_value = "Instructions"
+        mock_converter = Mock()
+        mock_converter.ato_json = AsyncMock(
+            return_value='{"name": "David", "age": 50}'
+        )
+        mock_create_converter.return_value = mock_converter
+
+        result = "Some text to convert"
+        output = await aconvert_with_instructions(result, SimpleModel, True, mock_agent)
+
+        assert output == '{"name": "David", "age": 50}'
+        mock_converter.ato_json.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_aconvert_with_instructions_failure() -> None:
+    """Test aconvert_with_instructions returns original result on ConverterError."""
+    from unittest.mock import AsyncMock
+
+    mock_agent = Mock()
+    mock_agent.function_calling_llm = None
+    mock_agent.llm = Mock()
+    mock_agent.verbose = True
+
+    with patch("crewai.utilities.converter.create_converter") as mock_create_converter, \
+         patch("crewai.utilities.converter.get_conversion_instructions") as mock_get_instructions:
+        mock_get_instructions.return_value = "Instructions"
+        mock_converter = Mock()
+        mock_converter.ato_pydantic = AsyncMock(
+            return_value=ConverterError("Conversion failed")
+        )
+        mock_create_converter.return_value = mock_converter
+
+        result = "Some text to convert"
+        with patch("crewai.utilities.converter.Printer") as mock_printer:
+            output = await aconvert_with_instructions(result, SimpleModel, False, mock_agent)
+            assert output == result
+            mock_printer.return_value.print.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_aconvert_with_instructions_no_agent() -> None:
+    """Test aconvert_with_instructions raises TypeError without agent."""
+    with pytest.raises(TypeError, match="Agent must be provided"):
+        await aconvert_with_instructions("text", SimpleModel, False, None)
+
+
+@pytest.mark.asyncio
+async def test_ahandle_partial_json_with_valid_partial() -> None:
+    """Test ahandle_partial_json with valid embedded JSON."""
+    result = 'Some text {"name": "Charlie", "age": 35} more text'
+    output = await ahandle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Charlie"
+    assert output.age == 35
+
+
+@pytest.mark.asyncio
+async def test_ahandle_partial_json_delegates_to_aconvert_with_instructions() -> None:
+    """Test ahandle_partial_json delegates to aconvert_with_instructions for invalid JSON."""
+    from unittest.mock import AsyncMock
+
+    mock_agent = Mock()
+    mock_agent.function_calling_llm = None
+    mock_agent.llm = Mock()
+
+    result = "No valid JSON here"
+    with patch("crewai.utilities.converter.aconvert_with_instructions", new_callable=AsyncMock) as mock_aconvert:
+        mock_aconvert.return_value = "Converted result"
+        output = await ahandle_partial_json(result, SimpleModel, False, mock_agent)
+        assert output == "Converted result"
+        mock_aconvert.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_converter_does_not_call_sync_llm_call() -> None:
+    """Core test for issue #5230: verify that async converter path never uses sync llm.call()."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.acall = AsyncMock(return_value='{"name": "Test", "age": 25}')
+    llm.call = Mock(side_effect=AssertionError("sync llm.call() should not be called in async path"))
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Test, Age: 25",
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    # ato_pydantic should use acall, never call
+    output = await converter.ato_pydantic()
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Test"
+    assert output.age == 25
+    llm.acall.assert_called_once()
+    llm.call.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_converter_json_does_not_call_sync_llm_call() -> None:
+    """Verify ato_json for non-function-calling LLMs never uses sync llm.call()."""
+    from unittest.mock import AsyncMock
+
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.acall = AsyncMock(return_value='{"name": "Test", "age": 25}')
+    llm.call = Mock(side_effect=AssertionError("sync llm.call() should not be called in async path"))
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Test, Age: 25",
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = await converter.ato_json()
+    assert isinstance(output, str)
+    llm.acall.assert_called_once()
+    llm.call.assert_not_called()
