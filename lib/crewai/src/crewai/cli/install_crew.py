@@ -1,6 +1,9 @@
+import os
 import subprocess
 
 import click
+
+from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
 
 
 # Be mindful about changing this.
@@ -13,7 +16,26 @@ def install_crew(proxy_options: list[str]) -> None:
     """
     try:
         command = ["uv", "sync", *proxy_options]
-        subprocess.run(command, check=True, capture_output=False, text=True)  # noqa: S603
+
+        # Inject tool repository credentials so uv can authenticate
+        # against private package indexes (e.g. crewai tool repository).
+        # Without this, `uv sync` fails with 401 Unauthorized when the
+        # project depends on tools from a private index.
+        env = os.environ.copy()
+        try:
+            pyproject_data = read_toml()
+            sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+            for source_config in sources.values():
+                if isinstance(source_config, dict):
+                    index = source_config.get("index")
+                    if index:
+                        index_env = build_env_with_tool_repository_credentials(index)
+                        env.update(index_env)
+        except Exception:  # noqa: S110
+            pass
+
+        subprocess.run(command, check=True, capture_output=False, text=True, env=env)  # noqa: S603
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while running the crew: {e}", err=True)
