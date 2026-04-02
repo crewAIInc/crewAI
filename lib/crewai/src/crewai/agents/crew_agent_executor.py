@@ -14,8 +14,7 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
-from pydantic_core import CoreSchema, core_schema
+from pydantic import BaseModel, Field, ValidationError
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
@@ -58,7 +57,6 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import (
     aexecute_tool_and_check_finality,
@@ -89,19 +87,38 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     LLM interactions, tool execution, and feedback handling.
     """
 
+    llm: Any = Field(default=None)
+    prompt: Any = Field(default=None)
+    tools: list[Any] = Field(default_factory=list)
+    tools_names: str = Field(default="")
+    stop: list[str] = Field(default_factory=list)
+    tools_description: str = Field(default="")
+    tools_handler: Any = Field(default=None)
+    step_callback: Any = Field(default=None)
+    original_tools: list[Any] = Field(default_factory=list)
+    function_calling_llm: Any = Field(default=None)
+    respect_context_window: bool = Field(default=False)
+    request_within_rpm_limit: Any = Field(default=None)
+    callbacks: list[Any] = Field(default_factory=list)
+    response_model: Any = Field(default=None)
+    ask_for_human_input: bool = Field(default=False)
+    log_error_after: int = Field(default=3)
+    before_llm_call_hooks: list[Any] = Field(default_factory=list)
+    after_llm_call_hooks: list[Any] = Field(default_factory=list)
+
     def __init__(
         self,
-        llm: BaseLLM,
-        task: Task,
-        crew: Crew,
-        agent: Agent,
-        prompt: SystemPromptResult | StandardPromptResult,
-        max_iter: int,
-        tools: list[CrewStructuredTool],
-        tools_names: str,
-        stop_words: list[str],
-        tools_description: str,
-        tools_handler: ToolsHandler,
+        llm: BaseLLM | None = None,
+        task: Task | None = None,
+        crew: Crew | None = None,
+        agent: Agent | None = None,
+        prompt: SystemPromptResult | StandardPromptResult | None = None,
+        max_iter: int = 25,
+        tools: list[CrewStructuredTool] | None = None,
+        tools_names: str = "",
+        stop_words: list[str] | None = None,
+        tools_description: str = "",
+        tools_handler: ToolsHandler | None = None,
         step_callback: Any = None,
         original_tools: list[BaseTool] | None = None,
         function_calling_llm: BaseLLM | Any | None = None,
@@ -110,59 +127,33 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         callbacks: list[Any] | None = None,
         response_model: type[BaseModel] | None = None,
         i18n: I18N | None = None,
+        **kwargs: Any,
     ) -> None:
-        """Initialize executor.
-
-        Args:
-            llm: Language model instance.
-            task: Task to execute.
-            crew: Crew instance.
-            agent: Agent to execute.
-            prompt: Prompt templates.
-            max_iter: Maximum iterations.
-            tools: Available tools.
-            tools_names: Tool names string.
-            stop_words: Stop word list.
-            tools_description: Tool descriptions.
-            tools_handler: Tool handler instance.
-            step_callback: Optional step callback.
-            original_tools: Original tool list.
-            function_calling_llm: Optional function calling LLM.
-            respect_context_window: Respect context limits.
-            request_within_rpm_limit: RPM limit check function.
-            callbacks: Optional callbacks list.
-            response_model: Optional Pydantic model for structured outputs.
-        """
-        self._i18n: I18N = i18n or get_i18n()
-        self.llm = llm
-        self.task = task
-        self.agent = agent
+        super().__init__(
+            llm=llm,
+            prompt=prompt,
+            tools=tools or [],
+            tools_names=tools_names,
+            stop=stop_words or [],
+            max_iter=max_iter,
+            callbacks=callbacks or [],
+            tools_handler=tools_handler,
+            original_tools=original_tools or [],
+            step_callback=step_callback,
+            tools_description=tools_description,
+            function_calling_llm=function_calling_llm,
+            respect_context_window=respect_context_window,
+            request_within_rpm_limit=request_within_rpm_limit,
+            response_model=response_model,
+            **kwargs,
+        )
         self.crew = crew
-        self.prompt = prompt
-        self.tools = tools
-        self.tools_names = tools_names
-        self.stop = stop_words
-        self.max_iter = max_iter
-        self.callbacks = callbacks or []
-        self._printer: Printer = Printer()
-        self.tools_handler = tools_handler
-        self.original_tools = original_tools or []
-        self.step_callback = step_callback
-        self.tools_description = tools_description
-        self.function_calling_llm = function_calling_llm
-        self.respect_context_window = respect_context_window
-        self.request_within_rpm_limit = request_within_rpm_limit
-        self.response_model = response_model
-        self.ask_for_human_input = False
-        self.messages: list[LLMMessage] = []
-        self.iterations = 0
-        self.log_error_after = 3
-        self.before_llm_call_hooks: list[Callable[..., Any]] = []
-        self.after_llm_call_hooks: list[Callable[..., Any]] = []
+        self.agent = agent
+        self.task = task
+        self._i18n = i18n or get_i18n()
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
         if self.llm:
-            # This may be mutating the shared llm object and needs further evaluation
             existing_stop = getattr(self.llm, "stop", [])
             self.llm.stop = list(
                 set(
@@ -1687,14 +1678,3 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return format_message_for_llm(
             self._i18n.slice("feedback_instructions").format(feedback=feedback)
         )
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _source_type: Any, _handler: GetCoreSchemaHandler
-    ) -> CoreSchema:
-        """Generate Pydantic core schema for BaseClient Protocol.
-
-        This allows the Protocol to be used in Pydantic models without
-        requiring arbitrary_types_allowed=True.
-        """
-        return core_schema.any_schema()

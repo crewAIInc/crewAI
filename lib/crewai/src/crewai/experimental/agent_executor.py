@@ -106,11 +106,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
-    from crewai.task import Task
     from crewai.tools.tool_types import ToolResult
     from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
@@ -155,7 +152,7 @@ class AgentExecutorState(BaseModel):
     )
 
 
-class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
+class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: ignore[pydantic-unexpected]
     """Agent Executor for both standalone agents and crew-bound agents.
 
     _skip_auto_memory prevents Flow from eagerly allocating a Memory
@@ -174,7 +171,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
     suppress_flow_events: bool = True  # always suppress for executor
     llm: BaseLLM = Field(exclude=True)
-    agent: Agent = Field(exclude=True)
     prompt: SystemPromptResult | StandardPromptResult = Field(exclude=True)
     max_iter: int = Field(default=25, exclude=True)
     tools: list[CrewStructuredTool] = Field(default_factory=list, exclude=True)
@@ -182,8 +178,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
     stop_words: list[str] = Field(default_factory=list, exclude=True)
     tools_description: str = Field(default="", exclude=True)
     tools_handler: ToolsHandler | None = Field(default=None, exclude=True)
-    task: Task | None = Field(default=None, exclude=True)
-    crew: Crew | None = Field(default=None, exclude=True)
     step_callback: Any = Field(default=None, exclude=True)
     original_tools: list[BaseTool] = Field(default_factory=list, exclude=True)
     function_calling_llm: BaseLLM | None = Field(default=None, exclude=True)
@@ -268,20 +262,20 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """Get thread-safe state proxy."""
         return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
-    @property
+    @property  # type: ignore[misc]
     def iterations(self) -> int:
         """Compatibility property for mixin - returns state iterations."""
-        return self._state.iterations  # type: ignore[no-any-return]
+        return int(self._state.iterations)
 
     @iterations.setter
     def iterations(self, value: int) -> None:
         """Set state iterations."""
         self._state.iterations = value
 
-    @property
+    @property  # type: ignore[misc]
     def messages(self) -> list[LLMMessage]:
         """Compatibility property - returns state messages."""
-        return self._state.messages  # type: ignore[no-any-return]
+        return list(self._state.messages)
 
     @messages.setter
     def messages(self, value: list[LLMMessage]) -> None:
@@ -395,28 +389,28 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """
         config = self.agent.planning_config
         if config is not None:
-            return config.reasoning_effort
+            return str(config.reasoning_effort)
         return "medium"
 
     def _get_max_replans(self) -> int:
         """Get max replans from planning config or default to 3."""
         config = self.agent.planning_config
         if config is not None:
-            return config.max_replans
+            return int(config.max_replans)
         return 3
 
     def _get_max_step_iterations(self) -> int:
         """Get max step iterations from planning config or default to 15."""
         config = self.agent.planning_config
         if config is not None:
-            return config.max_step_iterations
+            return int(config.max_step_iterations)
         return 15
 
     def _get_step_timeout(self) -> int | None:
         """Get per-step timeout from planning config or default to None."""
         config = self.agent.planning_config
         if config is not None:
-            return config.step_timeout
+            return int(config.step_timeout) if config.step_timeout is not None else None
         return None
 
     def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:

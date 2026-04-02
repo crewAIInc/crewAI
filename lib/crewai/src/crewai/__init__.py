@@ -185,6 +185,30 @@ try:
         Discriminator(_entity_discriminator),
     ]
 
+    def _sync_checkpoint_fields(entity: object) -> None:
+        """Copy private runtime attrs into checkpoint fields before serializing."""
+        if isinstance(entity, Flow):
+            entity.checkpoint_completed_methods = (
+                set(entity._completed_methods) if entity._completed_methods else None
+            )
+            entity.checkpoint_method_outputs = (
+                list(entity._method_outputs) if entity._method_outputs else None
+            )
+            entity.checkpoint_method_counts = (
+                {str(k): v for k, v in entity._method_execution_counts.items()}
+                if entity._method_execution_counts
+                else None
+            )
+            entity.checkpoint_state = (
+                entity._copy_and_serialize_state()
+                if entity._state is not None
+                else None
+            )
+        if isinstance(entity, Crew):
+            entity.checkpoint_inputs = entity._inputs
+            entity.checkpoint_train = entity._train
+            entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
+
     class RuntimeState(RootModel[list[Entity]]):
         def checkpoint(self, directory: str) -> str:
             """Write a checkpoint file to the directory.
@@ -203,6 +227,7 @@ try:
 
             for entity in self.root:
                 entity.execution_context = capture_execution_context()
+                _sync_checkpoint_fields(entity)
 
             dir_path = _Path(directory)
             dir_path.mkdir(parents=True, exist_ok=True)

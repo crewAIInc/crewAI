@@ -14,7 +14,6 @@ from pydantic import (
     BaseModel,
     BeforeValidator,
     Field,
-    InstanceOf,
     PrivateAttr,
     field_validator,
     model_validator,
@@ -197,7 +196,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: InstanceOf[CrewAgentExecutorMixin] | None = Field(
+    agent_executor: CrewAgentExecutorMixin | None = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
     llm: Annotated[
@@ -275,6 +274,26 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         min_length=1,
     )
     execution_context: ExecutionContext | None = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(cls, path: str) -> Self:
+        """Restore an Agent from a checkpoint file."""
+        from pathlib import Path as _Path
+
+        from crewai.context import apply_execution_context
+
+        json_str = _Path(path).read_text()
+        from crewai import RuntimeState
+
+        state = RuntimeState.model_validate_json(
+            json_str, context={"from_checkpoint": True}
+        )
+        for entity in state.root:
+            if isinstance(entity, cls):
+                if entity.execution_context is not None:
+                    apply_execution_context(entity.execution_context)
+                return entity
+        raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
 
     @model_validator(mode="before")
     @classmethod

@@ -27,7 +27,6 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
-    InstanceOf,
     PrivateAttr,
     model_validator,
 )
@@ -297,8 +296,8 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    agent_executor: InstanceOf[CrewAgentExecutor] | InstanceOf[AgentExecutor] | None = (
-        Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
+        default=None, description="An instance of the CrewAgentExecutor class."
     )
     executor_class: Annotated[
         type[CrewAgentExecutor] | type[AgentExecutor],
@@ -1011,7 +1010,7 @@ class Agent(BaseAgent):
                 )
             self.agent_executor = self.executor_class(
                 llm=self.llm,
-                task=task,  # type: ignore[arg-type]
+                task=task,
                 i18n=self.i18n,
                 agent=self,
                 crew=self.crew,  # type: ignore[arg-type]

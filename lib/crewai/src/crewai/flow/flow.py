@@ -919,6 +919,27 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     max_method_calls: int = Field(default=100)
 
     execution_context: ExecutionContext | None = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(cls, path: str) -> Flow:  # type: ignore[type-arg]
+        """Restore a Flow from a checkpoint file."""
+        from pathlib import Path as _Path
+
+        from crewai.context import apply_execution_context
+
+        json_str = _Path(path).read_text()
+        from crewai import RuntimeState
+
+        state = RuntimeState.model_validate_json(
+            json_str, context={"from_checkpoint": True}
+        )
+        for entity in state.root:
+            if isinstance(entity, cls):
+                if entity.execution_context is not None:
+                    apply_execution_context(entity.execution_context)
+                return entity
+        raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
+
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)
