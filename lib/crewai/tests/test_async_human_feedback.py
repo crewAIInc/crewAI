@@ -873,7 +873,7 @@ class TestAutoPersistence:
 
         # Create flow WITHOUT persistence
         flow = TestFlow()
-        assert flow._persistence is None  # No persistence initially
+        assert flow.persistence is None  # No persistence initially
 
         # kickoff should auto-create persistence when HumanFeedbackPending is raised
         result = flow.kickoff()
@@ -882,11 +882,11 @@ class TestAutoPersistence:
         assert isinstance(result, HumanFeedbackPending)
 
         # Persistence should have been auto-created
-        assert flow._persistence is not None
+        assert flow.persistence is not None
 
         # The pending feedback should be saved
         flow_id = result.context.flow_id
-        loaded = flow._persistence.load_pending_feedback(flow_id)
+        loaded = flow.persistence.load_pending_feedback(flow_id)
         assert loaded is not None
 
 

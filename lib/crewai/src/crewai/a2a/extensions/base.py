@@ -150,6 +150,23 @@ class A2AExtension(Protocol):
         """
         ...
 
+    def prepare_message_metadata(
+        self,
+        conversation_state: ConversationState | None,
+    ) -> dict[str, Any]:
+        """Prepare extension-specific metadata for outbound A2A messages.
+
+        Called when constructing A2A messages to inject extension-specific
+        metadata such as client capabilities declarations.
+
+        Args:
+            conversation_state: Extension-specific state from extract_state_from_history.
+
+        Returns:
+            Dict of metadata key-value pairs to merge into the message metadata.
+        """
+        ...
+
 
 class ExtensionRegistry:
     """Registry for managing A2A extensions.
@@ -236,3 +253,21 @@ class ExtensionRegistry:
             state = extension_states.get(type(extension))
             processed = extension.process_response(processed, state)
         return processed
+
+    def prepare_all_metadata(
+        self,
+        extension_states: dict[type[A2AExtension], ConversationState],
+    ) -> dict[str, Any]:
+        """Collect metadata from all registered extensions for outbound messages.
+
+        Args:
+            extension_states: Mapping of extension types to conversation states.
+
+        Returns:
+            Merged metadata dict from all extensions.
+        """
+        metadata: dict[str, Any] = {}
+        for extension in self._extensions:
+            state = extension_states.get(type(extension))
+            metadata.update(extension.prepare_message_metadata(state))
+        return metadata

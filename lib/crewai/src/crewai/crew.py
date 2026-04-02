@@ -22,7 +22,6 @@ from pydantic import (
     UUID4,
     BaseModel,
     Field,
-    InstanceOf,
     Json,
     PrivateAttr,
     field_validator,
@@ -176,7 +175,7 @@ class Crew(FlowTrackable, BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default_factory=CacheHandler)
+    _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
     _memory: Memory | MemoryScope | MemorySlice | None = PrivateAttr(default=None)
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
@@ -210,13 +209,13 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: str | InstanceOf[BaseLLM] | None = Field(
+    manager_llm: str | BaseLLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
     manager_agent: BaseAgent | None = Field(
         description="Custom agent that will be used as manager.", default=None
     )
-    function_calling_llm: str | InstanceOf[LLM] | None = Field(
+    function_calling_llm: str | LLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
@@ -267,7 +266,7 @@ class Crew(FlowTrackable, BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    planning_llm: str | BaseLLM | None = Field(
         default=None,
         description=(
             "Language model that will run the AgentPlanner if planning is True."
@@ -288,7 +287,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge object."
         ),
     )
-    chat_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    chat_llm: str | BaseLLM | None = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
@@ -1312,7 +1311,7 @@ class Crew(FlowTrackable, BaseModel):
             and hasattr(agent, "multimodal")
             and getattr(agent, "multimodal", False)
         ):
-            if not (agent.llm and agent.llm.supports_multimodal()):
+            if not (isinstance(agent.llm, BaseLLM) and agent.llm.supports_multimodal()):
                 tools = self._add_multimodal_tools(agent, tools)
 
         if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
@@ -1329,7 +1328,11 @@ class Crew(FlowTrackable, BaseModel):
         files = get_all_files(self.id, task.id)
         if files:
             supported_types: list[str] = []
-            if agent and agent.llm and agent.llm.supports_multimodal():
+            if (
+                agent
+                and isinstance(agent.llm, BaseLLM)
+                and agent.llm.supports_multimodal()
+            ):
                 provider = (
                     getattr(agent.llm, "provider", None)
                     or getattr(agent.llm, "model", None)
@@ -1782,17 +1785,10 @@ class Crew(FlowTrackable, BaseModel):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
 
-        if (
-            self.manager_agent
-            and hasattr(self.manager_agent, "llm")
-            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
-        ):
+        if self.manager_agent:
             if isinstance(self.manager_agent.llm, BaseLLM):
                 llm_usage = self.manager_agent.llm.get_token_usage_summary()
-            else:
-                llm_usage = self.manager_agent.llm._token_process.get_summary()
-
-            total_usage_metrics.add_usage_metrics(llm_usage)
+                total_usage_metrics.add_usage_metrics(llm_usage)
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
@@ -1800,7 +1796,7 @@ class Crew(FlowTrackable, BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: str | InstanceOf[BaseLLM],
+        eval_llm: str | BaseLLM,
         inputs: dict[str, Any] | None = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations.

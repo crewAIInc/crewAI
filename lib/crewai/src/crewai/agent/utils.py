@@ -137,7 +137,8 @@ def handle_knowledge_retrieval(
     Returns:
         The task prompt potentially augmented with knowledge context.
     """
-    if not (agent.knowledge or (agent.crew and agent.crew.knowledge)):
+    _crew = agent.crew if not isinstance(agent.crew, str) else None
+    if not (agent.knowledge or (_crew and _crew.knowledge)):
         return task_prompt
 
     crewai_event_bus.emit(
@@ -244,7 +245,7 @@ def apply_training_data(agent: Agent, task_prompt: str) -> str:
     Returns:
         The task prompt with training data applied.
     """
-    if agent.crew and agent.crew._train:
+    if agent.crew and not isinstance(agent.crew, str) and agent.crew._train:
         return agent._training_handler(task_prompt=task_prompt)
     return agent._use_trained_data(task_prompt=task_prompt)
 
@@ -355,7 +356,8 @@ async def ahandle_knowledge_retrieval(
     Returns:
         The task prompt potentially augmented with knowledge context.
     """
-    if not (agent.knowledge or (agent.crew and agent.crew.knowledge)):
+    _crew = agent.crew if not isinstance(agent.crew, str) else None
+    if not (agent.knowledge or (_crew and _crew.knowledge)):
         return task_prompt
 
     crewai_event_bus.emit(
@@ -381,15 +383,16 @@ async def ahandle_knowledge_retrieval(
                     if agent.agent_knowledge_context:
                         task_prompt += agent.agent_knowledge_context
 
-            knowledge_snippets = await agent.crew.aquery_knowledge(
-                [agent.knowledge_search_query], **knowledge_config
-            )
-            if knowledge_snippets:
-                agent.crew_knowledge_context = extract_knowledge_context(
-                    knowledge_snippets
+            if _crew:
+                knowledge_snippets = await _crew.aquery_knowledge(
+                    [agent.knowledge_search_query], **knowledge_config
                 )
-                if agent.crew_knowledge_context:
-                    task_prompt += agent.crew_knowledge_context
+                if knowledge_snippets:
+                    agent.crew_knowledge_context = extract_knowledge_context(
+                        knowledge_snippets
+                    )
+                    if agent.crew_knowledge_context:
+                        task_prompt += agent.crew_knowledge_context
 
             crewai_event_bus.emit(
                 agent,

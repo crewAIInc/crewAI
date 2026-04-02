@@ -150,6 +150,7 @@
                     "group": "Core Concepts",
                     "pages": [
                       "en/concepts/agents",
+                      "en/concepts/agent-capabilities",
                       "en/concepts/tasks",
                       "en/concepts/crews",
                       "en/concepts/flows",
@@ -2236,7 +2237,9 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/a2a-agent-delegation",
+                      "en/learn/a2ui"
                     ]
                   },
                   {
@@ -3173,7 +3176,9 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/a2a-agent-delegation",
+                      "en/learn/a2ui"
                     ]
                   },
                   {
@@ -3462,6 +3467,7 @@
                     "group": "Conceitos-Chave",
                     "pages": [
                       "pt-BR/concepts/agents",
+                      "pt-BR/concepts/agent-capabilities",
                       "pt-BR/concepts/tasks",
                       "pt-BR/concepts/crews",
                       "pt-BR/concepts/flows",
@@ -6669,6 +6675,7 @@
                     "pages": [
                       "ko/concepts/agents",
                       "ko/concepts/tasks",
+                      "ko/concepts/agent-capabilities",
                       "ko/concepts/crews",
                       "ko/concepts/flows",
                       "ko/concepts/production-architecture",
@@ -9958,6 +9965,7 @@
                     "group": "\u0627\u0644\u0645\u0641\u0627\u0647\u064a\u0645 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629",
                     "pages": [
                       "ar/concepts/agents",
+                      "ar/concepts/agent-capabilities",
                       "ar/concepts/tasks",
                       "ar/concepts/crews",
                       "ar/concepts/flows",

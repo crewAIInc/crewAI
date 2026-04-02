@@ -188,14 +188,14 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         self._openai_agent = OpenAIAgent(
             name=self.role,
             instructions=instructions,
-            model=self.llm,
+            model=str(self.llm),
             **self._agent_config or {},
         )
 
         if all_tools:
             self.configure_tools(all_tools)
 
-        self.agent_executor = Runner
+        self.agent_executor = Runner  # type: ignore[assignment]
 
     def configure_tools(self, tools: list[BaseTool] | None = None) -> None:
         """Configure tools for the OpenAI Assistant.
