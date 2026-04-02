@@ -98,6 +98,10 @@ class MCPNativeTool(BaseTool):
                 f"Error executing MCP tool {self.original_tool_name}: {e!s}"
             ) from e
 
+    async def _arun(self, **kwargs: Any) -> str:
+        """Async implementation for BaseTool.arun()."""
+        return await self._run_async(**kwargs)
+
     async def _run_async(self, **kwargs: Any) -> str:
         """Async implementation of tool execution.
 
