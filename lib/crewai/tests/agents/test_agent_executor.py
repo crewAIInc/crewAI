@@ -932,7 +932,7 @@ class TestNativeToolExecution:
     ):
         from crewai.utilities.planning_types import TodoList
 
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         # No current todo → not satisfied
         executor.state.todos = TodoList(items=[])
