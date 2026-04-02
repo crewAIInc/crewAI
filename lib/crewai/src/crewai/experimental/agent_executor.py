@@ -1690,7 +1690,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         for tool_call in tool_calls:
             func_name = self._extract_tool_name(tool_call)
-            if func_name == "unknown":
+            if func_name is None:
                 continue
 
             original_tool = self._resolve_original_tool(func_name)
@@ -1908,8 +1908,14 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             "original_tool": original_tool,
         }
 
-    def _extract_tool_name(self, tool_call: Any) -> str:
-        """Extract tool name from various tool call formats."""
+    def _extract_tool_name(self, tool_call: Any) -> str | None:
+        """Extract tool name from various tool call formats.
+
+        Returns:
+            The sanitized tool name, or ``None`` when the format is
+            unrecognised (avoids collisions with a tool legitimately
+            named "unknown").
+        """
         if hasattr(tool_call, "function"):
             return sanitize_tool_name(tool_call.function.name)
         if hasattr(tool_call, "function_call") and tool_call.function_call:
@@ -1918,10 +1924,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             return sanitize_tool_name(tool_call.name)
         if isinstance(tool_call, dict):
             func_info = tool_call.get("function", {})
-            return sanitize_tool_name(
-                func_info.get("name", "") or tool_call.get("name", "unknown")
-            )
-        return "unknown"
+            name = func_info.get("name", "") or tool_call.get("name", "")
+            return sanitize_tool_name(name) if name else None
+        return None
 
     @router(execute_native_tool)
     def check_native_todo_completion(

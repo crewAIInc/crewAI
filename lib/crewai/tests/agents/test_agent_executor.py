@@ -2141,12 +2141,12 @@ class TestExtractToolName:
 
         assert executor._extract_tool_name(tc) == "bedrock_tool"
 
-    def test_unknown_format_returns_unknown(self, mock_dependencies):
-        """Completely unrecognized object returns 'unknown'."""
+    def test_unknown_format_returns_none(self, mock_dependencies):
+        """Completely unrecognized object returns None (not 'unknown')."""
         executor = _build_executor(**mock_dependencies)
 
-        assert executor._extract_tool_name(42) == "unknown"
-        assert executor._extract_tool_name("not a tool call") == "unknown"
+        assert executor._extract_tool_name(42) is None
+        assert executor._extract_tool_name("not a tool call") is None
 
     def test_sanitizes_names(self, mock_dependencies):
         """Tool names with special characters are sanitized."""
