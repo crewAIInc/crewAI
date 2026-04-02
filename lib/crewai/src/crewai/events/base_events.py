@@ -25,13 +25,25 @@ def _get_or_create_counter() -> Iterator[int]:
         return counter
 
 
+_last_emitted: contextvars.ContextVar[int] = contextvars.ContextVar(
+    "_last_emitted", default=0
+)
+
+
 def get_next_emission_sequence() -> int:
     """Get the next emission sequence number.
 
     Returns:
         The next sequence number.
     """
-    return next(_get_or_create_counter())
+    seq = next(_get_or_create_counter())
+    _last_emitted.set(seq)
+    return seq
+
+
+def get_emission_sequence() -> int:
+    """Get the current emission sequence value without incrementing."""
+    return _last_emitted.get()
 
 
 def reset_emission_counter() -> None:
@@ -41,6 +53,14 @@ def reset_emission_counter() -> None:
     """
     counter: Iterator[int] = itertools.count(start=1)
     _emission_counter.set(counter)
+    _last_emitted.set(0)
+
+
+def set_emission_counter(start: int) -> None:
+    """Set the emission counter to resume from a given value."""
+    counter: Iterator[int] = itertools.count(start=start + 1)
+    _emission_counter.set(counter)
+    _last_emitted.set(start)
 
 
 class BaseEvent(BaseModel):
