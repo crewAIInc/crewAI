@@ -549,6 +549,31 @@ def build_env_with_tool_repository_credentials(
     return env
 
 
+def build_env_with_all_tool_credentials() -> dict[str, Any]:
+    """
+    Build environment dict with credentials for all tool repository indexes
+    found in pyproject.toml's [tool.uv.sources] section.
+
+    Returns:
+        dict: Environment variables with credentials for all private indexes.
+    """
+    env = os.environ.copy()
+    try:
+        pyproject_data = read_toml()
+        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+        for source_config in sources.values():
+            if isinstance(source_config, dict):
+                index = source_config.get("index")
+                if index:
+                    index_env = build_env_with_tool_repository_credentials(index)
+                    env.update(index_env)
+    except Exception:  # noqa: S110
+        pass
+
+    return env
+
+
 @contextmanager
 def _load_module_from_file(
     init_file: Path, module_name: str | None = None
