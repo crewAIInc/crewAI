@@ -384,7 +384,7 @@ Send files directly with the kickoff request:
 curl -X POST https://your-deployment.crewai.com/kickoff \
   -H 'Authorization: Bearer YOUR_TOKEN' \
   -F 'inputs={"company_name": "Einstein"}' \
-  -F 'cnh_image=@/path/to/document.jpg'
+  -F 'cover_image=@/path/to/photo.jpg'
 ```
 
 Files are automatically stored and converted to `FileInput` objects. The agent receives the file with provider-specific optimization (inline base64, file upload API, or URL reference depending on the LLM provider).
@@ -401,22 +401,24 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
 
 #### Option 3: Separate upload + kickoff
 
-Upload files first, then reference them:
+This is an alternative to multipart upload when you need to upload files separately from the kickoff request. Upload files first, then reference them by URL:
 
 ```bash
 # Step 1: Upload
 curl -X POST https://your-deployment.crewai.com/files \
   -H 'Authorization: Bearer YOUR_TOKEN' \
-  -F 'file=@/path/to/document.jpg' \
-  -F 'field_name=cnh_image'
-# Returns: {"url": "https://...", "field_name": "cnh_image"}
+  -F 'file=@/path/to/photo.jpg' \
+  -F 'field_name=cover_image'
+# Returns: {"url": "https://...", "field_name": "cover_image"}
 
 # Step 2: Kickoff with URL
 curl -X POST https://your-deployment.crewai.com/kickoff \
   -H 'Authorization: Bearer YOUR_TOKEN' \
   -H 'Content-Type: application/json' \
-  -d '{"inputs": {"company_name": "Einstein"}, "inputFiles": {"cnh_image": "https://..."}}'
+  -d '{"inputs": {"company_name": "Einstein"}, "input_files": {"cover_image": "https://..."}}'
 ```
+
+See the Platform API documentation for full `/files` endpoint details.
 
 #### On CrewAI Platform
 
