@@ -334,9 +334,9 @@ flow.kickoff()
 
 CrewAI Flows는 비구조적 및 구조적 상태 관리 옵션을 모두 제공함으로써, 개발자들이 다양한 애플리케이션 요구 사항에 맞춰 유연하면서도 견고한 AI 워크플로를 구축할 수 있도록 지원합니다.
 
-### File Inputs
+### 파일 입력
 
-When using structured state, you can include file-typed fields using classes from `crewai-files`. This enables file uploads as part of your flow's input:
+구조화된 상태를 사용할 때, `crewai-files`의 클래스를 사용하여 파일 타입 필드를 포함할 수 있습니다. 이를 통해 flow의 입력으로 파일 업로드가 가능합니다:
 
 ```python
 from crewai.flow.flow import Flow, start
@@ -356,21 +356,21 @@ class OnboardingFlow(Flow[OnboardingState]):
         return self.state.document
 ```
 
-When deployed on **CrewAI Platform**, file-typed fields automatically render as file upload dropzones in the UI. Users can drag and drop files, which are then passed to your flow.
+**CrewAI 플랫폼**에 배포하면 파일 타입 필드가 UI에서 자동으로 파일 업로드 드롭존으로 렌더링됩니다. 사용자는 파일을 드래그 앤 드롭할 수 있으며, 해당 파일은 flow로 전달됩니다.
 
-**Kicking off with files via API:**
+**API를 통한 파일 포함 시작:**
 
-The `/kickoff` endpoint auto-detects the request format:
-- **JSON body** → normal kickoff
-- **multipart/form-data** → file upload + kickoff
+`/kickoff` 엔드포인트는 요청 형식을 자동으로 감지합니다:
+- **JSON body** → 일반 kickoff
+- **multipart/form-data** → 파일 업로드 + kickoff
 
-API users can also pass URL strings directly to file-typed fields—Pydantic coerces them automatically.
+API 사용자는 파일 타입 필드에 URL 문자열을 직접 전달할 수도 있습니다 — Pydantic이 자동으로 변환합니다.
 
-### API Usage
+### API 사용법
 
-#### Option 1: Multipart kickoff (recommended)
+#### 옵션 1: Multipart kickoff (권장)
 
-Send files directly with the kickoff request:
+kickoff 요청과 함께 파일을 직접 전송합니다:
 
 ```bash
 # With files (multipart) — same endpoint
@@ -380,9 +380,9 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -F 'cover_image=@/path/to/photo.jpg'
 ```
 
-Files are automatically stored and converted to `FileInput` objects. The agent receives the file with provider-specific optimization (inline base64, file upload API, or URL reference depending on the LLM provider).
+파일은 자동으로 저장되고 `FileInput` 객체로 변환됩니다. 에이전트는 프로바이더별 최적화(LLM 프로바이더에 따라 인라인 base64, 파일 업로드 API 또는 URL 참조)와 함께 파일을 수신합니다.
 
-#### Option 2: JSON kickoff (no files)
+#### 옵션 2: JSON kickoff (파일 없음)
 
 ```bash
 # Without files (JSON) — same endpoint
@@ -392,9 +392,9 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -d '{"inputs": {"company_name": "Einstein"}}'
 ```
 
-#### Option 3: Separate upload + kickoff
+#### 옵션 3: 분리된 업로드 + kickoff
 
-This is an alternative to multipart upload when you need to upload files separately from the kickoff request. Upload files first, then reference them by URL:
+kickoff 요청과 별도로 파일을 업로드해야 할 때 multipart 업로드의 대안입니다. 먼저 파일을 업로드한 다음 URL로 참조합니다:
 
 ```bash
 # Step 1: Upload
@@ -411,11 +411,11 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -d '{"inputs": {"company_name": "Einstein"}, "input_files": {"cover_image": "https://..."}}'
 ```
 
-See the Platform API documentation for full `/files` endpoint details.
+`/files` 엔드포인트에 대한 자세한 내용은 플랫폼 API 문서를 참조하세요.
 
-#### On CrewAI Platform
+#### CrewAI 플랫폼에서
 
-When using the Platform UI, file-typed fields automatically render as drag-and-drop upload zones. No API calls needed—just drop the file and click Run.
+플랫폼 UI를 사용할 때 파일 타입 필드는 자동으로 드래그 앤 드롭 업로드 영역으로 렌더링됩니다. API 호출이 필요 없습니다 — 파일을 드롭하고 실행을 클릭하면 됩니다.
 
 ## 플로우 지속성
 
