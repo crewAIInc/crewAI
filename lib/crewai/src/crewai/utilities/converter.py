@@ -589,7 +589,9 @@ async def aconvert_with_instructions(
         instructions=instructions,
     )
     exported_result = (
-        await converter.ato_pydantic() if not is_json_output else await converter.ato_json()
+        await converter.ato_pydantic()
+        if not is_json_output
+        else await converter.ato_json()
     )
 
     if isinstance(exported_result, ConverterError):
