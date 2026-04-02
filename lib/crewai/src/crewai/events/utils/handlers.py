@@ -41,6 +41,7 @@ def is_call_handler_safe(
     handler: SyncHandler,
     source: Any,
     event: BaseEvent,
+    state: Any = None,
 ) -> Exception | None:
     """Safely call a single handler and return any exception.
 
@@ -48,12 +49,17 @@ def is_call_handler_safe(
         handler: The handler function to call
         source: The object that emitted the event
         event: The event instance
+        state: Optional RuntimeState passed as third arg if handler accepts it
 
     Returns:
         Exception if handler raised one, None otherwise
     """
     try:
-        handler(source, event)
+        sig = inspect.signature(handler)
+        if len(sig.parameters) >= 3:
+            handler(source, event, state)  # type: ignore[call-arg]
+        else:
+            handler(source, event)  # type: ignore[call-arg]
         return None
     except Exception as e:
         return e

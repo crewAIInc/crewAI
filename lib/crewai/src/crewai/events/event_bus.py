@@ -11,6 +11,7 @@ from collections.abc import Callable, Generator
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 import contextvars
+import inspect
 import threading
 from typing import Any, Final, ParamSpec, TypeVar
 
@@ -87,6 +88,7 @@ class CrewAIEventsBus:
     _futures_lock: threading.Lock
     _executor_initialized: bool
     _has_pending_events: bool
+    _runtime_state: Any
 
     def __new__(cls) -> Self:
         """Create or return the singleton instance.
@@ -122,6 +124,7 @@ class CrewAIEventsBus:
         # Lazy initialization flags - executor and loop created on first emit
         self._executor_initialized = False
         self._has_pending_events = False
+        self._runtime_state: Any = None
 
     def _ensure_executor_initialized(self) -> None:
         """Lazily initialize the thread pool executor and event loop.
@@ -248,6 +251,10 @@ class CrewAIEventsBus:
 
         return decorator
 
+    def set_runtime_state(self, state: Any) -> None:
+        """Set the RuntimeState that will be passed to event handlers."""
+        self._runtime_state = state
+
     def off(
         self,
         event_type: type[BaseEvent],
@@ -294,10 +301,12 @@ class CrewAIEventsBus:
             event: The event instance
             handlers: Frozenset of sync handlers to call
         """
+        state = self._runtime_state
         errors: list[tuple[SyncHandler, Exception]] = [
             (handler, error)
             for handler in handlers
-            if (error := is_call_handler_safe(handler, source, event)) is not None
+            if (error := is_call_handler_safe(handler, source, event, state))
+            is not None
         ]
 
         if errors:
@@ -319,7 +328,15 @@ class CrewAIEventsBus:
             event: The event instance
             handlers: Frozenset of async handlers to call
         """
-        coros = [handler(source, event) for handler in handlers]
+        state = self._runtime_state
+
+        async def _call(handler: AsyncHandler) -> Any:
+            sig = inspect.signature(handler)
+            if len(sig.parameters) >= 3:
+                return await handler(source, event, state)  # type: ignore[call-arg]
+            return await handler(source, event)  # type: ignore[call-arg]
+
+        coros = [_call(handler) for handler in handlers]
         results = await asyncio.gather(*coros, return_exceptions=True)
         for handler, result in zip(handlers, results, strict=False):
             if isinstance(result, Exception):

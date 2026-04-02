@@ -184,7 +184,34 @@ try:
         | Annotated[Agent, Tag("agent")],
         Discriminator(_entity_discriminator),
     ]
-    RuntimeState = RootModel[list[Entity]]
+
+    class RuntimeState(RootModel[list[Entity]]):
+        def checkpoint(self, directory: str) -> str:
+            """Write a checkpoint file to the directory.
+
+            Args:
+                directory: Directory to write checkpoint files into.
+
+            Returns:
+                The path of the written file.
+            """
+            from datetime import datetime, timezone
+            from pathlib import Path as _Path
+            import uuid
+
+            from crewai.context import capture_execution_context
+
+            for entity in self.root:
+                entity.execution_context = capture_execution_context()
+
+            dir_path = _Path(directory)
+            dir_path.mkdir(parents=True, exist_ok=True)
+
+            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+            filename = f"{ts}_{uuid.uuid4().hex[:8]}.json"
+            file_path = dir_path / filename
+            file_path.write_text(self.model_dump_json())
+            return str(file_path)
 
     try:
         Agent.model_rebuild(force=True, _types_namespace=_full_namespace)
