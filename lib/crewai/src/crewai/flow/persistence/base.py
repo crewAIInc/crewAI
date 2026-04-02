@@ -16,13 +16,6 @@ _persistence_registry: dict[str, type[FlowPersistence]] = {}
 
 
 class FlowPersistence(BaseModel, ABC):
-    persistence_type: str = Field(default="base")
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        if not getattr(cls, "__abstractmethods__", set()):
-            _persistence_registry[cls.__name__] = cls
-
     """Abstract base class for flow state persistence.
 
     This class defines the interface that all persistence implementations must follow.
@@ -33,6 +26,13 @@ class FlowPersistence(BaseModel, ABC):
     - load_pending_feedback(): Loads state and pending feedback context
     - clear_pending_feedback(): Clears pending feedback after resume
     """
+
+    persistence_type: str = Field(default="base")
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if not getattr(cls, "__abstractmethods__", set()):
+            _persistence_registry[cls.__name__] = cls
 
     @abstractmethod
     def init_db(self) -> None:

@@ -144,9 +144,31 @@ def callable_to_string(fn: Callable[..., Any]) -> str:
     return f"{module}.{qualname}"
 
 
-SerializableCallable = Annotated[
-    Callable[..., Any],
-    BeforeValidator(string_to_callable),
-    PlainSerializer(callable_to_string, return_type=str, when_used="json"),
-    WithJsonSchema({"type": "string"}),
-]
+class SerializableCallable:
+    """Callable field type with JSON round-trip via dotted-path strings.
+
+    ``SerializableCallable`` — accepts any callable, serializes to dotted path.
+    ``SerializableCallable[Callable[[int], bool] | None]`` — same, with signature preserved.
+    """
+
+    @classmethod
+    def __class_getitem__(cls, item: Any) -> Any:
+        return Annotated[
+            item,
+            BeforeValidator(string_to_callable),
+            PlainSerializer(callable_to_string, return_type=str, when_used="json"),
+            WithJsonSchema({"type": "string"}),
+        ]
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: Any) -> Any:
+        from pydantic_core import core_schema
+
+        schema = core_schema.no_info_plain_validator_function(string_to_callable)
+        return core_schema.no_info_wrap_validator_function(
+            lambda v, handler: handler(v),
+            schema,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                callable_to_string, info_arg=False, when_used="json"
+            ),
+        )

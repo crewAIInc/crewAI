@@ -30,6 +30,7 @@ from crewai.events.types.agent_events import (
 )
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool
+from crewai.types.callback import SerializableCallable
 from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
 from crewai.utilities.import_utils import require
@@ -50,7 +51,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     _memory: Any = PrivateAttr(default=None)
     _max_iterations: int = PrivateAttr(default=10)
     function_calling_llm: Any = Field(default=None)
-    step_callback: Callable[..., Any] | None = Field(default=None)
+    step_callback: SerializableCallable[Callable[..., Any] | None] = Field(default=None)  # type: ignore[type-arg,assignment]
 
     model: str = Field(default="gpt-4o")
     verbose: bool = Field(default=False)

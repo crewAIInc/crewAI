@@ -8,6 +8,7 @@ from pydantic import Field
 from crewai.task import Task
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.types.callback import SerializableCallable
 
 
 class ConditionalTask(Task):
@@ -24,7 +25,7 @@ class ConditionalTask(Task):
         - Cannot be the first task since it needs context from the previous task
     """
 
-    condition: Callable[[TaskOutput], bool] | None = Field(
+    condition: SerializableCallable[Callable[[TaskOutput], bool] | None] = Field(  # type: ignore[type-arg,assignment]
         default=None,
         description="Function that determines whether the task should be executed based on previous task output.",
     )
@@ -35,7 +36,7 @@ class ConditionalTask(Task):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.condition = condition
+        self.condition = condition  # type: ignore[assignment]
 
     def should_execute(self, context: TaskOutput) -> bool:
         """Determines whether the conditional task should be executed based on the provided context.
@@ -51,7 +52,7 @@ class ConditionalTask(Task):
         """
         if self.condition is None:
             raise ValueError("No condition function set for conditional task")
-        return self.condition(context)
+        return self.condition(context)  # type: ignore[operator,no-any-return]
 
     def get_skipped_task_output(self) -> TaskOutput:
         """Generate a TaskOutput for when the conditional task is skipped.
