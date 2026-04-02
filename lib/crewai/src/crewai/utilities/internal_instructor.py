@@ -104,19 +104,21 @@ class InternalInstructor(Generic[T]):
         else:
             provider = "openai"  # Default fallback
 
-        # Forward base_url and api_key when the LLM targets a custom endpoint
-        # (e.g. vLLM, Ollama, Azure OpenAI, or any OpenAI-compatible server).
-        # instructor.from_provider() creates a fresh OpenAI client that
-        # ignores these settings, so we must build the client explicitly.
-        base_url: str | None = getattr(self.llm, "base_url", None) or getattr(
-            self.llm, "api_base", None
-        )
-        if base_url:
-            from openai import OpenAI
+        # Forward base_url and api_key when the LLM targets a custom OpenAI-compatible
+        # endpoint (e.g. vLLM, Ollama, Azure OpenAI).  For non-OpenAI providers
+        # (anthropic, google, etc.) we still use from_provider() which handles
+        # provider-specific client construction.
+        _openai_compatible = {"openai", "azure", "deepseek", "groq", "together", "ollama"}
+        if provider.lower() in _openai_compatible:
+            base_url: str | None = getattr(self.llm, "base_url", None) or getattr(
+                self.llm, "api_base", None
+            )
+            if base_url:
+                from openai import OpenAI
 
-            api_key: str = getattr(self.llm, "api_key", None) or "not-needed"
-            openai_client = OpenAI(base_url=base_url, api_key=api_key)
-            return instructor.from_openai(openai_client)
+                api_key: str = getattr(self.llm, "api_key", None) or "not-needed"
+                openai_client = OpenAI(base_url=base_url, api_key=api_key)
+                return instructor.from_openai(openai_client)
 
         return instructor.from_provider(f"{provider}/{model_string}")
 
