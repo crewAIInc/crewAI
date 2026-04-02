@@ -927,6 +927,30 @@ class TestNativeToolExecution:
         assert len(tool_messages) == 1
         assert tool_messages[0]["tool_call_id"] == "call_1"
 
+    def test_check_native_todo_completion_requires_current_todo(
+        self, mock_dependencies
+    ):
+        from crewai.utilities.planning_types import TodoList
+
+        executor = AgentExecutor(**mock_dependencies)
+
+        # No current todo → not satisfied
+        executor.state.todos = TodoList(items=[])
+        assert executor.check_native_todo_completion() == "todo_not_satisfied"
+
+        # With a current todo that has tool_to_use → satisfied
+        running = TodoItem(
+            step_number=1,
+            description="Use the expected tool",
+            tool_to_use="expected_tool",
+            status="running",
+        )
+        executor.state.todos = TodoList(items=[running])
+        assert executor.check_native_todo_completion() == "todo_satisfied"
+
+        # With a current todo without tool_to_use → still satisfied
+        running.tool_to_use = None
+        assert executor.check_native_todo_completion() == "todo_satisfied"
 
 
 class TestPlannerObserver:
