@@ -14,6 +14,7 @@ import subprocess
 import time
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Literal,
     NoReturn,
@@ -23,12 +24,14 @@ import warnings
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     InstanceOf,
     PrivateAttr,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self
 
 from crewai.agent.planning_config import PlanningConfig
@@ -46,7 +49,11 @@ from crewai.agent.utils import (
     save_last_messages,
     validate_max_execution_time,
 )
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import (
+    BaseAgent,
+    _serialize_llm_ref,
+    _validate_llm_ref,
+)
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
@@ -122,6 +129,24 @@ if TYPE_CHECKING:
 
 _passthrough_exceptions: tuple[type[Exception], ...] = ()
 
+_EXECUTOR_CLASS_MAP: dict[str, type] = {
+    "CrewAgentExecutor": CrewAgentExecutor,
+    "AgentExecutor": AgentExecutor,
+}
+
+
+def _validate_executor_class(value: Any) -> Any:
+    if isinstance(value, str):
+        cls = _EXECUTOR_CLASS_MAP.get(value)
+        if cls is None:
+            raise ValueError(f"Unknown executor class: {value}")
+        return cls
+    return value
+
+
+def _serialize_executor_class(value: Any) -> str:
+    return value.__name__ if isinstance(value, type) else str(value)
+
 
 class Agent(BaseAgent):
     """Represents an agent in a system.
@@ -167,12 +192,16 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
-    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
+    llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
+    function_calling_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
     system_template: str | None = Field(
         default=None, description="System format for the agent."
     )
@@ -268,7 +297,14 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
+    agent_executor: InstanceOf[CrewAgentExecutor] | InstanceOf[AgentExecutor] | None = (
+        Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    )
+    executor_class: Annotated[
+        type[CrewAgentExecutor] | type[AgentExecutor],
+        BeforeValidator(_validate_executor_class),
+        PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
+    ] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
@@ -691,7 +727,9 @@ class Agent(BaseAgent):
             task_prompt,
             knowledge_config,
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
-            self.crew.query_knowledge if self.crew else lambda *a, **k: None,
+            self.crew.query_knowledge
+            if self.crew and not isinstance(self.crew, str)
+            else lambda *a, **k: None,
         )
 
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
@@ -778,14 +816,18 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        return self.agent_executor.invoke(
-            {
-                "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
-                "ask_for_human_input": task.human_input,
-            }
-        )["output"]
+        result = cast(
+            dict[str, Any],
+            self.agent_executor.invoke(
+                {
+                    "input": task_prompt,
+                    "tool_names": self.agent_executor.tools_names,
+                    "tools": self.agent_executor.tools_description,
+                    "ask_for_human_input": task.human_input,
+                }
+            ),
+        )
+        return result["output"]
 
     async def aexecute_task(
         self,
@@ -956,19 +998,23 @@ class Agent(BaseAgent):
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
-                tools=parsed_tools,  # type: ignore[arg-type]
+                tools=parsed_tools,
                 raw_tools=raw_tools,
                 prompt=prompt,
                 stop_words=stop_words,
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before creating agent executor."
+                )
             self.agent_executor = self.executor_class(
-                llm=cast(BaseLLM, self.llm),
+                llm=self.llm,
                 task=task,  # type: ignore[arg-type]
                 i18n=self.i18n,
                 agent=self,
-                crew=self.crew,
+                crew=self.crew,  # type: ignore[arg-type]
                 tools=parsed_tools,
                 prompt=prompt,
                 original_tools=raw_tools,
@@ -992,7 +1038,7 @@ class Agent(BaseAgent):
     def _update_executor_parameters(
         self,
         task: Task | None,
-        tools: list[BaseTool],
+        tools: list[CrewStructuredTool],
         raw_tools: list[BaseTool],
         prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
@@ -1008,11 +1054,17 @@ class Agent(BaseAgent):
             stop_words: Stop words list.
             rpm_limit_fn: RPM limit callback function.
         """
+        if self.agent_executor is None:
+            raise RuntimeError("Agent executor is not initialized.")
+
         self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        self.agent_executor.stop = stop_words
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.stop_words = stop_words
+        else:
+            self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -1034,7 +1086,7 @@ class Agent(BaseAgent):
                 )
             )
 
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
@@ -1788,21 +1840,3 @@ class Agent(BaseAgent):
             LiteAgentOutput: The result of the agent execution.
         """
         return await self.kickoff_async(messages, response_format, input_files)
-
-
-try:
-    from crewai.a2a.config import (
-        A2AClientConfig as _A2AClientConfig,
-        A2AConfig as _A2AConfig,
-        A2AServerConfig as _A2AServerConfig,
-    )
-
-    Agent.model_rebuild(
-        _types_namespace={
-            "A2AConfig": _A2AConfig,
-            "A2AClientConfig": _A2AClientConfig,
-            "A2AServerConfig": _A2AServerConfig,
-        }
-    )
-except ImportError:
-    pass

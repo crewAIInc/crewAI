@@ -17,9 +17,11 @@ from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.utils import (
     build_env_with_tool_repository_credentials,
     extract_available_exports,
+    extract_tools_metadata,
     get_project_description,
     get_project_name,
     get_project_version,
+    read_toml,
     tree_copy,
     tree_find_and_replace,
 )
@@ -101,13 +103,40 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             console.print(
                 f"[green]Found these tools to publish: {', '.join([e['name'] for e in available_exports])}[/green]"
             )
+
+        console.print("[bold blue]Extracting tool metadata...[/bold blue]")
+        try:
+            tools_metadata = extract_tools_metadata()
+        except Exception as e:
+            console.print(
+                f"[yellow]Warning: Could not extract tool metadata: {e}[/yellow]\n"
+                f"Publishing will continue without detailed metadata."
+            )
+            tools_metadata = []
+
+        self._print_tools_preview(tools_metadata)
         self._print_current_organization()
+
+        build_env = os.environ.copy()
+        try:
+            pyproject_data = read_toml()
+            sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+            for source_config in sources.values():
+                if isinstance(source_config, dict):
+                    index = source_config.get("index")
+                    if index:
+                        index_env = build_env_with_tool_repository_credentials(index)
+                        build_env.update(index_env)
+        except Exception:  # noqa: S110
+            pass
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(  # noqa: S603
                 ["uv", "build", "--sdist", "--out-dir", temp_build_dir],  # noqa: S607
                 check=True,
                 capture_output=False,
+                env=build_env,
             )
 
             tarball_filename = next(
@@ -118,7 +147,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                     "Project build failed. Please ensure that the command `uv build --sdist` completes successfully.",
                     style="bold red",
                 )
-                raise SystemExit
+                raise SystemExit(1)
 
             tarball_path = os.path.join(temp_build_dir, tarball_filename)
             with open(tarball_path, "rb") as file:
@@ -134,6 +163,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             description=project_description,
             encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
             available_exports=available_exports,
+            tools_metadata=tools_metadata,
         )
 
         self._validate_response(publish_response)
@@ -245,6 +275,55 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
             )
             raise SystemExit
+
+    def _print_tools_preview(self, tools_metadata: list[dict[str, Any]]) -> None:
+        if not tools_metadata:
+            console.print("[yellow]No tool metadata extracted.[/yellow]")
+            return
+
+        console.print(
+            f"\n[bold]Tools to be published ({len(tools_metadata)}):[/bold]\n"
+        )
+
+        for tool in tools_metadata:
+            console.print(f"  [bold cyan]{tool.get('name', 'Unknown')}[/bold cyan]")
+            if tool.get("module"):
+                console.print(f"    Module: {tool.get('module')}")
+            console.print(f"    Name: {tool.get('humanized_name', 'N/A')}")
+            console.print(
+                f"    Description: {tool.get('description', 'N/A')[:80]}{'...' if len(tool.get('description', '')) > 80 else ''}"
+            )
+
+            init_params = tool.get("init_params_schema", {}).get("properties", {})
+            if init_params:
+                required = tool.get("init_params_schema", {}).get("required", [])
+                console.print("    Init parameters:")
+                for param_name, param_info in init_params.items():
+                    param_type = param_info.get("type", "any")
+                    is_required = param_name in required
+                    req_marker = "[red]*[/red]" if is_required else ""
+                    default = (
+                        f" = {param_info['default']}" if "default" in param_info else ""
+                    )
+                    console.print(
+                        f"      - {param_name}: {param_type}{default} {req_marker}"
+                    )
+
+            env_vars = tool.get("env_vars", [])
+            if env_vars:
+                console.print("    Environment variables:")
+                for env_var in env_vars:
+                    req_marker = "[red]*[/red]" if env_var.get("required") else ""
+                    default = (
+                        f" (default: {env_var['default']})"
+                        if env_var.get("default")
+                        else ""
+                    )
+                    console.print(
+                        f"      - {env_var['name']}: {env_var.get('description', 'N/A')}{default} {req_marker}"
+                    )
+
+            console.print()
 
     def _print_current_organization(self) -> None:
         settings = Settings()

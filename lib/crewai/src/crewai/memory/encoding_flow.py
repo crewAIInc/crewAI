@@ -98,7 +98,7 @@ class EncodingFlow(Flow[EncodingState]):
 
     _skip_auto_memory: bool = True
 
-    initial_state = EncodingState
+    initial_state: type[EncodingState] = EncodingState
 
     def __init__(
         self,

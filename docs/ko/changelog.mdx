@@ -4,6 +4,169 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 4월 2일">
+  ## v1.13.0a7
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a7)
+
+  ## 변경 사항
+
+  ### 기능
+  - v0.8/v0.9 지원, 스키마 및 문서가 포함된 A2UI 확장 추가
+
+  ### 버그 수정
+  - GPT-5 및 o-series를 추가하여 다중 모드 비전 접두사 수정
+
+  ### 문서
+  - v1.13.0a6에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 1일">
+  ## v1.13.0a6
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a6)
+
+  ## 변경 사항
+
+  ### 문서
+  - 실제 UI 옵션에 맞게 RBAC 권한 수준 수정 (#5210)
+  - v1.13.0a5에 대한 변경 로그 및 버전 업데이트 (#5200)
+
+  ### 성능
+  - 지연 이벤트 버스를 구현하고 비활성화 시 추적을 건너뛰어 프레임워크 오버헤드 감소 (#5187)
+
+  ## 기여자
+
+  @alex-clawd, @joaomdmoura, @lucasgomide
+
+</Update>
+
+<Update label="2026년 3월 31일">
+  ## v1.13.0a5
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a5)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.13.0a4에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 1일">
+  ## v1.13.0a4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a4)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.13.0a3에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 1일">
+  ## v1.13.0a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a3)
+
+  ## 변경 사항
+
+  ### 기능
+  - LLMCallCompletedEvent에서 토큰 사용 데이터 발행
+  - 도구 메타데이터를 AMP로 추출 및 게시
+
+  ### 버그 수정
+  - `stop` API 매개변수를 지원하지 않는 GPT-5.x 모델 처리
+
+  ### 문서
+  - 모든 언어에서 에이전트 기능의 부정확성 수정
+  - 에이전트 기능 개요 추가 및 기술 문서 개선
+  - 포괄적인 SSO 구성 가이드 추가
+  - v1.13.0rc1에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - Flow를 Pydantic BaseModel로 변환
+  - LLM 클래스를 Pydantic BaseModel로 변환
+  - InstanceOf[T]를 일반 타입 주석으로 교체
+  - 사용되지 않는 메서드 제거
+
+  ## 기여자
+
+  @dependabot[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="2026년 3월 27일">
+  ## v1.13.0rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0rc1)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.13.0a2의 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 27일">
+  ## v1.13.0a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 릴리스 중 자동 업데이트 배포 테스트 리포지토리
+  - 기업 릴리스의 복원력 및 사용자 경험 개선
+
+  ### 문서
+  - v1.13.0a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 27일">
+  ## v1.13.0a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - Node를 LTS 22로 고정하여 문서 작업 흐름의 끊어진 링크 수정
+  - 기업 릴리스에서 새로 게시된 패키지의 uv 캐시 초기화
+
+  ### 문서
+  - 포괄적인 RBAC 권한 매트릭스 및 배포 가이드 추가
+  - v1.12.2에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
 <Update label="2026년 3월 25일">
   ## v1.12.2
 

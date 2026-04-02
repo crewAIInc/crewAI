@@ -21,7 +21,7 @@ class CrewOutput(BaseModel):
         description="JSON dict output of Crew", default=None
     )
     tasks_output: list[TaskOutput] = Field(
-        description="Output of each task", default=[]
+        description="Output of each task", default_factory=list
     )
     token_usage: UsageMetrics = Field(
         description="Processed token summary", default_factory=UsageMetrics
