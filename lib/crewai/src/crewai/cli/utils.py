@@ -484,8 +484,12 @@ def get_flows(flow_path: str = "main.py") -> list[Flow[Any]]:
             if flow_instances:
                 break
 
-    except Exception:  # noqa: S110
-        pass
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).debug(
+            f"Could not load tool repository credentials: {e}"
+        )
 
     return flow_instances
 
