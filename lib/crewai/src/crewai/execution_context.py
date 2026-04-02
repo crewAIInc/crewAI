@@ -77,5 +77,4 @@ def apply_execution_context(ctx: ExecutionContext) -> None:
     _triggering_event_id.set(ctx.triggering_event_id)
     set_emission_counter(ctx.emission_sequence)
 
-    if ctx.platform_token is not None:
-        _platform_integration_token.set(ctx.platform_token)
+    _platform_integration_token.set(ctx.platform_token)
