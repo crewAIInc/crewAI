@@ -20,7 +20,7 @@ class I18N(BaseModel):
     _prompts: dict[str, dict[str, str]] = PrivateAttr()
     prompt_file: str | None = Field(
         default=None,
-        description="Path to the prompt_file file to load",
+        description="Path to the prompt_file to load",
     )
 
     @model_validator(mode="after")
@@ -125,7 +125,7 @@ class I18N(BaseModel):
         try:
             return self._prompts[kind][key]
         except Exception as e:
-            raise Exception(f"Prompt for '{kind}':'{key}'  not found.") from e
+            raise Exception(f"Prompt for '{kind}':'{key}' not found.") from e
 
 
 @lru_cache(maxsize=None)
