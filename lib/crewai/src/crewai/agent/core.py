@@ -14,6 +14,7 @@ import subprocess
 import time
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Literal,
     NoReturn,
@@ -23,12 +24,14 @@ import warnings
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     InstanceOf,
     PrivateAttr,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self
 
 from crewai.agent.planning_config import PlanningConfig
@@ -46,7 +49,11 @@ from crewai.agent.utils import (
     save_last_messages,
     validate_max_execution_time,
 )
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import (
+    BaseAgent,
+    _serialize_llm_ref,
+    _validate_llm_ref,
+)
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
@@ -122,6 +129,24 @@ if TYPE_CHECKING:
 
 _passthrough_exceptions: tuple[type[Exception], ...] = ()
 
+_EXECUTOR_CLASS_MAP: dict[str, type] = {
+    "CrewAgentExecutor": CrewAgentExecutor,
+    "AgentExecutor": AgentExecutor,
+}
+
+
+def _validate_executor_class(value: Any) -> Any:
+    if isinstance(value, str):
+        cls = _EXECUTOR_CLASS_MAP.get(value)
+        if cls is None:
+            raise ValueError(f"Unknown executor class: {value}")
+        return cls
+    return value
+
+
+def _serialize_executor_class(value: Any) -> str:
+    return value.__name__ if isinstance(value, type) else str(value)
+
 
 class Agent(BaseAgent):
     """Represents an agent in a system.
@@ -167,12 +192,16 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | BaseLLM | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
-    function_calling_llm: str | BaseLLM | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
+    llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
+    function_calling_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
     system_template: str | None = Field(
         default=None, description="System format for the agent."
     )
@@ -271,7 +300,11 @@ class Agent(BaseAgent):
     agent_executor: InstanceOf[CrewAgentExecutor] | InstanceOf[AgentExecutor] | None = (
         Field(default=None, description="An instance of the CrewAgentExecutor class.")
     )
-    executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
+    executor_class: Annotated[
+        type[CrewAgentExecutor] | type[AgentExecutor],
+        BeforeValidator(_validate_executor_class),
+        PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
+    ] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
@@ -1053,7 +1086,7 @@ class Agent(BaseAgent):
                 )
             )
 
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 

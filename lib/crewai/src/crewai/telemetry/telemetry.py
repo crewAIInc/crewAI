@@ -1040,3 +1040,20 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+
+    def feature_usage_span(self, feature: str) -> None:
+        """Records that a feature was used. One span = one count.
+
+        Args:
+            feature: Feature identifier, e.g. "planning:creation",
+                     "mcp:connection", "a2a:delegation".
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Feature Usage")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "feature", feature)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
