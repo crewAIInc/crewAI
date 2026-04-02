@@ -25,7 +25,7 @@ class ConditionalTask(Task):
         - Cannot be the first task since it needs context from the previous task
     """
 
-    condition: SerializableCallable[Callable[[TaskOutput], bool] | None] = Field(  # type: ignore[type-arg,assignment]
+    condition: SerializableCallable | None = Field(
         default=None,
         description="Function that determines whether the task should be executed based on previous task output.",
     )
@@ -36,7 +36,7 @@ class ConditionalTask(Task):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.condition = condition  # type: ignore[assignment]
+        self.condition = condition
 
     def should_execute(self, context: TaskOutput) -> bool:
         """Determines whether the conditional task should be executed based on the provided context.
@@ -52,7 +52,7 @@ class ConditionalTask(Task):
         """
         if self.condition is None:
             raise ValueError("No condition function set for conditional task")
-        return self.condition(context)  # type: ignore[operator,no-any-return]
+        return bool(self.condition(context))
 
     def get_skipped_task_output(self) -> TaskOutput:
         """Generate a TaskOutput for when the conditional task is skipped.

@@ -51,7 +51,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     _memory: Any = PrivateAttr(default=None)
     _max_iterations: int = PrivateAttr(default=10)
     function_calling_llm: Any = Field(default=None)
-    step_callback: SerializableCallable[Callable[..., Any] | None] = Field(default=None)  # type: ignore[type-arg,assignment]
+    step_callback: SerializableCallable | None = Field(default=None)
 
     model: str = Field(default="gpt-4o")
     verbose: bool = Field(default=False)
