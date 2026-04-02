@@ -173,9 +173,9 @@ Cada estado nos flows do CrewAI recebe automaticamente um identificador único (
 
 Ao oferecer as duas opções de gerenciamento de estado, o CrewAI Flows permite que desenvolvedores criem fluxos de IA que sejam ao mesmo tempo flexíveis e robustos, atendendo a uma ampla variedade de requisitos de aplicação.
 
-### File Inputs
+### Entradas de Arquivos
 
-When using structured state, you can include file-typed fields using classes from `crewai-files`. This enables file uploads as part of your flow's input:
+Ao usar estado estruturado, você pode incluir campos tipados como arquivo usando classes do `crewai-files`. Isso habilita uploads de arquivos como parte da entrada do seu flow:
 
 ```python
 from crewai.flow.flow import Flow, start
@@ -195,21 +195,21 @@ class OnboardingFlow(Flow[OnboardingState]):
         return self.state.document
 ```
 
-When deployed on **CrewAI Platform**, file-typed fields automatically render as file upload dropzones in the UI. Users can drag and drop files, which are then passed to your flow.
+Quando implantado na **Plataforma CrewAI**, campos tipados como arquivo são renderizados automaticamente como zonas de upload de arquivos na interface. Os usuários podem arrastar e soltar arquivos, que são então passados para o seu flow.
 
-**Kicking off with files via API:**
+**Iniciando com arquivos via API:**
 
-The `/kickoff` endpoint auto-detects the request format:
-- **JSON body** → normal kickoff
-- **multipart/form-data** → file upload + kickoff
+O endpoint `/kickoff` detecta automaticamente o formato da requisição:
+- **Corpo JSON** → kickoff normal
+- **multipart/form-data** → upload de arquivo + kickoff
 
-API users can also pass URL strings directly to file-typed fields—Pydantic coerces them automatically.
+Usuários da API também podem passar strings de URL diretamente para campos tipados como arquivo — o Pydantic as converte automaticamente.
 
-### API Usage
+### Uso da API
 
-#### Option 1: Multipart kickoff (recommended)
+#### Opção 1: Kickoff multipart (recomendado)
 
-Send files directly with the kickoff request:
+Envie arquivos diretamente com a requisição de kickoff:
 
 ```bash
 # With files (multipart) — same endpoint
@@ -219,9 +219,9 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -F 'cover_image=@/path/to/photo.jpg'
 ```
 
-Files are automatically stored and converted to `FileInput` objects. The agent receives the file with provider-specific optimization (inline base64, file upload API, or URL reference depending on the LLM provider).
+Os arquivos são armazenados automaticamente e convertidos em objetos `FileInput`. O agente recebe o arquivo com otimização específica do provedor (base64 inline, API de upload de arquivo ou referência por URL dependendo do provedor LLM).
 
-#### Option 2: JSON kickoff (no files)
+#### Opção 2: Kickoff JSON (sem arquivos)
 
 ```bash
 # Without files (JSON) — same endpoint
@@ -231,9 +231,9 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -d '{"inputs": {"company_name": "Einstein"}}'
 ```
 
-#### Option 3: Separate upload + kickoff
+#### Opção 3: Upload separado + kickoff
 
-This is an alternative to multipart upload when you need to upload files separately from the kickoff request. Upload files first, then reference them by URL:
+Esta é uma alternativa ao upload multipart quando você precisa fazer upload dos arquivos separadamente da requisição de kickoff. Faça o upload dos arquivos primeiro e depois referencie-os por URL:
 
 ```bash
 # Step 1: Upload
@@ -250,11 +250,11 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -d '{"inputs": {"company_name": "Einstein"}, "input_files": {"cover_image": "https://..."}}'
 ```
 
-See the Platform API documentation for full `/files` endpoint details.
+Consulte a documentação da API da Plataforma para detalhes completos do endpoint `/files`.
 
-#### On CrewAI Platform
+#### Na Plataforma CrewAI
 
-When using the Platform UI, file-typed fields automatically render as drag-and-drop upload zones. No API calls needed—just drop the file and click Run.
+Ao usar a interface da Plataforma, campos tipados como arquivo são renderizados automaticamente como zonas de arrastar e soltar para upload. Nenhuma chamada de API é necessária — basta soltar o arquivo e clicar em Executar.
 
 ## Persistência de Flow
 

@@ -341,9 +341,9 @@ flow.kickoff()
 
 من خلال توفير خيارات إدارة الحالة غير المهيكلة والمهيكلة، تمكّن تدفقات CrewAI المطورين من بناء سير عمل ذكاء اصطناعي مرن ومتين في آن واحد، ملبيةً مجموعة واسعة من متطلبات التطبيقات.
 
-### File Inputs
+### مدخلات الملفات
 
-When using structured state, you can include file-typed fields using classes from `crewai-files`. This enables file uploads as part of your flow's input:
+عند استخدام الحالة المهيكلة، يمكنك تضمين حقول من نوع الملف باستخدام فئات من `crewai-files`. هذا يتيح رفع الملفات كجزء من مدخلات التدفق الخاص بك:
 
 ```python
 from crewai.flow.flow import Flow, start
@@ -363,21 +363,21 @@ class OnboardingFlow(Flow[OnboardingState]):
         return self.state.document
 ```
 
-When deployed on **CrewAI Platform**, file-typed fields automatically render as file upload dropzones in the UI. Users can drag and drop files, which are then passed to your flow.
+عند النشر على **منصة CrewAI**، تُعرض الحقول من نوع الملف تلقائيًا كمناطق سحب وإفلات لرفع الملفات في واجهة المستخدم. يمكن للمستخدمين سحب وإفلات الملفات، والتي تُمرر بعد ذلك إلى التدفق الخاص بك.
 
-**Kicking off with files via API:**
+**بدء التشغيل مع الملفات عبر API:**
 
-The `/kickoff` endpoint auto-detects the request format:
-- **JSON body** → normal kickoff
-- **multipart/form-data** → file upload + kickoff
+تكتشف نقطة النهاية `/kickoff` تنسيق الطلب تلقائيًا:
+- **جسم JSON** ← بدء تشغيل عادي
+- **multipart/form-data** ← رفع ملف + بدء تشغيل
 
-API users can also pass URL strings directly to file-typed fields—Pydantic coerces them automatically.
+يمكن لمستخدمي API أيضًا تمرير سلاسل URL مباشرة إلى الحقول من نوع الملف — يقوم Pydantic بتحويلها تلقائيًا.
 
-### API Usage
+### استخدام API
 
-#### Option 1: Multipart kickoff (recommended)
+#### الخيار 1: بدء تشغيل multipart (موصى به)
 
-Send files directly with the kickoff request:
+أرسل الملفات مباشرة مع طلب بدء التشغيل:
 
 ```bash
 # With files (multipart) — same endpoint
@@ -387,9 +387,9 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -F 'cover_image=@/path/to/photo.jpg'
 ```
 
-Files are automatically stored and converted to `FileInput` objects. The agent receives the file with provider-specific optimization (inline base64, file upload API, or URL reference depending on the LLM provider).
+يتم تخزين الملفات تلقائيًا وتحويلها إلى كائنات `FileInput`. يتلقى الوكيل الملف مع تحسين خاص بالمزود (base64 مضمّن، أو API لرفع الملفات، أو مرجع URL حسب مزود LLM).
 
-#### Option 2: JSON kickoff (no files)
+#### الخيار 2: بدء تشغيل JSON (بدون ملفات)
 
 ```bash
 # Without files (JSON) — same endpoint
@@ -399,9 +399,9 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -d '{"inputs": {"company_name": "Einstein"}}'
 ```
 
-#### Option 3: Separate upload + kickoff
+#### الخيار 3: رفع منفصل + بدء تشغيل
 
-This is an alternative to multipart upload when you need to upload files separately from the kickoff request. Upload files first, then reference them by URL:
+هذا بديل لرفع multipart عندما تحتاج إلى رفع الملفات بشكل منفصل عن طلب بدء التشغيل. ارفع الملفات أولاً، ثم أشِر إليها بواسطة URL:
 
 ```bash
 # Step 1: Upload
@@ -418,11 +418,11 @@ curl -X POST https://your-deployment.crewai.com/kickoff \
   -d '{"inputs": {"company_name": "Einstein"}, "input_files": {"cover_image": "https://..."}}'
 ```
 
-See the Platform API documentation for full `/files` endpoint details.
+راجع وثائق Platform API للحصول على تفاصيل كاملة حول نقطة النهاية `/files`.
 
-#### On CrewAI Platform
+#### على منصة CrewAI
 
-When using the Platform UI, file-typed fields automatically render as drag-and-drop upload zones. No API calls needed—just drop the file and click Run.
+عند استخدام واجهة المنصة، تُعرض الحقول من نوع الملف تلقائيًا كمناطق سحب وإفلات للرفع. لا حاجة لاستدعاءات API — فقط أفلِت الملف وانقر على تشغيل.
 
 ## استمرارية التدفق
 
