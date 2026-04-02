@@ -1,7 +1,5 @@
 """Tests for MCPServerStdio allowed_commands config integration."""
 
-import pytest
-
 from crewai.mcp.config import MCPServerStdio
 from crewai.mcp.transports.stdio import DEFAULT_ALLOWED_COMMANDS
 

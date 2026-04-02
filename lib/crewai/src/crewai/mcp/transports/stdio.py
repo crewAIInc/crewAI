@@ -69,6 +69,8 @@ class StdioTransport(BaseTransport):
 
         if allowed_commands is not None:
             base_command = os.path.basename(command)
+            # Strip extension for Windows compatibility (e.g., python.exe -> python)
+            base_command = os.path.splitext(base_command)[0]
             if base_command not in allowed_commands:
                 raise ValueError(
                     f"Command '{command}' is not in the allowed commands list: "
