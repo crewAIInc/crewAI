@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, TypedDict
@@ -225,7 +226,7 @@ class Converter(OutputConverter):
         """
         try:
             if self.llm.supports_function_calling():
-                return self._create_instructor().to_json()
+                return await asyncio.to_thread(self._create_instructor().to_json)
             return json.dumps(
                 await self.llm.acall(
                     [
