@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import base64
 from collections.abc import Callable, Coroutine
-from datetime import datetime
 from functools import wraps
 import json
 import logging
@@ -434,27 +433,6 @@ async def _execute_impl(
         ) from e
 
 
-async def execute_with_extensions(
-    agent: Agent,
-    context: RequestContext,
-    event_queue: EventQueue,
-    extension_registry: ServerExtensionRegistry,
-    extension_context: ExtensionContext,
-) -> None:
-    """Execute an A2A task with extension hooks.
-
-    Args:
-        agent: The CrewAI agent to execute the task.
-        context: The A2A request context containing the user's message.
-        event_queue: The event queue for sending responses back.
-        extension_registry: Registry of server extensions.
-        extension_context: Context for extension hooks.
-    """
-    await _execute_impl(
-        agent, context, event_queue, extension_registry, extension_context
-    )
-
-
 async def cancel(
     context: RequestContext,
     event_queue: EventQueue,
@@ -503,83 +481,3 @@ async def cancel(
     return None
 
 
-def list_tasks(
-    tasks: list[A2ATask],
-    context_id: str | None = None,
-    status: TaskState | None = None,
-    status_timestamp_after: datetime | None = None,
-    page_size: int = 50,
-    page_token: str | None = None,
-    history_length: int | None = None,
-    include_artifacts: bool = False,
-) -> tuple[list[A2ATask], str | None, int]:
-    """Filter and paginate A2A tasks.
-
-    Provides filtering by context, status, and timestamp, along with
-    cursor-based pagination. This is a pure utility function that operates
-    on an in-memory list of tasks - storage retrieval is handled separately.
-
-    Args:
-        tasks: All tasks to filter.
-        context_id: Filter by context ID to get tasks in a conversation.
-        status: Filter by task state (e.g., completed, working).
-        status_timestamp_after: Filter to tasks updated after this time.
-        page_size: Maximum tasks per page (default 50).
-        page_token: Base64-encoded cursor from previous response.
-        history_length: Limit history messages per task (None = full history).
-        include_artifacts: Whether to include task artifacts (default False).
-
-    Returns:
-        Tuple of (filtered_tasks, next_page_token, total_count).
-        - filtered_tasks: Tasks matching filters, paginated and trimmed.
-        - next_page_token: Token for next page, or None if no more pages.
-        - total_count: Total number of tasks matching filters (before pagination).
-    """
-    filtered: list[A2ATask] = []
-    for task in tasks:
-        if context_id and task.context_id != context_id:
-            continue
-        if status and task.status.state != status:
-            continue
-        if status_timestamp_after and task.status.timestamp:
-            ts = datetime.fromisoformat(task.status.timestamp.replace("Z", "+00:00"))
-            if ts <= status_timestamp_after:
-                continue
-        filtered.append(task)
-
-    def get_timestamp(t: A2ATask) -> datetime:
-        """Extract timestamp from task status for sorting."""
-        if t.status.timestamp is None:
-            return datetime.min
-        return datetime.fromisoformat(t.status.timestamp.replace("Z", "+00:00"))
-
-    filtered.sort(key=get_timestamp, reverse=True)
-    total = len(filtered)
-
-    start = 0
-    if page_token:
-        try:
-            cursor_id = base64.b64decode(page_token).decode()
-            for idx, task in enumerate(filtered):
-                if task.id == cursor_id:
-                    start = idx + 1
-                    break
-        except (ValueError, UnicodeDecodeError):
-            pass
-
-    page = filtered[start : start + page_size]
-
-    result: list[A2ATask] = []
-    for task in page:
-        task = task.model_copy(deep=True)
-        if history_length is not None and task.history:
-            task.history = task.history[-history_length:]
-        if not include_artifacts:
-            task.artifacts = None
-        result.append(task)
-
-    next_token: str | None = None
-    if result and len(result) == page_size:
-        next_token = base64.b64encode(result[-1].id.encode()).decode()
-
-    return result, next_token, total

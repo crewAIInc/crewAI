@@ -64,7 +64,6 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel, Field
 
-from crewai.flow.flow_wrappers import FlowMethod
 
 
 if TYPE_CHECKING:
@@ -188,23 +187,6 @@ class HumanFeedbackConfig:
     provider: HumanFeedbackProvider | None = None
     learn: bool = False
     learn_source: str = "hitl"
-
-
-class HumanFeedbackMethod(FlowMethod[Any, Any]):
-    """Wrapper for methods decorated with @human_feedback.
-
-    This wrapper extends FlowMethod to add human feedback specific attributes
-    that are used by FlowMeta for routing and by visualization tools.
-
-    Attributes:
-        __is_router__: True when emit is specified, enabling router behavior.
-        __router_paths__: List of possible outcomes when acting as a router.
-        __human_feedback_config__: The HumanFeedbackConfig for this method.
-    """
-
-    __is_router__: bool = False
-    __router_paths__: list[str] | None = None
-    __human_feedback_config__: HumanFeedbackConfig | None = None
 
 
 class PreReviewResult(BaseModel):
