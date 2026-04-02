@@ -10,6 +10,7 @@ from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.execution_context import ExecutionContext
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
@@ -178,6 +179,7 @@ __all__ = [
     "BaseLLM",
     "Crew",
     "CrewOutput",
+    "ExecutionContext",
     "Flow",
     "Knowledge",
     "LLMGuardrail",
