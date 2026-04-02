@@ -2050,3 +2050,531 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+# =========================================================================
+# Regression: PR #4656 – Tool Name Collision & Error Handling (Issue #5244)
+# =========================================================================
+
+
+class TestExtractToolName:
+    """Regression tests for _extract_tool_name across all provider formats.
+
+    Guards against the method being removed as 'unused' again (issue #5244).
+    """
+
+    @pytest.fixture
+    def mock_dependencies(self):
+        llm = Mock()
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+
+        agent = Mock()
+        agent.id = "test-agent-id"
+        agent.role = "Test Agent"
+        agent.verbose = False
+        agent.key = "test-key"
+
+        task = Mock()
+        task.description = "Test"
+        task.human_input = False
+        task.response_model = None
+
+        crew = Mock()
+        crew.verbose = False
+        crew._train = False
+
+        return {
+            "llm": llm,
+            "agent": agent,
+            "task": task,
+            "crew": crew,
+            "prompt": {"prompt": "Test"},
+            "max_iter": 10,
+            "tools": [],
+            "tools_names": "",
+            "stop_words": [],
+            "tools_description": "",
+            "tools_handler": Mock(spec=_ToolsHandler),
+        }
+
+    def test_openai_format(self, mock_dependencies):
+        """OpenAI tool call: has .function.name"""
+        executor = _build_executor(**mock_dependencies)
+        tc = Mock()
+        tc.function = Mock()
+        tc.function.name = "my_tool"
+        # Make sure hasattr checks work correctly
+        del tc.function_call
+        del tc.name
+
+        assert executor._extract_tool_name(tc) == "my_tool"
+
+    def test_gemini_format(self, mock_dependencies):
+        """Gemini tool call: has .function_call.name"""
+        executor = _build_executor(**mock_dependencies)
+        tc = Mock(spec=[])  # empty spec so hasattr returns False for unset attrs
+        tc.function_call = Mock()
+        tc.function_call.name = "gemini_tool"
+
+        assert executor._extract_tool_name(tc) == "gemini_tool"
+
+    def test_anthropic_format(self, mock_dependencies):
+        """Anthropic tool call: has .name but no .function"""
+        executor = _build_executor(**mock_dependencies)
+        tc = Mock(spec=[])
+        tc.name = "anthropic_tool"
+
+        assert executor._extract_tool_name(tc) == "anthropic_tool"
+
+    def test_dict_format_with_function(self, mock_dependencies):
+        """Dict tool call with 'function' key."""
+        executor = _build_executor(**mock_dependencies)
+        tc = {"function": {"name": "dict_tool"}, "id": "call_1"}
+
+        assert executor._extract_tool_name(tc) == "dict_tool"
+
+    def test_dict_format_with_name_only(self, mock_dependencies):
+        """Dict tool call with top-level 'name' key (Bedrock-style)."""
+        executor = _build_executor(**mock_dependencies)
+        tc = {"name": "bedrock_tool", "id": "call_1"}
+
+        assert executor._extract_tool_name(tc) == "bedrock_tool"
+
+    def test_unknown_format_returns_unknown(self, mock_dependencies):
+        """Completely unrecognized object returns 'unknown'."""
+        executor = _build_executor(**mock_dependencies)
+
+        assert executor._extract_tool_name(42) == "unknown"
+        assert executor._extract_tool_name("not a tool call") == "unknown"
+
+    def test_sanitizes_names(self, mock_dependencies):
+        """Tool names with special characters are sanitized."""
+        executor = _build_executor(**mock_dependencies)
+        tc = Mock()
+        tc.function = Mock()
+        tc.function.name = "My Special Tool!"
+        del tc.function_call
+        del tc.name
+
+        result = executor._extract_tool_name(tc)
+        assert result == "my_special_tool"
+
+
+class TestToolNameCollisionResolution:
+    """Regression tests for tool name collision resolution via _tool_name_mapping.
+
+    Ensures that tools with duplicate sanitized names are correctly distinguished
+    and that the mapping is used throughout the execution pipeline.
+    """
+
+    def test_convert_tools_deduplicates_names(self):
+        """Two tools with the same sanitized name get unique suffixes."""
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        tool_a = Mock()
+        tool_a.name = "search tool"
+        tool_a.description = "Tool Description: First search"
+        tool_a.args_schema = None
+        tool_a.run = Mock(return_value="a")
+
+        tool_b = Mock()
+        tool_b.name = "search tool"
+        tool_b.description = "Tool Description: Second search"
+        tool_b.args_schema = None
+        tool_b.run = Mock(return_value="b")
+
+        schemas, funcs, mapping = convert_tools_to_openai_schema([tool_a, tool_b])
+
+        assert len(schemas) == 2
+        names = [s["function"]["name"] for s in schemas]
+        # Both names must be unique
+        assert len(set(names)) == 2
+        # The second one gets a _2 suffix
+        assert names[0] == "search_tool"
+        assert names[1] == "search_tool_2"
+        # mapping correctly points to the originals
+        assert mapping["search_tool"] is tool_a
+        assert mapping["search_tool_2"] is tool_b
+        # functions are correctly mapped
+        assert funcs["search_tool"] is tool_a.run
+        assert funcs["search_tool_2"] is tool_b.run
+
+    def test_three_tools_same_name(self):
+        """Three tools with the same name get _2 and _3 suffixes."""
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        tools = []
+        for i in range(3):
+            t = Mock()
+            t.name = "my_tool"
+            t.description = f"Tool Description: Variant {i}"
+            t.args_schema = None
+            t.run = Mock(return_value=str(i))
+            tools.append(t)
+
+        schemas, funcs, mapping = convert_tools_to_openai_schema(tools)
+
+        names = [s["function"]["name"] for s in schemas]
+        assert names == ["my_tool", "my_tool_2", "my_tool_3"]
+        assert len(set(names)) == 3
+
+
+class TestResolveOriginalTool:
+    """Tests for _resolve_original_tool which centralizes tool lookup."""
+
+    @pytest.fixture
+    def mock_dependencies(self):
+        llm = Mock()
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+
+        agent = Mock()
+        agent.id = "test-agent-id"
+        agent.role = "Test Agent"
+        agent.verbose = False
+        agent.key = "test-key"
+
+        task = Mock()
+        task.description = "Test"
+        task.human_input = False
+        task.response_model = None
+
+        crew = Mock()
+        crew.verbose = False
+        crew._train = False
+
+        return {
+            "llm": llm,
+            "agent": agent,
+            "task": task,
+            "crew": crew,
+            "prompt": {"prompt": "Test"},
+            "max_iter": 10,
+            "tools": [],
+            "tools_names": "",
+            "stop_words": [],
+            "tools_description": "",
+            "tools_handler": Mock(spec=_ToolsHandler),
+        }
+
+    def test_resolve_via_mapping(self, mock_dependencies):
+        """_resolve_original_tool finds tool via _tool_name_mapping first."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        tool = Mock(spec=BaseTool)
+        tool.name = "search_tool"
+        executor._tool_name_mapping = {"search_tool": tool}
+        executor.original_tools = []
+
+        assert executor._resolve_original_tool("search_tool") is tool
+
+    def test_resolve_via_original_tools_fallback(self, mock_dependencies):
+        """Falls back to scanning original_tools when mapping is absent."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        tool = Mock(spec=BaseTool)
+        tool.name = "search_tool"
+        executor.original_tools = [tool]
+
+        assert executor._resolve_original_tool("search_tool") is tool
+
+    def test_resolve_collision_renamed_tool(self, mock_dependencies):
+        """Collision-renamed tool (e.g. search_tool_2) found via mapping."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        tool_a = Mock(spec=BaseTool)
+        tool_a.name = "search_tool"
+        tool_b = Mock(spec=BaseTool)
+        tool_b.name = "search_tool"
+
+        executor._tool_name_mapping = {
+            "search_tool": tool_a,
+            "search_tool_2": tool_b,
+        }
+        executor.original_tools = [tool_a, tool_b]
+
+        assert executor._resolve_original_tool("search_tool") is tool_a
+        assert executor._resolve_original_tool("search_tool_2") is tool_b
+
+    def test_resolve_returns_none_for_unknown(self, mock_dependencies):
+        """Returns None when tool is not found anywhere."""
+        executor = _build_executor(**mock_dependencies)
+        executor.original_tools = []
+
+        assert executor._resolve_original_tool("nonexistent") is None
+
+
+class TestToolErrorHandlingRegression:
+    """Regression tests for tool error handling (PR #4656).
+
+    Ensures tool execution errors are injected as observations in the
+    message history and that task error counters are incremented.
+    """
+
+    @pytest.fixture
+    def mock_dependencies(self):
+        llm = Mock()
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+
+        task = Mock()
+        task.name = "Test Task"
+        task.description = "Test"
+        task.human_input = False
+        task.response_model = None
+
+        crew = Mock()
+        crew._memory = None
+        crew.verbose = False
+        crew._train = False
+
+        agent = Mock()
+        agent.id = "test-agent-id"
+        agent.role = "Test Agent"
+        agent.verbose = False
+        agent.key = "test-key"
+
+        tools_handler = Mock(spec=_ToolsHandler)
+        tools_handler.cache = None
+
+        return {
+            "llm": llm,
+            "task": task,
+            "crew": crew,
+            "agent": agent,
+            "prompt": {"prompt": "Test"},
+            "max_iter": 10,
+            "tools": [],
+            "tools_names": "",
+            "stop_words": [],
+            "tools_description": "",
+            "tools_handler": tools_handler,
+        }
+
+    def test_tool_execution_error_injected_as_observation(self, mock_dependencies):
+        """When a native tool raises an error, the error message appears in messages."""
+        executor = _build_executor(**mock_dependencies)
+
+        def failing_tool() -> str:
+            raise RuntimeError("Something went wrong")
+
+        executor._available_functions = {"failing_tool": failing_tool}
+        executor.original_tools = []
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_err",
+                "function": {"name": "failing_tool", "arguments": "{}"},
+            }
+        ]
+
+        result = executor.execute_native_tool()
+
+        assert result == "native_tool_completed"
+        tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
+        assert len(tool_messages) == 1
+        assert "Error executing tool" in tool_messages[0]["content"]
+        assert "Something went wrong" in tool_messages[0]["content"]
+        mock_dependencies["task"].increment_tools_errors.assert_called_once()
+
+    def test_tool_execution_error_with_collision_renamed_tool(self, mock_dependencies):
+        """Error handling works correctly for collision-renamed tools."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        def failing_search() -> str:
+            raise ValueError("Search failed")
+
+        tool_obj = Mock(spec=BaseTool)
+        tool_obj.name = "search_tool"
+        tool_obj.result_as_answer = False
+        tool_obj.max_usage_count = None
+        tool_obj.current_usage_count = 0
+
+        executor._available_functions = {"search_tool_2": failing_search}
+        executor._tool_name_mapping = {"search_tool_2": tool_obj}
+        executor.original_tools = [tool_obj]
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_err2",
+                "function": {"name": "search_tool_2", "arguments": "{}"},
+            }
+        ]
+
+        result = executor.execute_native_tool()
+
+        assert result == "native_tool_completed"
+        tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
+        assert len(tool_messages) == 1
+        assert "Search failed" in tool_messages[0]["content"]
+
+    def test_result_as_answer_with_collision_renamed_tool(self, mock_dependencies):
+        """result_as_answer works correctly for collision-renamed tools."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        tool_obj = Mock(spec=BaseTool)
+        tool_obj.name = "search_tool"
+        tool_obj.result_as_answer = True
+        tool_obj.max_usage_count = None
+        tool_obj.current_usage_count = 0
+        tool_obj.cache_function = Mock(return_value=True)
+
+        executor._available_functions = {"search_tool_2": lambda: "final answer"}
+        executor._tool_name_mapping = {"search_tool_2": tool_obj}
+        executor.original_tools = [tool_obj]
+        executor.tools = []
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_final",
+                "function": {"name": "search_tool_2", "arguments": "{}"},
+            }
+        ]
+
+        result = executor.execute_native_tool()
+
+        assert result == "tool_result_is_final"
+        assert isinstance(executor.state.current_answer, AgentFinish)
+        assert executor.state.current_answer.output == "final answer"
+
+    def test_max_usage_with_collision_renamed_tool(self, mock_dependencies):
+        """max_usage_count is respected for collision-renamed tools."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        tool_obj = Mock(spec=BaseTool)
+        tool_obj.name = "search_tool"
+        tool_obj.result_as_answer = False
+        tool_obj.max_usage_count = 2
+        tool_obj.current_usage_count = 2  # already at limit
+
+        executor._available_functions = {"search_tool_2": lambda: "should not run"}
+        executor._tool_name_mapping = {"search_tool_2": tool_obj}
+        executor.original_tools = [tool_obj]
+        executor.tools = []
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_limited",
+                "function": {"name": "search_tool_2", "arguments": "{}"},
+            }
+        ]
+
+        result = executor.execute_native_tool()
+
+        assert result == "native_tool_completed"
+        tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
+        assert len(tool_messages) == 1
+        assert "usage limit" in tool_messages[0]["content"]
+
+
+class TestShouldParallelizeUsesExtractToolName:
+    """Regression: _should_parallelize_native_tool_calls must use _extract_tool_name.
+
+    This test class ensures the method is wired through _extract_tool_name
+    so that it cannot be removed as 'dead code' without breaking tests.
+    """
+
+    @pytest.fixture
+    def mock_dependencies(self):
+        llm = Mock()
+        llm.stop = []
+        llm.supports_stop_words.return_value = True
+
+        agent = Mock()
+        agent.id = "test-agent-id"
+        agent.role = "Test Agent"
+        agent.verbose = False
+        agent.key = "test-key"
+
+        task = Mock()
+        task.description = "Test"
+        task.human_input = False
+        task.response_model = None
+
+        crew = Mock()
+        crew.verbose = False
+        crew._train = False
+
+        return {
+            "llm": llm,
+            "agent": agent,
+            "task": task,
+            "crew": crew,
+            "prompt": {"prompt": "Test"},
+            "max_iter": 10,
+            "tools": [],
+            "tools_names": "",
+            "stop_words": [],
+            "tools_description": "",
+            "tools_handler": Mock(spec=_ToolsHandler),
+        }
+
+    def test_parallelize_calls_extract_tool_name(self, mock_dependencies):
+        """Verify _should_parallelize routes through _extract_tool_name."""
+        executor = _build_executor(**mock_dependencies)
+        executor.original_tools = []
+
+        tool_calls = [
+            {"id": "c1", "function": {"name": "tool_a", "arguments": "{}"}},
+            {"id": "c2", "function": {"name": "tool_b", "arguments": "{}"}},
+        ]
+
+        with patch.object(
+            executor, "_extract_tool_name", wraps=executor._extract_tool_name
+        ) as mock_extract:
+            executor._should_parallelize_native_tool_calls(tool_calls)
+
+        assert mock_extract.call_count == 2
+
+    def test_parallelize_false_for_result_as_answer_via_mapping(
+        self, mock_dependencies
+    ):
+        """result_as_answer tool detected via _tool_name_mapping blocks parallel."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        final_tool = Mock(spec=BaseTool)
+        final_tool.name = "search_tool"
+        final_tool.result_as_answer = True
+        final_tool.max_usage_count = None
+
+        executor._tool_name_mapping = {"search_tool_2": final_tool}
+        executor.original_tools = [final_tool]
+
+        tool_calls = [
+            {"id": "c1", "function": {"name": "search_tool_2", "arguments": "{}"}},
+            {"id": "c2", "function": {"name": "other_tool", "arguments": "{}"}},
+        ]
+
+        assert executor._should_parallelize_native_tool_calls(tool_calls) is False
+
+    def test_parallelize_true_when_all_tools_safe(self, mock_dependencies):
+        """Parallel execution allowed when no tools have special flags."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        safe_tool = Mock(spec=BaseTool)
+        safe_tool.name = "safe_tool"
+        safe_tool.result_as_answer = False
+        safe_tool.max_usage_count = None
+
+        executor._tool_name_mapping = {"safe_tool": safe_tool}
+        executor.original_tools = [safe_tool]
+
+        tool_calls = [
+            {"id": "c1", "function": {"name": "safe_tool", "arguments": "{}"}},
+            {"id": "c2", "function": {"name": "unknown_tool", "arguments": "{}"}},
+        ]
+
+        assert executor._should_parallelize_native_tool_calls(tool_calls) is True
