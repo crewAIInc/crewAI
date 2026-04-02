@@ -695,7 +695,9 @@ class Agent(BaseAgent):
             task_prompt,
             knowledge_config,
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
-            self.crew.query_knowledge if self.crew else lambda *a, **k: None,
+            self.crew.query_knowledge
+            if self.crew and not isinstance(self.crew, str)
+            else lambda *a, **k: None,
         )
 
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)

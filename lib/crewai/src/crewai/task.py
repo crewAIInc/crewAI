@@ -41,6 +41,7 @@ from crewai.events.types.task_events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
+from crewai.llms.base_llm import BaseLLM
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -316,6 +317,10 @@ class Task(BaseModel):
             if self.agent is None:
                 raise ValueError("Agent is required to use LLMGuardrail")
 
+            if not isinstance(self.agent.llm, BaseLLM):
+                raise ValueError(
+                    "Agent must have a BaseLLM instance to use LLMGuardrail"
+                )
             self._guardrail = cast(
                 GuardrailCallable,
                 LLMGuardrail(description=self.guardrail, llm=self.agent.llm),
@@ -339,6 +344,10 @@ class Task(BaseModel):
                                 )
                             from crewai.tasks.llm_guardrail import LLMGuardrail
 
+                            if not isinstance(self.agent.llm, BaseLLM):
+                                raise ValueError(
+                                    "Agent must have a BaseLLM instance to use LLMGuardrail"
+                                )
                             guardrails.append(
                                 cast(
                                     GuardrailCallable,
@@ -359,6 +368,10 @@ class Task(BaseModel):
                         )
                     from crewai.tasks.llm_guardrail import LLMGuardrail
 
+                    if not isinstance(self.agent.llm, BaseLLM):
+                        raise ValueError(
+                            "Agent must have a BaseLLM instance to use LLMGuardrail"
+                        )
                     guardrails.append(
                         cast(
                             GuardrailCallable,
@@ -646,7 +659,12 @@ class Task(BaseModel):
                     await cb_result
 
             crew = self.agent.crew  # type: ignore[union-attr]
-            if crew and crew.task_callback and crew.task_callback != self.callback:
+            if (
+                crew
+                and not isinstance(crew, str)
+                and crew.task_callback
+                and crew.task_callback != self.callback
+            ):
                 cb_result = crew.task_callback(self.output)
                 if inspect.isawaitable(cb_result):
                     await cb_result
@@ -761,7 +779,12 @@ class Task(BaseModel):
                     asyncio.run(cb_result)
 
             crew = self.agent.crew  # type: ignore[union-attr]
-            if crew and crew.task_callback and crew.task_callback != self.callback:
+            if (
+                crew
+                and not isinstance(crew, str)
+                and crew.task_callback
+                and crew.task_callback != self.callback
+            ):
                 cb_result = crew.task_callback(self.output)
                 if inspect.iscoroutine(cb_result):
                     asyncio.run(cb_result)
@@ -812,11 +835,14 @@ class Task(BaseModel):
                 if trigger_payload is not None:
                     description += f"\n\nTrigger Payload: {trigger_payload}"
 
-        if self.agent and self.agent.crew:
+        if self.agent and self.agent.crew and not isinstance(self.agent.crew, str):
             files = get_all_files(self.agent.crew.id, self.id)
             if files:
                 supported_types: list[str] = []
-                if self.agent.llm and self.agent.llm.supports_multimodal():
+                if (
+                    isinstance(self.agent.llm, BaseLLM)
+                    and self.agent.llm.supports_multimodal()
+                ):
                     provider: str = str(
                         getattr(self.agent.llm, "provider", None)
                         or getattr(self.agent.llm, "model", "openai")
