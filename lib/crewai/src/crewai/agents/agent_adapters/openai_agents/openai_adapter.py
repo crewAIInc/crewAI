@@ -4,6 +4,7 @@ This module contains the OpenAIAgentAdapter class that integrates OpenAI Assista
 with CrewAI's agent system, providing tool integration and structured output support.
 """
 
+from collections.abc import Sequence
 from typing import Any, cast
 
 from pydantic import ConfigDict, Field, PrivateAttr
@@ -221,7 +222,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         """
         return self._converter_adapter.post_process_result(result.final_output)
 
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         """Implement delegation tools support.
 
         Creates delegation tools that allow this agent to delegate tasks to other agents.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from concurrent.futures import Future
 import contextvars
 from copy import copy as shallow_copy
@@ -12,6 +13,7 @@ import logging
 from pathlib import Path
 import threading
 from typing import (
+    Annotated,
     Any,
     ClassVar,
     cast,
@@ -24,6 +26,7 @@ import warnings
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
     PrivateAttr,
     field_validator,
@@ -32,7 +35,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent, _resolve_agent
 from crewai.context import reset_current_task_id, set_current_task_id
 from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
@@ -129,9 +132,10 @@ class Task(BaseModel):
     callback: SerializableCallable | None = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
-    agent: BaseAgent | None = Field(
-        description="Agent responsible for execution the task.", default=None
-    )
+    agent: Annotated[
+        BaseAgent | None,
+        BeforeValidator(_resolve_agent),
+    ] = Field(description="Agent responsible for execution the task.", default=None)
     context: list[Task] | None | _NotSpecified = Field(
         description="Other tasks that will have their output used as context for this task.",
         default=NOT_SPECIFIED,
@@ -392,11 +396,12 @@ class Task(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
-        if v:
+    def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
+        if v and not (info.context or {}).get("from_checkpoint"):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
+        return v
 
     @field_validator("input_files", mode="before")
     @classmethod
@@ -997,7 +1002,7 @@ Follow these guidelines:
         self.delegations += 1
 
     def copy(  # type: ignore
-        self, agents: list[BaseAgent], task_mapping: dict[str, Task]
+        self, agents: Sequence[BaseAgent], task_mapping: dict[str, Task]
     ) -> Task:
         """Creates a deep copy of the Task while preserving its original class type.
 

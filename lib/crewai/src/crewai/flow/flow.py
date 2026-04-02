@@ -25,6 +25,7 @@ import logging
 import threading
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     ClassVar,
     Generic,
@@ -41,9 +42,11 @@ from opentelemetry import baggage
 from opentelemetry.context import attach, detach
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     PrivateAttr,
+    SerializeAsAny,
     ValidationError,
 )
 from pydantic._internal._model_construction import ModelMetaclass
@@ -115,6 +118,7 @@ from crewai.memory.unified_memory import Memory
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
+    from crewai.context import ExecutionContext
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
 
@@ -132,6 +136,19 @@ from crewai.utilities.streaming import (
 
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_persistence(value: Any) -> Any:
+    if value is None or isinstance(value, FlowPersistence):
+        return value
+    if isinstance(value, dict):
+        from crewai.flow.persistence.base import _persistence_registry
+
+        type_name = value.get("persistence_type", "SQLiteFlowPersistence")
+        cls = _persistence_registry.get(type_name)
+        if cls is not None:
+            return cls.model_validate(value)
+    return value
 
 
 class FlowState(BaseModel):
@@ -883,6 +900,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _routers: ClassVar[set[FlowMethodName]] = set()
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
 
+    entity_type: Literal["flow"] = "flow"
+
     initial_state: Any = Field(default=None)
     name: str | None = Field(default=None)
     tracing: bool | None = Field(default=None)
@@ -893,8 +912,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
     last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
-    persistence: Any = Field(default=None, exclude=True)
-    max_method_calls: int = Field(default=100, exclude=True)
+    persistence: Annotated[
+        SerializeAsAny[FlowPersistence] | Any,
+        BeforeValidator(lambda v, _: _resolve_persistence(v)),
+    ] = Field(default=None)
+    max_method_calls: int = Field(default=100)
+
+    execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint_completed_methods: set[str] | None = Field(default=None)
+    checkpoint_method_outputs: list[Any] | None = Field(default=None)
+    checkpoint_method_counts: dict[str, int] | None = Field(default=None)
+    checkpoint_state: dict[str, Any] | None = Field(default=None)
 
     _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
         default_factory=dict
