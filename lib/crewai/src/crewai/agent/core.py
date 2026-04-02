@@ -976,16 +976,12 @@ class Agent(BaseAgent):
                 raise RuntimeError(
                     "LLM must be resolved before creating agent executor."
                 )
-            if not isinstance(self.crew, BaseModel):
-                raise RuntimeError(
-                    "Agent must be assigned to a crew before creating agent executor."
-                )
             self.agent_executor = self.executor_class(
                 llm=self.llm,
                 task=task,  # type: ignore[arg-type]
                 i18n=self.i18n,
                 agent=self,
-                crew=self.crew,
+                crew=self.crew,  # type: ignore[arg-type]
                 tools=parsed_tools,
                 prompt=prompt,
                 original_tools=raw_tools,
