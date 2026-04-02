@@ -8,14 +8,15 @@ from pydantic import PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.context import ExecutionContext
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
-from crewai.execution_context import ExecutionContext
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
+from crewai.runtime_state import _entity_discriminator
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
@@ -112,10 +113,13 @@ try:
 
     _base_namespace: dict[str, type] = {
         "Agent": Agent,
+        "BaseAgent": _BaseAgent,
         "Crew": Crew,
+        "Flow": Flow,
         "BaseLLM": BaseLLM,
         "Task": Task,
         "CrewAgentExecutorMixin": _CrewAgentExecutorMixin,
+        "ExecutionContext": ExecutionContext,
     }
 
     try:
@@ -154,12 +158,33 @@ try:
     for _mod_name in (
         _BaseAgent.__module__,
         Agent.__module__,
+        Crew.__module__,
+        Flow.__module__,
+        Task.__module__,
         _AgentExecutor.__module__,
     ):
         sys.modules[_mod_name].__dict__.update(_resolve_namespace)
 
+    from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
+
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
+    Task.model_rebuild(force=True, _types_namespace=_full_namespace)
+    _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
+    Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
+    Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
+
+    from typing import Annotated
+
+    from pydantic import Discriminator, RootModel, Tag
+
+    Entity = Annotated[
+        Annotated[Flow, Tag("flow")]  # type: ignore[type-arg]
+        | Annotated[Crew, Tag("crew")]
+        | Annotated[Agent, Tag("agent")],
+        Discriminator(_entity_discriminator),
+    ]
+    RuntimeState = RootModel[list[Entity]]
 
     try:
         Agent.model_rebuild(force=True, _types_namespace=_full_namespace)
@@ -172,6 +197,7 @@ except (ImportError, PydanticUserError):
         "model_rebuild() failed; forward refs may be unresolved.",
         exc_info=True,
     )
+    RuntimeState = None  # type: ignore[assignment,misc]
 
 __all__ = [
     "LLM",
@@ -186,6 +212,7 @@ __all__ = [
     "Memory",
     "PlanningConfig",
     "Process",
+    "RuntimeState",
     "Task",
     "TaskOutput",
     "__version__",

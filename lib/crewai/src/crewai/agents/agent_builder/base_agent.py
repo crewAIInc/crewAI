@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
@@ -48,6 +49,7 @@ from crewai.utilities.string_utils import interpolate_only
 
 
 if TYPE_CHECKING:
+    from crewai.context import ExecutionContext
     from crewai.crew import Crew
 
 
@@ -59,6 +61,26 @@ def _serialize_crew_ref(value: Any) -> str | None:
     if value is None:
         return None
     return str(value.id) if hasattr(value, "id") else str(value)
+
+
+def _validate_llm_ref(value: Any) -> Any:
+    return value
+
+
+def _resolve_agent(value: Any, info: Any) -> Any:
+    if isinstance(value, BaseAgent) or value is None or not isinstance(value, dict):
+        return value
+    from crewai.agent.core import Agent
+
+    return Agent.model_validate(value, context=getattr(info, "context", None))
+
+
+def _serialize_llm_ref(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return getattr(value, "model", str(value))
 
 
 _SLUG_RE: Final[re.Pattern[str]] = re.compile(
@@ -138,6 +160,8 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             Set private attributes.
     """
 
+    entity_type: Literal["agent"] = "agent"
+
     __hash__ = object.__hash__
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
@@ -176,9 +200,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     agent_executor: InstanceOf[CrewAgentExecutorMixin] | None = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
-    llm: str | BaseLLM | None = Field(
-        default=None, description="Language model that will run the agent."
-    )
+    llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+    ] = Field(default=None, description="Language model that will run the agent.")
     crew: Annotated[
         Crew | str | None,
         BeforeValidator(_validate_crew_ref),
@@ -197,7 +223,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="An instance of the ToolsHandler class.",
     )
     tools_results: list[dict[str, Any]] = Field(
-        default=[], description="Results of the tools used by the agent."
+        default_factory=list, description="Results of the tools used by the agent."
     )
     max_tokens: int | None = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
@@ -248,6 +274,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
         min_length=1,
     )
+    execution_context: ExecutionContext | None = Field(default=None)
 
     @model_validator(mode="before")
     @classmethod
@@ -362,11 +389,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
-        if v:
+    def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
+        if v and not (info.context or {}).get("from_checkpoint"):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
+        return v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> Self:
@@ -423,7 +451,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
 
     @abstractmethod
