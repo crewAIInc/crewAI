@@ -9,13 +9,13 @@ class ReasoningEvent(BaseEvent):
     type: str
     attempt: int = 1
     agent_role: str
-    task_id: str
+    task_id: str | None = None
     task_name: str | None = None
     from_task: Any | None = None
     agent_id: str | None = None
     from_agent: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._set_task_params(data)
         self._set_agent_params(data)

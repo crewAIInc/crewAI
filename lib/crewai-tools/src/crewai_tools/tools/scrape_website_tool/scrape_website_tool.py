@@ -31,8 +31,8 @@ class ScrapeWebsiteTool(BaseTool):
     description: str = "A tool that can be used to read a website content."
     args_schema: type[BaseModel] = ScrapeWebsiteToolSchema
     website_url: str | None = None
-    cookies: dict | None = None
-    headers: dict | None = Field(
+    cookies: dict[str, str] | None = None
+    headers: dict[str, str] | None = Field(
         default_factory=lambda: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -46,8 +46,8 @@ class ScrapeWebsiteTool(BaseTool):
     def __init__(
         self,
         website_url: str | None = None,
-        cookies: dict | None = None,
-        **kwargs,
+        cookies: dict[str, str] | None = None,
+        **kwargs: Any,
     ):
         super().__init__(**kwargs)
         if not BEAUTIFULSOUP_AVAILABLE:
@@ -63,7 +63,7 @@ class ScrapeWebsiteTool(BaseTool):
             self.args_schema = FixedScrapeWebsiteToolSchema
             self._generate_description()
             if cookies is not None:
-                self.cookies = {cookies["name"]: os.getenv(cookies["value"])}
+                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
 
     def _run(
         self,

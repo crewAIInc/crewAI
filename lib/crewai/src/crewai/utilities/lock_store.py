@@ -1,7 +1,7 @@
 """Centralised lock factory.
 
-If ``REDIS_URL`` is set, locks are distributed via ``portalocker.RedisLock``. Otherwise, falls
-back to the standard ``portalocker.Lock``.
+If ``REDIS_URL`` is set and the ``redis`` package is installed, locks are distributed via
+``portalocker.RedisLock``. Otherwise, falls back to the standard ``portalocker.Lock``.
 """
 
 from __future__ import annotations
@@ -10,20 +10,36 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
 from hashlib import md5
+import logging
 import os
 import tempfile
 from typing import TYPE_CHECKING, Final
 
 import portalocker
+import portalocker.exceptions
 
 
 if TYPE_CHECKING:
     import redis
 
 
+logger = logging.getLogger(__name__)
+
 _REDIS_URL: str | None = os.environ.get("REDIS_URL")
 
 _DEFAULT_TIMEOUT: Final[int] = 120
+
+
+def _redis_available() -> bool:
+    """Return True if redis is installed and REDIS_URL is set."""
+    if not _REDIS_URL:
+        return False
+    try:
+        import redis  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
 
 
 @lru_cache(maxsize=1)
@@ -47,7 +63,7 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
     """
     channel = f"crewai:{md5(name.encode(), usedforsecurity=False).hexdigest()}"
 
-    if _REDIS_URL:
+    if _redis_available():
         with portalocker.RedisLock(
             channel=channel,
             connection=_redis_connection(),
@@ -57,5 +73,16 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
     else:
         lock_dir = tempfile.gettempdir()
         lock_path = os.path.join(lock_dir, f"{channel}.lock")
-        with portalocker.Lock(lock_path, timeout=timeout):
+        try:
+            pl = portalocker.Lock(lock_path, timeout=timeout)
+            pl.acquire()
+        except portalocker.exceptions.BaseLockException as exc:
+            raise portalocker.exceptions.LockException(
+                f"Failed to acquire lock '{name}' at {lock_path} "
+                f"(timeout={timeout}s). This commonly occurs in "
+                f"multi-process environments. "
+            ) from exc
+        try:
             yield
+        finally:
+            pl.release()  # type: ignore[no-untyped-call]

@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from pydantic import ConfigDict, model_validator
+from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.base_events import BaseEvent
@@ -25,16 +26,9 @@ class AgentExecutionStartedEvent(BaseEvent):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def set_fingerprint_data(self):
+    def set_fingerprint_data(self) -> Self:
         """Set fingerprint data from the agent if available."""
-        if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
-            self.source_fingerprint = self.agent.fingerprint.uuid_str
-            self.source_type = "agent"
-            if (
-                hasattr(self.agent.fingerprint, "metadata")
-                and self.agent.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.agent.fingerprint.metadata
+        _set_agent_fingerprint(self, self.agent)
         return self
 
 
@@ -49,16 +43,9 @@ class AgentExecutionCompletedEvent(BaseEvent):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def set_fingerprint_data(self):
+    def set_fingerprint_data(self) -> Self:
         """Set fingerprint data from the agent if available."""
-        if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
-            self.source_fingerprint = self.agent.fingerprint.uuid_str
-            self.source_type = "agent"
-            if (
-                hasattr(self.agent.fingerprint, "metadata")
-                and self.agent.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.agent.fingerprint.metadata
+        _set_agent_fingerprint(self, self.agent)
         return self
 
 
@@ -73,16 +60,9 @@ class AgentExecutionErrorEvent(BaseEvent):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def set_fingerprint_data(self):
+    def set_fingerprint_data(self) -> Self:
         """Set fingerprint data from the agent if available."""
-        if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
-            self.source_fingerprint = self.agent.fingerprint.uuid_str
-            self.source_type = "agent"
-            if (
-                hasattr(self.agent.fingerprint, "metadata")
-                and self.agent.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.agent.fingerprint.metadata
+        _set_agent_fingerprint(self, self.agent)
         return self
 
 
@@ -140,3 +120,13 @@ class AgentEvaluationFailedEvent(BaseEvent):
     iteration: int
     error: str
     type: str = "agent_evaluation_failed"
+
+
+def _set_agent_fingerprint(event: BaseEvent, agent: BaseAgent) -> None:
+    """Set fingerprint data on an event from an agent object."""
+    fp = agent.security_config.fingerprint
+    if fp is not None:
+        event.source_fingerprint = fp.uuid_str
+        event.source_type = "agent"
+        if fp.metadata:
+            event.fingerprint_metadata = fp.metadata

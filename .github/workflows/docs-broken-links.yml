@@ -23,7 +23,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "latest"
+          node-version: "22"
 
       - name: Install Mintlify CLI
         run: npm i -g mintlify

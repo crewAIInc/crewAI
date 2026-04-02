@@ -1,40 +1,64 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
+from pathlib import Path
 import re
-from typing import Any, Final, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
 
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
+    InstanceOf,
     PrivateAttr,
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agent.internal.meta import AgentMeta
+from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
 from crewai.tools.base_tool import BaseTool, Tool
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
+
+
+if TYPE_CHECKING:
+    from crewai.crew import Crew
+
+
+def _validate_crew_ref(value: Any) -> Any:
+    return value
+
+
+def _serialize_crew_ref(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value.id) if hasattr(value, "id") else str(value)
 
 
 _SLUG_RE: Final[re.Pattern[str]] = re.compile(
@@ -117,7 +141,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     __hash__ = object.__hash__
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
-    _request_within_rpm_limit: Any = PrivateAttr(default=None)
+    _request_within_rpm_limit: SerializableCallable | None = PrivateAttr(default=None)
     _original_role: str | None = PrivateAttr(default=None)
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
@@ -149,13 +173,19 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: Any = Field(
+    agent_executor: InstanceOf[CrewAgentExecutorMixin] | None = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
-    llm: Any = Field(
+    llm: str | BaseLLM | None = Field(
         default=None, description="Language model that will run the agent."
     )
-    crew: Any = Field(default=None, description="Crew to which the agent belongs.")
+    crew: Annotated[
+        Crew | str | None,
+        BeforeValidator(_validate_crew_ref),
+        PlainSerializer(
+            _serialize_crew_ref, return_type=str | None, when_used="always"
+        ),
+    ] = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(
         default_factory=get_i18n, description="Internationalization settings."
     )
@@ -179,7 +209,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="Knowledge sources for the agent.",
     )
-    knowledge_storage: Any | None = Field(
+    knowledge_storage: BaseKnowledgeStorage | None = Field(
         default=None,
         description="Custom knowledge storage for the agent.",
     )
@@ -187,7 +217,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: list[Callable[[Any], Any]] = Field(
+    callbacks: list[SerializableCallable] = Field(
         default_factory=list, description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
@@ -205,13 +235,18 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
     )
-    memory: Any = Field(
+    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
         default=None,
         description=(
             "Enable agent memory. Pass True for default Memory(), "
             "or a Memory/MemoryScope/MemorySlice instance for custom configuration. "
             "If not set, falls back to crew memory."
         ),
+    )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
+        min_length=1,
     )
 
     @model_validator(mode="before")
@@ -495,4 +530,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self._rpm_controller = rpm_controller
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
+        pass
+
+    def set_skills(self, resolved_crew_skills: list[Any] | None = None) -> None:
         pass

@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 
 
-T = TypeVar("T", bound=EmbeddingFunction)
+T = TypeVar("T", bound=EmbeddingFunction)  # type: ignore[type-arg]
 
 
 class BaseEmbeddingsProvider(BaseSettings, Generic[T]):

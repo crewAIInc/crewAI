@@ -1,0 +1,112 @@
+---
+title: "تصدير مكون React"
+description: "تعلم كيفية تصدير ودمج مكونات React من CrewAI AMP في تطبيقاتك"
+icon: "react"
+mode: "wide"
+---
+
+يشرح هذا الدليل كيفية تصدير طواقم CrewAI AMP كمكونات React ودمجها في تطبيقاتك.
+
+## تصدير مكون React
+
+<Steps>
+    <Step title="تصدير المكون">
+        انقر على القائمة (ثلاث نقاط على يمين طاقمك المنشور) واختر خيار التصدير واحفظ الملف محلياً. سنستخدم `CrewLead.jsx` في مثالنا.
+
+        <Frame>
+            <img src="/images/enterprise/export-react-component.png" alt="تصدير مكون React" />
+        </Frame>
+    </Step>
+
+</Steps>
+
+## إعداد بيئة React
+
+لتشغيل مكون React هذا محلياً، ستحتاج لإعداد بيئة تطوير React ودمج هذا المكون في مشروع React.
+
+<Steps>
+    <Step title="تثبيت Node.js">
+        - حمّل وثبّت Node.js من الموقع الرسمي: https://nodejs.org/
+        - اختر إصدار LTS (الدعم طويل المدى) للاستقرار.
+    </Step>
+
+    <Step title="إنشاء مشروع React جديد">
+        - افتح Command Prompt أو PowerShell
+        - انتقل إلى المجلد الذي تريد إنشاء مشروعك فيه
+        - شغّل الأمر التالي لإنشاء مشروع React جديد:
+
+            ```bash
+            npx create-react-app my-crew-app
+            ```
+        - انتقل إلى مجلد المشروع:
+
+            ```bash
+            cd my-crew-app
+            ```
+    </Step>
+
+    <Step title="تثبيت الاعتماديات اللازمة">
+        ```bash
+        npm install react-dom
+        ```
+    </Step>
+
+    <Step title="إنشاء مكون CrewLead">
+        - انقل الملف المُحمّل `CrewLead.jsx` إلى مجلد `src` في مشروعك.
+    </Step>
+
+    <Step title="تعديل App.js لاستخدام مكون CrewLead">
+        - افتح `src/App.js`
+        - استبدل محتوياته بشيء مثل هذا:
+
+        ```jsx
+        import React from 'react';
+        import CrewLead from './CrewLead';
+
+        function App() {
+            return (
+                <div className="App">
+                    <CrewLead baseUrl="YOUR_API_BASE_URL" bearerToken="YOUR_BEARER_TOKEN" />
+                </div>
+            );
+        }
+
+        export default App;
+        ```
+        - استبدل `YOUR_API_BASE_URL` و`YOUR_BEARER_TOKEN` بالقيم الفعلية لـ API.
+    </Step>
+
+    <Step title="بدء خادم التطوير">
+        - في مجلد مشروعك، شغّل:
+
+            ```bash
+            npm start
+            ```
+        - سيبدأ خادم التطوير، ويجب أن يفتح متصفح الويب الافتراضي تلقائياً على `http://localhost:3000`، حيث سترى تطبيق React يعمل.
+    </Step>
+
+</Steps>
+
+## التخصيص
+
+يمكنك بعد ذلك تخصيص `CrewLead.jsx` لإضافة اللون والعنوان وغيرها.
+
+<Frame>
+  <img
+    src="/images/enterprise/customise-react-component.png"
+    alt="تخصيص مكون React"
+  />
+</Frame>
+<Frame>
+  <img
+    src="/images/enterprise/customise-react-component-2.png"
+    alt="تخصيص مكون React"
+  />
+</Frame>
+
+## الخطوات التالية
+
+- خصّص تنسيق المكون ليتوافق مع تصميم تطبيقك
+- أضف خصائص إضافية للتهيئة
+- ادمج مع إدارة حالة تطبيقك
+- أضف معالجة الأخطاء وحالات التحميل

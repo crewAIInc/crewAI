@@ -1,0 +1,109 @@
+---
+title: تكامل Langfuse
+description: تعلم كيفية دمج Langfuse مع CrewAI عبر OpenTelemetry باستخدام OpenLit
+icon: vials
+mode: "wide"
+---
+
+# دمج Langfuse مع CrewAI
+
+يوضح هذا الدفتر كيفية دمج **Langfuse** مع **CrewAI** باستخدام OpenTelemetry عبر حزمة **OpenLit** SDK. بنهاية هذا الدفتر، ستتمكن من تتبع تطبيقات CrewAI مع Langfuse لتحسين المراقبة والتصحيح.
+
+> **ما هو Langfuse؟** [Langfuse](https://langfuse.com) هو منصة هندسة LLM مفتوحة المصدر. توفر قدرات التتبع والمراقبة لتطبيقات LLM، مما يساعد المطورين على التصحيح والتحليل والتحسين. يتكامل Langfuse مع أدوات وأطر عمل متنوعة عبر تكاملات أصلية وOpenTelemetry وواجهات API/SDKs.
+
+[![فيديو نظرة عامة على Langfuse](https://github.com/user-attachments/assets/3926b288-ff61-4b95-8aa1-45d041c70866)](https://langfuse.com/watch-demo)
+
+## البدء
+
+سنمر عبر مثال بسيط لاستخدام CrewAI ودمجه مع Langfuse عبر OpenTelemetry باستخدام OpenLit.
+
+### الخطوة 1: تثبيت الاعتماديات
+
+```python
+%pip install langfuse openlit crewai crewai_tools
+```
+
+### الخطوة 2: إعداد متغيرات البيئة
+
+عيّن مفاتيح API لـ Langfuse وإعدادات تصدير OpenTelemetry لإرسال التتبعات إلى Langfuse. يرجى الرجوع إلى [وثائق Langfuse OpenTelemetry](https://langfuse.com/docs/opentelemetry/get-started) لمزيد من المعلومات.
+
+```python
+import os
+
+# Get keys for your project from the project settings page: https://cloud.langfuse.com
+os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-..."
+os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-..."
+os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com" # 🇪🇺 EU region
+# os.environ["LANGFUSE_HOST"] = "https://us.cloud.langfuse.com" # 🇺🇸 US region
+
+
+# Your OpenAI key
+os.environ["OPENAI_API_KEY"] = "sk-proj-..."
+```
+
+مع تعيين متغيرات البيئة، يمكننا الآن تهيئة عميل Langfuse. تهيئ `get_client()` عميل Langfuse باستخدام بيانات الاعتماد المقدمة في متغيرات البيئة.
+
+```python
+from langfuse import get_client
+
+langfuse = get_client()
+
+# Verify connection
+if langfuse.auth_check():
+    print("Langfuse client is authenticated and ready!")
+else:
+    print("Authentication failed. Please check your credentials and host.")
+```
+
+### الخطوة 3: تهيئة OpenLit
+
+قم بتهيئة OpenLit OpenTelemetry instrumentation SDK لبدء التقاط تتبعات OpenTelemetry.
+
+```python
+import openlit
+
+openlit.init()
+```
+
+### الخطوة 4: إنشاء تطبيق CrewAI بسيط
+
+سننشئ تطبيق CrewAI بسيط حيث يتعاون عدة وكلاء للإجابة على سؤال المستخدم.
+
+```python
+from crewai import Agent, Task, Crew
+
+from crewai_tools import (
+    WebsiteSearchTool
+)
+
+web_rag_tool = WebsiteSearchTool()
+
+writer = Agent(
+        role="Writer",
+        goal="You make math engaging and understandable for young children through poetry",
+        backstory="You're an expert in writing haikus but you know nothing of math.",
+        tools=[web_rag_tool],
+    )
+
+task = Task(description=("What is {multiplication}?"),
+            expected_output=("Compose a haiku that includes the answer."),
+            agent=writer)
+
+crew = Crew(
+  agents=[writer],
+  tasks=[task],
+  share_crew=False
+)
+```
+
+### الخطوة 5: عرض التتبعات في Langfuse
+
+بعد تشغيل الوكيل، يمكنك عرض التتبعات المولدة من تطبيق CrewAI في [Langfuse](https://cloud.langfuse.com). سترى خطوات مفصلة لتفاعلات LLM، مما يساعدك في التصحيح والتحسين.
+
+![مثال تتبع CrewAI في Langfuse](https://langfuse.com/images/cookbook/integration_crewai/crewai-example-trace.png)
+
+_[مثال تتبع عام في Langfuse](https://cloud.langfuse.com/project/cloramnkj0002jz088vzn1ja4/traces/e2cf380ffc8d47d28da98f136140642b?timestamp=2025-02-05T15%3A12%3A02.717Z&observation=3b32338ee6a5d9af)_
+
+## المراجع
+
+- [وثائق Langfuse OpenTelemetry](https://langfuse.com/docs/opentelemetry/get-started)

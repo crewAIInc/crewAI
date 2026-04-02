@@ -3,6 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
+
 from crewai.knowledge.storage.knowledge_storage import (  # type: ignore[import-untyped]
     KnowledgeStorage,
 )
@@ -59,7 +61,7 @@ def test_knowledge_storage_invalid_embedding_config(mock_get_client: MagicMock) 
             "Unsupported provider: invalid_provider"
         )
 
-        with pytest.raises(ValueError, match="Unsupported provider: invalid_provider"):
+        with pytest.raises(ValidationError):
             KnowledgeStorage(
                 embedder={"provider": "invalid_provider"},
                 collection_name="invalid_embedding_test",

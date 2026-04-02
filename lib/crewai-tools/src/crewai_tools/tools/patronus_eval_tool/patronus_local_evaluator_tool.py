@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
 
-if TYPE_CHECKING:
-    from patronus import Client, EvaluationResult  # type: ignore[import-untyped]
-
 try:
-    import patronus  # noqa: F401
+    import patronus  # type: ignore[import-untyped]  # noqa: F401
 
     PYPATRONUS_AVAILABLE = True
 except ImportError:
@@ -37,7 +34,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
     name: str = "Patronus Local Evaluator Tool"
     description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
     args_schema: type[BaseModel] = FixedLocalEvaluatorToolSchema
-    client: Client = None
+    client: Any = None
     evaluator: str
     evaluated_model_gold_answer: str
 
@@ -46,7 +43,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
 
     def __init__(
         self,
-        patronus_client: Client = None,
+        patronus_client: Any = None,
         evaluator: str = "",
         evaluated_model_gold_answer: str = "",
         **kwargs: Any,
@@ -56,7 +53,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
         self.evaluated_model_gold_answer = evaluated_model_gold_answer
         self._initialize_patronus(patronus_client)
 
-    def _initialize_patronus(self, patronus_client: Client) -> None:
+    def _initialize_patronus(self, patronus_client: Any) -> None:
         try:
             if PYPATRONUS_AVAILABLE:
                 self.client = patronus_client
@@ -94,7 +91,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
         evaluated_model_gold_answer = self.evaluated_model_gold_answer
         evaluator = self.evaluator
 
-        result: EvaluationResult = self.client.evaluate(
+        result: Any = self.client.evaluate(
             evaluator=evaluator,
             evaluated_model_input=evaluated_model_input,
             evaluated_model_output=evaluated_model_output,

@@ -15,8 +15,6 @@ try:
     TAVILY_AVAILABLE = True
 except ImportError:
     TAVILY_AVAILABLE = False
-    TavilyClient = Any
-    AsyncTavilyClient = Any
 
 
 class TavilySearchToolSchema(BaseModel):
@@ -51,8 +49,8 @@ class TavilySearchTool(BaseTool):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    client: TavilyClient | None = None
-    async_client: AsyncTavilyClient | None = None
+    client: Any | None = None
+    async_client: Any | None = None
     name: str = "Tavily Search"
     description: str = (
         "A tool that performs web searches using the Tavily Search API. "

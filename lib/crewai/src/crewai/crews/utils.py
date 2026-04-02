@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import baggage
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
+from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files
 from crewai.utilities.streaming import (
@@ -47,8 +51,32 @@ def enable_agent_streaming(agents: Iterable[BaseAgent]) -> None:
         agents: Iterable of agents to enable streaming on.
     """
     for agent in agents:
-        if agent.llm is not None:
+        if isinstance(agent.llm, BaseLLM):
             agent.llm.stream = True
+
+
+def _resolve_crew_skills(crew: Crew) -> list[SkillModel] | None:
+    """Resolve crew-level skill paths once so agents don't repeat the work."""
+    if not isinstance(crew.skills, list) or not crew.skills:
+        return None
+
+    resolved: list[SkillModel] = []
+    seen: set[str] = set()
+    for item in crew.skills:
+        if isinstance(item, Path):
+            for skill in discover_skills(item):
+                if skill.name not in seen:
+                    seen.add(skill.name)
+                    resolved.append(activate_skill(skill))
+        elif isinstance(item, SkillModel):
+            if item.name not in seen:
+                seen.add(item.name)
+                resolved.append(
+                    activate_skill(item)
+                    if item.disclosure_level < INSTRUCTIONS
+                    else item
+                )
+    return resolved
 
 
 def setup_agents(
@@ -67,9 +95,12 @@ def setup_agents(
         function_calling_llm: Default function calling LLM for agents.
         step_callback: Default step callback for agents.
     """
+    resolved_crew_skills = _resolve_crew_skills(crew)
+
     for agent in agents:
         agent.crew = crew
         agent.set_knowledge(crew_embedder=embedder)
+        agent.set_skills(resolved_crew_skills=resolved_crew_skills)
         if not agent.function_calling_llm:  # type: ignore[attr-defined]
             agent.function_calling_llm = function_calling_llm  # type: ignore[attr-defined]
         if not agent.step_callback:  # type: ignore[attr-defined]

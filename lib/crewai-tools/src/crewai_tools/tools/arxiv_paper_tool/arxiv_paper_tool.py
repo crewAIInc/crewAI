@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import re
 import time
-from typing import ClassVar
+from typing import Any, ClassVar
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -75,7 +75,9 @@ class ArxivPaperTool(BaseTool):
             logger.error(f"ArxivTool Error: {e!s}")
             return f"Failed to fetch or download Arxiv papers: {e!s}"
 
-    def fetch_arxiv_data(self, search_query: str, max_results: int) -> list[dict]:
+    def fetch_arxiv_data(
+        self, search_query: str, max_results: int
+    ) -> list[dict[str, Any]]:
         api_url = f"{self.BASE_API_URL}?search_query={urllib.parse.quote(search_query)}&start=0&max_results={max_results}"
         logger.info(f"Fetching data from Arxiv API: {api_url}")
 
@@ -135,7 +137,7 @@ class ArxivPaperTool(BaseTool):
                 return href
         return None
 
-    def _format_paper_result(self, paper: dict) -> str:
+    def _format_paper_result(self, paper: dict[str, Any]) -> str:
         summary = (
             (paper["summary"][: self.SUMMARY_TRUNCATE_LENGTH] + "...")
             if len(paper["summary"]) > self.SUMMARY_TRUNCATE_LENGTH
@@ -156,7 +158,7 @@ class ArxivPaperTool(BaseTool):
         save_path.mkdir(parents=True, exist_ok=True)
         return save_path
 
-    def download_pdf(self, pdf_url: str, save_path: str):
+    def download_pdf(self, pdf_url: str, save_path: str) -> None:
         try:
             logger.info(f"Downloading PDF from {pdf_url} to {save_path}")
             urllib.request.urlretrieve(pdf_url, str(save_path))  # noqa: S310

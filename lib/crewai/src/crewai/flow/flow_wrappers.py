@@ -75,6 +75,7 @@ class FlowMethod(Generic[P, R]):
             "__is_router__",
             "__router_paths__",
             "__human_feedback_config__",
+            "_hf_llm",  # Live LLM object for HITL resume
         ]:
             if hasattr(meth, attr):
                 setattr(self, attr, getattr(meth, attr))

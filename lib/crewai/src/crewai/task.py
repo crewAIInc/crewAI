@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import contextvars
 from concurrent.futures import Future
+import contextvars
 from copy import copy as shallow_copy
 import datetime
 from hashlib import md5
@@ -41,6 +41,7 @@ from crewai.events.types.task_events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
+from crewai.llms.base_llm import BaseLLM
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -67,6 +68,7 @@ except ImportError:
         return []
 
 
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -124,7 +126,7 @@ class Task(BaseModel):
         description="Configuration for the agent",
         default=None,
     )
-    callback: Any | None = Field(
+    callback: SerializableCallable | None = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
     agent: BaseAgent | None = Field(
@@ -315,6 +317,10 @@ class Task(BaseModel):
             if self.agent is None:
                 raise ValueError("Agent is required to use LLMGuardrail")
 
+            if not isinstance(self.agent.llm, BaseLLM):
+                raise ValueError(
+                    "Agent must have a BaseLLM instance to use LLMGuardrail"
+                )
             self._guardrail = cast(
                 GuardrailCallable,
                 LLMGuardrail(description=self.guardrail, llm=self.agent.llm),
@@ -338,6 +344,10 @@ class Task(BaseModel):
                                 )
                             from crewai.tasks.llm_guardrail import LLMGuardrail
 
+                            if not isinstance(self.agent.llm, BaseLLM):
+                                raise ValueError(
+                                    "Agent must have a BaseLLM instance to use LLMGuardrail"
+                                )
                             guardrails.append(
                                 cast(
                                     GuardrailCallable,
@@ -358,6 +368,10 @@ class Task(BaseModel):
                         )
                     from crewai.tasks.llm_guardrail import LLMGuardrail
 
+                    if not isinstance(self.agent.llm, BaseLLM):
+                        raise ValueError(
+                            "Agent must have a BaseLLM instance to use LLMGuardrail"
+                        )
                     guardrails.append(
                         cast(
                             GuardrailCallable,
@@ -579,7 +593,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
             result = await agent.aexecute_task(
                 task=self,
                 context=context,
@@ -645,7 +659,12 @@ class Task(BaseModel):
                     await cb_result
 
             crew = self.agent.crew  # type: ignore[union-attr]
-            if crew and crew.task_callback and crew.task_callback != self.callback:
+            if (
+                crew
+                and not isinstance(crew, str)
+                and crew.task_callback
+                and crew.task_callback != self.callback
+            ):
                 cb_result = crew.task_callback(self.output)
                 if inspect.isawaitable(cb_result):
                     await cb_result
@@ -661,12 +680,12 @@ class Task(BaseModel):
                 self._save_file(content)
             crewai_event_bus.emit(
                 self,
-                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
+                TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
@@ -693,7 +712,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -760,7 +779,12 @@ class Task(BaseModel):
                     asyncio.run(cb_result)
 
             crew = self.agent.crew  # type: ignore[union-attr]
-            if crew and crew.task_callback and crew.task_callback != self.callback:
+            if (
+                crew
+                and not isinstance(crew, str)
+                and crew.task_callback
+                and crew.task_callback != self.callback
+            ):
                 cb_result = crew.task_callback(self.output)
                 if inspect.iscoroutine(cb_result):
                     asyncio.run(cb_result)
@@ -776,12 +800,12 @@ class Task(BaseModel):
                 self._save_file(content)
             crewai_event_bus.emit(
                 self,
-                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
+                TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
@@ -811,11 +835,14 @@ class Task(BaseModel):
                 if trigger_payload is not None:
                     description += f"\n\nTrigger Payload: {trigger_payload}"
 
-        if self.agent and self.agent.crew:
+        if self.agent and self.agent.crew and not isinstance(self.agent.crew, str):
             files = get_all_files(self.agent.crew.id, self.id)
             if files:
                 supported_types: list[str] = []
-                if self.agent.llm and self.agent.llm.supports_multimodal():
+                if (
+                    isinstance(self.agent.llm, BaseLLM)
+                    and self.agent.llm.supports_multimodal()
+                ):
                     provider: str = str(
                         getattr(self.agent.llm, "provider", None)
                         or getattr(self.agent.llm, "model", "openai")

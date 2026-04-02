@@ -13,7 +13,7 @@ class LLMGuardrailBaseEvent(BaseEvent):
     agent_role: str | None = None
     agent_id: str | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._set_agent_params(data)
         self._set_task_params(data)
@@ -28,10 +28,10 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
     """
 
     type: str = "llm_guardrail_started"
-    guardrail: str | Callable
+    guardrail: str | Callable[..., Any]
     retry_count: int
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
         from crewai.tasks.llm_guardrail import LLMGuardrail
 
@@ -39,7 +39,7 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
 
         if isinstance(self.guardrail, (LLMGuardrail, HallucinationGuardrail)):
             self.guardrail = self.guardrail.description.strip()
-        elif isinstance(self.guardrail, Callable):
+        elif callable(self.guardrail):
             self.guardrail = getsource(self.guardrail).strip()
 
 

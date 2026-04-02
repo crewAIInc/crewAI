@@ -72,8 +72,8 @@ class SpiderTool(BaseTool):
         website_url: str | None = None,
         custom_params: dict[str, Any] | None = None,
         log_failures: bool = True,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize SpiderTool for web scraping and crawling.
 
         Args:
@@ -96,7 +96,7 @@ class SpiderTool(BaseTool):
         self.custom_params = custom_params
 
         try:
-            from spider import Spider  # type: ignore
+            from spider import Spider
 
         except ImportError:
             import click
@@ -191,7 +191,8 @@ class SpiderTool(BaseTool):
             action = (
                 self.spider.scrape_url if mode == "scrape" else self.spider.crawl_url
             )
-            return action(url=url, params=params)
+            result: str | None = action(url=url, params=params)
+            return result
 
         except ValueError as ve:
             if self.log_failures:

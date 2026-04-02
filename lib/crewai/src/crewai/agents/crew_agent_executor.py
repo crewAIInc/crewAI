@@ -895,7 +895,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
-        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id, original_tool)
+        args_dict, parse_error = parse_tool_call_args(
+            func_args, func_name, call_id, original_tool
+        )
         if parse_error is not None:
             return parse_error
 
@@ -946,7 +948,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
         error_event_emitted = False
 
-        track_delegation_if_needed(func_name, args_dict, self.task)
+        track_delegation_if_needed(func_name, args_dict or {}, self.task)
 
         structured_tool: CrewStructuredTool | None = None
         if original_tool is not None:
@@ -963,7 +965,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
-            tool_input=args_dict,
+            tool_input=args_dict or {},
             tool=structured_tool,  # type: ignore[arg-type]
             agent=self.agent,
             task=self.task,
@@ -989,7 +991,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
         elif not from_cache and func_name in available_functions:
             try:
-                raw_result = available_functions[func_name](**args_dict)
+                raw_result = available_functions[func_name](**(args_dict or {}))
 
                 if self.tools_handler and self.tools_handler.cache:
                     should_cache = True
@@ -999,7 +1001,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         and callable(original_tool.cache_function)
                     ):
                         should_cache = original_tool.cache_function(
-                            args_dict, raw_result
+                            args_dict or {}, raw_result
                         )
                     if should_cache:
                         self.tools_handler.cache.add(
@@ -1028,7 +1030,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
-            tool_input=args_dict,
+            tool_input=args_dict or {},
             tool=structured_tool,  # type: ignore[arg-type]
             agent=self.agent,
             task=self.task,

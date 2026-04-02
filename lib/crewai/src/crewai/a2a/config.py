@@ -633,6 +633,10 @@ class A2AServerConfig(BaseModel):
         default=False,
         description="Whether agent provides extended card to authenticated users",
     )
+    extended_skills: list[AgentSkill] = Field(
+        default_factory=list,
+        description="Additional skills visible only to authenticated users in the extended card",
+    )
     url: Url | None = Field(
         default=None,
         description="Preferred endpoint URL for the agent. Set at runtime if not provided.",

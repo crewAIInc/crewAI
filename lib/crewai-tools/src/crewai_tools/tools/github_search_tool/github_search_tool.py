@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
@@ -38,8 +40,8 @@ class GithubSearchTool(RagTool):
         self,
         github_repo: str | None = None,
         content_types: list[str] | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
 
         if github_repo and content_types:
@@ -48,7 +50,7 @@ class GithubSearchTool(RagTool):
             self.args_schema = FixedGithubSearchToolSchema
             self._generate_description()
 
-    def add(
+    def add(  # type: ignore[override]
         self,
         repo: str,
         content_types: list[str] | None = None,

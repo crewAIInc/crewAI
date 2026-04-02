@@ -1,0 +1,107 @@
+---
+title: بحث Google عبر Serper
+description: أداة `SerperDevTool` مصممة للبحث في الإنترنت وإرجاع النتائج الأكثر صلة.
+icon: google
+mode: "wide"
+---
+
+# `SerperDevTool`
+
+## الوصف
+
+هذه الأداة مصممة لإجراء بحث دلالي عن استعلام محدد من محتوى نصي عبر الإنترنت. تستخدم [serper.dev](https://serper.dev) API
+لجلب وعرض نتائج البحث الأكثر صلة بناءً على الاستعلام المقدم من المستخدم.
+
+## التثبيت
+
+لاستخدام `SerperDevTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت الحزمة**: تأكد من تثبيت حزمة `crewai[tools]` في بيئة Python الخاصة بك.
+2. **الحصول على مفتاح API**: احصل على مفتاح `serper.dev` API على https://serper.dev/ (طبقة مجانية متاحة).
+3. **تكوين البيئة**: خزّن مفتاح API الذي حصلت عليه في متغير بيئة باسم `SERPER_API_KEY` لتسهيل استخدامه بواسطة الأداة.
+
+لدمج هذه الأداة في مشروعك، اتبع تعليمات التثبيت أدناه:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة وتنفيذ بحث باستعلام معين:
+
+```python Code
+from crewai_tools import SerperDevTool
+
+# Initialize the tool for internet searching capabilities
+tool = SerperDevTool()
+```
+
+## المعاملات
+
+تأتي أداة `SerperDevTool` مع عدة معاملات تُمرّر إلى API:
+
+- **search_url**: نقطة نهاية URL لـ search API. (الافتراضي هو `https://google.serper.dev/search`)
+
+- **country**: اختياري. تحديد البلد لنتائج البحث.
+- **location**: اختياري. تحديد الموقع لنتائج البحث.
+- **locale**: اختياري. تحديد اللغة المحلية لنتائج البحث.
+- **n_results**: عدد نتائج البحث المُرجعة. الافتراضي هو `10`.
+
+يمكن العثور على قيم `country` و `location` و `locale` و `search_url` في [Serper Playground](https://serper.dev/playground).
+
+## مثال مع المعاملات
+
+إليك مثالاً يوضح كيفية استخدام الأداة مع معاملات إضافية:
+
+```python Code
+from crewai_tools import SerperDevTool
+
+tool = SerperDevTool(
+    search_url="https://google.serper.dev/scholar",
+    n_results=2,
+)
+
+print(tool.run(search_query="ChatGPT"))
+
+# Using Tool: Search the internet
+
+# Search results: Title: Role of chat gpt in public health
+# Link: https://link.springer.com/article/10.1007/s10439-023-03172-7
+# Snippet: … ChatGPT in public health. In this overview, we will examine the potential uses of ChatGPT in
+# ---
+# Title: Potential use of chat gpt in global warming
+# Link: https://link.springer.com/article/10.1007/s10439-023-03171-8
+# Snippet: … as ChatGPT, have the potential to play a critical role in advancing our understanding of climate
+# ---
+
+```
+
+```python Code
+from crewai_tools import SerperDevTool
+
+tool = SerperDevTool(
+    country="fr",
+    locale="fr",
+    location="Paris, Paris, Ile-de-France, France",
+    n_results=2,
+)
+
+print(tool.run(search_query="Jeux Olympiques"))
+
+# Using Tool: Search the internet
+
+# Search results: Title: Jeux Olympiques de Paris 2024 - Actualités, calendriers, résultats
+# Link: https://olympics.com/fr/paris-2024
+# Snippet: Quels sont les sports présents aux Jeux Olympiques de Paris 2024 ? · Athlétisme · Aviron · Badminton · Basketball · Basketball 3x3 · Boxe · Breaking · Canoë ...
+# ---
+# Title: Billetterie Officielle de Paris 2024 - Jeux Olympiques et Paralympiques
+# Link: https://tickets.paris2024.org/
+# Snippet: Achetez vos billets exclusivement sur le site officiel de la billetterie de Paris 2024 pour participer au plus grand événement sportif au monde.
+# ---
+```
+
+## الخلاصة
+
+من خلال دمج `SerperDevTool` في مشاريع Python، يكتسب المستخدمون القدرة على إجراء عمليات بحث فورية وذات صلة عبر الإنترنت مباشرة من تطبيقاتهم.
+تسمح المعاملات المحدّثة بنتائج بحث أكثر تخصيصاً وتوطيناً. من خلال الالتزام بإرشادات الإعداد والاستخدام المقدمة، يصبح دمج هذه الأداة في المشاريع سلساً ومباشراً.

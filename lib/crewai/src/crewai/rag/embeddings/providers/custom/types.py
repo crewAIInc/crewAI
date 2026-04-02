@@ -9,7 +9,7 @@ from typing_extensions import Required, TypedDict
 class CustomProviderConfig(TypedDict, total=False):
     """Configuration for Custom provider."""
 
-    embedding_callable: type[EmbeddingFunction]
+    embedding_callable: type[EmbeddingFunction]  # type: ignore[type-arg]
 
 
 class CustomProviderSpec(TypedDict, total=False):

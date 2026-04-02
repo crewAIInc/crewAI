@@ -29,6 +29,7 @@ dev = [
     "types-psycopg2==2.9.21.20251012",
     "types-pymysql==1.1.0.20250916",
     "types-aiofiles~=25.1.0",
+    "commitizen>=4.13.9",
 ]
 
 
@@ -142,17 +143,33 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 
+[tool.commitizen]
+name = "cz_customize"
+version_provider = "scm"
+tag_format = "$version"
+allowed_prefixes = ["Merge", "Revert"]
+changelog_incremental = true
+update_changelog_on_bump = false
+
+[tool.commitizen.customize]
+schema = "<type>(<scope>): <description>"
+schema_pattern = "^(feat|fix|refactor|perf|test|docs|chore|ci|style|revert)(\\(.+\\))?!?: .{1,72}"
+bump_pattern = "^(feat|fix|perf|refactor|revert)"
+bump_map = { feat = "MINOR", fix = "PATCH", perf = "PATCH", refactor = "PATCH", revert = "PATCH" }
+info = "Commits must follow Conventional Commits 1.0.0."
+
+
 [tool.uv]
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
 # fastembed 0.7.x and docling 2.63 cap pillow<12; the removed APIs don't affect them.
-# langchain-core 0.3.76 has a template-injection vuln (GHSA); force >=0.3.80.
+# langchain-core <1.2.11 has SSRF via image_url token counting (CVE-2026-26013).
 override-dependencies = [
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
     "pillow>=12.1.1",
-    "langchain-core>=0.3.80,<1",
+    "langchain-core>=1.2.11,<2",
     "urllib3>=2.6.3",
 ]
 

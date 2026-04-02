@@ -1,8 +1,14 @@
+"""Core agent implementation for the CrewAI framework."""
+
 from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
+import concurrent.futures
 import contextvars
+from datetime import datetime
+import json
+from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -10,8 +16,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    NoReturn,
     cast,
 )
+import warnings
 
 from pydantic import (
     BaseModel,
@@ -23,8 +31,10 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
+    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
@@ -41,6 +51,9 @@ from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
@@ -55,6 +68,7 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.events.types.skill_events import SkillActivatedEvent
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -64,7 +78,10 @@ from crewai.mcp import MCPServerConfig
 from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -74,8 +91,9 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail
-from crewai.utilities.guardrail_types import GuardrailType
+from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -141,7 +159,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    step_callback: Any | None = Field(
+    step_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
@@ -149,10 +167,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | Any = Field(
+    llm: str | BaseLLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    function_calling_llm: str | BaseLLM | None = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: str | None = Field(
@@ -192,13 +210,23 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    reasoning: bool = Field(
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+    )
+    planning: bool = Field(
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
     )
+    reasoning: bool = Field(
+        default=False,
+        description="[DEPRECATED: Use planning_config instead] Whether the agent should reflect and create a plan before executing a task.",
+        deprecated=True,
+    )
     max_reasoning_attempts: int | None = Field(
         default=None,
-        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        description="[DEPRECATED: Use planning_config.max_attempts instead] Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        deprecated=True,
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -240,19 +268,25 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
+    agent_executor: InstanceOf[CrewAgentExecutor] | InstanceOf[AgentExecutor] | None = (
+        Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    )
     executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
 
     @model_validator(mode="before")
-    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
+    @classmethod
+    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
+        """Merge repository agent config with provided values before validation."""
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
 
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
+        """Initialize LLM, executor, code tools, and skills after model creation."""
         self.llm = create_llm(self.llm)
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
@@ -265,14 +299,33 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        self.set_skills()
+
+        if self.reasoning and self.planning_config is None:
+            warnings.warn(
+                "The 'reasoning' parameter is deprecated. Use 'planning_config=PlanningConfig()' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.planning_config = PlanningConfig(
+                max_attempts=self.max_reasoning_attempts,
+            )
+
         return self
 
+    @property
+    def planning_enabled(self) -> bool:
+        """Check if planning is enabled for this agent."""
+        return self.planning_config is not None or self.planning
+
     def _setup_agent_executor(self) -> None:
+        """Initialize the agent executor with a default cache handler."""
         if not self.cache_handler:
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
+        """Initialize knowledge sources with the agent or crew embedder config."""
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -289,6 +342,74 @@ class Agent(BaseAgent):
                     self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
+
+    def set_skills(
+        self,
+        resolved_crew_skills: list[SkillModel] | None = None,
+    ) -> None:
+        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+
+        Path entries trigger discovery and activation. Pre-loaded Skill objects
+        below INSTRUCTIONS level are activated. Crew-level skills are merged in
+        with event emission so observability is consistent regardless of origin.
+
+        Args:
+            resolved_crew_skills: Pre-resolved crew skills (already discovered
+                and activated). When provided, avoids redundant discovery per agent.
+        """
+        from crewai.crew import Crew
+
+        if resolved_crew_skills is None:
+            crew_skills: list[Path | SkillModel] | None = (
+                self.crew.skills
+                if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
+                else None
+            )
+        else:
+            crew_skills = list(resolved_crew_skills)
+
+        if not self.skills and not crew_skills:
+            return
+
+        needs_work = self.skills and any(
+            isinstance(s, Path)
+            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
+            for s in self.skills
+        )
+        if not needs_work and not crew_skills:
+            return
+
+        seen: set[str] = set()
+        resolved: list[Path | SkillModel] = []
+        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+
+        if crew_skills:
+            items.extend(crew_skills)
+
+        for item in items:
+            if isinstance(item, Path):
+                discovered = discover_skills(item, source=self)
+                for skill in discovered:
+                    if skill.name not in seen:
+                        seen.add(skill.name)
+                        resolved.append(activate_skill(skill, source=self))
+            elif isinstance(item, SkillModel):
+                if item.name not in seen:
+                    seen.add(item.name)
+                    activated = activate_skill(item, source=self)
+                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                        crewai_event_bus.emit(
+                            self,
+                            event=SkillActivatedEvent(
+                                from_agent=self,
+                                skill_name=item.name,
+                                skill_path=item.path,
+                                disclosure_level=item.disclosure_level,
+                            ),
+                        )
+                    resolved.append(activated)
+
+        self.skills = resolved if resolved else None
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
@@ -310,9 +431,238 @@ class Agent(BaseAgent):
         return (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
-            and self.llm.supports_function_calling()
+            and self.llm.supports_function_calling()  # type: ignore[union-attr]
             and len(tools) > 0
         )
+
+    def _prepare_task_execution(
+        self,
+        task: Task,
+        context: str | None,
+    ) -> str:
+        """Prepare common setup for task execution shared by sync and async paths.
+
+        Handles reasoning, date injection, prompt building, and memory retrieval.
+
+        Args:
+            task: Task to execute.
+            context: Context to execute the task in.
+
+        Returns:
+            The task prompt after memory retrieval, ready for knowledge lookup.
+        """
+        get_env_context()
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(self, task)
+
+        self._inject_date_to_task(task)
+
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = None
+
+        task_prompt = task.prompt()
+        task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
+        task_prompt = format_task_with_context(task_prompt, context, self.i18n)
+        return self._retrieve_memory_context(task, task_prompt)
+
+    def _finalize_task_prompt(
+        self,
+        task_prompt: str,
+        tools: list[BaseTool] | None,
+        task: Task,
+    ) -> str:
+        """Apply skill context, tool preparation, and training data to the task prompt.
+
+        Args:
+            task_prompt: The task prompt after memory and knowledge retrieval.
+            tools: Tools to use for the task.
+            task: Task to execute.
+
+        Returns:
+            The fully prepared task prompt.
+        """
+        task_prompt = append_skill_context(self, task_prompt)
+        prepare_tools(self, tools, task)
+
+        return apply_training_data(self, task_prompt)
+
+    def _retrieve_memory_context(self, task: Task, task_prompt: str) -> str:
+        """Retrieve memory context and append it to the task prompt.
+
+        Args:
+            task: The task being executed.
+            task_prompt: The current task prompt.
+
+        Returns:
+            The task prompt, potentially augmented with memory context.
+        """
+        if not self._is_any_available_memory():
+            return task_prompt
+
+        crewai_event_bus.emit(
+            self,
+            event=MemoryRetrievalStartedEvent(
+                task_id=str(task.id) if task else None,
+                source_type="agent",
+                from_agent=self,
+                from_task=task,
+            ),
+        )
+
+        start_time = time.time()
+        memory = ""
+
+        try:
+            unified_memory = getattr(self, "memory", None) or (
+                getattr(self.crew, "_memory", None) if self.crew else None
+            )
+            if unified_memory is not None:
+                query = task.description
+                matches = unified_memory.recall(query, limit=5)
+                if matches:
+                    memory = "Relevant memories:\n" + "\n".join(
+                        m.format() for m in matches
+                    )
+            if memory.strip() != "":
+                task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalCompletedEvent(
+                    task_id=str(task.id) if task else None,
+                    memory_content=memory,
+                    retrieval_time_ms=(time.time() - start_time) * 1000,
+                    source_type="agent",
+                    from_agent=self,
+                    from_task=task,
+                ),
+            )
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalFailedEvent(
+                    task_id=str(task.id) if task else None,
+                    source_type="agent",
+                    from_agent=self,
+                    from_task=task,
+                    error=str(e),
+                ),
+            )
+
+        return task_prompt
+
+    def _finalize_task_execution(self, task: Task, result: Any) -> Any:
+        """Finalize task execution with RPM cleanup, tool processing, and event emission.
+
+        Args:
+            task: The task that was executed.
+            result: The raw execution result.
+
+        Returns:
+            The processed result.
+        """
+        if self.max_rpm and self._rpm_controller:
+            self._rpm_controller.stop_rpm_counter()
+
+        result = process_tool_results(self, result)
+
+        output_for_event = result
+        if (
+            AgentResponseProtocol is not None
+            and isinstance(result, BaseModel)
+            and isinstance(result, AgentResponseProtocol)
+        ):
+            output_for_event = str(result.message)
+        elif not isinstance(result, str):
+            output_for_event = str(result)
+
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionCompletedEvent(
+                agent=self, task=task, output=output_for_event
+            ),
+        )
+
+        save_last_messages(self)
+        self._cleanup_mcp_clients()
+
+        return result
+
+    def _check_execution_error(self, e: Exception, task: Task) -> None:
+        """Check if an execution error should be re-raised immediately.
+
+        Args:
+            e: The exception that occurred.
+            task: The task being executed.
+
+        Raises:
+            Exception: If the error is from litellm, a passthrough, or retries are exhausted.
+        """
+        if e.__class__.__module__.startswith("litellm"):
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+        if isinstance(e, _passthrough_exceptions):
+            raise
+        self._times_executed += 1
+        if self._times_executed > self.max_retry_limit:
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+
+    def _handle_execution_error(
+        self,
+        e: Exception,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+    ) -> Any:
+        """Handle execution errors with retry logic (sync path).
+
+        Args:
+            e: The exception that occurred.
+            task: The task being executed.
+            context: Task context.
+            tools: Task tools.
+
+        Returns:
+            Result from retried execution.
+        """
+        self._check_execution_error(e, task)
+        return self.execute_task(task, context, tools)
+
+    async def _handle_execution_error_async(
+        self,
+        e: Exception,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+    ) -> Any:
+        """Handle execution errors with retry logic (async path).
+
+        Args:
+            e: The exception that occurred.
+            task: The task being executed.
+            context: Task context.
+            tools: Task tools.
+
+        Returns:
+            Result from retried execution.
+        """
+        self._check_execution_error(e, task)
+        return await self.aexecute_task(task, context, tools)
 
     def execute_task(
         self,
@@ -335,66 +685,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
-        self._inject_date_to_task(task)
-
-        if self.tools_handler:
-            self.tools_handler.last_used_tool = None
-
-        task_prompt = task.prompt()
-        task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
-        task_prompt = format_task_with_context(task_prompt, context, self.i18n)
-
-        if self._is_any_available_memory():
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalStartedEvent(
-                    task_id=str(task.id) if task else None,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
-
-            start_time = time.time()
-            memory = ""
-
-            try:
-                unified_memory = getattr(self, "memory", None) or (
-                    getattr(self.crew, "_memory", None) if self.crew else None
-                )
-                if unified_memory is not None:
-                    query = task.description
-                    matches = unified_memory.recall(query, limit=5)
-                    if matches:
-                        memory = "Relevant memories:\n" + "\n".join(
-                            m.format() for m in matches
-                        )
-                if memory.strip() != "":
-                    task_prompt += self.i18n.slice("memory").format(memory=memory)
-
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalCompletedEvent(
-                        task_id=str(task.id) if task else None,
-                        memory_content=memory,
-                        retrieval_time_ms=(time.time() - start_time) * 1000,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                    ),
-                )
-            except Exception as e:
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalFailedEvent(
-                        task_id=str(task.id) if task else None,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                        error=str(e),
-                    ),
-                )
+        task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = handle_knowledge_retrieval(
@@ -403,17 +694,12 @@ class Agent(BaseAgent):
             task_prompt,
             knowledge_config,
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
-            self.crew.query_knowledge if self.crew else lambda *a, **k: None,
+            self.crew.query_knowledge
+            if self.crew and not isinstance(self.crew, str)
+            else lambda *a, **k: None,
         )
 
-        prepare_tools(self, tools, task)
-        task_prompt = apply_training_data(self, task_prompt)
-
-        from crewai.events.types.agent_events import (
-            AgentExecutionCompletedEvent,
-            AgentExecutionErrorEvent,
-            AgentExecutionStartedEvent,
-        )
+        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
             crewai_event_bus.emit(
@@ -445,57 +731,9 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            if e.__class__.__module__.startswith("litellm"):
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            if isinstance(e, _passthrough_exceptions):
-                raise
-            self._times_executed += 1
-            if self._times_executed > self.max_retry_limit:
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            result = self.execute_task(task, context, tools)
+            result = self._handle_execution_error(e, task, context, tools)
 
-        if self.max_rpm and self._rpm_controller:
-            self._rpm_controller.stop_rpm_counter()
-
-        result = process_tool_results(self, result)
-
-        output_for_event = result
-        if (
-            AgentResponseProtocol is not None
-            and isinstance(result, BaseModel)
-            and isinstance(result, AgentResponseProtocol)
-        ):
-            output_for_event = str(result.message)
-        elif not isinstance(result, str):
-            output_for_event = str(result)
-
-        crewai_event_bus.emit(
-            self,
-            event=AgentExecutionCompletedEvent(
-                agent=self, task=task, output=output_for_event
-            ),
-        )
-
-        save_last_messages(self)
-        self._cleanup_mcp_clients()
-
-        return result
+        return self._finalize_task_execution(task, result)
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
@@ -512,8 +750,6 @@ class Agent(BaseAgent):
             TimeoutError: If execution exceeds the timeout.
             RuntimeError: If execution fails for other reasons.
         """
-        import concurrent.futures
-
         ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(
@@ -547,14 +783,18 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        return self.agent_executor.invoke(
-            {
-                "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
-                "ask_for_human_input": task.human_input,
-            }
-        )["output"]
+        result = cast(
+            dict[str, Any],
+            self.agent_executor.invoke(
+                {
+                    "input": task_prompt,
+                    "tool_names": self.agent_executor.tools_names,
+                    "tools": self.agent_executor.tools_description,
+                    "ask_for_human_input": task.human_input,
+                }
+            ),
+        )
+        return result["output"]
 
     async def aexecute_task(
         self,
@@ -577,80 +817,14 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
-        self._inject_date_to_task(task)
-
-        if self.tools_handler:
-            self.tools_handler.last_used_tool = None
-
-        task_prompt = task.prompt()
-        task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
-        task_prompt = format_task_with_context(task_prompt, context, self.i18n)
-
-        if self._is_any_available_memory():
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalStartedEvent(
-                    task_id=str(task.id) if task else None,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
-
-            start_time = time.time()
-            memory = ""
-
-            try:
-                unified_memory = getattr(self, "memory", None) or (
-                    getattr(self.crew, "_memory", None) if self.crew else None
-                )
-                if unified_memory is not None:
-                    query = task.description
-                    matches = unified_memory.recall(query, limit=5)
-                    if matches:
-                        memory = "Relevant memories:\n" + "\n".join(
-                            m.format() for m in matches
-                        )
-                if memory.strip() != "":
-                    task_prompt += self.i18n.slice("memory").format(memory=memory)
-
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalCompletedEvent(
-                        task_id=str(task.id) if task else None,
-                        memory_content=memory,
-                        retrieval_time_ms=(time.time() - start_time) * 1000,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                    ),
-                )
-            except Exception as e:
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalFailedEvent(
-                        task_id=str(task.id) if task else None,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                        error=str(e),
-                    ),
-                )
+        task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
 
-        prepare_tools(self, tools, task)
-        task_prompt = apply_training_data(self, task_prompt)
-
-        from crewai.events.types.agent_events import (
-            AgentExecutionCompletedEvent,
-            AgentExecutionErrorEvent,
-            AgentExecutionStartedEvent,
-        )
+        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
             crewai_event_bus.emit(
@@ -682,57 +856,9 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            if e.__class__.__module__.startswith("litellm"):
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            if isinstance(e, _passthrough_exceptions):
-                raise
-            self._times_executed += 1
-            if self._times_executed > self.max_retry_limit:
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            result = await self.aexecute_task(task, context, tools)
+            result = await self._handle_execution_error_async(e, task, context, tools)
 
-        if self.max_rpm and self._rpm_controller:
-            self._rpm_controller.stop_rpm_counter()
-
-        result = process_tool_results(self, result)
-
-        output_for_event = result
-        if (
-            AgentResponseProtocol is not None
-            and isinstance(result, BaseModel)
-            and isinstance(result, AgentResponseProtocol)
-        ):
-            output_for_event = str(result.message)
-        elif not isinstance(result, str):
-            output_for_event = str(result)
-
-        crewai_event_bus.emit(
-            self,
-            event=AgentExecutionCompletedEvent(
-                agent=self, task=task, output=output_for_event
-            ),
-        )
-
-        save_last_messages(self)
-        self._cleanup_mcp_clients()
-
-        return result
+        return self._finalize_task_execution(task, result)
 
     async def _aexecute_with_timeout(
         self, task_prompt: str, task: Task, timeout: int
@@ -785,17 +911,19 @@ class Agent(BaseAgent):
         )
         return result["output"]
 
-    def create_agent_executor(
-        self, tools: list[BaseTool] | None = None, task: Task | None = None
-    ) -> None:
-        """Create an agent executor for the agent.
+    def _build_execution_prompt(
+        self, raw_tools: list[BaseTool]
+    ) -> tuple[
+        SystemPromptResult | StandardPromptResult, list[str], Callable[[], bool] | None
+    ]:
+        """Build the execution prompt, stop words, and RPM limit function.
+
+        Args:
+            raw_tools: The raw tools available to the agent.
 
         Returns:
-            An instance of the CrewAgentExecutor class.
+            A tuple of (prompt, stop_words, rpm_limit_fn).
         """
-        raw_tools: list[BaseTool] = tools or self.tools or []
-        parsed_tools = parse_tools(raw_tools)
-
         use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
 
         prompt = Prompts(
@@ -810,7 +938,6 @@ class Agent(BaseAgent):
         ).task_execution()
 
         stop_words = [self.i18n.slice("observation")]
-
         if self.response_template:
             stop_words.append(
                 self.response_template.split("{{ .Response }}")[1].strip()
@@ -820,22 +947,41 @@ class Agent(BaseAgent):
             self._rpm_controller.check_or_wait if self._rpm_controller else None
         )
 
+        return prompt, stop_words, rpm_limit_fn
+
+    def create_agent_executor(
+        self, tools: list[BaseTool] | None = None, task: Task | None = None
+    ) -> None:
+        """Create an agent executor for the agent.
+
+        Returns:
+            An instance of the CrewAgentExecutor class.
+        """
+        raw_tools: list[BaseTool] = tools or self.tools or []
+        parsed_tools = parse_tools(raw_tools)
+
+        prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
+
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
-                tools=parsed_tools,  # type: ignore[arg-type]
+                tools=parsed_tools,
                 raw_tools=raw_tools,
                 prompt=prompt,
                 stop_words=stop_words,
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before creating agent executor."
+                )
             self.agent_executor = self.executor_class(
-                llm=cast(BaseLLM, self.llm),
+                llm=self.llm,
                 task=task,  # type: ignore[arg-type]
                 i18n=self.i18n,
                 agent=self,
-                crew=self.crew,
+                crew=self.crew,  # type: ignore[arg-type]
                 tools=parsed_tools,
                 prompt=prompt,
                 original_tools=raw_tools,
@@ -859,7 +1005,7 @@ class Agent(BaseAgent):
     def _update_executor_parameters(
         self,
         task: Task | None,
-        tools: list[BaseTool],
+        tools: list[CrewStructuredTool],
         raw_tools: list[BaseTool],
         prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
@@ -875,11 +1021,17 @@ class Agent(BaseAgent):
             stop_words: Stop words list.
             rpm_limit_fn: RPM limit callback function.
         """
+        if self.agent_executor is None:
+            raise RuntimeError("Agent executor is not initialized.")
+
         self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        self.agent_executor.stop = stop_words
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.stop_words = stop_words
+        else:
+            self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -933,17 +1085,18 @@ class Agent(BaseAgent):
 
     @staticmethod
     def get_multimodal_tools() -> Sequence[BaseTool]:
+        """Return tools for multimodal agent capabilities."""
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
         return [AddImageTool()]
 
     def get_code_execution_tools(self) -> list[CodeInterpreterTool]:
+        """Return code interpreter tools based on the agent's execution mode."""
         try:
             from crewai_tools import (
                 CodeInterpreterTool,
             )
 
-            # Set the unsafe_mode based on the code_execution_mode attribute
             unsafe_mode = self.code_execution_mode == "unsafe"
             return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
         except ModuleNotFoundError:
@@ -956,6 +1109,7 @@ class Agent(BaseAgent):
     def get_output_converter(
         llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
     ) -> Converter:
+        """Create a Converter instance for transforming LLM output to a structured model."""
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _training_handler(self, task_prompt: str) -> str:
@@ -1005,8 +1159,6 @@ class Agent(BaseAgent):
     def _inject_date_to_task(self, task: Task) -> None:
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
-            from datetime import datetime
-
             try:
                 valid_format_codes = [
                     "%Y",
@@ -1040,7 +1192,7 @@ class Agent(BaseAgent):
 
         try:
             subprocess.run(  # noqa: S603
-                [docker_path, "info"],
+                [str(docker_path), "info"],
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -1068,6 +1220,7 @@ class Agent(BaseAgent):
         return self.security_config.fingerprint
 
     def set_fingerprint(self, fingerprint: Fingerprint) -> None:
+        """Set the agent's security fingerprint."""
         self.security_config.fingerprint = fingerprint
 
     @property
@@ -1109,15 +1262,11 @@ class Agent(BaseAgent):
             return None
 
         try:
-            rewritten_query = self.llm.call(
-                [
-                    {
-                        "role": "system",
-                        "content": rewriter_prompt,
-                    },
-                    {"role": "user", "content": query},
-                ]
-            )
+            messages: list[LLMMessage] = [
+                {"role": "system", "content": rewriter_prompt},
+                {"role": "user", "content": query},
+            ]
+            rewritten_query = self.llm.call(messages)
             crewai_event_bus.emit(
                 self,
                 event=KnowledgeQueryCompletedEvent(
@@ -1158,7 +1307,6 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
-        # Process platform apps and MCP tools
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools:
@@ -1172,7 +1320,6 @@ class Agent(BaseAgent):
                     self.tools = []
                 self.tools.extend(mcps)
 
-        # Prepare tools
         raw_tools: list[BaseTool] = self.tools or []
 
         # Inject memory tools for standalone kickoff (crew path handles its own)
@@ -1189,7 +1336,6 @@ class Agent(BaseAgent):
 
         parsed_tools = parse_tools(raw_tools)
 
-        # Build agent_info for backward-compatible event emission
         agent_info = {
             "id": self.id,
             "role": self.role,
@@ -1199,35 +1345,9 @@ class Agent(BaseAgent):
             "verbose": self.verbose,
         }
 
-        # Build prompt for standalone execution
-        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
-        prompt = Prompts(
-            agent=self,
-            has_tools=len(raw_tools) > 0,
-            use_native_tool_calling=use_native_tool_calling,
-            i18n=self.i18n,
-            use_system_prompt=self.use_system_prompt,
-            system_template=self.system_template,
-            prompt_template=self.prompt_template,
-            response_template=self.response_template,
-        ).task_execution()
+        prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
 
-        # Prepare stop words
-        stop_words = [self.i18n.slice("observation")]
-        if self.response_template:
-            stop_words.append(
-                self.response_template.split("{{ .Response }}")[1].strip()
-            )
-
-        # Get RPM limit function
-        rpm_limit_fn = (
-            self._rpm_controller.check_or_wait if self._rpm_controller else None
-        )
-
-        # Create the executor for standalone mode (no crew, no task)
         executor = AgentExecutor(
-            task=None,
-            crew=None,
             llm=cast(BaseLLM, self.llm),
             agent=self,
             prompt=prompt,
@@ -1304,7 +1424,8 @@ class Agent(BaseAgent):
                     ),
                 )
 
-        # Build the input dict for the executor
+        formatted_messages = append_skill_context(self, formatted_messages)
+
         inputs: dict[str, Any] = {
             "input": formatted_messages,
             "tool_names": get_tool_names(parsed_tools),
@@ -1366,36 +1487,65 @@ class Agent(BaseAgent):
             )
 
             output = self._execute_and_build_output(executor, inputs, response_format)
-            if self.guardrail is not None:
-                output = self._process_kickoff_guardrail(
-                    output=output,
-                    executor=executor,
-                    inputs=inputs,
-                    response_format=response_format,
-                )
-
-            # Save to memory after execution (passive save)
-            self._save_kickoff_to_memory(messages, output.raw)
-
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionCompletedEvent(
-                    agent_info=agent_info,
-                    output=output.raw,
-                ),
+            return self._finalize_kickoff(
+                output, executor, inputs, response_format, messages, agent_info
             )
-
-            return output
 
         except Exception as e:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionErrorEvent(
-                    agent_info=agent_info,
-                    error=str(e),
-                ),
+            self._emit_kickoff_error(agent_info, e)
+
+    def _finalize_kickoff(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None,
+        messages: str | list[LLMMessage],
+        agent_info: dict[str, Any],
+    ) -> LiteAgentOutput:
+        """Apply guardrails, save to memory, and emit completion event.
+
+        Args:
+            output: The execution output.
+            executor: The agent executor.
+            inputs: The execution inputs.
+            response_format: Optional response format.
+            messages: The original messages.
+            agent_info: Agent metadata for events.
+
+        Returns:
+            The finalized output.
+        """
+        if self.guardrail is not None:
+            output = self._process_kickoff_guardrail(
+                output=output,
+                executor=executor,
+                inputs=inputs,
+                response_format=response_format,
             )
-            raise
+
+        self._save_kickoff_to_memory(messages, output.raw)
+
+        crewai_event_bus.emit(
+            self,
+            event=LiteAgentExecutionCompletedEvent(
+                agent_info=agent_info,
+                output=output.raw,
+            ),
+        )
+
+        return output
+
+    def _emit_kickoff_error(self, agent_info: dict[str, Any], e: Exception) -> NoReturn:
+        """Emit a kickoff error event and re-raise."""
+        crewai_event_bus.emit(
+            self,
+            event=LiteAgentExecutionErrorEvent(
+                agent_info=agent_info,
+                error=str(e),
+            ),
+        )
+        raise e
 
     def _save_kickoff_to_memory(
         self, messages: str | list[LLMMessage], output_text: str
@@ -1423,29 +1573,26 @@ class Agent(BaseAgent):
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
-    def _execute_and_build_output(
+    def _build_output_from_result(
         self,
+        result: dict[str, Any],
         executor: AgentExecutor,
-        inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent and build the output object.
+        """Build a LiteAgentOutput from an executor result dict.
+
+        Shared logic used by both sync and async execution paths.
 
         Args:
+            result: The result dictionary from executor.invoke / invoke_async.
             executor: The executor instance.
-            inputs: Input dictionary for execution.
             response_format: Optional response format.
 
         Returns:
             LiteAgentOutput with raw output, formatted result, and metrics.
         """
-        import json
-
-        # Execute the agent (this is called from sync path, so invoke returns dict)
-        result = cast(dict[str, Any], executor.invoke(inputs))
         output = result.get("output", "")
 
-        # Handle response format conversion
         formatted_result: BaseModel | None = None
         raw_output: str
 
@@ -1462,7 +1609,7 @@ class Agent(BaseAgent):
                 )
 
                 converter = Converter(
-                    llm=self.llm,
+                    llm=cast(BaseLLM, self.llm),
                     text=raw_output,
                     model=response_format,
                     instructions=instructions,
@@ -1476,7 +1623,6 @@ class Agent(BaseAgent):
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
-        # Get token usage metrics
         if isinstance(self.llm, BaseLLM):
             usage_metrics = self.llm.get_token_usage_summary()
         else:
@@ -1490,13 +1636,29 @@ class Agent(BaseAgent):
             else str(raw_output)
         )
 
+        todo_results = LiteAgentOutput.from_todo_items(executor.state.todos.items)
+
         return LiteAgentOutput(
             raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
+            messages=list(executor.state.messages),
+            plan=executor.state.plan,
+            todos=todo_results,
+            replan_count=executor.state.replan_count,
+            last_replan_reason=executor.state.last_replan_reason,
         )
+
+    def _execute_and_build_output(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent synchronously and build the output object."""
+        result = cast(dict[str, Any], executor.invoke(inputs))
+        return self._build_output_from_result(result, executor, response_format)
 
     async def _execute_and_build_output_async(
         self,
@@ -1504,77 +1666,9 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent asynchronously and build the output object.
-
-        This is the async version of _execute_and_build_output that uses
-        invoke_async() for native async execution within event loops.
-
-        Args:
-            executor: The executor instance.
-            inputs: Input dictionary for execution.
-            response_format: Optional response format.
-
-        Returns:
-            LiteAgentOutput with raw output, formatted result, and metrics.
-        """
-        import json
-
-        # Execute the agent asynchronously
+        """Execute the agent asynchronously and build the output object."""
         result = await executor.invoke_async(inputs)
-        output = result.get("output", "")
-
-        # Handle response format conversion
-        formatted_result: BaseModel | None = None
-        raw_output: str
-
-        if isinstance(output, BaseModel):
-            formatted_result = output
-            raw_output = output.model_dump_json()
-        elif response_format:
-            raw_output = str(output) if not isinstance(output, str) else output
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
-
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
-
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
-        else:
-            raw_output = str(output) if not isinstance(output, str) else output
-
-        # Get token usage metrics
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
-
-        raw_str = (
-            raw_output
-            if isinstance(raw_output, str)
-            else raw_output.model_dump_json()
-            if isinstance(raw_output, BaseModel)
-            else str(raw_output)
-        )
-
-        return LiteAgentOutput(
-            raw=raw_str,
-            pydantic=formatted_result,
-            agent_role=self.role,
-            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
-        )
+        return self._build_output_from_result(result, executor, response_format)
 
     def _process_kickoff_guardrail(
         self,
@@ -1596,9 +1690,6 @@ class Agent(BaseAgent):
         Returns:
             Validated/updated output.
         """
-        from crewai.utilities.guardrail_types import GuardrailCallable
-
-        # Ensure guardrail is callable
         guardrail_callable: GuardrailCallable
         if isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
@@ -1628,16 +1719,13 @@ class Agent(BaseAgent):
                     f"Last error: {guardrail_result.error}"
                 )
 
-            # Add feedback and re-execute
             executor._append_message_to_state(
                 guardrail_result.error or "Guardrail validation failed",
                 role="user",
             )
 
-            # Re-execute and build new output
             output = self._execute_and_build_output(executor, inputs, response_format)
 
-            # Recursively retry guardrail
             return self._process_kickoff_guardrail(
                 output=output,
                 executor=executor,
@@ -1646,7 +1734,6 @@ class Agent(BaseAgent):
                 retry_count=retry_count + 1,
             )
 
-        # Apply guardrail result if available
         if guardrail_result.result is not None:
             if isinstance(guardrail_result.result, str):
                 output.raw = guardrail_result.result
@@ -1696,37 +1783,12 @@ class Agent(BaseAgent):
             output = await self._execute_and_build_output_async(
                 executor, inputs, response_format
             )
-
-            if self.guardrail is not None:
-                output = self._process_kickoff_guardrail(
-                    output=output,
-                    executor=executor,
-                    inputs=inputs,
-                    response_format=response_format,
-                )
-
-            # Save to memory after async execution (passive save)
-            self._save_kickoff_to_memory(messages, output.raw)
-
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionCompletedEvent(
-                    agent_info=agent_info,
-                    output=output.raw,
-                ),
+            return self._finalize_kickoff(
+                output, executor, inputs, response_format, messages, agent_info
             )
-
-            return output
 
         except Exception as e:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionErrorEvent(
-                    agent_info=agent_info,
-                    error=str(e),
-                ),
-            )
-            raise
+            self._emit_kickoff_error(agent_info, e)
 
     async def akickoff(
         self,
@@ -1745,22 +1807,3 @@ class Agent(BaseAgent):
             LiteAgentOutput: The result of the agent execution.
         """
         return await self.kickoff_async(messages, response_format, input_files)
-
-
-# Rebuild Agent model to resolve A2A type forward references
-try:
-    from crewai.a2a.config import (
-        A2AClientConfig as _A2AClientConfig,
-        A2AConfig as _A2AConfig,
-        A2AServerConfig as _A2AServerConfig,
-    )
-
-    Agent.model_rebuild(
-        _types_namespace={
-            "A2AConfig": _A2AConfig,
-            "A2AClientConfig": _A2AClientConfig,
-            "A2AServerConfig": _A2AServerConfig,
-        }
-    )
-except ImportError:
-    pass

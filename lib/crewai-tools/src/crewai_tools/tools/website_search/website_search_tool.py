@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
@@ -26,7 +28,7 @@ class WebsiteSearchTool(RagTool):
     description: str = "A tool that can be used to semantic search a query from a specific URL content."
     args_schema: type[BaseModel] = WebsiteSearchToolSchema
 
-    def __init__(self, website: str | None = None, **kwargs):
+    def __init__(self, website: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if website is not None:
             self.add(website)
@@ -34,7 +36,7 @@ class WebsiteSearchTool(RagTool):
             self.args_schema = FixedWebsiteSearchToolSchema
             self._generate_description()
 
-    def add(self, website: str) -> None:
+    def add(self, website: str) -> None:  # type: ignore[override]
         super().add(website, data_type=DataType.WEBSITE)
 
     def _run(  # type: ignore[override]

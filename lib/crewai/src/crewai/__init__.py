@@ -4,9 +4,13 @@ from typing import Any
 import urllib.request
 import warnings
 
+from pydantic import PydanticUserError
+
 from crewai.agent.core import Agent
+from crewai.agent.planning_config import PlanningConfig
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.execution_context import ExecutionContext
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
@@ -41,7 +45,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.10.2a1"
+__version__ = "1.13.0a7"
 _telemetry_submitted = False
 
 
@@ -92,16 +96,95 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module 'crewai' has no attribute {name!r}")
 
 
+try:
+    from crewai.agents.agent_builder.base_agent import BaseAgent as _BaseAgent
+    from crewai.agents.agent_builder.base_agent_executor_mixin import (
+        CrewAgentExecutorMixin as _CrewAgentExecutorMixin,
+    )
+    from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
+    from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
+    from crewai.hooks.llm_hooks import LLMCallHookContext as _LLMCallHookContext
+    from crewai.tools.tool_types import ToolResult as _ToolResult
+    from crewai.utilities.prompts import (
+        StandardPromptResult as _StandardPromptResult,
+        SystemPromptResult as _SystemPromptResult,
+    )
+
+    _base_namespace: dict[str, type] = {
+        "Agent": Agent,
+        "Crew": Crew,
+        "BaseLLM": BaseLLM,
+        "Task": Task,
+        "CrewAgentExecutorMixin": _CrewAgentExecutorMixin,
+    }
+
+    try:
+        from crewai.a2a.config import (
+            A2AClientConfig as _A2AClientConfig,
+            A2AConfig as _A2AConfig,
+            A2AServerConfig as _A2AServerConfig,
+        )
+
+        _base_namespace.update(
+            {
+                "A2AConfig": _A2AConfig,
+                "A2AClientConfig": _A2AClientConfig,
+                "A2AServerConfig": _A2AServerConfig,
+            }
+        )
+    except ImportError:
+        pass
+
+    import sys
+
+    _full_namespace = {
+        **_base_namespace,
+        "ToolsHandler": _ToolsHandler,
+        "StandardPromptResult": _StandardPromptResult,
+        "SystemPromptResult": _SystemPromptResult,
+        "LLMCallHookContext": _LLMCallHookContext,
+        "ToolResult": _ToolResult,
+    }
+
+    _resolve_namespace = {
+        **_full_namespace,
+        **sys.modules[_BaseAgent.__module__].__dict__,
+    }
+
+    for _mod_name in (
+        _BaseAgent.__module__,
+        Agent.__module__,
+        _AgentExecutor.__module__,
+    ):
+        sys.modules[_mod_name].__dict__.update(_resolve_namespace)
+
+    _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
+    _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
+
+    try:
+        Agent.model_rebuild(force=True, _types_namespace=_full_namespace)
+    except PydanticUserError:
+        pass
+except (ImportError, PydanticUserError):
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning(
+        "model_rebuild() failed; forward refs may be unresolved.",
+        exc_info=True,
+    )
+
 __all__ = [
     "LLM",
     "Agent",
     "BaseLLM",
     "Crew",
     "CrewOutput",
+    "ExecutionContext",
     "Flow",
     "Knowledge",
     "LLMGuardrail",
     "Memory",
+    "PlanningConfig",
     "Process",
     "Task",
     "TaskOutput",

@@ -39,7 +39,14 @@ from uuid import uuid4
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    ValidationError,
+)
+from pydantic._internal._model_construction import ModelMetaclass
 from rich.console import Console
 from rich.panel import Panel
 
@@ -81,6 +88,8 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
     StartMethod,
 )
+from crewai.flow.human_feedback import HumanFeedbackResult
+from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import (
     FlowExecutionData,
@@ -99,17 +108,19 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
     from crewai.flow.async_feedback.types import PendingFeedbackContext
-    from crewai.flow.human_feedback import HumanFeedbackResult
     from crewai.llms.base_llm import BaseLLM
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.utilities.env import get_env_context
 from crewai.utilities.streaming import (
     TaskInfo,
     create_async_chunk_generator,
@@ -500,7 +511,7 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
 
     def index(
         self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None
-    ) -> int:  # type: ignore[override]
+    ) -> int:
         if stop is None:
             return self._list.index(value, start)
         return self._list.index(value, start, stop)
@@ -519,13 +530,13 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def copy(self) -> list[T]:
         return self._list.copy()
 
-    def __add__(self, other: list[T]) -> list[T]:
+    def __add__(self, other: list[T]) -> list[T]:  # type: ignore[override]
         return self._list + other
 
     def __radd__(self, other: list[T]) -> list[T]:
         return other + self._list
 
-    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:
+    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:  # type: ignore[override]
         with self._lock:
             self._list += list(other)
         return self
@@ -629,13 +640,13 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     def copy(self) -> dict[str, T]:
         return self._dict.copy()
 
-    def __or__(self, other: dict[str, T]) -> dict[str, T]:
+    def __or__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
         return self._dict | other
 
-    def __ror__(self, other: dict[str, T]) -> dict[str, T]:
+    def __ror__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
         return other | self._dict
 
-    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:
+    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:  # type: ignore[override]
         with self._lock:
             self._dict |= other
         return self
@@ -724,7 +735,7 @@ class StateProxy(Generic[T]):
         return result
 
 
-class FlowMeta(type):
+class FlowMeta(ModelMetaclass):
     def __new__(
         mcs,
         name: str,
@@ -732,6 +743,45 @@ class FlowMeta(type):
         namespace: dict[str, Any],
         **kwargs: Any,
     ) -> type:
+        parent_fields: set[str] = set()
+        for base in bases:
+            if hasattr(base, "model_fields"):
+                parent_fields.update(base.model_fields)
+
+        annotations = namespace.get("__annotations__", {})
+        _skip_types = (classmethod, staticmethod, property)
+
+        for base in bases:
+            if isinstance(base, ModelMetaclass):
+                continue
+            for attr_name in getattr(base, "__annotations__", {}):
+                if attr_name not in annotations and attr_name not in namespace:
+                    annotations[attr_name] = ClassVar
+
+        for attr_name, attr_value in namespace.items():
+            if isinstance(attr_value, property) and attr_name not in annotations:
+                for base in bases:
+                    base_ann = getattr(base, "__annotations__", {})
+                    if attr_name in base_ann:
+                        annotations[attr_name] = ClassVar
+
+        for attr_name, attr_value in list(namespace.items()):
+            if attr_name in annotations or attr_name.startswith("_"):
+                continue
+            if attr_name in parent_fields:
+                annotations[attr_name] = Any
+                if isinstance(attr_value, BaseModel):
+                    namespace[attr_name] = Field(
+                        default_factory=lambda v=attr_value: v, exclude=True
+                    )
+                continue
+            if callable(attr_value) or isinstance(
+                attr_value, (*_skip_types, FlowMethod)
+            ):
+                continue
+            annotations[attr_name] = ClassVar[type(attr_value)]
+        namespace["__annotations__"] = annotations
+
         cls = super().__new__(mcs, name, bases, namespace)
 
         start_methods = []
@@ -774,11 +824,19 @@ class FlowMeta(type):
                         and attr_value.__is_router__
                     ):
                         routers.add(attr_name)
-                        possible_returns = get_possible_return_constants(attr_value)
-                        if possible_returns:
-                            router_paths[attr_name] = possible_returns
+                        # First check for explicit __router_paths__ (set by @human_feedback(emit=[...]))
+                        if (
+                            hasattr(attr_value, "__router_paths__")
+                            and attr_value.__router_paths__
+                        ):
+                            router_paths[attr_name] = attr_value.__router_paths__
                         else:
-                            router_paths[attr_name] = []
+                            # Fall back to source code analysis for @router methods
+                            possible_returns = get_possible_return_constants(attr_value)
+                            if possible_returns:
+                                router_paths[attr_name] = possible_returns
+                            else:
+                                router_paths[attr_name] = []
 
                 # Handle start methods that are also routers (e.g., @human_feedback with emit)
                 if (
@@ -808,87 +866,90 @@ class FlowMeta(type):
         return cls
 
 
-class Flow(Generic[T], metaclass=FlowMeta):
+class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
     type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        ignored_types=(StartMethod, ListenMethod, RouterMethod),
+        revalidate_instances="never",
+    )
+    __hash__ = object.__hash__
 
     _start_methods: ClassVar[list[FlowMethodName]] = []
     _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
     _routers: ClassVar[set[FlowMethodName]] = set()
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
-    initial_state: type[T] | T | None = None
-    name: str | None = None
-    tracing: bool | None = None
-    stream: bool = False
-    memory: Any = (
-        None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
-    )
-    input_provider: Any = None  # InputProvider | None; per-flow override for self.ask()
 
-    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
-        class _FlowGeneric(cls):  # type: ignore
-            _initial_state_t = item
+    initial_state: Any = Field(default=None)
+    name: str | None = Field(default=None)
+    tracing: bool | None = Field(default=None)
+    stream: bool = Field(default=False)
+    memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
+    input_provider: InputProvider | None = Field(default=None)
+    suppress_flow_events: bool = Field(default=False)
+    human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
+    last_human_feedback: HumanFeedbackResult | None = Field(default=None)
+
+    persistence: Any = Field(default=None, exclude=True)
+    max_method_calls: int = Field(default=100, exclude=True)
+
+    _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
+        default_factory=dict
+    )
+    _method_execution_counts: dict[FlowMethodName, int] = PrivateAttr(
+        default_factory=dict
+    )
+    _pending_and_listeners: dict[PendingListenerKey, set[FlowMethodName]] = PrivateAttr(
+        default_factory=dict
+    )
+    _fired_or_listeners: set[FlowMethodName] = PrivateAttr(default_factory=set)
+    _method_outputs: list[Any] = PrivateAttr(default_factory=list)
+    _state_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
+    _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
+    _is_execution_resuming: bool = PrivateAttr(default=False)
+    _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
+    _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
+    _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
+    _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
+    _state: Any = PrivateAttr(default=None)
+
+    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
+        class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
+            pass
 
         _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
+        _FlowGeneric._initial_state_t = item
         return _FlowGeneric
 
-    def __init__(
-        self,
-        persistence: FlowPersistence | None = None,
-        tracing: bool | None = None,
-        suppress_flow_events: bool = False,
-        max_method_calls: int = 100,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize a new Flow instance.
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Allow arbitrary attribute assignment for backward compat with plain class."""
+        if name in self.model_fields or name in self.__private_attributes__:
+            super().__setattr__(name, value)
+        else:
+            object.__setattr__(self, name, value)
 
-        Args:
-            persistence: Optional persistence backend for storing flow states
-            tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
-            suppress_flow_events: Whether to suppress flow event emissions (internal use)
-            max_method_calls: Maximum times a single method can be called per execution before raising RecursionError
-            **kwargs: Additional state values to initialize or override
-        """
-        # Initialize basic instance attributes
-        self._methods: dict[FlowMethodName, FlowMethod[Any, Any]] = {}
-        self._method_execution_counts: dict[FlowMethodName, int] = {}
-        self._pending_and_listeners: dict[PendingListenerKey, set[FlowMethodName]] = {}
-        self._fired_or_listeners: set[FlowMethodName] = (
-            set()
-        )  # Track OR listeners that already fired
-        self._method_outputs: list[Any] = []  # list to store all method outputs
-        self._state_lock = threading.Lock()
-        self._or_listeners_lock = threading.Lock()
-        self._completed_methods: set[FlowMethodName] = (
-            set()
-        )  # Track completed methods for reload
-        self._method_call_counts: dict[FlowMethodName, int] = {}
-        self._max_method_calls = max_method_calls
-        self._persistence: FlowPersistence | None = persistence
-        self._is_execution_resuming: bool = False
-        self._event_futures: list[Future[None]] = []
+    def model_post_init(self, __context: Any) -> None:
+        self._flow_post_init()
 
-        # Human feedback storage
-        self.human_feedback_history: list[HumanFeedbackResult] = []
-        self.last_human_feedback: HumanFeedbackResult | None = None
-        self._pending_feedback_context: PendingFeedbackContext | None = None
-        self.suppress_flow_events: bool = suppress_flow_events
+    def _flow_post_init(self) -> None:
+        """Heavy initialization: state creation, events, memory, method registration."""
+        if getattr(self, "_flow_post_init_done", False):
+            return
+        object.__setattr__(self, "_flow_post_init_done", True)
 
-        # User input history (for self.ask())
-        self._input_history: list[InputHistoryEntry] = []
+        if self._state is None:
+            self._state = self._create_initial_state()
 
-        # Initialize state with initial values
-        self._state = self._create_initial_state()
-        self.tracing = tracing
         tracing_enabled = should_enable_tracing(override=self.tracing)
         set_tracing_enabled(tracing_enabled)
 
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
-        # Apply any additional kwargs
-        if kwargs:
-            self._initialize_state(kwargs)
 
         if not self.suppress_flow_events:
             crewai_event_bus.emit(
@@ -903,9 +964,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
         # to avoid creating a wasteful standalone Memory instance.
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
-            from crewai.memory.unified_memory import Memory
+            from crewai.memory.utils import sanitize_scope_name
 
-            self.memory = Memory()
+            flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
+            self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -950,10 +1012,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Raises:
             ValueError: If no memory is configured for this flow.
+            TypeError: If batch remember is attempted on a MemoryScope or MemorySlice.
         """
         if self.memory is None:
             raise ValueError("No memory configured for this flow")
         if isinstance(content, list):
+            if not isinstance(self.memory, Memory):
+                raise TypeError(
+                    "Batch remember requires a Memory instance, "
+                    f"got {type(self.memory).__name__}"
+                )
             return self.memory.remember_many(content, **kwargs)
         return self.memory.remember(content, **kwargs)
 
@@ -1206,9 +1274,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Mark that we're resuming execution
         instance._is_execution_resuming = True
 
-        # Mark the method as completed (it ran before pausing)
-        instance._completed_methods.add(FlowMethodName(pending_context.method_name))
-
         return instance
 
     @property
@@ -1309,7 +1374,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
-        llm = context.llm
+
+        # Try to get the live LLM from the re-imported decorator first.
+        # This preserves the fully-configured object (credentials, safety_settings, etc.)
+        # for same-process resume. For cross-process resume, fall back to the
+        # serialized context.llm which is now a dict with full config (or a legacy string).
+        from crewai.flow.human_feedback import _deserialize_llm_from_context
+
+        llm = None
+        method = self._methods.get(FlowMethodName(context.method_name))
+        if method is not None:
+            live_llm = getattr(method, "_hf_llm", None)
+            if live_llm is not None:
+                from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+
+                if isinstance(live_llm, BaseLLMClass):
+                    llm = live_llm
+
+        if llm is None:
+            llm = _deserialize_llm_from_context(context.llm)
 
         # Determine outcome
         collapsed_outcome: str | None = None
@@ -1345,12 +1428,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history.append(result)
         self.last_human_feedback = result
 
-        # Clear pending context after processing
+        self._completed_methods.add(FlowMethodName(context.method_name))
+
         self._pending_feedback_context = None
 
         # Clear pending feedback from persistence
-        if self._persistence:
-            self._persistence.clear_pending_feedback(context.flow_id)
+        if self.persistence:
+            self.persistence.clear_pending_feedback(context.flow_id)
 
         # Emit feedback received event
         crewai_event_bus.emit(
@@ -1368,7 +1452,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
-        final_result: Any = result
+        if emit and collapsed_outcome is None:
+            collapsed_outcome = default_outcome or emit[0]
+            result.outcome = collapsed_outcome
+
         try:
             if emit and collapsed_outcome:
                 self._method_outputs.append(collapsed_outcome)
@@ -1386,18 +1473,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if isinstance(e, HumanFeedbackPending):
-                # Auto-save pending feedback (create default persistence if needed)
-                if self._persistence is None:
+                self._pending_feedback_context = e.context
+
+                if self.persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
-                    self._persistence = SQLiteFlowPersistence()
+                    self.persistence = SQLiteFlowPersistence()
 
                 state_data = (
                     self._state
                     if isinstance(self._state, dict)
                     else self._state.model_dump()
                 )
-                self._persistence.save_pending_feedback(
+                self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
                     state_data=state_data,
@@ -1419,6 +1507,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Return the pending exception instead of raising
                 return e
             raise
+
+        final_result = self._method_outputs[-1] if self._method_outputs else result
 
         # Emit flow finished
         crewai_event_bus.emit(
@@ -1445,39 +1535,33 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         init_state = self.initial_state
 
-        # Handle case where initial_state is None but we have a type parameter
         if init_state is None and hasattr(self, "_initial_state_t"):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    # Create instance - FlowState auto-generates id via default_factory
                     instance = state_type()
-                    # Ensure id is set - generate UUID if empty
                     if not getattr(instance, "id", None):
                         object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if issubclass(state_type, BaseModel):
-                    # Create a new type with FlowState first for proper id default
+
                     class StateWithId(FlowState, state_type):  # type: ignore
                         pass
 
                     instance = StateWithId()
-                    # Ensure id is set - generate UUID if empty
                     if not getattr(instance, "id", None):
                         object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if state_type is dict:
                     return cast(T, {"id": str(uuid4())})
 
-        # Handle case where no initial state is provided
         if init_state is None:
             return cast(T, {"id": str(uuid4())})
 
-        # Handle case where initial_state is a type (class)
         if isinstance(init_state, type):
             state_class = init_state
             if issubclass(state_class, FlowState):
-                return state_class()
+                return cast(T, state_class())
             if issubclass(state_class, BaseModel):
                 model_fields = getattr(state_class, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
@@ -1485,7 +1569,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 model_instance = state_class()
                 if not getattr(model_instance, "id", None):
                     object.__setattr__(model_instance, "id", str(uuid4()))
-                return model_instance
+                return cast(T, model_instance)
             if init_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
@@ -1496,32 +1580,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 new_state["id"] = str(uuid4())
             return cast(T, new_state)
 
-        # Handle BaseModel instance case
         if isinstance(init_state, BaseModel):
-            model = cast(BaseModel, init_state)
-            if not hasattr(model, "id"):
-                raise ValueError("Flow state model must have an 'id' field")
-
-            # Create new instance with same values to avoid mutations
-            if hasattr(model, "model_dump"):
-                # Pydantic v2
+            model = init_state
+            if hasattr(model, "id"):
                 state_dict = model.model_dump()
-            elif hasattr(model, "dict"):
-                # Pydantic v1
-                state_dict = model.dict()
-            else:
-                # Fallback for other BaseModel implementations
-                state_dict = {
-                    k: v for k, v in model.__dict__.items() if not k.startswith("_")
-                }
+                if not state_dict.get("id"):
+                    state_dict["id"] = str(uuid4())
+                model_class = type(model)
+                return cast(T, model_class(**state_dict))
 
-            # Ensure id is set - generate UUID if empty
-            if not state_dict.get("id"):
-                state_dict["id"] = str(uuid4())
+            class StateWithId(FlowState, type(model)):  # type: ignore
+                pass
 
-            # Create new instance of the same class
-            model_class = type(model)
-            return cast(T, model_class(**state_dict))
+            state_dict = model.model_dump()
+            state_dict["id"] = str(uuid4())
+            return cast(T, StateWithId(**state_dict))
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
@@ -1534,17 +1607,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         if isinstance(self._state, BaseModel):
             try:
-                return self._state.model_copy(deep=True)
+                return cast(T, self._state.model_copy(deep=True))
             except (TypeError, AttributeError):
                 try:
                     state_dict = self._state.model_dump()
                     model_class = type(self._state)
-                    return model_class(**state_dict)
+                    return cast(T, model_class(**state_dict))
                 except Exception:
-                    return self._state.model_copy(deep=False)
+                    return cast(T, self._state.model_copy(deep=False))
         else:
             try:
-                return copy.deepcopy(self._state)
+                return cast(T, copy.deepcopy(self._state))
             except (TypeError, AttributeError):
                 return cast(T, self._state.copy())
 
@@ -1620,7 +1693,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, preserve existing fields unless overridden
             try:
-                model = cast(BaseModel, self._state)
+                model = self._state
                 # Get current state as dict
                 if hasattr(model, "model_dump"):
                     current_state = model.model_dump()
@@ -1671,7 +1744,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._state.update(stored_state)
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, create new instance with stored values
-            model = cast(BaseModel, self._state)
+            model = self._state
             if hasattr(model, "model_validate"):
                 # Pydantic v2
                 self._state = cast(T, type(model).model_validate(stored_state))
@@ -1770,6 +1843,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        get_env_context()
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -1895,7 +1969,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         try:
             # Reset flow state for fresh execution unless restoring from persistence
-            is_restoring = inputs and "id" in inputs and self._persistence is not None
+            is_restoring = inputs and "id" in inputs and self.persistence is not None
             if not is_restoring:
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
@@ -1921,9 +1995,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         setattr(self._state, "id", inputs["id"])  # noqa: B010
 
                 # If persistence is enabled, attempt to restore the stored state using the provided id.
-                if "id" in inputs and self._persistence is not None:
+                if "id" in inputs and self.persistence is not None:
                     restore_uuid = inputs["id"]
-                    stored_state = self._persistence.load_state(restore_uuid)
+                    stored_state = self.persistence.load_state(restore_uuid)
                     if stored_state:
                         self._log_flow_event(
                             f"Loading flow state from memory for UUID: {restore_uuid}"
@@ -1993,17 +2067,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
                 if isinstance(e, HumanFeedbackPending):
                     # Auto-save pending feedback (create default persistence if needed)
-                    if self._persistence is None:
+                    if self.persistence is None:
                         from crewai.flow.persistence import SQLiteFlowPersistence
 
-                        self._persistence = SQLiteFlowPersistence()
+                        self.persistence = SQLiteFlowPersistence()
 
                     state_data = (
                         self._state
                         if isinstance(self._state, dict)
                         else self._state.model_dump()
                     )
-                    self._persistence.save_pending_feedback(
+                    self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
                         state_data=state_data,
@@ -2250,6 +2324,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 result = await result
 
             self._method_outputs.append(result)
+
+            # For @human_feedback methods with emit, the result is the collapsed outcome
+            # (e.g., "approved") used for routing. But we want the actual method output
+            # to be the stored result (for final flow output). Replace the last entry
+            # if a stashed output exists. Dict-based stash is concurrency-safe and
+            # handles None return values (presence in dict = stashed, not value).
+            if method_name in self._human_feedback_method_outputs:
+                self._method_outputs[-1] = self._human_feedback_method_outputs.pop(
+                    method_name
+                )
+
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
             )
@@ -2278,11 +2363,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if isinstance(e, HumanFeedbackPending):
                 e.context.method_name = method_name
 
-                # Auto-save pending feedback (create default persistence if needed)
-                if self._persistence is None:
+                if self.persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
-                    self._persistence = SQLiteFlowPersistence()
+                    self.persistence = SQLiteFlowPersistence()
 
                 # Emit paused event (not failed)
                 if not self.suppress_flow_events:
@@ -2643,9 +2727,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             - Catches and logs any exceptions during execution, preventing individual listener failures from breaking the entire flow
         """
         count = self._method_call_counts.get(listener_name, 0) + 1
-        if count > self._max_method_calls:
+        if count > self.max_method_calls:
             raise RecursionError(
-                f"Method '{listener_name}' has been called {self._max_method_calls} times in "
+                f"Method '{listener_name}' has been called {self.max_method_calls} times in "
                 f"this flow execution, which indicates an infinite loop. "
                 f"This commonly happens when a @listen label matches the "
                 f"method's own name."
@@ -2716,12 +2800,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if not isinstance(e, HumanFeedbackPending):
-                logger.error(f"Error executing listener {listener_name}: {e}")
+                if not getattr(e, "_flow_listener_logged", False):
+                    logger.error(f"Error executing listener {listener_name}: {e}")
+                    e._flow_listener_logged = True  # type: ignore[attr-defined]
             raise
 
     # ── User Input (self.ask) ────────────────────────────────────────
 
-    def _resolve_input_provider(self) -> Any:
+    def _resolve_input_provider(self) -> InputProvider:
         """Resolve the input provider using the priority chain.
 
         Resolution order:
@@ -2750,7 +2836,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         This is best-effort: if persistence is not configured, this is a no-op.
         """
-        if self._persistence is None:
+        if self.persistence is None:
             return
         try:
             state_data = (
@@ -2758,7 +2844,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if isinstance(self._state, dict)
                 else self._state.model_dump()
             )
-            self._persistence.save_state(
+            self.persistence.save_state(
                 flow_uuid=self.flow_id,
                 method_name="_ask_checkpoint",
                 state_data=state_data,
@@ -3084,25 +3170,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
             )
-            response = llm_instance.call(messages=prompt)
-            response_clean = str(response).strip()
+            try:
+                response = llm_instance.call(
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                response_clean = str(response).strip()
 
-            # Exact match (case-insensitive)
-            for outcome in outcomes:
-                if outcome.lower() == response_clean.lower():
-                    return outcome
+                # Exact match (case-insensitive)
+                for outcome in outcomes:
+                    if outcome.lower() == response_clean.lower():
+                        return outcome
 
-            # Partial match
-            for outcome in outcomes:
-                if outcome.lower() in response_clean.lower():
-                    return outcome
+                # Partial match (longest wins, first on length ties)
+                response_lower = response_clean.lower()
+                best_outcome: str | None = None
+                best_len = -1
+                for outcome in outcomes:
+                    if outcome.lower() in response_lower and len(outcome) > best_len:
+                        best_outcome = outcome
+                        best_len = len(outcome)
+                if best_outcome is not None:
+                    return best_outcome
 
-            # Fallback to first outcome
-            logger.warning(
-                f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
-                f"Falling back to first outcome: {outcomes[0]}"
-            )
-            return outcomes[0]
+                # Fallback to first outcome
+                logger.warning(
+                    f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
+
+            except Exception as fallback_err:
+                logger.warning(
+                    f"Simple prompting also failed: {fallback_err}. "
+                    f"Falling back to first outcome: {outcomes[0]}"
+                )
+                return outcomes[0]
 
     def _log_flow_event(
         self,

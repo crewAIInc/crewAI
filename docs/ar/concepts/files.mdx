@@ -1,0 +1,267 @@
+---
+title: الملفات
+description: تمرير الصور وملفات PDF والصوت والفيديو والنصوص إلى وكلائك للمعالجة متعددة الوسائط.
+icon: file-image
+---
+
+## نظرة عامة
+
+يدعم CrewAI مدخلات الملفات متعددة الوسائط الأصلية، مما يتيح لك تمرير الصور وملفات PDF والصوت والفيديو والنصوص مباشرة إلى وكلائك. يتم تنسيق الملفات تلقائيًا وفقًا لمتطلبات API لكل مزود LLM.
+
+<Note type="info" title="اعتمادية اختيارية">
+يتطلب دعم الملفات حزمة `crewai-files` الاختيارية. ثبّتها بـ:
+
+```bash
+uv add 'crewai[file-processing]'
+```
+</Note>
+
+<Note type="warning" title="وصول مبكر">
+واجهة معالجة الملفات حاليًا في مرحلة الوصول المبكر.
+</Note>
+
+## أنواع الملفات
+
+يدعم CrewAI خمسة أنواع ملفات محددة بالإضافة إلى فئة `File` العامة التي تكتشف النوع تلقائيًا:
+
+| النوع | الفئة | حالات الاستخدام |
+|:-----|:------|:----------|
+| **صورة** | `ImageFile` | صور، لقطات شاشة، مخططات، رسوم بيانية |
+| **PDF** | `PDFFile` | مستندات، تقارير، أوراق بحثية |
+| **صوت** | `AudioFile` | تسجيلات صوتية، بودكاست، اجتماعات |
+| **فيديو** | `VideoFile` | تسجيلات شاشة، عروض تقديمية |
+| **نص** | `TextFile` | ملفات كود، سجلات، ملفات بيانات |
+| **عام** | `File` | اكتشاف تلقائي للنوع من المحتوى |
+
+```python
+from crewai_files import File, ImageFile, PDFFile, AudioFile, VideoFile, TextFile
+
+image = ImageFile(source="screenshot.png")
+pdf = PDFFile(source="report.pdf")
+audio = AudioFile(source="meeting.mp3")
+video = VideoFile(source="demo.mp4")
+text = TextFile(source="data.csv")
+
+file = File(source="document.pdf")
+```
+
+## مصادر الملفات
+
+يقبل معامل `source` أنواع إدخال متعددة ويكتشف تلقائيًا المعالج المناسب:
+
+### من مسار
+
+```python
+from crewai_files import ImageFile
+
+image = ImageFile(source="./images/chart.png")
+```
+
+### من عنوان URL
+
+```python
+from crewai_files import ImageFile
+
+image = ImageFile(source="https://example.com/image.png")
+```
+
+### من بايتات
+
+```python
+from crewai_files import ImageFile, FileBytes
+
+image_bytes = download_image_from_api()
+image = ImageFile(source=FileBytes(data=image_bytes, filename="downloaded.png"))
+image = ImageFile(source=image_bytes)
+```
+
+## استخدام الملفات
+
+يمكن تمرير الملفات على مستويات متعددة، حيث تأخذ المستويات الأكثر تحديدًا الأولوية.
+
+### مع الأطقم
+
+مرر الملفات عند تشغيل طاقم:
+
+```python
+from crewai import Crew
+from crewai_files import ImageFile
+
+crew = Crew(agents=[analyst], tasks=[analysis_task])
+
+result = crew.kickoff(
+    inputs={"topic": "Q4 Sales"},
+    input_files={
+        "chart": ImageFile(source="sales_chart.png"),
+        "report": PDFFile(source="quarterly_report.pdf"),
+    }
+)
+```
+
+### مع المهام
+
+أرفق الملفات بمهام محددة:
+
+```python
+from crewai import Task
+from crewai_files import ImageFile
+
+task = Task(
+    description="Analyze the sales chart and identify trends in {chart}",
+    expected_output="A summary of key trends",
+    input_files={
+        "chart": ImageFile(source="sales_chart.png"),
+    }
+)
+```
+
+### مع التدفقات
+
+مرر الملفات إلى التدفقات، والتي تنتقل تلقائيًا إلى الأطقم:
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai_files import ImageFile
+
+class AnalysisFlow(Flow):
+    @start()
+    def analyze(self):
+        return self.analysis_crew.kickoff()
+
+flow = AnalysisFlow()
+result = flow.kickoff(
+    input_files={"image": ImageFile(source="data.png")}
+)
+```
+
+### مع الوكلاء المستقلين
+
+مرر الملفات مباشرة إلى تشغيل الوكيل:
+
+```python
+from crewai import Agent
+from crewai_files import ImageFile
+
+agent = Agent(
+    role="Image Analyst",
+    goal="Analyze images",
+    backstory="Expert at visual analysis",
+    llm="gpt-4o",
+)
+
+result = agent.kickoff(
+    messages="What's in this image?",
+    input_files={"photo": ImageFile(source="photo.jpg")},
+)
+```
+
+## أولوية الملفات
+
+عند تمرير الملفات على مستويات متعددة، تتجاوز المستويات الأكثر تحديدًا المستويات الأوسع:
+
+```
+Flow input_files < Crew input_files < Task input_files
+```
+
+على سبيل المثال، إذا عرّف كل من التدفق والمهمة ملفًا باسم `"chart"`، تُستخدم نسخة المهمة.
+
+## دعم المزودين
+
+تدعم المزودات المختلفة أنواع ملفات مختلفة. يقوم CrewAI تلقائيًا بتنسيق الملفات وفقًا لواجهة كل مزود.
+
+| المزود | صورة | PDF | صوت | فيديو | نص |
+|:---------|:-----:|:---:|:-----:|:-----:|:----:|
+| **OpenAI** (completions API) | ✓ | | | | |
+| **OpenAI** (responses API) | ✓ | ✓ | ✓ | | |
+| **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
+| **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
+| **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
+
+<Note type="info" title="Gemini لأقصى دعم للملفات">
+تدعم نماذج Google Gemini جميع أنواع الملفات بما في ذلك الفيديو (حتى ساعة واحدة، 2 جيجابايت). استخدم Gemini عندما تحتاج لمعالجة محتوى الفيديو.
+</Note>
+
+<Note type="warning" title="أنواع الملفات غير المدعومة">
+إذا مررت نوع ملف لا يدعمه المزود (مثل الفيديو إلى OpenAI)، ستتلقى خطأ `UnsupportedFileTypeError`. اختر مزودك بناءً على أنواع الملفات التي تحتاج لمعالجتها.
+</Note>
+
+## كيف تُرسل الملفات
+
+يختار CrewAI تلقائيًا الطريقة المثلى لإرسال الملفات إلى كل مزود:
+
+| الطريقة | الوصف | متى تُستخدم |
+|:-------|:------------|:----------|
+| **Inline Base64** | الملف مضمّن مباشرة في الطلب | ملفات صغيرة (< 5 ميجابايت عادة) |
+| **File Upload API** | الملف يُرفع بشكل منفصل، يُشار إليه بمعرّف | ملفات كبيرة تتجاوز العتبة |
+| **URL Reference** | عنوان URL مباشر يُمرر إلى النموذج | مصدر الملف هو عنوان URL بالفعل |
+
+### طرق الإرسال حسب المزود
+
+| المزود | Inline Base64 | File Upload API | URL References |
+|:---------|:-------------:|:---------------:|:--------------:|
+| **OpenAI** | ✓ | ✓ (> 5 MB) | ✓ |
+| **Anthropic** | ✓ | ✓ (> 5 MB) | ✓ |
+| **Google Gemini** | ✓ | ✓ (> 20 MB) | ✓ |
+| **AWS Bedrock** | ✓ | | ✓ (S3 URIs) |
+| **Azure OpenAI** | ✓ | | ✓ |
+
+<Note type="info" title="تحسين تلقائي">
+لا تحتاج لإدارة هذا بنفسك. يستخدم CrewAI تلقائيًا الطريقة الأكثر كفاءة بناءً على حجم الملف وقدرات المزود. المزودات بدون واجهات رفع الملفات تستخدم inline base64 لجميع الملفات.
+</Note>
+
+## أوضاع معالجة الملفات
+
+تحكم في كيفية معالجة الملفات عندما تتجاوز حدود المزود:
+
+```python
+from crewai_files import ImageFile, PDFFile
+
+image = ImageFile(source="large.png", mode="strict")
+image = ImageFile(source="large.png", mode="auto")
+image = ImageFile(source="large.png", mode="warn")
+pdf = PDFFile(source="large.pdf", mode="chunk")
+```
+
+## قيود المزودين
+
+لكل مزود حدود محددة لأحجام الملفات والأبعاد:
+
+### OpenAI
+- **الصور**: حد أقصى 20 ميجابايت، حتى 10 صور لكل طلب
+- **PDF**: حد أقصى 32 ميجابايت، حتى 100 صفحة
+- **الصوت**: حد أقصى 25 ميجابايت، حتى 25 دقيقة
+
+### Anthropic
+- **الصور**: حد أقصى 5 ميجابايت، أقصى 8000x8000 بكسل، حتى 100 صورة
+- **PDF**: حد أقصى 32 ميجابايت، حتى 100 صفحة
+
+### Google Gemini
+- **الصور**: حد أقصى 100 ميجابايت
+- **PDF**: حد أقصى 50 ميجابايت
+- **الصوت**: حد أقصى 100 ميجابايت، حتى 9.5 ساعة
+- **الفيديو**: حد أقصى 2 جيجابايت، حتى ساعة واحدة
+
+### AWS Bedrock
+- **الصور**: حد أقصى 4.5 ميجابايت، أقصى 8000x8000 بكسل
+- **PDF**: حد أقصى 3.75 ميجابايت، حتى 100 صفحة
+
+## الإشارة إلى الملفات في الأوامر
+
+استخدم اسم مفتاح الملف في أوصاف المهام للإشارة إلى الملفات:
+
+```python
+task = Task(
+    description="""
+    Analyze the provided materials:
+    1. Review the chart in {sales_chart}
+    2. Cross-reference with data in {quarterly_report}
+    3. Summarize key findings
+    """,
+    expected_output="Analysis summary with key insights",
+    input_files={
+        "sales_chart": ImageFile(source="chart.png"),
+        "quarterly_report": PDFFile(source="report.pdf"),
+    }
+)
+```

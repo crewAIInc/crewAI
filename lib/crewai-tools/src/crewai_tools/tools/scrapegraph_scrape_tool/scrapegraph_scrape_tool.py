@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-
-# Type checking import
-if TYPE_CHECKING:
-    from scrapegraph_py import Client  # type: ignore[import-untyped]
 
 
 class ScrapegraphError(Exception):
@@ -36,7 +31,7 @@ class ScrapegraphScrapeToolSchema(FixedScrapegraphScrapeToolSchema):
 
     @field_validator("website_url")
     @classmethod
-    def validate_url(cls, v):
+    def validate_url(cls, v: str) -> str:
         """Validate URL format."""
         try:
             result = urlparse(v)
@@ -69,7 +64,7 @@ class ScrapegraphScrapeTool(BaseTool):
     user_prompt: str | None = None
     api_key: str | None = None
     enable_logging: bool = False
-    _client: Client | None = None
+    _client: Any = None
     package_dependencies: list[str] = Field(default_factory=lambda: ["scrapegraph-py"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -87,12 +82,12 @@ class ScrapegraphScrapeTool(BaseTool):
         user_prompt: str | None = None,
         api_key: str | None = None,
         enable_logging: bool = False,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         try:
-            from scrapegraph_py import Client  # type: ignore[import-not-found]
-            from scrapegraph_py.logger import (  # type: ignore[import-not-found]
+            from scrapegraph_py import Client
+            from scrapegraph_py.logger import (
                 sgai_logger,
             )
 
@@ -146,7 +141,7 @@ class ScrapegraphScrapeTool(BaseTool):
                 "Invalid URL format. URL must include scheme (http/https) and domain"
             ) from e
 
-    def _handle_api_response(self, response: dict) -> str:
+    def _handle_api_response(self, response: dict[str, Any]) -> str:
         """Handle and validate API response."""
         if not response:
             raise RuntimeError("Empty response from Scrapegraph API")
@@ -160,7 +155,7 @@ class ScrapegraphScrapeTool(BaseTool):
         if "result" not in response:
             raise RuntimeError("Invalid response format from Scrapegraph API")
 
-        return response["result"]
+        return str(response["result"])
 
     def _run(
         self,

@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai.tools.base_tool import BaseTool
@@ -27,8 +29,8 @@ class AddImageTool(BaseTool):
         self,
         image_url: str,
         action: str | None = None,
-        **kwargs,
-    ) -> dict:
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         action = action or i18n.tools("add_image")["default_action"]  # type: ignore
         content = [
             {"type": "text", "text": action},

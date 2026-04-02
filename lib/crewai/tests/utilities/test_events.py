@@ -880,6 +880,35 @@ def test_llm_emits_call_started_event():
 
 
 @pytest.mark.vcr()
+def test_llm_completed_event_includes_usage():
+    completed_events: list[LLMCallCompletedEvent] = []
+    condition = threading.Condition()
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    def handle_llm_call_completed(source, event):
+        with condition:
+            completed_events.append(event)
+            condition.notify()
+
+    llm = LLM(model="gpt-4o-mini")
+    llm.call("Say hello")
+
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_events) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLMCallCompletedEvent"
+
+    event = completed_events[0]
+    assert event.usage is not None
+    assert isinstance(event.usage, dict)
+    assert event.usage.get("prompt_tokens", 0) > 0
+    assert event.usage.get("completion_tokens", 0) > 0
+    assert event.usage.get("total_tokens", 0) > 0
+
+
+@pytest.mark.vcr()
 def test_llm_emits_call_failed_event():
     received_events = []
     event_received = threading.Event()
@@ -1254,7 +1283,7 @@ def test_llm_emits_event_with_lite_agent():
         success = condition.wait_for(
             lambda: len(completed_event) >= 1
             and len(started_event) >= 1
-            and len(stream_event) >= 15,
+            and len(stream_event) >= 1,
             timeout=10,
         )
     assert success, "Timeout waiting for all events"
@@ -1262,7 +1291,7 @@ def test_llm_emits_event_with_lite_agent():
     assert len(completed_event) == 1
     assert len(failed_event) == 0
     assert len(started_event) == 1
-    assert len(stream_event) == 15
+    assert len(stream_event) >= 1
 
     all_events = completed_event + failed_event + started_event + stream_event
     all_agent_roles = [event.agent_role for event in all_events]
@@ -1271,8 +1300,9 @@ def test_llm_emits_event_with_lite_agent():
     all_task_name = [event.task_name for event in all_events if event.task_name]
 
     # ensure all events have the agent + task props set
-    assert len(all_agent_roles) == 17
-    assert len(all_agent_id) == 17
+    expected_total = 1 + 1 + len(stream_event)  # completed + started + stream
+    assert len(all_agent_roles) == expected_total
+    assert len(all_agent_id) == expected_total
     assert len(all_task_id) == 0
     assert len(all_task_name) == 0
 

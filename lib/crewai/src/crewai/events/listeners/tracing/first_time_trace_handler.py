@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import logging
 import uuid
 import webbrowser
@@ -65,9 +66,9 @@ class FirstTimeTraceHandler:
             self._gracefully_fail(f"Error in trace handling: {e}")
             mark_first_execution_completed(user_consented=False)
 
-    def _initialize_backend_and_send_events(self):
+    def _initialize_backend_and_send_events(self) -> None:
         """Initialize backend batch and send collected events."""
-        if not self.batch_manager:
+        if not self.batch_manager or not self.batch_manager.trace_batch_id:
             return
 
         try:
@@ -100,27 +101,58 @@ class FirstTimeTraceHandler:
                     user_context=user_context,
                     execution_metadata=execution_metadata,
                     use_ephemeral=True,
+                    skip_context_check=True,
                 )
+
+                if not self.batch_manager.trace_batch_id:
+                    self._gracefully_fail(
+                        "Backend batch creation failed, cannot send events."
+                    )
+                    self._reset_batch_state()
+                    return
+
                 self.batch_manager.backend_initialized = True
 
-            if self.batch_manager.event_buffer:
-                self.batch_manager._send_events_to_backend()
+            # Capture values before send/finalize consume them
+            events_count = len(self.batch_manager.event_buffer)
+            batch_id = self.batch_manager.trace_batch_id
+            # Read duration non-destructively — _finalize_backend_batch will consume it
+            start_time = self.batch_manager.execution_start_times.get("execution")
+            duration_ms = (
+                int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+                if start_time
+                else 0
+            )
 
-            self.batch_manager.finalize_batch()
+            if self.batch_manager.event_buffer:
+                send_status = self.batch_manager._send_events_to_backend()
+                if send_status == 500 and self.batch_manager.trace_batch_id:
+                    self.batch_manager._mark_batch_as_failed(
+                        self.batch_manager.trace_batch_id,
+                        "Error sending events to backend",
+                    )
+                    self._reset_batch_state()
+                    return
+
+            self.batch_manager._finalize_backend_batch(events_count)
             self.ephemeral_url = self.batch_manager.ephemeral_trace_url
 
             if not self.ephemeral_url:
-                self._show_local_trace_message()
+                self._show_local_trace_message(events_count, duration_ms, batch_id)
+
+            self._reset_batch_state()
 
         except Exception as e:
             self._gracefully_fail(f"Backend initialization failed: {e}")
+            self._reset_batch_state()
 
-    def _display_ephemeral_trace_link(self):
+    def _display_ephemeral_trace_link(self) -> None:
         """Display the ephemeral trace link to the user and automatically open browser."""
         console = Console()
 
         try:
-            webbrowser.open(self.ephemeral_url)
+            if self.ephemeral_url:
+                webbrowser.open(self.ephemeral_url)
         except Exception:  # noqa: S110
             pass
 
@@ -158,7 +190,7 @@ To disable tracing later, do any one of these:
         console.print(panel)
         console.print()
 
-    def _show_tracing_declined_message(self):
+    def _show_tracing_declined_message(self) -> None:
         """Show message when user declines tracing."""
         console = Console()
 
@@ -184,24 +216,42 @@ To enable tracing later, do any one of these:
         console.print(panel)
         console.print()
 
-    def _gracefully_fail(self, error_message: str):
+    def _reset_batch_state(self) -> None:
+        """Reset batch manager state to allow future executions to re-initialize."""
+        if not self.batch_manager:
+            return
+        self.batch_manager.batch_owner_type = None
+        self.batch_manager.batch_owner_id = None
+        self.batch_manager.current_batch = None
+        self.batch_manager.event_buffer.clear()
+        self.batch_manager.trace_batch_id = None
+        self.batch_manager.is_current_batch_ephemeral = False
+        self.batch_manager.backend_initialized = False
+        self.batch_manager._cleanup_batch_data()
+
+    def _gracefully_fail(self, error_message: str) -> None:
         """Handle errors gracefully without disrupting user experience."""
         console = Console()
         console.print(f"[yellow]Note: {error_message}[/yellow]")
 
         logger.debug(f"First-time trace error: {error_message}")
 
-    def _show_local_trace_message(self):
+    def _show_local_trace_message(
+        self, events_count: int = 0, duration_ms: int = 0, batch_id: str | None = None
+    ) -> None:
         """Show message when traces were collected locally but couldn't be uploaded."""
+        if self.batch_manager is None:
+            return
+
         console = Console()
 
         panel_content = f"""
 📊 Your execution traces were collected locally!
 
 Unfortunately, we couldn't upload them to the server right now, but here's what we captured:
-• {len(self.batch_manager.event_buffer)} trace events
-• Execution duration: {self.batch_manager.calculate_duration("execution")}ms
-• Batch ID: {self.batch_manager.trace_batch_id}
+• {events_count} trace events
+• Execution duration: {duration_ms}ms
+• Batch ID: {batch_id}
 
 ✅ Tracing has been enabled for future runs!
 Your preference has been saved. Future Crew/Flow executions will automatically collect traces.

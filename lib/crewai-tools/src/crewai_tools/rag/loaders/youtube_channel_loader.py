@@ -10,7 +10,7 @@ from crewai_tools.rag.source_content import SourceContent
 class YoutubeChannelLoader(BaseLoader):
     """Loader for YouTube channels."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         """Load and extract content from a YouTube channel.
 
         Args:
