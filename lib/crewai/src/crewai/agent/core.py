@@ -114,7 +114,6 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
-    from crewai.crew import Crew
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
@@ -973,12 +972,20 @@ class Agent(BaseAgent):
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before creating agent executor."
+                )
+            if not isinstance(self.crew, BaseModel):
+                raise RuntimeError(
+                    "Agent must be assigned to a crew before creating agent executor."
+                )
             self.agent_executor = self.executor_class(
-                llm=cast(BaseLLM, self.llm),
+                llm=self.llm,
                 task=task,  # type: ignore[arg-type]
                 i18n=self.i18n,
                 agent=self,
-                crew=cast(Crew, self.crew),
+                crew=self.crew,
                 tools=parsed_tools,
                 prompt=prompt,
                 original_tools=raw_tools,
