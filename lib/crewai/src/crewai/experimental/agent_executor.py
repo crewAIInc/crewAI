@@ -2114,15 +2114,28 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 text=fallback_text,
             )
 
-        if not isinstance(self.state.current_answer, AgentFinish):
-            skip_text = Text()
-            skip_text.append("⚠️ ", style="yellow bold")
-            skip_text.append(
-                f"Finalize called with {type(self.state.current_answer).__name__} instead of AgentFinish - skipping",
-                style="yellow",
+        if isinstance(self.state.current_answer, AgentAction):
+            action = self.state.current_answer
+            fallback_output = str(
+                action.result
+                or action.text
+                or "Agent completed execution but produced no final output."
             )
-            self._console.print(skip_text)
-            return "skipped"
+
+            if self.agent.verbose:
+                warn_text = Text()
+                warn_text.append("⚠️ ", style="yellow bold")
+                warn_text.append(
+                    "Finalize: converting AgentAction to AgentFinish",
+                    style="yellow",
+                )
+                self._console.print(warn_text)
+
+            self.state.current_answer = AgentFinish(
+                thought="Converted from AgentAction during finalization",
+                output=fallback_output,
+                text=fallback_output,
+            )
 
         self.state.is_finished = True
         self._show_logs(self.state.current_answer)
