@@ -134,6 +134,10 @@ result = flow.kickoff(
 )
 ```
 
+<Note type="info" title="CrewAI Platform Integration">
+When deployed on CrewAI Platform, `ImageFile`, `PDFFile`, and other file-typed fields in your flow state automatically get a file upload UI. Users can drag and drop files directly in the Platform interface. Files are stored securely and passed to agents using provider-specific optimizations (inline base64, file upload APIs, or URL references depending on the provider). For API usage examples, see [File Inputs in Flows](/concepts/flows#file-inputs).
+</Note>
+
 ### 단독 에이전트와 함께
 
 에이전트 킥오프에 직접 파일을 전달합니다:
