@@ -54,7 +54,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.13.0a6",
+    "crewai-tools==1.13.0a7",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
