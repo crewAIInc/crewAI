@@ -455,7 +455,7 @@ class CrewAIEventsBus:
             ...     # or future.result(timeout=5.0) in sync code
         """
         if (
-            hasattr(source, "entity_type")
+            getattr(source, "entity_type", None) in ("flow", "crew", "agent")
             and id(source) not in self._registered_entity_ids
         ):
             self.register_entity(source)
