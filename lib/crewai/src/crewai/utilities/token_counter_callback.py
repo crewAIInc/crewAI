@@ -33,6 +33,8 @@ class TokenCalcHandler(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    __hash__ = object.__hash__
+
     token_cost_process: TokenProcess | None = Field(default=None)
 
     def __init__(

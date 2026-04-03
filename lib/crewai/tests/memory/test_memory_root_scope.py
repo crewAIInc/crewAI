@@ -543,17 +543,12 @@ class TestAgentScopeExtension:
         mock_task.description = "Research task"
         mock_task.expected_output = "Report"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = CrewAgentExecutorMixin(
+            crew=None,
+            agent=mock_agent,
+            task=mock_task,
+        )
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="Result", text="Result"))
 
         mock_memory.remember_many.assert_called_once()
@@ -582,17 +577,12 @@ class TestAgentScopeExtension:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = CrewAgentExecutorMixin(
+            crew=None,
+            agent=mock_agent,
+            task=mock_task,
+        )
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
         call_kwargs = mock_memory.remember_many.call_args.kwargs
@@ -1077,17 +1067,12 @@ class TestAgentExecutorBackwardCompat:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = CrewAgentExecutorMixin(
+            crew=None,
+            agent=mock_agent,
+            task=mock_task,
+        )
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
         # Should NOT pass root_scope when memory has none
@@ -1117,17 +1102,12 @@ class TestAgentExecutorBackwardCompat:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = CrewAgentExecutorMixin(
+            crew=None,
+            agent=mock_agent,
+            task=mock_task,
+        )
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
         # Should pass extended root_scope
