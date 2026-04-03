@@ -142,8 +142,8 @@ def _unregister_handler(handler: Callable[[Any, BaseEvent], None]) -> None:
         handler: The handler function to unregister.
     """
     with crewai_event_bus._rwlock.w_locked():
-        handlers: frozenset[Callable[[Any, BaseEvent], None]] = (
-            crewai_event_bus._sync_handlers.get(LLMStreamChunkEvent, frozenset())
+        handlers: frozenset[Callable[..., None]] = crewai_event_bus._sync_handlers.get(
+            LLMStreamChunkEvent, frozenset()
         )
         crewai_event_bus._sync_handlers[LLMStreamChunkEvent] = handlers - {handler}
 

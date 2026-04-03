@@ -1013,7 +1013,7 @@ class Agent(BaseAgent):
                 task=task,
                 i18n=self.i18n,
                 agent=self,
-                crew=self.crew,  # type: ignore[arg-type]
+                crew=self.crew,
                 tools=parsed_tools,
                 prompt=prompt,
                 original_tools=raw_tools,
@@ -1075,7 +1075,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
-        if self.agent_executor.llm:
+        if isinstance(self.agent_executor.llm, BaseLLM):
             existing_stop = getattr(self.agent_executor.llm, "stop", [])
             self.agent_executor.llm.stop = list(
                 set(
