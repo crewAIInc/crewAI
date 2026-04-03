@@ -600,10 +600,13 @@ class MCPClient:
         # Extract result content
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:
-                content_item = result.content[0]
-                if hasattr(content_item, "text"):
-                    return _MCPToolResult(str(content_item.text), is_error)
-                return _MCPToolResult(str(content_item), is_error)
+                parts: list[str] = []
+                for content_item in result.content:
+                    if hasattr(content_item, "text"):
+                        parts.append(str(content_item.text))
+                    else:
+                        parts.append(str(content_item))
+                return _MCPToolResult("\n".join(parts), is_error)
             return _MCPToolResult(str(result.content), is_error)
 
         return _MCPToolResult(str(result), is_error)
