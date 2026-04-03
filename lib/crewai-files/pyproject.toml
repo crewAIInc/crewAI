@@ -17,6 +17,9 @@ dependencies = [
     "av~=13.0.0",
 ]
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
