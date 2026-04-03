@@ -22,6 +22,7 @@ class TaskOutput(BaseModel):
         raw: Raw output of the task
         pydantic: Pydantic model output of the task
         json_dict: JSON dictionary output of the task
+        proof_links: Optional proof/receipt links for the task output
         agent: Agent that executed the task
         output_format: Output format of the task (JSON, PYDANTIC, or RAW)
     """
@@ -38,6 +39,10 @@ class TaskOutput(BaseModel):
     )
     json_dict: dict[str, Any] | None = Field(
         description="JSON dictionary of task", default=None
+    )
+    proof_links: dict[str, str] = Field(
+        description="Optional proof/receipt links for the task output",
+        default_factory=dict,
     )
     agent: str = Field(description="Agent that executed the task")
     output_format: OutputFormat = Field(
