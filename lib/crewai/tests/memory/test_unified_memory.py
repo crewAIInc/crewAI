@@ -331,17 +331,11 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     mock_task.description = "Do research"
     mock_task.expected_output = "A report"
 
-    class MinimalExecutor(CrewAgentExecutorMixin):
-        crew = None
-        agent = mock_agent
-        task = mock_task
-        iterations = 0
-        max_iter = 1
-        messages = []
-        _i18n = MagicMock()
-        _printer = Printer()
-
-    executor = MinimalExecutor()
+    executor = CrewAgentExecutorMixin(
+        crew=None,
+        agent=mock_agent,
+        task=mock_task,
+    )
     executor._save_to_memory(
         AgentFinish(thought="", output="We found X and Y.", text="We found X and Y.")
     )
@@ -366,19 +360,13 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
     mock_agent._logger = MagicMock()
     mock_task = MagicMock(description="Task", expected_output="Out")
 
-    class MinimalExecutor(CrewAgentExecutorMixin):
-        crew = None
-        agent = mock_agent
-        task = mock_task
-        iterations = 0
-        max_iter = 1
-        messages = []
-        _i18n = MagicMock()
-        _printer = Printer()
-
     delegate_text = f"Action: {sanitize_tool_name('Delegate work to coworker')}"
     full_text = delegate_text + " rest"
-    executor = MinimalExecutor()
+    executor = CrewAgentExecutorMixin(
+        crew=None,
+        agent=mock_agent,
+        task=mock_task,
+    )
     executor._save_to_memory(
         AgentFinish(thought="", output=full_text, text=full_text)
     )
