@@ -1901,6 +1901,37 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: 
             "original_tool": original_tool,
         }
 
+    def _extract_tool_name(self, tool_call: Any) -> str:
+        """Extract tool name from various tool call formats."""
+        if hasattr(tool_call, "function"):
+            return sanitize_tool_name(tool_call.function.name)
+        if hasattr(tool_call, "function_call") and tool_call.function_call:
+            return sanitize_tool_name(tool_call.function_call.name)
+        if hasattr(tool_call, "name"):
+            return sanitize_tool_name(tool_call.name)
+        if isinstance(tool_call, dict):
+            func_info = tool_call.get("function", {})
+            return sanitize_tool_name(
+                func_info.get("name", "") or tool_call.get("name", "unknown")
+            )
+        return "unknown"
+
+    @router(execute_native_tool)
+    def check_native_todo_completion(
+        self,
+    ) -> Literal["todo_satisfied", "todo_not_satisfied"]:
+        """Check if the native tool execution satisfied the active todo.
+
+        Similar to check_todo_completion but for native tool execution path.
+        """
+        current_todo = self.state.todos.current_todo
+
+        if not current_todo:
+            return "todo_not_satisfied"
+
+        # For native tools, any tool execution satisfies the todo
+        return "todo_satisfied"
+
     @listen("initialized")
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
