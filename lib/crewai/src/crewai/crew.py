@@ -438,7 +438,8 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
-        self._cache_handler = CacheHandler()
+        if not getattr(self, "_cache_handler", None):
+            self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
         # Determine and set tracing state once for this execution
