@@ -737,7 +737,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             self,
             event=LiteAgentExecutionCompletedEvent(
                 agent_info=agent_info,
-                output=agent_finish.output,
+                output=output.raw,
             ),
         )
 
