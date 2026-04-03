@@ -1136,3 +1136,256 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+# --- Tests for issue #4697: tools discarded when response_model is set ---
+
+
+class MyOutput(BaseModel):
+    name: str
+    value: str
+
+
+def _make_tool_call_response():
+    """Create a mock litellm response that contains a tool call."""
+    mock_message = MagicMock()
+    mock_message.content = ""
+    mock_tool_call = MagicMock()
+    mock_tool_call.function.name = "my_search_tool"
+    mock_tool_call.function.arguments = '{"query": "test"}'
+    mock_tool_call.id = "call_123"
+    mock_message.tool_calls = [mock_tool_call]
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+    mock_response.usage.prompt_tokens = 10
+    mock_response.usage.completion_tokens = 5
+    mock_response.usage.total_tokens = 15
+    return mock_response
+
+
+def _make_text_response(text: str = '{"name": "Alice", "value": "42"}'):
+    """Create a mock litellm response that contains only text content."""
+    mock_message = MagicMock()
+    mock_message.content = text
+    mock_message.tool_calls = []
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = MagicMock()
+    mock_response.usage.prompt_tokens = 10
+    mock_response.usage.completion_tokens = 5
+    mock_response.usage.total_tokens = 15
+    return mock_response
+
+
+def _get_tool_schema():
+    return {
+        "type": "function",
+        "function": {
+            "name": "my_search_tool",
+            "description": "Search for data",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "The search query"}
+                },
+                "required": ["query"],
+            },
+        },
+    }
+
+
+def test_non_streaming_response_model_with_tools_skips_instructor():
+    """When response_model AND tools are both present, InternalInstructor must NOT
+    be used so that LiteLLM sees the tools and can return tool_calls."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    tool_call_resp = _make_tool_call_response()
+
+    with patch("litellm.completion", return_value=tool_call_resp) as mock_completion:
+        result = llm.call(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,  # executor handles tool execution
+            response_model=MyOutput,
+        )
+
+    # litellm.completion must have been called (not InternalInstructor)
+    mock_completion.assert_called_once()
+    # The result should be tool_calls (a list), not a structured JSON string
+    assert isinstance(result, list), (
+        "Expected tool_calls list but got a string/model — "
+        "InternalInstructor likely intercepted the call"
+    )
+
+
+def test_non_streaming_response_model_without_tools_uses_instructor():
+    """When response_model is set but NO tools, InternalInstructor should still
+    be used for structured output conversion."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch(
+        "crewai.utilities.internal_instructor.InternalInstructor"
+    ) as MockInstructor:
+        mock_instance = MagicMock()
+        mock_pydantic = MyOutput(name="Alice", value="42")
+        mock_instance.to_pydantic.return_value = mock_pydantic
+        MockInstructor.return_value = mock_instance
+
+        result = llm.call(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=None,
+            response_model=MyOutput,
+        )
+
+    # InternalInstructor should have been used
+    MockInstructor.assert_called_once()
+    assert '"Alice"' in result
+
+
+def test_non_streaming_response_model_with_tools_returns_tool_calls():
+    """Verify that when LLM returns tool_calls with response_model + tools,
+    the tool_calls are returned to the caller (not swallowed)."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    tool_call_resp = _make_tool_call_response()
+
+    with patch("litellm.completion", return_value=tool_call_resp):
+        result = llm.call(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,
+            response_model=MyOutput,
+        )
+
+    # The result should be the raw tool_calls list
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].function.name == "my_search_tool"
+
+
+def test_non_streaming_response_model_with_tools_text_response():
+    """When LLM returns text (not tool_calls) with both response_model and tools,
+    the text response should be returned normally."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    text_resp = _make_text_response('{"name": "Alice", "value": "42"}')
+
+    with patch("litellm.completion", return_value=text_resp):
+        result = llm.call(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,
+            response_model=MyOutput,
+        )
+
+    # Text response should be returned as-is
+    assert isinstance(result, str)
+    assert "Alice" in result
+
+
+@pytest.mark.asyncio
+async def test_async_non_streaming_response_model_with_tools_skips_instructor():
+    """Async variant: response_model + tools should skip InternalInstructor."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    tool_call_resp = _make_tool_call_response()
+
+    with patch("litellm.acompletion", return_value=tool_call_resp) as mock_acompletion:
+        result = await llm.acall(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,
+            response_model=MyOutput,
+        )
+
+    mock_acompletion.assert_called_once()
+    assert isinstance(result, list), (
+        "Expected tool_calls list but got a string/model — "
+        "InternalInstructor likely intercepted the call"
+    )
+
+
+@pytest.mark.asyncio
+async def test_async_non_streaming_response_model_without_tools_uses_instructor():
+    """Async variant: response_model without tools should use InternalInstructor."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch(
+        "crewai.utilities.internal_instructor.InternalInstructor"
+    ) as MockInstructor:
+        mock_instance = MagicMock()
+        mock_pydantic = MyOutput(name="Alice", value="42")
+        mock_instance.to_pydantic.return_value = mock_pydantic
+        MockInstructor.return_value = mock_instance
+
+        result = await llm.acall(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=None,
+            response_model=MyOutput,
+        )
+
+    MockInstructor.assert_called_once()
+    assert '"Alice"' in result
+
+
+def test_non_streaming_response_model_not_passed_to_litellm_when_tools_present():
+    """Verify that response_model is NOT forwarded to litellm.completion when
+    tools are present, because litellm's internal instructor would override
+    the tools parameter."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    tool_call_resp = _make_tool_call_response()
+
+    with patch("litellm.completion", return_value=tool_call_resp) as mock_completion:
+        llm.call(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,
+            response_model=MyOutput,
+        )
+
+    mock_completion.assert_called_once()
+    call_kwargs = mock_completion.call_args[1]
+    # response_model must NOT be in the kwargs sent to litellm.completion
+    assert "response_model" not in call_kwargs, (
+        "response_model was passed to litellm.completion even though tools are present; "
+        "litellm's internal instructor would override the tools"
+    )
+    # tools MUST be present
+    assert "tools" in call_kwargs
+
+
+@pytest.mark.asyncio
+async def test_async_response_model_not_passed_to_litellm_when_tools_present():
+    """Async variant: response_model must not be forwarded to litellm.acompletion
+    when tools are present."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    tool_schema = _get_tool_schema()
+    tool_call_resp = _make_tool_call_response()
+
+    with patch("litellm.acompletion", return_value=tool_call_resp) as mock_acompletion:
+        await llm.acall(
+            messages=[{"role": "user", "content": "Find the name and value"}],
+            tools=[tool_schema],
+            available_functions=None,
+            response_model=MyOutput,
+        )
+
+    mock_acompletion.assert_called_once()
+    call_kwargs = mock_acompletion.call_args[1]
+    assert "response_model" not in call_kwargs, (
+        "response_model was passed to litellm.acompletion even though tools are present; "
+        "litellm's internal instructor would override the tools"
+    )
+    assert "tools" in call_kwargs

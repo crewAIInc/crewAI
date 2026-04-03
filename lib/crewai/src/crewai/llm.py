@@ -961,8 +961,17 @@ class LLM(BaseLLM):
                 self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
+            # If there are tool calls but no available functions, return them
+            # so the caller (e.g., executor) can handle tool execution.
+            # This mirrors _handle_non_streaming_response's explicit path.
+            if tool_calls and not available_functions:
+                return tool_calls
+
             if not tool_calls or not available_functions:
-                if response_model and self.is_litellm:
+                # Only use InternalInstructor for structured output when there
+                # are no tools — otherwise tools would be silently discarded.
+                has_tools = bool(params.get("tools"))
+                if response_model and self.is_litellm and not has_tools:
                     instructor_instance = InternalInstructor(
                         content=full_response,
                         model=response_model,
@@ -1154,7 +1163,10 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Handle response_model with InternalInstructor for LiteLLM
-        if response_model and self.is_litellm:
+        # Skip InternalInstructor when tools are present so the LLM can
+        # see and call the agent's tools before returning structured output.
+        has_tools = bool(params.get("tools"))
+        if response_model and self.is_litellm and not has_tools:
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1188,7 +1200,11 @@ class LLM(BaseLLM):
             # and convert them to our own exception type for consistent handling
             # across the codebase. This allows CrewAgentExecutor to handle context
             # length issues appropriately.
-            if response_model:
+            # Only pass response_model to litellm when there are no tools.
+            # When tools are present, litellm's internal instructor would override
+            # the tools parameter, so we let the normal completion flow handle it
+            # and defer structured output conversion to the executor/converter.
+            if response_model and not has_tools:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
 
@@ -1305,7 +1321,10 @@ class LLM(BaseLLM):
         Returns:
             str: The response text
         """
-        if response_model and self.is_litellm:
+        # Skip InternalInstructor when tools are present so the LLM can
+        # see and call the agent's tools before returning structured output.
+        has_tools = bool(params.get("tools"))
+        if response_model and self.is_litellm and not has_tools:
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1334,7 +1353,11 @@ class LLM(BaseLLM):
             return structured_response
 
         try:
-            if response_model:
+            # Only pass response_model to litellm when there are no tools.
+            # When tools are present, litellm's internal instructor would override
+            # the tools parameter, so we let the normal completion flow handle it
+            # and defer structured output conversion to the executor/converter.
+            if response_model and not has_tools:
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
