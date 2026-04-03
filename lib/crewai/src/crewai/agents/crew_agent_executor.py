@@ -352,6 +352,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # In ReAct mode the LLM does NOT support native function
+                # calling, so we must NOT pass response_model — instructor
+                # would inject the Pydantic schema as a tool/function, which
+                # models without function-calling support cannot handle.
+                # The task-level convert_to_model() handles the final
+                # text → Pydantic conversion after the ReAct loop finishes.
                 answer = get_llm_response(
                     llm=self.llm,
                     messages=self.messages,
@@ -359,34 +365,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
-                # breakpoint()
                 if self.response_model is not None:
+                    answer_str = answer if isinstance(answer, str) else str(answer)
                     try:
-                        if isinstance(answer, BaseModel):
-                            output_json = answer.model_dump_json()
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=output_json,
-                            )
-                        else:
-                            self.response_model.model_validate_json(answer)
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=answer,
-                            )
-                    except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
-                        answer_str = (
-                            answer.model_dump_json()
-                            if isinstance(answer, BaseModel)
-                            else str(answer)
+                        self.response_model.model_validate_json(answer_str)
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer_str,
+                            text=answer_str,
                         )
+                    except ValidationError:
                         formatted_answer = process_llm_response(
                             answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
@@ -1192,6 +1184,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # In ReAct mode the LLM does NOT support native function
+                # calling, so we must NOT pass response_model — instructor
+                # would inject the Pydantic schema as a tool/function, which
+                # models without function-calling support cannot handle.
+                # The task-level convert_to_model() handles the final
+                # text → Pydantic conversion after the ReAct loop finishes.
                 answer = await aget_llm_response(
                     llm=self.llm,
                     messages=self.messages,
@@ -1199,34 +1197,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
 
                 if self.response_model is not None:
+                    answer_str = answer if isinstance(answer, str) else str(answer)
                     try:
-                        if isinstance(answer, BaseModel):
-                            output_json = answer.model_dump_json()
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=output_json,
-                            )
-                        else:
-                            self.response_model.model_validate_json(answer)
-                            formatted_answer = AgentFinish(
-                                thought="",
-                                output=answer,
-                                text=answer,
-                            )
-                    except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
-                        answer_str = (
-                            answer.model_dump_json()
-                            if isinstance(answer, BaseModel)
-                            else str(answer)
+                        self.response_model.model_validate_json(answer_str)
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer_str,
+                            text=answer_str,
                         )
+                    except ValidationError:
                         formatted_answer = process_llm_response(
                             answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
