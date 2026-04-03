@@ -25,7 +25,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
         Basic usage:
         >>> tool = InvokeCrewAIAutomationTool(
         ...     crew_api_url="https://api.example.com",
-        ...     crew_bearer_token="your_token",
+        ...     crew_bearer_token=os.environ["CREWAI_BEARER_TOKEN"],
         ...     crew_name="My Crew",
         ...     crew_description="Description of what the crew does",
         ... )
@@ -39,7 +39,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
         ... }
         >>> tool = InvokeCrewAIAutomationTool(
         ...     crew_api_url="https://api.example.com",
-        ...     crew_bearer_token="your_token",
+        ...     crew_bearer_token=os.environ["CREWAI_BEARER_TOKEN"],
         ...     crew_name="My Crew",
         ...     crew_description="Description of what the crew does",
         ...     crew_inputs=custom_inputs,
@@ -49,7 +49,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
         >>> tools = [
         ...     InvokeCrewAIAutomationTool(
         ...         crew_api_url="https://canary-crew-[...].crewai.com",
-        ...         crew_bearer_token="[Your token: abcdef012345]",
+        ...         crew_bearer_token=os.environ["CREWAI_BEARER_TOKEN"],
         ...         crew_name="State of AI Report",
         ...         crew_description="Retrieves a report on state of AI for a given year.",
         ...         crew_inputs={

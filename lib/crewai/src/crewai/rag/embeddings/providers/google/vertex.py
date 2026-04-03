@@ -49,9 +49,9 @@ class VertexAIProvider(BaseEmbeddingsProvider[GoogleGenAIVertexEmbeddingFunction
             model_name="gemini-embedding-001"
         )
 
-        # New model with API key
+        # New model with API key (from environment variable)
         provider = VertexAIProvider(
-            api_key="your-api-key",
+            api_key=os.environ["GOOGLE_API_KEY"],
             model_name="gemini-embedding-001"
         )
     """
