@@ -278,7 +278,9 @@ def prepare_kickoff(
     from crewai.events.event_context import get_current_parent_id, reset_last_event_id
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
-    if get_current_parent_id() is None:
+    resuming = crew._kickoff_event_id is not None
+
+    if not resuming and get_current_parent_id() is None:
         reset_emission_counter()
         reset_last_event_id()
 
@@ -296,15 +298,29 @@ def prepare_kickoff(
             normalized = {}
         normalized = before_callback(normalized)
 
-    started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
-    if crew._kickoff_event_id is None:
+    if resuming:
+        if crew.verbose:
+            from crewai.events.utils.console_formatter import ConsoleFormatter
+
+            fmt = ConsoleFormatter(verbose=True)
+            content = fmt.create_status_content(
+                "Resuming from Checkpoint",
+                crew.name or "Crew",
+                "bright_magenta",
+                ID=str(crew.id),
+            )
+            fmt.print_panel(
+                content, "\U0001f504 Resuming from Checkpoint", "bright_magenta"
+            )
+    else:
+        started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
         crew._kickoff_event_id = started_event.event_id
-    future = crewai_event_bus.emit(crew, started_event)
-    if future is not None:
-        try:
-            future.result()
-        except Exception:  # noqa: S110
-            pass
+        future = crewai_event_bus.emit(crew, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: S110
+                pass
 
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"

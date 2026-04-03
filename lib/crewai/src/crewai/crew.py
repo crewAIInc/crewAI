@@ -369,10 +369,12 @@ class Crew(FlowTrackable, BaseModel):
 
         json_str = _Path(path).read_text()
         from crewai import RuntimeState
+        from crewai.events.event_bus import crewai_event_bus
 
         state = RuntimeState.model_validate_json(
             json_str, context={"from_checkpoint": True}
         )
+        crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if isinstance(entity, cls):
                 if entity.execution_context is not None:
