@@ -68,12 +68,14 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
 
         name = function_info.get("name", "")
         description = function_info.get("description", "")
-        parameters = function_info.get("parameters", {})
+        # MCP tools may expose the schema as "inputSchema" instead of "parameters"
+        parameters = function_info.get("parameters") or function_info.get("inputSchema") or {}
     else:
         # Direct format
         name = tool.get("name", "")
         description = tool.get("description", "")
-        parameters = tool.get("parameters", {})
+        # MCP tools may expose the schema as "inputSchema" instead of "parameters"
+        parameters = tool.get("parameters") or tool.get("inputSchema") or {}
 
         # Also check for args_schema (Pydantic format)
         if not parameters and "args_schema" in tool:
