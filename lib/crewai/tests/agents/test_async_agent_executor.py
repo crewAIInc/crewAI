@@ -8,13 +8,15 @@ import pytest
 
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, AgentFinish
+from crewai.agents.tools_handler import ToolsHandler
+from crewai.llms.base_llm import BaseLLM
 from crewai.tools.tool_types import ToolResult
 
 
 @pytest.fixture
 def mock_llm() -> MagicMock:
     """Create a mock LLM for testing."""
-    llm = MagicMock()
+    llm = MagicMock(spec=BaseLLM)
     llm.supports_stop_words.return_value = True
     llm.stop = []
     return llm
@@ -51,7 +53,7 @@ def mock_crew() -> MagicMock:
 @pytest.fixture
 def mock_tools_handler() -> MagicMock:
     """Create a mock tools handler."""
-    return MagicMock()
+    return MagicMock(spec=ToolsHandler)
 
 
 @pytest.fixture
