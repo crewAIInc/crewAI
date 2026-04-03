@@ -58,7 +58,10 @@ from crewai.utilities.string_utils import sanitize_tool_name
 
 
 try:
-    from crewai_files import aformat_multimodal_content, format_multimodal_content
+    from crewai_files import (
+        aformat_multimodal_content,
+        format_multimodal_content,
+    )
 
     HAS_CREWAI_FILES = True
 except ImportError:
@@ -2035,6 +2038,10 @@ class LLM(BaseLLM):
         For each message with a `files` field, formats the files into
         provider-specific content blocks and updates the message content.
 
+        Text files (TextFile instances or files with text/* / application/json /
+        application/xml / application/x-yaml content types) are always inlined
+        as text content, even when the model does not support multimodal input.
+
         Args:
             messages: List of messages that may contain file attachments.
 
@@ -2045,11 +2052,55 @@ class LLM(BaseLLM):
             return messages
 
         if not self.supports_multimodal():
-            if any(msg.get("files") for msg in messages):
+            # Inline text files as text; reject non-text files
+            has_non_text = False
+            for msg in messages:
+                files = msg.get("files")
+                if not files:
+                    continue
+
+                text_parts: list[str] = []
+                non_text_files: dict[str, Any] = {}
+                for name, file_input in files.items():
+                    if self._is_text_file(file_input):
+                        try:
+                            content = file_input.read_text()
+                            text_parts.append(
+                                f"--- Content of file '{name}' ---\n{content}"
+                            )
+                        except Exception:
+                            non_text_files[name] = file_input
+                    else:
+                        non_text_files[name] = file_input
+
+                if non_text_files:
+                    has_non_text = True
+
+                if text_parts:
+                    existing_content = msg.get("content", "")
+                    inlined = "\n\n".join(text_parts)
+                    if isinstance(existing_content, str):
+                        msg["content"] = (
+                            f"{existing_content}\n\n{inlined}"
+                            if existing_content
+                            else inlined
+                        )
+                    elif isinstance(existing_content, list):
+                        msg["content"] = [
+                            *existing_content,
+                            self.format_text_content(inlined),
+                        ]
+
+                if non_text_files:
+                    msg["files"] = non_text_files
+                else:
+                    msg.pop("files", None)
+
+            if has_non_text:
                 raise ValueError(
                     f"Model '{self.model}' does not support multimodal input, "
-                    "but files were provided via 'input_files'. "
-                    "Use a vision-capable model or remove the file inputs."
+                    "but non-text files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the non-text file inputs."
                 )
             return messages
 
@@ -2086,6 +2137,10 @@ class LLM(BaseLLM):
         For each message with a `files` field, formats the files into
         provider-specific content blocks and updates the message content.
 
+        Text files (TextFile instances or files with text/* / application/json /
+        application/xml / application/x-yaml content types) are always inlined
+        as text content, even when the model does not support multimodal input.
+
         Args:
             messages: List of messages that may contain file attachments.
 
@@ -2096,11 +2151,55 @@ class LLM(BaseLLM):
             return messages
 
         if not self.supports_multimodal():
-            if any(msg.get("files") for msg in messages):
+            # Inline text files as text; reject non-text files
+            has_non_text = False
+            for msg in messages:
+                files = msg.get("files")
+                if not files:
+                    continue
+
+                text_parts: list[str] = []
+                non_text_files: dict[str, Any] = {}
+                for name, file_input in files.items():
+                    if self._is_text_file(file_input):
+                        try:
+                            content = file_input.read_text()
+                            text_parts.append(
+                                f"--- Content of file '{name}' ---\n{content}"
+                            )
+                        except Exception:
+                            non_text_files[name] = file_input
+                    else:
+                        non_text_files[name] = file_input
+
+                if non_text_files:
+                    has_non_text = True
+
+                if text_parts:
+                    existing_content = msg.get("content", "")
+                    inlined = "\n\n".join(text_parts)
+                    if isinstance(existing_content, str):
+                        msg["content"] = (
+                            f"{existing_content}\n\n{inlined}"
+                            if existing_content
+                            else inlined
+                        )
+                    elif isinstance(existing_content, list):
+                        msg["content"] = [
+                            *existing_content,
+                            self.format_text_content(inlined),
+                        ]
+
+                if non_text_files:
+                    msg["files"] = non_text_files
+                else:
+                    msg.pop("files", None)
+
+            if has_non_text:
                 raise ValueError(
                     f"Model '{self.model}' does not support multimodal input, "
-                    "but files were provided via 'input_files'. "
-                    "Use a vision-capable model or remove the file inputs."
+                    "but non-text files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the non-text file inputs."
                 )
             return messages
 
