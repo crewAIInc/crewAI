@@ -32,6 +32,10 @@ class TaskOutput(BaseModel):
         description="Expected output of the task", default=None
     )
     summary: str | None = Field(description="Summary of the task", default=None)
+    context_summary: str | None = Field(
+        description="Condensed summary of the raw output used when context_strategy='summarized'",
+        default=None,
+    )
     raw: str = Field(description="Raw output of the task", default="")
     pydantic: BaseModel | None = Field(
         description="Pydantic output of task", default=None
