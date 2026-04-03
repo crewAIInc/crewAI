@@ -140,7 +140,12 @@ async def aexecute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in after_tool_call hook: {e}")
 
-        return ToolResult(modified_result, tool.result_as_answer)
+        # Don't honor result_as_answer when the tool execution errored;
+        # let the agent reflect on the error instead.
+        effective_result_as_answer = (
+            tool.result_as_answer and not tool_usage._last_execution_errored
+        )
+        return ToolResult(modified_result, effective_result_as_answer)
 
     tool_result = i18n.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
@@ -261,7 +266,12 @@ def execute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in after_tool_call hook: {e}")
 
-        return ToolResult(modified_result, tool.result_as_answer)
+        # Don't honor result_as_answer when the tool execution errored;
+        # let the agent reflect on the error instead.
+        effective_result_as_answer = (
+            tool.result_as_answer and not tool_usage._last_execution_errored
+        )
+        return ToolResult(modified_result, effective_result_as_answer)
 
     tool_result = i18n.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
