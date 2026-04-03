@@ -46,6 +46,7 @@ from crewai.hooks.tool_hooks import (
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
 )
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     aget_llm_response,
     convert_tools_to_openai_schema,
@@ -67,6 +68,7 @@ from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import (
     aexecute_tool_and_check_finality,
     execute_tool_and_check_finality,
@@ -106,7 +108,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     )
     tools_description: str = Field(default="")
     tools_handler: ToolsHandler | None = Field(default=None)
-    step_callback: Any = Field(default=None, exclude=True)
+    step_callback: SerializableCallable | None = Field(default=None, exclude=True)
     original_tools: list[BaseTool] = Field(default_factory=list)
     function_calling_llm: Annotated[
         BaseLLM | str | None,
@@ -114,13 +116,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
     ] = Field(default=None)
     respect_context_window: bool = Field(default=False)
-    request_within_rpm_limit: Any = Field(default=None, exclude=True)
-    callbacks: list[Any] = Field(default_factory=list, exclude=True)
-    response_model: Any = Field(default=None, exclude=True)
+    request_within_rpm_limit: SerializableCallable | None = Field(
+        default=None, exclude=True
+    )
+    callbacks: list[TokenCalcHandler] = Field(default_factory=list, exclude=True)
+    response_model: type[BaseModel] | None = Field(default=None, exclude=True)
     ask_for_human_input: bool = Field(default=False)
     log_error_after: int = Field(default=3)
-    before_llm_call_hooks: list[Any] = Field(default_factory=list, exclude=True)
-    after_llm_call_hooks: list[Any] = Field(default_factory=list, exclude=True)
+    before_llm_call_hooks: list[SerializableCallable] = Field(
+        default_factory=list, exclude=True
+    )
+    after_llm_call_hooks: list[SerializableCallable] = Field(
+        default_factory=list, exclude=True
+    )
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
