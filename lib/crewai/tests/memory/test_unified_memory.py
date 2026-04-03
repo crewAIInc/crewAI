@@ -315,19 +315,21 @@ def test_memory_extract_memories_empty_content_returns_empty_list(tmp_path: Path
 
 def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     """_save_to_memory calls memory.extract_memories(raw) then memory.remember(m) for each."""
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
+    from crewai.task import Task
 
     mock_memory = MagicMock()
     mock_memory.read_only = False
     mock_memory.extract_memories.return_value = ["Fact A.", "Fact B."]
 
-    mock_agent = MagicMock()
+    mock_agent = MagicMock(spec=BaseAgent)
     mock_agent.memory = mock_memory
     mock_agent._logger = MagicMock()
     mock_agent.role = "Researcher"
 
-    mock_task = MagicMock()
+    mock_task = MagicMock(spec=Task)
     mock_task.description = "Do research"
     mock_task.expected_output = "A report"
 
@@ -349,16 +351,20 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
 
 def test_executor_save_to_memory_skips_delegation_output() -> None:
     """_save_to_memory does nothing when output contains delegate action."""
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
+    from crewai.task import Task
     from crewai.utilities.string_utils import sanitize_tool_name
 
     mock_memory = MagicMock()
     mock_memory.read_only = False
-    mock_agent = MagicMock()
+    mock_agent = MagicMock(spec=BaseAgent)
     mock_agent.memory = mock_memory
     mock_agent._logger = MagicMock()
-    mock_task = MagicMock(description="Task", expected_output="Out")
+    mock_task = MagicMock(spec=Task)
+    mock_task.description = "Task"
+    mock_task.expected_output = "Out"
 
     delegate_text = f"Action: {sanitize_tool_name('Delegate work to coworker')}"
     full_text = delegate_text + " rest"

@@ -1142,18 +1142,21 @@ class TestNativeToolCallingJsonParseError:
 
     def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
         """Create a minimal CrewAgentExecutor with mocked dependencies."""
+        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.crew import Crew
+        from crewai.task import Task
         from crewai.tools.base_tool import to_langchain
 
         structured_tools = to_langchain(tools)
-        mock_agent = Mock()
+        mock_agent = Mock(spec=BaseAgent)
         mock_agent.key = "test_agent"
         mock_agent.role = "tester"
         mock_agent.verbose = False
         mock_agent.fingerprint = None
         mock_agent.tools_results = []
 
-        mock_task = Mock()
+        mock_task = Mock(spec=Task)
         mock_task.name = "test"
         mock_task.description = "test"
         mock_task.id = "test-id"
@@ -1161,7 +1164,7 @@ class TestNativeToolCallingJsonParseError:
         return CrewAgentExecutor(
             agent=mock_agent,
             task=mock_task,
-            crew=Mock(),
+            crew=Mock(spec=Crew),
             tools=structured_tools,
             original_tools=tools,
         )

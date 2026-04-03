@@ -523,10 +523,12 @@ class TestAgentScopeExtension:
 
     def test_agent_save_extends_crew_root_scope(self) -> None:
         """Agent._save_to_memory extends crew's root_scope with agent info."""
+        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.agent_builder.base_agent_executor import (
             BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
+        from crewai.task import Task
         from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
@@ -534,12 +536,12 @@ class TestAgentScopeExtension:
         mock_memory.root_scope = "/crew/research-crew"
         mock_memory.extract_memories.return_value = ["Fact A"]
 
-        mock_agent = MagicMock()
+        mock_agent = MagicMock(spec=BaseAgent)
         mock_agent.memory = mock_memory
         mock_agent._logger = MagicMock()
         mock_agent.role = "Researcher"
 
-        mock_task = MagicMock()
+        mock_task = MagicMock(spec=Task)
         mock_task.description = "Research task"
         mock_task.expected_output = "Report"
 
@@ -557,10 +559,12 @@ class TestAgentScopeExtension:
 
     def test_agent_save_sanitizes_role(self) -> None:
         """Agent role with special chars is sanitized for scope path."""
+        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.agent_builder.base_agent_executor import (
             BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
+        from crewai.task import Task
         from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
@@ -568,12 +572,12 @@ class TestAgentScopeExtension:
         mock_memory.root_scope = "/crew/test"
         mock_memory.extract_memories.return_value = ["Fact"]
 
-        mock_agent = MagicMock()
+        mock_agent = MagicMock(spec=BaseAgent)
         mock_agent.memory = mock_memory
         mock_agent._logger = MagicMock()
         mock_agent.role = "Senior Research Analyst #1"
 
-        mock_task = MagicMock()
+        mock_task = MagicMock(spec=Task)
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
