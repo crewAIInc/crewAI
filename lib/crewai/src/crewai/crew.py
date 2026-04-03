@@ -1113,6 +1113,10 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+        custom_start = self._get_execution_start_index(tasks)
+        if custom_start is not None:
+            start_index = custom_start
+
         task_outputs: list[TaskOutput] = []
         pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
@@ -1297,7 +1301,7 @@ class Crew(FlowTrackable, BaseModel):
         for i, task in enumerate(tasks):
             if task.output is None:
                 return i if i > 0 else None
-        return None
+        return len(tasks) if tasks else None
 
     def _execute_tasks(
         self,

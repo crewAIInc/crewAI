@@ -10,6 +10,19 @@ from crewai.events.base_events import BaseEvent
 from crewai.events.types.event_bus_types import AsyncHandler, SyncHandler
 
 
+_handler_param_count: dict[int, int] = {}
+
+
+def _get_param_count(handler: Any) -> int:
+    """Return the number of parameters a handler accepts, with caching."""
+    key = id(handler)
+    count = _handler_param_count.get(key)
+    if count is None:
+        count = len(inspect.signature(handler).parameters)
+        _handler_param_count[key] = count
+    return count
+
+
 def is_async_handler(
     handler: Any,
 ) -> TypeIs[AsyncHandler]:
@@ -55,8 +68,7 @@ def is_call_handler_safe(
         Exception if handler raised one, None otherwise
     """
     try:
-        sig = inspect.signature(handler)
-        if len(sig.parameters) >= 3:
+        if _get_param_count(handler) >= 3:
             handler(source, event, state)  # type: ignore[call-arg]
         else:
             handler(source, event)  # type: ignore[call-arg]

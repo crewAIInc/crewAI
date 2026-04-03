@@ -13,7 +13,6 @@ from collections.abc import Callable, Generator
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 import contextvars
-import inspect
 import logging
 import threading
 from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypeVar
@@ -51,7 +50,11 @@ from crewai.events.types.event_bus_types import (
 )
 from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.events.utils.console_formatter import ConsoleFormatter
-from crewai.events.utils.handlers import is_async_handler, is_call_handler_safe
+from crewai.events.utils.handlers import (
+    _get_param_count,
+    is_async_handler,
+    is_call_handler_safe,
+)
 from crewai.utilities.rw_lock import RWLock
 
 
@@ -356,8 +359,7 @@ class CrewAIEventsBus:
         state = self._runtime_state
 
         async def _call(handler: AsyncHandler) -> Any:
-            sig = inspect.signature(handler)
-            if len(sig.parameters) >= 3:
+            if _get_param_count(handler) >= 3:
                 return await handler(source, event, state)  # type: ignore[call-arg]
             return await handler(source, event)  # type: ignore[call-arg]
 
