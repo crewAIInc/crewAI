@@ -181,6 +181,7 @@ try:
     )
     from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
 
+    _BaseAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
     Task.model_rebuild(force=True, _types_namespace=_full_namespace)
     _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
