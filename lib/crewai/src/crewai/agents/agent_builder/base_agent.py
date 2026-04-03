@@ -15,6 +15,7 @@ from pydantic import (
     BeforeValidator,
     Field,
     PrivateAttr,
+    SerializeAsAny,
     field_validator,
     model_validator,
 )
@@ -23,7 +24,7 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agent.internal.meta import AgentMeta
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
@@ -63,6 +64,10 @@ def _serialize_crew_ref(value: Any) -> str | None:
 
 
 def _validate_llm_ref(value: Any) -> Any:
+    if isinstance(value, dict):
+        from crewai.llm import LLM
+
+        return LLM(**value)
     return value
 
 
@@ -74,12 +79,21 @@ def _resolve_agent(value: Any, info: Any) -> Any:
     return Agent.model_validate(value, context=getattr(info, "context", None))
 
 
-def _serialize_llm_ref(value: Any) -> str | None:
+def _validate_executor_ref(value: Any) -> Any:
+    if isinstance(value, dict):
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        return CrewAgentExecutor.model_validate(value)
+    return value
+
+
+def _serialize_llm_ref(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return value
-    return getattr(value, "model", str(value))
+        return {"model": value}
+    result: dict[str, Any] = value.model_dump()
+    return result
 
 
 _SLUG_RE: Final[re.Pattern[str]] = re.compile(
@@ -196,13 +210,19 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: CrewAgentExecutorMixin | None = Field(
+    agent_executor: SerializeAsAny[BaseAgentExecutor] | None = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
+
+    @field_validator("agent_executor", mode="before")
+    @classmethod
+    def _validate_agent_executor(cls, v: Any) -> Any:
+        return _validate_executor_ref(v)
+
     llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(default=None, description="Language model that will run the agent.")
     crew: Annotated[
         Crew | str | None,

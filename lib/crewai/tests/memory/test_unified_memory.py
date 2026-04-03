@@ -315,7 +315,7 @@ def test_memory_extract_memories_empty_content_returns_empty_list(tmp_path: Path
 
 def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     """_save_to_memory calls memory.extract_memories(raw) then memory.remember(m) for each."""
-    from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
 
     mock_memory = MagicMock()
@@ -331,7 +331,7 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     mock_task.description = "Do research"
     mock_task.expected_output = "A report"
 
-    executor = CrewAgentExecutorMixin(
+    executor = BaseAgentExecutor(
         crew=None,
         agent=mock_agent,
         task=mock_task,
@@ -349,7 +349,7 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
 
 def test_executor_save_to_memory_skips_delegation_output() -> None:
     """_save_to_memory does nothing when output contains delegate action."""
-    from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
     from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -362,7 +362,7 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
 
     delegate_text = f"Action: {sanitize_tool_name('Delegate work to coworker')}"
     full_text = delegate_text + " rest"
-    executor = CrewAgentExecutorMixin(
+    executor = BaseAgentExecutor(
         crew=None,
         agent=mock_agent,
         task=mock_task,

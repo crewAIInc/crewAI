@@ -523,8 +523,8 @@ class TestAgentScopeExtension:
 
     def test_agent_save_extends_crew_root_scope(self) -> None:
         """Agent._save_to_memory extends crew's root_scope with agent info."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
         from crewai.utilities.printer import Printer
@@ -543,7 +543,7 @@ class TestAgentScopeExtension:
         mock_task.description = "Research task"
         mock_task.expected_output = "Report"
 
-        executor = CrewAgentExecutorMixin(
+        executor = BaseAgentExecutor(
             crew=None,
             agent=mock_agent,
             task=mock_task,
@@ -557,8 +557,8 @@ class TestAgentScopeExtension:
 
     def test_agent_save_sanitizes_role(self) -> None:
         """Agent role with special chars is sanitized for scope path."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
         from crewai.utilities.printer import Printer
@@ -577,7 +577,7 @@ class TestAgentScopeExtension:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        executor = CrewAgentExecutorMixin(
+        executor = BaseAgentExecutor(
             crew=None,
             agent=mock_agent,
             task=mock_task,
@@ -1047,8 +1047,8 @@ class TestAgentExecutorBackwardCompat:
 
     def test_agent_executor_no_root_scope_when_memory_has_none(self) -> None:
         """Agent executor doesn't inject root_scope when memory has none."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
         from crewai.utilities.printer import Printer
@@ -1067,7 +1067,7 @@ class TestAgentExecutorBackwardCompat:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        executor = CrewAgentExecutorMixin(
+        executor = BaseAgentExecutor(
             crew=None,
             agent=mock_agent,
             task=mock_task,
@@ -1082,8 +1082,8 @@ class TestAgentExecutorBackwardCompat:
 
     def test_agent_executor_extends_root_scope_when_memory_has_one(self) -> None:
         """Agent executor extends root_scope when memory has one."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
         from crewai.utilities.printer import Printer
@@ -1102,7 +1102,7 @@ class TestAgentExecutorBackwardCompat:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        executor = CrewAgentExecutorMixin(
+        executor = BaseAgentExecutor(
             crew=None,
             agent=mock_agent,
             task=mock_task,

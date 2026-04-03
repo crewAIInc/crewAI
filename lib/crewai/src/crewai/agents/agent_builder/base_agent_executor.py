@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field, PrivateAttr
 
@@ -8,18 +8,27 @@ from crewai.agents.parser import AgentFinish
 from crewai.memory.utils import sanitize_scope_name
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.types import LLMMessage
 
 
-class CrewAgentExecutorMixin(BaseModel):
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.crew import Crew
+    from crewai.task import Task
+    from crewai.utilities.i18n import I18N
+
+
+class BaseAgentExecutor(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
-    crew: Any = Field(default=None, exclude=True)
-    agent: Any = Field(default=None, exclude=True)
-    task: Any = Field(default=None, exclude=True)
+    crew: Crew = Field(default=None, exclude=True)  # type: ignore[assignment]
+    agent: BaseAgent = Field(default=None, exclude=True)  # type: ignore[assignment]
+    task: Task = Field(default=None, exclude=True)  # type: ignore[assignment]
     iterations: int = Field(default=0)
     max_iter: int = Field(default=25)
-    messages: list[Any] = Field(default_factory=list)
-    _i18n: Any = PrivateAttr(default=None)
+    messages: list[LLMMessage] = Field(default_factory=list)
+    _resuming: bool = PrivateAttr(default=False)
+    _i18n: I18N = PrivateAttr(default=None)  # type: ignore[assignment]
     _printer: Printer = PrivateAttr(default_factory=Printer)
 
     def _save_to_memory(self, output: AgentFinish) -> None:

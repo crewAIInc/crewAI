@@ -183,7 +183,9 @@ def prepare_task_execution(
         tools_for_task,
     )
 
-    crew._log_task_start(task, agent_to_use.role)
+    executor = agent_to_use.agent_executor
+    if not (executor and executor._resuming):
+        crew._log_task_start(task, agent_to_use.role)
 
     return (
         TaskExecutionData(agent=agent_to_use, tools=tools_for_task),
@@ -275,7 +277,11 @@ def prepare_kickoff(
     """
     from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.event_context import get_current_parent_id, reset_last_event_id
+    from crewai.events.event_context import (
+        get_current_parent_id,
+        push_event_scope,
+        reset_last_event_id,
+    )
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
     resuming = crew._kickoff_event_id is not None
@@ -298,7 +304,8 @@ def prepare_kickoff(
             normalized = {}
         normalized = before_callback(normalized)
 
-    if resuming:
+    if resuming and crew._kickoff_event_id:
+        push_event_scope(crew._kickoff_event_id, "crew_kickoff_started")
         if crew.verbose:
             from crewai.events.utils.console_formatter import ConsoleFormatter
 

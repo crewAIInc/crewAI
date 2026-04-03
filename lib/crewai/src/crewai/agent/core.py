@@ -194,12 +194,12 @@ class Agent(BaseAgent):
     llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     function_calling_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     system_template: str | None = Field(
         default=None, description="System format for the agent."
@@ -1056,7 +1056,8 @@ class Agent(BaseAgent):
         if self.agent_executor is None:
             raise RuntimeError("Agent executor is not initialized.")
 
-        self.agent_executor.task = task
+        if task is not None:
+            self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt

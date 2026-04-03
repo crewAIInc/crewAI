@@ -25,7 +25,7 @@ from pydantic import (
 from pydantic.functional_serializers import PlainSerializer
 
 from crewai.agents.agent_builder.base_agent import _serialize_llm_ref, _validate_llm_ref
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -88,7 +88,7 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-class CrewAgentExecutor(CrewAgentExecutorMixin):
+class CrewAgentExecutor(BaseAgentExecutor):
     """Executor for crew agents.
 
     Manages the execution lifecycle of an agent including prompt formatting,
@@ -98,7 +98,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     llm: Annotated[
         BaseLLM | str | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(default=None)
     prompt: SystemPromptResult | StandardPromptResult | None = Field(default=None)
     tools: list[CrewStructuredTool] = Field(default_factory=list)
@@ -113,7 +113,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     function_calling_llm: Annotated[
         BaseLLM | str | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(default=None)
     respect_context_window: bool = Field(default=False)
     request_within_rpm_limit: SerializableCallable | None = Field(
@@ -194,9 +194,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
-        self._setup_messages(inputs)
-
-        self._inject_multimodal_files(inputs)
+        if self._resuming:
+            self._resuming = False
+        else:
+            self._setup_messages(inputs)
+            self._inject_multimodal_files(inputs)
 
         self._show_start_logs()
 
@@ -1098,9 +1100,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
-        self._setup_messages(inputs)
-
-        await self._ainject_multimodal_files(inputs)
+        if self._resuming:
+            self._resuming = False
+        else:
+            self._setup_messages(inputs)
+            await self._ainject_multimodal_files(inputs)
 
         self._show_start_logs()
 

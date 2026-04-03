@@ -21,7 +21,7 @@ from rich.console import Console
 from rich.text import Text
 from typing_extensions import Self
 
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -152,7 +152,7 @@ class AgentExecutorState(BaseModel):
     )
 
 
-class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: ignore[pydantic-unexpected]
+class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignore[pydantic-unexpected]
     """Agent Executor for both standalone agents and crew-bound agents.
 
     _skip_auto_memory prevents Flow from eagerly allocating a Memory
@@ -160,7 +160,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: 
 
     Inherits from:
     - Flow[AgentExecutorState]: Provides flow orchestration capabilities
-    - CrewAgentExecutorMixin: Provides memory methods (short/long/external term)
+    - BaseAgentExecutor: Provides memory methods (short/long/external term)
 
     This executor can operate in two modes:
     - Standalone mode: When crew and task are None (used by Agent.kickoff())
@@ -297,12 +297,12 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: 
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:
-                planning_handler = AgentReasoning(agent=self.agent, task=self.task)
+                planning_handler = AgentReasoning(agent=self.agent, task=self.task)  # type: ignore[arg-type]
             else:
                 # For kickoff() path - use input text directly, no Task needed
                 input_text = getattr(self, "_kickoff_input", "")
                 planning_handler = AgentReasoning(
-                    agent=self.agent,
+                    agent=self.agent,  # type: ignore[arg-type]
                     description=input_text or "Complete the requested task",
                     expected_output="Complete the task successfully",
                 )
@@ -387,28 +387,28 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: 
             step failures reliably trigger replanning rather than being
             silently ignored.
         """
-        config = self.agent.planning_config
+        config = self.agent.planning_config  # type: ignore[attr-defined]
         if config is not None:
             return str(config.reasoning_effort)
         return "medium"
 
     def _get_max_replans(self) -> int:
         """Get max replans from planning config or default to 3."""
-        config = self.agent.planning_config
+        config = self.agent.planning_config  # type: ignore[attr-defined]
         if config is not None:
             return int(config.max_replans)
         return 3
 
     def _get_max_step_iterations(self) -> int:
         """Get max step iterations from planning config or default to 15."""
-        config = self.agent.planning_config
+        config = self.agent.planning_config  # type: ignore[attr-defined]
         if config is not None:
             return int(config.max_step_iterations)
         return 15
 
     def _get_step_timeout(self) -> int | None:
         """Get per-step timeout from planning config or default to None."""
-        config = self.agent.planning_config
+        config = self.agent.planning_config  # type: ignore[attr-defined]
         if config is not None:
             return int(config.step_timeout) if config.step_timeout is not None else None
         return None
@@ -2358,11 +2358,11 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: 
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:
-                planning_handler = AgentReasoning(agent=self.agent, task=self.task)
+                planning_handler = AgentReasoning(agent=self.agent, task=self.task)  # type: ignore[arg-type]
             else:
                 input_text = getattr(self, "_kickoff_input", "")
                 planning_handler = AgentReasoning(
-                    agent=self.agent,
+                    agent=self.agent,  # type: ignore[arg-type]
                     description=input_text or "Complete the requested task",
                     expected_output="Complete the task successfully",
                 )
@@ -2379,7 +2379,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):  # type: 
                 # description is a read-only property — recreate with enhanced text
                 input_text = getattr(self, "_kickoff_input", "")
                 planning_handler = AgentReasoning(
-                    agent=self.agent,
+                    agent=self.agent,  # type: ignore[arg-type]
                     description=enhanced_description
                     or input_text
                     or "Complete the requested task",

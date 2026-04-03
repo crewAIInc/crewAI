@@ -98,8 +98,8 @@ def __getattr__(name: str) -> Any:
 
 try:
     from crewai.agents.agent_builder.base_agent import BaseAgent as _BaseAgent
-    from crewai.agents.agent_builder.base_agent_executor_mixin import (
-        CrewAgentExecutorMixin as _CrewAgentExecutorMixin,
+    from crewai.agents.agent_builder.base_agent_executor import (
+        BaseAgentExecutor as _BaseAgentExecutor,
     )
     from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
     from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
@@ -117,7 +117,7 @@ try:
         "Flow": Flow,
         "BaseLLM": BaseLLM,
         "Task": Task,
-        "CrewAgentExecutorMixin": _CrewAgentExecutorMixin,
+        "BaseAgentExecutor": _BaseAgentExecutor,
         "ExecutionContext": ExecutionContext,
         "StandardPromptResult": _StandardPromptResult,
         "SystemPromptResult": _SystemPromptResult,

@@ -234,7 +234,7 @@ class Crew(FlowTrackable, BaseModel):
     manager_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     manager_agent: Annotated[
         BaseAgent | None,
@@ -243,7 +243,7 @@ class Crew(FlowTrackable, BaseModel):
     function_calling_llm: Annotated[
         str | LLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
@@ -296,7 +296,7 @@ class Crew(FlowTrackable, BaseModel):
     planning_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(
         default=None,
         description=(
@@ -321,7 +321,7 @@ class Crew(FlowTrackable, BaseModel):
     chat_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
@@ -386,15 +386,21 @@ class Crew(FlowTrackable, BaseModel):
     def _restore_runtime(self) -> None:
         """Re-create runtime objects after restoring from a checkpoint."""
         for agent in self.agents:
-            if isinstance(agent.llm, str):
-                agent.llm = create_llm(agent.llm)
             agent.crew = self
-            agent.agent_executor = None
+            executor = agent.agent_executor
+            if executor and executor.messages:
+                executor.crew = self
+                executor.agent = agent
+                executor._resuming = True
+            else:
+                agent.agent_executor = None
         for task in self.tasks:
             if task.agent is not None:
                 for agent in self.agents:
                     if agent.role == task.agent.role:
                         task.agent = agent
+                        if agent.agent_executor is not None and task.output is None:
+                            agent.agent_executor.task = task
                         break
         if self.checkpoint_inputs is not None:
             self._inputs = self.checkpoint_inputs
