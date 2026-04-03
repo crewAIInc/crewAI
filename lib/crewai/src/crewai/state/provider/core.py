@@ -12,8 +12,8 @@ from pydantic_core import CoreSchema, core_schema
 class BaseProvider(Protocol):
     """Interface for persisting and restoring runtime state checkpoints.
 
-    Implementations handle the storage backend (filesystem, cloud, database,
-    etc.) while ``RuntimeState`` handles serialization.
+    Implementations handle the storage backend — filesystem, cloud, database,
+    etc. — while ``RuntimeState`` handles serialization.
     """
 
     @classmethod
@@ -39,10 +39,10 @@ class BaseProvider(Protocol):
 
         Args:
             data: The serialized string to persist.
-            directory: Logical destination (path, bucket prefix, etc.).
+            directory: Logical destination: path, bucket prefix, etc.
 
         Returns:
-            A location identifier for the saved checkpoint (e.g. file path, URI).
+            A location identifier for the saved checkpoint, such as a file path or URI.
         """
         ...
 
@@ -51,9 +51,9 @@ class BaseProvider(Protocol):
 
         Args:
             data: The serialized string to persist.
-            directory: Logical destination (path, bucket prefix, etc.).
+            directory: Logical destination: path, bucket prefix, etc.
 
         Returns:
-            A location identifier for the saved checkpoint (e.g. file path, URI).
+            A location identifier for the saved checkpoint, such as a file path or URI.
         """
         ...

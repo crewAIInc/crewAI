@@ -480,6 +480,10 @@ class CrewAIEventsBus:
                 event.parent_event_id = get_current_parent_id()
 
         set_last_event_id(event.event_id)
+
+        if self._runtime_state is not None:
+            self._runtime_state.event_record.add(event)
+
         event_type = type(event)
 
         with self._rwlock.r_locked():
@@ -578,6 +582,9 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
+        if self._runtime_state is not None:
+            self._runtime_state.event_record.add(event)
+
         event_type = type(event)
 
         with self._rwlock.r_locked():

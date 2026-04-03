@@ -9,17 +9,30 @@ via ``RuntimeState.model_rebuild()``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
-from pydantic import PrivateAttr, RootModel
+from pydantic import (
+    ModelWrapValidatorHandler,
+    PrivateAttr,
+    RootModel,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 from crewai.context import capture_execution_context
+from crewai.state.event_record import EventRecord
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
 
 
 if TYPE_CHECKING:
     from crewai import Entity
+
+
+class CheckpointPayload(TypedDict):
+    entities: list[Entity]
+    event_record: dict[str, Any]
 
 
 def _entity_discriminator(v: dict[str, Any] | object) -> str:
@@ -64,6 +77,32 @@ def _sync_checkpoint_fields(entity: object) -> None:
 class RuntimeState(RootModel):  # type: ignore[type-arg]
     root: list[Entity]
     _provider: BaseProvider = PrivateAttr(default_factory=JsonProvider)
+    _event_record: EventRecord = PrivateAttr(default_factory=EventRecord)
+
+    @property
+    def event_record(self) -> EventRecord:
+        """The execution event record."""
+        return self._event_record
+
+    @model_serializer(mode="wrap")
+    def _serialize(self, handler: SerializerFunctionWrapHandler) -> CheckpointPayload:
+        return {
+            "entities": handler(self),
+            "event_record": self._event_record.model_dump(),
+        }
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _deserialize(
+        cls, data: Any, handler: ModelWrapValidatorHandler[RuntimeState]
+    ) -> RuntimeState:
+        if isinstance(data, dict) and "entities" in data:
+            record_data = data.get("event_record")
+            state = handler(data["entities"])
+            if record_data:
+                state._event_record = EventRecord.model_validate(record_data)
+            return state
+        return handler(data)
 
     def checkpoint(self, directory: str) -> str:
         """Write a checkpoint file to the directory.
