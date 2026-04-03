@@ -355,20 +355,19 @@ class Crew(FlowTrackable, BaseModel):
 
     @classmethod
     def from_checkpoint(cls, path: str) -> Crew:
-        """Restore a Crew from a checkpoint file.
+        """Restore a Crew from a checkpoint file, ready to resume via kickoff().
 
         Args:
             path: Path to a checkpoint JSON file.
 
         Returns:
-            A Crew instance with state restored from the checkpoint.
+            A Crew instance. Call kickoff() to resume from the last completed task.
         """
         from pathlib import Path as _Path
 
         from crewai.context import apply_execution_context
 
         json_str = _Path(path).read_text()
-        # Parse as RuntimeState to handle discriminated union
         from crewai import RuntimeState
 
         state = RuntimeState.model_validate_json(
@@ -378,8 +377,27 @@ class Crew(FlowTrackable, BaseModel):
             if isinstance(entity, cls):
                 if entity.execution_context is not None:
                     apply_execution_context(entity.execution_context)
+                entity._restore_runtime()
                 return entity
         raise ValueError(f"No Crew found in checkpoint: {path}")
+
+    def _restore_runtime(self) -> None:
+        """Re-create runtime objects after restoring from a checkpoint."""
+        for agent in self.agents:
+            if isinstance(agent.llm, str):
+                agent.llm = create_llm(agent.llm)
+            agent.crew = self
+            agent.agent_executor = None
+        for task in self.tasks:
+            if task.agent is not None:
+                for agent in self.agents:
+                    if agent.role == task.agent.role:
+                        task.agent = agent
+                        break
+        if self.checkpoint_inputs is not None:
+            self._inputs = self.checkpoint_inputs
+        if self.checkpoint_kickoff_event_id is not None:
+            self._kickoff_event_id = self.checkpoint_kickoff_event_id
 
     @field_validator("id", mode="before")
     @classmethod
@@ -1264,6 +1282,9 @@ class Crew(FlowTrackable, BaseModel):
         manager.crew = self
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
+        for i, task in enumerate(tasks):
+            if task.output is None:
+                return i if i > 0 else None
         return None
 
     def _execute_tasks(
