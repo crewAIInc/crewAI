@@ -14,6 +14,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 import contextvars
 import inspect
+import logging
 import threading
 from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypeVar
 
@@ -53,6 +54,8 @@ from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.events.utils.handlers import is_async_handler, is_call_handler_safe
 from crewai.utilities.rw_lock import RWLock
 
+
+logger = logging.getLogger(__name__)
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -267,6 +270,11 @@ class CrewAIEventsBus:
             if self._runtime_state is None:
                 from crewai import RuntimeState
 
+                if RuntimeState is None:
+                    logger.warning(
+                        "RuntimeState unavailable; skipping entity registration."
+                    )
+                    return
                 self._runtime_state = RuntimeState(root=[entity])
             else:
                 self._runtime_state.root.append(entity)
