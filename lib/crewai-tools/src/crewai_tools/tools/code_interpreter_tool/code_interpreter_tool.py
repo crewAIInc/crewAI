@@ -1,3 +1,4 @@
+import re
 """Code Interpreter Tool for executing Python code in isolated environments.
 
 This module provides a tool for executing Python code either in a Docker container for
@@ -239,6 +240,8 @@ class CodeInterpreterTool(BaseTool):
             libraries: A list of library names to install using pip.
         """
         for library in libraries:
+            if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*([<>=!~]+[a-zA-Z0-9.*]+)?$", library):
+                continue
             container.exec_run(["pip", "install", library])
 
     def _init_docker_container(self) -> Any:
@@ -268,7 +271,7 @@ class CodeInterpreterTool(BaseTool):
             tty=True,
             working_dir="/workspace",
             name=container_name,
-            volumes={current_path: {"bind": "/workspace", "mode": "rw"}},
+            volumes={current_path: {"bind": "/workspace", "mode": "ro"}},
         )
 
     @staticmethod
@@ -411,6 +414,9 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
+            if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*([<>=!~]+[a-zA-Z0-9.*]+)?$", library):
+                Printer.print(f"WARNING: Skipping invalid library name: {library}", color="bold_red")
+                continue
             subprocess.run(  # noqa: S603
                 [sys.executable, "-m", "pip", "install", library], check=False
             )
