@@ -1,0 +1,164 @@
+---
+title: SidClaw Integration
+description: Add human approval workflows, policy-based governance, and tamper-proof audit trails to CrewAI agents
+icon: shield-check
+mode: "wide"
+---
+
+# SidClaw — Governance for CrewAI Agents
+
+[SidClaw](https://github.com/sidclawhq/platform) is an open-source governance SDK for AI agents. It adds three capabilities to CrewAI agents that observability tools alone cannot provide:
+
+1. **Human approval before execution** — high-risk tool calls pause and wait for a reviewer to approve or deny in a dashboard, before the tool runs
+2. **Policy engine** — priority-ordered rules that automatically allow, deny, or require approval for tool calls based on data classification, agent identity, and resource scope
+3. **Hash-chain audit trail** — every tool call is recorded to a tamper-evident, cryptographically chained trace — the kind that satisfies FINRA 2026 and EU AI Act audit requirements
+
+This is different from tracing tools (Langfuse, LangSmith) that record what happened after the fact. SidClaw evaluates actions before they execute and can block or hold them.
+
+## Installation
+
+```bash
+pip install sidclaw crewai
+```
+
+## Configuration
+
+Create a free account at [app.sidclaw.com](https://app.sidclaw.com) (5 agents free, no credit card) and get your API key. Or self-host with Docker:
+
+```bash
+git clone https://github.com/sidclawhq/platform && cd platform
+docker compose up
+```
+
+```bash
+export SIDCLAW_API_KEY=ai_...
+```
+
+## Wrapping CrewAI tools with governance
+
+`govern_crewai_tool()` is a one-line wrapper around any `BaseTool`. It intercepts `_run`, evaluates the action against your policies, and records the outcome to the audit trail.
+
+```python
+import os
+from crewai import Agent, Crew, Task
+from crewai.tools import BaseTool
+from sidclaw import SidClaw
+from sidclaw.middleware.crewai import govern_crewai_tool
+
+sidclaw = SidClaw(
+    api_key=os.environ["SIDCLAW_API_KEY"],
+    agent_id="devops-crew",
+)
+
+class DeployTool(BaseTool):
+    name: str = "deploy_to_production"
+    description: str = "Deploy the latest build to the production environment."
+
+    def _run(self, version: str = "latest") -> str:
+        return f"Deployed {version} to production."
+
+class MigrationTool(BaseTool):
+    name: str = "run_db_migration"
+    description: str = "Run pending database migrations against production."
+
+    def _run(self, migration_id: str = "all") -> str:
+        return f"Migration {migration_id} complete."
+
+# Wrap each tool with governance.
+# data_classification influences which policy rules apply.
+governed_deploy = govern_crewai_tool(
+    DeployTool(),
+    client=sidclaw,
+    data_classification="confidential",   # -> approval_required
+)
+
+governed_migration = govern_crewai_tool(
+    MigrationTool(),
+    client=sidclaw,
+    data_classification="restricted",     # -> deny
+)
+
+agent = Agent(
+    role="DevOps Engineer",
+    goal="Deploy the latest build and run pending migrations.",
+    tools=[governed_deploy, governed_migration],
+    verbose=True,
+)
+```
+
+## Policy outcomes
+
+Before each tool call, SidClaw evaluates your policies and returns one of three decisions:
+
+| Decision | Behavior |
+|---|---|
+| `allow` | Tool runs immediately. Outcome recorded to audit trail. |
+| `approval_required` | Execution pauses. A reviewer approves or denies in the dashboard. Tool runs or raises `ActionDeniedError`. |
+| `deny` | `ActionDeniedError` raised. Tool never executes. |
+
+Configure policies in the dashboard or via JSON. Example policy (YAML):
+
+```yaml
+- name: "require-approval-for-deployments"
+  priority: 100
+  match:
+    target_integration: "deploy_to_production"
+    data_classification: ["confidential"]
+  effect: "approval_required"
+
+- name: "block-db-migrations"
+  priority: 90
+  match:
+    target_integration: "run_db_migration"
+    data_classification: ["restricted"]
+  effect: "deny"
+```
+
+## Handling governance outcomes
+
+```python
+from sidclaw import ActionDeniedError
+
+try:
+    result = crew.kickoff()
+except ActionDeniedError as e:
+    print(f"Blocked by policy: {e.reason}")
+    print(f"Audit trace: https://app.sidclaw.com/dashboard/audit/{e.trace_id}")
+```
+
+When a tool is `approval_required`, the crew waits by default until a reviewer approves in the SidClaw dashboard (configurable timeout). Denial raises `ActionDeniedError` with the policy rule that blocked it.
+
+## Audit trail
+
+Every tool call — allowed, denied, or approved — is recorded to the audit trace. The trace is hash-chained: each event includes a cryptographic hash of the previous event, making tampering detectable.
+
+```python
+# Retrieve a trace programmatically
+from sidclaw import SidClaw
+
+client = SidClaw(api_key=os.environ["SIDCLAW_API_KEY"], agent_id="devops-crew")
+trace = client.get_trace(trace_id="trc_abc123")
+print(trace)
+# TraceEvent(
+#   id="trc_abc123",
+#   operation="deploy_to_production",
+#   decision="approval_required",
+#   approved_by="alice@company.com",
+#   approved_at="2026-03-28T14:32:00Z",
+#   outcome="success",
+#   prev_hash="sha256:...",
+# )
+```
+
+## Live demo
+
+See SidClaw governing a DevOps crew in action — no signup needed:
+
+- [demo-devops.sidclaw.com](https://demo-devops.sidclaw.com)
+
+## Links
+
+- [GitHub](https://github.com/sidclawhq/platform) — Apache 2.0 SDK, FSL platform
+- [Documentation](https://docs.sidclaw.com)
+- [PyPI](https://pypi.org/project/sidclaw/) — `pip install sidclaw`
+- [Full example](https://github.com/sidclawhq/platform/tree/main/examples) — complete governed crew with all policy outcomes
