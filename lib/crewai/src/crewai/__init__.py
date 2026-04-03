@@ -120,7 +120,15 @@ try:
         "Task": Task,
         "CrewAgentExecutorMixin": _CrewAgentExecutorMixin,
         "ExecutionContext": ExecutionContext,
+        "StandardPromptResult": _StandardPromptResult,
+        "SystemPromptResult": _SystemPromptResult,
     }
+
+    from crewai.tools.base_tool import BaseTool as _BaseTool
+    from crewai.tools.structured_tool import CrewStructuredTool as _CrewStructuredTool
+
+    _base_namespace["BaseTool"] = _BaseTool
+    _base_namespace["CrewStructuredTool"] = _CrewStructuredTool
 
     try:
         from crewai.a2a.config import (
@@ -161,15 +169,20 @@ try:
         Crew.__module__,
         Flow.__module__,
         Task.__module__,
+        "crewai.agents.crew_agent_executor",
         _AgentExecutor.__module__,
     ):
         sys.modules[_mod_name].__dict__.update(_resolve_namespace)
 
+    from crewai.agents.crew_agent_executor import (
+        CrewAgentExecutor as _CrewAgentExecutor,
+    )
     from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
 
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
     Task.model_rebuild(force=True, _types_namespace=_full_namespace)
     _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
+    _CrewAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
     Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)

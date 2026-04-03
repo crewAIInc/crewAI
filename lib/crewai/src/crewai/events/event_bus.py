@@ -125,6 +125,7 @@ class CrewAIEventsBus:
         self._executor_initialized = False
         self._has_pending_events = False
         self._runtime_state: Any = None
+        self._registered_entity_ids: set[int] = set()
 
     def _ensure_executor_initialized(self) -> None:
         """Lazily initialize the thread pool executor and event loop.
@@ -253,7 +254,26 @@ class CrewAIEventsBus:
 
     def set_runtime_state(self, state: Any) -> None:
         """Set the RuntimeState that will be passed to event handlers."""
-        self._runtime_state = state
+        with self._instance_lock:
+            self._runtime_state = state
+
+    _registered_entity_ids: set[int]
+
+    def register_entity(self, entity: Any) -> None:
+        """Add an entity to the RuntimeState, creating it if needed."""
+        eid = id(entity)
+        if eid in self._registered_entity_ids:
+            return
+        with self._instance_lock:
+            if eid in self._registered_entity_ids:
+                return
+            if self._runtime_state is None:
+                from crewai import RuntimeState
+
+                self._runtime_state = RuntimeState(root=[entity])
+            else:
+                self._runtime_state.root.append(entity)
+            self._registered_entity_ids.add(eid)
 
     def off(
         self,
@@ -434,6 +454,12 @@ class CrewAIEventsBus:
             ...     await asyncio.wrap_future(future)  # In async test
             ...     # or future.result(timeout=5.0) in sync code
         """
+        if (
+            hasattr(source, "entity_type")
+            and id(source) not in self._registered_entity_ids
+        ):
+            self.register_entity(source)
+
         event.previous_event_id = get_last_event_id()
         event.triggered_by_event_id = get_triggering_event_id()
         event.emission_sequence = get_next_emission_sequence()
