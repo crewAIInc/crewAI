@@ -51,7 +51,7 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
-from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.converter import Converter, aconvert_to_model, convert_to_model
 from crewai.utilities.file_store import (
     clear_task_files,
     get_all_files,
@@ -620,7 +620,7 @@ class Task(BaseModel):
                     json_output = None
             elif not self._guardrails and not self._guardrail:
                 raw = result
-                pydantic_output, json_output = self._export_output(result)
+                pydantic_output, json_output = await self._aexport_output(result)
             else:
                 raw = result
                 pydantic_output, json_output = None, None
@@ -1071,6 +1071,34 @@ Follow these guidelines:
 
         return pydantic_output, json_output
 
+    async def _aexport_output(
+        self, result: str
+    ) -> tuple[BaseModel | None, dict[str, Any] | None]:
+        """Async version of _export_output that uses async LLM calls."""
+        pydantic_output: BaseModel | None = None
+        json_output: dict[str, Any] | None = None
+
+        if self.output_pydantic or self.output_json:
+            model_output = await aconvert_to_model(
+                result,
+                self.output_pydantic,
+                self.output_json,
+                self.agent,
+                self.converter_cls,
+            )
+
+            if isinstance(model_output, BaseModel):
+                pydantic_output = model_output
+            elif isinstance(model_output, dict):
+                json_output = model_output
+            elif isinstance(model_output, str):
+                try:
+                    json_output = json.loads(model_output)
+                except json.JSONDecodeError:
+                    json_output = None
+
+        return pydantic_output, json_output
+
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
             return OutputFormat.JSON
@@ -1286,7 +1314,7 @@ Follow these guidelines:
 
                 if isinstance(guardrail_result.result, str):
                     task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = self._export_output(
+                    pydantic_output, json_output = await self._aexport_output(
                         guardrail_result.result
                     )
                     task_output.pydantic = pydantic_output
@@ -1331,7 +1359,7 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            pydantic_output, json_output = await self._aexport_output(result)
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
