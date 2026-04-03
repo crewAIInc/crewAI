@@ -86,6 +86,10 @@ class MCPToolWrapper(BaseTool):
         except Exception as e:
             return f"Error executing MCP tool {self.original_tool_name}: {e!s}"
 
+    async def _arun(self, **kwargs: Any) -> str:
+        """Async implementation for BaseTool.arun()."""
+        return await self._run_async(**kwargs)
+
     async def _run_async(self, **kwargs: Any) -> str:
         """Async implementation of MCP tool execution with timeouts and retry logic."""
         return await self._retry_with_exponential_backoff(

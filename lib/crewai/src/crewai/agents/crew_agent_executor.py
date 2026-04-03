@@ -817,6 +817,128 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages.append(reasoning_message)
         return None
 
+    async def _ahandle_native_tool_calls(
+        self,
+        tool_calls: list[Any],
+        available_functions: dict[str, Callable[..., Any]],
+    ) -> AgentFinish | None:
+        """Async version of _handle_native_tool_calls.
+
+        Uses ``asyncio.gather`` for parallel tool execution instead of
+        ``ThreadPoolExecutor``, keeping the event loop free.
+        """
+        if not tool_calls:
+            return None
+
+        parsed_calls = [
+            parsed
+            for tool_call in tool_calls
+            if (parsed := self._parse_native_tool_call(tool_call)) is not None
+        ]
+        if not parsed_calls:
+            return None
+
+        original_tools_by_name: dict[str, Any] = dict(self._tool_name_mapping)
+
+        if len(parsed_calls) > 1:
+            has_result_as_answer_in_batch = any(
+                bool(
+                    original_tools_by_name.get(func_name)
+                    and getattr(
+                        original_tools_by_name.get(func_name), "result_as_answer", False
+                    )
+                )
+                for _, func_name, _ in parsed_calls
+            )
+            has_max_usage_count_in_batch = any(
+                bool(
+                    original_tools_by_name.get(func_name)
+                    and getattr(
+                        original_tools_by_name.get(func_name),
+                        "max_usage_count",
+                        None,
+                    )
+                    is not None
+                )
+                for _, func_name, _ in parsed_calls
+            )
+
+            if has_result_as_answer_in_batch or has_max_usage_count_in_batch:
+                logger.debug(
+                    "Skipping parallel native execution because batch includes result_as_answer or max_usage_count tool"
+                )
+            else:
+                execution_plan: list[
+                    tuple[str, str, str | dict[str, Any], Any | None]
+                ] = []
+                for call_id, func_name, func_args in parsed_calls:
+                    original_tool = original_tools_by_name.get(func_name)
+                    execution_plan.append(
+                        (call_id, func_name, func_args, original_tool)
+                    )
+
+                self._append_assistant_tool_calls_message(
+                    [
+                        (call_id, func_name, func_args)
+                        for call_id, func_name, func_args, _ in execution_plan
+                    ]
+                )
+
+                ordered_results = await asyncio.gather(
+                    *(
+                        self._aexecute_single_native_tool_call(
+                            call_id=call_id,
+                            func_name=func_name,
+                            func_args=func_args,
+                            available_functions=available_functions,
+                            original_tool=original_tool,
+                            should_execute=True,
+                        )
+                        for call_id, func_name, func_args, original_tool in execution_plan
+                    )
+                )
+
+                for execution_result in ordered_results:
+                    if not execution_result:
+                        continue
+                    tool_finish = self._append_tool_result_and_check_finality(
+                        execution_result
+                    )
+                    if tool_finish:
+                        return tool_finish
+
+                reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+                reasoning_message: LLMMessage = {
+                    "role": "user",
+                    "content": reasoning_prompt,
+                }
+                self.messages.append(reasoning_message)
+                return None
+
+        # Sequential behavior: process only first tool call, then force reflection.
+        call_id, func_name, func_args = parsed_calls[0]
+        self._append_assistant_tool_calls_message([(call_id, func_name, func_args)])
+
+        execution_result = await self._aexecute_single_native_tool_call(
+            call_id=call_id,
+            func_name=func_name,
+            func_args=func_args,
+            available_functions=available_functions,
+            original_tool=original_tools_by_name.get(func_name),
+            should_execute=True,
+        )
+        tool_finish = self._append_tool_result_and_check_finality(execution_result)
+        if tool_finish:
+            return tool_finish
+
+        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+        reasoning_message = {
+            "role": "user",
+            "content": reasoning_prompt,
+        }
+        self.messages.append(reasoning_message)
+        return None
+
     def _parse_native_tool_call(
         self, tool_call: Any
     ) -> tuple[str, str, str | dict[str, Any]] | None:
@@ -992,6 +1114,224 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         elif not from_cache and func_name in available_functions:
             try:
                 raw_result = available_functions[func_name](**(args_dict or {}))
+
+                if self.tools_handler and self.tools_handler.cache:
+                    should_cache = True
+                    if (
+                        original_tool
+                        and hasattr(original_tool, "cache_function")
+                        and callable(original_tool.cache_function)
+                    ):
+                        should_cache = original_tool.cache_function(
+                            args_dict or {}, raw_result
+                        )
+                    if should_cache:
+                        self.tools_handler.cache.add(
+                            tool=func_name, input=input_str, output=raw_result
+                        )
+
+                result = (
+                    str(raw_result) if not isinstance(raw_result, str) else raw_result
+                )
+            except Exception as e:
+                result = f"Error executing tool: {e}"
+                if self.task:
+                    self.task.increment_tools_errors()
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self.agent,
+                        from_task=self.task,
+                        agent_key=agent_key,
+                        error=e,
+                    ),
+                )
+                error_event_emitted = True
+
+        after_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict or {},
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+            tool_result=result,
+        )
+        after_hooks = get_after_tool_call_hooks()
+        try:
+            for after_hook in after_hooks:
+                after_hook_result = after_hook(after_hook_context)
+                if after_hook_result is not None:
+                    result = after_hook_result
+                    after_hook_context.tool_result = result
+        except Exception as hook_error:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in after_tool_call hook: {hook_error}",
+                    color="red",
+                )
+
+        if not error_event_emitted:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageFinishedEvent(
+                    output=result,
+                    tool_name=func_name,
+                    tool_args=args_dict,
+                    from_agent=self.agent,
+                    from_task=self.task,
+                    agent_key=agent_key,
+                    started_at=started_at,
+                    finished_at=datetime.now(),
+                ),
+            )
+
+        return {
+            "call_id": call_id,
+            "func_name": func_name,
+            "result": result,
+            "from_cache": from_cache,
+            "original_tool": original_tool,
+        }
+
+    async def _aexecute_single_native_tool_call(
+        self,
+        *,
+        call_id: str,
+        func_name: str,
+        func_args: str | dict[str, Any],
+        available_functions: dict[str, Callable[..., Any]],
+        original_tool: Any | None = None,
+        should_execute: bool = True,
+    ) -> dict[str, Any]:
+        """Async version of _execute_single_native_tool_call.
+
+        Tries the tool's async ``arun`` method first. If the tool does not
+        support async execution (raises ``NotImplementedError``), falls back
+        to running the synchronous callable in a thread via
+        ``asyncio.to_thread`` so the event loop is never blocked.
+        """
+        from datetime import datetime
+        import json
+
+        from crewai.events.types.tool_usage_events import (
+            ToolUsageErrorEvent,
+            ToolUsageFinishedEvent,
+            ToolUsageStartedEvent,
+        )
+
+        args_dict, parse_error = parse_tool_call_args(
+            func_args, func_name, call_id, original_tool
+        )
+        if parse_error is not None:
+            return parse_error
+
+        if original_tool is None:
+            for tool in self.original_tools or []:
+                if sanitize_tool_name(tool.name) == func_name:
+                    original_tool = tool
+                    break
+
+        max_usage_reached = False
+        if not should_execute and original_tool:
+            max_usage_reached = True
+        elif (
+            should_execute
+            and original_tool
+            and (max_count := getattr(original_tool, "max_usage_count", None))
+            is not None
+            and getattr(original_tool, "current_usage_count", 0) >= max_count
+        ):
+            max_usage_reached = True
+
+        from_cache = False
+        result: str = "Tool not found"
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if self.tools_handler and self.tools_handler.cache:
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
+            if cached_result is not None:
+                result = (
+                    str(cached_result)
+                    if not isinstance(cached_result, str)
+                    else cached_result
+                )
+                from_cache = True
+
+        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                agent_key=agent_key,
+            ),
+        )
+        error_event_emitted = False
+
+        track_delegation_if_needed(func_name, args_dict or {}, self.task)
+
+        structured_tool: CrewStructuredTool | None = None
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
+
+        hook_blocked = False
+        before_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict or {},
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+        )
+        before_hooks = get_before_tool_call_hooks()
+        try:
+            for hook in before_hooks:
+                hook_result = hook(before_hook_context)
+                if hook_result is False:
+                    hook_blocked = True
+                    break
+        except Exception as hook_error:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in before_tool_call hook: {hook_error}",
+                    color="red",
+                )
+
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+        elif max_usage_reached and original_tool:
+            result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+        elif not from_cache and func_name in available_functions:
+            try:
+                # Try async execution first via the original tool's arun method,
+                # falling back to running the sync callable in a thread.
+                raw_result: Any
+                if original_tool is not None and hasattr(original_tool, "arun"):
+                    try:
+                        raw_result = await original_tool.arun(**(args_dict or {}))
+                    except NotImplementedError:
+                        raw_result = await asyncio.to_thread(
+                            available_functions[func_name], **(args_dict or {})
+                        )
+                else:
+                    raw_result = await asyncio.to_thread(
+                        available_functions[func_name], **(args_dict or {})
+                    )
 
                 if self.tools_handler and self.tools_handler.cache:
                     should_cache = True
@@ -1344,7 +1684,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 # Call LLM with native tools
                 # Pass available_functions=None so the LLM returns tool_calls
                 # without executing them. The executor handles tool execution
-                # via _handle_native_tool_calls to properly manage message history.
+                # via _ahandle_native_tool_calls to properly manage message history.
                 answer = await aget_llm_response(
                     llm=self.llm,
                     messages=self.messages,
@@ -1365,7 +1705,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     and self._is_tool_call_list(answer)
                 ):
                     # Handle tool calls - execute tools and add results to messages
-                    tool_finish = self._handle_native_tool_calls(
+                    tool_finish = await self._ahandle_native_tool_calls(
                         answer, available_functions
                     )
                     # If tool has result_as_answer=True, return immediately
