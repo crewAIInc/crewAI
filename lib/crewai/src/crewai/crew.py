@@ -1543,13 +1543,18 @@ class Crew(FlowTrackable, BaseModel):
     def _update_manager_tools(
         self, task: Task, tools: list[BaseTool]
     ) -> list[BaseTool]:
+        """Equip the manager agent with delegation tools for all worker agents.
+
+        In a hierarchical process the manager must be able to delegate to *any*
+        worker, regardless of which worker a task was originally assigned to.
+        Previously, when ``task.agent`` was set the tools were (incorrectly)
+        scoped to that single agent, preventing the manager from reaching the
+        rest of the crew.
+        """
         if self.manager_agent:
-            if task.agent:
-                tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
-            else:
-                tools = self._inject_delegation_tools(
-                    tools, self.manager_agent, self.agents
-                )
+            tools = self._inject_delegation_tools(
+                tools, self.manager_agent, self.agents
+            )
         return tools
 
     @staticmethod
