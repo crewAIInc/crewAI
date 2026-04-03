@@ -41,6 +41,7 @@ from crewai.events.types.system_events import (
     SigTStpEvent,
     SigTermEvent,
 )
+from crewai.llms.base_llm import BaseLLM
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
@@ -323,7 +324,9 @@ class Telemetry:
                                     if getattr(agent, "function_calling_llm", None)
                                     else ""
                                 ),
-                                "llm": agent.llm.model,
+                                "llm": agent.llm.model
+                                if isinstance(agent.llm, BaseLLM)
+                                else str(agent.llm),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "allow_code_execution?": getattr(
                                     agent, "allow_code_execution", False
@@ -427,7 +430,9 @@ class Telemetry:
                                     if getattr(agent, "function_calling_llm", None)
                                     else ""
                                 ),
-                                "llm": agent.llm.model,
+                                "llm": agent.llm.model
+                                if isinstance(agent.llm, BaseLLM)
+                                else str(agent.llm),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "allow_code_execution?": getattr(
                                     agent, "allow_code_execution", False
@@ -840,7 +845,9 @@ class Telemetry:
                             "max_iter": agent.max_iter,
                             "max_rpm": agent.max_rpm,
                             "i18n": agent.i18n.prompt_file,
-                            "llm": agent.llm.model,
+                            "llm": agent.llm.model
+                            if isinstance(agent.llm, BaseLLM)
+                            else str(agent.llm),
                             "delegation_enabled?": agent.allow_delegation,
                             "tools_names": [
                                 sanitize_tool_name(tool.name)
@@ -1030,6 +1037,23 @@ class Telemetry:
                 self._add_attribute(span, "feedback_provided", feedback_provided)
             if outcome is not None:
                 self._add_attribute(span, "outcome", outcome)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def feature_usage_span(self, feature: str) -> None:
+        """Records that a feature was used. One span = one count.
+
+        Args:
+            feature: Feature identifier, e.g. "planning:creation",
+                     "mcp:connection", "a2a:delegation".
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Feature Usage")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "feature", feature)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

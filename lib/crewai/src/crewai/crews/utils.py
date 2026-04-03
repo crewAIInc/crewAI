@@ -11,6 +11,7 @@ from opentelemetry import baggage
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
+from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.skills.loader import activate_skill, discover_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
@@ -50,7 +51,7 @@ def enable_agent_streaming(agents: Iterable[BaseAgent]) -> None:
         agents: Iterable of agents to enable streaming on.
     """
     for agent in agents:
-        if agent.llm is not None:
+        if isinstance(agent.llm, BaseLLM):
             agent.llm.stream = True
 
 
