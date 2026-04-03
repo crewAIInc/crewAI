@@ -927,6 +927,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     ) -> Flow:  # type: ignore[type-arg]
         """Restore a Flow from a checkpoint file."""
         from crewai.context import apply_execution_context
+        from crewai.events.event_bus import crewai_event_bus
         from crewai.state.provider.json_provider import JsonProvider
         from crewai.state.runtime import RuntimeState
 
@@ -935,6 +936,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             provider=provider or JsonProvider(),
             context={"from_checkpoint": True},
         )
+        crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if isinstance(entity, cls):
                 if entity.execution_context is not None:
