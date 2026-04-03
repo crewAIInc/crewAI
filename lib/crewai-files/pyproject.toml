@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [tool.uv]
-exclude-newer = "7 days"
+exclude-newer = "3 days"
 
 [build-system]
 requires = ["hatchling"]

@@ -26,7 +26,7 @@ docs-check = "crewai_devtools.docs_check:docs_check"
 devtools = "crewai_devtools.cli:main"
 
 [tool.uv]
-exclude-newer = "7 days"
+exclude-newer = "3 days"
 
 [build-system]
 requires = ["hatchling"]

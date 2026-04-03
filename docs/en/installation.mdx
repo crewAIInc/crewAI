@@ -171,6 +171,9 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
       ```shell
       uv add <package-name>
       ```
+      <Note>
+        As a supply-chain security measure, CrewAI's internal packages use `exclude-newer = "3 days"` in their `pyproject.toml` files. This means transitive dependencies pulled in by CrewAI won't resolve packages released less than 3 days ago. Your own direct dependencies are not affected by this policy. If you notice a transitive dependency is behind, you can pin the version you want explicitly in your project's dependencies.
+      </Note>
     - To run your crew, execute the following command in the root of your project:
       ```bash
       crewai run

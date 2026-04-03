@@ -8,8 +8,5 @@ dependencies = [
     "crewai[tools]==1.13.0"
 ]
 
-[tool.uv]
-exclude-newer = "7 days"
-
 [tool.crewai]
 type = "tool"
