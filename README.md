@@ -273,7 +273,7 @@ reporting_analyst:
 
 **tasks.yaml**
 
-````yaml
+```yaml
 # src/my_project/config/tasks.yaml
 research_task:
   description: >
@@ -289,11 +289,11 @@ reporting_task:
     Review the context you got and expand each topic into a full section for a report.
     Make sure the report is detailed and contains any and all relevant information.
   expected_output: >
-    A fully fledge reports with the mains topics, each with a full section of information.
+    A fully fledged report with the main topics, each with a full section of information.
     Formatted as markdown without '```'
   agent: reporting_analyst
   output_file: report.md
-````
+```
 
 **crew.py**
 
@@ -454,7 +454,7 @@ CrewAI's power truly shines when combining Crews with Flows to create sophistica
 CrewAI flows support logical operators like `or_` and `and_` to combine multiple conditions. This can be used with `@start`, `@listen`, or `@router` decorators to create complex triggering conditions.
 
 - `or_`: Triggers when any of the specified conditions are met.
-- `and_`Triggers when all of the specified conditions are met.
+- `and_`: Triggers when all of the specified conditions are met.
 
 Here's how you can orchestrate multiple Crews within a Flow:
 
