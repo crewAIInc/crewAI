@@ -244,8 +244,8 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
 
         # Simple n-gram based similarity detection
         # For a more robust implementation, consider using embedding-based similarity
-        for i in range(len(messages) - 2):
-            for j in range(i + 1, len(messages) - 1):
+        for i in range(len(messages) - 1):
+            for j in range(i + 1, len(messages)):
                 # Check for repeated patterns (simplistic approach)
                 # A more sophisticated approach would use semantic similarity
                 similarity = self._calculate_text_similarity(messages[i], messages[j])
