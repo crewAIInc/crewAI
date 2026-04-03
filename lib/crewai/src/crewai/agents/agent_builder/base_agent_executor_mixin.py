@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field, PrivateAttr
 
@@ -10,53 +10,20 @@ from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
-if TYPE_CHECKING:
-    pass
-
-
 class CrewAgentExecutorMixin(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
-    _crew: Any = PrivateAttr(default=None)
-    _agent: Any = PrivateAttr(default=None)
-    _task: Any = PrivateAttr(default=None)
+    crew: Any = Field(default=None, exclude=True)
+    agent: Any = Field(default=None, exclude=True)
+    task: Any = Field(default=None, exclude=True)
     iterations: int = Field(default=0)
     max_iter: int = Field(default=25)
     messages: list[Any] = Field(default_factory=list)
     _i18n: Any = PrivateAttr(default=None)
     _printer: Printer = PrivateAttr(default_factory=Printer)
 
-    @property
-    def crew(self) -> Any:
-        return self._crew
-
-    @crew.setter
-    def crew(self, value: Any) -> None:
-        self._crew = value
-
-    @property
-    def agent(self) -> Any:
-        return self._agent
-
-    @agent.setter
-    def agent(self, value: Any) -> None:
-        self._agent = value
-
-    @property
-    def task(self) -> Any:
-        return self._task
-
-    @task.setter
-    def task(self, value: Any) -> None:
-        self._task = value
-
     def _save_to_memory(self, output: AgentFinish) -> None:
-        """Save task result to unified memory (memory or crew._memory).
-
-        Extends the memory's root_scope with agent-specific path segment
-        (e.g., '/crew/research-crew/agent/researcher') so that agent memories
-        are scoped hierarchically under their crew.
-        """
+        """Save task result to unified memory (memory or crew._memory)."""
         memory = getattr(self.agent, "memory", None) or (
             getattr(self.crew, "_memory", None) if self.crew else None
         )

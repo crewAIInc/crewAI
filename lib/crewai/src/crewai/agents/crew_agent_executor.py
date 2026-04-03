@@ -131,6 +131,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     ) -> None:
         super().__init__(
             llm=llm,
+            crew=crew,
+            agent=agent,
+            task=task,
             prompt=prompt,
             tools=tools or [],
             tools_names=tools_names,
@@ -147,9 +150,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             response_model=response_model,
             **kwargs,
         )
-        self.crew = crew
-        self.agent = agent
-        self.task = task
         self._i18n = i18n or get_i18n()
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
