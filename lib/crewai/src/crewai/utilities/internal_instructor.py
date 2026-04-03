@@ -73,8 +73,32 @@ class InternalInstructor(Generic[T]):
             else:
                 self._client = self._create_instructor_client()
 
+    def _get_llm_client_kwargs(self) -> dict[str, Any]:
+        """Extract base_url and api_key from the LLM so they can be forwarded
+        to the instructor client.
+
+        Returns:
+            Dict with ``base_url`` and/or ``api_key`` when present on the LLM.
+        """
+        kwargs: dict[str, Any] = {}
+        if isinstance(self.llm, str):
+            return kwargs
+        for attr in ("base_url", "api_base", "api_key"):
+            value = getattr(self.llm, attr, None)
+            if value is not None:
+                # Normalize api_base → base_url for the OpenAI client.
+                # First writer wins: base_url takes precedence over api_base.
+                key = "base_url" if attr == "api_base" else attr
+                if key not in kwargs:
+                    kwargs[key] = value
+        return kwargs
+
     def _create_instructor_client(self) -> Any:
-        """Create instructor client using the modern from_provider pattern.
+        """Create instructor client configured for the LLM provider.
+
+        When the LLM carries a custom ``base_url`` (e.g. self-hosted vLLM,
+        Ollama, or any OpenAI-compatible endpoint), we construct an explicit
+        provider client so the URL is not silently discarded.
 
         Returns:
             Instructor client configured for the LLM provider
@@ -96,9 +120,78 @@ class InternalInstructor(Generic[T]):
         elif self.llm is not None and hasattr(self.llm, "provider"):
             provider = self.llm.provider
         else:
-            provider = "openai"  # Default fallback
+            provider = "openai"
+
+        extra_kwargs = self._get_llm_client_kwargs()
+
+        # If the LLM has a custom base_url we must construct the provider
+        # client explicitly — instructor.from_provider() does not forward
+        # base_url to the underlying SDK client constructor.
+        if "base_url" in extra_kwargs:
+            return self._create_instructor_client_with_base_url(
+                provider, model_string, extra_kwargs
+            )
 
         return instructor.from_provider(f"{provider}/{model_string}")
+
+    def _create_instructor_client_with_base_url(
+        self, provider: str, model_string: str, kwargs: dict[str, Any]
+    ) -> Any:
+        """Create an instructor client using an explicit SDK client so that
+        ``base_url`` is forwarded correctly.
+
+        Args:
+            provider: The provider name (e.g. ``"openai"``, ``"anthropic"``).
+            model_string: The model identifier.
+            kwargs: Dict containing ``base_url`` and optionally ``api_key``.
+
+        Returns:
+            An Instructor client wrapping a provider-specific SDK client.
+        """
+        import instructor
+
+        base_url = kwargs.get("base_url")
+        api_key = kwargs.get("api_key")
+
+        if provider in ("azure", "azure_openai"):
+            from openai import AzureOpenAI
+
+            client_kwargs: dict[str, Any] = {}
+            if base_url is not None:
+                client_kwargs["azure_endpoint"] = base_url
+            if api_key is not None:
+                client_kwargs["api_key"] = api_key
+            api_version = getattr(self.llm, "api_version", None)
+            if api_version is not None:
+                client_kwargs["api_version"] = api_version
+            return instructor.from_openai(AzureOpenAI(**client_kwargs))
+
+        if provider == "openai":
+            from openai import OpenAI
+
+            client_kwargs = {}
+            if base_url is not None:
+                client_kwargs["base_url"] = base_url
+            if api_key is not None:
+                client_kwargs["api_key"] = api_key
+            return instructor.from_openai(OpenAI(**client_kwargs))
+
+        if provider == "anthropic":
+            from anthropic import Anthropic
+
+            client_kwargs = {}
+            if base_url is not None:
+                client_kwargs["base_url"] = base_url
+            if api_key is not None:
+                client_kwargs["api_key"] = api_key
+            return instructor.from_anthropic(Anthropic(**client_kwargs))
+
+        # For other providers, fall back to from_provider. base_url may not
+        # be supported, but we forward api_key if available.
+        fp_kwargs: dict[str, Any] = {}
+        if api_key is not None:
+            fp_kwargs["api_key"] = api_key
+        return instructor.from_provider(f"{provider}/{model_string}", **fp_kwargs)
 
     def _extract_provider(self) -> str:
         """Extract provider from LLM model name.
