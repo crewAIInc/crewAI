@@ -1,0 +1,132 @@
+---
+title: "Treinamento de Crews"
+description: "Treine seus crews implantados diretamente da plataforma CrewAI AMP para melhorar o desempenho dos agentes ao longo do tempo"
+icon: "dumbbell"
+mode: "wide"
+---
+
+O treinamento permite que você melhore o desempenho do crew executando sessões de treinamento iterativas diretamente da aba **Training** no CrewAI AMP. A plataforma usa o **modo de auto-treinamento** — ela gerencia o processo iterativo automaticamente, diferente do treinamento via CLI que requer feedback humano interativo por iteração.
+
+Após a conclusão do treinamento, o CrewAI avalia as saídas dos agentes e consolida o feedback em sugestões acionáveis para cada agente. Essas sugestões são então aplicadas às execuções futuras do crew para melhorar a qualidade das saídas.
+
+<Tip>
+  Para detalhes sobre como o treinamento do CrewAI funciona internamente, consulte a página [Conceitos de Treinamento](/pt-BR/concepts/training).
+</Tip>
+
+## Pré-requisitos
+
+<CardGroup cols={2}>
+  <Card title="Implantação ativa" icon="rocket">
+    Você precisa de uma conta CrewAI AMP com uma implantação ativa em status **Ready** (tipo Crew).
+  </Card>
+  <Card title="Permissão de execução" icon="key">
+    Sua conta deve ter permissão de execução para a implantação que deseja treinar.
+  </Card>
+</CardGroup>
+
+## Como treinar um crew
+
+<Steps>
+  <Step title="Abra a aba Training">
+    Navegue até **Deployments**, clique na sua implantação e selecione a aba **Training**.
+  </Step>
+
+  <Step title="Insira um nome de treinamento">
+    Forneça um **Training Name** — este será o nome do arquivo `.pkl` usado para armazenar os resultados do treinamento. Por exemplo, "Expert Mode Training" produz `expert_mode_training.pkl`.
+  </Step>
+
+  <Step title="Preencha as entradas do crew">
+    Insira os campos de entrada do crew. Estas são as mesmas entradas que você forneceria para um kickoff normal — elas são carregadas dinamicamente com base na configuração do seu crew.
+  </Step>
+
+  <Step title="Inicie o treinamento">
+    Clique em **Train Crew**. O botão muda para "Training..." com um spinner enquanto o processo é executado.
+
+    Por trás dos panos:
+    - Um registro de treinamento é criado para sua implantação
+    - A plataforma chama o endpoint de auto-treinamento da implantação
+    - O crew executa suas iterações automaticamente — nenhum feedback manual é necessário
+  </Step>
+
+  <Step title="Monitore o progresso">
+    O painel **Current Training Status** exibe:
+    - **Status** — Estado atual da execução do treinamento
+    - **Nº Iterations** — Número de iterações de treinamento configuradas
+    - **Filename** — O arquivo `.pkl` sendo gerado
+    - **Started At** — Quando o treinamento começou
+    - **Training Inputs** — As entradas que você forneceu
+  </Step>
+</Steps>
+
+## Entendendo os resultados do treinamento
+
+Uma vez que o treinamento for concluído, você verá cards de resultado por agente com as seguintes informações:
+
+- **Agent Role** — O nome/função do agente no seu crew
+- **Final Quality** — Uma pontuação de 0 a 10 avaliando a qualidade da saída do agente
+- **Final Summary** — Um resumo do desempenho do agente durante o treinamento
+- **Suggestions** — Recomendações acionáveis para melhorar o comportamento do agente
+
+### Editando sugestões
+
+Você pode refinar as sugestões para qualquer agente:
+
+<Steps>
+  <Step title="Clique em Edit">
+    No card de resultado de qualquer agente, clique no botão **Edit** ao lado das sugestões.
+  </Step>
+
+  <Step title="Modifique as sugestões">
+    Atualize o texto das sugestões para refletir melhor as melhorias que você deseja.
+  </Step>
+
+  <Step title="Salve as alterações">
+    Clique em **Save**. As sugestões editadas são sincronizadas de volta à implantação e usadas em todas as execuções futuras.
+  </Step>
+</Steps>
+
+## Usando dados de treinamento
+
+Para aplicar os resultados do treinamento ao seu crew:
+
+1. Anote o **Training Filename** (o arquivo `.pkl`) da sua sessão de treinamento concluída.
+2. Especifique este nome de arquivo na configuração de kickoff ou execução da sua implantação.
+3. O crew carrega automaticamente o arquivo de treinamento e aplica as sugestões armazenadas a cada agente.
+
+Isso significa que os agentes se beneficiam do feedback gerado durante o treinamento em cada execução subsequente.
+
+## Treinamentos anteriores
+
+A parte inferior da aba Training exibe um **histórico de todas as sessões de treinamento anteriores** da implantação. Use isso para revisar execuções de treinamento anteriores, comparar resultados ou selecionar um arquivo de treinamento diferente para usar.
+
+## Tratamento de erros
+
+Se uma execução de treinamento falhar, o painel de status mostra um estado de erro junto com uma mensagem descrevendo o que deu errado.
+
+Causas comuns de falhas de treinamento:
+- **Runtime da implantação não atualizado** — Certifique-se de que sua implantação está executando a versão mais recente
+- **Erros de execução do crew** — Problemas na lógica de tarefas do crew ou configuração do agente
+- **Problemas de rede** — Problemas de conectividade entre a plataforma e a implantação
+
+## Limitações
+
+<Info>
+  Tenha estas restrições em mente ao planejar seu fluxo de trabalho de treinamento:
+  - **Um treinamento ativo por vez** por implantação — aguarde a execução atual terminar antes de iniciar outra
+  - **Apenas modo de auto-treinamento** — a plataforma não suporta feedback interativo por iteração como o CLI
+  - **Dados de treinamento são específicos da implantação** — os resultados do treinamento estão vinculados à instância e versão específicas da implantação
+</Info>
+
+## Recursos relacionados
+
+<CardGroup cols={3}>
+  <Card title="Conceitos de Treinamento" icon="book" href="/pt-BR/concepts/training">
+    Aprenda como o treinamento do CrewAI funciona internamente.
+  </Card>
+  <Card title="Kickoff Crew" icon="play" href="/pt-BR/enterprise/guides/kickoff-crew">
+    Execute seu crew implantado a partir da plataforma AMP.
+  </Card>
+  <Card title="Implantar no AMP" icon="cloud-arrow-up" href="/pt-BR/enterprise/guides/deploy-to-amp">
+    Faça a implantação do seu crew e deixe-o pronto para treinamento.
+  </Card>
+</CardGroup>
