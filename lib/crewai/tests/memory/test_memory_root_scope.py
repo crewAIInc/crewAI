@@ -1047,23 +1047,24 @@ class TestAgentExecutorBackwardCompat:
 
     def test_agent_executor_no_root_scope_when_memory_has_none(self) -> None:
         """Agent executor doesn't inject root_scope when memory has none."""
+        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.agent_builder.base_agent_executor import (
             BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.utilities.printer import Printer
+        from crewai.task import Task
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
         mock_memory.root_scope = None  # No root_scope set
         mock_memory.extract_memories.return_value = ["Fact A"]
 
-        mock_agent = MagicMock()
+        mock_agent = MagicMock(spec=BaseAgent)
         mock_agent.memory = mock_memory
         mock_agent._logger = MagicMock()
         mock_agent.role = "Researcher"
 
-        mock_task = MagicMock()
+        mock_task = MagicMock(spec=Task)
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
@@ -1082,23 +1083,24 @@ class TestAgentExecutorBackwardCompat:
 
     def test_agent_executor_extends_root_scope_when_memory_has_one(self) -> None:
         """Agent executor extends root_scope when memory has one."""
+        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.agent_builder.base_agent_executor import (
             BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.utilities.printer import Printer
+        from crewai.task import Task
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
         mock_memory.root_scope = "/crew/test"  # Has root_scope
         mock_memory.extract_memories.return_value = ["Fact A"]
 
-        mock_agent = MagicMock()
+        mock_agent = MagicMock(spec=BaseAgent)
         mock_agent.memory = mock_memory
         mock_agent._logger = MagicMock()
         mock_agent.role = "Researcher"
 
-        mock_task = MagicMock()
+        mock_task = MagicMock(spec=Task)
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
