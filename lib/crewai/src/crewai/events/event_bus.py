@@ -5,6 +5,8 @@ of events throughout the CrewAI system, supporting both synchronous and asynchro
 event handlers with optional dependency management.
 """
 
+from __future__ import annotations
+
 import asyncio
 import atexit
 from collections.abc import Callable, Generator
@@ -13,9 +15,13 @@ from contextlib import contextmanager
 import contextvars
 import inspect
 import threading
-from typing import Any, Final, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypeVar
 
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai.runtime_state import RuntimeState
 
 from crewai.events.base_events import BaseEvent, get_next_emission_sequence
 from crewai.events.depends import Depends
@@ -88,7 +94,7 @@ class CrewAIEventsBus:
     _futures_lock: threading.Lock
     _executor_initialized: bool
     _has_pending_events: bool
-    _runtime_state: Any
+    _runtime_state: RuntimeState | None
 
     def __new__(cls) -> Self:
         """Create or return the singleton instance.
@@ -124,7 +130,7 @@ class CrewAIEventsBus:
         # Lazy initialization flags - executor and loop created on first emit
         self._executor_initialized = False
         self._has_pending_events = False
-        self._runtime_state: Any = None
+        self._runtime_state: RuntimeState | None = None
         self._registered_entity_ids: set[int] = set()
 
     def _ensure_executor_initialized(self) -> None:
@@ -213,25 +219,16 @@ class CrewAIEventsBus:
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         """Decorator to register an event handler for a specific event type.
 
+        Handlers can accept 2 or 3 arguments:
+            - ``(source, event)`` — standard handler
+            - ``(source, event, state: RuntimeState)`` — handler with runtime state
+
         Args:
             event_type: The event class to listen for
-            depends_on: Optional dependency or list of dependencies. Handlers with
-                       dependencies will execute after their dependencies complete.
+            depends_on: Optional dependency or list of dependencies.
 
         Returns:
             Decorator function that registers the handler
-
-        Example:
-            >>> from crewai.events import crewai_event_bus, Depends
-            >>> from crewai.events.types.llm_events import LLMCallStartedEvent
-            >>>
-            >>> @crewai_event_bus.on(LLMCallStartedEvent)
-            >>> def setup_context(source, event):
-            ...     print("Setting up context")
-            >>>
-            >>> @crewai_event_bus.on(LLMCallStartedEvent, depends_on=Depends(setup_context))
-            >>> def process(source, event):
-            ...     print("Processing (runs after setup_context)")
         """
 
         def decorator(handler: Callable[P, R]) -> Callable[P, R]:
@@ -252,7 +249,7 @@ class CrewAIEventsBus:
 
         return decorator
 
-    def set_runtime_state(self, state: Any) -> None:
+    def set_runtime_state(self, state: RuntimeState) -> None:
         """Set the RuntimeState that will be passed to event handlers."""
         with self._instance_lock:
             self._runtime_state = state

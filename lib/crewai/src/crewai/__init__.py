@@ -16,7 +16,6 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
-from crewai.runtime_state import _entity_discriminator
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
@@ -163,6 +162,8 @@ try:
         **sys.modules[_BaseAgent.__module__].__dict__,
     }
 
+    import crewai.runtime_state as _runtime_state_mod
+
     for _mod_name in (
         _BaseAgent.__module__,
         Agent.__module__,
@@ -170,6 +171,7 @@ try:
         Flow.__module__,
         Task.__module__,
         "crewai.agents.crew_agent_executor",
+        _runtime_state_mod.__name__,
         _AgentExecutor.__module__,
     ):
         sys.modules[_mod_name].__dict__.update(_resolve_namespace)
@@ -189,7 +191,9 @@ try:
 
     from typing import Annotated
 
-    from pydantic import Discriminator, RootModel, Tag
+    from pydantic import Discriminator, Tag
+
+    from crewai.runtime_state import RuntimeState, _entity_discriminator
 
     Entity = Annotated[
         Annotated[Flow, Tag("flow")]  # type: ignore[type-arg]
@@ -198,58 +202,10 @@ try:
         Discriminator(_entity_discriminator),
     ]
 
-    def _sync_checkpoint_fields(entity: object) -> None:
-        """Copy private runtime attrs into checkpoint fields before serializing."""
-        if isinstance(entity, Flow):
-            entity.checkpoint_completed_methods = (
-                set(entity._completed_methods) if entity._completed_methods else None
-            )
-            entity.checkpoint_method_outputs = (
-                list(entity._method_outputs) if entity._method_outputs else None
-            )
-            entity.checkpoint_method_counts = (
-                {str(k): v for k, v in entity._method_execution_counts.items()}
-                if entity._method_execution_counts
-                else None
-            )
-            entity.checkpoint_state = (
-                entity._copy_and_serialize_state()
-                if entity._state is not None
-                else None
-            )
-        if isinstance(entity, Crew):
-            entity.checkpoint_inputs = entity._inputs
-            entity.checkpoint_train = entity._train
-            entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
-
-    class RuntimeState(RootModel[list[Entity]]):
-        def checkpoint(self, directory: str) -> str:
-            """Write a checkpoint file to the directory.
-
-            Args:
-                directory: Directory to write checkpoint files into.
-
-            Returns:
-                The path of the written file.
-            """
-            from datetime import datetime, timezone
-            from pathlib import Path as _Path
-            import uuid
-
-            from crewai.context import capture_execution_context
-
-            for entity in self.root:
-                entity.execution_context = capture_execution_context()
-                _sync_checkpoint_fields(entity)
-
-            dir_path = _Path(directory)
-            dir_path.mkdir(parents=True, exist_ok=True)
-
-            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-            filename = f"{ts}_{uuid.uuid4().hex[:8]}.json"
-            file_path = dir_path / filename
-            file_path.write_text(self.model_dump_json())
-            return str(file_path)
+    RuntimeState.model_rebuild(
+        force=True,
+        _types_namespace={**_full_namespace, "Entity": Entity},
+    )
 
     try:
         Agent.model_rebuild(force=True, _types_namespace=_full_namespace)
