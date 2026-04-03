@@ -11,10 +11,21 @@ import requests
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
     CrewAIPlatformActionTool,
 )
+from crewai_tools.tools.crewai_platform_tools.crewai_platform_file_upload_tool import (
+    CrewAIPlatformFileUploadTool,
+)
 from crewai_tools.tools.crewai_platform_tools.misc import (
     get_platform_api_base_url,
     get_platform_integration_token,
 )
+
+# Apps that have client-side local tools (e.g. file-path-based upload)
+_LOCAL_TOOL_APPS = {
+    "google_drive": [CrewAIPlatformFileUploadTool],
+}
+_LOCAL_TOOL_ACTIONS = {
+    "google_drive/upload_from_file": CrewAIPlatformFileUploadTool,
+}
 
 
 logger = logging.getLogger(__name__)
@@ -94,6 +105,23 @@ class CrewaiPlatformToolBuilder:
             )
 
             tools.append(tool)
+
+        # Inject client-side local tools based on requested apps
+        added_local_tools: set[type] = set()
+        for app in self._apps:
+            # Check for specific action (e.g. "google_drive/upload_from_file")
+            if app in _LOCAL_TOOL_ACTIONS:
+                tool_cls = _LOCAL_TOOL_ACTIONS[app]
+                if tool_cls not in added_local_tools:
+                    tools.append(tool_cls())
+                    added_local_tools.add(tool_cls)
+            # Check for full app (e.g. "google_drive") — inject all local tools
+            app_base = app.split("/")[0]
+            if app_base in _LOCAL_TOOL_APPS:
+                for tool_cls in _LOCAL_TOOL_APPS[app_base]:
+                    if tool_cls not in added_local_tools:
+                        tools.append(tool_cls())
+                        added_local_tools.add(tool_cls)
 
         self._tools = tools
 

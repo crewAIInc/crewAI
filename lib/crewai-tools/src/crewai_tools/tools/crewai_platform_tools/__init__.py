@@ -7,6 +7,9 @@ through the CrewAI platform API.
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
     CrewAIPlatformActionTool,
 )
+from crewai_tools.tools.crewai_platform_tools.crewai_platform_file_upload_tool import (
+    CrewAIPlatformFileUploadTool,
+)
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder import (
     CrewaiPlatformToolBuilder,
 )
@@ -17,6 +20,7 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
 
 __all__ = [
     "CrewAIPlatformActionTool",
+    "CrewAIPlatformFileUploadTool",
     "CrewaiPlatformToolBuilder",
     "CrewaiPlatformTools",
 ]

@@ -86,6 +86,22 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
   </Accordion>
 
+  <Accordion title="google_drive/upload_from_file">
+    **Description:** Upload a file from a local path to Google Drive. The file is read directly from disk — its content never passes through the LLM context window, making this efficient for large or binary files.
+
+    <Note>
+      Unlike `google_drive/upload_file` which requires passing file content as a parameter (consuming LLM tokens), this action takes a file path and reads the file directly. Use this for binary files, large documents, or any case where you want to avoid token overhead.
+    </Note>
+
+    **Parameters:**
+    - `file_path` (string, required): Path to the local file to upload.
+    - `name` (string, optional): Name for the file in Google Drive (defaults to the local filename).
+    - `mime_type` (string, optional): MIME type of the file (auto-detected from file extension if not provided).
+    - `parent_folder_id` (string, optional): ID of the parent folder where the file should be created.
+    - `description` (string, optional): Description of the file.
+
+  </Accordion>
+
   <Accordion title="google_drive/download_file">
     **Description:** Download a file from Google Drive.
 
@@ -204,6 +220,42 @@ crew = Crew(
 
 crew.kickoff()
 ```
+
+### Uploading Files from Disk (Token-Efficient)
+
+```python
+from crewai import Agent, Task, Crew
+
+# Use upload_from_file to avoid passing file content through the LLM context
+upload_agent = Agent(
+    role="File Uploader",
+    goal="Upload local files to Google Drive efficiently",
+    backstory="An AI assistant that uploads files without wasting context tokens.",
+    apps=[
+        'google_drive/upload_from_file',
+        'google_drive/list_files'
+    ]
+)
+
+# The agent only needs to specify the file path — the file is read directly
+# from disk and never passes through the LLM context window
+upload_task = Task(
+    description="Upload the file at /data/reports/quarterly_report.pdf to Google Drive in the Reports folder",
+    agent=upload_agent,
+    expected_output="File uploaded successfully with file ID"
+)
+
+crew = Crew(
+    agents=[upload_agent],
+    tasks=[upload_task]
+)
+
+crew.kickoff()
+```
+
+<Tip>
+  Use `google_drive/upload_from_file` instead of `google_drive/upload_file` when uploading existing files from disk. This is especially important for binary files (PDFs, images, etc.) or large files that would otherwise consume significant LLM context tokens or exceed context limits.
+</Tip>
 
 ### Advanced File Management
 
