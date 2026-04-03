@@ -134,7 +134,8 @@
                         "icon": "gear",
                         "pages": [
                           "en/guides/advanced/customizing-prompts",
-                          "en/guides/advanced/fingerprinting"
+                          "en/guides/advanced/fingerprinting",
+                          "en/guides/advanced/governance-middleware"
                         ]
                       },
                       {
