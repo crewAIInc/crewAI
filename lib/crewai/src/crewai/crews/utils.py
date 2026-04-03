@@ -297,7 +297,8 @@ def prepare_kickoff(
         normalized = before_callback(normalized)
 
     started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
-    crew._kickoff_event_id = started_event.event_id
+    if crew._kickoff_event_id is None:
+        crew._kickoff_event_id = started_event.event_id
     future = crewai_event_bus.emit(crew, started_event)
     if future is not None:
         try:
