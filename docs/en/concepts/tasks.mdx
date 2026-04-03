@@ -57,7 +57,7 @@ crew = Crew(
 | **Human Input** _(optional)_           | `human_input`           | `Optional[bool]`            | Whether the task should have a human review the final answer of the agent. Defaults to False.                   |
 | **Markdown** _(optional)_              | `markdown`              | `Optional[bool]`            | Whether the task should instruct the agent to return the final answer formatted in Markdown. Defaults to False. |
 | **Config** _(optional)_                | `config`                | `Optional[Dict[str, Any]]`  | Task-specific configuration parameters.                                                                         |
-| **Output File** _(optional)_           | `output_file`           | `Optional[str]`             | File path for storing the task output.                                                                          |
+| **Output File** _(optional)_           | `output_file`           | `Optional[str]`             | File path for storing the task output. Use a `.pdf` extension to export a real PDF document.                   |
 | **Create Directory** _(optional)_      | `create_directory`      | `Optional[bool]`            | Whether to create the directory for output_file if it doesn't exist. Defaults to True.                          |
 | **Output JSON** _(optional)_           | `output_json`           | `Optional[Type[BaseModel]]` | A Pydantic model to structure the JSON output.                                                                  |
 | **Output Pydantic** _(optional)_       | `output_pydantic`       | `Optional[Type[BaseModel]]` | A Pydantic model for task output.                                                                               |
