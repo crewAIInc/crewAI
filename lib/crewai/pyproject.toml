@@ -115,6 +115,9 @@ qdrant-edge = [
 crewai = "crewai.cli.cli:crewai"
 
 
+[tool.uv]
+exclude-newer = "3 days"
+
 # PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
 [[tool.uv.index]]
 name = "pytorch-nightly"
