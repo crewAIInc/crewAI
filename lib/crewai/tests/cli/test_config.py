@@ -66,7 +66,7 @@ class TestSettings(unittest.TestCase):
         settings = Settings(config_path=self.config_path, **user_settings)
         settings.clear_user_settings()
 
-        for key in user_settings.keys():
+        for key in user_settings:
             self.assertEqual(getattr(settings, key), None)
 
     @patch("crewai.cli.config.TokenManager")
@@ -86,9 +86,9 @@ class TestSettings(unittest.TestCase):
 
         settings.reset()
 
-        for key in user_settings.keys():
+        for key in user_settings:
             self.assertEqual(getattr(settings, key), None)
-        for key in cli_settings.keys():
+        for key in cli_settings:
             self.assertEqual(getattr(settings, key), DEFAULT_CLI_SETTINGS.get(key))
 
         mock_token_manager.return_value.clear_tokens.assert_called_once()

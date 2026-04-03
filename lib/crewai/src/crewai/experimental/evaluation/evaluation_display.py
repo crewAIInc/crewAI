@@ -118,7 +118,7 @@ class EvaluationDisplayFormatter:
 
         table.add_column("Agent/Metric", style="cyan")
 
-        for iter_num in sorted(iterations_results.keys()):
+        for iter_num in sorted(iterations_results):
             run_label = f"Run {iter_num}"
             table.add_column(run_label, justify="center")
 
@@ -166,7 +166,7 @@ class EvaluationDisplayFormatter:
 
             row = [f"[bold]{agent_role}[/bold]"]
 
-            for iter_num in sorted(iterations_results.keys()):
+            for iter_num in sorted(iterations_results):
                 if iter_num in agent_scores_by_iteration:
                     score = agent_scores_by_iteration[iter_num]
                     if score >= 8.0:
@@ -202,7 +202,7 @@ class EvaluationDisplayFormatter:
 
                 row = [f"  - {metric.title()}"]
 
-                for iter_num in sorted(iterations_results.keys()):
+                for iter_num in sorted(iterations_results):
                     if (
                         iter_num in agent_metrics_by_iteration
                         and metric in agent_metrics_by_iteration[iter_num]
