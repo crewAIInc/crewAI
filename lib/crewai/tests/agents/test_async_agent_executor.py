@@ -386,3 +386,80 @@ class TestAsyncLLMResponseHelper:
                 callbacks=[],
                 printer=Printer(),
             )
+
+class TestExecutorStateReset:
+    """Tests verifying that invoke/ainvoke reset execution state between calls.
+
+    Regression tests for https://github.com/crewAIInc/crewAI/issues/4389.
+    """
+
+    def _make_executor(self, mock_llm, mock_agent, mock_task, mock_crew, mock_tools_handler):
+        return CrewAgentExecutor(
+            llm=mock_llm,
+            task=mock_task,
+            crew=mock_crew,
+            agent=mock_agent,
+            prompt={"prompt": "Test prompt {input} {tool_names} {tools}"},
+            max_iter=5,
+            tools=[],
+            tools_names="",
+            stop_words=["Observation:"],
+            tools_description="",
+            tools_handler=mock_tools_handler,
+        )
+
+    def test_invoke_resets_messages_and_iterations(
+        self,
+        mock_llm: MagicMock,
+        mock_agent: MagicMock,
+        mock_task: MagicMock,
+        mock_crew: MagicMock,
+        mock_tools_handler: MagicMock,
+    ) -> None:
+        """invoke() must clear self.messages and reset self.iterations to 0
+        before executing, so that state from a previous task is not inherited."""
+        exc = self._make_executor(mock_llm, mock_agent, mock_task, mock_crew, mock_tools_handler)
+
+        # Simulate stale state left over from a previous task
+        exc.messages = [{"role": "user", "content": "stale message"}]
+        exc.iterations = 42
+
+        final_answer = AgentFinish(thought="Done", output="result", text="Final Answer: result")
+
+        with patch.object(exc, "_invoke_loop", return_value=final_answer):
+            with patch.object(exc, "_show_start_logs"):
+                with patch.object(exc, "_save_to_memory"):
+                    exc.invoke({"input": "new task", "tool_names": "", "tools": ""})
+
+        # Messages should have been reset (and then populated only by _setup_messages)
+        assert exc.iterations == 0
+        # The stale "stale message" entry must not appear
+        for msg in exc.messages:
+            assert msg.get("content") != "stale message"
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_resets_messages_and_iterations(
+        self,
+        mock_llm: MagicMock,
+        mock_agent: MagicMock,
+        mock_task: MagicMock,
+        mock_crew: MagicMock,
+        mock_tools_handler: MagicMock,
+    ) -> None:
+        """ainvoke() must clear self.messages and reset self.iterations to 0
+        before executing."""
+        exc = self._make_executor(mock_llm, mock_agent, mock_task, mock_crew, mock_tools_handler)
+
+        exc.messages = [{"role": "assistant", "content": "old answer"}]
+        exc.iterations = 7
+
+        final_answer = AgentFinish(thought="Done", output="async result", text="Final Answer: async result")
+
+        with patch.object(exc, "_ainvoke_loop", new_callable=AsyncMock, return_value=final_answer):
+            with patch.object(exc, "_show_start_logs"):
+                with patch.object(exc, "_save_to_memory"):
+                    await exc.ainvoke({"input": "new async task", "tool_names": "", "tools": ""})
+
+        assert exc.iterations == 0
+        for msg in exc.messages:
+            assert msg.get("content") != "old answer"
