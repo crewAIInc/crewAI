@@ -1239,7 +1239,7 @@ Follow these guidelines:
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=str(result),
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
