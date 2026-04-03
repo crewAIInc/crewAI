@@ -523,33 +523,28 @@ class TestAgentScopeExtension:
 
     def test_agent_save_extends_crew_root_scope(self) -> None:
         """Agent._save_to_memory extends crew's root_scope with agent info."""
-        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.agent_builder.base_agent_executor import (
             BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.task import Task
-        from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
         mock_memory.root_scope = "/crew/research-crew"
         mock_memory.extract_memories.return_value = ["Fact A"]
 
-        mock_agent = MagicMock(spec=BaseAgent)
+        mock_agent = MagicMock()
         mock_agent.memory = mock_memory
         mock_agent._logger = MagicMock()
         mock_agent.role = "Researcher"
 
-        mock_task = MagicMock(spec=Task)
+        mock_task = MagicMock()
         mock_task.description = "Research task"
         mock_task.expected_output = "Report"
 
-        executor = BaseAgentExecutor(
-            crew=None,
-            agent=mock_agent,
-            task=mock_task,
-        )
+        executor = BaseAgentExecutor()
+        executor.agent = mock_agent
+        executor.task = mock_task
 
         executor._save_to_memory(AgentFinish(thought="", output="Result", text="Result"))
 
@@ -559,33 +554,28 @@ class TestAgentScopeExtension:
 
     def test_agent_save_sanitizes_role(self) -> None:
         """Agent role with special chars is sanitized for scope path."""
-        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.agent_builder.base_agent_executor import (
             BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.task import Task
-        from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
         mock_memory.root_scope = "/crew/test"
         mock_memory.extract_memories.return_value = ["Fact"]
 
-        mock_agent = MagicMock(spec=BaseAgent)
+        mock_agent = MagicMock()
         mock_agent.memory = mock_memory
         mock_agent._logger = MagicMock()
         mock_agent.role = "Senior Research Analyst #1"
 
-        mock_task = MagicMock(spec=Task)
+        mock_task = MagicMock()
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        executor = BaseAgentExecutor(
-            crew=None,
-            agent=mock_agent,
-            task=mock_task,
-        )
+        executor = BaseAgentExecutor()
+        executor.agent = mock_agent
+        executor.task = mock_task
 
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
@@ -1087,32 +1077,28 @@ class TestAgentExecutorBackwardCompat:
 
     def test_agent_executor_extends_root_scope_when_memory_has_one(self) -> None:
         """Agent executor extends root_scope when memory has one."""
-        from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.agents.agent_builder.base_agent_executor import (
             BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.task import Task
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
         mock_memory.root_scope = "/crew/test"  # Has root_scope
         mock_memory.extract_memories.return_value = ["Fact A"]
 
-        mock_agent = MagicMock(spec=BaseAgent)
+        mock_agent = MagicMock()
         mock_agent.memory = mock_memory
         mock_agent._logger = MagicMock()
         mock_agent.role = "Researcher"
 
-        mock_task = MagicMock(spec=Task)
+        mock_task = MagicMock()
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        executor = BaseAgentExecutor(
-            crew=None,
-            agent=mock_agent,
-            task=mock_task,
-        )
+        executor = BaseAgentExecutor()
+        executor.agent = mock_agent
+        executor.task = mock_task
 
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 

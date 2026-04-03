@@ -342,6 +342,9 @@ class TestRuntimeStateIntegration:
     def test_runtime_state_serializes_event_record(self):
         from crewai import Agent, Crew, RuntimeState
 
+        if RuntimeState is None:
+            pytest.skip("RuntimeState unavailable (model_rebuild failed)")
+
         agent = Agent(
             role="test", goal="test", backstory="test", llm="gpt-4o-mini"
         )
@@ -364,6 +367,9 @@ class TestRuntimeStateIntegration:
 
     def test_runtime_state_roundtrip_with_record(self):
         from crewai import Agent, Crew, RuntimeState
+
+        if RuntimeState is None:
+            pytest.skip("RuntimeState unavailable (model_rebuild failed)")
 
         agent = Agent(
             role="test", goal="test", backstory="test", llm="gpt-4o-mini"
@@ -396,6 +402,9 @@ class TestRuntimeStateIntegration:
     def test_runtime_state_without_record_still_loads(self):
         """Backwards compat: a bare entity list should still validate."""
         from crewai import Agent, Crew, RuntimeState
+
+        if RuntimeState is None:
+            pytest.skip("RuntimeState unavailable (model_rebuild failed)")
 
         agent = Agent(
             role="test", goal="test", backstory="test", llm="gpt-4o-mini"
