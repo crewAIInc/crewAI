@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, PrivateAttr, model_validator
@@ -72,6 +72,19 @@ class AzureCompletion(BaseLLM):
 
     This class provides direct integration with the Azure AI Inference Python SDK,
     offering native function calling, streaming support, and proper Azure authentication.
+
+    Supports both Chat Completions API (default) and Responses API.
+    When ``api="responses"`` is set, calls are delegated to the OpenAI Responses API
+    implementation with the Azure resource's ``/openai/v1/`` base URL, reusing the
+    fully-tested OpenAI Responses API code path.
+
+    Example::
+
+        # Chat Completions (default)
+        llm = LLM(model="azure/gpt-4o", api_key=KEY, endpoint=ENDPOINT)
+
+        # Responses API
+        llm = LLM(model="azure/gpt-4o", api="responses", api_key=KEY, endpoint=ENDPOINT)
     """
 
     endpoint: str | None = None
@@ -82,14 +95,27 @@ class AzureCompletion(BaseLLM):
     frequency_penalty: float | None = None
     presence_penalty: float | None = None
     max_tokens: int | None = None
+    max_completion_tokens: int | None = None
     stream: bool = False
     interceptor: BaseInterceptor[Any, Any] | None = None
     response_format: type[BaseModel] | None = None
     is_openai_model: bool = False
     is_azure_openai_endpoint: bool = False
+    api: Literal["completions", "responses"] = "completions"
+    instructions: str | None = None
+    store: bool | None = None
+    previous_response_id: str | None = None
+    include: list[str] | None = None
+    builtin_tools: list[str] | None = None
+    parse_tool_outputs: bool = False
+    auto_chain: bool = False
+    auto_chain_reasoning: bool = False
+    reasoning_effort: str | None = None
+    seed: int | None = None
 
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)
+    _responses_delegate: Any = PrivateAttr(default=None)
 
     @model_validator(mode="before")
     @classmethod
@@ -142,16 +168,94 @@ class AzureCompletion(BaseLLM):
     def _init_clients(self) -> AzureCompletion:
         if not self.api_key:
             raise ValueError("Azure API key is required.")
-        client_kwargs: dict[str, Any] = {
-            "endpoint": self.endpoint,
-            "credential": AzureKeyCredential(self.api_key),
-        }
-        if self.api_version:
-            client_kwargs["api_version"] = self.api_version
 
-        self._client = ChatCompletionsClient(**client_kwargs)
-        self._async_client = AsyncChatCompletionsClient(**client_kwargs)
+        if self.api == "responses":
+            self._init_responses_delegate()
+        else:
+            client_kwargs: dict[str, Any] = {
+                "endpoint": self.endpoint,
+                "credential": AzureKeyCredential(self.api_key),
+            }
+            if self.api_version:
+                client_kwargs["api_version"] = self.api_version
+
+            self._client = ChatCompletionsClient(**client_kwargs)
+            self._async_client = AsyncChatCompletionsClient(**client_kwargs)
         return self
+
+    def _init_responses_delegate(self) -> None:
+        """Initialise the OpenAICompletion delegate for Responses API calls.
+
+        Constructs the Azure-compatible ``/openai/v1/`` base URL from the
+        configured endpoint and creates an :class:`OpenAICompletion` instance
+        that handles all Responses API logic.
+        """
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+
+        # Build the Azure base_url: <resource>/openai/v1/
+        raw_endpoint = self.endpoint or ""
+        # Strip the /openai/deployments/<deployment> suffix if present
+        deployment_idx = raw_endpoint.find("/openai/deployments/")
+        if deployment_idx != -1:
+            resource_url = raw_endpoint[:deployment_idx]
+        else:
+            resource_url = raw_endpoint.rstrip("/")
+
+        api_version = self.api_version or "2024-06-01"
+        base_url = f"{resource_url}/openai/v1/?api-version={api_version}"
+
+        delegate_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "provider": "openai",
+            "api_key": self.api_key,
+            "base_url": base_url,
+            "api": "responses",
+            "stream": self.stream,
+        }
+
+        # Forward Responses API parameters
+        if self.instructions is not None:
+            delegate_kwargs["instructions"] = self.instructions
+        if self.store is not None:
+            delegate_kwargs["store"] = self.store
+        if self.previous_response_id is not None:
+            delegate_kwargs["previous_response_id"] = self.previous_response_id
+        if self.include is not None:
+            delegate_kwargs["include"] = self.include
+        if self.builtin_tools is not None:
+            delegate_kwargs["builtin_tools"] = self.builtin_tools
+        if self.parse_tool_outputs:
+            delegate_kwargs["parse_tool_outputs"] = self.parse_tool_outputs
+        if self.auto_chain:
+            delegate_kwargs["auto_chain"] = self.auto_chain
+        if self.auto_chain_reasoning:
+            delegate_kwargs["auto_chain_reasoning"] = self.auto_chain_reasoning
+        if self.reasoning_effort is not None:
+            delegate_kwargs["reasoning_effort"] = self.reasoning_effort
+        if self.temperature is not None:
+            delegate_kwargs["temperature"] = self.temperature
+        if self.top_p is not None:
+            delegate_kwargs["top_p"] = self.top_p
+        if self.max_tokens is not None:
+            delegate_kwargs["max_tokens"] = self.max_tokens
+        if self.max_completion_tokens is not None:
+            delegate_kwargs["max_completion_tokens"] = self.max_completion_tokens
+        if self.seed is not None:
+            delegate_kwargs["seed"] = self.seed
+        if self.timeout is not None:
+            delegate_kwargs["timeout"] = self.timeout
+        if self.max_retries != 2:
+            delegate_kwargs["max_retries"] = self.max_retries
+        if self.response_format is not None:
+            delegate_kwargs["response_format"] = self.response_format
+        if self.stop:
+            delegate_kwargs["stop"] = self.stop
+        if self.frequency_penalty is not None:
+            delegate_kwargs["frequency_penalty"] = self.frequency_penalty
+        if self.presence_penalty is not None:
+            delegate_kwargs["presence_penalty"] = self.presence_penalty
+
+        self._responses_delegate = OpenAICompletion(**delegate_kwargs)
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Azure-specific fields."""
@@ -172,6 +276,10 @@ class AzureCompletion(BaseLLM):
             config["presence_penalty"] = self.presence_penalty
         if self.max_tokens is not None:
             config["max_tokens"] = self.max_tokens
+        if self.api != "completions":
+            config["api"] = self.api
+        if self.reasoning_effort is not None:
+            config["reasoning_effort"] = self.reasoning_effort
         return config
 
     @staticmethod
@@ -277,7 +385,7 @@ class AzureCompletion(BaseLLM):
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Call Azure AI Inference chat completions API.
+        """Call Azure AI Inference API (Chat Completions or Responses).
 
         Args:
             messages: Input messages for the chat completion
@@ -291,6 +399,17 @@ class AzureCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
+        if self.api == "responses" and self._responses_delegate is not None:
+            return self._responses_delegate.call(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+
         with llm_call_context():
             try:
                 # Emit call started event
@@ -349,7 +468,7 @@ class AzureCompletion(BaseLLM):
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Call Azure AI Inference chat completions API asynchronously.
+        """Call Azure AI Inference API asynchronously (Chat Completions or Responses).
 
         Args:
             messages: Input messages for the chat completion
@@ -363,6 +482,17 @@ class AzureCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
+        if self.api == "responses" and self._responses_delegate is not None:
+            return await self._responses_delegate.acall(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+
         with llm_call_context():
             try:
                 self._emit_call_started_event(
@@ -1089,6 +1219,19 @@ class AzureCompletion(BaseLLM):
                 "cached_prompt_tokens": cached_tokens,
             }
         return {"total_tokens": 0}
+
+    @property
+    def last_response_id(self) -> str | None:
+        """Get the last response ID from auto-chaining (Responses API only)."""
+        if self._responses_delegate is not None:
+            rid: str | None = self._responses_delegate.last_response_id
+            return rid
+        return None
+
+    def reset_chain(self) -> None:
+        """Reset the auto-chain state (Responses API only)."""
+        if self._responses_delegate is not None:
+            self._responses_delegate.reset_chain()
 
     async def aclose(self) -> None:
         """Close the async client and clean up resources.
