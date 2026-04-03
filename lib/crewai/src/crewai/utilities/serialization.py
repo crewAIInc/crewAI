@@ -89,7 +89,7 @@ def to_serializable(
                 _current_depth=_current_depth + 1,
                 _ancestors=new_ancestors,
             )
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             try:
                 return {
                     _to_serializable_key(k): to_serializable(
@@ -101,7 +101,7 @@ def to_serializable(
                     for k, v in obj.__dict__.items()
                     if k not in (exclude or set())
                 }
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 return repr(obj)
     return repr(obj)
 
