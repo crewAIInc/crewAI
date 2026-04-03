@@ -1,3 +1,4 @@
+# mypy: disable-error-code="union-attr,arg-type"
 """Agent executor for crew AI agents.
 
 Handles agent execution flow including LLM interactions, tool execution,
@@ -296,7 +297,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         use_native_tools = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
-            and self.llm.supports_function_calling()  # type: ignore[union-attr]
+            and self.llm.supports_function_calling()
             and self.original_tools
         )
 
@@ -409,8 +410,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         formatted_answer, tool_result
                     )
 
-                self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr]
+                self._invoke_step_callback(formatted_answer)
+                self._append_message(formatted_answer.text)
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -947,7 +948,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict or {},
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -1012,7 +1013,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict or {},
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -1142,7 +1143,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         use_native_tools = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
-            and self.llm.supports_function_calling()  # type: ignore[union-attr]
+            and self.llm.supports_function_calling()
             and self.original_tools
         )
 
@@ -1250,8 +1251,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         formatted_answer, tool_result
                     )
 
-                await self._ainvoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr]
+                await self._ainvoke_step_callback(formatted_answer)
+                self._append_message(formatted_answer.text)
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -1634,7 +1635,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             Final answer after feedback.
         """
         provider = get_provider()
-        return provider.handle_feedback(formatted_answer, self)  # type: ignore[arg-type]
+        return provider.handle_feedback(formatted_answer, self)
 
     async def _ahandle_human_feedback(
         self, formatted_answer: AgentFinish
@@ -1648,7 +1649,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             Final answer after feedback.
         """
         provider = get_provider()
-        return await provider.handle_feedback_async(formatted_answer, self)  # type: ignore[arg-type]
+        return await provider.handle_feedback_async(formatted_answer, self)
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.

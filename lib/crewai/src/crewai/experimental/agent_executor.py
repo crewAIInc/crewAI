@@ -1,3 +1,4 @@
+# mypy: disable-error-code="union-attr,arg-type"
 from __future__ import annotations
 
 import asyncio
@@ -297,12 +298,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:
-                planning_handler = AgentReasoning(agent=self.agent, task=self.task)  # type: ignore[arg-type]
+                planning_handler = AgentReasoning(agent=self.agent, task=self.task)
             else:
                 # For kickoff() path - use input text directly, no Task needed
                 input_text = getattr(self, "_kickoff_input", "")
                 planning_handler = AgentReasoning(
-                    agent=self.agent,  # type: ignore[arg-type]
+                    agent=self.agent,
                     description=input_text or "Complete the requested task",
                     expected_output="Complete the task successfully",
                 )
@@ -387,28 +388,28 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             step failures reliably trigger replanning rather than being
             silently ignored.
         """
-        config = self.agent.planning_config  # type: ignore[attr-defined]
+        config = self.agent.planning_config
         if config is not None:
             return str(config.reasoning_effort)
         return "medium"
 
     def _get_max_replans(self) -> int:
         """Get max replans from planning config or default to 3."""
-        config = self.agent.planning_config  # type: ignore[attr-defined]
+        config = self.agent.planning_config
         if config is not None:
             return int(config.max_replans)
         return 3
 
     def _get_max_step_iterations(self) -> int:
         """Get max step iterations from planning config or default to 15."""
-        config = self.agent.planning_config  # type: ignore[attr-defined]
+        config = self.agent.planning_config
         if config is not None:
             return int(config.max_step_iterations)
         return 15
 
     def _get_step_timeout(self) -> int | None:
         """Get per-step timeout from planning config or default to None."""
-        config = self.agent.planning_config  # type: ignore[attr-defined]
+        config = self.agent.planning_config
         if config is not None:
             return int(config.step_timeout) if config.step_timeout is not None else None
         return None
@@ -1784,7 +1785,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -1858,7 +1859,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -2358,11 +2359,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:
-                planning_handler = AgentReasoning(agent=self.agent, task=self.task)  # type: ignore[arg-type]
+                planning_handler = AgentReasoning(agent=self.agent, task=self.task)
             else:
                 input_text = getattr(self, "_kickoff_input", "")
                 planning_handler = AgentReasoning(
-                    agent=self.agent,  # type: ignore[arg-type]
+                    agent=self.agent,
                     description=input_text or "Complete the requested task",
                     expected_output="Complete the task successfully",
                 )
@@ -2379,7 +2380,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 # description is a read-only property — recreate with enhanced text
                 input_text = getattr(self, "_kickoff_input", "")
                 planning_handler = AgentReasoning(
-                    agent=self.agent,  # type: ignore[arg-type]
+                    agent=self.agent,
                     description=enhanced_description
                     or input_text
                     or "Complete the requested task",

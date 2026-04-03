@@ -891,7 +891,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         callbacks=self._callbacks,
                         printer=self._printer,
-                        from_agent=self,
+                        from_agent=self,  # type: ignore[arg-type]
                         executor_context=self,
                         response_model=response_model,
                         verbose=self.verbose,

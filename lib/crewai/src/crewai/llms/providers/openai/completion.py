@@ -29,7 +29,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent.core import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
 
@@ -359,7 +359,7 @@ class OpenAICompletion(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI API (Chat Completions or Responses based on api setting).
@@ -427,7 +427,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI Chat Completions API."""
@@ -459,7 +459,7 @@ class OpenAICompletion(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI API (Chat Completions or Responses).
@@ -522,7 +522,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI Chat Completions API."""
@@ -553,7 +553,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI Responses API."""
@@ -584,7 +584,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI Responses API."""
