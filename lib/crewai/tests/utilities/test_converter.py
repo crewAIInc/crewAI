@@ -952,3 +952,134 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+def test_internal_instructor_forwards_base_url_to_from_provider() -> None:
+    """Test that _create_instructor_client forwards base_url from LLM to instructor.from_provider.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5204
+    When using an OpenAI-compatible provider with a custom base_url (e.g. vLLM, Ollama),
+    the InternalInstructor must pass base_url through so that structured output requests
+    reach the correct endpoint instead of defaulting to api.openai.com.
+    """
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "my-local-model"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = "http://localhost:8000/v1"
+    mock_llm.api_key = "sk-custom-key"
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_client = Mock()
+        mock_from_provider.return_value = mock_client
+
+        InternalInstructor(
+            content="Test content",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        mock_from_provider.assert_called_once_with(
+            "openai/my-local-model",
+            base_url="http://localhost:8000/v1",
+            api_key="sk-custom-key",
+        )
+
+
+def test_internal_instructor_forwards_base_url_without_api_key() -> None:
+    """Test that base_url is forwarded even when api_key is not set."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "my-local-model"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = "http://localhost:11434/v1"
+    mock_llm.api_key = None
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_client = Mock()
+        mock_from_provider.return_value = mock_client
+
+        InternalInstructor(
+            content="Test content",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        mock_from_provider.assert_called_once_with(
+            "openai/my-local-model",
+            base_url="http://localhost:11434/v1",
+        )
+
+
+def test_internal_instructor_no_extra_kwargs_when_base_url_not_set() -> None:
+    """Test that no extra kwargs are passed when base_url and api_key are not set."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "gpt-4o"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = None
+    mock_llm.api_key = None
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_client = Mock()
+        mock_from_provider.return_value = mock_client
+
+        InternalInstructor(
+            content="Test content",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        mock_from_provider.assert_called_once_with(
+            "openai/gpt-4o",
+        )
+
+
+def test_internal_instructor_get_llm_extra_kwargs_with_string_llm() -> None:
+    """Test that _get_llm_extra_kwargs returns empty dict for string LLM."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_client = Mock()
+        mock_from_provider.return_value = mock_client
+
+        inst = InternalInstructor(
+            content="Test content",
+            model=SimpleModel,
+            llm="openai/gpt-4o",
+        )
+
+        assert inst._get_llm_extra_kwargs() == {}
+
+
+def test_internal_instructor_forwards_only_api_key() -> None:
+    """Test that only api_key is forwarded when base_url is not set."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "gpt-4o"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = None
+    mock_llm.api_key = "sk-my-key"
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_client = Mock()
+        mock_from_provider.return_value = mock_client
+
+        InternalInstructor(
+            content="Test content",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        mock_from_provider.assert_called_once_with(
+            "openai/gpt-4o",
+            api_key="sk-my-key",
+        )
