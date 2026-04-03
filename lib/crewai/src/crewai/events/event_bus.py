@@ -21,7 +21,7 @@ from typing_extensions import Self
 
 
 if TYPE_CHECKING:
-    from crewai.runtime_state import RuntimeState
+    from crewai.state.runtime import RuntimeState
 
 from crewai.events.base_events import BaseEvent, get_next_emission_sequence
 from crewai.events.depends import Depends

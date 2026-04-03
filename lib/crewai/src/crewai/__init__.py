@@ -162,7 +162,7 @@ try:
         **sys.modules[_BaseAgent.__module__].__dict__,
     }
 
-    import crewai.runtime_state as _runtime_state_mod
+    import crewai.state.runtime as _runtime_state_mod
 
     for _mod_name in (
         _BaseAgent.__module__,
@@ -193,7 +193,7 @@ try:
 
     from pydantic import Discriminator, Tag
 
-    from crewai.runtime_state import RuntimeState, _entity_discriminator
+    from crewai.state.runtime import RuntimeState, _entity_discriminator
 
     Entity = Annotated[
         Annotated[Flow, Tag("flow")]  # type: ignore[type-arg]
@@ -226,6 +226,7 @@ __all__ = [
     "BaseLLM",
     "Crew",
     "CrewOutput",
+    "Entity",
     "ExecutionContext",
     "Flow",
     "Knowledge",

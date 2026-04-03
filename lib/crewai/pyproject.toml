@@ -43,6 +43,7 @@ dependencies = [
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
     "pyyaml~=6.0",
+    "aiofiles~=24.1.0",
     "lancedb>=0.29.2,<0.30.1",
 ]
 

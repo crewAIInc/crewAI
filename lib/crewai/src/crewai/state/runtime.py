@@ -9,16 +9,17 @@ via ``RuntimeState.model_rebuild()``.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
-import uuid
 
-from pydantic import RootModel
+from pydantic import PrivateAttr, RootModel
+
+from crewai.context import capture_execution_context
+from crewai.state.provider.core import BaseProvider
+from crewai.state.provider.json_provider import JsonProvider
 
 
 if TYPE_CHECKING:
-    pass
+    from crewai import Entity
 
 
 def _entity_discriminator(v: dict[str, Any] | object) -> str:
@@ -30,7 +31,12 @@ def _entity_discriminator(v: dict[str, Any] | object) -> str:
 
 
 def _sync_checkpoint_fields(entity: object) -> None:
-    """Copy private runtime attrs into checkpoint fields before serializing."""
+    """Copy private runtime attrs into checkpoint fields before serializing.
+
+    Args:
+        entity: The entity whose private runtime attributes will be
+            copied into its public checkpoint fields.
+    """
     from crewai.crew import Crew
     from crewai.flow.flow import Flow
 
@@ -56,21 +62,40 @@ def _sync_checkpoint_fields(entity: object) -> None:
 
 
 class RuntimeState(RootModel):  # type: ignore[type-arg]
-    root: list[Entity]  # type: ignore[name-defined]  # noqa: F821
+    root: list[Entity]
+    _provider: BaseProvider = PrivateAttr(default_factory=JsonProvider)
 
     def checkpoint(self, directory: str) -> str:
-        """Write a checkpoint file to the directory."""
-        from crewai.context import capture_execution_context
+        """Write a checkpoint file to the directory.
 
-        for entity in self.root:
-            entity.execution_context = capture_execution_context()
-            _sync_checkpoint_fields(entity)
+        Args:
+            directory: Filesystem path where the checkpoint JSON will be saved.
 
-        dir_path = Path(directory)
-        dir_path.mkdir(parents=True, exist_ok=True)
+        Returns:
+            A location identifier for the saved checkpoint.
+        """
+        _prepare_entities(self.root)
+        return self._provider.checkpoint(self.model_dump_json(), directory)
 
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-        filename = f"{ts}_{uuid.uuid4().hex[:8]}.json"
-        file_path = dir_path / filename
-        file_path.write_text(self.model_dump_json())
-        return str(file_path)
+    async def acheckpoint(self, directory: str) -> str:
+        """Async version of :meth:`checkpoint`.
+
+        Args:
+            directory: Filesystem path where the checkpoint JSON will be saved.
+
+        Returns:
+            A location identifier for the saved checkpoint.
+        """
+        _prepare_entities(self.root)
+        return await self._provider.acheckpoint(self.model_dump_json(), directory)
+
+
+def _prepare_entities(root: list[Entity]) -> None:
+    """Capture execution context and sync checkpoint fields on each entity.
+
+    Args:
+        root: List of entities to prepare for serialization.
+    """
+    for entity in root:
+        entity.execution_context = capture_execution_context()
+        _sync_checkpoint_fields(entity)
