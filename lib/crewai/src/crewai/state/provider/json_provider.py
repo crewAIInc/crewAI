@@ -49,6 +49,29 @@ class JsonProvider(BaseProvider):
             await f.write(data)
         return str(file_path)
 
+    def from_checkpoint(self, location: str) -> str:
+        """Read a JSON checkpoint file.
+
+        Args:
+            location: Filesystem path to the checkpoint file.
+
+        Returns:
+            The raw JSON string.
+        """
+        return Path(location).read_text()
+
+    async def afrom_checkpoint(self, location: str) -> str:
+        """Read a JSON checkpoint file asynchronously.
+
+        Args:
+            location: Filesystem path to the checkpoint file.
+
+        Returns:
+            The raw JSON string.
+        """
+        async with aiofiles.open(location) as f:
+            return await f.read()
+
 
 def _build_path(directory: str) -> Path:
     """Build a timestamped checkpoint file path.

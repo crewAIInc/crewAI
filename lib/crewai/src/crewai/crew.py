@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from opentelemetry.trace import Span
 
     from crewai.context import ExecutionContext
+    from crewai.state.provider.core import BaseProvider
 
 try:
     from crewai_files import get_supported_content_types
@@ -354,25 +355,27 @@ class Crew(FlowTrackable, BaseModel):
     checkpoint_kickoff_event_id: str | None = Field(default=None)
 
     @classmethod
-    def from_checkpoint(cls, path: str) -> Crew:
+    def from_checkpoint(
+        cls, path: str, *, provider: BaseProvider | None = None
+    ) -> Crew:
         """Restore a Crew from a checkpoint file, ready to resume via kickoff().
 
         Args:
             path: Path to a checkpoint JSON file.
+            provider: Storage backend to read from. Defaults to JsonProvider.
 
         Returns:
             A Crew instance. Call kickoff() to resume from the last completed task.
         """
-        from pathlib import Path as _Path
-
         from crewai.context import apply_execution_context
-
-        json_str = _Path(path).read_text()
-        from crewai import RuntimeState
         from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.runtime import RuntimeState
 
-        state = RuntimeState.model_validate_json(
-            json_str, context={"from_checkpoint": True}
+        state = RuntimeState.from_checkpoint(
+            path,
+            provider=provider or JsonProvider(),
+            context={"from_checkpoint": True},
         )
         crewai_event_bus.set_runtime_state(state)
         for entity in state.root:

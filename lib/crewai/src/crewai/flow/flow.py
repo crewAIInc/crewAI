@@ -121,6 +121,7 @@ if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
+    from crewai.state.provider.core import BaseProvider
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
@@ -921,17 +922,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     execution_context: ExecutionContext | None = Field(default=None)
 
     @classmethod
-    def from_checkpoint(cls, path: str) -> Flow:  # type: ignore[type-arg]
+    def from_checkpoint(
+        cls, path: str, *, provider: BaseProvider | None = None
+    ) -> Flow:  # type: ignore[type-arg]
         """Restore a Flow from a checkpoint file."""
-        from pathlib import Path as _Path
-
         from crewai.context import apply_execution_context
+        from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.runtime import RuntimeState
 
-        json_str = _Path(path).read_text()
-        from crewai import RuntimeState
-
-        state = RuntimeState.model_validate_json(
-            json_str, context={"from_checkpoint": True}
+        state = RuntimeState.from_checkpoint(
+            path,
+            provider=provider or JsonProvider(),
+            context={"from_checkpoint": True},
         )
         for entity in state.root:
             if isinstance(entity, cls):

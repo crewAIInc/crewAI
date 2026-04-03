@@ -21,18 +21,20 @@ if TYPE_CHECKING:
 class BaseAgentExecutor(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
-    crew: Crew = Field(default=None, exclude=True)  # type: ignore[assignment]
-    agent: BaseAgent = Field(default=None, exclude=True)  # type: ignore[assignment]
-    task: Task = Field(default=None, exclude=True)  # type: ignore[assignment]
+    crew: Crew | None = Field(default=None, exclude=True)
+    agent: BaseAgent | None = Field(default=None, exclude=True)
+    task: Task | None = Field(default=None, exclude=True)
     iterations: int = Field(default=0)
     max_iter: int = Field(default=25)
     messages: list[LLMMessage] = Field(default_factory=list)
     _resuming: bool = PrivateAttr(default=False)
-    _i18n: I18N = PrivateAttr(default=None)  # type: ignore[assignment]
+    _i18n: I18N | None = PrivateAttr(default=None)
     _printer: Printer = PrivateAttr(default_factory=Printer)
 
     def _save_to_memory(self, output: AgentFinish) -> None:
         """Save task result to unified memory (memory or crew._memory)."""
+        if self.agent is None:
+            return
         memory = getattr(self.agent, "memory", None) or (
             getattr(self.crew, "_memory", None) if self.crew else None
         )

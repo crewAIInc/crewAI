@@ -128,6 +128,40 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         _prepare_entities(self.root)
         return await self._provider.acheckpoint(self.model_dump_json(), directory)
 
+    @classmethod
+    def from_checkpoint(
+        cls, location: str, provider: BaseProvider, **kwargs: Any
+    ) -> RuntimeState:
+        """Restore a RuntimeState from a checkpoint.
+
+        Args:
+            location: The identifier returned by a previous ``checkpoint`` call.
+            provider: The storage backend to read from.
+            **kwargs: Passed to ``model_validate_json``.
+
+        Returns:
+            A restored RuntimeState.
+        """
+        raw = provider.from_checkpoint(location)
+        return cls.model_validate_json(raw, **kwargs)
+
+    @classmethod
+    async def afrom_checkpoint(
+        cls, location: str, provider: BaseProvider, **kwargs: Any
+    ) -> RuntimeState:
+        """Async version of :meth:`from_checkpoint`.
+
+        Args:
+            location: The identifier returned by a previous ``acheckpoint`` call.
+            provider: The storage backend to read from.
+            **kwargs: Passed to ``model_validate_json``.
+
+        Returns:
+            A restored RuntimeState.
+        """
+        raw = await provider.afrom_checkpoint(location)
+        return cls.model_validate_json(raw, **kwargs)
+
 
 def _prepare_entities(root: list[Entity]) -> None:
     """Capture execution context and sync checkpoint fields on each entity.

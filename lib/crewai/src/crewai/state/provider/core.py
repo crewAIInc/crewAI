@@ -57,3 +57,25 @@ class BaseProvider(Protocol):
             A location identifier for the saved checkpoint, such as a file path or URI.
         """
         ...
+
+    def from_checkpoint(self, location: str) -> str:
+        """Read a snapshot synchronously.
+
+        Args:
+            location: The identifier returned by a previous ``checkpoint`` call.
+
+        Returns:
+            The raw serialized string.
+        """
+        ...
+
+    async def afrom_checkpoint(self, location: str) -> str:
+        """Read a snapshot asynchronously.
+
+        Args:
+            location: The identifier returned by a previous ``acheckpoint`` call.
+
+        Returns:
+            The raw serialized string.
+        """
+        ...
