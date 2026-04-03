@@ -2246,8 +2246,15 @@ class LLM(BaseLLM):
 
         try:
             provider = self._get_custom_llm_provider()
+            # Pass api_base so remote Ollama servers are queried at the
+            # configured URL instead of falling back to localhost:11434.
+            kwargs: dict = {"custom_llm_provider": provider}
+            if self.api_base:
+                kwargs["api_base"] = self.api_base
+            elif self.base_url:
+                kwargs["api_base"] = self.base_url
             return litellm.utils.supports_function_calling(
-                self.model, custom_llm_provider=provider
+                self.model, **kwargs
             )
         except Exception as e:
             logging.error(f"Failed to check function calling support: {e!s}")
