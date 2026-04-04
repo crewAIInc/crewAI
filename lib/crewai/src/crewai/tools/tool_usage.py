@@ -888,8 +888,7 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
-            repaired_input = repair_json(tool_input)
-            # Continue to the next parsing attempt
+            pass  # Continue to the next parsing attempt
 
         # Attempt 3: Parse as JSON5
         try:
