@@ -1,0 +1,196 @@
+---
+title: "OMEGA Memory Backend"
+description: "Use OMEGA as a persistent, local-first memory storage backend for CrewAI"
+icon: "brain"
+---
+
+## Overview
+
+[OMEGA](https://github.com/omega-memory/omega-memory) is a local-first memory system that can serve as a drop-in storage backend for CrewAI's unified memory. It stores all memories in a local SQLite database with built-in embeddings, semantic deduplication, contradiction detection, and graph relationships -- no cloud API keys needed for the storage layer.
+
+**Why use OMEGA as your memory backend?**
+
+- **Local-first**: All data stays on your machine in a SQLite database (`~/.omega/omega.db`). No external storage service required.
+- **Built-in embeddings**: OMEGA generates embeddings locally using bge-small-en-v1.5 (384-dim, ONNX). No embedding API key needed.
+- **Semantic deduplication**: Automatically detects and merges near-duplicate memories.
+- **Contradiction detection**: Identifies when new information contradicts existing memories.
+- **Cross-session persistence**: Memories survive across crew runs, agent restarts, and machine reboots.
+- **Shared memory across tools**: If you also use OMEGA with Claude Code, Cursor, or other AI tools, all agents share the same memory graph.
+
+## Installation
+
+```bash
+pip install omega-memory crewai
+```
+
+## Quick Start
+
+The simplest way to use OMEGA with CrewAI is the `OmegaMemory` convenience factory:
+
+```python
+from integrations.crewai_memory import OmegaMemory
+from crewai import Crew, Agent, Task, Process
+
+memory = OmegaMemory(project="my-project")
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find and analyze information",
+    backstory="Expert researcher with attention to detail",
+)
+
+writer = Agent(
+    role="Writer",
+    goal="Produce clear, well-structured content",
+    backstory="Experienced technical writer",
+)
+
+research_task = Task(
+    description="Research the latest trends in AI memory systems",
+    agent=researcher,
+)
+
+writing_task = Task(
+    description="Write a summary of the research findings",
+    agent=writer,
+)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+    memory=memory,
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+All memories from this crew run are now persisted in OMEGA's local database. The next time you run a crew with the same project name, it will have access to all prior memories.
+
+## Using OmegaStorage Directly
+
+If you want more control, use `OmegaStorage` as the storage backend for CrewAI's `Memory` class:
+
+```python
+from crewai.memory import Memory
+from integrations.crewai_memory import OmegaStorage
+
+storage = OmegaStorage(project="my-project")
+
+memory = Memory(
+    storage=storage,
+    llm="gpt-4o-mini",
+    recency_weight=0.4,
+    semantic_weight=0.4,
+    importance_weight=0.2,
+)
+```
+
+## With Flows
+
+OMEGA memory works with CrewAI Flows:
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from integrations.crewai_memory import OmegaMemory
+
+class ResearchFlow(Flow):
+    memory = OmegaMemory(project="research")
+
+    @start()
+    def gather_data(self):
+        self.remember("PostgreSQL handles 10k concurrent connections")
+        return "Data gathered"
+
+    @listen(gather_data)
+    def analyze(self, data):
+        past = self.recall("database performance")
+        context = "\n".join(f"- {m.record.content}" for m in past)
+        return f"Analysis with context:\n{context}"
+```
+
+## Configuration
+
+### OmegaMemory Parameters
+
+| Parameter | Default | Description |
+| :--- | :--- | :--- |
+| `project` | `None` | Project name for scoping memories. Different projects are isolated. |
+| `session_id` | Auto-generated UUID | Session identifier for grouping related memories. |
+| `omega_home` | `~/.omega` | Path to the OMEGA data directory. |
+| `agent_type` | `"crewai"` | Agent type identifier stored in memory metadata. |
+| `llm` | `"gpt-4o-mini"` | LLM for CrewAI's memory analysis (scope inference, consolidation). |
+
+All additional keyword arguments are passed through to `crewai.memory.Memory()`, so you can set `recency_weight`, `consolidation_threshold`, and other Memory parameters.
+
+### OmegaStorage Parameters
+
+| Parameter | Default | Description |
+| :--- | :--- | :--- |
+| `project` | `None` | Project name for scoping memories. |
+| `session_id` | Auto-generated UUID | Session identifier. |
+| `omega_home` | `~/.omega` | OMEGA data directory path. |
+| `agent_type` | `"crewai"` | Agent type stored in metadata. |
+
+## How It Works
+
+### Category Mapping
+
+CrewAI categories are mapped to OMEGA event types bidirectionally:
+
+| CrewAI Category | OMEGA Event Type |
+| :--- | :--- |
+| `task_result` | `task_completion` |
+| `observation` | `lesson_learned` |
+| `decision` | `decision` |
+| `error` | `error_pattern` |
+| `preference` | `user_preference` |
+| `lesson` | `lesson_learned` |
+| `entity` | `memory` |
+| `summary` | `session_summary` |
+
+### Scope to Project Mapping
+
+CrewAI's hierarchical scopes (e.g., `/company/engineering/backend`) are mapped to OMEGA's project-based scoping using the last path segment (e.g., `backend`). This keeps the mapping simple while preserving logical grouping.
+
+### Embedding Handling
+
+OMEGA generates its own embeddings using a local ONNX model (bge-small-en-v1.5, 384 dimensions). When CrewAI passes embedding vectors from its configured embedder, the OMEGA backend performs text-based semantic search instead, which produces more consistent results since both indexing and querying use the same embedding model.
+
+## Fully Local Setup
+
+For complete privacy with no external API calls, combine OMEGA storage with a local LLM:
+
+```python
+from integrations.crewai_memory import OmegaMemory
+
+# Local LLM for memory analysis + local OMEGA embeddings
+memory = OmegaMemory(
+    project="private-project",
+    llm="ollama/llama3.2",
+)
+```
+
+This setup keeps all data and computation on your machine. OMEGA handles embeddings locally, and Ollama handles the LLM analysis that CrewAI uses for scope inference and consolidation.
+
+## Troubleshooting
+
+**ImportError on startup?**
+- Ensure both packages are installed: `pip install omega-memory crewai`
+- OMEGA requires Python 3.10+.
+
+**Memories not persisting between runs?**
+- Check that you're using the same `project` name across runs.
+- Verify OMEGA's database exists: `ls ~/.omega/omega.db`
+
+**Want to inspect stored memories?**
+- Use OMEGA's CLI: `python -m omega query "your search terms"`
+- Or browse the database directly: `python -m omega stats`
+
+## Links
+
+- [OMEGA on PyPI](https://pypi.org/project/omega-memory/)
+- [OMEGA on GitHub](https://github.com/omega-memory/omega-memory)
+- [CrewAI Memory Documentation](/concepts/memory)
+- [Storage Backend Protocol](/concepts/memory#storage-backend)
