@@ -103,7 +103,7 @@ def sign_agent_card(
     Example:
         >>> signature = sign_agent_card(
         ...     agent_card,
-        ...     private_key_pem="-----BEGIN PRIVATE KEY-----...",
+        ...     private_key_pem="<PEM-encoded private key>",
         ...     key_id="my-key-id",
         ... )
     """
@@ -158,7 +158,7 @@ def verify_agent_card_signature(
 
     Example:
         >>> is_valid = verify_agent_card_signature(
-        ...     agent_card, signature, public_key_pem="-----BEGIN PUBLIC KEY-----..."
+        ...     agent_card, signature, public_key_pem="<PEM-encoded public key>"
         ... )
     """
     if algorithms is None:
