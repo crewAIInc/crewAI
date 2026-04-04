@@ -165,7 +165,7 @@ class Task(BaseModel):
         default=True,
     )
     output: TaskOutput | None = Field(
-        description="Task output, it's final result after being executed", default=None
+        description="Task output, its final result after being executed", default=None
     )
     tools: list[BaseTool] | None = Field(
         default_factory=list,
