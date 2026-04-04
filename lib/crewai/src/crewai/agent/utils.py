@@ -247,7 +247,13 @@ def apply_training_data(agent: Agent, task_prompt: str) -> str:
     """
     if agent.crew and not isinstance(agent.crew, str) and agent.crew._train:
         return agent._training_handler(task_prompt=task_prompt)
-    return agent._use_trained_data(task_prompt=task_prompt)
+    trained_agents_data_file = (
+        agent.crew.trained_agents_data_file if agent.crew else None
+    )
+    return agent._use_trained_data(
+        task_prompt=task_prompt,
+        trained_agents_data_file=trained_agents_data_file,
+    )
 
 
 def process_tool_results(agent: Agent, result: Any) -> Any:
