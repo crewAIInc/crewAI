@@ -276,7 +276,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
     @property  # type: ignore[misc]
     def messages(self) -> list[LLMMessage]:
         """Compatibility property - returns state messages."""
-        return list(self._state.messages)
+        return self._state.messages  # type: ignore[no-any-return]
 
     @messages.setter
     def messages(self, value: list[LLMMessage]) -> None:
