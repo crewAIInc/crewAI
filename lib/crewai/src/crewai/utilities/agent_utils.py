@@ -1221,7 +1221,12 @@ def extract_tool_call_info(
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        func_args = func_info.get("arguments") or tool_call.get("input") or {}
+        if func_info and "arguments" in func_info:
+            func_args = func_info["arguments"]
+        elif "input" in tool_call:
+            func_args = tool_call["input"]
+        else:
+            func_args = {}
         return call_id, sanitize_tool_name(func_name), func_args
     return None
 
