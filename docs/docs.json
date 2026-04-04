@@ -495,7 +495,8 @@
                       "en/api-reference/inputs",
                       "en/api-reference/kickoff",
                       "en/api-reference/resume",
-                      "en/api-reference/status"
+                      "en/api-reference/status",
+                      "en/api-reference/stop"
                     ]
                   }
                 ]
@@ -1435,7 +1436,8 @@
                       "en/api-reference/inputs",
                       "en/api-reference/kickoff",
                       "en/api-reference/resume",
-                      "en/api-reference/status"
+                      "en/api-reference/status",
+                      "en/api-reference/stop"
                     ]
                   }
                 ]
@@ -1904,7 +1906,8 @@
                       "en/api-reference/inputs",
                       "en/api-reference/kickoff",
                       "en/api-reference/resume",
-                      "en/api-reference/status"
+                      "en/api-reference/status",
+                      "en/api-reference/stop"
                     ]
                   }
                 ]
@@ -2374,7 +2377,8 @@
                       "en/api-reference/inputs",
                       "en/api-reference/kickoff",
                       "en/api-reference/resume",
-                      "en/api-reference/status"
+                      "en/api-reference/status",
+                      "en/api-reference/stop"
                     ]
                   }
                 ]
@@ -2845,7 +2849,8 @@
                       "en/api-reference/inputs",
                       "en/api-reference/kickoff",
                       "en/api-reference/resume",
-                      "en/api-reference/status"
+                      "en/api-reference/status",
+                      "en/api-reference/stop"
                     ]
                   }
                 ]
@@ -3314,7 +3319,8 @@
                       "en/api-reference/inputs",
                       "en/api-reference/kickoff",
                       "en/api-reference/resume",
-                      "en/api-reference/status"
+                      "en/api-reference/status",
+                      "en/api-reference/stop"
                     ]
                   }
                 ]
@@ -3786,7 +3792,8 @@
                       "en/api-reference/inputs",
                       "en/api-reference/kickoff",
                       "en/api-reference/resume",
-                      "en/api-reference/status"
+                      "en/api-reference/status",
+                      "en/api-reference/stop"
                     ]
                   }
                 ]
@@ -4272,7 +4279,8 @@
                       "pt-BR/api-reference/inputs",
                       "pt-BR/api-reference/kickoff",
                       "pt-BR/api-reference/resume",
-                      "pt-BR/api-reference/status"
+                      "pt-BR/api-reference/status",
+                      "pt-BR/api-reference/stop"
                     ]
                   }
                 ]
@@ -5183,7 +5191,8 @@
                       "pt-BR/api-reference/inputs",
                       "pt-BR/api-reference/kickoff",
                       "pt-BR/api-reference/resume",
-                      "pt-BR/api-reference/status"
+                      "pt-BR/api-reference/status",
+                      "pt-BR/api-reference/stop"
                     ]
                   }
                 ]
@@ -5638,7 +5647,8 @@
                       "pt-BR/api-reference/inputs",
                       "pt-BR/api-reference/kickoff",
                       "pt-BR/api-reference/resume",
-                      "pt-BR/api-reference/status"
+                      "pt-BR/api-reference/status",
+                      "pt-BR/api-reference/stop"
                     ]
                   }
                 ]
@@ -6093,7 +6103,8 @@
                       "pt-BR/api-reference/inputs",
                       "pt-BR/api-reference/kickoff",
                       "pt-BR/api-reference/resume",
-                      "pt-BR/api-reference/status"
+                      "pt-BR/api-reference/status",
+                      "pt-BR/api-reference/stop"
                     ]
                   }
                 ]
@@ -6547,7 +6558,8 @@
                       "pt-BR/api-reference/inputs",
                       "pt-BR/api-reference/kickoff",
                       "pt-BR/api-reference/resume",
-                      "pt-BR/api-reference/status"
+                      "pt-BR/api-reference/status",
+                      "pt-BR/api-reference/stop"
                     ]
                   }
                 ]
@@ -7001,7 +7013,8 @@
                       "pt-BR/api-reference/inputs",
                       "pt-BR/api-reference/kickoff",
                       "pt-BR/api-reference/resume",
-                      "pt-BR/api-reference/status"
+                      "pt-BR/api-reference/status",
+                      "pt-BR/api-reference/stop"
                     ]
                   }
                 ]
@@ -7456,7 +7469,8 @@
                       "pt-BR/api-reference/inputs",
                       "pt-BR/api-reference/kickoff",
                       "pt-BR/api-reference/resume",
-                      "pt-BR/api-reference/status"
+                      "pt-BR/api-reference/status",
+                      "pt-BR/api-reference/stop"
                     ]
                   }
                 ]
@@ -7954,7 +7968,8 @@
                       "ko/api-reference/inputs",
                       "ko/api-reference/kickoff",
                       "ko/api-reference/resume",
-                      "ko/api-reference/status"
+                      "ko/api-reference/status",
+                      "ko/api-reference/stop"
                     ]
                   }
                 ]
@@ -8889,7 +8904,8 @@
                       "ko/api-reference/inputs",
                       "ko/api-reference/kickoff",
                       "ko/api-reference/resume",
-                      "ko/api-reference/status"
+                      "ko/api-reference/status",
+                      "ko/api-reference/stop"
                     ]
                   }
                 ]
@@ -9356,7 +9372,8 @@
                       "ko/api-reference/inputs",
                       "ko/api-reference/kickoff",
                       "ko/api-reference/resume",
-                      "ko/api-reference/status"
+                      "ko/api-reference/status",
+                      "ko/api-reference/stop"
                     ]
                   }
                 ]
@@ -9823,7 +9840,8 @@
                       "ko/api-reference/inputs",
                       "ko/api-reference/kickoff",
                       "ko/api-reference/resume",
-                      "ko/api-reference/status"
+                      "ko/api-reference/status",
+                      "ko/api-reference/stop"
                     ]
                   }
                 ]
@@ -10289,7 +10307,8 @@
                       "ko/api-reference/inputs",
                       "ko/api-reference/kickoff",
                       "ko/api-reference/resume",
-                      "ko/api-reference/status"
+                      "ko/api-reference/status",
+                      "ko/api-reference/stop"
                     ]
                   }
                 ]
@@ -10755,7 +10774,8 @@
                       "ko/api-reference/inputs",
                       "ko/api-reference/kickoff",
                       "ko/api-reference/resume",
-                      "ko/api-reference/status"
+                      "ko/api-reference/status",
+                      "ko/api-reference/stop"
                     ]
                   }
                 ]
@@ -11222,7 +11242,8 @@
                       "ko/api-reference/inputs",
                       "ko/api-reference/kickoff",
                       "ko/api-reference/resume",
-                      "ko/api-reference/status"
+                      "ko/api-reference/status",
+                      "ko/api-reference/stop"
                     ]
                   }
                 ]
@@ -11720,7 +11741,8 @@
                       "ar/api-reference/inputs",
                       "ar/api-reference/kickoff",
                       "ar/api-reference/resume",
-                      "ar/api-reference/status"
+                      "ar/api-reference/status",
+                      "ar/api-reference/stop"
                     ]
                   }
                 ]
@@ -12655,7 +12677,8 @@
                       "ar/api-reference/inputs",
                       "ar/api-reference/kickoff",
                       "ar/api-reference/resume",
-                      "ar/api-reference/status"
+                      "ar/api-reference/status",
+                      "ar/api-reference/stop"
                     ]
                   }
                 ]
@@ -13122,7 +13145,8 @@
                       "ar/api-reference/inputs",
                       "ar/api-reference/kickoff",
                       "ar/api-reference/resume",
-                      "ar/api-reference/status"
+                      "ar/api-reference/status",
+                      "ar/api-reference/stop"
                     ]
                   }
                 ]
@@ -13589,7 +13613,8 @@
                       "ar/api-reference/inputs",
                       "ar/api-reference/kickoff",
                       "ar/api-reference/resume",
-                      "ar/api-reference/status"
+                      "ar/api-reference/status",
+                      "ar/api-reference/stop"
                     ]
                   }
                 ]
@@ -14055,7 +14080,8 @@
                       "ar/api-reference/inputs",
                       "ar/api-reference/kickoff",
                       "ar/api-reference/resume",
-                      "ar/api-reference/status"
+                      "ar/api-reference/status",
+                      "ar/api-reference/stop"
                     ]
                   }
                 ]
@@ -14521,7 +14547,8 @@
                       "ar/api-reference/inputs",
                       "ar/api-reference/kickoff",
                       "ar/api-reference/resume",
-                      "ar/api-reference/status"
+                      "ar/api-reference/status",
+                      "ar/api-reference/stop"
                     ]
                   }
                 ]
@@ -14988,7 +15015,8 @@
                       "ar/api-reference/inputs",
                       "ar/api-reference/kickoff",
                       "ar/api-reference/resume",
-                      "ar/api-reference/status"
+                      "ar/api-reference/status",
+                      "ar/api-reference/stop"
                     ]
                   }
                 ]

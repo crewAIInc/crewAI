@@ -36,6 +36,7 @@ info:
     1. **Discover inputs** using `GET /inputs`
     2. **Start execution** using `POST /kickoff`
     3. **Monitor progress** using `GET /{kickoff_id}/status`
+    4. **Stop execution** (if needed) using `POST /stop/{kickoff_id}`
   version: 1.0.0
   contact:
     name: CrewAI Support
@@ -284,6 +285,56 @@ paths:
         "500":
           $ref: "#/components/responses/ServerError"
 
+  /stop/{kickoff_id}:
+    post:
+      summary: Stop Crew Execution
+      description: |
+        **📋 Reference Example Only** - *This shows the request format. To test with your actual crew, copy the cURL example and replace the URL + token with your real values.*
+
+        Stops or cancels a running crew or flow execution. The execution must be in an active state
+        (not SUCCESS, FAILURE, or REVOKED).
+      operationId: stopCrewExecution
+      parameters:
+        - name: kickoff_id
+          in: path
+          required: true
+          description: The kickoff ID of the execution to stop
+          schema:
+            type: string
+            format: uuid
+            example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+      responses:
+        "200":
+          description: Successfully stopped the execution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StopExecutionResponse"
+              example:
+                status: "stopped"
+                kickoffId: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+        "400":
+          description: Execution is already in a terminal state (SUCCESS, FAILURE, or REVOKED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                detail: "Cannot stop execution. Current state: SUCCESS"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          description: Kickoff ID not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "Execution not found"
+                message: "No execution found with ID: abcd1234-5678-90ef-ghij-klmnopqrstuv"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
   /resume:
     post:
       summary: Resume Crew Execution with Human Feedback
@@ -507,6 +558,19 @@ components:
           type: number
           description: Time taken to execute this task in seconds
           example: 45.2
+
+    StopExecutionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["stopped"]
+          description: Indicates the execution was successfully stopped
+          example: "stopped"
+        kickoffId:
+          type: string
+          description: The kickoff ID of the stopped execution
+          example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
 
     Error:
       type: object
