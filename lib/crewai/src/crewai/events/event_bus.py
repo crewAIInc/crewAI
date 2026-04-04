@@ -592,6 +592,12 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
+        if (
+            getattr(source, "entity_type", None) in ("flow", "crew", "agent")
+            and id(source) not in self._registered_entity_ids
+        ):
+            self.register_entity(source)
+
         if self._runtime_state is not None:
             self._runtime_state.event_record.add(event)
 
