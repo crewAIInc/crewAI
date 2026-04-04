@@ -1304,7 +1304,7 @@ class Crew(FlowTrackable, BaseModel):
             return None
         for i, task in enumerate(tasks):
             if task.output is None:
-                return i if i > 0 else None
+                return i
         return len(tasks) if tasks else None
 
     def _execute_tasks(
