@@ -211,12 +211,12 @@ def create_crew(
                 return
 
         existing_provider = None
-        for provider, env_keys in ENV_VARS.items():
+        for env_provider, env_keys in ENV_VARS.items():
             if any(
                 "key_name" in details and details["key_name"] in env_vars
                 for details in env_keys
             ):
-                existing_provider = provider
+                existing_provider = env_provider
                 break
 
         if existing_provider:
