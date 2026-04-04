@@ -280,7 +280,8 @@ class Telemetry:
             self._add_attribute(span, "python_version", platform.python_version())
             add_crew_attributes(span, crew, self._add_attribute)
             self._add_attribute(span, "crew_process", crew.process)
-            self._add_attribute(span, "crew_memory", crew.memory)
+            crew_memory = crew.memory if isinstance(crew.memory, (bool, str, int, float)) else type(crew.memory).__name__
+            self._add_attribute(span, "crew_memory", crew_memory)
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
 
