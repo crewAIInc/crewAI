@@ -48,6 +48,7 @@ from crewai.llms.constants import (
     BEDROCK_MODELS,
     GEMINI_MODELS,
     OPENAI_MODELS,
+    TZAFON_MODELS,
 )
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -230,6 +231,9 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # tzafon
+    "tzafon.sm-1": 8192,
+    "tzafon.northstar-cua-fast": 8192,
     # bedrock
     "us.amazon.nova-pro-v1:0": 300000,
     "us.amazon.nova-micro-v1:0": 128000,
@@ -311,6 +315,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "tzafon",
     # OpenAI-compatible providers
     "openrouter",
     "deepseek",
@@ -399,6 +404,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "tzafon": "tzafon",
                 # OpenAI-compatible providers
                 "openrouter": "openrouter",
                 "deepseek": "deepseek",
@@ -526,6 +532,9 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "tzafon":
+            return model_lower.startswith("tzafon.")
+
         return False
 
     @classmethod
@@ -561,6 +570,9 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if provider == "tzafon" and model in TZAFON_MODELS:
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -592,6 +604,9 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        if model in TZAFON_MODELS:
+            return "tzafon"
 
         return "openai"
 
@@ -625,6 +640,11 @@ class LLM(BaseLLM):
 
             return BedrockCompletion
 
+        if provider == "tzafon":
+            from crewai.llms.providers.tzafon.completion import TzafonCompletion
+
+            return TzafonCompletion
+
         # OpenAI-compatible providers
         openai_compatible_providers = {
             "openrouter",
@@ -635,6 +655,7 @@ class LLM(BaseLLM):
             "cerebras",
             "dashscope",
         }
+
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
                 OpenAICompatibleCompletion,
