@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 from datetime import datetime
@@ -68,7 +69,7 @@ class Memory(BaseModel):
         description="LLM for analysis (model name or BaseLLM instance).",
     )
     storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
-        default="lancedb",
+        default="qdrant-edge" if sys.platform == "win32" else "lancedb",
         description="Storage backend instance or path string.",
     )
     embedder: Any = Field(
