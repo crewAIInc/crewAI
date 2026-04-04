@@ -1,4 +1,3 @@
-from functools import lru_cache
 import subprocess
 
 
@@ -40,22 +39,21 @@ class Repository:
             encoding="utf-8",
         ).strip()
 
-    @lru_cache(maxsize=None)  # noqa: B019
     def is_git_repo(self) -> bool:
-        """Check if the current directory is a git repository.
-
-        Notes:
-          - TODO: This method is cached to avoid redundant checks, but using lru_cache on methods can lead to memory leaks
-        """
+        """Check if the current directory is a git repository."""
+        if hasattr(self, "_is_git_repo_cached"):
+            return self._is_git_repo_cached
         try:
             subprocess.check_output(
                 ["git", "rev-parse", "--is-inside-work-tree"],  # noqa: S607
                 cwd=self.path,
                 encoding="utf-8",
             )
-            return True
+            result = True
         except subprocess.CalledProcessError:
-            return False
+            result = False
+        self._is_git_repo_cached = result
+        return result
 
     def has_uncommitted_changes(self) -> bool:
         """Check if the repository has uncommitted changes."""
