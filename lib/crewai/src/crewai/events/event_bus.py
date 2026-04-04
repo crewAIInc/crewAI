@@ -259,6 +259,7 @@ class CrewAIEventsBus:
         """Set the RuntimeState that will be passed to event handlers."""
         with self._instance_lock:
             self._runtime_state = state
+            self._registered_entity_ids = {id(e) for e in state.root}
 
     def register_entity(self, entity: Any) -> None:
         """Add an entity to the RuntimeState, creating it if needed."""
