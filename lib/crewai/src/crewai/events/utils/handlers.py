@@ -10,17 +10,10 @@ from crewai.events.base_events import BaseEvent
 from crewai.events.types.event_bus_types import AsyncHandler, SyncHandler
 
 
-_handler_param_count: dict[int, int] = {}
-
-
+@functools.lru_cache(maxsize=256)
 def _get_param_count(handler: Any) -> int:
     """Return the number of parameters a handler accepts, with caching."""
-    key = id(handler)
-    count = _handler_param_count.get(key)
-    if count is None:
-        count = len(inspect.signature(handler).parameters)
-        _handler_param_count[key] = count
-    return count
+    return len(inspect.signature(handler).parameters)
 
 
 def is_async_handler(
