@@ -260,8 +260,6 @@ class CrewAIEventsBus:
         with self._instance_lock:
             self._runtime_state = state
 
-    _registered_entity_ids: set[int]
-
     def register_entity(self, entity: Any) -> None:
         """Add an entity to the RuntimeState, creating it if needed."""
         eid = id(entity)
