@@ -369,6 +369,12 @@
                     "pages": [
                       "en/telemetry"
                     ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "en/security"
+                    ]
                   }
                 ]
               },
@@ -1310,6 +1316,12 @@
                     "pages": [
                       "en/telemetry"
                     ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "en/security"
+                    ]
                   }
                 ]
               },
@@ -1779,6 +1791,12 @@
                     "pages": [
                       "en/telemetry"
                     ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "en/security"
+                    ]
                   }
                 ]
               },
@@ -2247,6 +2265,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "en/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "en/security"
                     ]
                   }
                 ]
@@ -2719,6 +2743,12 @@
                     "pages": [
                       "en/telemetry"
                     ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "en/security"
+                    ]
                   }
                 ]
               },
@@ -3187,6 +3217,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "en/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "en/security"
                     ]
                   }
                 ]
@@ -3659,6 +3695,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "en/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "en/security"
                     ]
                   }
                 ]
@@ -4145,6 +4187,12 @@
                     "group": "Telemetria",
                     "pages": [
                       "pt-BR/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "Segurança",
+                    "pages": [
+                      "pt-BR/security"
                     ]
                   }
                 ]
@@ -5057,6 +5105,12 @@
                     "pages": [
                       "pt-BR/telemetry"
                     ]
+                  },
+                  {
+                    "group": "Segurança",
+                    "pages": [
+                      "pt-BR/security"
+                    ]
                   }
                 ]
               },
@@ -5511,6 +5565,12 @@
                     "group": "Telemetria",
                     "pages": [
                       "pt-BR/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "Segurança",
+                    "pages": [
+                      "pt-BR/security"
                     ]
                   }
                 ]
@@ -5967,6 +6027,12 @@
                     "pages": [
                       "pt-BR/telemetry"
                     ]
+                  },
+                  {
+                    "group": "Segurança",
+                    "pages": [
+                      "pt-BR/security"
+                    ]
                   }
                 ]
               },
@@ -6420,6 +6486,12 @@
                     "group": "Telemetria",
                     "pages": [
                       "pt-BR/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "Segurança",
+                    "pages": [
+                      "pt-BR/security"
                     ]
                   }
                 ]
@@ -6875,6 +6947,12 @@
                     "pages": [
                       "pt-BR/telemetry"
                     ]
+                  },
+                  {
+                    "group": "Segurança",
+                    "pages": [
+                      "pt-BR/security"
+                    ]
                   }
                 ]
               },
@@ -7329,6 +7407,12 @@
                     "group": "Telemetria",
                     "pages": [
                       "pt-BR/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "Segurança",
+                    "pages": [
+                      "pt-BR/security"
                     ]
                   }
                 ]
@@ -7828,6 +7912,12 @@
                     "pages": [
                       "ko/telemetry"
                     ]
+                  },
+                  {
+                    "group": "보안",
+                    "pages": [
+                      "ko/security"
+                    ]
                   }
                 ]
               },
@@ -8763,6 +8853,12 @@
                     "pages": [
                       "ko/telemetry"
                     ]
+                  },
+                  {
+                    "group": "보안",
+                    "pages": [
+                      "ko/security"
+                    ]
                   }
                 ]
               },
@@ -9229,6 +9325,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "ko/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "보안",
+                    "pages": [
+                      "ko/security"
                     ]
                   }
                 ]
@@ -9697,6 +9799,12 @@
                     "pages": [
                       "ko/telemetry"
                     ]
+                  },
+                  {
+                    "group": "보안",
+                    "pages": [
+                      "ko/security"
+                    ]
                   }
                 ]
               },
@@ -10162,6 +10270,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "ko/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "보안",
+                    "pages": [
+                      "ko/security"
                     ]
                   }
                 ]
@@ -10629,6 +10743,12 @@
                     "pages": [
                       "ko/telemetry"
                     ]
+                  },
+                  {
+                    "group": "보안",
+                    "pages": [
+                      "ko/security"
+                    ]
                   }
                 ]
               },
@@ -11095,6 +11215,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "ko/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "보안",
+                    "pages": [
+                      "ko/security"
                     ]
                   }
                 ]
@@ -11593,6 +11719,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "ar/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "الأمان",
+                    "pages": [
+                      "ar/security"
                     ]
                   }
                 ]
@@ -12529,6 +12661,12 @@
                     "pages": [
                       "ar/telemetry"
                     ]
+                  },
+                  {
+                    "group": "الأمان",
+                    "pages": [
+                      "ar/security"
+                    ]
                   }
                 ]
               },
@@ -12995,6 +13133,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "ar/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "الأمان",
+                    "pages": [
+                      "ar/security"
                     ]
                   }
                 ]
@@ -13463,6 +13607,12 @@
                     "pages": [
                       "ar/telemetry"
                     ]
+                  },
+                  {
+                    "group": "الأمان",
+                    "pages": [
+                      "ar/security"
+                    ]
                   }
                 ]
               },
@@ -13928,6 +14078,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "ar/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "الأمان",
+                    "pages": [
+                      "ar/security"
                     ]
                   }
                 ]
@@ -14395,6 +14551,12 @@
                     "pages": [
                       "ar/telemetry"
                     ]
+                  },
+                  {
+                    "group": "الأمان",
+                    "pages": [
+                      "ar/security"
+                    ]
                   }
                 ]
               },
@@ -14861,6 +15023,12 @@
                     "group": "Telemetry",
                     "pages": [
                       "ar/telemetry"
+                    ]
+                  },
+                  {
+                    "group": "الأمان",
+                    "pages": [
+                      "ar/security"
                     ]
                   }
                 ]
