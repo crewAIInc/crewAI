@@ -11,9 +11,20 @@ from crewai.events.types.event_bus_types import AsyncHandler, SyncHandler
 
 
 @functools.lru_cache(maxsize=256)
-def _get_param_count(handler: Any) -> int:
-    """Return the number of parameters a handler accepts, with caching."""
+def _get_param_count_cached(handler: Any) -> int:
     return len(inspect.signature(handler).parameters)
+
+
+def _get_param_count(handler: Any) -> int:
+    """Return the number of parameters a handler accepts, with caching.
+
+    Falls back to uncached introspection for unhashable handlers
+    like functools.partial.
+    """
+    try:
+        return _get_param_count_cached(handler)
+    except TypeError:
+        return len(inspect.signature(handler).parameters)
 
 
 def is_async_handler(
