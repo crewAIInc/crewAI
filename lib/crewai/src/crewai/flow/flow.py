@@ -3264,12 +3264,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         else:
             logger.warning(message)
 
-    def plot(self, filename: str = "crewai_flow.html", show: bool = True) -> str:
+    def plot(
+        self,
+        filename: str = "crewai_flow.html",
+        show: bool = True,
+        output_dir: str | None = None,
+    ) -> str:
         """Create interactive HTML visualization of Flow structure.
 
         Args:
             filename: Output HTML filename (default: "crewai_flow.html").
             show: Whether to open in browser (default: True).
+            output_dir: Directory to save generated files. Defaults to the
+                current working directory.
 
         Returns:
             Absolute path to generated HTML file.
@@ -3282,7 +3289,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             ),
         )
         structure = build_flow_structure(self)
-        return render_interactive(structure, filename=filename, show=show)
+        return render_interactive(
+            structure, filename=filename, show=show, output_dir=output_dir
+        )
 
     @staticmethod
     def _show_tracing_disabled_message() -> None:
