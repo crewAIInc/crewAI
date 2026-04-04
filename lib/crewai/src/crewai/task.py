@@ -39,7 +39,6 @@ from crewai.agents.agent_builder.base_agent import BaseAgent, _resolve_agent
 from crewai.context import reset_current_task_id, set_current_task_id
 from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.event_context import push_event_scope
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
@@ -599,9 +598,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            if agent.agent_executor and agent.agent_executor._resuming:
-                push_event_scope(str(self.id), "task_started")
-            else:
+            if not (agent.agent_executor and agent.agent_executor._resuming):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )
@@ -723,9 +720,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            if agent.agent_executor and agent.agent_executor._resuming:
-                push_event_scope(str(self.id), "task_started")
-            else:
+            if not (agent.agent_executor and agent.agent_executor._resuming):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )

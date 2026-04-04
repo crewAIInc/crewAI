@@ -412,6 +412,39 @@ class Crew(FlowTrackable, BaseModel):
         if self.checkpoint_train is not None:
             self._train = self.checkpoint_train
 
+        self._restore_event_scope()
+
+    def _restore_event_scope(self) -> None:
+        """Rebuild the event scope stack from the checkpoint's event record."""
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.event_context import (
+            SCOPE_ENDING_EVENTS,
+            SCOPE_STARTING_EVENTS,
+            restore_event_scope,
+            set_last_event_id,
+        )
+
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            return
+
+        stack: list[tuple[str, str]] = []
+        last_event_id: str | None = None
+        for node in sorted(
+            state.event_record.nodes.values(),
+            key=lambda n: n.event.emission_sequence or 0,
+        ):
+            evt = node.event
+            last_event_id = evt.event_id
+            if evt.type in SCOPE_STARTING_EVENTS:
+                stack.append((evt.event_id, evt.type))
+            elif evt.type in SCOPE_ENDING_EVENTS and stack:
+                stack.pop()
+
+        restore_event_scope(tuple(stack))
+        if last_event_id is not None:
+            set_last_event_id(last_event_id)
+
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
