@@ -173,6 +173,89 @@ Cada estado nos flows do CrewAI recebe automaticamente um identificador único (
 
 Ao oferecer as duas opções de gerenciamento de estado, o CrewAI Flows permite que desenvolvedores criem fluxos de IA que sejam ao mesmo tempo flexíveis e robustos, atendendo a uma ampla variedade de requisitos de aplicação.
 
+### Entradas de Arquivos
+
+Ao usar estado estruturado, você pode incluir campos tipados como arquivo usando classes do `crewai-files`. Isso habilita uploads de arquivos como parte da entrada do seu flow:
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai_files import ImageFile, PDFFile
+from pydantic import BaseModel
+
+class OnboardingState(BaseModel):
+    document: PDFFile        # File upload
+    cover_image: ImageFile   # Image upload
+    title: str = ""          # Text input
+
+class OnboardingFlow(Flow[OnboardingState]):
+    @start()
+    def process_upload(self):
+        # Access files directly from state
+        print(f"Processing: {self.state.title}")
+        return self.state.document
+```
+
+Quando implantado na **Plataforma CrewAI**, campos tipados como arquivo são renderizados automaticamente como zonas de upload de arquivos na interface. Os usuários podem arrastar e soltar arquivos, que são então passados para o seu flow.
+
+**Iniciando com arquivos via API:**
+
+O endpoint `/kickoff` detecta automaticamente o formato da requisição:
+- **Corpo JSON** → kickoff normal
+- **multipart/form-data** → upload de arquivo + kickoff
+
+Usuários da API também podem passar strings de URL diretamente para campos tipados como arquivo — o Pydantic as converte automaticamente.
+
+### Uso da API
+
+#### Opção 1: Kickoff multipart (recomendado)
+
+Envie arquivos diretamente com a requisição de kickoff:
+
+```bash
+# With files (multipart) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"company_name": "Einstein"}' \
+  -F 'cover_image=@/path/to/photo.jpg'
+```
+
+Os arquivos são armazenados automaticamente e convertidos em objetos `FileInput`. O agente recebe o arquivo com otimização específica do provedor (base64 inline, API de upload de arquivo ou referência por URL dependendo do provedor LLM).
+
+#### Opção 2: Kickoff JSON (sem arquivos)
+
+```bash
+# Without files (JSON) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}}'
+```
+
+#### Opção 3: Upload separado + kickoff
+
+Esta é uma alternativa ao upload multipart quando você precisa fazer upload dos arquivos separadamente da requisição de kickoff. Faça o upload dos arquivos primeiro e depois referencie-os por URL:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/photo.jpg' \
+  -F 'field_name=cover_image'
+# Returns: {"url": "https://...", "field_name": "cover_image"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}, "input_files": {"cover_image": "https://..."}}'
+```
+
+Consulte a documentação da API da Plataforma para detalhes completos do endpoint `/files`.
+
+#### Na Plataforma CrewAI
+
+Ao usar a interface da Plataforma, campos tipados como arquivo são renderizados automaticamente como zonas de arrastar e soltar para upload. Nenhuma chamada de API é necessária — basta soltar o arquivo e clicar em Executar.
+
 ## Persistência de Flow
 
 O decorador @persist permite a persistência automática do estado nos flows do CrewAI, garantindo que você mantenha o estado do flow entre reinicializações ou execuções diferentes do workflow. Esse decorador pode ser aplicado tanto ao nível de classe, quanto ao nível de método, oferecendo flexibilidade sobre como gerenciar a persistência do estado.

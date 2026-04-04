@@ -134,6 +134,10 @@ result = flow.kickoff(
 )
 ```
 
+<Note type="info" title="Integração com a Plataforma CrewAI">
+Quando implantado na Plataforma CrewAI, campos tipados como arquivo como `ImageFile`, `PDFFile` e outros no estado do seu flow recebem automaticamente uma interface de upload de arquivos. Os usuários podem arrastar e soltar arquivos diretamente na interface da Plataforma. Os arquivos são armazenados de forma segura e passados para os agentes usando otimizações específicas do provedor (base64 inline, APIs de upload de arquivo ou referências por URL dependendo do provedor). Para exemplos de uso da API, consulte [Entradas de Arquivos em Flows](/pt-BR/concepts/flows#entradas-de-arquivos).
+</Note>
+
 ### Com Agentes Standalone
 
 Passe arquivos diretamente no kickoff do agente:
