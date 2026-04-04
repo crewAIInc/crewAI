@@ -409,6 +409,8 @@ class Crew(FlowTrackable, BaseModel):
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:
             self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        if self.checkpoint_train is not None:
+            self._train = self.checkpoint_train
 
     @field_validator("id", mode="before")
     @classmethod
