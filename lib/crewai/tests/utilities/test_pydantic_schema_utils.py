@@ -882,3 +882,86 @@ class TestEndToEndMCPSchema:
         )
         assert obj.filters.date_from == datetime.date(2025, 1, 1)
         assert obj.filters.categories == ["news", "tech"]
+
+
+class TestExtraFieldsConfig:
+    """Tests for extra fields handling with ConfigDict.
+
+    Regression tests for https://github.com/crewAIInc/crewAI/issues/4796.
+    MCP tools need to ignore extra fields like security_context injected
+    by CrewAI's tool execution framework.
+    """
+
+    SIMPLE_SCHEMA: dict = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "top_k": {
+                "anyOf": [{"type": "integer"}, {"type": "null"}],
+                "default": None,
+            },
+        },
+        "required": ["query"],
+    }
+
+    def test_default_config_forbids_extra(self) -> None:
+        """By default, create_model_from_schema forbids extra fields."""
+        Model = create_model_from_schema(self.SIMPLE_SCHEMA)
+        with pytest.raises(Exception):
+            Model(query="test", security_context={"agent_fingerprint": "abc"})
+
+    def test_ignore_config_allows_extra(self) -> None:
+        """With extra='ignore', extra fields are silently dropped."""
+        from pydantic import ConfigDict
+
+        Model = create_model_from_schema(
+            self.SIMPLE_SCHEMA,
+            __config__=ConfigDict(extra="ignore"),
+        )
+        obj = Model(
+            query="test",
+            security_context={
+                "agent_fingerprint": {
+                    "uuid_str": "test-uuid",
+                    "created_at": "2026-01-01T00:00:00",
+                },
+                "metadata": {},
+            },
+        )
+        assert obj.query == "test"
+        # security_context should not appear in the dumped model
+        assert "security_context" not in obj.model_dump()
+
+    def test_ignore_config_preserves_validation(self) -> None:
+        """Extra='ignore' still validates declared fields correctly."""
+        from pydantic import ConfigDict
+
+        Model = create_model_from_schema(
+            self.SIMPLE_SCHEMA,
+            __config__=ConfigDict(extra="ignore"),
+        )
+        # Valid input works
+        obj = Model(query="test", top_k=5)
+        assert obj.query == "test"
+        assert obj.top_k == 5
+
+        # Missing required field still fails
+        with pytest.raises(Exception):
+            Model(top_k=5)
+
+    def test_ignore_config_with_mcp_schema(self) -> None:
+        """Extra='ignore' works with complex MCP-like schemas."""
+        from pydantic import ConfigDict
+
+        Model = create_model_from_schema(
+            TestEndToEndMCPSchema.MCP_SCHEMA,
+            __config__=ConfigDict(extra="ignore"),
+        )
+        obj = Model(
+            query="search term",
+            format="json",
+            filters={"date_from": "2025-01-01"},
+            security_context={"agent_fingerprint": "test"},
+        )
+        assert obj.query == "search term"
+        assert "security_context" not in obj.model_dump()
