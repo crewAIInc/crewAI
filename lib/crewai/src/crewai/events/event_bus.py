@@ -5,16 +5,23 @@ of events throughout the CrewAI system, supporting both synchronous and asynchro
 event handlers with optional dependency management.
 """
 
+from __future__ import annotations
+
 import asyncio
 import atexit
 from collections.abc import Callable, Generator
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
 import contextvars
+import logging
 import threading
-from typing import Any, Final, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypeVar
 
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai.state.runtime import RuntimeState
 
 from crewai.events.base_events import BaseEvent, get_next_emission_sequence
 from crewai.events.depends import Depends
@@ -43,9 +50,15 @@ from crewai.events.types.event_bus_types import (
 )
 from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.events.utils.console_formatter import ConsoleFormatter
-from crewai.events.utils.handlers import is_async_handler, is_call_handler_safe
+from crewai.events.utils.handlers import (
+    _get_param_count,
+    is_async_handler,
+    is_call_handler_safe,
+)
 from crewai.utilities.rw_lock import RWLock
 
+
+logger = logging.getLogger(__name__)
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -87,6 +100,7 @@ class CrewAIEventsBus:
     _futures_lock: threading.Lock
     _executor_initialized: bool
     _has_pending_events: bool
+    _runtime_state: RuntimeState | None
 
     def __new__(cls) -> Self:
         """Create or return the singleton instance.
@@ -122,6 +136,8 @@ class CrewAIEventsBus:
         # Lazy initialization flags - executor and loop created on first emit
         self._executor_initialized = False
         self._has_pending_events = False
+        self._runtime_state: RuntimeState | None = None
+        self._registered_entity_ids: set[int] = set()
 
     def _ensure_executor_initialized(self) -> None:
         """Lazily initialize the thread pool executor and event loop.
@@ -209,25 +225,16 @@ class CrewAIEventsBus:
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         """Decorator to register an event handler for a specific event type.
 
+        Handlers can accept 2 or 3 arguments:
+            - ``(source, event)`` — standard handler
+            - ``(source, event, state: RuntimeState)`` — handler with runtime state
+
         Args:
             event_type: The event class to listen for
-            depends_on: Optional dependency or list of dependencies. Handlers with
-                       dependencies will execute after their dependencies complete.
+            depends_on: Optional dependency or list of dependencies.
 
         Returns:
             Decorator function that registers the handler
-
-        Example:
-            >>> from crewai.events import crewai_event_bus, Depends
-            >>> from crewai.events.types.llm_events import LLMCallStartedEvent
-            >>>
-            >>> @crewai_event_bus.on(LLMCallStartedEvent)
-            >>> def setup_context(source, event):
-            ...     print("Setting up context")
-            >>>
-            >>> @crewai_event_bus.on(LLMCallStartedEvent, depends_on=Depends(setup_context))
-            >>> def process(source, event):
-            ...     print("Processing (runs after setup_context)")
         """
 
         def decorator(handler: Callable[P, R]) -> Callable[P, R]:
@@ -247,6 +254,42 @@ class CrewAIEventsBus:
             return handler
 
         return decorator
+
+    def set_runtime_state(self, state: RuntimeState) -> None:
+        """Set the RuntimeState that will be passed to event handlers."""
+        with self._instance_lock:
+            self._runtime_state = state
+            self._registered_entity_ids = {id(e) for e in state.root}
+
+    def register_entity(self, entity: Any) -> None:
+        """Add an entity to the RuntimeState, creating it if needed.
+
+        Agents that belong to an already-registered Crew are tracked
+        but not appended to root, since they are serialized as part
+        of the Crew's agents list.
+        """
+        eid = id(entity)
+        if eid in self._registered_entity_ids:
+            return
+        with self._instance_lock:
+            if eid in self._registered_entity_ids:
+                return
+            self._registered_entity_ids.add(eid)
+            if getattr(entity, "entity_type", None) == "agent":
+                crew = getattr(entity, "crew", None)
+                if crew is not None and id(crew) in self._registered_entity_ids:
+                    return
+            if self._runtime_state is None:
+                from crewai import RuntimeState
+
+                if RuntimeState is None:
+                    logger.warning(
+                        "RuntimeState unavailable; skipping entity registration."
+                    )
+                    return
+                self._runtime_state = RuntimeState(root=[entity])
+            else:
+                self._runtime_state.root.append(entity)
 
     def off(
         self,
@@ -294,10 +337,12 @@ class CrewAIEventsBus:
             event: The event instance
             handlers: Frozenset of sync handlers to call
         """
+        state = self._runtime_state
         errors: list[tuple[SyncHandler, Exception]] = [
             (handler, error)
             for handler in handlers
-            if (error := is_call_handler_safe(handler, source, event)) is not None
+            if (error := is_call_handler_safe(handler, source, event, state))
+            is not None
         ]
 
         if errors:
@@ -319,7 +364,14 @@ class CrewAIEventsBus:
             event: The event instance
             handlers: Frozenset of async handlers to call
         """
-        coros = [handler(source, event) for handler in handlers]
+        state = self._runtime_state
+
+        async def _call(handler: AsyncHandler) -> Any:
+            if _get_param_count(handler) >= 3:
+                return await handler(source, event, state)  # type: ignore[call-arg]
+            return await handler(source, event)  # type: ignore[call-arg]
+
+        coros = [_call(handler) for handler in handlers]
         results = await asyncio.gather(*coros, return_exceptions=True)
         for handler, result in zip(handlers, results, strict=False):
             if isinstance(result, Exception):
@@ -391,6 +443,41 @@ class CrewAIEventsBus:
             if level_async:
                 await self._acall_handlers(source, event, level_async)
 
+    def _prepare_event(self, source: Any, event: BaseEvent) -> None:
+        """Set event metadata, register the source entity, and record the event."""
+        if (
+            getattr(source, "entity_type", None) in ("flow", "crew", "agent")
+            and id(source) not in self._registered_entity_ids
+        ):
+            self.register_entity(source)
+
+        event.previous_event_id = get_last_event_id()
+        event.triggered_by_event_id = get_triggering_event_id()
+        event.emission_sequence = get_next_emission_sequence()
+        if event.parent_event_id is None:
+            event_type_name = event.type
+            if event_type_name in SCOPE_ENDING_EVENTS:
+                event.parent_event_id = get_enclosing_parent_id()
+                popped = pop_event_scope()
+                if popped is None:
+                    handle_empty_pop(event_type_name)
+                else:
+                    popped_event_id, popped_type = popped
+                    event.started_event_id = popped_event_id
+                    expected_start = VALID_EVENT_PAIRS.get(event_type_name)
+                    if expected_start and popped_type and popped_type != expected_start:
+                        handle_mismatch(event_type_name, popped_type, expected_start)
+            elif event_type_name in SCOPE_STARTING_EVENTS:
+                event.parent_event_id = get_current_parent_id()
+                push_event_scope(event.event_id, event_type_name)
+            else:
+                event.parent_event_id = get_current_parent_id()
+
+        set_last_event_id(event.event_id)
+
+        if self._runtime_state is not None:
+            self._runtime_state.event_record.add(event)
+
     def emit(self, source: Any, event: BaseEvent) -> Future[None] | None:
         """Emit an event to all registered handlers.
 
@@ -417,29 +504,8 @@ class CrewAIEventsBus:
             ...     await asyncio.wrap_future(future)  # In async test
             ...     # or future.result(timeout=5.0) in sync code
         """
-        event.previous_event_id = get_last_event_id()
-        event.triggered_by_event_id = get_triggering_event_id()
-        event.emission_sequence = get_next_emission_sequence()
-        if event.parent_event_id is None:
-            event_type_name = event.type
-            if event_type_name in SCOPE_ENDING_EVENTS:
-                event.parent_event_id = get_enclosing_parent_id()
-                popped = pop_event_scope()
-                if popped is None:
-                    handle_empty_pop(event_type_name)
-                else:
-                    popped_event_id, popped_type = popped
-                    event.started_event_id = popped_event_id
-                    expected_start = VALID_EVENT_PAIRS.get(event_type_name)
-                    if expected_start and popped_type and popped_type != expected_start:
-                        handle_mismatch(event_type_name, popped_type, expected_start)
-            elif event_type_name in SCOPE_STARTING_EVENTS:
-                event.parent_event_id = get_current_parent_id()
-                push_event_scope(event.event_id, event_type_name)
-            else:
-                event.parent_event_id = get_current_parent_id()
+        self._prepare_event(source, event)
 
-        set_last_event_id(event.event_id)
         event_type = type(event)
 
         with self._rwlock.r_locked():
@@ -538,6 +604,8 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
+        self._prepare_event(source, event)
+
         event_type = type(event)
 
         with self._rwlock.r_locked():

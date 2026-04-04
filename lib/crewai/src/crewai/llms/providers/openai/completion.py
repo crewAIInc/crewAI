@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 import httpx
 from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
 from openai.lib.streaming.chat import ChatCompletionStream
-from openai.types.chat import ChatCompletion, ChatCompletionChunk
+from openai.types.chat import (
+    ChatCompletion,
+    ChatCompletionChunk,
+    ChatCompletionMessageFunctionToolCall,
+)
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.responses import Response
@@ -29,7 +33,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent.core import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
 
@@ -359,7 +363,7 @@ class OpenAICompletion(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI API (Chat Completions or Responses based on api setting).
@@ -427,7 +431,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI Chat Completions API."""
@@ -459,7 +463,7 @@ class OpenAICompletion(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI API (Chat Completions or Responses).
@@ -522,7 +526,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI Chat Completions API."""
@@ -553,7 +557,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI Responses API."""
@@ -584,7 +588,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI Responses API."""
@@ -1359,11 +1363,11 @@ class OpenAICompletion(BaseLLM):
                 file_results: list[FileSearchResultItem] = (
                     [
                         FileSearchResultItem(
-                            file_id=r.file_id,  # type: ignore[union-attr]
-                            filename=r.filename,  # type: ignore[union-attr]
-                            text=r.text,  # type: ignore[union-attr]
-                            score=r.score,  # type: ignore[union-attr]
-                            attributes=r.attributes,  # type: ignore[union-attr]
+                            file_id=r.file_id,
+                            filename=r.filename,
+                            text=r.text,
+                            score=r.score,
+                            attributes=r.attributes,
                         )
                         for r in item.results  # type: ignore[union-attr]
                     ]
@@ -1625,6 +1629,8 @@ class OpenAICompletion(BaseLLM):
             # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
+                if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
+                    return message.content
                 function_name = tool_call.function.name
 
                 try:
@@ -2009,7 +2015,13 @@ class OpenAICompletion(BaseLLM):
 
             # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
+                from openai.types.chat.chat_completion_message_function_tool_call import (
+                    ChatCompletionMessageFunctionToolCall,
+                )
+
                 tool_call = message.tool_calls[0]
+                if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
+                    return message.content
                 function_name = tool_call.function.name
 
                 try:

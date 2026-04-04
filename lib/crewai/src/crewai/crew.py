@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from opentelemetry.trace import Span
 
     from crewai.context import ExecutionContext
+    from crewai.state.provider.core import BaseProvider
 
 try:
     from crewai_files import get_supported_content_types
@@ -234,7 +235,7 @@ class Crew(FlowTrackable, BaseModel):
     manager_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     manager_agent: Annotated[
         BaseAgent | None,
@@ -243,7 +244,7 @@ class Crew(FlowTrackable, BaseModel):
     function_calling_llm: Annotated[
         str | LLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
@@ -296,7 +297,7 @@ class Crew(FlowTrackable, BaseModel):
     planning_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(
         default=None,
         description=(
@@ -321,7 +322,7 @@ class Crew(FlowTrackable, BaseModel):
     chat_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
@@ -353,6 +354,97 @@ class Crew(FlowTrackable, BaseModel):
     checkpoint_train: bool | None = Field(default=None)
     checkpoint_kickoff_event_id: str | None = Field(default=None)
 
+    @classmethod
+    def from_checkpoint(
+        cls, path: str, *, provider: BaseProvider | None = None
+    ) -> Crew:
+        """Restore a Crew from a checkpoint file, ready to resume via kickoff().
+
+        Args:
+            path: Path to a checkpoint JSON file.
+            provider: Storage backend to read from. Defaults to JsonProvider.
+
+        Returns:
+            A Crew instance. Call kickoff() to resume from the last completed task.
+        """
+        from crewai.context import apply_execution_context
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.runtime import RuntimeState
+
+        state = RuntimeState.from_checkpoint(
+            path,
+            provider=provider or JsonProvider(),
+            context={"from_checkpoint": True},
+        )
+        crewai_event_bus.set_runtime_state(state)
+        for entity in state.root:
+            if isinstance(entity, cls):
+                if entity.execution_context is not None:
+                    apply_execution_context(entity.execution_context)
+                entity._restore_runtime()
+                return entity
+        raise ValueError(f"No Crew found in checkpoint: {path}")
+
+    def _restore_runtime(self) -> None:
+        """Re-create runtime objects after restoring from a checkpoint."""
+        for agent in self.agents:
+            agent.crew = self
+            executor = agent.agent_executor
+            if executor and executor.messages:
+                executor.crew = self
+                executor.agent = agent
+                executor._resuming = True
+            else:
+                agent.agent_executor = None
+        for task in self.tasks:
+            if task.agent is not None:
+                for agent in self.agents:
+                    if agent.role == task.agent.role:
+                        task.agent = agent
+                        if agent.agent_executor is not None and task.output is None:
+                            agent.agent_executor.task = task
+                        break
+        if self.checkpoint_inputs is not None:
+            self._inputs = self.checkpoint_inputs
+        if self.checkpoint_kickoff_event_id is not None:
+            self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        if self.checkpoint_train is not None:
+            self._train = self.checkpoint_train
+
+        self._restore_event_scope()
+
+    def _restore_event_scope(self) -> None:
+        """Rebuild the event scope stack from the checkpoint's event record."""
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.event_context import (
+            SCOPE_ENDING_EVENTS,
+            SCOPE_STARTING_EVENTS,
+            restore_event_scope,
+            set_last_event_id,
+        )
+
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            return
+
+        stack: list[tuple[str, str]] = []
+        last_event_id: str | None = None
+        for node in sorted(
+            state.event_record.nodes.values(),
+            key=lambda n: n.event.emission_sequence or 0,
+        ):
+            evt = node.event
+            last_event_id = evt.event_id
+            if evt.type in SCOPE_STARTING_EVENTS:
+                stack.append((evt.event_id, evt.type))
+            elif evt.type in SCOPE_ENDING_EVENTS and stack:
+                stack.pop()
+
+        restore_event_scope(tuple(stack))
+        if last_event_id is not None:
+            set_last_event_id(last_event_id)
+
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
@@ -381,7 +473,8 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
-        self._cache_handler = CacheHandler()
+        if not getattr(self, "_cache_handler", None):
+            self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
         # Determine and set tracing state once for this execution
@@ -1055,6 +1148,10 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+        custom_start = self._get_execution_start_index(tasks)
+        if custom_start is not None:
+            start_index = custom_start
+
         task_outputs: list[TaskOutput] = []
         pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
@@ -1236,7 +1333,12 @@ class Crew(FlowTrackable, BaseModel):
         manager.crew = self
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
-        return None
+        if self.checkpoint_kickoff_event_id is None:
+            return None
+        for i, task in enumerate(tasks):
+            if task.output is None:
+                return i
+        return len(tasks) if tasks else None
 
     def _execute_tasks(
         self,

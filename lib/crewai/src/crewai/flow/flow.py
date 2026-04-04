@@ -121,6 +121,7 @@ if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
+    from crewai.state.provider.core import BaseProvider
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
@@ -919,6 +920,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     max_method_calls: int = Field(default=100)
 
     execution_context: ExecutionContext | None = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(
+        cls, path: str, *, provider: BaseProvider | None = None
+    ) -> Flow:  # type: ignore[type-arg]
+        """Restore a Flow from a checkpoint file."""
+        from crewai.context import apply_execution_context
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.runtime import RuntimeState
+
+        state = RuntimeState.from_checkpoint(
+            path,
+            provider=provider or JsonProvider(),
+            context={"from_checkpoint": True},
+        )
+        crewai_event_bus.set_runtime_state(state)
+        for entity in state.root:
+            if isinstance(entity, cls):
+                if entity.execution_context is not None:
+                    apply_execution_context(entity.execution_context)
+                return entity
+        raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
+
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)

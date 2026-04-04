@@ -2,37 +2,39 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel, Field, PrivateAttr
+
 from crewai.agents.parser import AgentFinish
 from crewai.memory.utils import sanitize_scope_name
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
     from crewai.task import Task
     from crewai.utilities.i18n import I18N
-    from crewai.utilities.types import LLMMessage
 
 
-class CrewAgentExecutorMixin:
-    crew: Crew | None
-    agent: Agent
-    task: Task | None
-    iterations: int
-    max_iter: int
-    messages: list[LLMMessage]
-    _i18n: I18N
-    _printer: Printer = Printer()
+class BaseAgentExecutor(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+
+    crew: Crew | None = Field(default=None, exclude=True)
+    agent: BaseAgent | None = Field(default=None, exclude=True)
+    task: Task | None = Field(default=None, exclude=True)
+    iterations: int = Field(default=0)
+    max_iter: int = Field(default=25)
+    messages: list[LLMMessage] = Field(default_factory=list)
+    _resuming: bool = PrivateAttr(default=False)
+    _i18n: I18N | None = PrivateAttr(default=None)
+    _printer: Printer = PrivateAttr(default_factory=Printer)
 
     def _save_to_memory(self, output: AgentFinish) -> None:
-        """Save task result to unified memory (memory or crew._memory).
-
-        Extends the memory's root_scope with agent-specific path segment
-        (e.g., '/crew/research-crew/agent/researcher') so that agent memories
-        are scoped hierarchically under their crew.
-        """
+        """Save task result to unified memory (memory or crew._memory)."""
+        if self.agent is None:
+            return
         memory = getattr(self.agent, "memory", None) or (
             getattr(self.crew, "_memory", None) if self.crew else None
         )
@@ -49,11 +51,9 @@ class CrewAgentExecutorMixin:
             )
             extracted = memory.extract_memories(raw)
             if extracted:
-                # Get the memory's existing root_scope
                 base_root = getattr(memory, "root_scope", None)
 
                 if isinstance(base_root, str) and base_root:
-                    # Memory has a root_scope — extend it with agent info
                     agent_role = self.agent.role or "unknown"
                     sanitized_role = sanitize_scope_name(agent_role)
                     agent_root = f"{base_root.rstrip('/')}/agent/{sanitized_role}"
@@ -63,7 +63,6 @@ class CrewAgentExecutorMixin:
                         extracted, agent_role=self.agent.role, root_scope=agent_root
                     )
                 else:
-                    # No base root_scope — don't inject one, preserve backward compat
                     memory.remember_many(extracted, agent_role=self.agent.role)
         except Exception as e:
             self.agent._logger.log("error", f"Failed to save to memory: {e}")

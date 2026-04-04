@@ -40,7 +40,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.experimental.agent_executor import AgentExecutor
@@ -431,7 +431,7 @@ def get_llm_response(
     tools: list[dict[str, Any]] | None = None,
     available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
-    from_agent: Agent | LiteAgent | None = None,
+    from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
     verbose: bool = True,
@@ -468,7 +468,7 @@ def get_llm_response(
             callbacks=callbacks,
             available_functions=available_functions,
             from_task=from_task,
-            from_agent=from_agent,  # type: ignore[arg-type]
+            from_agent=from_agent,
             response_model=response_model,
         )
     except Exception as e:
@@ -487,7 +487,7 @@ async def aget_llm_response(
     tools: list[dict[str, Any]] | None = None,
     available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
-    from_agent: Agent | LiteAgent | None = None,
+    from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | AgentExecutor | None = None,
     verbose: bool = True,
@@ -524,7 +524,7 @@ async def aget_llm_response(
             callbacks=callbacks,
             available_functions=available_functions,
             from_task=from_task,
-            from_agent=from_agent,  # type: ignore[arg-type]
+            from_agent=from_agent,
             response_model=response_model,
         )
     except Exception as e:
@@ -1363,7 +1363,7 @@ def execute_single_native_tool_call(
     original_tools: list[BaseTool],
     structured_tools: list[CrewStructuredTool] | None,
     tools_handler: ToolsHandler | None,
-    agent: Agent | None,
+    agent: BaseAgent | None,
     task: Task | None,
     crew: Any | None,
     event_source: Any,

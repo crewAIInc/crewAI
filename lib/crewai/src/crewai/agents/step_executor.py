@@ -48,7 +48,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
@@ -88,7 +88,7 @@ class StepExecutor:
         self,
         llm: BaseLLM,
         tools: list[CrewStructuredTool],
-        agent: Agent,
+        agent: BaseAgent,
         original_tools: list[BaseTool] | None = None,
         tools_handler: ToolsHandler | None = None,
         task: Task | None = None,

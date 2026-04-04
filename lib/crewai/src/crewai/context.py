@@ -90,7 +90,7 @@ class ExecutionContext(BaseModel):
     flow_id: str | None = Field(default=None)
     flow_method_name: str = Field(default="unknown")
 
-    event_id_stack: tuple[tuple[str, str], ...] = Field(default=())
+    event_id_stack: tuple[tuple[str, str], ...] = Field(default_factory=tuple)
     last_event_id: str | None = Field(default=None)
     triggering_event_id: str | None = Field(default=None)
     emission_sequence: int = Field(default=0)
