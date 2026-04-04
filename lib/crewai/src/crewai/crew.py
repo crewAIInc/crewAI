@@ -1298,6 +1298,8 @@ class Crew(FlowTrackable, BaseModel):
         manager.crew = self
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
+        if self.checkpoint_kickoff_event_id is None:
+            return None
         for i, task in enumerate(tasks):
             if task.output is None:
                 return i if i > 0 else None

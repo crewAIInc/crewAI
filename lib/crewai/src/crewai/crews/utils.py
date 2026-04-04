@@ -284,7 +284,7 @@ def prepare_kickoff(
     )
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
-    resuming = crew._kickoff_event_id is not None
+    resuming = crew.checkpoint_kickoff_event_id is not None
 
     if not resuming and get_current_parent_id() is None:
         reset_emission_counter()
