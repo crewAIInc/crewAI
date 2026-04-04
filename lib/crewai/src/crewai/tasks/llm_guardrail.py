@@ -41,7 +41,7 @@ class LLMGuardrailResult(BaseModel):
         description="Whether the task output complies with the guardrail"
     )
     feedback: str | None = Field(
-        description="A feedback about the task output if it is not valid",
+        description="Feedback about the task output if it is not valid",
         default=None,
     )
 
@@ -50,11 +50,11 @@ class LLMGuardrail:
     """It validates the output of another task using an LLM.
 
     This class is used to validate the output from a Task based on specified criteria.
-    It uses an LLM to validate the output and provides a feedback if the output is not valid.
+    It uses an LLM to validate the output and provides feedback if the output is not valid.
 
     Args:
         description (str): The description of the validation criteria.
-        llm (LLM, optional): The language model to use for code generation.
+        llm (LLM, optional): The language model to use for validation.
     """
 
     def __init__(
@@ -70,7 +70,7 @@ class LLMGuardrail:
         agent = Agent(
             role="Guardrail Agent",
             goal="Validate the output of the task",
-            backstory="You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.",
+            backstory="You are an expert at validating the output of a task by providing effective feedback if the output is not valid.",
             llm=self.llm,
         )
 
@@ -87,7 +87,7 @@ class LLMGuardrail:
         - Confirm if the Task result complies with the guardrail.
         - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).
         - Focus only on identifying issues — do not propose corrections.
-        - If the Task result complies with the guardrail, saying that is valid
+        - If the Task result complies with the guardrail, say that it is valid
         """
 
         kickoff_result = agent.kickoff(query, response_format=LLMGuardrailResult)
