@@ -136,8 +136,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
     def __init__(self, i18n: I18N | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._i18n = i18n or get_i18n()
-        self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
-        self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
+        if not self.before_llm_call_hooks:
+            self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
+        if not self.after_llm_call_hooks:
+            self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
         if self.llm and not isinstance(self.llm, str):
             existing_stop = getattr(self.llm, "stop", [])
             self.llm.stop = list(
