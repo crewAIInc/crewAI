@@ -262,13 +262,23 @@ class CrewAIEventsBus:
             self._registered_entity_ids = {id(e) for e in state.root}
 
     def register_entity(self, entity: Any) -> None:
-        """Add an entity to the RuntimeState, creating it if needed."""
+        """Add an entity to the RuntimeState, creating it if needed.
+
+        Agents that belong to an already-registered Crew are tracked
+        but not appended to root, since they are serialized as part
+        of the Crew's agents list.
+        """
         eid = id(entity)
         if eid in self._registered_entity_ids:
             return
         with self._instance_lock:
             if eid in self._registered_entity_ids:
                 return
+            self._registered_entity_ids.add(eid)
+            if getattr(entity, "entity_type", None) == "agent":
+                crew = getattr(entity, "crew", None)
+                if crew is not None and id(crew) in self._registered_entity_ids:
+                    return
             if self._runtime_state is None:
                 from crewai import RuntimeState
 
@@ -280,7 +290,6 @@ class CrewAIEventsBus:
                 self._runtime_state = RuntimeState(root=[entity])
             else:
                 self._runtime_state.root.append(entity)
-            self._registered_entity_ids.add(eid)
 
     def off(
         self,
