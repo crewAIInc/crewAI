@@ -197,6 +197,7 @@ class Crew(FlowTrackable, BaseModel):
     _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
     _memory: Memory | MemoryScope | MemorySlice | None = PrivateAttr(default=None)
     _train: bool | None = PrivateAttr(default=False)
+    _train_filename: str | None = PrivateAttr(default=None)
     _train_iteration: int | None = PrivateAttr()
     _inputs: dict[str, Any] | None = PrivateAttr(default=None)
     _logging_color: PrinterColor = PrivateAttr(
@@ -665,6 +666,7 @@ class Crew(FlowTrackable, BaseModel):
     def _setup_for_training(self, filename: str) -> None:
         """Sets up the crew for training."""
         self._train = True
+        self._train_filename = filename
 
         for task in self.tasks:
             task.human_input = True
