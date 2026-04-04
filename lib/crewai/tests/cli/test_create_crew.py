@@ -320,6 +320,137 @@ def test_create_folder_structure_rejects_reserved_names():
 @mock.patch("crewai.cli.create_crew.select_provider")
 @mock.patch("crewai.cli.create_crew.select_model")
 @mock.patch("click.prompt")
+def test_provider_param_not_shadowed_by_env_vars_loop(
+    mock_prompt,
+    mock_select_model,
+    mock_select_provider,
+    mock_get_provider_data,
+    mock_load_env_vars,
+    mock_copy_template,
+    mock_create_folder_structure,
+    tmp_path,
+):
+    """Test that the provider parameter is not overwritten by the ENV_VARS loop variable.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5270:
+    The for-loop iterating over ENV_VARS used `provider` as its loop variable,
+    which shadowed the `provider` function parameter. After the fix, the loop
+    uses `env_provider` instead, so the original parameter value is preserved.
+    """
+    crew_path = tmp_path / "test_crew"
+    crew_path.mkdir()
+    mock_create_folder_structure.return_value = (crew_path, "test_crew", "TestCrew")
+
+    # Simulate existing env vars that match the "openai" provider key
+    mock_load_env_vars.return_value = {"OPENAI_API_KEY": "sk-existing"}
+    mock_get_provider_data.return_value = {"openai": ["gpt-4"]}
+    mock_select_provider.return_value = "openai"
+    mock_select_model.return_value = "gpt-4"
+    mock_prompt.return_value = "fake-api-key"
+
+    # Patch click.confirm to accept the override prompt for existing provider
+    with mock.patch("click.confirm", return_value=True):
+        create_crew("Test Crew", provider="openai")
+
+    # The key assertion: select_provider should still be called because
+    # the provider parameter should retain its original value (not be
+    # overwritten by the last ENV_VARS key from the loop).
+    mock_select_provider.assert_called()
+
+
+@mock.patch("crewai.cli.create_crew.create_folder_structure")
+@mock.patch("crewai.cli.create_crew.copy_template")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+@mock.patch("crewai.cli.create_crew.get_provider_data")
+@mock.patch("crewai.cli.create_crew.select_provider")
+@mock.patch("crewai.cli.create_crew.select_model")
+@mock.patch("click.prompt")
+def test_provider_param_preserved_after_env_vars_loop_no_match(
+    mock_prompt,
+    mock_select_model,
+    mock_select_provider,
+    mock_get_provider_data,
+    mock_load_env_vars,
+    mock_copy_template,
+    mock_create_folder_structure,
+    tmp_path,
+):
+    """Test that provider parameter is preserved when no existing env var matches.
+
+    When no ENV_VARS key matches the loaded environment, existing_provider
+    should be None and the provider parameter should still hold its original
+    value (not the last key from the ENV_VARS dict).
+    """
+    crew_path = tmp_path / "test_crew"
+    crew_path.mkdir()
+    mock_create_folder_structure.return_value = (crew_path, "test_crew", "TestCrew")
+
+    # No existing env vars — the loop iterates all of ENV_VARS without breaking
+    mock_load_env_vars.return_value = {}
+    mock_get_provider_data.return_value = {"anthropic": ["claude-3-opus-20240229"]}
+    mock_select_provider.return_value = "anthropic"
+    mock_select_model.return_value = "claude-3-opus-20240229"
+    mock_prompt.return_value = "fake-api-key"
+
+    create_crew("Test Crew", provider="anthropic")
+
+    # Verify the function completed without errors and the provider selection
+    # proceeded correctly (the provider param was not corrupted by the loop)
+    mock_select_provider.assert_called()
+    mock_select_model.assert_called_once_with(
+        "anthropic", {"anthropic": ["claude-3-opus-20240229"]}
+    )
+
+
+@mock.patch("crewai.cli.create_crew.create_folder_structure")
+@mock.patch("crewai.cli.create_crew.copy_template")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+@mock.patch("crewai.cli.create_crew.get_provider_data")
+@mock.patch("crewai.cli.create_crew.select_provider")
+@mock.patch("crewai.cli.create_crew.select_model")
+@mock.patch("click.prompt")
+def test_existing_provider_detected_without_shadowing_provider_param(
+    mock_prompt,
+    mock_select_model,
+    mock_select_provider,
+    mock_get_provider_data,
+    mock_load_env_vars,
+    mock_copy_template,
+    mock_create_folder_structure,
+    tmp_path,
+):
+    """Test that existing_provider is correctly detected from env vars.
+
+    Ensures the loop correctly identifies an existing provider configuration
+    without corrupting the provider function parameter.
+    """
+    crew_path = tmp_path / "test_crew"
+    crew_path.mkdir()
+    mock_create_folder_structure.return_value = (crew_path, "test_crew", "TestCrew")
+
+    # Simulate existing ANTHROPIC_API_KEY in env
+    mock_load_env_vars.return_value = {"ANTHROPIC_API_KEY": "sk-ant-existing"}
+    mock_get_provider_data.return_value = {"openai": ["gpt-4"]}
+    mock_select_provider.return_value = "openai"
+    mock_select_model.return_value = "gpt-4"
+    mock_prompt.return_value = "fake-api-key"
+
+    # Patch click.confirm — user declines to override existing provider config
+    with mock.patch("click.confirm", return_value=False):
+        create_crew("Test Crew", provider="openai")
+
+    # When user declines to override, the function should return early
+    # and NOT call select_provider
+    mock_select_provider.assert_not_called()
+
+
+@mock.patch("crewai.cli.create_crew.create_folder_structure")
+@mock.patch("crewai.cli.create_crew.copy_template")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+@mock.patch("crewai.cli.create_crew.get_provider_data")
+@mock.patch("crewai.cli.create_crew.select_provider")
+@mock.patch("crewai.cli.create_crew.select_model")
+@mock.patch("click.prompt")
 def test_env_vars_are_uppercased_in_env_file(
     mock_prompt,
     mock_select_model,
