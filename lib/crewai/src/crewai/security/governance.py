@@ -116,7 +116,10 @@ class SubprocessPolicy(BaseModel):
                 f"Command '{cmd_basename}' is blocked by policy.",
             )
 
-        if self.allowed_commands is not None and cmd_basename not in self.allowed_commands:
+        if (
+            self.allowed_commands is not None
+            and cmd_basename not in self.allowed_commands
+        ):
             raise GovernanceError(
                 "subprocess",
                 f"Command '{cmd_basename}' is not in the allowed commands list: "
@@ -153,8 +156,7 @@ class HttpPolicy(BaseModel):
     allowed_domains: list[str] | None = Field(
         default=None,
         description=(
-            "Allowlist of domains. "
-            "If None, all domains are allowed (unless blocked)."
+            "Allowlist of domains. If None, all domains are allowed (unless blocked)."
         ),
     )
     blocked_domains: list[str] = Field(
@@ -176,9 +178,7 @@ class HttpPolicy(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    def validate_request(
-        self, url: str, method: str = "GET", **kwargs: Any
-    ) -> None:
+    def validate_request(self, url: str, method: str = "GET", **kwargs: Any) -> None:
         """Validate an HTTP request against this policy.
 
         Args:
@@ -243,8 +243,7 @@ class ToolPolicy(BaseModel):
     allowed_tools: list[str] | None = Field(
         default=None,
         description=(
-            "Allowlist of tool names. "
-            "If None, all tools are allowed (unless blocked)."
+            "Allowlist of tool names. If None, all tools are allowed (unless blocked)."
         ),
     )
     blocked_tools: list[str] = Field(
@@ -350,9 +349,7 @@ class GovernanceConfig(BaseModel):
         """
         self.subprocess_policy.validate_command(command, shell=shell, **kwargs)
 
-    def validate_http(
-        self, url: str, method: str = "GET", **kwargs: Any
-    ) -> None:
+    def validate_http(self, url: str, method: str = "GET", **kwargs: Any) -> None:
         """Validate an HTTP request.
 
         Args:
