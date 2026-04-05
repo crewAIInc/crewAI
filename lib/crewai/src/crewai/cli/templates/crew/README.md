@@ -4,7 +4,7 @@ Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.co
 
 ## Installation
 
-Ensure you have Python >=3.10 <3.14 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+Ensure you have Python installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
 
 First, if you haven't already, install uv:
 
@@ -47,8 +47,7 @@ The {{name}} Crew is composed of multiple AI agents, each with unique roles, goa
 
 For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
 - Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
+- Reach out to us through our [GitHub repository](https://github.com/crewAIInc/crewai)
 - [Chat with our docs](https://chatg.pt/DWjSBZn)
 
 Let's create wonders together with the power and simplicity of crewAI.
