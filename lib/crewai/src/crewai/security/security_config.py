@@ -9,12 +9,15 @@ The SecurityConfig class is the primary interface for managing security settings
 in CrewAI applications.
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Self
 
 from crewai.security.fingerprint import Fingerprint
+from crewai.security.governance import GovernanceConfig
 
 
 class SecurityConfig(BaseModel):
@@ -38,6 +41,13 @@ class SecurityConfig(BaseModel):
 
     fingerprint: Fingerprint = Field(
         default_factory=Fingerprint, description="Unique identifier for the component"
+    )
+    governance: GovernanceConfig = Field(
+        default_factory=GovernanceConfig,
+        description=(
+            "Governance policies for controlling subprocess execution, "
+            "HTTP requests, and tool invocations."
+        ),
     )
 
     @field_validator("fingerprint", mode="before")
@@ -64,7 +74,10 @@ class SecurityConfig(BaseModel):
         Returns:
             Dictionary representation of the security config
         """
-        return {"fingerprint": self.fingerprint.to_dict()}
+        return {
+            "fingerprint": self.fingerprint.to_dict(),
+            "governance": self.governance.model_dump(),
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
@@ -84,4 +97,11 @@ class SecurityConfig(BaseModel):
             else Fingerprint()
         )
 
-        return cls(fingerprint=fingerprint)
+        governance_data = data.get("governance")
+        governance = (
+            GovernanceConfig(**governance_data)
+            if governance_data
+            else GovernanceConfig()
+        )
+
+        return cls(fingerprint=fingerprint, governance=governance)

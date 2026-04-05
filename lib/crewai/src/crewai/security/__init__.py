@@ -8,7 +8,22 @@ This module provides security-related functionality for CrewAI, including:
 """
 
 from crewai.security.fingerprint import Fingerprint
+from crewai.security.governance import (
+    GovernanceConfig,
+    GovernanceError,
+    HttpPolicy,
+    SubprocessPolicy,
+    ToolPolicy,
+)
 from crewai.security.security_config import SecurityConfig
 
 
-__all__ = ["Fingerprint", "SecurityConfig"]
+__all__ = [
+    "Fingerprint",
+    "GovernanceConfig",
+    "GovernanceError",
+    "HttpPolicy",
+    "SecurityConfig",
+    "SubprocessPolicy",
+    "ToolPolicy",
+]

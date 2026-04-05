@@ -10,6 +10,7 @@ from crewai.hooks.tool_hooks import (
     get_before_tool_call_hooks,
 )
 from crewai.security.fingerprint import Fingerprint
+from crewai.security.governance import GovernanceError
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
@@ -95,6 +96,21 @@ async def aexecute_tool_and_check_finality(
     tool = tool_name_to_tool_map.get(sanitized_tool_name)
     if tool:
         tool_input = tool_calling.arguments if tool_calling.arguments else {}
+
+        # Governance policy check (OWASP ASI02: Tool Misuse & Exploitation)
+        if crew and hasattr(crew, "security_config"):
+            try:
+                crew.security_config.governance.validate_tool(
+                    sanitized_tool_name, tool_input
+                )
+            except GovernanceError as e:
+                blocked_message = (
+                    f"Tool execution blocked by governance policy. "
+                    f"Tool: {tool_calling.tool_name}. Reason: {e.detail}"
+                )
+                logger.log("warning", blocked_message)
+                return ToolResult(blocked_message, False)
+
         hook_context = ToolCallHookContext(
             tool_name=tool_calling.tool_name,
             tool_input=tool_input,
@@ -215,6 +231,21 @@ def execute_tool_and_check_finality(
     tool = tool_name_to_tool_map.get(sanitized_tool_name)
     if tool:
         tool_input = tool_calling.arguments if tool_calling.arguments else {}
+
+        # Governance policy check (OWASP ASI02: Tool Misuse & Exploitation)
+        if crew and hasattr(crew, "security_config"):
+            try:
+                crew.security_config.governance.validate_tool(
+                    sanitized_tool_name, tool_input
+                )
+            except GovernanceError as e:
+                blocked_message = (
+                    f"Tool execution blocked by governance policy. "
+                    f"Tool: {tool_calling.tool_name}. Reason: {e.detail}"
+                )
+                logger.log("warning", blocked_message)
+                return ToolResult(blocked_message, False)
+
         hook_context = ToolCallHookContext(
             tool_name=tool_calling.tool_name,
             tool_input=tool_input,

@@ -962,6 +962,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     structured_tool = structured
                     break
 
+        # Governance policy check (OWASP ASI02: Tool Misuse & Exploitation)
+        governance_blocked = False
+        if self.crew and hasattr(self.crew, "security_config"):
+            from crewai.security.governance import GovernanceError
+
+            try:
+                self.crew.security_config.governance.validate_tool(
+                    func_name, args_dict or {}
+                )
+            except GovernanceError as gov_err:
+                governance_blocked = True
+                result = (
+                    f"Tool execution blocked by governance policy. "
+                    f"Tool: {func_name}. Reason: {gov_err.detail}"
+                )
+
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
@@ -972,20 +988,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             crew=self.crew,
         )
         before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
-                    break
-        except Exception as hook_error:
-            if self.agent.verbose:
-                self._printer.print(
-                    content=f"Error in before_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        if not governance_blocked:
+            try:
+                for hook in before_hooks:
+                    hook_result = hook(before_hook_context)
+                    if hook_result is False:
+                        hook_blocked = True
+                        break
+            except Exception as hook_error:
+                if self.agent.verbose:
+                    self._printer.print(
+                        content=f"Error in before_tool_call hook: {hook_error}",
+                        color="red",
+                    )
 
-        if hook_blocked:
+        if governance_blocked:
+            result = result  # already set above
+        elif hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."

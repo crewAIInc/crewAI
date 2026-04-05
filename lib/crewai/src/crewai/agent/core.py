@@ -1216,16 +1216,32 @@ class Agent(BaseAgent):
                 self._logger.log("warning", f"Failed to inject date: {e!s}")
 
     def _validate_docker_installation(self) -> None:
-        """Check if Docker is installed and running."""
+        """Check if Docker is installed and running.
+
+        Validates the subprocess command against the agent's governance
+        policy before execution (OWASP ASI08: Uncontrolled Code Execution).
+        """
+        from crewai.security.governance import GovernanceError
+
         docker_path = shutil.which("docker")
         if not docker_path:
             raise RuntimeError(
                 f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}"
             )
 
+        command = [str(docker_path), "info"]
+
+        # Validate subprocess command against governance policy
+        try:
+            self.security_config.governance.validate_subprocess(command)
+        except GovernanceError as e:
+            raise RuntimeError(
+                f"Governance policy blocked Docker validation for agent '{self.role}': {e}"
+            ) from e
+
         try:
             subprocess.run(  # noqa: S603
-                [str(docker_path), "info"],
+                command,
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
