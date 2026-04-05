@@ -1,108 +1,260 @@
 ---
 title: "역할 기반 접근 제어 (RBAC)"
-description: "역할과 자동화별 가시성으로 crews, 도구, 데이터 접근을 제어합니다."
+description: "역할, 범위, 세분화된 권한으로 crews, 도구, 데이터 접근을 제어합니다."
 icon: "shield"
 mode: "wide"
 ---
 
 ## 개요
 
-CrewAI AOP의 RBAC는 **조직 수준 역할**과 **자동화(Automation) 수준 가시성**을 결합하여 안전하고 확장 가능한 접근 제어를 제공합니다.
+CrewAI AMP의 RBAC는 두 가지 계층을 통해 안전하고 확장 가능한 접근 관리를 제공합니다:
+
+1. **기능 권한** — 플랫폼 전반에서 각 역할이 수행할 수 있는 작업을 제어합니다 (관리, 읽기 또는 접근 불가)
+2. **엔티티 수준 권한** — 개별 자동화, 환경 변수, LLM 연결, Git 저장소에 대한 세분화된 접근 제어
 
 <Frame>
   <img src="/images/enterprise/users_and_roles.png" alt="CrewAI AMP RBAC 개요" />
-
 </Frame>
 
 ## 사용자와 역할
 
-워크스페이스의 각 구성원은 역할이 있으며, 이는 기능 접근 범위를 결정합니다.
+CrewAI 워크스페이스의 각 구성원에게는 역할이 할당되며, 이를 통해 다양한 기능에 대한 접근 범위가 결정됩니다.
 
 가능한 작업:
 
 - 사전 정의된 역할 사용 (Owner, Member)
-- 권한을 세분화한 커스텀 역할 생성
-- 설정 화면에서 언제든 역할 할당/변경
+- 특정 권한에 맞춘 커스텀 역할 생성
+- 설정 패널에서 언제든지 역할 할당
 
 설정 위치: Settings → Roles
 
 <Steps>
-  <Step title="Roles 열기">
-    <b>Settings → Roles</b>로 이동합니다.
+  <Step title="Roles 설정 열기">
+    CrewAI AMP에서 <b>Settings → Roles</b>로 이동합니다.
   </Step>
-  <Step title="역할 선택">
-    <b>Owner</b> 또는 <b>Member</b>를 사용하거나 <b>Create role</b>로 커스텀
-    역할을 만듭니다.
+  <Step title="역할 유형 선택">
+    사전 정의된 역할(<b>Owner</b>, <b>Member</b>)을 사용하거나{" "}
+    <b>Create role</b>을 클릭하여 커스텀 역할을 만듭니다.
   </Step>
   <Step title="멤버에 할당">
-    사용자들을 선택하여 역할을 지정합니다. 언제든 변경할 수 있습니다.
+    사용자를 선택하고 역할을 할당합니다. 언제든지 변경할 수 있습니다.
   </Step>
 </Steps>
 
+### 사전 정의된 역할
+
+| 역할       | 설명                                                                 |
+| :--------- | :------------------------------------------------------------------- |
+| **Owner**  | 모든 기능 및 설정에 대한 전체 접근 권한. 제한할 수 없습니다.            |
+| **Member** | 대부분의 기능에 대한 읽기 접근, 환경 변수, LLM 연결, Studio 프로젝트에 대한 관리 접근. 조직 설정이나 기본 설정은 수정할 수 없습니다. |
+
 ### 구성 요약
 
-| 영역          | 위치                               | 옵션                              |
+| 영역          | 설정 위치                          | 옵션                              |
 | :------------ | :--------------------------------- | :-------------------------------- |
-| 사용자 & 역할 | Settings → Roles                   | Owner, Member; 커스텀 역할        |
+| 사용자 & 역할 | Settings → Roles                   | 사전 정의: Owner, Member; 커스텀 역할 |
 | 자동화 가시성 | Automation → Settings → Visibility | Private; 사용자/역할 화이트리스트 |
 
-## 자동화 수준 접근 제어
+---
 
-조직 역할과 별개로, **Automations**는 사용자/역할별로 특정 자동화 접근을 제한하는 가시성 설정을 제공합니다.
+## 기능 권한 매트릭스
 
-유용한 경우:
+각 역할에는 기능 영역별 권한 수준이 있습니다. 세 가지 수준은 다음과 같습니다:
 
-- 민감/실험 자동화를 비공개로 유지
-- 대규모 팀/외부 협업에서 가시성 관리
+- **Manage** — 전체 읽기/쓰기 접근 (생성, 편집, 삭제)
+- **Read** — 읽기 전용 접근
+- **No access** — 기능이 숨겨지거나 접근 불가
+
+| 기능                        | Owner   | Member (기본값)  | 사용 가능한 수준            | 설명                                                           |
+| :-------------------------- | :------ | :--------------- | :------------------------- | :------------------------------------------------------------- |
+| `usage_dashboards`          | Manage  | Read             | Manage / Read / No access  | 사용 메트릭 및 분석 보기                                        |
+| `crews_dashboards`          | Manage  | Read             | Manage / Read / No access  | 배포 대시보드 보기, 자동화 세부 정보 접근                        |
+| `invitations`               | Manage  | Read             | Manage / Read / No access  | 조직에 새 멤버 초대                                             |
+| `training_ui`               | Manage  | Read             | Manage / Read / No access  | 훈련/파인튜닝 인터페이스 접근                                    |
+| `tools`                     | Manage  | Read             | Manage / Read / No access  | 도구 생성 및 관리                                               |
+| `agents`                    | Manage  | Read             | Manage / Read / No access  | 에이전트 생성 및 관리                                           |
+| `environment_variables`     | Manage  | Manage           | Manage / No access         | 환경 변수 생성 및 관리                                          |
+| `llm_connections`           | Manage  | Manage           | Manage / No access         | LLM 제공자 연결 구성                                            |
+| `default_settings`          | Manage  | No access        | Manage / No access         | 조직 전체 기본 설정 수정                                        |
+| `organization_settings`     | Manage  | No access        | Manage / No access         | 결제, 플랜 및 조직 구성 관리                                    |
+| `studio_projects`           | Manage  | Manage           | Manage / No access         | Studio에서 프로젝트 생성 및 편집                                 |
+
+<Tip>
+  커스텀 역할을 만들 때 대부분의 기능은 **Manage**, **Read** 또는 **No access**로 설정할 수 있습니다. 그러나 `environment_variables`, `llm_connections`, `default_settings`, `organization_settings`, `studio_projects`는 **Manage** 또는 **No access**만 지원합니다 — 이 기능들에는 읽기 전용 옵션이 없습니다.
+</Tip>
+
+---
+
+## GitHub 또는 Zip에서 배포
+
+가장 흔한 RBAC 질문 중 하나: _"팀원이 배포하려면 어떤 권한이 필요한가요?"_
+
+### GitHub에서 배포
+
+GitHub 저장소에서 자동화를 배포하려면 사용자에게 다음이 필요합니다:
+
+1. **`crews_dashboards`**: 최소 `Read` — 배포가 생성되는 자동화 대시보드에 접근하는 데 필요
+2. **Git 저장소 접근** (Git 저장소에 대한 엔티티 수준 RBAC가 활성화된 경우): 사용자의 역할에 엔티티 수준 권한을 통해 특정 Git 저장소에 대한 접근이 부여되어야 함
+3. **`studio_projects`: `Manage`** — 배포 전에 Studio에서 crew를 빌드하는 경우
+
+### Zip에서 배포
+
+Zip 파일 업로드로 자동화를 배포하려면 사용자에게 다음이 필요합니다:
+
+1. **`crews_dashboards`**: 최소 `Read` — 자동화 대시보드에 접근하는 데 필요
+2. **Zip 배포 활성화**: 조직이 조직 설정에서 Zip 배포를 비활성화하지 않아야 함
+
+### 빠른 참조: 배포에 필요한 최소 권한
+
+| 작업                 | 필요한 기능 권한                      | 추가 요구사항                                     |
+| :------------------- | :----------------------------------- | :----------------------------------------------- |
+| GitHub에서 배포      | `crews_dashboards: Read`             | Git 저장소 엔티티 접근 (Git RBAC 활성화 시)        |
+| Zip에서 배포         | `crews_dashboards: Read`             | 조직 수준에서 Zip 배포가 활성화되어야 함           |
+| Studio에서 빌드      | `studio_projects: Manage`            | —                                                |
+| LLM 키 구성          | `llm_connections: Manage`            | —                                                |
+| 환경 변수 설정        | `environment_variables: Manage`      | 엔티티 수준 접근 (엔티티 RBAC 활성화 시)           |
+
+---
+
+## 자동화 수준 접근 제어 (엔티티 권한)
+
+조직 전체 역할 외에도, CrewAI는 개별 리소스에 대한 접근을 제한하는 세분화된 엔티티 수준 권한을 지원합니다.
+
+### 자동화 가시성
+
+자동화는 사용자 또는 역할별로 접근을 제한하는 가시성 설정을 지원합니다. 다음과 같은 경우에 유용합니다:
+
+- 민감하거나 실험적인 자동화를 비공개로 유지
+- 대규모 팀이나 외부 협업자의 가시성 관리
 - 격리된 컨텍스트에서 자동화 테스트
 
-Private 모드에서는 화이트리스트에 포함된 사용자/역할만 다음 작업이 가능합니다:
+배포를 비공개로 구성할 수 있으며, 이 경우 화이트리스트에 포함된 사용자와 역할만 상호작용할 수 있습니다.
 
-- 자동화 보기
-- 실행/API 사용
-- 로그, 메트릭, 설정 접근
-
-조직 Owner는 항상 접근 가능하며, 가시성 설정에 영향을 받지 않습니다.
-
-설정 위치: Automation → Settings → Visibility
+설정 위치: Automation → Settings → Visibility 탭
 
 <Steps>
   <Step title="Visibility 탭 열기">
     <b>Automation → Settings → Visibility</b>로 이동합니다.
   </Step>
   <Step title="가시성 설정">
-    <b>Private</b>를 선택합니다. Owner는 항상 접근 가능합니다.
+    접근을 제한하려면 <b>Private</b>를 선택합니다. 조직 Owner는 항상
+    접근 권한을 유지합니다.
   </Step>
-  <Step title="허용 대상 추가">
-    보기/실행/로그·메트릭·설정 접근이 가능한 사용자/역할을 추가합니다.
+  <Step title="접근 허용 대상 추가">
+    보기, 실행, 로그/메트릭/설정 접근이 허용된 특정 사용자와 역할을
+    추가합니다.
   </Step>
   <Step title="저장 및 확인">
-    저장 후, 목록에 없는 사용자가 보거나 실행할 수 없는지 확인합니다.
+    변경 사항을 저장한 후, 화이트리스트에 없는 사용자가 자동화를 보거나 실행할 수
+    없는지 확인합니다.
   </Step>
 </Steps>
 
-### Private 모드 접근 결과
+### Private 가시성: 접근 결과
 
-| 동작             | Owner | 화이트리스트 사용자/역할 | 비포함 |
-| :--------------- | :---- | :----------------------- | :----- |
-| 자동화 보기      | ✓     | ✓                        | ✗      |
-| 실행/API         | ✓     | ✓                        | ✗      |
-| 로그/메트릭/설정 | ✓     | ✓                        | ✗      |
+| 동작                   | Owner | 화이트리스트 사용자/역할 | 비포함 |
+| :--------------------- | :---- | :----------------------- | :----- |
+| 자동화 보기            | ✓     | ✓                        | ✗      |
+| 자동화/API 실행        | ✓     | ✓                        | ✗      |
+| 로그/메트릭/설정 접근  | ✓     | ✓                        | ✗      |
 
 <Tip>
-  Owner는 항상 접근 가능하며, Private 모드에서는 화이트리스트에 포함된
-  사용자/역할만 권한이 부여됩니다.
+  조직 Owner는 항상 접근 권한이 있습니다. Private 모드에서는 화이트리스트에 포함된
+  사용자/역할만 보기, 실행, 로그/메트릭/설정에 접근할 수 있습니다.
 </Tip>
 
 <Frame>
-  <img src="/images/enterprise/visibility.png" alt="CrewAI AMP 가시성 설정" />
-
+  <img src="/images/enterprise/visibility.png" alt="CrewAI AMP 자동화 가시성 설정" />
 </Frame>
+
+### 배포 권한 유형
+
+특정 자동화에 엔티티 수준 접근을 부여할 때 다음 권한 유형을 할당할 수 있습니다:
+
+| 권한                 | 허용 범위                                            |
+| :------------------- | :-------------------------------------------------- |
+| `run`                | 자동화 실행 및 API 사용                               |
+| `traces`             | 실행 트레이스 및 로그 보기                             |
+| `manage_settings`    | 자동화 편집, 재배포, 롤백 또는 삭제                     |
+| `human_in_the_loop`  | HITL(human-in-the-loop) 요청에 응답                   |
+| `full_access`        | 위의 모든 권한                                        |
+
+### 기타 리소스에 대한 엔티티 수준 RBAC
+
+엔티티 수준 RBAC가 활성화되면 다음 리소스에 대한 접근도 사용자 또는 역할별로 제어할 수 있습니다:
+
+| 리소스             | 제어 방식                           | 설명                                                          |
+| :----------------- | :---------------------------------- | :------------------------------------------------------------ |
+| 환경 변수          | 엔티티 RBAC 기능 플래그              | 특정 환경 변수를 보거나 관리할 수 있는 역할/사용자 제한          |
+| LLM 연결           | 엔티티 RBAC 기능 플래그              | 특정 LLM 제공자 구성에 대한 접근 제한                           |
+| Git 저장소         | Git 저장소 RBAC 조직 설정            | 특정 연결된 저장소에 접근할 수 있는 역할/사용자 제한             |
+
+---
+
+## 일반적인 역할 패턴
+
+CrewAI는 Owner와 Member 역할을 기본 제공하지만, 대부분의 팀은 커스텀 역할을 만들어 활용합니다. 일반적인 패턴은 다음과 같습니다:
+
+### Developer 역할
+
+자동화를 빌드하고 배포하지만 조직 설정을 관리하지 않는 팀원을 위한 역할입니다.
+
+| 기능                        | 권한        |
+| :-------------------------- | :---------- |
+| `usage_dashboards`          | Read        |
+| `crews_dashboards`          | Manage      |
+| `invitations`               | Read        |
+| `training_ui`               | Read        |
+| `tools`                     | Manage      |
+| `agents`                    | Manage      |
+| `environment_variables`     | Manage      |
+| `llm_connections`           | Manage      |
+| `default_settings`          | No access   |
+| `organization_settings`     | No access   |
+| `studio_projects`           | Manage      |
+
+### Viewer / Stakeholder 역할
+
+자동화를 모니터링하고 결과를 확인해야 하는 비기술 이해관계자를 위한 역할입니다.
+
+| 기능                        | 권한        |
+| :-------------------------- | :---------- |
+| `usage_dashboards`          | Read        |
+| `crews_dashboards`          | Read        |
+| `invitations`               | No access   |
+| `training_ui`               | Read        |
+| `tools`                     | Read        |
+| `agents`                    | Read        |
+| `environment_variables`     | No access   |
+| `llm_connections`           | No access   |
+| `default_settings`          | No access   |
+| `organization_settings`     | No access   |
+| `studio_projects`           | No access   |
+
+### Ops / Platform Admin 역할
+
+인프라 설정을 관리하지만 에이전트를 빌드하지 않을 수 있는 플랫폼 운영자를 위한 역할입니다.
+
+| 기능                        | 권한        |
+| :-------------------------- | :---------- |
+| `usage_dashboards`          | Manage      |
+| `crews_dashboards`          | Manage      |
+| `invitations`               | Manage      |
+| `training_ui`               | Read        |
+| `tools`                     | Read        |
+| `agents`                    | Read        |
+| `environment_variables`     | Manage      |
+| `llm_connections`           | Manage      |
+| `default_settings`          | Manage      |
+| `organization_settings`     | Read        |
+| `studio_projects`           | No access   |
+
+---
 
 <Card
   title="도움이 필요하신가요?"
   icon="headset"
   href="mailto:support@crewai.com"
 >
-  RBAC 구성과 점검에 대한 지원이 필요하면 연락해 주세요.
+  RBAC 관련 질문은 지원팀에 문의해 주세요.
 </Card>
