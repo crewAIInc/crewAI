@@ -4,6 +4,111 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 02, 2026">
+  ## v1.13.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0)
+
+  ## What's Changed
+
+  ### Features
+  - Add RuntimeState RootModel for unified state serialization
+  - Enhance event listener with new telemetry spans for skill and memory events
+  - Add A2UI extension with v0.8/v0.9 support, schemas, and docs
+  - Emit token usage data in LLMCallCompletedEvent
+  - Auto-update deployment test repo during release
+  - Improve enterprise release resilience and UX
+
+  ### Bug Fixes
+  - Add tool repository credentials to crewai install
+  - Add tool repository credentials to uv build in tool publish
+  - Pass fingerprint metadata via config instead of tool args
+  - Handle GPT-5.x models not supporting the `stop` API parameter
+  - Add GPT-5 and o-series to multimodal vision prefixes
+  - Bust uv cache for freshly published packages in enterprise release
+  - Cap lancedb below 0.30.1 for Windows compatibility
+  - Fix RBAC permission levels to match actual UI options
+  - Fix inaccuracies in agent-capabilities across all languages
+
+  ### Documentation
+  - Add coding agent skills demo video to getting started pages
+  - Add comprehensive SSO configuration guide
+  - Add comprehensive RBAC permissions matrix and deployment guide
+  - Update changelog and version for v1.13.0
+
+  ### Performance
+  - Reduce framework overhead with lazy event bus, skip tracing when disabled
+
+  ### Refactoring
+  - Convert Flow to Pydantic BaseModel
+  - Convert LLM classes to Pydantic BaseModel
+  - Replace InstanceOf[T] with plain type annotations
+  - Remove unused third_party LLM directory
+
+  ## Contributors
+
+  @alex-clawd, @dependabot[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="Apr 02, 2026">
+  ## v1.13.0a7
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a7)
+
+  ## What's Changed
+
+  ### Features
+  - Add A2UI extension with v0.8/v0.9 support, schemas, and docs
+
+  ### Bug Fixes
+  - Fix multimodal vision prefixes by adding GPT-5 and o-series
+
+  ### Documentation
+  - Update changelog and version for v1.13.0a6
+
+  ## Contributors
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="Apr 01, 2026">
+  ## v1.13.0a6
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a6)
+
+  ## What's Changed
+
+  ### Documentation
+  - Fix RBAC permission levels to match actual UI options (#5210)
+  - Update changelog and version for v1.13.0a5 (#5200)
+
+  ### Performance
+  - Reduce framework overhead by implementing a lazy event bus and skipping tracing when disabled (#5187)
+
+  ## Contributors
+
+  @alex-clawd, @joaomdmoura, @lucasgomide
+
+</Update>
+
+<Update label="Mar 31, 2026">
+  ## v1.13.0a5
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a5)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.13.0a4
+
+  ## Contributors
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
 <Update label="Apr 01, 2026">
   ## v1.13.0a4
 

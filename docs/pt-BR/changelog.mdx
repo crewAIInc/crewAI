@@ -4,6 +4,111 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="02 abr 2026">
+  ## v1.13.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar RuntimeState RootModel para serialização de estado unificado
+  - Melhorar o listener de eventos com novos spans de telemetria para eventos de habilidade e memória
+  - Adicionar extensão A2UI com suporte a v0.8/v0.9, esquemas e documentação
+  - Emitir dados de uso de token no LLMCallCompletedEvent
+  - Atualizar automaticamente o repositório de testes de implantação durante o lançamento
+  - Melhorar a resiliência e a experiência do usuário na versão empresarial
+
+  ### Correções de Bugs
+  - Adicionar credenciais do repositório de ferramentas ao crewai install
+  - Adicionar credenciais do repositório de ferramentas ao uv build na publicação de ferramentas
+  - Passar metadados de impressão digital via configuração em vez de argumentos de ferramenta
+  - Lidar com modelos GPT-5.x que não suportam o parâmetro API `stop`
+  - Adicionar GPT-5 e a série o aos prefixos de visão multimodal
+  - Limpar cache uv para pacotes recém-publicados na versão empresarial
+  - Limitar lancedb abaixo de 0.30.1 para compatibilidade com Windows
+  - Corrigir níveis de permissão RBAC para corresponder às opções reais da interface do usuário
+  - Corrigir imprecisões nas capacidades do agente em todos os idiomas
+
+  ### Documentação
+  - Adicionar vídeo de demonstração de habilidades do agente de codificação às páginas de introdução
+  - Adicionar guia abrangente de configuração SSO
+  - Adicionar matriz de permissões RBAC abrangente e guia de implantação
+  - Atualizar changelog e versão para v1.13.0
+
+  ### Desempenho
+  - Reduzir a sobrecarga do framework com bus de eventos preguiçoso, pular rastreamento quando desativado
+
+  ### Refatoração
+  - Converter Flow para Pydantic BaseModel
+  - Converter classes LLM para Pydantic BaseModel
+  - Substituir InstanceOf[T] por anotações de tipo simples
+  - Remover diretório LLM de terceiros não utilizado
+
+  ## Contribuidores
+
+  @alex-clawd, @dependabot[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="02 abr 2026">
+  ## v1.13.0a7
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a7)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar a extensão A2UI com suporte a v0.8/v0.9, esquemas e documentação
+
+  ### Correções de Bugs
+  - Corrigir prefixos de visão multimodal adicionando GPT-5 e o-series
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.13.0a6
+
+  ## Contribuidores
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="01 abr 2026">
+  ## v1.13.0a6
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a6)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Corrigir níveis de permissão RBAC para corresponder às opções reais da interface do usuário (#5210)
+  - Atualizar changelog e versão para v1.13.0a5 (#5200)
+
+  ### Desempenho
+  - Reduzir a sobrecarga do framework implementando um barramento de eventos preguiçoso e pulando o rastreamento quando desativado (#5187)
+
+  ## Contributors
+
+  @alex-clawd, @joaomdmoura, @lucasgomide
+
+</Update>
+
+<Update label="31 mar 2026">
+  ## v1.13.0a5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a5)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.13.0a4
+
+  ## Contributors
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
 <Update label="01 abr 2026">
   ## v1.13.0a4
 

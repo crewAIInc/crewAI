@@ -11,7 +11,7 @@ dependencies = [
     "pytube~=15.0.0",
     "requests~=2.32.5",
     "docker~=7.1.0",
-    "crewai==1.13.0a4",
+    "crewai==1.13.0",
     "tiktoken~=0.8.0",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
@@ -141,6 +141,9 @@ contextual = [
     "nest-asyncio>=1.6.0",
 ]
 
+
+[tool.uv]
+exclude-newer = "3 days"
 
 [build-system]
 requires = ["hatchling"]

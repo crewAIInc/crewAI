@@ -9,7 +9,8 @@ from pathlib import Path
 import sqlite3
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.utilities.lock_store import lock as store_lock
@@ -50,26 +51,22 @@ class SQLiteFlowPersistence(FlowPersistence):
         ```
     """
 
-    def __init__(self, db_path: str | None = None) -> None:
-        """Initialize SQLite persistence.
+    persistence_type: str = Field(default="SQLiteFlowPersistence")
+    db_path: str = Field(
+        default_factory=lambda: str(Path(db_storage_path()) / "flow_states.db")
+    )
+    _lock_name: str = PrivateAttr()
 
-        Args:
-            db_path: Path to the SQLite database file. If not provided, uses
-                    db_storage_path() from utilities.paths.
+    def __init__(self, db_path: str | None = None, /, **kwargs: Any) -> None:
+        if db_path is not None:
+            kwargs["db_path"] = db_path
+        super().__init__(**kwargs)
 
-        Raises:
-            ValueError: If db_path is invalid
-        """
-
-        # Get path from argument or default location
-        path = db_path or str(Path(db_storage_path()) / "flow_states.db")
-
-        if not path:
-            raise ValueError("Database path must be provided")
-
-        self.db_path = path  # Now mypy knows this is str
+    @model_validator(mode="after")
+    def _setup(self) -> Self:
         self._lock_name = f"sqlite:{os.path.realpath(self.db_path)}"
         self.init_db()
+        return self
 
     def init_db(self) -> None:
         """Create the necessary tables if they don't exist."""

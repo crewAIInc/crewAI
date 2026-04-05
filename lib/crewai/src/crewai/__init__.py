@@ -8,6 +8,7 @@ from pydantic import PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.context import ExecutionContext
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
@@ -15,6 +16,7 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
+from crewai.runtime_state import _entity_discriminator
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
@@ -44,7 +46,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.13.0a4"
+__version__ = "1.13.0"
 _telemetry_submitted = False
 
 
@@ -96,6 +98,10 @@ def __getattr__(name: str) -> Any:
 
 
 try:
+    from crewai.agents.agent_builder.base_agent import BaseAgent as _BaseAgent
+    from crewai.agents.agent_builder.base_agent_executor_mixin import (
+        CrewAgentExecutorMixin as _CrewAgentExecutorMixin,
+    )
     from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
     from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
     from crewai.hooks.llm_hooks import LLMCallHookContext as _LLMCallHookContext
@@ -105,27 +111,93 @@ try:
         SystemPromptResult as _SystemPromptResult,
     )
 
-    _AgentExecutor.model_rebuild(
-        force=True,
-        _types_namespace={
-            "Agent": Agent,
-            "ToolsHandler": _ToolsHandler,
-            "Crew": Crew,
-            "BaseLLM": BaseLLM,
-            "Task": Task,
-            "StandardPromptResult": _StandardPromptResult,
-            "SystemPromptResult": _SystemPromptResult,
-            "LLMCallHookContext": _LLMCallHookContext,
-            "ToolResult": _ToolResult,
-        },
-    )
+    _base_namespace: dict[str, type] = {
+        "Agent": Agent,
+        "BaseAgent": _BaseAgent,
+        "Crew": Crew,
+        "Flow": Flow,
+        "BaseLLM": BaseLLM,
+        "Task": Task,
+        "CrewAgentExecutorMixin": _CrewAgentExecutorMixin,
+        "ExecutionContext": ExecutionContext,
+    }
+
+    try:
+        from crewai.a2a.config import (
+            A2AClientConfig as _A2AClientConfig,
+            A2AConfig as _A2AConfig,
+            A2AServerConfig as _A2AServerConfig,
+        )
+
+        _base_namespace.update(
+            {
+                "A2AConfig": _A2AConfig,
+                "A2AClientConfig": _A2AClientConfig,
+                "A2AServerConfig": _A2AServerConfig,
+            }
+        )
+    except ImportError:
+        pass
+
+    import sys
+
+    _full_namespace = {
+        **_base_namespace,
+        "ToolsHandler": _ToolsHandler,
+        "StandardPromptResult": _StandardPromptResult,
+        "SystemPromptResult": _SystemPromptResult,
+        "LLMCallHookContext": _LLMCallHookContext,
+        "ToolResult": _ToolResult,
+    }
+
+    _resolve_namespace = {
+        **_full_namespace,
+        **sys.modules[_BaseAgent.__module__].__dict__,
+    }
+
+    for _mod_name in (
+        _BaseAgent.__module__,
+        Agent.__module__,
+        Crew.__module__,
+        Flow.__module__,
+        Task.__module__,
+        _AgentExecutor.__module__,
+    ):
+        sys.modules[_mod_name].__dict__.update(_resolve_namespace)
+
+    from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
+
+    _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
+    Task.model_rebuild(force=True, _types_namespace=_full_namespace)
+    _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
+    Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
+    Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
+    _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
+
+    from typing import Annotated
+
+    from pydantic import Discriminator, RootModel, Tag
+
+    Entity = Annotated[
+        Annotated[Flow, Tag("flow")]  # type: ignore[type-arg]
+        | Annotated[Crew, Tag("crew")]
+        | Annotated[Agent, Tag("agent")],
+        Discriminator(_entity_discriminator),
+    ]
+    RuntimeState = RootModel[list[Entity]]
+
+    try:
+        Agent.model_rebuild(force=True, _types_namespace=_full_namespace)
+    except PydanticUserError:
+        pass
 except (ImportError, PydanticUserError):
     import logging as _logging
 
     _logging.getLogger(__name__).warning(
-        "AgentExecutor.model_rebuild() failed; forward refs may be unresolved.",
+        "model_rebuild() failed; forward refs may be unresolved.",
         exc_info=True,
     )
+    RuntimeState = None  # type: ignore[assignment,misc]
 
 __all__ = [
     "LLM",
@@ -133,12 +205,14 @@ __all__ = [
     "BaseLLM",
     "Crew",
     "CrewOutput",
+    "ExecutionContext",
     "Flow",
     "Knowledge",
     "LLMGuardrail",
     "Memory",
     "PlanningConfig",
     "Process",
+    "RuntimeState",
     "Task",
     "TaskOutput",
     "__version__",

@@ -54,7 +54,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.13.0a4",
+    "crewai-tools==1.13.0",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -114,6 +114,9 @@ qdrant-edge = [
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+
+[tool.uv]
+exclude-newer = "3 days"
 
 # PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
 [[tool.uv.index]]

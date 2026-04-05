@@ -1,5 +1,7 @@
 from typing import Annotated, Final
 
+from pydantic_core import CoreSchema
+
 from crewai.utilities.printer import PrinterColor
 
 
@@ -35,6 +37,25 @@ class _NotSpecified:
 
     def __repr__(self) -> str:
         return "NOT_SPECIFIED"
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: object, _handler: object
+    ) -> CoreSchema:
+        from pydantic_core import core_schema
+
+        def _validate(v: object) -> _NotSpecified:
+            if isinstance(v, _NotSpecified) or v == "NOT_SPECIFIED":
+                return NOT_SPECIFIED
+            raise ValueError(f"Expected NOT_SPECIFIED sentinel, got {type(v).__name__}")
+
+        return core_schema.no_info_plain_validator_function(
+            _validate,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: "NOT_SPECIFIED",
+                info_arg=False,
+            ),
+        )
 
 
 NOT_SPECIFIED: Final[
