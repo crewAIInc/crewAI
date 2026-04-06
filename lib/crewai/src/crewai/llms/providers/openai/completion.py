@@ -1350,7 +1350,7 @@ class OpenAICompletion(BaseLLM):
                 result.web_search_results.append(
                     WebSearchResult(
                         id=item.id,
-                        status=item.status,  # type: ignore[union-attr]
+                        status=item.status,
                         type=item_type,
                     )
                 )
@@ -1359,23 +1359,23 @@ class OpenAICompletion(BaseLLM):
                 file_results: list[FileSearchResultItem] = (
                     [
                         FileSearchResultItem(
-                            file_id=r.file_id,  # type: ignore[union-attr]
-                            filename=r.filename,  # type: ignore[union-attr]
-                            text=r.text,  # type: ignore[union-attr]
-                            score=r.score,  # type: ignore[union-attr]
-                            attributes=r.attributes,  # type: ignore[union-attr]
+                            file_id=r.file_id,
+                            filename=r.filename,
+                            text=r.text,
+                            score=r.score,
+                            attributes=r.attributes,
                         )
-                        for r in item.results  # type: ignore[union-attr]
+                        for r in item.results
                     ]
-                    if item.results  # type: ignore[union-attr]
+                    if item.results
                     else []
                 )
                 result.file_search_results.append(
                     FileSearchResult(
                         id=item.id,
-                        status=item.status,  # type: ignore[union-attr]
+                        status=item.status,
                         type=item_type,
-                        queries=list(item.queries),  # type: ignore[union-attr]
+                        queries=list(item.queries),
                         results=file_results,
                     )
                 )
@@ -1384,15 +1384,15 @@ class OpenAICompletion(BaseLLM):
                 code_results: list[
                     CodeInterpreterLogResult | CodeInterpreterFileResult
                 ] = []
-                for r in item.results:  # type: ignore[union-attr]
-                    if r.type == "logs":  # type: ignore[union-attr]
+                for r in item.results:
+                    if r.type == "logs":
                         code_results.append(
-                            CodeInterpreterLogResult(type="logs", logs=r.logs)  # type: ignore[union-attr]
+                            CodeInterpreterLogResult(type="logs", logs=r.logs)
                         )
-                    elif r.type == "files":  # type: ignore[union-attr]
+                    elif r.type == "files":
                         files_data = [
                             {"file_id": f.file_id, "mime_type": f.mime_type}
-                            for f in r.files  # type: ignore[union-attr]
+                            for f in r.files
                         ]
                         code_results.append(
                             CodeInterpreterFileResult(type="files", files=files_data)
@@ -1400,49 +1400,49 @@ class OpenAICompletion(BaseLLM):
                 result.code_interpreter_results.append(
                     CodeInterpreterResult(
                         id=item.id,
-                        status=item.status,  # type: ignore[union-attr]
+                        status=item.status,
                         type=item_type,
-                        code=item.code,  # type: ignore[union-attr]
-                        container_id=item.container_id,  # type: ignore[union-attr]
+                        code=item.code,
+                        container_id=item.container_id,
                         results=code_results,
                     )
                 )
 
             elif item_type == "computer_call":
-                action_dict = item.action.model_dump() if item.action else {}  # type: ignore[union-attr]
+                action_dict = item.action.model_dump() if item.action else {}
                 safety_checks = [
                     {"id": c.id, "code": c.code, "message": c.message}
-                    for c in item.pending_safety_checks  # type: ignore[union-attr]
+                    for c in item.pending_safety_checks
                 ]
                 result.computer_use_results.append(
                     ComputerUseResult(
                         id=item.id,
-                        status=item.status,  # type: ignore[union-attr]
+                        status=item.status,
                         type=item_type,
-                        call_id=item.call_id,  # type: ignore[union-attr]
+                        call_id=item.call_id,
                         action=action_dict,
                         pending_safety_checks=safety_checks,
                     )
                 )
 
             elif item_type == "reasoning":
-                summaries = [{"type": s.type, "text": s.text} for s in item.summary]  # type: ignore[union-attr]
+                summaries = [{"type": s.type, "text": s.text} for s in item.summary]
                 result.reasoning_summaries.append(
                     ReasoningSummary(
                         id=item.id,
-                        status=item.status,  # type: ignore[union-attr]
+                        status=item.status,
                         type=item_type,
                         summary=summaries,
-                        encrypted_content=item.encrypted_content,  # type: ignore[union-attr]
+                        encrypted_content=item.encrypted_content,
                     )
                 )
 
             elif item_type == "function_call":
                 result.function_calls.append(
                     {
-                        "id": item.call_id,  # type: ignore[union-attr]
-                        "name": item.name,  # type: ignore[union-attr]
-                        "arguments": item.arguments,  # type: ignore[union-attr]
+                        "id": item.call_id,
+                        "name": item.name,
+                        "arguments": item.arguments,
                     }
                 )
 
@@ -1625,6 +1625,8 @@ class OpenAICompletion(BaseLLM):
             # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
+                if not hasattr(tool_call, "function") or tool_call.function is None:
+                    raise ValueError(f"Unsupported tool call type: {type(tool_call).__name__}")
                 function_name = tool_call.function.name
 
                 try:
@@ -2010,6 +2012,8 @@ class OpenAICompletion(BaseLLM):
             # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
+                if not hasattr(tool_call, "function") or tool_call.function is None:
+                    raise ValueError(f"Unsupported tool call type: {type(tool_call).__name__}")
                 function_name = tool_call.function.name
 
                 try:
