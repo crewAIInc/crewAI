@@ -64,15 +64,12 @@ class SqliteProvider(BaseProvider):
             A location string in the format ``"db_path#checkpoint_id"``.
         """
         checkpoint_id, ts = _make_id()
-        conn = sqlite3.connect(directory)
-        try:
+        with sqlite3.connect(directory) as conn:
             conn.execute(_CREATE_TABLE)
             conn.execute(_INSERT, (checkpoint_id, ts, data))
             if self.max_checkpoints is not None:
                 conn.execute(_PRUNE, (self.max_checkpoints,))
             conn.commit()
-        finally:
-            conn.close()
         return f"{directory}#{checkpoint_id}"
 
     async def acheckpoint(self, data: str, directory: str) -> str:
@@ -107,15 +104,12 @@ class SqliteProvider(BaseProvider):
             ValueError: If the checkpoint ID is not found.
         """
         db_path, checkpoint_id = location.rsplit("#", 1)
-        conn = sqlite3.connect(db_path)
-        try:
+        with sqlite3.connect(db_path) as conn:
             row = conn.execute(_SELECT, (checkpoint_id,)).fetchone()
             if row is None:
                 raise ValueError(f"Checkpoint not found: {checkpoint_id}")
             result: str = row[0]
             return result
-        finally:
-            conn.close()
 
     async def afrom_checkpoint(self, location: str) -> str:
         """Read a checkpoint from the SQLite database asynchronously.
