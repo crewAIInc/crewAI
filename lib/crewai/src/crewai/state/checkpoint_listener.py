@@ -50,10 +50,20 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
 
 
 def _do_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
-    """Write a checkpoint and optionally prune old files."""
+    """Write a checkpoint synchronously and optionally prune old files."""
     _prepare_entities(state.root)
     data = state.model_dump_json()
     cfg.provider.checkpoint(data, cfg.directory)
+
+    if cfg.max_checkpoints is not None:
+        _prune(cfg.directory, cfg.max_checkpoints)
+
+
+async def _ado_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
+    """Write a checkpoint asynchronously and optionally prune old files."""
+    _prepare_entities(state.root)
+    data = state.model_dump_json()
+    await cfg.provider.acheckpoint(data, cfg.directory)
 
     if cfg.max_checkpoints is not None:
         _prune(cfg.directory, cfg.max_checkpoints)
@@ -74,17 +84,20 @@ def _prune(directory: str, max_keep: int) -> None:
         _safe_remove(path)
 
 
-def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
-    """Handler registered on every event class.
-
-    Checks whether the source entity (or its parent crew/agent) has a
-    ``checkpoint`` whose ``trigger_events`` includes this event's
-    type string.  If so, writes a checkpoint.
-    """
+def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None:
+    """Return the CheckpointConfig if this event should trigger a checkpoint."""
     cfg = _find_checkpoint(source)
     if cfg is None:
-        return
+        return None
     if not cfg.trigger_all and event.type not in cfg.trigger_events:
+        return None
+    return cfg
+
+
+def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
+    """Sync handler registered on every event class."""
+    cfg = _should_checkpoint(source, event)
+    if cfg is None:
         return
     try:
         _do_checkpoint(state, cfg)
@@ -92,8 +105,19 @@ def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
         logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
 
 
+async def _on_any_event_async(source: Any, event: BaseEvent, state: Any) -> None:
+    """Async handler registered on every event class."""
+    cfg = _should_checkpoint(source, event)
+    if cfg is None:
+        return
+    try:
+        await _ado_checkpoint(state, cfg)
+    except Exception:
+        logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
+
+
 def setup_checkpoint_handlers(event_bus: CrewAIEventsBus) -> None:
-    """Register the checkpoint handler on all known event classes."""
+    """Register sync and async checkpoint handlers on all known event classes."""
     seen: set[type] = set()
 
     def _collect(cls: type[BaseEvent]) -> None:
@@ -107,6 +131,7 @@ def setup_checkpoint_handlers(event_bus: CrewAIEventsBus) -> None:
                     and type_field.default != "base_event"
                 ):
                     event_bus.register_handler(sub, _on_any_event)
+                    event_bus.register_handler(sub, _on_any_event_async)
                 _collect(sub)
 
     _collect(BaseEvent)
