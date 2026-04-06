@@ -343,27 +343,28 @@ flow.kickoff()
 
 ### مدخلات الملفات
 
-عند استخدام الحالة المهيكلة، يمكنك تضمين حقول من نوع الملف باستخدام فئات من `crewai-files`. هذا يتيح رفع الملفات كجزء من مدخلات التدفق الخاص بك:
+عند استخدام الحالة المهيكلة، يمكنك تضمين حقول من نوع الملف باستخدام فئات من `crewai-files`. تعمل الحقول من نوع الملف في حالة التدفق كإشارة للمنصة — فهي تُعرض تلقائيًا كمناطق سحب وإفلات لرفع الملفات في واجهة علامة تبويب Run ويتم تعبئتها عند رفع الملفات عبر المنصة أو تمريرها عبر `input_files` في API.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile, PDFFile
+from crewai_files import File, ImageFile, PDFFile
 from pydantic import BaseModel
 
-class OnboardingState(BaseModel):
-    document: PDFFile        # File upload
-    cover_image: ImageFile   # Image upload
-    title: str = ""          # Text input
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform
+    title: str = ""
 
-class OnboardingFlow(Flow[OnboardingState]):
+class MyFlow(Flow[MyState]):
     @start()
-    def process_upload(self):
-        # Access files directly from state
-        print(f"Processing: {self.state.title}")
-        return self.state.document
+    def process(self):
+        # File object is automatically populated in state
+        # when uploaded via Platform UI or passed via API
+        content = self.state.document.read()
+        print(f"Processing {self.state.title}: {len(content)} bytes")
+        return content
 ```
 
-عند النشر على **منصة CrewAI**، تُعرض الحقول من نوع الملف تلقائيًا كمناطق سحب وإفلات لرفع الملفات في واجهة المستخدم. يمكن للمستخدمين سحب وإفلات الملفات، والتي تُمرر بعد ذلك إلى التدفق الخاص بك.
+عند النشر على **منصة CrewAI**، تُعرض الحقول من نوع الملف (`File`، `ImageFile`، `PDFFile` من `crewai-files`) تلقائيًا كمناطق سحب وإفلات لرفع الملفات في واجهة المستخدم. يمكن للمستخدمين سحب وإفلات الملفات، والتي تُملأ بعد ذلك في حالة التدفق الخاص بك.
 
 **بدء التشغيل مع الملفات عبر API:**
 

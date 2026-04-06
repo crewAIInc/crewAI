@@ -86,6 +86,60 @@ curl -H "Authorization: Bearer YOUR_CREW_TOKEN" https://your-crew-url.crewai.com
 
 Seu bearer token está disponível na aba Status na página de detalhes do seu crew.
 
+## Upload de Arquivos
+
+Quando seu crew ou flow inclui campos de estado tipados como arquivo (usando `ImageFile`, `PDFFile` ou `File` do `crewai-files`), esses campos são renderizados automaticamente como zonas de upload de arquivos na aba Run da interface. Os usuários podem arrastar e soltar arquivos diretamente, e a Plataforma gerencia o armazenamento e entrega para seus agentes.
+
+### Kickoff Multipart (Recomendado)
+
+Envie arquivos diretamente com a requisição de kickoff usando `multipart/form-data`:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"title": "Report"}' \
+  -F 'document=@/path/to/file.pdf'
+```
+
+Os arquivos são armazenados automaticamente e convertidos em objetos de arquivo. O agente recebe o arquivo com otimização específica do provedor (base64 inline, API de upload de arquivo ou referência por URL dependendo do provedor LLM).
+
+### Kickoff JSON com URLs de Arquivos
+
+Se você já tem arquivos hospedados em URLs, passe-os via `input_files`:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "inputs": {"title": "Report"},
+    "input_files": {"document": "https://example.com/file.pdf"}
+  }'
+```
+
+### Upload Separado + Kickoff
+
+Faça upload dos arquivos primeiro e depois referencie-os por URL:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/file.pdf' \
+  -F 'field_name=document'
+# Returns: {"url": "https://...", "field_name": "document"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"title": "Report"}, "input_files": {"document": "https://..."}}'
+```
+
+<Note type="info">
+O upload de arquivos funciona da mesma forma tanto para crews quanto para flows. Defina campos tipados como arquivo no seu esquema de estado, e a interface da Plataforma e a API tratarão os uploads automaticamente.
+</Note>
+
 ### Verificando o Status do Crew
 
 Antes de executar operações, você pode verificar se seu crew está funcionando corretamente:

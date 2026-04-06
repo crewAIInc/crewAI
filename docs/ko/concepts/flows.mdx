@@ -336,27 +336,28 @@ CrewAI Flows는 비구조적 및 구조적 상태 관리 옵션을 모두 제공
 
 ### 파일 입력
 
-구조화된 상태를 사용할 때, `crewai-files`의 클래스를 사용하여 파일 타입 필드를 포함할 수 있습니다. 이를 통해 flow의 입력으로 파일 업로드가 가능합니다:
+구조화된 상태를 사용할 때, `crewai-files`의 클래스를 사용하여 파일 타입 필드를 포함할 수 있습니다. flow 상태의 파일 타입 필드는 플랫폼에 대한 신호 역할을 합니다 — Run 탭 UI에서 자동으로 파일 업로드 드롭존으로 렌더링되며, 플랫폼을 통해 파일을 업로드하거나 API에서 `input_files`를 통해 전달할 때 자동으로 채워집니다.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile, PDFFile
+from crewai_files import File, ImageFile, PDFFile
 from pydantic import BaseModel
 
-class OnboardingState(BaseModel):
-    document: PDFFile        # File upload
-    cover_image: ImageFile   # Image upload
-    title: str = ""          # Text input
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform
+    title: str = ""
 
-class OnboardingFlow(Flow[OnboardingState]):
+class MyFlow(Flow[MyState]):
     @start()
-    def process_upload(self):
-        # Access files directly from state
-        print(f"Processing: {self.state.title}")
-        return self.state.document
+    def process(self):
+        # File object is automatically populated in state
+        # when uploaded via Platform UI or passed via API
+        content = self.state.document.read()
+        print(f"Processing {self.state.title}: {len(content)} bytes")
+        return content
 ```
 
-**CrewAI 플랫폼**에 배포하면 파일 타입 필드가 UI에서 자동으로 파일 업로드 드롭존으로 렌더링됩니다. 사용자는 파일을 드래그 앤 드롭할 수 있으며, 해당 파일은 flow로 전달됩니다.
+**CrewAI 플랫폼**에 배포하면 파일 타입 필드(`crewai-files`의 `File`, `ImageFile`, `PDFFile`)가 UI에서 자동으로 파일 업로드 드롭존으로 렌더링됩니다. 사용자는 파일을 드래그 앤 드롭할 수 있으며, 해당 파일은 flow의 상태에 자동으로 채워집니다.
 
 **API를 통한 파일 포함 시작:**
 

@@ -175,27 +175,28 @@ Ao oferecer as duas opções de gerenciamento de estado, o CrewAI Flows permite 
 
 ### Entradas de Arquivos
 
-Ao usar estado estruturado, você pode incluir campos tipados como arquivo usando classes do `crewai-files`. Isso habilita uploads de arquivos como parte da entrada do seu flow:
+Ao usar estado estruturado, você pode incluir campos tipados como arquivo usando classes do `crewai-files`. Campos tipados como arquivo no estado do seu flow servem como sinal para a Plataforma — eles são renderizados automaticamente como zonas de upload de arquivos na aba Run da interface e são preenchidos quando arquivos são enviados via Plataforma ou passados via `input_files` na API.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile, PDFFile
+from crewai_files import File, ImageFile, PDFFile
 from pydantic import BaseModel
 
-class OnboardingState(BaseModel):
-    document: PDFFile        # File upload
-    cover_image: ImageFile   # Image upload
-    title: str = ""          # Text input
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform
+    title: str = ""
 
-class OnboardingFlow(Flow[OnboardingState]):
+class MyFlow(Flow[MyState]):
     @start()
-    def process_upload(self):
-        # Access files directly from state
-        print(f"Processing: {self.state.title}")
-        return self.state.document
+    def process(self):
+        # File object is automatically populated in state
+        # when uploaded via Platform UI or passed via API
+        content = self.state.document.read()
+        print(f"Processing {self.state.title}: {len(content)} bytes")
+        return content
 ```
 
-Quando implantado na **Plataforma CrewAI**, campos tipados como arquivo são renderizados automaticamente como zonas de upload de arquivos na interface. Os usuários podem arrastar e soltar arquivos, que são então passados para o seu flow.
+Quando implantado na **Plataforma CrewAI**, campos tipados como arquivo (`File`, `ImageFile`, `PDFFile` do `crewai-files`) são renderizados automaticamente como zonas de upload de arquivos na interface. Os usuários podem arrastar e soltar arquivos, que são então preenchidos no estado do seu flow.
 
 **Iniciando com arquivos via API:**
 

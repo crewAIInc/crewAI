@@ -86,6 +86,60 @@ curl -H "Authorization: Bearer YOUR_CREW_TOKEN" https://your-crew-url.crewai.com
 
 베어러 토큰은 crew의 상세 페이지의 Status 탭에서 확인할 수 있습니다.
 
+## 파일 업로드
+
+crew나 flow에 파일 타입 상태 필드(`crewai-files`의 `ImageFile`, `PDFFile`, 또는 `File` 사용)가 포함되어 있으면, 이러한 필드는 Run 탭 UI에서 자동으로 파일 업로드 드롭존으로 렌더링됩니다. 사용자는 파일을 직접 드래그 앤 드롭할 수 있으며, 플랫폼이 저장 및 에이전트 전달을 처리합니다.
+
+### Multipart Kickoff (권장)
+
+`multipart/form-data`를 사용하여 kickoff 요청과 함께 파일을 직접 전송합니다:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"title": "Report"}' \
+  -F 'document=@/path/to/file.pdf'
+```
+
+파일은 자동으로 저장되고 파일 객체로 변환됩니다. 에이전트는 프로바이더별 최적화(LLM 프로바이더에 따라 인라인 base64, 파일 업로드 API 또는 URL 참조)와 함께 파일을 수신합니다.
+
+### 파일 URL을 포함한 JSON Kickoff
+
+이미 URL에 호스팅된 파일이 있다면 `input_files`를 통해 전달합니다:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "inputs": {"title": "Report"},
+    "input_files": {"document": "https://example.com/file.pdf"}
+  }'
+```
+
+### 분리된 업로드 + Kickoff
+
+먼저 파일을 업로드한 다음 URL로 참조합니다:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/file.pdf' \
+  -F 'field_name=document'
+# Returns: {"url": "https://...", "field_name": "document"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"title": "Report"}, "input_files": {"document": "https://..."}}'
+```
+
+<Note type="info">
+파일 업로드는 crew와 flow 모두에서 동일하게 작동합니다. 상태 스키마에 파일 타입 필드를 정의하면 플랫폼 UI와 API가 자동으로 업로드를 처리합니다.
+</Note>
+
 ### 크루 상태 확인
 
 작업을 실행하기 전에 크루가 정상적으로 실행되고 있는지 확인할 수 있습니다:

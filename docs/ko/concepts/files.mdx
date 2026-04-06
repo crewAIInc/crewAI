@@ -117,20 +117,28 @@ task = Task(
 
 ### Flow와 함께
 
-flow에 파일을 전달하면 자동으로 crew에 상속됩니다:
+flow의 상태 스키마에 있는 파일 타입 필드(`File`, `ImageFile`, `PDFFile`)는 플랫폼 UI에 대한 신호 역할을 합니다. 배포 시 이러한 필드는 파일 업로드 드롭존으로 렌더링됩니다. 파일은 API에서 `input_files`를 통해서도 전달할 수 있습니다.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile
+from crewai_files import File, ImageFile
+from pydantic import BaseModel
 
-class AnalysisFlow(Flow):
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform UI
+    cover_image: ImageFile   # Image-specific dropzone
+    title: str = ""
+
+class AnalysisFlow(Flow[MyState]):
     @start()
     def analyze(self):
+        # Files are automatically populated in state
+        content = self.state.document.read()
         return self.analysis_crew.kickoff()
 
 flow = AnalysisFlow()
 result = flow.kickoff(
-    input_files={"image": ImageFile(source="data.png")}
+    input_files={"document": File(source="report.pdf")}
 )
 ```
 

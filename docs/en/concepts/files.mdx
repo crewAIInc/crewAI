@@ -117,20 +117,28 @@ task = Task(
 
 ### With Flows
 
-Pass files to flows, which automatically inherit to crews:
+File-typed fields (`File`, `ImageFile`, `PDFFile`) in your flow's state schema serve as the signal to the Platform UI. When deployed, these fields render as file upload dropzones. Files can also be passed via `input_files` in the API.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile
+from crewai_files import File, ImageFile
+from pydantic import BaseModel
 
-class AnalysisFlow(Flow):
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform UI
+    cover_image: ImageFile   # Image-specific dropzone
+    title: str = ""
+
+class AnalysisFlow(Flow[MyState]):
     @start()
     def analyze(self):
+        # Files are automatically populated in state
+        content = self.state.document.read()
         return self.analysis_crew.kickoff()
 
 flow = AnalysisFlow()
 result = flow.kickoff(
-    input_files={"image": ImageFile(source="data.png")}
+    input_files={"document": File(source="report.pdf")}
 )
 ```
 

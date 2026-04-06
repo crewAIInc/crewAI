@@ -343,27 +343,28 @@ By providing both unstructured and structured state management options, CrewAI F
 
 ### File Inputs
 
-When using structured state, you can include file-typed fields using classes from `crewai-files`. This enables file uploads as part of your flow's input:
+When using structured state, you can include file-typed fields using classes from `crewai-files`. File-typed fields in your flow state serve as the signal to the Platform—they automatically render as file upload dropzones in the Run tab UI and get populated when files are uploaded via the Platform or passed via `input_files` in the API.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile, PDFFile
+from crewai_files import File, ImageFile, PDFFile
 from pydantic import BaseModel
 
-class OnboardingState(BaseModel):
-    document: PDFFile        # File upload
-    cover_image: ImageFile   # Image upload
-    title: str = ""          # Text input
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform
+    title: str = ""
 
-class OnboardingFlow(Flow[OnboardingState]):
+class MyFlow(Flow[MyState]):
     @start()
-    def process_upload(self):
-        # Access files directly from state
-        print(f"Processing: {self.state.title}")
-        return self.state.document
+    def process(self):
+        # File object is automatically populated in state
+        # when uploaded via Platform UI or passed via API
+        content = self.state.document.read()
+        print(f"Processing {self.state.title}: {len(content)} bytes")
+        return content
 ```
 
-When deployed on **CrewAI Platform**, file-typed fields automatically render as file upload dropzones in the UI. Users can drag and drop files, which are then passed to your flow.
+When deployed on **CrewAI Platform**, file-typed fields (`File`, `ImageFile`, `PDFFile` from `crewai-files`) automatically render as file upload dropzones in the UI. Users can drag and drop files, which are then populated into your flow's state.
 
 **Kicking off with files via API:**
 
