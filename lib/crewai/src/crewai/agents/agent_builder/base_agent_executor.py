@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class BaseAgentExecutor(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
+    executor_type: str = "base"
     crew: Crew | None = Field(default=None, exclude=True)
     agent: BaseAgent | None = Field(default=None, exclude=True)
     task: Task | None = Field(default=None, exclude=True)

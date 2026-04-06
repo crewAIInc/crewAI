@@ -343,6 +343,7 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
+    llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
     timeout: float | int | None = None
     top_p: float | None = None

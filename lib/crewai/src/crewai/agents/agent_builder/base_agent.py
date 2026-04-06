@@ -64,11 +64,26 @@ def _serialize_crew_ref(value: Any) -> str | None:
     return str(value.id) if hasattr(value, "id") else str(value)
 
 
+_LLM_TYPE_REGISTRY: dict[str, str] = {
+    "base": "crewai.llms.base_llm.BaseLLM",
+    "litellm": "crewai.llm.LLM",
+    "openai": "crewai.llms.providers.openai.completion.OpenAICompletion",
+    "anthropic": "crewai.llms.providers.anthropic.completion.AnthropicCompletion",
+    "azure": "crewai.llms.providers.azure.completion.AzureCompletion",
+    "bedrock": "crewai.llms.providers.bedrock.completion.BedrockCompletion",
+    "gemini": "crewai.llms.providers.gemini.completion.GeminiCompletion",
+}
+
+
 def _validate_llm_ref(value: Any) -> Any:
     if isinstance(value, dict):
-        from crewai.llm import LLM
+        import importlib
 
-        return LLM(**value)
+        llm_type = value["llm_type"]
+        dotted = _LLM_TYPE_REGISTRY[llm_type]
+        mod_path, cls_name = dotted.rsplit(".", 1)
+        cls = getattr(importlib.import_module(mod_path), cls_name)
+        return cls(**value)
     return value
 
 
@@ -80,11 +95,22 @@ def _resolve_agent(value: Any, info: Any) -> Any:
     return Agent.model_validate(value, context=getattr(info, "context", None))
 
 
+_EXECUTOR_TYPE_REGISTRY: dict[str, str] = {
+    "base": "crewai.agents.agent_builder.base_agent_executor.BaseAgentExecutor",
+    "crew": "crewai.agents.crew_agent_executor.CrewAgentExecutor",
+    "experimental": "crewai.experimental.agent_executor.AgentExecutor",
+}
+
+
 def _validate_executor_ref(value: Any) -> Any:
     if isinstance(value, dict):
-        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        import importlib
 
-        return CrewAgentExecutor.model_validate(value)
+        executor_type = value["executor_type"]
+        dotted = _EXECUTOR_TYPE_REGISTRY[executor_type]
+        mod_path, cls_name = dotted.rsplit(".", 1)
+        cls = getattr(importlib.import_module(mod_path), cls_name)
+        return cls.model_validate(value)
     return value
 
 

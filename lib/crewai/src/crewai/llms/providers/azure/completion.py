@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, PrivateAttr, model_validator
@@ -74,6 +74,7 @@ class AzureCompletion(BaseLLM):
     offering native function calling, streaming support, and proper Azure authentication.
     """
 
+    llm_type: Literal["azure"] = "azure"
     endpoint: str | None = None
     api_version: str | None = None
     timeout: float | None = None

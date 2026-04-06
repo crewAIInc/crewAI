@@ -170,6 +170,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
     _skip_auto_memory: bool = True
 
+    executor_type: Literal["experimental"] = "experimental"
     suppress_flow_events: bool = True  # always suppress for executor
     llm: BaseLLM = Field(exclude=True)
     prompt: SystemPromptResult | StandardPromptResult = Field(exclude=True)

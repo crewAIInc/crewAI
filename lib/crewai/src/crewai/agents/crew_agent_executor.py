@@ -96,6 +96,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
     LLM interactions, tool execution, and feedback handling.
     """
 
+    executor_type: Literal["crew"] = "crew"
     llm: Annotated[
         BaseLLM | str | None,
         BeforeValidator(_validate_llm_ref),

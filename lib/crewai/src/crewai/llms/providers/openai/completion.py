@@ -180,6 +180,8 @@ class OpenAICompletion(BaseLLM):
             chain-of-thought without storing data on OpenAI servers.
     """
 
+    llm_type: Literal["openai"] = "openai"
+
     BUILTIN_TOOL_TYPES: ClassVar[dict[str, str]] = {
         "web_search": "web_search_preview",
         "file_search": "file_search",

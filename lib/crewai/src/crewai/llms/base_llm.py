@@ -117,6 +117,7 @@ class BaseLLM(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
+    llm_type: str = "base"
     model: str
     temperature: float | None = None
     api_key: str | None = None
