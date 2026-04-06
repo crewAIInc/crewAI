@@ -1,0 +1,145 @@
+---
+title: Checkpointing
+description: Automatically save execution state so crews, flows, and agents can resume after failures.
+icon: floppy-disk
+mode: "wide"
+---
+
+## Overview
+
+Checkpointing automatically saves execution state during a run. If a crew, flow, or agent fails mid-execution, you can restore from the last checkpoint and resume without re-running completed work.
+
+## Quick Start
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=True,  # uses defaults: ./checkpoints, on task_completed
+)
+result = crew.kickoff()
+```
+
+Checkpoint files are written to `./checkpoints/` after each completed task.
+
+## Configuration
+
+Use `CheckpointConfig` for full control:
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./my_checkpoints",
+        on_events=["task_completed", "crew_kickoff_completed"],
+        max_checkpoints=5,
+    ),
+)
+```
+
+### CheckpointConfig Fields
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `directory` | `str` | `"./checkpoints"` | Filesystem path for checkpoint files |
+| `on_events` | `list[str]` | `["task_completed"]` | Event types that trigger a checkpoint |
+| `provider` | `BaseProvider` | `JsonProvider()` | Storage backend |
+| `max_checkpoints` | `int \| None` | `None` | Max files to keep; oldest pruned first |
+
+## Resuming from a Checkpoint
+
+```python
+# Restore and resume
+crew = Crew.from_checkpoint("./my_checkpoints/20260407T120000_abc123.json")
+result = crew.kickoff()  # picks up from last completed task
+```
+
+The restored crew skips already-completed tasks and resumes from the first incomplete one.
+
+## Works on Crew, Flow, and Agent
+
+### Crew
+
+```python
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, write_task, review_task],
+    checkpoint=CheckpointConfig(directory="./crew_cp"),
+)
+```
+
+Default trigger: `task_completed` (one checkpoint per finished task).
+
+### Flow
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from crewai import CheckpointConfig
+
+class MyFlow(Flow):
+    @start()
+    def step_one(self):
+        return "data"
+
+    @listen(step_one)
+    def step_two(self, data):
+        return process(data)
+
+flow = MyFlow(
+    checkpoint=CheckpointConfig(
+        directory="./flow_cp",
+        on_events=["method_execution_finished"],
+    ),
+)
+result = flow.kickoff()
+
+# Resume
+flow = MyFlow.from_checkpoint("./flow_cp/20260407T120000_abc123.json")
+result = flow.kickoff()
+```
+
+### Agent
+
+```python
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    checkpoint=CheckpointConfig(
+        directory="./agent_cp",
+        on_events=["lite_agent_execution_completed"],
+    ),
+)
+result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
+```
+
+## Event Types
+
+The `on_events` field accepts any combination of event type strings. Common choices:
+
+| Use Case | Events |
+|:---------|:-------|
+| After each task (Crew) | `["task_completed"]` |
+| After each flow method | `["method_execution_finished"]` |
+| After agent execution | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
+| On crew completion only | `["crew_kickoff_completed"]` |
+| After every LLM call | `["llm_call_completed"]` |
+| On everything | `["*"]` |
+
+<Warning>
+Using `["*"]` or high-frequency events like `llm_call_completed` will write many checkpoint files and may impact performance. Use `max_checkpoints` to limit disk usage.
+</Warning>
+
+## How It Works
+
+1. When you set `checkpoint` on a Crew, Flow, or Agent, CrewAI registers an event listener on the event bus
+2. When a matching event fires, the listener serializes the full `RuntimeState` (entities + event record) to JSON
+3. The JSON is written to the configured directory via the storage provider
+4. On resume via `from_checkpoint()`, the state is deserialized and execution continues from where it left off
+
+Checkpointing is best-effort: if a checkpoint write fails, the error is logged but execution continues uninterrupted.
