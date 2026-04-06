@@ -103,7 +103,8 @@ def _prune(directory: str, max_keep: int) -> None:
     """Remove oldest checkpoint files beyond *max_keep*."""
     pattern = os.path.join(directory, "*.json")
     files = sorted(glob.glob(pattern), key=os.path.getmtime)
-    for path in files[:-max_keep]:
+    to_remove = files if max_keep == 0 else files[:-max_keep]
+    for path in to_remove:
         _safe_remove(path)
 
 
