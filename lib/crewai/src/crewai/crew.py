@@ -426,10 +426,26 @@ class Crew(FlowTrackable, BaseModel):
         if state is None:
             return
 
-        # Only restore the crew-level scope. Inner scopes (task, agent, llm)
-        # are re-created by the normal execution flow on resume.
+        # Restore crew scope and the in-progress task scope. Inner scopes
+        # (agent, llm, tool) are re-created by the executor on resume.
+        stack: list[tuple[str, str]] = []
         if self._kickoff_event_id:
-            restore_event_scope(((self._kickoff_event_id, "crew_kickoff_started"),))
+            stack.append((self._kickoff_event_id, "crew_kickoff_started"))
+
+        # Find the task_started event for the in-progress task (skipped on resume)
+        for task in self.tasks:
+            if task.output is None:
+                task_id_str = str(task.id)
+                for node in state.event_record.nodes.values():
+                    if (
+                        node.event.type == "task_started"
+                        and node.event.task_id == task_id_str
+                    ):
+                        stack.append((node.event.event_id, "task_started"))
+                        break
+                break
+
+        restore_event_scope(tuple(stack))
 
         # Set last_event_id to the most recent event in the record
         last_event_id: str | None = None
