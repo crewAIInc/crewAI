@@ -30,7 +30,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ class PlannerObserver:
 
     def __init__(
         self,
-        agent: Agent,
+        agent: BaseAgent,
         task: Task | None = None,
         kickoff_input: str = "",
     ) -> None:

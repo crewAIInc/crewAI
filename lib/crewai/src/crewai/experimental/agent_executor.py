@@ -1,3 +1,4 @@
+# mypy: disable-error-code="union-attr,arg-type"
 from __future__ import annotations
 
 import asyncio
@@ -21,7 +22,7 @@ from rich.console import Console
 from rich.text import Text
 from typing_extensions import Self
 
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -106,11 +107,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
-    from crewai.task import Task
     from crewai.tools.tool_types import ToolResult
     from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
@@ -155,7 +153,7 @@ class AgentExecutorState(BaseModel):
     )
 
 
-class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
+class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignore[pydantic-unexpected]
     """Agent Executor for both standalone agents and crew-bound agents.
 
     _skip_auto_memory prevents Flow from eagerly allocating a Memory
@@ -163,7 +161,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
     Inherits from:
     - Flow[AgentExecutorState]: Provides flow orchestration capabilities
-    - CrewAgentExecutorMixin: Provides memory methods (short/long/external term)
+    - BaseAgentExecutor: Provides memory methods (short/long/external term)
 
     This executor can operate in two modes:
     - Standalone mode: When crew and task are None (used by Agent.kickoff())
@@ -172,9 +170,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
     _skip_auto_memory: bool = True
 
+    executor_type: Literal["experimental"] = "experimental"
     suppress_flow_events: bool = True  # always suppress for executor
     llm: BaseLLM = Field(exclude=True)
-    agent: Agent = Field(exclude=True)
     prompt: SystemPromptResult | StandardPromptResult = Field(exclude=True)
     max_iter: int = Field(default=25, exclude=True)
     tools: list[CrewStructuredTool] = Field(default_factory=list, exclude=True)
@@ -182,8 +180,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
     stop_words: list[str] = Field(default_factory=list, exclude=True)
     tools_description: str = Field(default="", exclude=True)
     tools_handler: ToolsHandler | None = Field(default=None, exclude=True)
-    task: Task | None = Field(default=None, exclude=True)
-    crew: Crew | None = Field(default=None, exclude=True)
     step_callback: Any = Field(default=None, exclude=True)
     original_tools: list[BaseTool] = Field(default_factory=list, exclude=True)
     function_calling_llm: BaseLLM | None = Field(default=None, exclude=True)
@@ -268,17 +264,17 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """Get thread-safe state proxy."""
         return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
-    @property
+    @property  # type: ignore[misc]
     def iterations(self) -> int:
         """Compatibility property for mixin - returns state iterations."""
-        return self._state.iterations  # type: ignore[no-any-return]
+        return int(self._state.iterations)
 
     @iterations.setter
     def iterations(self, value: int) -> None:
         """Set state iterations."""
         self._state.iterations = value
 
-    @property
+    @property  # type: ignore[misc]
     def messages(self) -> list[LLMMessage]:
         """Compatibility property - returns state messages."""
         return self._state.messages  # type: ignore[no-any-return]
@@ -395,28 +391,28 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """
         config = self.agent.planning_config
         if config is not None:
-            return config.reasoning_effort
+            return str(config.reasoning_effort)
         return "medium"
 
     def _get_max_replans(self) -> int:
         """Get max replans from planning config or default to 3."""
         config = self.agent.planning_config
         if config is not None:
-            return config.max_replans
+            return int(config.max_replans)
         return 3
 
     def _get_max_step_iterations(self) -> int:
         """Get max step iterations from planning config or default to 15."""
         config = self.agent.planning_config
         if config is not None:
-            return config.max_step_iterations
+            return int(config.max_step_iterations)
         return 15
 
     def _get_step_timeout(self) -> int | None:
         """Get per-step timeout from planning config or default to None."""
         config = self.agent.planning_config
         if config is not None:
-            return config.step_timeout
+            return int(config.step_timeout) if config.step_timeout is not None else None
         return None
 
     def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:
@@ -1790,7 +1786,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -1864,7 +1860,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,

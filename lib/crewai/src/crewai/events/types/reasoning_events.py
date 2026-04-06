@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -24,7 +24,7 @@ class ReasoningEvent(BaseEvent):
 class AgentReasoningStartedEvent(ReasoningEvent):
     """Event emitted when an agent starts reasoning about a task."""
 
-    type: str = "agent_reasoning_started"
+    type: Literal["agent_reasoning_started"] = "agent_reasoning_started"
     agent_role: str
     task_id: str
 
@@ -32,7 +32,7 @@ class AgentReasoningStartedEvent(ReasoningEvent):
 class AgentReasoningCompletedEvent(ReasoningEvent):
     """Event emitted when an agent finishes its reasoning process."""
 
-    type: str = "agent_reasoning_completed"
+    type: Literal["agent_reasoning_completed"] = "agent_reasoning_completed"
     agent_role: str
     task_id: str
     plan: str
@@ -42,7 +42,7 @@ class AgentReasoningCompletedEvent(ReasoningEvent):
 class AgentReasoningFailedEvent(ReasoningEvent):
     """Event emitted when the reasoning process fails."""
 
-    type: str = "agent_reasoning_failed"
+    type: Literal["agent_reasoning_failed"] = "agent_reasoning_failed"
     agent_role: str
     task_id: str
     error: str

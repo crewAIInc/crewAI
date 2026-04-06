@@ -16,7 +16,6 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
-from crewai.runtime_state import _entity_discriminator
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
@@ -99,8 +98,8 @@ def __getattr__(name: str) -> Any:
 
 try:
     from crewai.agents.agent_builder.base_agent import BaseAgent as _BaseAgent
-    from crewai.agents.agent_builder.base_agent_executor_mixin import (
-        CrewAgentExecutorMixin as _CrewAgentExecutorMixin,
+    from crewai.agents.agent_builder.base_agent_executor import (
+        BaseAgentExecutor as _BaseAgentExecutor,
     )
     from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
     from crewai.experimental.agent_executor import AgentExecutor as _AgentExecutor
@@ -118,9 +117,17 @@ try:
         "Flow": Flow,
         "BaseLLM": BaseLLM,
         "Task": Task,
-        "CrewAgentExecutorMixin": _CrewAgentExecutorMixin,
+        "BaseAgentExecutor": _BaseAgentExecutor,
         "ExecutionContext": ExecutionContext,
+        "StandardPromptResult": _StandardPromptResult,
+        "SystemPromptResult": _SystemPromptResult,
     }
+
+    from crewai.tools.base_tool import BaseTool as _BaseTool
+    from crewai.tools.structured_tool import CrewStructuredTool as _CrewStructuredTool
+
+    _base_namespace["BaseTool"] = _BaseTool
+    _base_namespace["CrewStructuredTool"] = _CrewStructuredTool
 
     try:
         from crewai.a2a.config import (
@@ -155,36 +162,49 @@ try:
         **sys.modules[_BaseAgent.__module__].__dict__,
     }
 
+    import crewai.state.runtime as _runtime_state_mod
+
     for _mod_name in (
         _BaseAgent.__module__,
         Agent.__module__,
         Crew.__module__,
         Flow.__module__,
         Task.__module__,
+        "crewai.agents.crew_agent_executor",
+        _runtime_state_mod.__name__,
         _AgentExecutor.__module__,
     ):
         sys.modules[_mod_name].__dict__.update(_resolve_namespace)
 
+    from crewai.agents.crew_agent_executor import (
+        CrewAgentExecutor as _CrewAgentExecutor,
+    )
     from crewai.tasks.conditional_task import ConditionalTask as _ConditionalTask
 
+    _BaseAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     _BaseAgent.model_rebuild(force=True, _types_namespace=_full_namespace)
     Task.model_rebuild(force=True, _types_namespace=_full_namespace)
     _ConditionalTask.model_rebuild(force=True, _types_namespace=_full_namespace)
+    _CrewAgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
     Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
     Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
 
     from typing import Annotated
 
-    from pydantic import Discriminator, RootModel, Tag
+    from pydantic import Field
+
+    from crewai.state.runtime import RuntimeState
 
     Entity = Annotated[
-        Annotated[Flow, Tag("flow")]  # type: ignore[type-arg]
-        | Annotated[Crew, Tag("crew")]
-        | Annotated[Agent, Tag("agent")],
-        Discriminator(_entity_discriminator),
+        Flow | Crew | Agent,  # type: ignore[type-arg]
+        Field(discriminator="entity_type"),
     ]
-    RuntimeState = RootModel[list[Entity]]
+
+    RuntimeState.model_rebuild(
+        force=True,
+        _types_namespace={**_full_namespace, "Entity": Entity},
+    )
 
     try:
         Agent.model_rebuild(force=True, _types_namespace=_full_namespace)
@@ -205,6 +225,7 @@ __all__ = [
     "BaseLLM",
     "Crew",
     "CrewOutput",
+    "Entity",
     "ExecutionContext",
     "Flow",
     "Knowledge",

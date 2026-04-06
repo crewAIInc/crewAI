@@ -41,6 +41,7 @@ class GeminiCompletion(BaseLLM):
     offering native function calling, streaming support, and proper Gemini formatting.
     """
 
+    llm_type: Literal["gemini"] = "gemini"
     model: str = "gemini-2.0-flash-001"
     project: str | None = None
     location: str | None = None
