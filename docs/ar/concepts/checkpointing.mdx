@@ -144,6 +144,51 @@ agent = Agent(
 result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
 ```
 
+## مزودات التخزين
+
+يتضمن CrewAI مزودي تخزين لنقاط الحفظ.
+
+### JsonProvider (افتراضي)
+
+يكتب كل نقطة حفظ كملف JSON منفصل.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import JsonProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./my_checkpoints",
+        provider=JsonProvider(),
+        max_checkpoints=5,
+    ),
+)
+```
+
+### SqliteProvider
+
+يخزن جميع نقاط الحفظ في ملف قاعدة بيانات SQLite واحد.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import SqliteProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./.checkpoints.db",
+        provider=SqliteProvider(max_checkpoints=50),
+    ),
+)
+```
+
+<Note>
+عند استخدام `SqliteProvider`، حقل `directory` هو مسار ملف قاعدة البيانات، وليس مجلدا.
+</Note>
+
 ## انواع الاحداث
 
 يقبل حقل `on_events` اي مجموعة من سلاسل انواع الاحداث. الخيارات الشائعة:
