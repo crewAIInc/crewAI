@@ -16,6 +16,7 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
+from crewai.state.checkpoint_config import CheckpointConfig  # noqa: F401
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
@@ -210,6 +211,11 @@ try:
         Agent.model_rebuild(force=True, _types_namespace=_full_namespace)
     except PydanticUserError:
         pass
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.state.checkpoint_listener import setup_checkpoint_handlers
+
+    setup_checkpoint_handlers(crewai_event_bus)
 except (ImportError, PydanticUserError):
     import logging as _logging
 

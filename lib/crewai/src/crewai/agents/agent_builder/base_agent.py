@@ -39,6 +39,7 @@ from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
@@ -298,6 +299,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
+    )
+    checkpoint: CheckpointConfig | None = Field(
+        default=None,
+        description="Automatic checkpointing configuration. "
+        "When set, checkpoints are written on the specified event(s).",
     )
     callbacks: list[SerializableCallable] = Field(
         default_factory=list, description="Callbacks to be used for the agent"

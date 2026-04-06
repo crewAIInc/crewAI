@@ -104,6 +104,7 @@ from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -339,6 +340,11 @@ class Crew(FlowTrackable, BaseModel):
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
+    )
+    checkpoint: CheckpointConfig | None = Field(
+        default=None,
+        description="Automatic checkpointing configuration. "
+        "When set, checkpoints are written on the specified event(s).",
     )
     token_usage: UsageMetrics | None = Field(
         default=None,
