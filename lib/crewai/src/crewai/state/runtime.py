@@ -9,7 +9,7 @@ via ``RuntimeState.model_rebuild()``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any
 
 from pydantic import (
     ModelWrapValidatorHandler,
@@ -27,19 +27,6 @@ from crewai.state.provider.json_provider import JsonProvider
 
 if TYPE_CHECKING:
     from crewai import Entity
-
-
-class CheckpointPayload(TypedDict):
-    entities: list[Entity]
-    event_record: dict[str, Any]
-
-
-def _entity_discriminator(v: dict[str, Any] | object) -> str:
-    if isinstance(v, dict):
-        raw = v.get("entity_type", "agent")
-    else:
-        raw = getattr(v, "entity_type", "agent")
-    return str(raw)
 
 
 def _sync_checkpoint_fields(entity: object) -> None:
