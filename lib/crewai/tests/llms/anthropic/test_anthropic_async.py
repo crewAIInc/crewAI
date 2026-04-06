@@ -7,6 +7,9 @@ import tiktoken
 from pydantic import BaseModel
 
 from crewai.llm import LLM
+
+# Pre-cache tiktoken encoding so VCR doesn't intercept the download request
+tiktoken.get_encoding("cl100k_base")
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 
 
