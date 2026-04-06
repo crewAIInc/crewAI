@@ -61,7 +61,7 @@ class CrewStructuredTool(BaseModel):
 
     name: str = Field(default="")
     description: str = Field(default="")
-    args_schema: Any = Field(default=None)
+    args_schema: type[BaseModel] | None = Field(default=None)
     func: Any = Field(default=None, exclude=True)
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
@@ -179,6 +179,8 @@ class CrewStructuredTool(BaseModel):
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
+        if not self.args_schema:
+            return
         sig = inspect.signature(self.func)
         schema_fields = self.args_schema.model_fields
 
@@ -218,6 +220,8 @@ class CrewStructuredTool(BaseModel):
             except json.JSONDecodeError as e:
                 raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
 
+        if not self.args_schema:
+            return raw_args if isinstance(raw_args, dict) else {}
         try:
             validated_args = self.args_schema.model_validate(raw_args)
             return dict(validated_args.model_dump())
@@ -265,6 +269,8 @@ class CrewStructuredTool(BaseModel):
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Legacy method for compatibility."""
         # Convert args/kwargs to our expected format
+        if not self.args_schema:
+            return self.func(*args, **kwargs)
         input_dict = dict(zip(self.args_schema.model_fields.keys(), args, strict=False))
         input_dict.update(kwargs)
         return self.invoke(input_dict)
@@ -311,6 +317,8 @@ class CrewStructuredTool(BaseModel):
     @property
     def args(self) -> dict[str, Any]:
         """Get the tool's input arguments schema."""
+        if not self.args_schema:
+            return {}
         schema: dict[str, Any] = self.args_schema.model_json_schema()["properties"]
         return schema
 
