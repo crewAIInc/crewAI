@@ -48,7 +48,7 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
-from crewai.tools.base_tool import BaseTool
+from crewai.tools.base_tool import BaseTool, restore_tool_from_dict
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import Converter, convert_to_model
@@ -236,6 +236,21 @@ class Task(BaseModel):
     _original_output_file: str | None = PrivateAttr(default=None)
     _thread: threading.Thread | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
+
+    @field_validator("tools", mode="before")
+    @classmethod
+    def _restore_tools_from_checkpoint(
+        cls, tools: list[Any] | None
+    ) -> list[Any] | None:
+        if not tools:
+            return tools
+        restored: list[Any] = []
+        for tool in tools:
+            if isinstance(tool, dict) and "tool_type" in tool:
+                restored.append(restore_tool_from_dict(tool))
+            else:
+                restored.append(tool)
+        return restored
 
     @field_validator("guardrail")
     @classmethod

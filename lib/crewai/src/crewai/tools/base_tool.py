@@ -3,10 +3,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
+import importlib
 from inspect import Parameter, signature
 import json
 import threading
 from typing import (
+    Annotated,
     Any,
     Generic,
     ParamSpec,
@@ -19,13 +21,21 @@ from pydantic import (
     BaseModel as PydanticBaseModel,
     ConfigDict,
     Field,
+    PlainSerializer,
     PrivateAttr,
+    computed_field,
     create_model,
     field_validator,
 )
 from typing_extensions import TypeIs
 
-from crewai.tools.structured_tool import CrewStructuredTool, build_schema_hint
+from crewai.tools.structured_tool import (
+    CrewStructuredTool,
+    _deserialize_schema,
+    _serialize_schema,
+    build_schema_hint,
+)
+from crewai.types.callback import SerializableCallable, _resolve_dotted_path
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -35,6 +45,37 @@ _printer = Printer()
 
 P = ParamSpec("P")
 R = TypeVar("R", covariant=True)
+
+
+def restore_tool_from_dict(data: dict[str, Any]) -> BaseTool:
+    """Reconstruct a concrete ``BaseTool`` subclass from a checkpoint dict.
+
+    The dict must contain a ``tool_type`` key holding the fully qualified
+    class name (e.g. ``crewai_tools.tools.serper_dev_tool.SerperDevTool``).
+    The class is imported and instantiated with the remaining fields so that
+    its ``_run`` method is available.
+    """
+
+    data = dict(data)  # avoid mutating caller
+    dotted = data.pop("tool_type")
+    mod_path, cls_name = dotted.rsplit(".", 1)
+    cls = getattr(importlib.import_module(mod_path), cls_name)
+
+    for key in ("cache_function",):
+        val = data.get(key)
+        if isinstance(val, str):
+            try:
+                data[key] = _resolve_dotted_path(val)
+            except (ValueError, ImportError):
+                data.pop(key)
+
+    result: BaseTool = cls(**data)
+    return result
+
+
+def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
+    """Default cache function that always allows caching."""
+    return True
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
@@ -70,7 +111,10 @@ class BaseTool(BaseModel, ABC):
         default_factory=list,
         description="List of environment variables used by the tool.",
     )
-    args_schema: type[PydanticBaseModel] = Field(
+    args_schema: Annotated[
+        type[PydanticBaseModel],
+        PlainSerializer(_serialize_schema, return_type=dict | None, when_used="json"),
+    ] = Field(
         default=_ArgsSchemaPlaceholder,
         validate_default=True,
         description="The schema for the arguments that the tool accepts.",
@@ -80,8 +124,8 @@ class BaseTool(BaseModel, ABC):
         default=False, description="Flag to check if the description has been updated."
     )
 
-    cache_function: Callable[..., bool] = Field(
-        default=lambda _args=None, _result=None: True,
+    cache_function: SerializableCallable = Field(
+        default=_default_cache_function,
         description="Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached.",
     )
     result_as_answer: bool = Field(
@@ -98,12 +142,24 @@ class BaseTool(BaseModel, ABC):
     )
     _usage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def tool_type(self) -> str:
+        cls = type(self)
+        return f"{cls.__module__}.{cls.__qualname__}"
+
     @field_validator("args_schema", mode="before")
     @classmethod
     def _default_args_schema(
-        cls, v: type[PydanticBaseModel]
+        cls, v: type[PydanticBaseModel] | dict[str, Any] | None
     ) -> type[PydanticBaseModel]:
-        if v != cls._ArgsSchemaPlaceholder:
+        if isinstance(v, dict):
+            restored = _deserialize_schema(v)
+            if restored is not None:
+                return restored
+        if v is None or v == cls._ArgsSchemaPlaceholder:
+            pass  # fall through to generate from signature
+        elif isinstance(v, type):
             return v
 
         run_sig = signature(cls._run)
