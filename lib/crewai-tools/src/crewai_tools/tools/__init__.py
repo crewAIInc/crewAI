@@ -148,6 +148,9 @@ from crewai_tools.tools.serpapi_tool.serpapi_google_shopping_tool import (
     SerpApiGoogleShoppingTool,
 )
 from crewai_tools.tools.serper_dev_tool.serper_dev_tool import SerperDevTool
+from crewai_tools.tools.semantic_scholar_search_tool.semantic_scholar_search_tool import (
+    SemanticScholarSearchTool,
+)
 from crewai_tools.tools.serper_scrape_website_tool.serper_scrape_website_tool import (
     SerperScrapeWebsiteTool,
 )
