@@ -598,7 +598,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
+            if not (agent.agent_executor and agent.agent_executor._resuming):
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
             result = await agent.aexecute_task(
                 task=self,
                 context=context,
@@ -717,7 +720,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
+            if not (agent.agent_executor and agent.agent_executor._resuming):
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
             result = agent.execute_task(
                 task=self,
                 context=context,

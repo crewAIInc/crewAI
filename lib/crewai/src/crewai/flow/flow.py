@@ -113,6 +113,7 @@ from crewai.flow.utils import (
 )
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
+from crewai.state.checkpoint_config import CheckpointConfig
 
 
 if TYPE_CHECKING:
@@ -121,6 +122,7 @@ if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
+    from crewai.state.provider.core import BaseProvider
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
@@ -919,10 +921,60 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     max_method_calls: int = Field(default=100)
 
     execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint: CheckpointConfig | bool | None = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(
+        cls, path: str, *, provider: BaseProvider | None = None
+    ) -> Flow:  # type: ignore[type-arg]
+        """Restore a Flow from a checkpoint file."""
+        from crewai.context import apply_execution_context
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.runtime import RuntimeState
+
+        state = RuntimeState.from_checkpoint(
+            path,
+            provider=provider or JsonProvider(),
+            context={"from_checkpoint": True},
+        )
+        crewai_event_bus.set_runtime_state(state)
+        for entity in state.root:
+            if not isinstance(entity, Flow):
+                continue
+            if entity.execution_context is not None:
+                apply_execution_context(entity.execution_context)
+            if isinstance(entity, cls):
+                entity._restore_from_checkpoint()
+                return entity
+            instance = cls()
+            instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
+            instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
+            instance.checkpoint_method_counts = entity.checkpoint_method_counts
+            instance.checkpoint_state = entity.checkpoint_state
+            instance._restore_from_checkpoint()
+            return instance
+        raise ValueError(f"No Flow found in checkpoint: {path}")
+
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)
     checkpoint_state: dict[str, Any] | None = Field(default=None)
+
+    def _restore_from_checkpoint(self) -> None:
+        """Restore private execution state from checkpoint fields."""
+        if self.checkpoint_completed_methods is not None:
+            self._completed_methods = {
+                FlowMethodName(m) for m in self.checkpoint_completed_methods
+            }
+        if self.checkpoint_method_outputs is not None:
+            self._method_outputs = list(self.checkpoint_method_outputs)
+        if self.checkpoint_method_counts is not None:
+            self._method_execution_counts = {
+                FlowMethodName(k): v for k, v in self.checkpoint_method_counts.items()
+            }
+        if self.checkpoint_state is not None:
+            self._restore_state(self.checkpoint_state)
 
     _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
         default_factory=dict

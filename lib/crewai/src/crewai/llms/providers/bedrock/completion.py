@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -228,6 +228,7 @@ class BedrockCompletion(BaseLLM):
     - Model-specific conversation format handling (e.g., Cohere requirements)
     """
 
+    llm_type: Literal["bedrock"] = "bedrock"
     model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None

@@ -2141,6 +2141,7 @@ def test_task_same_callback_both_on_task_and_crew():
 
 @pytest.mark.vcr()
 def test_tools_with_custom_caching():
+
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""

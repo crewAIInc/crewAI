@@ -53,7 +53,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from crewai.agent.core import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -117,6 +117,7 @@ class BaseLLM(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
+    llm_type: str = "base"
     model: str
     temperature: float | None = None
     api_key: str | None = None
@@ -240,7 +241,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call the LLM with the given messages.
@@ -277,7 +278,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call the LLM with the given messages.
@@ -434,7 +435,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> None:
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
@@ -458,7 +459,7 @@ class BaseLLM(BaseModel, ABC):
         response: Any,
         call_type: LLMCallType,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
     ) -> None:
@@ -483,7 +484,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         error: str,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> None:
         """Emit LLM call failed event."""
         crewai_event_bus.emit(
@@ -501,7 +502,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         chunk: str,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
         response_id: str | None = None,
@@ -533,7 +534,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         chunk: str,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_id: str | None = None,
     ) -> None:
         """Emit thinking/reasoning chunk event from a thinking model.
@@ -561,7 +562,7 @@ class BaseLLM(BaseModel, ABC):
         function_args: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> str | None:
         """Handle tool execution with proper event emission.
 
@@ -827,7 +828,7 @@ class BaseLLM(BaseModel, ABC):
     def _invoke_before_llm_call_hooks(
         self,
         messages: list[LLMMessage],
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> bool:
         """Invoke before_llm_call hooks for direct LLM calls (no agent context).
 
@@ -896,7 +897,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         messages: list[LLMMessage],
         response: str,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> str:
         """Invoke after_llm_call hooks for direct LLM calls (no agent context).
 
