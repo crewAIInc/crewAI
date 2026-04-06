@@ -105,6 +105,9 @@ def setup_agents(
             agent.function_calling_llm = function_calling_llm  # type: ignore[attr-defined]
         if not agent.step_callback:  # type: ignore[attr-defined]
             agent.step_callback = step_callback  # type: ignore[attr-defined]
+        executor = getattr(agent, "agent_executor", None)
+        if executor and getattr(executor, "_resuming", False):
+            continue
         agent.create_agent_executor()
 
 
