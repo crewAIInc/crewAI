@@ -135,11 +135,4 @@ The `on_events` field accepts any combination of event type strings. Common choi
 Using `["*"]` or high-frequency events like `llm_call_completed` will write many checkpoint files and may impact performance. Use `max_checkpoints` to limit disk usage.
 </Warning>
 
-## How It Works
-
-1. When you set `checkpoint` on a Crew, Flow, or Agent, CrewAI registers an event listener on the event bus
-2. When a matching event fires, the listener serializes the full `RuntimeState` (entities + event record) to JSON
-3. The JSON is written to the configured directory via the storage provider
-4. On resume via `from_checkpoint()`, the state is deserialized and execution continues from where it left off
-
 Checkpointing is best-effort: if a checkpoint write fails, the error is logged but execution continues uninterrupted.
