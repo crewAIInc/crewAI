@@ -12,6 +12,8 @@ class LLMGuardrailBaseEvent(BaseEvent):
     from_agent: Any | None = None
     agent_role: str | None = None
     agent_id: str | None = None
+    guardrail_type: str | None = None
+    guardrail_name: str | None = None
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
@@ -37,9 +39,17 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
 
         super().__init__(**data)
 
-        if isinstance(self.guardrail, (LLMGuardrail, HallucinationGuardrail)):
+        if isinstance(self.guardrail, HallucinationGuardrail):
+            self.guardrail_type = "hallucination"
+            self.guardrail_name = self.guardrail.description.strip()
+            self.guardrail = self.guardrail.description.strip()
+        elif isinstance(self.guardrail, LLMGuardrail):
+            self.guardrail_type = "llm"
+            self.guardrail_name = self.guardrail.description.strip()
             self.guardrail = self.guardrail.description.strip()
         elif callable(self.guardrail):
+            self.guardrail_type = "function"
+            self.guardrail_name = getattr(self.guardrail, "__name__", None)
             self.guardrail = getsource(self.guardrail).strip()
 
 
@@ -57,17 +67,4 @@ class LLMGuardrailCompletedEvent(LLMGuardrailBaseEvent):
     success: bool
     result: Any
     error: str | None = None
-    retry_count: int
-
-
-class LLMGuardrailFailedEvent(LLMGuardrailBaseEvent):
-    """Event emitted when a guardrail task fails
-
-    Attributes:
-        error: The error message
-        retry_count: The number of times the guardrail has been retried
-    """
-
-    type: Literal["llm_guardrail_failed"] = "llm_guardrail_failed"
-    error: str
     retry_count: int
