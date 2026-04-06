@@ -17,12 +17,12 @@ from crewai import Crew, CheckpointConfig
 crew = Crew(
     agents=[...],
     tasks=[...],
-    checkpoint=True,  # uses defaults: ./checkpoints, on task_completed
+    checkpoint=True,  # uses defaults: ./.checkpoints, on task_completed
 )
 result = crew.kickoff()
 ```
 
-Checkpoint files are written to `./checkpoints/` after each completed task.
+Checkpoint files are written to `./.checkpoints/` after each completed task.
 
 ## Configuration
 
@@ -46,7 +46,7 @@ crew = Crew(
 
 | Field | Type | Default | Description |
 |:------|:-----|:--------|:------------|
-| `directory` | `str` | `"./checkpoints"` | Filesystem path for checkpoint files |
+| `directory` | `str` | `"./.checkpoints"` | Filesystem path for checkpoint files |
 | `on_events` | `list[str]` | `["task_completed"]` | Event types that trigger a checkpoint |
 | `provider` | `BaseProvider` | `JsonProvider()` | Storage backend |
 | `max_checkpoints` | `int \| None` | `None` | Max files to keep; oldest pruned first |

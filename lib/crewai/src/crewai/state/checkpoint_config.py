@@ -166,7 +166,7 @@ class CheckpointConfig(BaseModel):
     """
 
     directory: str = Field(
-        default="./checkpoints",
+        default="./.checkpoints",
         description="Filesystem path where checkpoint JSON files are written.",
     )
     on_events: list[CheckpointEventType | Literal["*"]] = Field(
