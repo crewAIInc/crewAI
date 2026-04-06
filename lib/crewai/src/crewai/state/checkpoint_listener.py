@@ -73,7 +73,7 @@ def _safe_remove(path: str) -> None:
     try:
         os.remove(path)
     except OSError:
-        pass
+        logger.debug("Failed to remove checkpoint file %s", path, exc_info=True)
 
 
 def _prune(directory: str, max_keep: int) -> None:
