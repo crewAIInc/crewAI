@@ -40,6 +40,42 @@ def test_memory_match() -> None:
     assert m.match_reasons == ["semantic"]
 
 
+def test_memory_record_embedding_excluded_from_serialization() -> None:
+    """Embedding vectors should not appear in serialized output to save tokens."""
+    r = MemoryRecord(content="hello", embedding=[0.1, 0.2, 0.3])
+
+    # Direct access still works
+    assert r.embedding == [0.1, 0.2, 0.3]
+
+    # model_dump excludes embedding by default
+    dumped = r.model_dump()
+    assert "embedding" not in dumped
+    assert dumped["content"] == "hello"
+
+    # model_dump_json excludes embedding
+    json_str = r.model_dump_json()
+    assert "0.1" not in json_str
+    assert "embedding" not in json_str
+
+    # repr excludes embedding
+    assert "0.1" not in repr(r)
+
+    # Direct attribute access still works for storage layer
+    assert r.embedding is not None
+    assert len(r.embedding) == 3
+
+
+def test_memory_match_embedding_excluded_from_serialization() -> None:
+    """MemoryMatch serialization should not leak embedding vectors."""
+    r = MemoryRecord(content="x", embedding=[0.5] * 1536)
+    m = MemoryMatch(record=r, score=0.9, match_reasons=["semantic"])
+
+    dumped = m.model_dump()
+    assert "embedding" not in dumped["record"]
+    assert dumped["record"]["content"] == "x"
+    assert dumped["score"] == 0.9
+
+
 def test_scope_info() -> None:
     i = ScopeInfo(path="/", record_count=5, categories=["c1"], child_scopes=["/a"])
     assert i.path == "/"
