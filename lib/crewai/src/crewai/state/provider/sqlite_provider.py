@@ -67,6 +67,7 @@ class SqliteProvider(BaseProvider):
         checkpoint_id, ts = _make_id()
         Path(directory).parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(directory) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(_CREATE_TABLE)
             conn.execute(_INSERT, (checkpoint_id, ts, data))
             if self.max_checkpoints is not None:
@@ -87,6 +88,7 @@ class SqliteProvider(BaseProvider):
         checkpoint_id, ts = _make_id()
         Path(directory).parent.mkdir(parents=True, exist_ok=True)
         async with aiosqlite.connect(directory) as db:
+            await db.execute("PRAGMA journal_mode=WAL")
             await db.execute(_CREATE_TABLE)
             await db.execute(_INSERT, (checkpoint_id, ts, data))
             if self.max_checkpoints is not None:
