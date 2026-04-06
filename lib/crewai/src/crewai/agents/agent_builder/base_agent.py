@@ -79,7 +79,12 @@ def _validate_llm_ref(value: Any) -> Any:
     if isinstance(value, dict):
         import importlib
 
-        llm_type = value["llm_type"]
+        llm_type = value.get("llm_type")
+        if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
+            raise ValueError(
+                f"Unknown or missing llm_type: {llm_type!r}. "
+                f"Expected one of {list(_LLM_TYPE_REGISTRY)}"
+            )
         dotted = _LLM_TYPE_REGISTRY[llm_type]
         mod_path, cls_name = dotted.rsplit(".", 1)
         cls = getattr(importlib.import_module(mod_path), cls_name)
@@ -106,7 +111,12 @@ def _validate_executor_ref(value: Any) -> Any:
     if isinstance(value, dict):
         import importlib
 
-        executor_type = value["executor_type"]
+        executor_type = value.get("executor_type")
+        if not executor_type or executor_type not in _EXECUTOR_TYPE_REGISTRY:
+            raise ValueError(
+                f"Unknown or missing executor_type: {executor_type!r}. "
+                f"Expected one of {list(_EXECUTOR_TYPE_REGISTRY)}"
+            )
         dotted = _EXECUTOR_TYPE_REGISTRY[executor_type]
         mod_path, cls_name = dotted.rsplit(".", 1)
         cls = getattr(importlib.import_module(mod_path), cls_name)
