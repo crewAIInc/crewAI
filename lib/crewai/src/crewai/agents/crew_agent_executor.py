@@ -1080,6 +1080,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "error": error_event_emitted,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1090,6 +1091,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        had_error = execution_result.get("error", False)
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1107,7 +1109,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
 
         if (
-            original_tool
+            not had_error
+            and original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
         ):

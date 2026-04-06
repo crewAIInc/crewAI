@@ -117,7 +117,10 @@ async def aexecute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")
 
+        errors_before = task.tools_errors if task else 0
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
+        errors_after = task.tools_errors if task else 0
+        had_error = errors_after > errors_before
 
         after_hook_context = ToolCallHookContext(
             tool_name=tool_calling.tool_name,
@@ -140,7 +143,10 @@ async def aexecute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in after_tool_call hook: {e}")
 
-        return ToolResult(modified_result, tool.result_as_answer)
+        # Don't treat error output as the final answer; let the agent
+        # reflect on the failure instead.
+        use_as_answer = tool.result_as_answer and not had_error
+        return ToolResult(modified_result, use_as_answer)
 
     tool_result = i18n.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
@@ -237,7 +243,10 @@ def execute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")
 
+        errors_before = task.tools_errors if task else 0
         tool_result = tool_usage.use(tool_calling, agent_action.text)
+        errors_after = task.tools_errors if task else 0
+        had_error = errors_after > errors_before
 
         after_hook_context = ToolCallHookContext(
             tool_name=tool_calling.tool_name,
@@ -261,7 +270,10 @@ def execute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in after_tool_call hook: {e}")
 
-        return ToolResult(modified_result, tool.result_as_answer)
+        # Don't treat error output as the final answer; let the agent
+        # reflect on the failure instead.
+        use_as_answer = tool.result_as_answer and not had_error
+        return ToolResult(modified_result, use_as_answer)
 
     tool_result = i18n.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
