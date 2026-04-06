@@ -5,12 +5,14 @@ from collections.abc import Callable
 import inspect
 import json
 import textwrap
-from typing import TYPE_CHECKING, Any, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, get_type_hints
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
+    PlainSerializer,
     PrivateAttr,
     create_model,
     model_validator,
@@ -18,7 +20,20 @@ from pydantic import (
 from typing_extensions import Self
 
 from crewai.utilities.logger import Logger
+from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 from crewai.utilities.string_utils import sanitize_tool_name
+
+
+def _serialize_schema(v: type[BaseModel] | None) -> dict[str, Any] | None:
+    return v.model_json_schema() if v else None
+
+
+def _deserialize_schema(v: Any) -> type[BaseModel] | None:
+    if v is None or isinstance(v, type):
+        return v
+    if isinstance(v, dict):
+        return create_model_from_schema(v)
+    return None
 
 
 if TYPE_CHECKING:
@@ -61,7 +76,11 @@ class CrewStructuredTool(BaseModel):
 
     name: str = Field(default="")
     description: str = Field(default="")
-    args_schema: type[BaseModel] | None = Field(default=None)
+    args_schema: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_schema),
+        PlainSerializer(_serialize_schema),
+    ] = Field(default=None)
     func: Any = Field(default=None, exclude=True)
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
