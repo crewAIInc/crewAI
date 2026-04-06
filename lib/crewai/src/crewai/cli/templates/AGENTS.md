@@ -120,11 +120,11 @@ my_crew/
 my_flow/
 ├── src/my_flow/
 │   ├── crews/                 # Multiple crew definitions
-│   │   └── poem_crew/
+│   │   └── content_crew/
 │   │       ├── config/
 │   │       │   ├── agents.yaml
 │   │       │   └── tasks.yaml
-│   │       └── poem_crew.py
+│   │       └── content_crew.py
 │   ├── tools/                 # Custom tools
 │   ├── main.py                # Flow orchestration
 │   └── ...
