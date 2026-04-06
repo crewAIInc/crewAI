@@ -162,13 +162,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
         if self.llm:
-            # This may be mutating the shared llm object and needs further evaluation
-            existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
+            # Compute effective stop words without mutating the shared LLM.
+            # We store the original value and only apply merged stop words
+            # around each invoke/ainvoke call to avoid cross-agent pollution.
+            existing_stop = getattr(self.llm, "stop", []) or []
+            self._original_stop = list(existing_stop) if isinstance(existing_stop, list) else []
+            self._effective_stop = list(
                 set(
-                    existing_stop + self.stop
-                    if isinstance(existing_stop, list)
-                    else self.stop
+                    self._original_stop + self.stop
                 )
             )
 
@@ -223,6 +224,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
+        # Apply executor-specific stop words to the LLM for this run only,
+        # then restore the original value so shared LLM instances stay clean.
+        if self.llm and hasattr(self, "_effective_stop"):
+            self.llm.stop = self._effective_stop
         try:
             formatted_answer = self._invoke_loop()
         except AssertionError:
@@ -235,6 +240,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         except Exception as e:
             handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
+        finally:
+            if self.llm and hasattr(self, "_original_stop"):
+                self.llm.stop = self._original_stop
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -1072,6 +1080,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "error": error_event_emitted,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1082,6 +1091,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        had_error = execution_result.get("error", False)
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1099,7 +1109,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
 
         if (
-            original_tool
+            not had_error
+            and original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
         ):
@@ -1127,6 +1138,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
+        # Apply executor-specific stop words to the LLM for this run only,
+        # then restore the original value so shared LLM instances stay clean.
+        if self.llm and hasattr(self, "_effective_stop"):
+            self.llm.stop = self._effective_stop
         try:
             formatted_answer = await self._ainvoke_loop()
         except AssertionError:
@@ -1139,6 +1154,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         except Exception as e:
             handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
+        finally:
+            if self.llm and hasattr(self, "_original_stop"):
+                self.llm.stop = self._original_stop
 
         if self.ask_for_human_input:
             formatted_answer = await self._ahandle_human_feedback(formatted_answer)

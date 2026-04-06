@@ -927,6 +927,42 @@ class TestNativeToolExecution:
         assert len(tool_messages) == 1
         assert tool_messages[0]["tool_call_id"] == "call_1"
 
+    def test_result_as_answer_not_used_when_tool_errors(
+        self, mock_dependencies
+    ):
+        """When a tool with result_as_answer=True raises an exception,
+        the error output must NOT become the final answer. The agent
+        should be allowed to reflect on the failure instead."""
+        executor = _build_executor(**mock_dependencies)
+
+        def failing_tool() -> str:
+            raise RuntimeError("something went wrong")
+
+        result_tool = Mock()
+        result_tool.name = "failing_tool"
+        result_tool.result_as_answer = True
+        result_tool.max_usage_count = None
+        result_tool.current_usage_count = 0
+
+        executor.original_tools = [result_tool]
+        executor._available_functions = {"failing_tool": failing_tool}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "failing_tool", "arguments": "{}"},
+            },
+        ]
+
+        result = executor.execute_native_tool()
+
+        # The tool errored, so result_as_answer should be suppressed
+        assert result != "tool_result_is_final"
+        assert not executor.state.is_finished
+        # The error message should still appear in messages for the agent to see
+        tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
+        assert len(tool_messages) == 1
+        assert "Error" in tool_messages[0]["content"]
+
     def test_check_native_todo_completion_requires_current_todo(
         self, mock_dependencies
     ):
