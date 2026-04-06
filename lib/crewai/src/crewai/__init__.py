@@ -192,15 +192,13 @@ try:
 
     from typing import Annotated
 
-    from pydantic import Discriminator, Tag
+    from pydantic import Field
 
-    from crewai.state.runtime import RuntimeState, _entity_discriminator
+    from crewai.state.runtime import RuntimeState
 
     Entity = Annotated[
-        Annotated[Flow, Tag("flow")]  # type: ignore[type-arg]
-        | Annotated[Crew, Tag("crew")]
-        | Annotated[Agent, Tag("agent")],
-        Discriminator(_entity_discriminator),
+        Flow | Crew | Agent,  # type: ignore[type-arg]
+        Field(discriminator="entity_type"),
     ]
 
     RuntimeState.model_rebuild(

@@ -15,7 +15,6 @@ from pydantic import (
     ModelWrapValidatorHandler,
     PrivateAttr,
     RootModel,
-    SerializerFunctionWrapHandler,
     model_serializer,
     model_validator,
 )
@@ -84,10 +83,10 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         """The execution event record."""
         return self._event_record
 
-    @model_serializer(mode="wrap")
-    def _serialize(self, handler: SerializerFunctionWrapHandler) -> CheckpointPayload:
+    @model_serializer(mode="plain")
+    def _serialize(self) -> dict[str, Any]:
         return {
-            "entities": handler(self),
+            "entities": [e.model_dump() for e in self.root],
             "event_record": self._event_record.model_dump(),
         }
 
