@@ -68,16 +68,3 @@ class LLMGuardrailCompletedEvent(LLMGuardrailBaseEvent):
     result: Any
     error: str | None = None
     retry_count: int
-
-
-class LLMGuardrailFailedEvent(LLMGuardrailBaseEvent):
-    """Event emitted when a guardrail task fails
-
-    Attributes:
-        error: The error message
-        retry_count: The number of times the guardrail has been retried
-    """
-
-    type: Literal["llm_guardrail_failed"] = "llm_guardrail_failed"
-    error: str
-    retry_count: int
