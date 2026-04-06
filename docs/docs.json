@@ -3968,7 +3968,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -4424,7 +4425,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -4879,7 +4881,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -5334,7 +5337,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -5789,7 +5793,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -6243,7 +6248,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -6697,7 +6703,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -7152,7 +7159,8 @@
                       "pt-BR/concepts/testing",
                       "pt-BR/concepts/cli",
                       "pt-BR/concepts/tools",
-                      "pt-BR/concepts/event-listener"
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
                     ]
                   },
                   {
@@ -7638,7 +7646,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -8106,7 +8115,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -8573,7 +8583,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -9040,7 +9051,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -9507,7 +9519,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -9973,7 +9986,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -10439,7 +10453,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -10906,7 +10921,8 @@
                       "ko/concepts/testing",
                       "ko/concepts/cli",
                       "ko/concepts/tools",
-                      "ko/concepts/event-listener"
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
                     ]
                   },
                   {
@@ -11404,7 +11420,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
@@ -11872,7 +11889,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
@@ -12339,7 +12357,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
@@ -12806,7 +12825,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
@@ -13273,7 +13293,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
@@ -13739,7 +13760,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
@@ -14205,7 +14227,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
@@ -14672,7 +14695,8 @@
                       "ar/concepts/testing",
                       "ar/concepts/cli",
                       "ar/concepts/tools",
-                      "ar/concepts/event-listener"
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
                     ]
                   },
                   {
