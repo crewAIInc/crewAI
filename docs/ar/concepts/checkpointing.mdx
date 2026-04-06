@@ -51,6 +51,28 @@ crew = Crew(
 | `provider` | `BaseProvider` | `JsonProvider()` | واجهة التخزين |
 | `max_checkpoints` | `int \| None` | `None` | الحد الاقصى للملفات؛ يتم حذف الاقدم اولا |
 
+### الوراثة والانسحاب
+
+يقبل حقل `checkpoint` في Crew و Flow و Agent قيم `CheckpointConfig` او `True` او `False` او `None`:
+
+| القيمة | السلوك |
+|:-------|:-------|
+| `None` (افتراضي) | يرث من الاصل. الوكيل يرث اعدادات الطاقم. |
+| `True` | تفعيل بالاعدادات الافتراضية. |
+| `False` | انسحاب صريح. يوقف الوراثة من الاصل. |
+| `CheckpointConfig(...)` | اعدادات مخصصة. |
+
+```python
+crew = Crew(
+    agents=[
+        Agent(role="Researcher", ...),                  # يرث checkpoint من الطاقم
+        Agent(role="Writer", ..., checkpoint=False),     # منسحب، بدون نقاط حفظ
+    ],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
 ## الاستئناف من نقطة حفظ
 
 ```python

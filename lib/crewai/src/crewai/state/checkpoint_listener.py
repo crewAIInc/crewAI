@@ -20,13 +20,24 @@ from crewai.task import Task
 logger = logging.getLogger(__name__)
 
 
-def _resolve(value: CheckpointConfig | bool) -> CheckpointConfig | None:
-    """Coerce a checkpoint field to a CheckpointConfig or None."""
+_SENTINEL = object()
+
+
+def _resolve(value: CheckpointConfig | bool | None) -> CheckpointConfig | None | object:
+    """Coerce a checkpoint field value.
+
+    Returns:
+        CheckpointConfig — use this config.
+        _SENTINEL — explicit opt-out (``False``), stop walking parents.
+        None — not configured, keep walking parents.
+    """
     if isinstance(value, CheckpointConfig):
         return value
     if value is True:
         return CheckpointConfig()
-    return None
+    if value is False:
+        return _SENTINEL
+    return None  # None = inherit
 
 
 def _find_checkpoint(source: Any) -> CheckpointConfig | None:
@@ -34,28 +45,39 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
 
     Walks known relationships: Task -> Agent -> Crew. Flow and Agent
     carry their own checkpoint field directly.
+
+    A ``None`` value means "not configured, inherit from parent".
+    A ``False`` value means "opt out" and stops the walk.
     """
     if isinstance(source, Flow):
-        return _resolve(source.checkpoint)
+        result = _resolve(source.checkpoint)
+        return result if isinstance(result, CheckpointConfig) else None
     if isinstance(source, Crew):
-        return _resolve(source.checkpoint)
+        result = _resolve(source.checkpoint)
+        return result if isinstance(result, CheckpointConfig) else None
     if isinstance(source, BaseAgent):
-        cfg = _resolve(source.checkpoint)
-        if cfg is not None:
-            return cfg
+        result = _resolve(source.checkpoint)
+        if isinstance(result, CheckpointConfig):
+            return result
+        if result is _SENTINEL:
+            return None
         crew = source.crew
         if isinstance(crew, Crew):
-            return _resolve(crew.checkpoint)
+            result = _resolve(crew.checkpoint)
+            return result if isinstance(result, CheckpointConfig) else None
         return None
     if isinstance(source, Task):
         agent = source.agent
         if isinstance(agent, BaseAgent):
-            cfg = _resolve(agent.checkpoint)
-            if cfg is not None:
-                return cfg
+            result = _resolve(agent.checkpoint)
+            if isinstance(result, CheckpointConfig):
+                return result
+            if result is _SENTINEL:
+                return None
             crew = agent.crew
             if isinstance(crew, Crew):
-                return _resolve(crew.checkpoint)
+                result = _resolve(crew.checkpoint)
+                return result if isinstance(result, CheckpointConfig) else None
         return None
     return None
 

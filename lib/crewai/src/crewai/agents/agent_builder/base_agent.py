@@ -300,10 +300,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    checkpoint: CheckpointConfig | bool = Field(
-        default=False,
+    checkpoint: CheckpointConfig | bool | None = Field(
+        default=None,
         description="Automatic checkpointing configuration. "
-        "Pass True for defaults or a CheckpointConfig for custom settings.",
+        "True for defaults, False to opt out, None to inherit.",
     )
     callbacks: list[SerializableCallable] = Field(
         default_factory=list, description="Callbacks to be used for the agent"

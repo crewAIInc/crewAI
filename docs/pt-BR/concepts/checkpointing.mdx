@@ -51,6 +51,28 @@ crew = Crew(
 | `provider` | `BaseProvider` | `JsonProvider()` | Backend de armazenamento |
 | `max_checkpoints` | `int \| None` | `None` | Maximo de arquivos a manter; os mais antigos sao removidos primeiro |
 
+### Heranca e Desativacao
+
+O campo `checkpoint` em Crew, Flow e Agent aceita `CheckpointConfig`, `True`, `False` ou `None`:
+
+| Valor | Comportamento |
+|:------|:--------------|
+| `None` (padrao) | Herda do pai. Um agente herda a configuracao da crew. |
+| `True` | Ativa com padroes. |
+| `False` | Desativacao explicita. Interrompe a heranca do pai. |
+| `CheckpointConfig(...)` | Configuracao personalizada. |
+
+```python
+crew = Crew(
+    agents=[
+        Agent(role="Researcher", ...),                  # herda checkpoint da crew
+        Agent(role="Writer", ..., checkpoint=False),     # desativado, sem checkpoints
+    ],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
 ## Retomando a partir de um Checkpoint
 
 ```python

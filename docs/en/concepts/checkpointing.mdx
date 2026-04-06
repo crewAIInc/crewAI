@@ -51,6 +51,28 @@ crew = Crew(
 | `provider` | `BaseProvider` | `JsonProvider()` | Storage backend |
 | `max_checkpoints` | `int \| None` | `None` | Max files to keep; oldest pruned first |
 
+### Inheritance and Opt-Out
+
+The `checkpoint` field on Crew, Flow, and Agent accepts `CheckpointConfig`, `True`, `False`, or `None`:
+
+| Value | Behavior |
+|:------|:---------|
+| `None` (default) | Inherit from parent. An agent inherits its crew's config. |
+| `True` | Enable with defaults. |
+| `False` | Explicit opt-out. Stops inheritance from parent. |
+| `CheckpointConfig(...)` | Custom configuration. |
+
+```python
+crew = Crew(
+    agents=[
+        Agent(role="Researcher", ...),                  # inherits crew's checkpoint
+        Agent(role="Writer", ..., checkpoint=False),     # opted out, no checkpoints
+    ],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
 ## Resuming from a Checkpoint
 
 ```python

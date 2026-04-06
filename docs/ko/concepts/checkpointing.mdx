@@ -51,6 +51,28 @@ crew = Crew(
 | `provider` | `BaseProvider` | `JsonProvider()` | 스토리지 백엔드 |
 | `max_checkpoints` | `int \| None` | `None` | 보관할 최대 파일 수; 오래된 것부터 삭제 |
 
+### 상속 및 옵트아웃
+
+Crew, Flow, Agent의 `checkpoint` 필드는 `CheckpointConfig`, `True`, `False`, `None`을 받습니다:
+
+| 값 | 동작 |
+|:---|:-----|
+| `None` (기본값) | 부모에서 상속. 에이전트는 크루의 설정을 상속합니다. |
+| `True` | 기본값으로 활성화. |
+| `False` | 명시적 옵트아웃. 부모 상속을 중단합니다. |
+| `CheckpointConfig(...)` | 사용자 정의 설정. |
+
+```python
+crew = Crew(
+    agents=[
+        Agent(role="Researcher", ...),                  # 크루의 checkpoint 상속
+        Agent(role="Writer", ..., checkpoint=False),     # 옵트아웃, 체크포인트 없음
+    ],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
 ## 체크포인트에서 재개
 
 ```python
