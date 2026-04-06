@@ -418,8 +418,6 @@ class Crew(FlowTrackable, BaseModel):
         """Rebuild the event scope stack from the checkpoint's event record."""
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.event_context import (
-            SCOPE_ENDING_EVENTS,
-            SCOPE_STARTING_EVENTS,
             restore_event_scope,
             set_last_event_id,
         )
@@ -428,20 +426,22 @@ class Crew(FlowTrackable, BaseModel):
         if state is None:
             return
 
-        stack: list[tuple[str, str]] = []
-        last_event_id: str | None = None
-        for node in sorted(
-            state.event_record.nodes.values(),
-            key=lambda n: n.event.emission_sequence or 0,
-        ):
-            evt = node.event
-            last_event_id = evt.event_id
-            if evt.type in SCOPE_STARTING_EVENTS:
-                stack.append((evt.event_id, evt.type))
-            elif evt.type in SCOPE_ENDING_EVENTS and stack:
-                stack.pop()
+        # Only restore the crew-level scope. Inner scopes (task, agent, llm)
+        # are re-created by the normal execution flow on resume.
+        if self._kickoff_event_id:
+            restore_event_scope(((self._kickoff_event_id, "crew_kickoff_started"),))
 
-        restore_event_scope(tuple(stack))
+        # Set last_event_id to the most recent event in the record
+        last_event_id: str | None = None
+        for node in state.event_record.nodes.values():
+            seq = node.event.emission_sequence or 0
+            if last_event_id is None or seq > (
+                state.event_record.nodes.get(
+                    last_event_id, node
+                ).event.emission_sequence
+                or 0
+            ):
+                last_event_id = node.event.event_id
         if last_event_id is not None:
             set_last_event_id(last_event_id)
 
