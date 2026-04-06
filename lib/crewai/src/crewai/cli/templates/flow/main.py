@@ -1,59 +1,64 @@
 #!/usr/bin/env python
-from random import randint
+from pathlib import Path
 
 from pydantic import BaseModel
 
 from crewai.flow import Flow, listen, start
 
-from {{folder_name}}.crews.poem_crew.poem_crew import PoemCrew
+from {{folder_name}}.crews.content_crew.content_crew import ContentCrew
 
 
-class PoemState(BaseModel):
-    sentence_count: int = 1
-    poem: str = ""
+class ContentState(BaseModel):
+    topic: str = ""
+    outline: str = ""
+    draft: str = ""
+    final_post: str = ""
 
 
-class PoemFlow(Flow[PoemState]):
+class ContentFlow(Flow[ContentState]):
 
     @start()
-    def generate_sentence_count(self, crewai_trigger_payload: dict = None):
-        print("Generating sentence count")
+    def plan_content(self, crewai_trigger_payload: dict = None):
+        print("Planning content")
 
-        # Use trigger payload if available
         if crewai_trigger_payload:
-            # Example: use trigger data to influence sentence count
-            self.state.sentence_count = crewai_trigger_payload.get('sentence_count', randint(1, 5))
+            self.state.topic = crewai_trigger_payload.get("topic", "AI Agents")
             print(f"Using trigger payload: {crewai_trigger_payload}")
         else:
-            self.state.sentence_count = randint(1, 5)
+            self.state.topic = "AI Agents"
 
-    @listen(generate_sentence_count)
-    def generate_poem(self):
-        print("Generating poem")
+        print(f"Topic: {self.state.topic}")
+
+    @listen(plan_content)
+    def generate_content(self):
+        print(f"Generating content on: {self.state.topic}")
         result = (
-            PoemCrew()
+            ContentCrew()
             .crew()
-            .kickoff(inputs={"sentence_count": self.state.sentence_count})
+            .kickoff(inputs={"topic": self.state.topic})
         )
 
-        print("Poem generated", result.raw)
-        self.state.poem = result.raw
+        print("Content generated")
+        self.state.final_post = result.raw
 
-    @listen(generate_poem)
-    def save_poem(self):
-        print("Saving poem")
-        with open("poem.txt", "w") as f:
-            f.write(self.state.poem)
+    @listen(generate_content)
+    def save_content(self):
+        print("Saving content")
+        output_dir = Path("output")
+        output_dir.mkdir(exist_ok=True)
+        with open(output_dir / "post.md", "w") as f:
+            f.write(self.state.final_post)
+        print("Post saved to output/post.md")
 
 
 def kickoff():
-    poem_flow = PoemFlow()
-    poem_flow.kickoff()
+    content_flow = ContentFlow()
+    content_flow.kickoff()
 
 
 def plot():
-    poem_flow = PoemFlow()
-    poem_flow.plot()
+    content_flow = ContentFlow()
+    content_flow.plot()
 
 
 def run_with_trigger():
@@ -74,10 +79,10 @@ def run_with_trigger():
 
     # Create flow and kickoff with trigger payload
     # The @start() methods will automatically receive crewai_trigger_payload parameter
-    poem_flow = PoemFlow()
+    content_flow = ContentFlow()
 
     try:
-        result = poem_flow.kickoff({"crewai_trigger_payload": trigger_payload})
+        result = content_flow.kickoff({"crewai_trigger_payload": trigger_payload})
         return result
     except Exception as e:
         raise Exception(f"An error occurred while running the flow with trigger: {e}")

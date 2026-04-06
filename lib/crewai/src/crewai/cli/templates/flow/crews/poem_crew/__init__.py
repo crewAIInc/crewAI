@@ -1,1 +1,0 @@
-"""Poem crew template."""
