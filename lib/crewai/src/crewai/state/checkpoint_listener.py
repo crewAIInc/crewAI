@@ -1,16 +1,22 @@
-"""Event listener that writes checkpoints automatically."""
+"""Event listener that writes checkpoints automatically.
+
+Handlers are registered lazily — only when the first ``CheckpointConfig``
+is resolved (i.e. an entity actually has checkpointing enabled). This
+avoids per-event overhead when no entity uses checkpointing.
+"""
 
 from __future__ import annotations
 
 import glob
 import logging
 import os
+import threading
 from typing import Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.events.base_events import BaseEvent
-from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
 from crewai.flow.flow import Flow
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.runtime import RuntimeState, _prepare_entities
@@ -19,8 +25,22 @@ from crewai.task import Task
 
 logger = logging.getLogger(__name__)
 
+_handlers_registered = False
+_register_lock = threading.Lock()
 
 _SENTINEL = object()
+
+
+def _ensure_handlers_registered() -> None:
+    """Register checkpoint handlers on the event bus once, lazily."""
+    global _handlers_registered
+    if _handlers_registered:
+        return
+    with _register_lock:
+        if _handlers_registered:
+            return
+        _register_all_handlers(crewai_event_bus)
+        _handlers_registered = True
 
 
 def _resolve(value: CheckpointConfig | bool | None) -> CheckpointConfig | None | object:
@@ -32,8 +52,10 @@ def _resolve(value: CheckpointConfig | bool | None) -> CheckpointConfig | None |
         None — not configured, keep walking parents.
     """
     if isinstance(value, CheckpointConfig):
+        _ensure_handlers_registered()
         return value
     if value is True:
+        _ensure_handlers_registered()
         return CheckpointConfig()
     if value is False:
         return _SENTINEL
@@ -129,7 +151,7 @@ def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
         logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
 
 
-def setup_checkpoint_handlers(event_bus: CrewAIEventsBus) -> None:
+def _register_all_handlers(event_bus: CrewAIEventsBus) -> None:
     """Register the checkpoint handler on all known event classes.
 
     Only the sync handler is registered. The event bus runs sync handlers

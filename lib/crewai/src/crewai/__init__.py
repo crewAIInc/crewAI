@@ -212,10 +212,6 @@ try:
     except PydanticUserError:
         pass
 
-    from crewai.events.event_bus import crewai_event_bus
-    from crewai.state.checkpoint_listener import setup_checkpoint_handlers
-
-    setup_checkpoint_handlers(crewai_event_bus)
 except (ImportError, PydanticUserError):
     import logging as _logging
 
