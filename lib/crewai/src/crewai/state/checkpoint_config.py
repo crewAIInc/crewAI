@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
@@ -164,8 +164,6 @@ class CheckpointConfig(BaseModel):
     When set on a Crew, Flow, or Agent, checkpoints are written
     automatically whenever the specified event(s) fire.
     """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     directory: str = Field(
         description="Filesystem path where checkpoint JSON files are written.",
