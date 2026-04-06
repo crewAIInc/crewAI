@@ -13,6 +13,7 @@ class LLMGuardrailBaseEvent(BaseEvent):
     agent_role: str | None = None
     agent_id: str | None = None
     guardrail_type: str | None = None
+    guardrail_name: str | None = None
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
@@ -40,12 +41,15 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
 
         if isinstance(self.guardrail, HallucinationGuardrail):
             self.guardrail_type = "hallucination"
+            self.guardrail_name = self.guardrail.description.strip()
             self.guardrail = self.guardrail.description.strip()
         elif isinstance(self.guardrail, LLMGuardrail):
             self.guardrail_type = "llm"
+            self.guardrail_name = self.guardrail.description.strip()
             self.guardrail = self.guardrail.description.strip()
         elif callable(self.guardrail):
             self.guardrail_type = "function"
+            self.guardrail_name = getattr(self.guardrail, "__name__", None)
             self.guardrail = getsource(self.guardrail).strip()
 
 
