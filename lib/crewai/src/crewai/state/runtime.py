@@ -73,7 +73,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     @model_serializer(mode="plain")
     def _serialize(self) -> dict[str, Any]:
         return {
-            "entities": [e.model_dump() for e in self.root],
+            "entities": [e.model_dump(mode="json") for e in self.root],
             "event_record": self._event_record.model_dump(),
         }
 
