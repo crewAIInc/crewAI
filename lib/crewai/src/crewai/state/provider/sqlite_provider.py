@@ -8,6 +8,8 @@ import uuid
 
 import aiosqlite
 
+from crewai.state.provider.core import BaseProvider
+
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS checkpoints (
@@ -32,7 +34,7 @@ def _make_id() -> tuple[str, str]:
     return checkpoint_id, ts
 
 
-class SqliteProvider:
+class SqliteProvider(BaseProvider):
     """Persists runtime state checkpoints in a SQLite database.
 
     The ``directory`` argument to ``checkpoint`` / ``acheckpoint`` is
