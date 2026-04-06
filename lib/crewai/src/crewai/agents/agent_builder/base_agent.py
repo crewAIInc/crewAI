@@ -340,6 +340,9 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             if isinstance(entity, cls):
                 if entity.execution_context is not None:
                     apply_execution_context(entity.execution_context)
+                if entity.agent_executor is not None:
+                    entity.agent_executor.agent = entity
+                    entity.agent_executor._resuming = True
                 return entity
         raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
 
