@@ -13,7 +13,15 @@ from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from openai.types.responses import Response
+from openai.types.responses import (
+    Response,
+    ResponseCodeInterpreterToolCall,
+    ResponseComputerToolCall,
+    ResponseFileSearchToolCall,
+    ResponseFunctionToolCall,
+    ResponseFunctionWebSearch,
+    ResponseReasoningItem,
+)
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
@@ -1344,18 +1352,16 @@ class OpenAICompletion(BaseLLM):
         )
 
         for item in response.output:
-            item_type = item.type
-
-            if item_type == "web_search_call":
+            if isinstance(item, ResponseFunctionWebSearch):
                 result.web_search_results.append(
                     WebSearchResult(
                         id=item.id,
                         status=item.status,
-                        type=item_type,
+                        type=item.type,
                     )
                 )
 
-            elif item_type == "file_search_call":
+            elif isinstance(item, ResponseFileSearchToolCall):
                 file_results: list[FileSearchResultItem] = (
                     [
                         FileSearchResultItem(
@@ -1374,41 +1380,40 @@ class OpenAICompletion(BaseLLM):
                     FileSearchResult(
                         id=item.id,
                         status=item.status,
-                        type=item_type,
+                        type=item.type,
                         queries=list(item.queries),
                         results=file_results,
                     )
                 )
 
-            elif item_type == "code_interpreter_call":
+            elif isinstance(item, ResponseCodeInterpreterToolCall):
                 code_results: list[
                     CodeInterpreterLogResult | CodeInterpreterFileResult
                 ] = []
-                for r in item.results:
+                for r in item.outputs or []:
                     if r.type == "logs":
                         code_results.append(
                             CodeInterpreterLogResult(type="logs", logs=r.logs)
                         )
-                    elif r.type == "files":
-                        files_data = [
-                            {"file_id": f.file_id, "mime_type": f.mime_type}
-                            for f in r.files
-                        ]
+                    elif r.type == "image":
                         code_results.append(
-                            CodeInterpreterFileResult(type="files", files=files_data)
+                            CodeInterpreterFileResult(
+                                type="files",
+                                files=[{"url": r.url}],
+                            )
                         )
                 result.code_interpreter_results.append(
                     CodeInterpreterResult(
                         id=item.id,
                         status=item.status,
-                        type=item_type,
+                        type=item.type,
                         code=item.code,
                         container_id=item.container_id,
                         results=code_results,
                     )
                 )
 
-            elif item_type == "computer_call":
+            elif isinstance(item, ResponseComputerToolCall):
                 action_dict = item.action.model_dump() if item.action else {}
                 safety_checks = [
                     {"id": c.id, "code": c.code, "message": c.message}
@@ -1418,26 +1423,26 @@ class OpenAICompletion(BaseLLM):
                     ComputerUseResult(
                         id=item.id,
                         status=item.status,
-                        type=item_type,
+                        type=item.type,
                         call_id=item.call_id,
                         action=action_dict,
                         pending_safety_checks=safety_checks,
                     )
                 )
 
-            elif item_type == "reasoning":
+            elif isinstance(item, ResponseReasoningItem):
                 summaries = [{"type": s.type, "text": s.text} for s in item.summary]
                 result.reasoning_summaries.append(
                     ReasoningSummary(
                         id=item.id,
                         status=item.status,
-                        type=item_type,
+                        type=item.type,
                         summary=summaries,
                         encrypted_content=item.encrypted_content,
                     )
                 )
 
-            elif item_type == "function_call":
+            elif isinstance(item, ResponseFunctionToolCall):
                 result.function_calls.append(
                     {
                         "id": item.call_id,
@@ -1626,7 +1631,9 @@ class OpenAICompletion(BaseLLM):
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
                 if not hasattr(tool_call, "function") or tool_call.function is None:
-                    raise ValueError(f"Unsupported tool call type: {type(tool_call).__name__}")
+                    raise ValueError(
+                        f"Unsupported tool call type: {type(tool_call).__name__}"
+                    )
                 function_name = tool_call.function.name
 
                 try:
@@ -2013,7 +2020,9 @@ class OpenAICompletion(BaseLLM):
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
                 if not hasattr(tool_call, "function") or tool_call.function is None:
-                    raise ValueError(f"Unsupported tool call type: {type(tool_call).__name__}")
+                    raise ValueError(
+                        f"Unsupported tool call type: {type(tool_call).__name__}"
+                    )
                 function_name = tool_call.function.name
 
                 try:
