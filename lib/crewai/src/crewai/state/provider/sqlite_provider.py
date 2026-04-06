@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 import sqlite3
 import uuid
 
@@ -64,6 +65,7 @@ class SqliteProvider(BaseProvider):
             A location string in the format ``"db_path#checkpoint_id"``.
         """
         checkpoint_id, ts = _make_id()
+        Path(directory).parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(directory) as conn:
             conn.execute(_CREATE_TABLE)
             conn.execute(_INSERT, (checkpoint_id, ts, data))
@@ -83,6 +85,7 @@ class SqliteProvider(BaseProvider):
             A location string in the format ``"db_path#checkpoint_id"``.
         """
         checkpoint_id, ts = _make_id()
+        Path(directory).parent.mkdir(parents=True, exist_ok=True)
         async with aiosqlite.connect(directory) as db:
             await db.execute(_CREATE_TABLE)
             await db.execute(_INSERT, (checkpoint_id, ts, data))
