@@ -6,12 +6,46 @@ sequential relationships.  Provides O(1) lookups and traversal.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, BeforeValidator, Field, PlainSerializer, PrivateAttr
 
 from crewai.events.base_events import BaseEvent
 from crewai.utilities.rw_lock import RWLock
+
+
+_event_type_map: dict[str, type[BaseEvent]] = {}
+
+
+def _resolve_event(v: Any) -> BaseEvent:
+    """Validate an event value into the correct BaseEvent subclass."""
+    if isinstance(v, BaseEvent):
+        return v
+    if not isinstance(v, dict):
+        return BaseEvent.model_validate(v)
+    if not _event_type_map:
+        _build_event_type_map()
+    event_type = v.get("type", "")
+    cls = _event_type_map.get(event_type, BaseEvent)
+    if cls is BaseEvent:
+        return BaseEvent.model_validate(v)
+    try:
+        return cls.model_validate(v)
+    except Exception:
+        return BaseEvent.model_validate(v)
+
+
+def _build_event_type_map() -> None:
+    """Populate _event_type_map from all BaseEvent subclasses."""
+
+    def _collect(cls: type[BaseEvent]) -> None:
+        for sub in cls.__subclasses__():
+            type_field = sub.model_fields.get("type")
+            if type_field and type_field.default:
+                _event_type_map[type_field.default] = sub
+            _collect(sub)
+
+    _collect(BaseEvent)
 
 
 EdgeType = Literal[
@@ -29,7 +63,11 @@ EdgeType = Literal[
 class EventNode(BaseModel):
     """A node wrapping a single event with its adjacency lists."""
 
-    event: BaseEvent
+    event: Annotated[
+        BaseEvent,
+        BeforeValidator(_resolve_event),
+        PlainSerializer(lambda v: v.model_dump()),
+    ]
     edges: dict[EdgeType, list[str]] = Field(default_factory=dict)
 
     def add_edge(self, edge_type: EdgeType, target_id: str) -> None:
