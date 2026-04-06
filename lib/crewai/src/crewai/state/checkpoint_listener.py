@@ -70,16 +70,6 @@ def _do_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
         _prune(cfg.directory, cfg.max_checkpoints)
 
 
-async def _ado_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
-    """Write a checkpoint asynchronously and optionally prune old files."""
-    _prepare_entities(state.root)
-    data = state.model_dump_json()
-    await cfg.provider.acheckpoint(data, cfg.directory)
-
-    if cfg.max_checkpoints is not None:
-        _prune(cfg.directory, cfg.max_checkpoints)
-
-
 def _safe_remove(path: str) -> None:
     try:
         os.remove(path)
@@ -116,19 +106,13 @@ def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
         logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
 
 
-async def _on_any_event_async(source: Any, event: BaseEvent, state: Any) -> None:
-    """Async handler registered on every event class."""
-    cfg = _should_checkpoint(source, event)
-    if cfg is None:
-        return
-    try:
-        await _ado_checkpoint(state, cfg)
-    except Exception:
-        logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
-
-
 def setup_checkpoint_handlers(event_bus: CrewAIEventsBus) -> None:
-    """Register sync and async checkpoint handlers on all known event classes."""
+    """Register the checkpoint handler on all known event classes.
+
+    Only the sync handler is registered. The event bus runs sync handlers
+    in a ``ThreadPoolExecutor``, so blocking I/O is safe and we avoid
+    writing duplicate checkpoints from both sync and async dispatch.
+    """
     seen: set[type] = set()
 
     def _collect(cls: type[BaseEvent]) -> None:
@@ -142,7 +126,6 @@ def setup_checkpoint_handlers(event_bus: CrewAIEventsBus) -> None:
                     and type_field.default != "base_event"
                 ):
                     event_bus.register_handler(sub, _on_any_event)
-                    event_bus.register_handler(sub, _on_any_event_async)
                 _collect(sub)
 
     _collect(BaseEvent)
