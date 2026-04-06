@@ -144,6 +144,51 @@ agent = Agent(
 result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
 ```
 
+## Provedores de Armazenamento
+
+O CrewAI inclui dois provedores de armazenamento para checkpoints.
+
+### JsonProvider (padrao)
+
+Grava cada checkpoint como um arquivo JSON separado.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import JsonProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./my_checkpoints",
+        provider=JsonProvider(),
+        max_checkpoints=5,
+    ),
+)
+```
+
+### SqliteProvider
+
+Armazena todos os checkpoints em um unico arquivo SQLite.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import SqliteProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./.checkpoints.db",
+        provider=SqliteProvider(max_checkpoints=50),
+    ),
+)
+```
+
+<Note>
+Ao usar `SqliteProvider`, o campo `directory` e o caminho do arquivo de banco de dados, nao um diretorio.
+</Note>
+
 ## Tipos de Evento
 
 O campo `on_events` aceita qualquer combinacao de strings de tipo de evento. Escolhas comuns:

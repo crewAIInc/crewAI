@@ -144,6 +144,55 @@ agent = Agent(
 result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
 ```
 
+## Storage Providers
+
+CrewAI ships with two checkpoint storage providers.
+
+### JsonProvider (default)
+
+Writes each checkpoint as a separate JSON file. Simple, human-readable, easy to inspect.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import JsonProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./my_checkpoints",
+        provider=JsonProvider(),       # this is the default
+        max_checkpoints=5,             # prunes oldest files
+    ),
+)
+```
+
+Files are named `<timestamp>_<uuid>.json` inside the directory.
+
+### SqliteProvider
+
+Stores all checkpoints in a single SQLite database file. Better for high-frequency checkpointing and avoids many small files.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import SqliteProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./.checkpoints.db",
+        provider=SqliteProvider(max_checkpoints=50),
+    ),
+)
+```
+
+`SqliteProvider` accepts its own `max_checkpoints` parameter that prunes old rows via SQL. WAL journal mode is enabled for concurrent read access.
+
+<Note>
+When using `SqliteProvider`, the `directory` field is the database file path, not a directory. The `max_checkpoints` on `CheckpointConfig` controls filesystem pruning (for `JsonProvider`), while `SqliteProvider.max_checkpoints` controls row pruning in the database.
+</Note>
+
 ## Event Types
 
 The `on_events` field accepts any combination of event type strings. Common choices:
