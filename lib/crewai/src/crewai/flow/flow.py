@@ -938,12 +938,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
         crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
+            if not isinstance(entity, Flow):
+                continue
+            if entity.execution_context is not None:
+                apply_execution_context(entity.execution_context)
             if isinstance(entity, cls):
-                if entity.execution_context is not None:
-                    apply_execution_context(entity.execution_context)
                 entity._restore_from_checkpoint()
                 return entity
-        raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
+            instance = cls()
+            instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
+            instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
+            instance.checkpoint_method_counts = entity.checkpoint_method_counts
+            instance.checkpoint_state = entity.checkpoint_state
+            instance._restore_from_checkpoint()
+            return instance
+        raise ValueError(f"No Flow found in checkpoint: {path}")
 
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
