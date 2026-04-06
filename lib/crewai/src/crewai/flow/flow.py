@@ -921,7 +921,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     max_method_calls: int = Field(default=100)
 
     execution_context: ExecutionContext | None = Field(default=None)
-    checkpoint: CheckpointConfig | None = Field(default=None)
+    checkpoint: CheckpointConfig | bool = Field(default=False)
 
     @classmethod
     def from_checkpoint(

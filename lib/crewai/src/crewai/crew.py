@@ -341,10 +341,10 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
-    checkpoint: CheckpointConfig | None = Field(
-        default=None,
+    checkpoint: CheckpointConfig | bool = Field(
+        default=False,
         description="Automatic checkpointing configuration. "
-        "When set, checkpoints are written on the specified event(s).",
+        "Pass True for defaults or a CheckpointConfig for custom settings.",
     )
     token_usage: UsageMetrics | None = Field(
         default=None,

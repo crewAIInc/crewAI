@@ -20,6 +20,15 @@ from crewai.task import Task
 logger = logging.getLogger(__name__)
 
 
+def _resolve(value: CheckpointConfig | bool) -> CheckpointConfig | None:
+    """Coerce a checkpoint field to a CheckpointConfig or None."""
+    if isinstance(value, CheckpointConfig):
+        return value
+    if value is True:
+        return CheckpointConfig()
+    return None
+
+
 def _find_checkpoint(source: Any) -> CheckpointConfig | None:
     """Find the CheckpointConfig for an event source.
 
@@ -27,24 +36,26 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
     carry their own checkpoint field directly.
     """
     if isinstance(source, Flow):
-        return source.checkpoint
+        return _resolve(source.checkpoint)
     if isinstance(source, Crew):
-        return source.checkpoint
+        return _resolve(source.checkpoint)
     if isinstance(source, BaseAgent):
-        if source.checkpoint is not None:
-            return source.checkpoint
+        cfg = _resolve(source.checkpoint)
+        if cfg is not None:
+            return cfg
         crew = source.crew
         if isinstance(crew, Crew):
-            return crew.checkpoint
+            return _resolve(crew.checkpoint)
         return None
     if isinstance(source, Task):
         agent = source.agent
         if isinstance(agent, BaseAgent):
-            if agent.checkpoint is not None:
-                return agent.checkpoint
+            cfg = _resolve(agent.checkpoint)
+            if cfg is not None:
+                return cfg
             crew = agent.crew
             if isinstance(crew, Crew):
-                return crew.checkpoint
+                return _resolve(crew.checkpoint)
         return None
     return None
 
