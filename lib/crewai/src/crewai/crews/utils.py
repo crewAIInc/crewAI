@@ -160,10 +160,8 @@ def prepare_task_execution(
     # Handle replay skip
     if start_index is not None and task_index < start_index:
         if task.output:
-            if task.async_execution:
-                task_outputs.append(task.output)
-            else:
-                task_outputs = [task.output]
+            task_outputs.append(task.output)
+            if not task.async_execution:
                 last_sync_output = task.output
         return (
             TaskExecutionData(agent=None, tools=[], should_skip=True),
