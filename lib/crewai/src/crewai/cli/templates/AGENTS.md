@@ -767,10 +767,40 @@ class CustomSearchTool(BaseTool):
 ```python
 from crewai.tools import tool
 
+import ast
+import operator
+
+def safe_eval(expr: str) -> float:
+    """Safely evaluate arithmetic expressions using AST parsing."""
+    allowed_operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Pow: operator.pow,
+        ast.Mod: operator.mod,
+        ast.USub: operator.neg,
+    }
+
+    def _eval(node):
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+        elif isinstance(node, ast.BinOp) and type(node.op) in allowed_operators:
+            return allowed_operators[type(node.op)](_eval(node.left), _eval(node.right))
+        elif isinstance(node, ast.UnaryOp) and type(node.op) in allowed_operators:
+            return allowed_operators[type(node.op)](_eval(node.operand))
+        else:
+            raise ValueError(f"Unsupported expression: {ast.dump(node)}")
+
+    tree = ast.parse(expr, mode='eval')
+    return _eval(tree)
+
 @tool("Calculator")
 def calculator(expression: str) -> str:
     """Evaluates a mathematical expression and returns the result."""
-    return str(eval(expression))
+    return str(safe_eval(expression))
 ```
 
 ### Built-in Tools (install with `uv add crewai-tools`)
