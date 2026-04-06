@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from pathlib import Path
+
 from pydantic import BaseModel
 
 from crewai.flow import Flow, listen, start
@@ -42,7 +44,9 @@ class ContentFlow(Flow[ContentState]):
     @listen(generate_content)
     def save_content(self):
         print("Saving content")
-        with open("output/post.md", "w") as f:
+        output_dir = Path("output")
+        output_dir.mkdir(exist_ok=True)
+        with open(output_dir / "post.md", "w") as f:
             f.write(self.state.final_post)
         print("Post saved to output/post.md")
 
