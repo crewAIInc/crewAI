@@ -21,12 +21,14 @@ from pydantic import (
     BaseModel as PydanticBaseModel,
     ConfigDict,
     Field,
+    GetCoreSchemaHandler,
     PlainSerializer,
     PrivateAttr,
     computed_field,
     create_model,
     field_validator,
 )
+from pydantic_core import CoreSchema, core_schema
 from typing_extensions import TypeIs
 
 from crewai.tools.structured_tool import (
@@ -46,21 +48,27 @@ _printer = Printer()
 P = ParamSpec("P")
 R = TypeVar("R", covariant=True)
 
+# Registry populated by BaseTool.__init_subclass__; used for checkpoint
+# deserialization so that list[BaseTool] fields resolve the concrete class.
+_TOOL_TYPE_REGISTRY: dict[str, type] = {}
 
-def restore_tool_from_dict(data: dict[str, Any]) -> BaseTool:
-    """Reconstruct a concrete ``BaseTool`` subclass from a checkpoint dict.
+# Sentinel set after BaseTool is defined so __get_pydantic_core_schema__
+# can distinguish the base class from subclasses despite
+# ``from __future__ import annotations``.
+_BASE_TOOL_CLS: type | None = None
 
-    The dict must contain a ``tool_type`` key holding the fully qualified
-    class name (e.g. ``crewai_tools.tools.serper_dev_tool.SerperDevTool``).
-    The class is imported and instantiated with the remaining fields so that
-    its ``_run`` method is available.
-    """
 
-    data = dict(data)  # avoid mutating caller
-    dotted = data.pop("tool_type")
-    mod_path, cls_name = dotted.rsplit(".", 1)
-    cls = getattr(importlib.import_module(mod_path), cls_name)
+def _resolve_tool_dict(value: dict[str, Any]) -> Any:
+    """Validate a dict with ``tool_type`` into the concrete BaseTool subclass."""
+    dotted = value.get("tool_type", "")
+    tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
+    if tool_cls is None:
+        mod_path, cls_name = dotted.rsplit(".", 1)
+        tool_cls = getattr(importlib.import_module(mod_path), cls_name)
 
+    # Pre-resolve serialized callback strings so SerializableCallable's
+    # BeforeValidator sees a callable and skips the env-var guard.
+    data = dict(value)
     for key in ("cache_function",):
         val = data.get(key)
         if isinstance(val, str):
@@ -69,8 +77,7 @@ def restore_tool_from_dict(data: dict[str, Any]) -> BaseTool:
             except (ValueError, ImportError):
                 data.pop(key)
 
-    result: BaseTool = cls(**data)
-    return result
+    return tool_cls.model_validate(data)  # type: ignore[union-attr]
 
 
 def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
@@ -100,6 +107,36 @@ class BaseTool(BaseModel, ABC):
         pass
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        key = f"{cls.__module__}.{cls.__qualname__}"
+        _TOOL_TYPE_REGISTRY[key] = cls
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        default_schema = handler(source_type)
+        if cls is not _BASE_TOOL_CLS:
+            return default_schema
+
+        def _validate_tool(value: Any, nxt: Any) -> Any:
+            if isinstance(value, _BASE_TOOL_CLS):
+                return value
+            if isinstance(value, dict) and "tool_type" in value:
+                return _resolve_tool_dict(value)
+            return nxt(value)
+
+        return core_schema.no_info_wrap_validator_function(
+            _validate_tool,
+            default_schema,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: v.model_dump(mode="json"),
+                info_arg=False,
+                when_used="json",
+            ),
+        )
 
     name: str = Field(
         description="The unique name of the tool that clearly communicates its purpose."
@@ -419,6 +456,9 @@ class BaseTool(BaseModel, ABC):
             f"Tool Arguments: {args_json}\n"
             f"Tool Description: {self.description}"
         )
+
+
+_BASE_TOOL_CLS = BaseTool
 
 
 class Tool(BaseTool, Generic[P, R]):

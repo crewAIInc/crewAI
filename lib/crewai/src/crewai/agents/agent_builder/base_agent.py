@@ -39,7 +39,7 @@ from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
-from crewai.tools.base_tool import BaseTool, Tool, restore_tool_from_dict
+from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -361,14 +361,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
 
-    @field_validator("tools", mode="before")
+    @field_validator("tools")
     @classmethod
     def validate_tools(cls, tools: list[Any]) -> list[BaseTool]:
         """Validate and process the tools provided to the agent.
 
-        This method ensures that each tool is either an instance of BaseTool,
-        a dict from checkpoint deserialization with a ``tool_type`` key, or an
-        object with 'name', 'func', and 'description' attributes. If the
+        This method ensures that each tool is either an instance of BaseTool
+        or an object with 'name', 'func', and 'description' attributes. If the
         tool meets these criteria, it is processed and added to the list of
         tools. Otherwise, a ValueError is raised.
         """
@@ -380,8 +379,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         for tool in tools:
             if isinstance(tool, BaseTool):
                 processed_tools.append(tool)
-            elif isinstance(tool, dict) and "tool_type" in tool:
-                processed_tools.append(restore_tool_from_dict(tool))
             elif all(hasattr(tool, attr) for attr in required_attrs):
                 # Tool has the required attributes, create a Tool instance
                 processed_tools.append(Tool.from_langchain(tool))
