@@ -144,6 +144,51 @@ agent = Agent(
 result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
 ```
 
+## 스토리지 프로바이더
+
+CrewAI는 두 가지 체크포인트 스토리지 프로바이더를 제공합니다.
+
+### JsonProvider (기본값)
+
+각 체크포인트를 별도의 JSON 파일로 저장합니다.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import JsonProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./my_checkpoints",
+        provider=JsonProvider(),
+        max_checkpoints=5,
+    ),
+)
+```
+
+### SqliteProvider
+
+모든 체크포인트를 단일 SQLite 데이터베이스 파일에 저장합니다.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import SqliteProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        directory="./.checkpoints.db",
+        provider=SqliteProvider(max_checkpoints=50),
+    ),
+)
+```
+
+<Note>
+`SqliteProvider`를 사용할 때 `directory` 필드는 디렉토리가 아닌 데이터베이스 파일 경로입니다.
+</Note>
+
 ## 이벤트 타입
 
 `on_events` 필드는 이벤트 타입 문자열의 조합을 받습니다. 일반적인 선택:
