@@ -443,13 +443,26 @@ class CrewAIEventsBus:
             if level_async:
                 await self._acall_handlers(source, event, level_async)
 
-    def _prepare_event(self, source: Any, event: BaseEvent) -> None:
-        """Set event metadata, register the source entity, and record the event."""
+    def _register_source(self, source: Any) -> None:
+        """Register the source entity in RuntimeState if applicable."""
         if (
             getattr(source, "entity_type", None) in ("flow", "crew", "agent")
             and id(source) not in self._registered_entity_ids
         ):
             self.register_entity(source)
+
+    def _record_event(self, event: BaseEvent) -> None:
+        """Add an event to the RuntimeState event record."""
+        if self._runtime_state is not None:
+            self._runtime_state.event_record.add(event)
+
+    def _prepare_event(self, source: Any, event: BaseEvent) -> None:
+        """Register source, set scope/sequence metadata, and record the event.
+
+        This method mutates ContextVar state (scope stack, last_event_id)
+        and must only be called from synchronous emit paths.
+        """
+        self._register_source(source)
 
         event.previous_event_id = get_last_event_id()
         event.triggered_by_event_id = get_triggering_event_id()
@@ -475,8 +488,7 @@ class CrewAIEventsBus:
 
         set_last_event_id(event.event_id)
 
-        if self._runtime_state is not None:
-            self._runtime_state.event_record.add(event)
+        self._record_event(event)
 
     def emit(self, source: Any, event: BaseEvent) -> Future[None] | None:
         """Emit an event to all registered handlers.
@@ -604,7 +616,9 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
-        self._prepare_event(source, event)
+        self._register_source(source)
+        event.emission_sequence = get_next_emission_sequence()
+        self._record_event(event)
 
         event_type = type(event)
 
