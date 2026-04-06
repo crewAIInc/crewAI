@@ -416,6 +416,7 @@ class Crew(FlowTrackable, BaseModel):
 
     def _restore_event_scope(self) -> None:
         """Rebuild the event scope stack from the checkpoint's event record."""
+        from crewai.events.base_events import set_emission_counter
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.event_context import (
             restore_event_scope,
@@ -447,19 +448,18 @@ class Crew(FlowTrackable, BaseModel):
 
         restore_event_scope(tuple(stack))
 
-        # Set last_event_id to the most recent event in the record
+        # Restore last_event_id and emission counter from the record
         last_event_id: str | None = None
+        max_seq = 0
         for node in state.event_record.nodes.values():
             seq = node.event.emission_sequence or 0
-            if last_event_id is None or seq > (
-                state.event_record.nodes.get(
-                    last_event_id, node
-                ).event.emission_sequence
-                or 0
-            ):
+            if seq > max_seq:
+                max_seq = seq
                 last_event_id = node.event.event_id
         if last_event_id is not None:
             set_last_event_id(last_event_id)
+        if max_seq > 0:
+            set_emission_counter(max_seq)
 
     @field_validator("id", mode="before")
     @classmethod
