@@ -83,7 +83,7 @@ voyageai = [
     "voyageai~=0.3.5",
 ]
 litellm = [
-    "litellm>=1.74.9,<=1.82.6",
+    "litellm~=1.83.0",
 ]
 bedrock = [
     "boto3~=1.40.45",
