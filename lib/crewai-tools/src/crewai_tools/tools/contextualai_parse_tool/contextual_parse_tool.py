@@ -47,7 +47,7 @@ class ContextualAIParseTool(BaseTool):
         """Parse a document using Contextual AI's parser."""
         if output_types is None:
             output_types = ["markdown-per-page"]
-        validate_file_path(file_path)
+        file_path = validate_file_path(file_path)
         try:
             import json
             import os

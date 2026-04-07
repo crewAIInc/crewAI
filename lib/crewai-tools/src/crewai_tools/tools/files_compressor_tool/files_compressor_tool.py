@@ -42,14 +42,14 @@ class FileCompressorTool(BaseTool):
         overwrite: bool = False,
         format: str = "zip",
     ) -> str:
-        validate_file_path(input_path)
+        input_path = validate_file_path(input_path)
         if not os.path.exists(input_path):
             return f"Input path '{input_path}' does not exist."
 
         if not output_path:
             output_path = self._generate_output_path(input_path, format)
 
-        validate_file_path(output_path)
+        output_path = validate_file_path(output_path)
 
         format_extension = {
             "zip": ".zip",

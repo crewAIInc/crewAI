@@ -38,7 +38,7 @@ class DirectorySearchTool(RagTool):
             self._generate_description()
 
     def add(self, directory: str) -> None:  # type: ignore[override]
-        validate_directory_path(directory)
+        directory = validate_directory_path(directory)
         super().add(directory, data_type=DataType.DIRECTORY)
 
     def _run(  # type: ignore[override]

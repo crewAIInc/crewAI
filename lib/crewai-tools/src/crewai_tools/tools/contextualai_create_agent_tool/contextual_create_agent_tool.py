@@ -50,7 +50,7 @@ class ContextualAICreateAgentTool(BaseTool):
     ) -> str:
         """Create a complete RAG pipeline with documents."""
         for doc_path in document_paths:
-            validate_file_path(doc_path)
+            doc_path = validate_file_path(doc_path)
         try:
             import os
 

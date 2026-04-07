@@ -41,7 +41,7 @@ class DirectoryReadTool(BaseTool):
         if directory is None:
             raise ValueError("Directory must be provided.")
 
-        validate_directory_path(directory)
+        directory = validate_directory_path(directory)
         if directory[-1] == "/":
             directory = directory[:-1]
         files_list = [

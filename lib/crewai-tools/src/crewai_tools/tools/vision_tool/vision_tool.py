@@ -137,6 +137,6 @@ class VisionTool(BaseTool):
         Returns:
             Base64-encoded image data
         """
-        validate_file_path(image_path)
+        image_path = validate_file_path(image_path)
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode()
