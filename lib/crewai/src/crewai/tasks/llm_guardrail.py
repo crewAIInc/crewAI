@@ -1,6 +1,6 @@
 import asyncio
-import concurrent.futures
 from collections.abc import Coroutine
+import concurrent.futures
 import contextvars
 import inspect
 from typing import Any

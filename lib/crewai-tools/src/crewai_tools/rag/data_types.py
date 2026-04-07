@@ -109,7 +109,7 @@ class DataTypes:
         if isinstance(content, str):
             try:
                 url = urlparse(content)
-                is_url = bool(url.scheme and url.netloc) or url.scheme == "file"
+                is_url = bool(url.scheme in ("http", "https") and url.netloc)
             except Exception:  # noqa: S110
                 pass
 
