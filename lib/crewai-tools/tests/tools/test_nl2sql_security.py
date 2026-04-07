@@ -288,3 +288,69 @@ class TestRunValidation:
         tool = _make_tool(allow_dml=False)
         result = tool._run("SELECT 1 AS n")
         assert result == [{"n": 1}]
+
+
+# ---------------------------------------------------------------------------
+# Multi-statement / semicolon injection prevention
+# ---------------------------------------------------------------------------
+
+
+class TestSemicolonInjection:
+    def test_multi_statement_blocked_in_read_only_mode(self):
+        """SELECT 1; DROP TABLE users must be rejected when allow_dml=False."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="multi-statement"):
+            tool._validate_query("SELECT 1; DROP TABLE users")
+
+    def test_multi_statement_blocked_even_with_only_selects(self):
+        """Two SELECT statements are still rejected in read-only mode."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="multi-statement"):
+            tool._validate_query("SELECT 1; SELECT 2")
+
+    def test_trailing_semicolon_allowed_single_statement(self):
+        """A single statement with a trailing semicolon should pass."""
+        tool = _make_tool(allow_dml=False)
+        # Should not raise — the part after the semicolon is empty
+        tool._validate_query("SELECT 1;")
+
+    def test_multi_statement_allowed_when_dml_enabled(self):
+        """Multiple statements are permitted when allow_dml=True."""
+        tool = _make_tool(allow_dml=True)
+        # Should not raise
+        tool._validate_query("SELECT 1; INSERT INTO t VALUES (1)")
+
+    def test_multi_statement_write_still_blocked_individually(self):
+        """Even with allow_dml=False, a single write statement is blocked."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("DROP TABLE users")
+
+
+# ---------------------------------------------------------------------------
+# Extended _WRITE_COMMANDS coverage
+# ---------------------------------------------------------------------------
+
+
+class TestExtendedWriteCommands:
+    @pytest.mark.parametrize(
+        "stmt",
+        [
+            "UPSERT INTO t VALUES (1)",
+            "LOAD DATA INFILE 'f.csv' INTO TABLE t",
+            "COPY t FROM '/tmp/f.csv'",
+            "VACUUM ANALYZE t",
+            "ANALYZE t",
+            "ANALYSE t",
+            "REINDEX TABLE t",
+            "CLUSTER t USING idx",
+            "REFRESH MATERIALIZED VIEW v",
+            "COMMENT ON TABLE t IS 'desc'",
+            "SET search_path = myschema",
+            "RESET search_path",
+        ],
+    )
+    def test_extended_write_commands_blocked_by_default(self, stmt: str):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(stmt)

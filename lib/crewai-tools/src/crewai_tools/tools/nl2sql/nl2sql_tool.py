@@ -35,6 +35,18 @@ _WRITE_COMMANDS = {
     "CALL",
     "MERGE",
     "REPLACE",
+    "UPSERT",
+    "LOAD",
+    "COPY",
+    "VACUUM",
+    "ANALYZE",
+    "ANALYSE",
+    "REINDEX",
+    "CLUSTER",
+    "REFRESH",
+    "COMMENT",
+    "SET",
+    "RESET",
 }
 
 
@@ -127,12 +139,29 @@ class NL2SQLTool(BaseTool):
     def _validate_query(self, sql_query: str) -> None:
         """Raise ValueError if *sql_query* is not permitted under the current config.
 
-        Parses the leading SQL command keyword and checks it against the
-        allowed set.  When ``allow_dml=False`` (the default) only read
-        statements pass.  When ``allow_dml=True`` all statements are allowed
-        but a warning is emitted for write operations.
+        Splits the query on semicolons and validates each statement
+        independently.  When ``allow_dml=False`` (the default), multi-statement
+        queries are rejected outright to prevent ``SELECT 1; DROP TABLE users``
+        style bypasses.  When ``allow_dml=True`` every statement is checked and
+        a warning is emitted for write operations.
         """
-        command = self._extract_command(sql_query)
+        statements = [s.strip() for s in sql_query.split(";") if s.strip()]
+
+        if not statements:
+            raise ValueError("NL2SQLTool received an empty SQL query.")
+
+        if not self.allow_dml and len(statements) > 1:
+            raise ValueError(
+                "NL2SQLTool blocked a multi-statement query in read-only mode. "
+                "Semicolons are not permitted when allow_dml=False."
+            )
+
+        for stmt in statements:
+            self._validate_statement(stmt)
+
+    def _validate_statement(self, stmt: str) -> None:
+        """Validate a single SQL statement (no semicolons)."""
+        command = self._extract_command(stmt)
 
         if command in _WRITE_COMMANDS:
             if not self.allow_dml:
