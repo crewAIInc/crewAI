@@ -81,11 +81,8 @@ from crewai.utilities.guardrail_types import (
     GuardrailsType,
 )
 from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
-
-
-_printer = Printer()
 
 
 class Task(BaseModel):
@@ -981,7 +978,7 @@ Follow these guidelines:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
                 if self.agent and self.agent.verbose:
-                    _printer.print(
+                    PRINTER.print(
                         f"An error occurred while parsing crew chat messages: {e}",
                         color="red",
                     )
@@ -1227,8 +1224,7 @@ Follow these guidelines:
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
-                printer = Printer()
-                printer.print(
+                PRINTER.print(
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
@@ -1325,8 +1321,7 @@ Follow these guidelines:
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
-                printer = Printer()
-                printer.print(
+                PRINTER.print(
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )

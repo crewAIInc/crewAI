@@ -32,7 +32,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.i18n import I18N
-from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.printer import PRINTER, ColoredText, Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -946,7 +946,7 @@ def summarize_messages(
         summarized_contents: list[SummaryContent] = []
         for idx, chunk in enumerate(chunks, 1):
             if verbose:
-                Printer().print(
+                PRINTER.print(
                     content=f"Summarizing {idx}/{total_chunks}...",
                     color="yellow",
                 )
@@ -967,7 +967,7 @@ def summarize_messages(
     else:
         # Multiple chunks — summarize in parallel via asyncio
         if verbose:
-            Printer().print(
+            PRINTER.print(
                 content=f"Summarizing {total_chunks} chunks in parallel...",
                 color="yellow",
             )

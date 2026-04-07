@@ -98,7 +98,7 @@ from crewai.utilities.planning_types import (
     TodoItem,
     TodoList,
 )
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -199,7 +199,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
     )
 
     _i18n: I18N = PrivateAttr(default_factory=get_i18n)
-    _printer: Printer = PrivateAttr(default_factory=Printer)
     _console: Console = PrivateAttr(default_factory=Console)
     _last_parser_error: OutputParserError | None = PrivateAttr(default=None)
     _last_context_error: Exception | None = PrivateAttr(default=None)
@@ -503,7 +502,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         )
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content=(
                     f"[Observe] Step {current_todo.step_number} "
                     f"(effort={effort}): "
@@ -553,7 +552,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Low] Step {current_todo.step_number} hard-failed "
                         f"— triggering replan: {observation.replan_reason}"
@@ -572,7 +571,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=f"[Low] Step {current_todo.step_number} done ({completed}/{total}) — continuing",
                 color="green",
             )
@@ -605,7 +604,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             if self.agent.verbose:
                 completed = self.state.todos.completed_count
                 total = len(self.state.todos.items)
-                self._printer.print(
+                PRINTER.print(
                     content=f"[Medium] Step {current_todo.step_number} succeeded ({completed}/{total}) — continuing",
                     color="green",
                 )
@@ -618,7 +617,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Medium] Step {current_todo.step_number} failed + replan required "
                         f"— triggering replan: {observation.replan_reason}"
@@ -638,7 +637,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         if self.agent.verbose:
             failed = len(self.state.todos.get_failed_todos())
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=(
                     f"[Medium] Step {current_todo.step_number} failed but no replan needed "
                     f"({failed} failed/{total} total) — continuing"
@@ -680,7 +679,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="[Decide] Goal achieved early — finalizing",
                     color="green",
                 )
@@ -692,7 +691,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"[Decide] Full replan needed: {observation.replan_reason}",
                     color="yellow",
                 )
@@ -705,7 +704,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="[Decide] Step failed — triggering replan",
                     color="yellow",
                 )
@@ -718,7 +717,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="[Decide] Plan valid but refining upcoming steps",
                     color="cyan",
                 )
@@ -731,7 +730,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=f"[Decide] Continue plan ({completed}/{total} done)",
                 color="green",
             )
@@ -776,7 +775,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             )
 
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"[Refine] Updated {len(remaining)} pending step(s)",
                     color="cyan",
                 )
@@ -811,7 +810,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         )
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content="Goal achieved early — skipping remaining steps",
                 color="green",
             )
@@ -829,7 +828,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
         if self.state.replan_count >= max_replans:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Max replans ({max_replans}) reached — finalizing with current results",
                     color="yellow",
                 )
@@ -936,7 +935,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         # Plan-and-Execute path: use StepExecutor for isolated execution
         if getattr(self.agent, "planning_enabled", False):
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Execute] Step {current.step_number}: "
                         f"{current.description[:60]}..."
@@ -971,7 +970,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
             if self.agent.verbose:
                 status = "success" if result.success else "failed"
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Execute] Step {current.step_number} {status} "
                         f"({result.execution_time:.1f}s, "
@@ -1080,7 +1079,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 todo.result = error_msg
                 self.state.todos.mark_failed(todo.step_number, result=error_msg)
                 if self.agent.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content=f"Todo {todo.step_number} failed: {error_msg}",
                         color="red",
                     )
@@ -1105,7 +1104,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
                 if self.agent.verbose:
                     status = "success" if step_result.success else "failed"
-                    self._printer.print(
+                    PRINTER.print(
                         content=(
                             f"[Execute] Step {todo.step_number} {status} "
                             f"({step_result.execution_time:.1f}s, "
@@ -1152,7 +1151,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 self.state.todos.mark_failed(todo.step_number, result=todo.result)
 
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Observe] Step {todo.step_number} "
                         f"(effort={effort}): "
@@ -1203,7 +1202,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         """Force agent to provide final answer when max iterations exceeded."""
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
-            printer=self._printer,
+            printer=PRINTER,
             i18n=self._i18n,
             messages=list(self.state.messages),
             llm=self.llm,
@@ -1232,7 +1231,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,
-                printer=self._printer,
+                printer=PRINTER,
                 from_task=self.task,
                 from_agent=self.agent,
                 response_model=self.response_model,
@@ -1282,7 +1281,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 return "context_error"
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
 
     @router("continue_reasoning_native")
@@ -1318,7 +1317,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,
-                printer=self._printer,
+                printer=PRINTER,
                 tools=self._openai_tools,
                 available_functions=None,
                 from_task=self.task,
@@ -1373,7 +1372,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 return "context_error"
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
 
     def _route_finish_with_todos(
@@ -1442,9 +1441,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             )
         except Exception as e:
             if self.agent and self.agent.verbose:
-                self._printer.print(
-                    content=f"Error in tool execution: {e}", color="red"
-                )
+                PRINTER.print(content=f"Error in tool execution: {e}", color="red")
             if self.task:
                 self.task.increment_tools_errors()
 
@@ -1598,7 +1595,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 # Log the tool execution
                 if self.agent and self.agent.verbose:
                     cache_info = " (from cache)" if from_cache else ""
-                    self._printer.print(
+                    PRINTER.print(
                         content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
                         color="green",
                     )
@@ -1636,7 +1633,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             # Log the tool execution
             if self.agent and self.agent.verbose:
                 cache_info = " (from cache)" if from_cache else ""
-                self._printer.print(
+                PRINTER.print(
                     content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
                     color="green",
                 )
@@ -1800,7 +1797,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                     break
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in before_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -1875,7 +1872,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                     after_hook_context.tool_result = result
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in after_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -2033,7 +2030,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=f"✓ Todo {step_number} completed ({completed}/{total})",
                 color="green",
             )
@@ -2100,7 +2097,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             self._finalize_called = True
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content=f"[Finalize] todos_count={len(self.state.todos.items)}, todos_with_results={sum(1 for t in self.state.todos.items if t.result)}",
                 color="magenta",
             )
@@ -2263,7 +2260,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
         except Exception as e:
             if self.agent and self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Synthesis LLM call failed ({e}), falling back to concatenation",
                     color="yellow",
                 )
@@ -2348,7 +2345,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         self.state.last_replan_reason = reason
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content=f"Triggering replan (attempt {self.state.replan_count}): {reason}",
                 color="yellow",
             )
@@ -2408,7 +2405,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 self.state.todos.replace_pending_todos(new_todos)
 
                 if self.agent.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content=f"Replan: {len(new_todos)} new steps (completed history preserved)",
                         color="green",
                     )
@@ -2492,7 +2489,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
         if self.state.replan_count >= max_replans:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Max replans ({max_replans}) reached — finalizing with current results",
                     color="yellow",
                 )
@@ -2518,7 +2515,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             messages=list(self.state.messages),
             iterations=self.state.iterations,
             log_error_after=self.log_error_after,
-            printer=self._printer,
+            printer=PRINTER,
             verbose=self.agent.verbose,
         )
 
@@ -2534,7 +2531,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         """Recover from context length errors and retry."""
         handle_context_length(
             respect_context_window=self.respect_context_window,
-            printer=self._printer,
+            printer=PRINTER,
             messages=self.state.messages,
             llm=self.llm,
             callbacks=self.callbacks,
@@ -2637,7 +2634,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
@@ -2728,7 +2725,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
@@ -2793,7 +2790,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             task.result()
         except Exception as e:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in async step_callback task: {e!s}",
                     color="red",
                 )

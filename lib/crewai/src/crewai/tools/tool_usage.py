@@ -29,7 +29,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -94,7 +94,6 @@ class ToolUsage:
         fingerprint_context: dict[str, str] | None = None,
     ) -> None:
         self._i18n: I18N = agent.i18n if agent else get_i18n()
-        self._printer: Printer = Printer()
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
@@ -129,7 +128,7 @@ class ToolUsage:
         if isinstance(calling, ToolUsageError):
             error = calling.message
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             if self.task:
                 self.task.increment_tools_errors()
             return error
@@ -141,7 +140,7 @@ class ToolUsage:
             if self.task:
                 self.task.increment_tools_errors()
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             return error
 
         if (
@@ -157,7 +156,7 @@ class ToolUsage:
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
-                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                    PRINTER.print(content=f"\n\n{error}\n", color="red")
                 return error
 
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
@@ -177,7 +176,7 @@ class ToolUsage:
         if isinstance(calling, ToolUsageError):
             error = calling.message
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             if self.task:
                 self.task.increment_tools_errors()
             return error
@@ -189,7 +188,7 @@ class ToolUsage:
             if self.task:
                 self.task.increment_tools_errors()
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             return error
 
         if (
@@ -206,7 +205,7 @@ class ToolUsage:
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
-                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                    PRINTER.print(content=f"\n\n{error}\n", color="red")
                 return error
 
         return (
@@ -391,7 +390,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -405,7 +404,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -429,9 +428,7 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
-                            self._printer.print(
-                                content=f"\n\n{error_message}\n", color="red"
-                            )
+                            PRINTER.print(content=f"\n\n{error_message}\n", color="red")
                     else:
                         if self.task:
                             self.task.increment_tools_errors()
@@ -626,7 +623,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -640,7 +637,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -664,9 +661,7 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
-                            self._printer.print(
-                                content=f"\n\n{error_message}\n", color="red"
-                            )
+                            PRINTER.print(content=f"\n\n{error_message}\n", color="red")
                     else:
                         if self.task:
                             self.task.increment_tools_errors()
@@ -859,7 +854,7 @@ class ToolUsage:
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
-                    self._printer.print(content=f"\n\n{e}\n", color="red")
+                    PRINTER.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageError(
                     f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                 )
@@ -903,16 +898,14 @@ class ToolUsage:
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             if self.agent and self.agent.verbose:
-                self._printer.print(
-                    content=f"Repaired JSON: {repaired_input}", color="blue"
-                )
+                PRINTER.print(content=f"Repaired JSON: {repaired_input}", color="blue")
             arguments = json.loads(repaired_input)
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
             error = f"Failed to repair JSON: {e}"
             if self.agent and self.agent.verbose:
-                self._printer.print(content=error, color="red")
+                PRINTER.print(content=error, color="red")
 
         error_message = (
             "Tool input must be a valid dictionary in JSON or Python literal format"

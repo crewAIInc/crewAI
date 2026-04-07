@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai.agents.parser import AgentFinish
 from crewai.memory.utils import sanitize_scope_name
-from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.types import LLMMessage
 
@@ -30,7 +29,6 @@ class BaseAgentExecutor(BaseModel):
     messages: list[LLMMessage] = Field(default_factory=list)
     _resuming: bool = PrivateAttr(default=False)
     _i18n: I18N | None = PrivateAttr(default=None)
-    _printer: Printer = PrivateAttr(default_factory=Printer)
 
     def _save_to_memory(self, output: AgentFinish) -> None:
         """Save task result to unified memory (memory or crew._memory)."""
