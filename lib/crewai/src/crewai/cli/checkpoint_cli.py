@@ -49,7 +49,16 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
     """Parse checkpoint JSON into metadata dict."""
     data = json.loads(raw)
     entities = data.get("entities", [])
-    event_count = len(data.get("event_record", {}).get("nodes", {}))
+    nodes = data.get("event_record", {}).get("nodes", {})
+    event_count = len(nodes)
+
+    trigger_event = None
+    if nodes:
+        last_node = max(
+            nodes.values(),
+            key=lambda n: n.get("event", {}).get("emission_sequence") or 0,
+        )
+        trigger_event = last_node.get("event", {}).get("type")
 
     parsed_entities: list[dict[str, Any]] = []
     for entity in entities:
@@ -75,6 +84,7 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
     return {
         "source": source,
         "event_count": event_count,
+        "trigger": trigger_event,
         "entities": parsed_entities,
     }
 
@@ -234,11 +244,15 @@ def list_checkpoints(location: str) -> None:
         ts = entry.get("ts") or "unknown"
         name = entry.get("name", "")
         size = _format_size(entry["size"]) if "size" in entry else ""
+        trigger = entry.get("trigger") or ""
         summary = _entity_summary(entry.get("entities", []))
+        parts = [name, ts]
         if size:
-            click.echo(f"  {name}  {ts}  {size}  {summary}")
-        else:
-            click.echo(f"  {name}  {ts}  {summary}")
+            parts.append(size)
+        if trigger:
+            parts.append(trigger)
+        parts.append(summary)
+        click.echo(f"  {'  '.join(parts)}")
 
 
 def info_checkpoint(path: str) -> None:
@@ -294,6 +308,9 @@ def _print_info(meta: dict[str, Any]) -> None:
     if "size" in meta:
         click.echo(f"Size:    {_format_size(meta['size'])}")
     click.echo(f"Events:  {meta.get('event_count', 0)}")
+    trigger = meta.get("trigger")
+    if trigger:
+        click.echo(f"Trigger: {trigger}")
 
     for ent in meta.get("entities", []):
         eid = str(ent.get("id", ""))[:8]
