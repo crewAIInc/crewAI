@@ -4,6 +4,8 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import requests
 
+from crewai_tools.security.safe_path import validate_url
+
 
 class JinaScrapeWebsiteToolInput(BaseModel):
     """Input schema for JinaScrapeWebsiteTool."""
@@ -45,6 +47,7 @@ class JinaScrapeWebsiteTool(BaseTool):
                 "Website URL must be provided either during initialization or execution"
             )
 
+        url = validate_url(url)
         response = requests.get(
             f"https://r.jina.ai/{url}", headers=self.headers, timeout=15
         )

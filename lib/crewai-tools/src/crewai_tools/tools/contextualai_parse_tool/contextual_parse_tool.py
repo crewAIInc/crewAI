@@ -1,6 +1,8 @@
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_file_path
+
 
 class ContextualAIParseSchema(BaseModel):
     """Schema for contextual parse tool."""
@@ -45,6 +47,7 @@ class ContextualAIParseTool(BaseTool):
         """Parse a document using Contextual AI's parser."""
         if output_types is None:
             output_types = ["markdown-per-page"]
+        file_path = validate_file_path(file_path)
         try:
             import json
             import os
