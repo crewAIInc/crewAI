@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
+from typing import Literal
 import uuid
 
 import aiosqlite
@@ -46,6 +47,8 @@ class SqliteProvider(BaseProvider):
     The ``location`` argument to ``checkpoint`` / ``acheckpoint`` is
     used as the database file path.
     """
+
+    provider_type: Literal["sqlite"] = "sqlite"
 
     def checkpoint(self, data: str, location: str) -> str:
         """Write a checkpoint to the SQLite database.
