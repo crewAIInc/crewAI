@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import tempfile
 
 import pytest
 
@@ -52,7 +51,6 @@ class TestValidateFilePath:
 
     def test_rejects_symlink_escape(self, tmp_path):
         """Reject symlinks that point outside base_dir."""
-        target = tempfile.mktemp()  # path that doesn't exist
         link = tmp_path / "sneaky_link"
         # Create a symlink pointing to /etc/passwd
         os.symlink("/etc/passwd", str(link))

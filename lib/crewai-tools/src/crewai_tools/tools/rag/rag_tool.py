@@ -1,5 +1,5 @@
-import os
 from abc import ABC, abstractmethod
+import os
 from typing import Any, Literal, cast
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
@@ -249,8 +249,9 @@ class RagTool(BaseTool):
         """
         # Validate file paths and URLs before adding to prevent
         # unauthorized file reads and SSRF.
-        from crewai_tools.utilities.safe_path import validate_file_path, validate_url
         from urllib.parse import urlparse
+
+        from crewai_tools.utilities.safe_path import validate_file_path, validate_url
 
         def _check_url(value: str, label: str) -> None:
             try:
@@ -268,17 +269,20 @@ class RagTool(BaseTool):
         for arg in args:
             source_ref = str(arg.get("source", arg.get("content", ""))) if isinstance(arg, dict) else str(arg)
 
-            # Check if it's a URL
+            # Check if it's a URL — only catch urlparse-specific errors here;
+            # validate_url's ValueError must propagate so it is never silently bypassed.
             try:
                 parsed = urlparse(source_ref)
-                if parsed.scheme in ("http", "https", "file"):
+            except (ValueError, AttributeError):
+                parsed = None  # type: ignore[assignment]
+
+            if parsed is not None and parsed.scheme in ("http", "https", "file"):
+                try:
                     validate_url(source_ref)
-                    validated_args.append(arg)
-                    continue
-            except ValueError as e:
-                raise ValueError(f"Blocked unsafe URL: {e}") from e
-            except Exception:
-                pass
+                except ValueError as e:
+                    raise ValueError(f"Blocked unsafe URL: {e}") from e
+                validated_args.append(arg)
+                continue
 
             # Check if it looks like a file path (not a plain text string)
             if os.path.sep in source_ref or source_ref.startswith(".") or os.path.isabs(source_ref):

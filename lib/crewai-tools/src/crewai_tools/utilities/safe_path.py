@@ -16,6 +16,7 @@ import os
 import socket
 from urllib.parse import urlparse
 
+
 logger = logging.getLogger(__name__)
 
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
@@ -172,10 +173,10 @@ def validate_url(url: str) -> str:
         addrinfos = socket.getaddrinfo(
             parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80)
         )
-    except socket.gaierror:
-        raise ValueError(f"Could not resolve hostname: '{parsed.hostname}'")
+    except socket.gaierror as exc:
+        raise ValueError(f"Could not resolve hostname: '{parsed.hostname}'") from exc
 
-    for family, _, _, _, sockaddr in addrinfos:
+    for _family, _, _, _, sockaddr in addrinfos:
         ip_str = sockaddr[0]
         if _is_private_or_reserved(ip_str):
             raise ValueError(
