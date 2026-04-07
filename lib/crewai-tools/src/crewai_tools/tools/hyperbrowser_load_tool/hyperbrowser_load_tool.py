@@ -4,6 +4,8 @@ from typing import Any, Literal
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_url
+
 
 class HyperbrowserLoadToolSchema(BaseModel):
     url: str = Field(description="Website URL")
@@ -119,6 +121,7 @@ class HyperbrowserLoadTool(BaseTool):
             ) from e
 
         params = self._prepare_params(params)
+        url = validate_url(url)
 
         if operation == "scrape":
             scrape_params = StartScrapeJobParams(url=url, **params)

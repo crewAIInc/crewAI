@@ -3,6 +3,8 @@ from typing import Any
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_file_path
+
 
 class FileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
@@ -76,6 +78,7 @@ class FileReadTool(BaseTool):
         if file_path is None:
             return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
 
+        file_path = validate_file_path(file_path)
         try:
             with open(file_path, "r") as file:
                 if start_line == 1 and line_count is None:
