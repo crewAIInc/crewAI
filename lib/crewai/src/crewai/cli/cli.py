@@ -786,5 +786,28 @@ def traces_status() -> None:
     console.print(panel)
 
 
+@crewai.group()
+def checkpoint() -> None:
+    """Inspect checkpoint files."""
+
+
+@checkpoint.command("list")
+@click.argument("location", default="./.checkpoints")
+def checkpoint_list(location: str) -> None:
+    """List checkpoints in a directory."""
+    from crewai.cli.checkpoint_cli import list_checkpoints
+
+    list_checkpoints(location)
+
+
+@checkpoint.command("info")
+@click.argument("path", default="./.checkpoints")
+def checkpoint_info(path: str) -> None:
+    """Show details of a checkpoint. Pass a file or directory for latest."""
+    from crewai.cli.checkpoint_cli import info_checkpoint
+
+    info_checkpoint(path)
+
+
 if __name__ == "__main__":
     crewai()
