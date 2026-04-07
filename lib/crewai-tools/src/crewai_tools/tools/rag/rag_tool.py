@@ -267,7 +267,11 @@ class RagTool(BaseTool):
 
         validated_args: list[ContentItem] = []
         for arg in args:
-            source_ref = str(arg.get("source", arg.get("content", ""))) if isinstance(arg, dict) else str(arg)
+            source_ref = (
+                str(arg.get("source", arg.get("content", "")))
+                if isinstance(arg, dict)
+                else str(arg)
+            )
 
             # Check if it's a URL — only catch urlparse-specific errors here;
             # validate_url's ValueError must propagate so it is never silently bypassed.
@@ -285,7 +289,11 @@ class RagTool(BaseTool):
                 continue
 
             # Check if it looks like a file path (not a plain text string)
-            if os.path.sep in source_ref or source_ref.startswith(".") or os.path.isabs(source_ref):
+            if (
+                os.path.sep in source_ref
+                or source_ref.startswith(".")
+                or os.path.isabs(source_ref)
+            ):
                 try:
                     validate_file_path(source_ref)
                 except ValueError as e:

@@ -31,6 +31,7 @@ def _is_escape_hatch_enabled() -> bool:
 # File path validation
 # ---------------------------------------------------------------------------
 
+
 def validate_file_path(path: str, base_dir: str | None = None) -> str:
     """Validate that a file path is safe to read.
 
@@ -59,10 +60,15 @@ def validate_file_path(path: str, base_dir: str | None = None) -> str:
         base_dir = os.getcwd()
 
     resolved_base = os.path.realpath(base_dir)
-    resolved_path = os.path.realpath(os.path.join(resolved_base, path) if not os.path.isabs(path) else path)
+    resolved_path = os.path.realpath(
+        os.path.join(resolved_base, path) if not os.path.isabs(path) else path
+    )
 
     # Ensure the resolved path is within the base directory
-    if not resolved_path.startswith(resolved_base + os.sep) and resolved_path != resolved_base:
+    if (
+        not resolved_path.startswith(resolved_base + os.sep)
+        and resolved_path != resolved_base
+    ):
         raise ValueError(
             f"Path '{path}' resolves to '{resolved_path}' which is outside "
             f"the allowed directory '{resolved_base}'. "

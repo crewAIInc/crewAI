@@ -609,7 +609,6 @@ def env() -> None:
 @env.command("view")
 def env_view() -> None:
     """View tracing-related environment variables."""
-    import os
     from pathlib import Path
 
     from rich.console import Console
@@ -738,7 +737,6 @@ def traces_disable() -> None:
 @traces.command("status")
 def traces_status() -> None:
     """Show current trace collection status."""
-    import os
 
     from rich.console import Console
     from rich.panel import Panel
