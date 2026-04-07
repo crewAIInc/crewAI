@@ -36,15 +36,6 @@ def _make_tool(allow_dml: bool = False, **kwargs) -> NL2SQLTool:
         return NL2SQLTool(db_uri=SQLITE_URI, allow_dml=allow_dml, **kwargs)
 
 
-def _seed_db(uri: str) -> None:
-    """Create a tiny table in the target database for DML tests."""
-    engine = create_engine(uri)
-    with engine.connect() as conn:
-        conn.execute(text("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)"))
-        conn.execute(text("INSERT INTO users VALUES (1, 'alice')"))
-        conn.commit()
-
-
 # ---------------------------------------------------------------------------
 # Read-only enforcement (allow_dml=False)
 # ---------------------------------------------------------------------------
@@ -403,6 +394,23 @@ class TestExplainAnalyze:
     def test_explain_analyze_delete_allowed_when_dml_enabled(self):
         tool = _make_tool(allow_dml=True)
         tool._validate_query("EXPLAIN ANALYZE DELETE FROM users")
+
+    def test_explain_paren_analyze_delete_blocked_in_read_only(self):
+        """EXPLAIN (ANALYZE) DELETE actually runs the delete — block it."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("EXPLAIN (ANALYZE) DELETE FROM users")
+
+    def test_explain_paren_analyze_verbose_delete_blocked_in_read_only(self):
+        """EXPLAIN (ANALYZE, VERBOSE) DELETE actually runs the delete — block it."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("EXPLAIN (ANALYZE, VERBOSE) DELETE FROM users")
+
+    def test_explain_paren_verbose_select_allowed_in_read_only(self):
+        """EXPLAIN (VERBOSE) SELECT is safe — no ANALYZE means no execution."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("EXPLAIN (VERBOSE) SELECT * FROM users")
 
 
 # ---------------------------------------------------------------------------

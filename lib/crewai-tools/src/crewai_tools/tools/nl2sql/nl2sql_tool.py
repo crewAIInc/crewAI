@@ -178,16 +178,31 @@ class NL2SQLTool(BaseTool):
 
         # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
         # query.  Resolve the real command so write operations are caught.
+        # Handles both space-separated ("EXPLAIN ANALYZE DELETE …") and
+        # parenthesized ("EXPLAIN (ANALYZE) DELETE …", "EXPLAIN (ANALYZE, VERBOSE) DELETE …").
         if command == "EXPLAIN":
-            tokens = stmt.strip().lstrip("(").split()
-            if len(tokens) >= 2 and tokens[1].upper().rstrip(";") in (
-                "ANALYZE",
-                "ANALYSE",
-            ):
-                # The statement being explained starts at the third token.
-                if len(tokens) >= 3:
-                    command = tokens[2].upper().rstrip(";")
-                # else: bare "EXPLAIN ANALYZE" with no query — treat as read-only.
+            rest = stmt.strip()[len("EXPLAIN"):].strip()
+            analyze_found = False
+
+            if rest.startswith("("):
+                # Parenthesized options: EXPLAIN (ANALYZE, VERBOSE, …) <stmt>
+                close = rest.find(")")
+                if close != -1:
+                    options_str = rest[1:close].upper()
+                    analyze_found = any(
+                        opt.strip() in ("ANALYZE", "ANALYSE")
+                        for opt in options_str.split(",")
+                    )
+                    rest = rest[close + 1:].strip()
+            else:
+                # Space-separated: EXPLAIN ANALYZE <stmt>
+                first_opt = rest.split()[0].upper().rstrip(";") if rest.split() else ""
+                if first_opt in ("ANALYZE", "ANALYSE"):
+                    analyze_found = True
+                    rest = rest[len(first_opt):].strip()
+
+            if analyze_found and rest:
+                command = rest.split()[0].upper().rstrip(";")
 
         # WITH starts a CTE.  Read-only CTEs are fine; writable CTEs
         # (e.g. WITH d AS (DELETE …) SELECT …) must be blocked in read-only mode.
