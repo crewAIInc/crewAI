@@ -36,7 +36,6 @@ from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
     CodeDocsSearchTool,
 )
 from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
-    CodeInterpreterTool,
 )
 from crewai_tools.tools.composio_tool.composio_tool import ComposioTool
 from crewai_tools.tools.contextualai_create_agent_tool.contextual_create_agent_tool import (
@@ -225,7 +224,6 @@ __all__ = [
     "BrowserbaseLoadTool",
     "CSVSearchTool",
     "CodeDocsSearchTool",
-    "CodeInterpreterTool",
     "ComposioTool",
     "ContextualAICreateAgentTool",
     "ContextualAIParseTool",
