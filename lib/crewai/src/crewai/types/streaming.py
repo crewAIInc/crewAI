@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Iterator
 from enum import Enum
+import threading
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
@@ -76,14 +78,23 @@ class StreamingOutputBase(Generic[T]):
 
     Provides iteration over stream chunks and access to final result
     via the .result property after streaming completes.
+
+    Supports graceful cancellation via ``aclose()`` (async) and ``cancel()``
+    (sync).  When cancelled, in-flight background tasks are aborted and
+    resources are released promptly.
     """
 
     def __init__(self) -> None:
         """Initialize streaming output base."""
         self._result: T | None = None
         self._completed: bool = False
+        self._cancelled: bool = False
         self._chunks: list[StreamChunk] = []
         self._error: Exception | None = None
+        self._cancel_event: asyncio.Event | None = None
+        self._cancel_thread_event: threading.Event | None = None
+        self._background_task: asyncio.Task[Any] | None = None
+        self._background_thread: threading.Thread | None = None
 
     @property
     def result(self) -> T:
@@ -113,6 +124,11 @@ class StreamingOutputBase(Generic[T]):
         return self._completed
 
     @property
+    def is_cancelled(self) -> bool:
+        """Check if streaming was cancelled."""
+        return self._cancelled
+
+    @property
     def chunks(self) -> list[StreamChunk]:
         """Get all collected chunks so far."""
         return self._chunks.copy()
@@ -128,6 +144,76 @@ class StreamingOutputBase(Generic[T]):
             for chunk in self._chunks
             if chunk.chunk_type == StreamChunkType.TEXT
         )
+
+    async def aclose(self) -> None:
+        """Cancel streaming and clean up resources.
+
+        Signals cancellation to the background task, waits briefly for it
+        to finish, and marks the stream as completed and cancelled.
+        Safe to call multiple times or on an already-completed stream.
+
+        Example:
+            ```python
+            streaming = await crew.akickoff(inputs=inputs)
+            try:
+                async for chunk in streaming:
+                    ...
+            finally:
+                await streaming.aclose()
+            ```
+        """
+        if self._completed:
+            return
+
+        self._cancelled = True
+
+        if self._cancel_event is not None:
+            self._cancel_event.set()
+
+        if self._cancel_thread_event is not None:
+            self._cancel_thread_event.set()
+
+        if self._background_task is not None and not self._background_task.done():
+            self._background_task.cancel()
+            try:
+                await self._background_task
+            except (asyncio.CancelledError, Exception):  # noqa: S110
+                pass
+
+        self._completed = True
+
+    def cancel(self) -> None:
+        """Synchronously cancel streaming and clean up resources.
+
+        Signals cancellation to the background thread/task and marks the
+        stream as completed and cancelled.  For async contexts prefer
+        ``aclose()`` which can ``await`` background cleanup.
+
+        Example:
+            ```python
+            streaming = crew.kickoff(inputs=inputs)
+            try:
+                for chunk in streaming:
+                    ...
+            finally:
+                streaming.cancel()
+            ```
+        """
+        if self._completed:
+            return
+
+        self._cancelled = True
+
+        if self._cancel_event is not None:
+            self._cancel_event.set()
+
+        if self._cancel_thread_event is not None:
+            self._cancel_thread_event.set()
+
+        if self._background_task is not None and not self._background_task.done():
+            self._background_task.cancel()
+
+        self._completed = True
 
 
 class CrewStreamingOutput(StreamingOutputBase["CrewOutput"]):

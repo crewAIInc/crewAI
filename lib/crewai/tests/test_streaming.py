@@ -709,6 +709,222 @@ class TestStreamingEdgeCases:
         assert streaming.is_completed
 
 
+class TestStreamingCancellation:
+    """Tests for graceful cancellation of streaming via aclose() and cancel()."""
+
+    @pytest.mark.asyncio
+    async def test_aclose_stops_async_iteration(self) -> None:
+        """Test that aclose() stops async iteration promptly."""
+        chunks_yielded: list[str] = []
+        cancel_event = asyncio.Event()
+
+        async def slow_gen() -> AsyncIterator[StreamChunk]:
+            for i in range(100):
+                if cancel_event.is_set():
+                    return
+                yield StreamChunk(content=f"chunk-{i}")
+                await asyncio.sleep(0.05)
+
+        streaming = CrewStreamingOutput(async_iterator=slow_gen())
+        streaming._cancel_event = cancel_event
+
+        async for chunk in streaming:
+            chunks_yielded.append(chunk.content)
+            if len(chunks_yielded) >= 3:
+                await streaming.aclose()
+                break
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(chunks_yielded) >= 3
+        assert len(chunks_yielded) < 100
+
+    @pytest.mark.asyncio
+    async def test_aclose_on_completed_stream_is_noop(self) -> None:
+        """Test that aclose() on an already-completed stream does nothing."""
+        async def simple_gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="done")
+
+        streaming = CrewStreamingOutput(async_iterator=simple_gen())
+
+        async for _ in streaming:
+            pass
+
+        assert streaming.is_completed
+        assert not streaming.is_cancelled
+
+        # aclose on completed stream should not change cancelled state
+        await streaming.aclose()
+        assert streaming.is_completed
+        assert not streaming.is_cancelled
+
+    @pytest.mark.asyncio
+    async def test_aclose_cancels_background_task(self) -> None:
+        """Test that aclose() cancels the background asyncio task."""
+        bg_task_started = asyncio.Event()
+
+        async def long_running_task() -> None:
+            bg_task_started.set()
+            await asyncio.sleep(100)
+
+        bg_task = asyncio.create_task(long_running_task())
+        await bg_task_started.wait()
+
+        streaming = CrewStreamingOutput()
+        streaming._background_task = bg_task
+
+        assert not bg_task.done()
+
+        await streaming.aclose()
+
+        assert streaming.is_cancelled
+        assert bg_task.done()
+        assert bg_task.cancelled()
+
+    def test_cancel_stops_sync_iteration(self) -> None:
+        """Test that cancel() marks streaming as cancelled."""
+        def slow_gen() -> Generator[StreamChunk, None, None]:
+            for i in range(100):
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(sync_iterator=slow_gen())
+
+        chunks_collected: list[str] = []
+        for chunk in streaming:
+            chunks_collected.append(chunk.content)
+            if len(chunks_collected) >= 3:
+                streaming.cancel()
+                break
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(chunks_collected) >= 3
+
+    def test_cancel_on_completed_stream_is_noop(self) -> None:
+        """Test that cancel() on an already-completed stream does nothing."""
+        def simple_gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="done")
+
+        streaming = CrewStreamingOutput(sync_iterator=simple_gen())
+        list(streaming)
+
+        assert streaming.is_completed
+        assert not streaming.is_cancelled
+
+        streaming.cancel()
+        assert streaming.is_completed
+        assert not streaming.is_cancelled
+
+    @pytest.mark.asyncio
+    async def test_is_cancelled_property_reflects_state(self) -> None:
+        """Test that is_cancelled starts False and becomes True after aclose()."""
+        async def simple_gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(async_iterator=simple_gen())
+        assert not streaming.is_cancelled
+
+        await streaming.aclose()
+        assert streaming.is_cancelled
+
+    @pytest.mark.asyncio
+    async def test_aclose_with_cancel_event(self) -> None:
+        """Test that aclose() sets the cancel event."""
+        cancel_event = asyncio.Event()
+        streaming = CrewStreamingOutput()
+        streaming._cancel_event = cancel_event
+
+        assert not cancel_event.is_set()
+        await streaming.aclose()
+        assert cancel_event.is_set()
+        assert streaming.is_cancelled
+
+    def test_cancel_with_thread_event(self) -> None:
+        """Test that cancel() sets the thread cancel event."""
+        import threading
+
+        cancel_event = threading.Event()
+        streaming = CrewStreamingOutput()
+        streaming._cancel_thread_event = cancel_event
+
+        assert not cancel_event.is_set()
+        streaming.cancel()
+        assert cancel_event.is_set()
+        assert streaming.is_cancelled
+
+    @pytest.mark.asyncio
+    async def test_flow_streaming_aclose(self) -> None:
+        """Test that FlowStreamingOutput also supports aclose()."""
+        async def simple_gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="flow-chunk")
+            await asyncio.sleep(100)  # Would block forever without cancel
+
+        streaming = FlowStreamingOutput(async_iterator=simple_gen())
+        cancel_event = asyncio.Event()
+        streaming._cancel_event = cancel_event
+
+        chunks: list[str] = []
+        async for chunk in streaming:
+            chunks.append(chunk.content)
+            await streaming.aclose()
+            break
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(chunks) == 1
+        assert chunks[0] == "flow-chunk"
+
+    def test_flow_streaming_cancel(self) -> None:
+        """Test that FlowStreamingOutput also supports cancel()."""
+        def simple_gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(sync_iterator=simple_gen())
+        assert not streaming.is_cancelled
+
+        # Consume
+        list(streaming)
+        assert streaming.is_completed
+
+        # Cancel on completed does nothing
+        streaming.cancel()
+        assert not streaming.is_cancelled
+
+        # Test cancelling before completion
+        streaming2 = FlowStreamingOutput(sync_iterator=simple_gen())
+        streaming2.cancel()
+        assert streaming2.is_cancelled
+        assert streaming2.is_completed
+
+    @pytest.mark.asyncio
+    async def test_multiple_aclose_calls_are_safe(self) -> None:
+        """Test that calling aclose() multiple times is safe."""
+        async def simple_gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(async_iterator=simple_gen())
+
+        await streaming.aclose()
+        assert streaming.is_cancelled
+
+        # Second call should be a no-op
+        await streaming.aclose()
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_multiple_cancel_calls_are_safe(self) -> None:
+        """Test that calling cancel() multiple times is safe."""
+        streaming = CrewStreamingOutput()
+
+        streaming.cancel()
+        assert streaming.is_cancelled
+
+        # Second call should be a no-op
+        streaming.cancel()
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+
 class TestStreamingImports:
     """Tests for correct imports of streaming types."""
 
