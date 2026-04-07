@@ -5,6 +5,8 @@ from typing import Any
 from pydantic import Field
 import requests
 
+from crewai_tools.security.safe_url import validate_url
+
 
 try:
     from bs4 import BeautifulSoup
@@ -73,6 +75,7 @@ class ScrapeWebsiteTool(BaseTool):
         if website_url is None:
             raise ValueError("Website URL must be provided.")
 
+        website_url = validate_url(website_url)
         page = requests.get(
             website_url,
             timeout=15,

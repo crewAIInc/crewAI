@@ -5,6 +5,8 @@ from typing import Any
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
+from crewai_tools.security.safe_url import validate_url
+
 
 try:
     from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
@@ -106,6 +108,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         if not self._firecrawl:
             raise RuntimeError("FirecrawlApp not properly initialized")
 
+        url = validate_url(url)
         return self._firecrawl.scrape(url=url, **self.config)
 
 

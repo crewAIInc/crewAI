@@ -3,6 +3,8 @@ from typing import Any
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_path
+
 
 class ContextualAICreateAgentSchema(BaseModel):
     """Schema for contextual create agent tool."""
@@ -57,6 +59,7 @@ class ContextualAICreateAgentTool(BaseTool):
             # Upload documents
             document_ids = []
             for doc_path in document_paths:
+                validate_path(doc_path)
                 if not os.path.exists(doc_path):
                     raise FileNotFoundError(f"Document not found: {doc_path}")
 

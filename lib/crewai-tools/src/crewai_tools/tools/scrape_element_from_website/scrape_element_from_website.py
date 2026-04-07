@@ -5,6 +5,8 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import requests
 
+from crewai_tools.security.safe_url import validate_url
+
 
 try:
     from bs4 import BeautifulSoup
@@ -81,6 +83,7 @@ class ScrapeElementFromWebsiteTool(BaseTool):
         if website_url is None or css_element is None:
             raise ValueError("Both website_url and css_element must be provided.")
 
+        website_url = validate_url(website_url)
         page = requests.get(
             website_url,
             headers=self.headers,

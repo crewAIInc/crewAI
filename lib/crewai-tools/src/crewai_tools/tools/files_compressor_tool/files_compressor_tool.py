@@ -5,6 +5,8 @@ import zipfile
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_path
+
 
 class FileCompressorToolInput(BaseModel):
     """Input schema for FileCompressorTool."""
@@ -40,6 +42,7 @@ class FileCompressorTool(BaseTool):
         overwrite: bool = False,
         format: str = "zip",
     ) -> str:
+        validate_path(input_path)
         if not os.path.exists(input_path):
             return f"Input path '{input_path}' does not exist."
 
