@@ -121,7 +121,7 @@ class HyperbrowserLoadTool(BaseTool):
             ) from e
 
         params = self._prepare_params(params)
-        url = validate_url(url)
+        url = validate_url(url, pin_ip=False)
 
         if operation == "scrape":
             scrape_params = StartScrapeJobParams(url=url, **params)

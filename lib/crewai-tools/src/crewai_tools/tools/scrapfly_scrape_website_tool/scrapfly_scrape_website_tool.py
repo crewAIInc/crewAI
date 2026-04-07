@@ -74,7 +74,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
     ) -> str | None:
         from scrapfly import ScrapeConfig
 
-        url = validate_url(url)
+        url = validate_url(url, pin_ip=False)
         scrape_config = scrape_config if scrape_config is not None else {}
         try:
             response = self.scrapfly.scrape(  # type: ignore[union-attr]

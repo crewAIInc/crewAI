@@ -108,7 +108,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
         if not self._firecrawl:
             raise RuntimeError("FirecrawlApp not properly initialized")
 
-        url = validate_url(url)
+        url = validate_url(url, pin_ip=False)
         return self._firecrawl.crawl(url=url, poll_interval=2, **self.config)
 
 

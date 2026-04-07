@@ -49,7 +49,7 @@ class SerplyWebpageToMarkdownTool(RagTool):
         if self.proxy_location and not self.headers.get("X-Proxy-Location"):
             self.headers["X-Proxy-Location"] = self.proxy_location
 
-        url = validate_url(url)
+        validate_url(url, pin_ip=False)
         data = {"url": url, "method": "GET", "response_type": "markdown"}
         response = requests.request(
             "POST",

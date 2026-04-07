@@ -38,7 +38,7 @@ class WebsiteSearchTool(RagTool):
             self._generate_description()
 
     def add(self, website: str) -> None:  # type: ignore[override]
-        website = validate_url(website)
+        website = validate_url(website, pin_ip=False)
         super().add(website, data_type=DataType.WEBSITE)
 
     def _run(  # type: ignore[override]

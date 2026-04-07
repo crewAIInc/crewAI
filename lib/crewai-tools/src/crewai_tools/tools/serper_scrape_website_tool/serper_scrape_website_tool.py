@@ -57,7 +57,7 @@ class SerperScrapeWebsiteTool(BaseTool):
             # Set headers
             headers = {"X-API-KEY": api_key or "", "Content-Type": "application/json"}
 
-            url = validate_url(url)
+            url = validate_url(url, pin_ip=False)
 
             # Make the API request
             response = requests.post(

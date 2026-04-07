@@ -47,7 +47,7 @@ class JinaScrapeWebsiteTool(BaseTool):
                 "Website URL must be provided either during initialization or execution"
             )
 
-        url = validate_url(url)
+        url = validate_url(url, pin_ip=False)
         response = requests.get(
             f"https://r.jina.ai/{url}", headers=self.headers, timeout=15
         )
