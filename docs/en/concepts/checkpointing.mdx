@@ -39,7 +39,7 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
+        location="./my_checkpoints",
         on_events=["task_completed", "crew_kickoff_completed"],
         max_checkpoints=5,
     ),
@@ -50,10 +50,10 @@ crew = Crew(
 
 | Field | Type | Default | Description |
 |:------|:-----|:--------|:------------|
-| `directory` | `str` | `"./.checkpoints"` | Filesystem path for checkpoint files |
+| `location` | `str` | `"./.checkpoints"` | Storage destination — a directory for `JsonProvider`, a database file path for `SqliteProvider` |
 | `on_events` | `list[str]` | `["task_completed"]` | Event types that trigger a checkpoint |
 | `provider` | `BaseProvider` | `JsonProvider()` | Storage backend |
-| `max_checkpoints` | `int \| None` | `None` | Max files to keep; oldest pruned first |
+| `max_checkpoints` | `int \| None` | `None` | Max checkpoints to keep. Oldest are pruned after each write. Pruning is handled by the provider. |
 
 ### Inheritance and Opt-Out
 
@@ -95,7 +95,7 @@ The restored crew skips already-completed tasks and resumes from the first incom
 crew = Crew(
     agents=[researcher, writer],
     tasks=[research_task, write_task, review_task],
-    checkpoint=CheckpointConfig(directory="./crew_cp"),
+    checkpoint=CheckpointConfig(location="./crew_cp"),
 )
 ```
 
@@ -118,7 +118,7 @@ class MyFlow(Flow):
 
 flow = MyFlow(
     checkpoint=CheckpointConfig(
-        directory="./flow_cp",
+        location="./flow_cp",
         on_events=["method_execution_finished"],
     ),
 )
@@ -137,7 +137,7 @@ agent = Agent(
     goal="Research topics",
     backstory="Expert researcher",
     checkpoint=CheckpointConfig(
-        directory="./agent_cp",
+        location="./agent_cp",
         on_events=["lite_agent_execution_completed"],
     ),
 )
@@ -160,14 +160,14 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
+        location="./my_checkpoints",
         provider=JsonProvider(),       # this is the default
         max_checkpoints=5,             # prunes oldest files
     ),
 )
 ```
 
-Files are named `<timestamp>_<uuid>.json` inside the directory.
+Files are named `<timestamp>_<uuid>.json` inside the location directory.
 
 ### SqliteProvider
 
@@ -181,17 +181,14 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./.checkpoints.db",
-        provider=SqliteProvider(max_checkpoints=50),
+        location="./.checkpoints.db",
+        provider=SqliteProvider(),
+        max_checkpoints=50,
     ),
 )
 ```
 
-`SqliteProvider` accepts its own `max_checkpoints` parameter that prunes old rows via SQL. WAL journal mode is enabled for concurrent read access.
-
-<Note>
-When using `SqliteProvider`, the `directory` field is the database file path, not a directory. The `max_checkpoints` on `CheckpointConfig` controls filesystem pruning (for `JsonProvider`), while `SqliteProvider.max_checkpoints` controls row pruning in the database.
-</Note>
+WAL journal mode is enabled for concurrent read access.
 
 ## Event Types
 
