@@ -136,7 +136,7 @@ class BrightDataWebUnlockerTool(BaseTool):
             "Content-Type": "application/json",
         }
 
-        url = validate_url(url)
+        validate_url(url)
         try:
             response = requests.post(
                 self.base_url, json=payload, headers=headers, timeout=30
