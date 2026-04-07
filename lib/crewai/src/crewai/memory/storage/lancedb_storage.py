@@ -13,9 +13,9 @@ import time
 from typing import Any
 
 try:
-    import lancedb
+    import lancedb  # type: ignore[import-untyped]
 except ImportError:
-    lancedb = None  # type: ignore[assignment]
+    lancedb = None
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
 from crewai.utilities.lock_store import lock as store_lock
