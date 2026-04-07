@@ -5,6 +5,44 @@ icon: "clock"
 mode: "wide"
 ---
 <Update label="07 abr 2026">
+  ## v1.14.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar comandos CLI de lista/informações de checkpoint
+  - Adicionar guardrail_type e nome para distinguir rastros
+  - Adicionar SqliteProvider para armazenamento de checkpoints
+  - Adicionar CheckpointConfig para checkpointing automático
+  - Implementar checkpointing de estado em tempo de execução, sistema de eventos e refatoração do executor
+
+  ### Correções de Bugs
+  - Adicionar proteções contra SSRF e travessia de caminho
+  - Adicionar validação de caminho e URL às ferramentas RAG
+  - Excluir vetores de incorporação da serialização de memória para economizar tokens
+  - Garantir que o diretório de saída exista antes de escrever no modelo de fluxo
+  - Atualizar litellm para >=1.83.0 para resolver CVE-2026-35030
+  - Remover campo de indexação SEO que causava renderização de página em árabe
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0
+  - Atualizar guias de início rápido e instalação para maior clareza
+  - Adicionar seção de provedores de armazenamento, exportar JsonProvider
+  - Adicionar guia da aba de Treinamento AMP
+
+  ### Refatoração
+  - Limpar API de checkpoint
+  - Remover CodeInterpreterTool e descontinuar parâmetros de execução de código
+
+  ## Contribuidores
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="07 abr 2026">
   ## v1.14.0a4
 
   [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
