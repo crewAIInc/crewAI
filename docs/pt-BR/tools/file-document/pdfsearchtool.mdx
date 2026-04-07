@@ -102,3 +102,19 @@ tool = PDFSearchTool(
     }
 )
 ```
+
+## Segurança
+
+### Validação de Caminhos
+
+Os caminhos de arquivo fornecidos a esta ferramenta são validados em relação ao diretório de trabalho atual. Caminhos que resolvem fora do diretório de trabalho são rejeitados com um `ValueError`.
+
+Para permitir caminhos fora do diretório de trabalho (por exemplo, em testes ou pipelines confiáveis), defina a variável de ambiente:
+
+```shell
+CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true
+```
+
+### Validação de URLs
+
+Entradas de URL também são validadas: URIs `file://` e requisições direcionadas a faixas de IP privadas ou reservadas são bloqueadas para prevenir ataques de falsificação de requisições do lado do servidor (SSRF).

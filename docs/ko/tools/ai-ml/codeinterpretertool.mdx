@@ -7,6 +7,10 @@ mode: "wide"
 
 # `CodeInterpreterTool`
 
+<Warning>
+  **지원 중단:** `CodeInterpreterTool`이 `crewai-tools`에서 제거되었습니다. `Agent`의 `allow_code_execution` 및 `code_execution_mode` 파라미터도 더 이상 사용되지 않습니다. 안전하고 격리된 코드 실행을 위해 전용 샌드박스 서비스 — [E2B](https://e2b.dev) 또는 [Modal](https://modal.com) — 을 사용하세요.
+</Warning>
+
 ## 설명
 
 `CodeInterpreterTool`은 CrewAI 에이전트가 자율적으로 생성한 Python 3 코드를 실행할 수 있도록 합니다. 이 기능은 에이전트가 코드를 생성하고, 실행하며, 결과를 얻고, 그 정보를 활용하여 이후의 결정과 행동에 반영할 수 있다는 점에서 특히 유용합니다.
