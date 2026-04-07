@@ -68,11 +68,7 @@ def validate_file_path(path: str, base_dir: str | None = None) -> str:
     # When resolved_base already ends with a separator (e.g. the filesystem
     # root "/"), appending os.sep would double it ("//"), so use the base
     # as-is in that case.
-    prefix = (
-        resolved_base
-        if resolved_base.endswith(os.sep)
-        else resolved_base + os.sep
-    )
+    prefix = resolved_base if resolved_base.endswith(os.sep) else resolved_base + os.sep
     if not resolved_path.startswith(prefix) and resolved_path != resolved_base:
         raise ValueError(
             f"Path '{path}' resolves to '{resolved_path}' which is outside "
@@ -125,8 +121,6 @@ _BLOCKED_IPV6_NETWORKS = [
     ipaddress.ip_network("fc00::/7"),  # Unique local addresses
     ipaddress.ip_network("fe80::/10"),  # Link-local IPv6
 ]
-
-_BLOCKED_NETWORKS = _BLOCKED_IPV4_NETWORKS + _BLOCKED_IPV6_NETWORKS
 
 
 def _is_private_or_reserved(ip_str: str) -> bool:
