@@ -4,6 +4,39 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 07, 2026">
+  ## v1.14.0a4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## What's Changed
+
+  ### Features
+  - Add guardrail_type and name to distinguish traces
+  - Add SqliteProvider for checkpoint storage
+  - Add CheckpointConfig for automatic checkpointing
+  - Implement runtime state checkpointing, event system, and executor refactor
+
+  ### Bug Fixes
+  - Exclude embedding vectors from memory serialization to save tokens
+  - Bump litellm to >=1.83.0 to address CVE-2026-35030
+
+  ### Documentation
+  - Update quickstart and installation guides for improved clarity
+  - Add storage providers section and export JsonProvider
+
+  ### Performance
+  - Use JSONB for checkpoint data column
+
+  ### Refactoring
+  - Remove CodeInterpreterTool and deprecate code execution params
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
 <Update label="Apr 06, 2026">
   ## v1.14.0a3
 

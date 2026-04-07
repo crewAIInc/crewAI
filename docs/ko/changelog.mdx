@@ -4,6 +4,39 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 4월 7일">
+  ## v1.14.0a4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## 변경 사항
+
+  ### 기능
+  - 추적을 구분하기 위해 guardrail_type 및 이름 추가
+  - 체크포인트 저장을 위한 SqliteProvider 추가
+  - 자동 체크포인트 생성을 위한 CheckpointConfig 추가
+  - 런타임 상태 체크포인트, 이벤트 시스템 및 실행기 리팩토링 구현
+
+  ### 버그 수정
+  - 토큰 절약을 위해 메모리 직렬화에서 임베딩 벡터 제외
+  - CVE-2026-35030 문제를 해결하기 위해 litellm을 >=1.83.0으로 업데이트
+
+  ### 문서
+  - 명확성을 개선하기 위해 빠른 시작 및 설치 가이드 업데이트
+  - 저장소 제공자 섹션 추가 및 JsonProvider 내보내기
+
+  ### 성능
+  - 체크포인트 데이터 열에 JSONB 사용
+
+  ### 리팩토링
+  - CodeInterpreterTool 제거 및 코드 실행 매개변수 사용 중단
+
+  ## 기여자
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
 <Update label="2026년 4월 6일">
   ## v1.14.0a3
 
