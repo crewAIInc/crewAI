@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from crewai_tools.utilities.safe_path import (
+from crewai_tools.security.safe_path import (
     validate_directory_path,
     validate_file_path,
     validate_url,

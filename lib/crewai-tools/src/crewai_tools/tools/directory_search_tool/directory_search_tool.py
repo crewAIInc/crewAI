@@ -3,8 +3,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
+from crewai_tools.security.safe_path import validate_directory_path
 from crewai_tools.tools.rag.rag_tool import RagTool
-from crewai_tools.utilities.safe_path import validate_directory_path
 
 
 class FixedDirectorySearchToolSchema(BaseModel):

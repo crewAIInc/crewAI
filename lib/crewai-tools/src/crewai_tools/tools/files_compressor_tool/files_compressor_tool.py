@@ -5,7 +5,7 @@ import zipfile
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from crewai_tools.utilities.safe_path import validate_file_path
+from crewai_tools.security.safe_path import validate_file_path
 
 
 class FileCompressorToolInput(BaseModel):
@@ -48,6 +48,8 @@ class FileCompressorTool(BaseTool):
 
         if not output_path:
             output_path = self._generate_output_path(input_path, format)
+
+        validate_file_path(output_path)
 
         format_extension = {
             "zip": ".zip",

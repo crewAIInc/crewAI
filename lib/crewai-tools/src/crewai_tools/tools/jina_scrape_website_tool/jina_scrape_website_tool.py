@@ -4,7 +4,7 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import requests
 
-from crewai_tools.utilities.safe_path import validate_url
+from crewai_tools.security.safe_path import validate_url
 
 
 class JinaScrapeWebsiteToolInput(BaseModel):

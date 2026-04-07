@@ -251,7 +251,7 @@ class RagTool(BaseTool):
         # unauthorized file reads and SSRF.
         from urllib.parse import urlparse
 
-        from crewai_tools.utilities.safe_path import validate_file_path, validate_url
+        from crewai_tools.security.safe_path import validate_file_path, validate_url
 
         def _check_url(value: str, label: str) -> None:
             try:

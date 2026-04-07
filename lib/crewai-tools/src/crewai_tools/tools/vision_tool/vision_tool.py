@@ -7,7 +7,7 @@ from crewai.tools import BaseTool, EnvVar
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel, Field, PrivateAttr, field_validator
 
-from crewai_tools.utilities.safe_path import validate_file_path
+from crewai_tools.security.safe_path import validate_file_path
 
 
 class ImagePromptSchema(BaseModel):

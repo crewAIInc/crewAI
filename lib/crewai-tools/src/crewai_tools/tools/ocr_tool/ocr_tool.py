@@ -11,7 +11,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel, Field
 
-from crewai_tools.utilities.safe_path import validate_file_path
+from crewai_tools.security.safe_path import validate_file_path
 
 
 class OCRToolSchema(BaseModel):

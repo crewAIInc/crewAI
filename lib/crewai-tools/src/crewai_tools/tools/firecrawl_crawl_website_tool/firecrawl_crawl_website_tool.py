@@ -5,7 +5,7 @@ from typing import Any
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from crewai_tools.utilities.safe_path import validate_url
+from crewai_tools.security.safe_path import validate_url
 
 
 try:

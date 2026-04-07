@@ -1,7 +1,7 @@
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from crewai_tools.utilities.safe_path import validate_file_path
+from crewai_tools.security.safe_path import validate_file_path
 
 
 class ContextualAIParseSchema(BaseModel):

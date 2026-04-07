@@ -5,8 +5,8 @@ from crewai.tools import EnvVar
 from pydantic import BaseModel, Field
 import requests
 
+from crewai_tools.security.safe_path import validate_url
 from crewai_tools.tools.rag.rag_tool import RagTool
-from crewai_tools.utilities.safe_path import validate_url
 
 
 class SerplyWebpageToMarkdownToolSchema(BaseModel):

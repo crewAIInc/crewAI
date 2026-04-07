@@ -5,7 +5,7 @@ from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 import requests
 
-from crewai_tools.utilities.safe_path import validate_url
+from crewai_tools.security.safe_path import validate_url
 
 
 class SerperScrapeWebsiteInput(BaseModel):
@@ -51,13 +51,13 @@ class SerperScrapeWebsiteTool(BaseTool):
             # Get API key from environment variable for security
             api_key = os.getenv("SERPER_API_KEY")
 
+            validate_url(url)
+
             # Prepare the payload
             payload = json.dumps({"url": url, "includeMarkdown": include_markdown})
 
             # Set headers
             headers = {"X-API-KEY": api_key or "", "Content-Type": "application/json"}
-
-            url = validate_url(url)
 
             # Make the API request
             response = requests.post(
