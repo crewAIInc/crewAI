@@ -288,9 +288,12 @@ class RagTool(BaseTool):
                 validated_args.append(arg)
                 continue
 
-            # Check if it looks like a file path (not a plain text string)
+            # Check if it looks like a file path (not a plain text string).
+            # Check both os.sep (backslash on Windows) and "/" so that
+            # forward-slash paths like "sub/file.txt" are caught on all platforms.
             if (
                 os.path.sep in source_ref
+                or "/" in source_ref
                 or source_ref.startswith(".")
                 or os.path.isabs(source_ref)
             ):
