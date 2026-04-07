@@ -336,7 +336,6 @@ class Agent(BaseAgent):
                 DeprecationWarning,
                 stacklevel=2,
             )
-            self._validate_docker_installation()
 
         self.set_skills()
 
@@ -1130,7 +1129,7 @@ class Agent(BaseAgent):
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self) -> list:
+    def get_code_execution_tools(self) -> list[Any]:
         """Deprecated: CodeInterpreterTool is no longer available."""
         warnings.warn(
             "CodeInterpreterTool is no longer available. "
