@@ -5011,135 +5011,6 @@
       }
     },
     {
-      "description": "Interprets Python3 code strings with a final print statement.",
-      "env_vars": [],
-      "humanized_name": "Code Interpreter",
-      "init_params_schema": {
-        "$defs": {
-          "EnvVar": {
-            "properties": {
-              "default": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Default"
-              },
-              "description": {
-                "title": "Description",
-                "type": "string"
-              },
-              "name": {
-                "title": "Name",
-                "type": "string"
-              },
-              "required": {
-                "default": true,
-                "title": "Required",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "name",
-              "description"
-            ],
-            "title": "EnvVar",
-            "type": "object"
-          }
-        },
-        "description": "A tool for executing Python code in isolated environments.\n\nThis tool provides functionality to run Python code either in a Docker container\nfor safe isolation or directly in a restricted sandbox. It can handle installing\nPython packages and executing arbitrary Python code.",
-        "properties": {
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Code"
-          },
-          "default_image_tag": {
-            "default": "code-interpreter:latest",
-            "title": "Default Image Tag",
-            "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
-          "unsafe_mode": {
-            "default": false,
-            "title": "Unsafe Mode",
-            "type": "boolean"
-          },
-          "user_docker_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Docker Base Url"
-          },
-          "user_dockerfile_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Dockerfile Path"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
-        "title": "CodeInterpreterTool",
-        "type": "object"
-      },
-      "name": "CodeInterpreterTool",
-      "package_dependencies": [],
-      "run_params_schema": {
-        "description": "Schema for defining inputs to the CodeInterpreterTool.\n\nThis schema defines the required parameters for code execution,\nincluding the code to run and any libraries that need to be installed.",
-        "properties": {
-          "code": {
-            "description": "Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
-            "title": "Code",
-            "type": "string"
-          },
-          "libraries_used": {
-            "description": "List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
-            "items": {
-              "type": "string"
-            },
-            "title": "Libraries Used",
-            "type": "array"
-          }
-        },
-        "required": [
-          "code",
-          "libraries_used"
-        ],
-        "title": "CodeInterpreterSchema",
-        "type": "object"
-      }
-    },
-    {
       "description": "",
       "env_vars": [
         {
@@ -14180,7 +14051,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries are allowed unless the tool is configured with allow_dml=True.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -14221,7 +14092,7 @@
             "type": "object"
           }
         },
-        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and WITH (CTE) statements are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
           "allow_dml": {
             "default": false,
