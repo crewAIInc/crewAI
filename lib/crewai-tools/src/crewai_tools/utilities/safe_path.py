@@ -1,7 +1,4 @@
-"""Compatibility shim — re-exports from crewai_tools.security.safe_path.
-
-Import from crewai_tools.security.safe_path instead.
-"""
+"""Backward-compatible re-export from crewai_tools.security.safe_path."""
 
 from crewai_tools.security.safe_path import (
     validate_directory_path,
