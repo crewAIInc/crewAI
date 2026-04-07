@@ -13,7 +13,6 @@ import pytest
 pytest.importorskip("sqlalchemy")
 
 from sqlalchemy import create_engine, text  # noqa: E402
-from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool  # noqa: E402
 

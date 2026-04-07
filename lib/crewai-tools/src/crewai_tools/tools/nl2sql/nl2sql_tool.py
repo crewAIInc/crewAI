@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any
+from typing import Any, Self
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, model_validator
@@ -83,7 +83,7 @@ class NL2SQLTool(BaseTool):
     args_schema: type[BaseModel] = NL2SQLToolInput
 
     @model_validator(mode="after")
-    def _apply_env_override(self) -> "NL2SQLTool":
+    def _apply_env_override(self) -> Self:
         """Allow CREWAI_NL2SQL_ALLOW_DML=true to override allow_dml at runtime."""
         if os.environ.get("CREWAI_NL2SQL_ALLOW_DML", "").strip().lower() == "true":
             if not self.allow_dml:
