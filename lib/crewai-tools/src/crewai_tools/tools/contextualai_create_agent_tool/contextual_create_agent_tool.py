@@ -49,8 +49,7 @@ class ContextualAICreateAgentTool(BaseTool):
         document_paths: list[str],
     ) -> str:
         """Create a complete RAG pipeline with documents."""
-        for doc_path in document_paths:
-            doc_path = validate_file_path(doc_path)
+        resolved_paths = [validate_file_path(doc_path) for doc_path in document_paths]
         try:
             import os
 
@@ -60,7 +59,7 @@ class ContextualAICreateAgentTool(BaseTool):
 
             # Upload documents
             document_ids = []
-            for doc_path in document_paths:
+            for doc_path in resolved_paths:
                 if not os.path.exists(doc_path):
                     raise FileNotFoundError(f"Document not found: {doc_path}")
 
