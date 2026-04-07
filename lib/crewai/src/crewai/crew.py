@@ -104,7 +104,7 @@ from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
-from crewai.state.checkpoint_config import CheckpointConfig
+from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -341,7 +341,10 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
-    checkpoint: CheckpointConfig | bool | None = Field(
+    checkpoint: Annotated[
+        CheckpointConfig | bool | None,
+        BeforeValidator(_coerce_checkpoint),
+    ] = Field(
         default=None,
         description="Automatic checkpointing configuration. "
         "True for defaults, False to opt out, None to inherit.",

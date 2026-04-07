@@ -39,7 +39,7 @@ from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
-from crewai.state.checkpoint_config import CheckpointConfig
+from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
@@ -300,7 +300,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    checkpoint: CheckpointConfig | bool | None = Field(
+    checkpoint: Annotated[
+        CheckpointConfig | bool | None,
+        BeforeValidator(_coerce_checkpoint),
+    ] = Field(
         default=None,
         description="Automatic checkpointing configuration. "
         "True for defaults, False to opt out, None to inherit.",

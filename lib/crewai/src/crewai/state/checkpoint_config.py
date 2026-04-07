@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -156,6 +156,20 @@ CheckpointEventType = Literal[
     "cursor_env",
     "default_env",
 ]
+
+
+def _coerce_checkpoint(v: Any) -> Any:
+    """BeforeValidator for checkpoint fields on Crew/Flow/Agent.
+
+    Converts True to CheckpointConfig and triggers handler registration.
+    """
+    if v is True:
+        v = CheckpointConfig()
+    if isinstance(v, CheckpointConfig):
+        from crewai.state.checkpoint_listener import _ensure_handlers_registered
+
+        _ensure_handlers_registered()
+    return v
 
 
 class CheckpointConfig(BaseModel):
