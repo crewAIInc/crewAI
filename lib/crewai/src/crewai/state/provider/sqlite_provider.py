@@ -16,12 +16,12 @@ _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS checkpoints (
     id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL,
-    data TEXT NOT NULL
+    data JSONB NOT NULL
 )
 """
 
-_INSERT = "INSERT INTO checkpoints (id, created_at, data) VALUES (?, ?, ?)"
-_SELECT = "SELECT data FROM checkpoints WHERE id = ?"
+_INSERT = "INSERT INTO checkpoints (id, created_at, data) VALUES (?, ?, jsonb(?))"
+_SELECT = "SELECT json(data) FROM checkpoints WHERE id = ?"
 _PRUNE = """
 DELETE FROM checkpoints WHERE rowid NOT IN (
     SELECT rowid FROM checkpoints ORDER BY rowid DESC LIMIT ?
