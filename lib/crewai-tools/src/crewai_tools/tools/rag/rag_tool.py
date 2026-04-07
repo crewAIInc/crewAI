@@ -252,6 +252,18 @@ class RagTool(BaseTool):
         from crewai_tools.utilities.safe_path import validate_file_path, validate_url
         from urllib.parse import urlparse
 
+        def _check_url(value: str, label: str) -> None:
+            try:
+                validate_url(value)
+            except ValueError as e:
+                raise ValueError(f"Blocked unsafe {label}: {e}") from e
+
+        def _check_path(value: str, label: str) -> None:
+            try:
+                validate_file_path(value)
+            except ValueError as e:
+                raise ValueError(f"Blocked unsafe {label}: {e}") from e
+
         validated_args: list[ContentItem] = []
         for arg in args:
             source_ref = str(arg.get("source", arg.get("content", ""))) if isinstance(arg, dict) else str(arg)
@@ -276,6 +288,19 @@ class RagTool(BaseTool):
                     raise ValueError(f"Blocked unsafe file path: {e}") from e
 
             validated_args.append(arg)
+
+        # Validate keyword path/URL arguments — these are equally user-controlled
+        # and must not bypass the checks applied to positional args.
+        for kwarg_name in ("path", "file_path"):
+            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:  # type: ignore[literal-required]
+                _check_path(str(kwargs[kwarg_name]), kwarg_name)  # type: ignore[literal-required]
+
+        if "directory_path" in kwargs and kwargs.get("directory_path") is not None:
+            _check_path(str(kwargs["directory_path"]), "directory_path")
+
+        for kwarg_name in ("url", "website", "github_url", "youtube_url"):
+            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:  # type: ignore[literal-required]
+                _check_url(str(kwargs[kwarg_name]), kwarg_name)  # type: ignore[literal-required]
 
         self.adapter.add(*validated_args, **kwargs)
 
