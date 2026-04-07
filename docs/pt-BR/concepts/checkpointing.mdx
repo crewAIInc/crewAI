@@ -39,7 +39,7 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
+        location="./my_checkpoints",
         on_events=["task_completed", "crew_kickoff_completed"],
         max_checkpoints=5,
     ),
@@ -50,7 +50,7 @@ crew = Crew(
 
 | Campo | Tipo | Padrao | Descricao |
 |:------|:-----|:-------|:----------|
-| `directory` | `str` | `"./.checkpoints"` | Caminho para os arquivos de checkpoint |
+| `location` | `str` | `"./.checkpoints"` | Caminho para os arquivos de checkpoint |
 | `on_events` | `list[str]` | `["task_completed"]` | Tipos de evento que acionam um checkpoint |
 | `provider` | `BaseProvider` | `JsonProvider()` | Backend de armazenamento |
 | `max_checkpoints` | `int \| None` | `None` | Maximo de arquivos a manter; os mais antigos sao removidos primeiro |
@@ -95,7 +95,7 @@ A crew restaurada pula tarefas ja concluidas e retoma a partir da primeira incom
 crew = Crew(
     agents=[researcher, writer],
     tasks=[research_task, write_task, review_task],
-    checkpoint=CheckpointConfig(directory="./crew_cp"),
+    checkpoint=CheckpointConfig(location="./crew_cp"),
 )
 ```
 
@@ -118,7 +118,7 @@ class MyFlow(Flow):
 
 flow = MyFlow(
     checkpoint=CheckpointConfig(
-        directory="./flow_cp",
+        location="./flow_cp",
         on_events=["method_execution_finished"],
     ),
 )
@@ -137,7 +137,7 @@ agent = Agent(
     goal="Research topics",
     backstory="Expert researcher",
     checkpoint=CheckpointConfig(
-        directory="./agent_cp",
+        location="./agent_cp",
         on_events=["lite_agent_execution_completed"],
     ),
 )
@@ -160,7 +160,7 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
+        location="./my_checkpoints",
         provider=JsonProvider(),
         max_checkpoints=5,
     ),
@@ -179,15 +179,12 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./.checkpoints.db",
-        provider=SqliteProvider(max_checkpoints=50),
+        location="./.checkpoints.db",
+        provider=SqliteProvider(),
     ),
 )
 ```
 
-<Note>
-Ao usar `SqliteProvider`, o campo `directory` e o caminho do arquivo de banco de dados, nao um diretorio.
-</Note>
 
 ## Tipos de Evento
 
