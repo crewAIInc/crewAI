@@ -278,7 +278,7 @@ class RagTool(BaseTool):
             try:
                 parsed = urlparse(source_ref)
             except (ValueError, AttributeError):
-                parsed = None  # type: ignore[assignment]
+                parsed = None
 
             if parsed is not None and parsed.scheme in ("http", "https", "file"):
                 try:
@@ -304,15 +304,15 @@ class RagTool(BaseTool):
         # Validate keyword path/URL arguments — these are equally user-controlled
         # and must not bypass the checks applied to positional args.
         for kwarg_name in ("path", "file_path"):
-            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:  # type: ignore[literal-required]
-                _check_path(str(kwargs[kwarg_name]), kwarg_name)  # type: ignore[literal-required]
+            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:
+                _check_path(str(kwargs[kwarg_name]), kwarg_name)
 
         if "directory_path" in kwargs and kwargs.get("directory_path") is not None:
             _check_path(str(kwargs["directory_path"]), "directory_path")
 
         for kwarg_name in ("url", "website", "github_url", "youtube_url"):
-            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:  # type: ignore[literal-required]
-                _check_url(str(kwargs[kwarg_name]), kwarg_name)  # type: ignore[literal-required]
+            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:
+                _check_url(str(kwargs[kwarg_name]), kwarg_name)
 
         self.adapter.add(*validated_args, **kwargs)
 

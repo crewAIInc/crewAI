@@ -183,7 +183,7 @@ def validate_url(url: str) -> str:
         raise ValueError(f"Could not resolve hostname: '{parsed.hostname}'") from exc
 
     for _family, _, _, _, sockaddr in addrinfos:
-        ip_str = sockaddr[0]
+        ip_str = str(sockaddr[0])
         if _is_private_or_reserved(ip_str):
             raise ValueError(
                 f"URL '{url}' resolves to private/reserved IP {ip_str}. "
