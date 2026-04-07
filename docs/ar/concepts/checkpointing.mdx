@@ -39,7 +39,7 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
+        location="./my_checkpoints",
         on_events=["task_completed", "crew_kickoff_completed"],
         max_checkpoints=5,
     ),
@@ -50,7 +50,7 @@ crew = Crew(
 
 | الحقل | النوع | الافتراضي | الوصف |
 |:------|:------|:----------|:------|
-| `directory` | `str` | `"./.checkpoints"` | مسار ملفات نقاط الحفظ |
+| `location` | `str` | `"./.checkpoints"` | مسار ملفات نقاط الحفظ |
 | `on_events` | `list[str]` | `["task_completed"]` | انواع الاحداث التي تطلق نقطة حفظ |
 | `provider` | `BaseProvider` | `JsonProvider()` | واجهة التخزين |
 | `max_checkpoints` | `int \| None` | `None` | الحد الاقصى للملفات؛ يتم حذف الاقدم اولا |
@@ -95,7 +95,7 @@ result = crew.kickoff()  # يستأنف من اخر مهمة مكتملة
 crew = Crew(
     agents=[researcher, writer],
     tasks=[research_task, write_task, review_task],
-    checkpoint=CheckpointConfig(directory="./crew_cp"),
+    checkpoint=CheckpointConfig(location="./crew_cp"),
 )
 ```
 
@@ -118,7 +118,7 @@ class MyFlow(Flow):
 
 flow = MyFlow(
     checkpoint=CheckpointConfig(
-        directory="./flow_cp",
+        location="./flow_cp",
         on_events=["method_execution_finished"],
     ),
 )
@@ -137,7 +137,7 @@ agent = Agent(
     goal="Research topics",
     backstory="Expert researcher",
     checkpoint=CheckpointConfig(
-        directory="./agent_cp",
+        location="./agent_cp",
         on_events=["lite_agent_execution_completed"],
     ),
 )
@@ -160,7 +160,7 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
+        location="./my_checkpoints",
         provider=JsonProvider(),
         max_checkpoints=5,
     ),
@@ -179,15 +179,12 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     checkpoint=CheckpointConfig(
-        directory="./.checkpoints.db",
-        provider=SqliteProvider(max_checkpoints=50),
+        location="./.checkpoints.db",
+        provider=SqliteProvider(),
     ),
 )
 ```
 
-<Note>
-عند استخدام `SqliteProvider`، حقل `directory` هو مسار ملف قاعدة البيانات، وليس مجلدا.
-</Note>
 
 ## انواع الاحداث
 

@@ -34,27 +34,36 @@ class BaseProvider(Protocol):
             ),
         )
 
-    def checkpoint(self, data: str, directory: str) -> str:
+    def checkpoint(self, data: str, location: str) -> str:
         """Persist a snapshot synchronously.
 
         Args:
             data: The serialized string to persist.
-            directory: Logical destination: path, bucket prefix, etc.
+            location: Storage destination (directory, file path, URI, etc.).
 
         Returns:
-            A location identifier for the saved checkpoint, such as a file path or URI.
+            A location identifier for the saved checkpoint.
         """
         ...
 
-    async def acheckpoint(self, data: str, directory: str) -> str:
+    async def acheckpoint(self, data: str, location: str) -> str:
         """Persist a snapshot asynchronously.
 
         Args:
             data: The serialized string to persist.
-            directory: Logical destination: path, bucket prefix, etc.
+            location: Storage destination (directory, file path, URI, etc.).
 
         Returns:
-            A location identifier for the saved checkpoint, such as a file path or URI.
+            A location identifier for the saved checkpoint.
+        """
+        ...
+
+    def prune(self, location: str, max_keep: int) -> None:
+        """Remove old checkpoints, keeping at most *max_keep*.
+
+        Args:
+            location: The storage destination passed to ``checkpoint``.
+            max_keep: Maximum number of checkpoints to retain.
         """
         ...
 

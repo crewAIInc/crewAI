@@ -165,9 +165,10 @@ class CheckpointConfig(BaseModel):
     automatically whenever the specified event(s) fire.
     """
 
-    directory: str = Field(
+    location: str = Field(
         default="./.checkpoints",
-        description="Filesystem path where checkpoint JSON files are written.",
+        description="Storage destination. For JsonProvider this is a directory "
+        "path; for SqliteProvider it is a database file path.",
     )
     on_events: list[CheckpointEventType | Literal["*"]] = Field(
         default=["task_completed"],
@@ -180,8 +181,8 @@ class CheckpointConfig(BaseModel):
     )
     max_checkpoints: int | None = Field(
         default=None,
-        description="Maximum checkpoint files to keep. Oldest are pruned first. "
-        "None means keep all.",
+        description="Maximum checkpoints to keep. Oldest are pruned after "
+        "each write. None means keep all.",
     )
 
     @property

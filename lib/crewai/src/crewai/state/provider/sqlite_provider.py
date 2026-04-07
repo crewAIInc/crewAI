@@ -43,58 +43,53 @@ def _make_id() -> tuple[str, str]:
 class SqliteProvider(BaseProvider):
     """Persists runtime state checkpoints in a SQLite database.
 
-    The ``directory`` argument to ``checkpoint`` / ``acheckpoint`` is
-    used as the database path (e.g. ``"./.checkpoints.db"``).
-
-    Args:
-        max_checkpoints: Maximum number of checkpoints to retain.
-            Oldest rows are pruned after each write. None keeps all.
+    The ``location`` argument to ``checkpoint`` / ``acheckpoint`` is
+    used as the database file path.
     """
 
-    def __init__(self, max_checkpoints: int | None = None) -> None:
-        self.max_checkpoints = max_checkpoints
-
-    def checkpoint(self, data: str, directory: str) -> str:
+    def checkpoint(self, data: str, location: str) -> str:
         """Write a checkpoint to the SQLite database.
 
         Args:
             data: The serialized JSON string to persist.
-            directory: Path to the SQLite database file.
+            location: Path to the SQLite database file.
 
         Returns:
             A location string in the format ``"db_path#checkpoint_id"``.
         """
         checkpoint_id, ts = _make_id()
-        Path(directory).parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(directory) as conn:
+        Path(location).parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(location) as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(_CREATE_TABLE)
             conn.execute(_INSERT, (checkpoint_id, ts, data))
-            if self.max_checkpoints is not None:
-                conn.execute(_PRUNE, (self.max_checkpoints,))
             conn.commit()
-        return f"{directory}#{checkpoint_id}"
+        return f"{location}#{checkpoint_id}"
 
-    async def acheckpoint(self, data: str, directory: str) -> str:
+    async def acheckpoint(self, data: str, location: str) -> str:
         """Write a checkpoint to the SQLite database asynchronously.
 
         Args:
             data: The serialized JSON string to persist.
-            directory: Path to the SQLite database file.
+            location: Path to the SQLite database file.
 
         Returns:
             A location string in the format ``"db_path#checkpoint_id"``.
         """
         checkpoint_id, ts = _make_id()
-        Path(directory).parent.mkdir(parents=True, exist_ok=True)
-        async with aiosqlite.connect(directory) as db:
+        Path(location).parent.mkdir(parents=True, exist_ok=True)
+        async with aiosqlite.connect(location) as db:
             await db.execute("PRAGMA journal_mode=WAL")
             await db.execute(_CREATE_TABLE)
             await db.execute(_INSERT, (checkpoint_id, ts, data))
-            if self.max_checkpoints is not None:
-                await db.execute(_PRUNE, (self.max_checkpoints,))
             await db.commit()
-        return f"{directory}#{checkpoint_id}"
+        return f"{location}#{checkpoint_id}"
+
+    def prune(self, location: str, max_keep: int) -> None:
+        """Remove oldest checkpoint rows beyond *max_keep*."""
+        with sqlite3.connect(location) as conn:
+            conn.execute(_PRUNE, (max_keep,))
+            conn.commit()
 
     def from_checkpoint(self, location: str) -> str:
         """Read a checkpoint from the SQLite database.

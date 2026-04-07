@@ -17,10 +17,10 @@ from crewai.flow.flow import Flow, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
-    _prune,
     _resolve,
     _SENTINEL,
 )
+from crewai.state.provider.json_provider import JsonProvider
 from crewai.task import Task
 
 
@@ -37,10 +37,10 @@ class TestResolve:
     def test_true_returns_config(self) -> None:
         result = _resolve(True)
         assert isinstance(result, CheckpointConfig)
-        assert result.directory == "./.checkpoints"
+        assert result.location == "./.checkpoints"
 
     def test_config_returns_config(self) -> None:
-        cfg = CheckpointConfig(directory="/tmp/cp")
+        cfg = CheckpointConfig(location="/tmp/cp")
         assert _resolve(cfg) is cfg
 
 
@@ -77,12 +77,12 @@ class TestFindCheckpoint:
 
     def test_agent_config_overrides_crew(self) -> None:
         a = self._make_agent(
-            checkpoint=CheckpointConfig(directory="/agent_cp")
+            checkpoint=CheckpointConfig(location="/agent_cp")
         )
         self._make_crew([a], checkpoint=True)
         cfg = _find_checkpoint(a)
         assert isinstance(cfg, CheckpointConfig)
-        assert cfg.directory == "/agent_cp"
+        assert cfg.location == "/agent_cp"
 
     def test_task_inherits_from_crew(self) -> None:
         a = self._make_agent()
@@ -123,7 +123,7 @@ class TestPrune:
                 # Ensure distinct mtime
                 time.sleep(0.01)
 
-            _prune(d, max_keep=2)
+            JsonProvider().prune(d, max_keep=2)
             remaining = os.listdir(d)
             assert len(remaining) == 2
             assert "cp_3.json" in remaining
@@ -135,7 +135,7 @@ class TestPrune:
                 with open(os.path.join(d, f"cp_{i}.json"), "w") as f:
                     f.write("{}")
 
-            _prune(d, max_keep=0)
+            JsonProvider().prune(d, max_keep=0)
             assert os.listdir(d) == []
 
     def test_prune_more_than_existing(self) -> None:
@@ -143,7 +143,7 @@ class TestPrune:
             with open(os.path.join(d, "cp.json"), "w") as f:
                 f.write("{}")
 
-            _prune(d, max_keep=10)
+            JsonProvider().prune(d, max_keep=10)
             assert len(os.listdir(d)) == 1
 
 
@@ -153,7 +153,7 @@ class TestPrune:
 class TestCheckpointConfig:
     def test_defaults(self) -> None:
         cfg = CheckpointConfig()
-        assert cfg.directory == "./.checkpoints"
+        assert cfg.location == "./.checkpoints"
         assert cfg.on_events == ["task_completed"]
         assert cfg.max_checkpoints is None
         assert not cfg.trigger_all
