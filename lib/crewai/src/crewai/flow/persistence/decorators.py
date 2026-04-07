@@ -28,13 +28,13 @@ import asyncio
 from collections.abc import Callable
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:
@@ -55,8 +55,6 @@ LOG_MESSAGES: Final[dict[str, str]] = {
 
 class PersistenceDecorator:
     """Class to handle flow state persistence with consistent logging."""
-
-    _printer: ClassVar[Printer] = Printer()
 
     @classmethod
     def persist_state(
@@ -104,7 +102,7 @@ class PersistenceDecorator:
 
             # Log state saving only if verbose is True
             if verbose:
-                cls._printer.print(
+                PRINTER.print(
                     LOG_MESSAGES["save_state"].format(flow_uuid), color="cyan"
                 )
                 logger.info(LOG_MESSAGES["save_state"].format(flow_uuid))
@@ -119,19 +117,19 @@ class PersistenceDecorator:
             except Exception as e:
                 error_msg = LOG_MESSAGES["save_error"].format(method_name, str(e))
                 if verbose:
-                    cls._printer.print(error_msg, color="red")
+                    PRINTER.print(error_msg, color="red")
                 logger.error(error_msg)
                 raise RuntimeError(f"State persistence failed: {e!s}") from e
         except AttributeError as e:
             error_msg = LOG_MESSAGES["state_missing"]
             if verbose:
-                cls._printer.print(error_msg, color="red")
+                PRINTER.print(error_msg, color="red")
             logger.error(error_msg)
             raise ValueError(error_msg) from e
         except (TypeError, ValueError) as e:
             error_msg = LOG_MESSAGES["id_missing"]
             if verbose:
-                cls._printer.print(error_msg, color="red")
+                PRINTER.print(error_msg, color="red")
             logger.error(error_msg)
             raise ValueError(error_msg) from e
 

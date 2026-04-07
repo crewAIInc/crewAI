@@ -38,12 +38,9 @@ from crewai.tools.structured_tool import (
     build_schema_hint,
 )
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
-from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 
-
-_printer = Printer()
 
 P = ParamSpec("P")
 R = TypeVar("R", covariant=True)

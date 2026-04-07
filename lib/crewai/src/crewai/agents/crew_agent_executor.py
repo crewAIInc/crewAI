@@ -68,6 +68,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import (
@@ -212,13 +213,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
             formatted_answer = self._invoke_loop()
         except AssertionError:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="Agent failed to reach a final answer. This is likely a bug - please report it.",
                     color="red",
                 )
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
 
         if self.ask_for_human_input:
@@ -326,7 +327,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
-                        printer=self._printer,
+                        printer=PRINTER,
                         i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
@@ -341,7 +342,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     from_task=self.task,
                     from_agent=self.agent,
                     response_model=self.response_model,
@@ -422,7 +423,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     messages=self.messages,
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
-                    printer=self._printer,
+                    printer=PRINTER,
                     verbose=self.agent.verbose,
                 )
 
@@ -433,7 +434,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -441,7 +442,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -482,7 +483,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         None,
-                        printer=self._printer,
+                        printer=PRINTER,
                         i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
@@ -502,7 +503,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     tools=openai_tools,
                     available_functions=None,
                     from_task=self.task,
@@ -570,7 +571,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -578,7 +579,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -595,7 +596,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             llm=cast("BaseLLM", self.llm),
             messages=self.messages,
             callbacks=self.callbacks,
-            printer=self._printer,
+            printer=PRINTER,
             from_task=self.task,
             from_agent=self.agent,
             response_model=self.response_model,
@@ -965,7 +966,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     break
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in before_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -1031,7 +1032,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     after_hook_context.tool_result = result
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in after_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -1078,7 +1079,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         if self.agent and self.agent.verbose:
             cache_info = " (from cache)" if from_cache else ""
-            self._printer.print(
+            PRINTER.print(
                 content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
                 color="green",
             )
@@ -1118,13 +1119,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
             formatted_answer = await self._ainvoke_loop()
         except AssertionError:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="Agent failed to reach a final answer. This is likely a bug - please report it.",
                     color="red",
                 )
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
 
         if self.ask_for_human_input:
@@ -1168,7 +1169,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
-                        printer=self._printer,
+                        printer=PRINTER,
                         i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
@@ -1183,7 +1184,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     from_task=self.task,
                     from_agent=self.agent,
                     response_model=self.response_model,
@@ -1263,7 +1264,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     messages=self.messages,
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
-                    printer=self._printer,
+                    printer=PRINTER,
                     verbose=self.agent.verbose,
                 )
 
@@ -1273,7 +1274,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -1281,7 +1282,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1316,7 +1317,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         None,
-                        printer=self._printer,
+                        printer=PRINTER,
                         i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
@@ -1336,7 +1337,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     tools=openai_tools,
                     available_functions=None,
                     from_task=self.task,
@@ -1403,7 +1404,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -1411,7 +1412,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1428,7 +1429,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             llm=cast("BaseLLM", self.llm),
             messages=self.messages,
             callbacks=self.callbacks,
-            printer=self._printer,
+            printer=PRINTER,
             from_task=self.task,
             from_agent=self.agent,
             response_model=self.response_model,
@@ -1576,7 +1577,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         if train_iteration is None or not isinstance(train_iteration, int):
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="Invalid or missing train iteration. Cannot save training data.",
                     color="red",
                 )
@@ -1600,7 +1601,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 agent_training_data[train_iteration]["improved_output"] = result.output
             else:
                 if self.agent.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content=(
                             f"No existing training data for agent {agent_id} and iteration "
                             f"{train_iteration}. Cannot save improved output."

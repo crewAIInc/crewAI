@@ -40,7 +40,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.planning_types import TodoItem
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -109,7 +109,6 @@ class StepExecutor:
         self.request_within_rpm_limit = request_within_rpm_limit
         self.callbacks = callbacks or []
         self._i18n: I18N = i18n or get_i18n()
-        self._printer: Printer = Printer()
 
         # Native tool support — set up once
         self._use_native_tools = check_native_tool_support(
@@ -585,7 +584,7 @@ class StepExecutor:
                 task=self.task,
                 crew=self.crew,
                 event_source=self,
-                printer=self._printer,
+                printer=PRINTER,
                 verbose=bool(self.agent and self.agent.verbose),
             )
 

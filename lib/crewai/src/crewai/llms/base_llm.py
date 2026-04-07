@@ -857,7 +857,7 @@ class BaseLLM(BaseModel, ABC):
             LLMCallHookContext,
             get_before_llm_call_hooks,
         )
-        from crewai.utilities.printer import Printer
+        from crewai.utilities.printer import PRINTER
 
         before_hooks = get_before_llm_call_hooks()
         if not before_hooks:
@@ -872,21 +872,20 @@ class BaseLLM(BaseModel, ABC):
             crew=None,
         )
         verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        printer = Printer()
 
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
                     if verbose:
-                        printer.print(
+                        PRINTER.print(
                             content="LLM call blocked by before_llm_call hook",
                             color="yellow",
                         )
                     return False
         except Exception as e:
             if verbose:
-                printer.print(
+                PRINTER.print(
                     content=f"Error in before_llm_call hook: {e}",
                     color="yellow",
                 )
@@ -927,7 +926,7 @@ class BaseLLM(BaseModel, ABC):
             LLMCallHookContext,
             get_after_llm_call_hooks,
         )
-        from crewai.utilities.printer import Printer
+        from crewai.utilities.printer import PRINTER
 
         after_hooks = get_after_llm_call_hooks()
         if not after_hooks:
@@ -943,7 +942,6 @@ class BaseLLM(BaseModel, ABC):
             response=response,
         )
         verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        printer = Printer()
         modified_response = response
 
         try:
@@ -954,7 +952,7 @@ class BaseLLM(BaseModel, ABC):
                     hook_context.response = modified_response
         except Exception as e:
             if verbose:
-                printer.print(
+                PRINTER.print(
                     content=f"Error in after_llm_call hook: {e}",
                     color="yellow",
                 )
