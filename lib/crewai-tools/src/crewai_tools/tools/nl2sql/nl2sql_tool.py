@@ -1,6 +1,12 @@
 import logging
 import os
-from typing import Any, Self
+from typing import Any
+
+
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, model_validator
