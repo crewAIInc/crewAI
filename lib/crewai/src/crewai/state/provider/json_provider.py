@@ -7,6 +7,7 @@ import glob
 import logging
 import os
 from pathlib import Path
+from typing import Literal
 import uuid
 
 import aiofiles
@@ -20,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 class JsonProvider(BaseProvider):
     """Persists runtime state checkpoints as JSON files on the local filesystem."""
+
+    provider_type: Literal["json"] = "json"
 
     def checkpoint(self, data: str, location: str) -> str:
         """Write a JSON checkpoint file.

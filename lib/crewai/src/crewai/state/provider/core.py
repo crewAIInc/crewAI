@@ -1,39 +1,22 @@
-"""Base protocol for state providers."""
+"""Base class for state providers."""
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from abc import ABC, abstractmethod
 
-from pydantic import GetCoreSchemaHandler
-from pydantic_core import CoreSchema, core_schema
+from pydantic import BaseModel
 
 
-@runtime_checkable
-class BaseProvider(Protocol):
-    """Interface for persisting and restoring runtime state checkpoints.
+class BaseProvider(BaseModel, ABC):
+    """Base class for persisting and restoring runtime state checkpoints.
 
     Implementations handle the storage backend — filesystem, cloud, database,
     etc. — while ``RuntimeState`` handles serialization.
     """
 
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source_type: Any, handler: GetCoreSchemaHandler
-    ) -> CoreSchema:
-        """Allow Pydantic to validate any ``BaseProvider`` instance."""
+    provider_type: str = "base"
 
-        def _validate(v: Any) -> BaseProvider:
-            if isinstance(v, BaseProvider):
-                return v
-            raise TypeError(f"Expected a BaseProvider instance, got {type(v)}")
-
-        return core_schema.no_info_plain_validator_function(
-            _validate,
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                lambda v: type(v).__name__, info_arg=False
-            ),
-        )
-
+    @abstractmethod
     def checkpoint(self, data: str, location: str) -> str:
         """Persist a snapshot synchronously.
 
@@ -46,6 +29,7 @@ class BaseProvider(Protocol):
         """
         ...
 
+    @abstractmethod
     async def acheckpoint(self, data: str, location: str) -> str:
         """Persist a snapshot asynchronously.
 
@@ -58,6 +42,7 @@ class BaseProvider(Protocol):
         """
         ...
 
+    @abstractmethod
     def prune(self, location: str, max_keep: int) -> None:
         """Remove old checkpoints, keeping at most *max_keep*.
 
@@ -67,6 +52,7 @@ class BaseProvider(Protocol):
         """
         ...
 
+    @abstractmethod
     def from_checkpoint(self, location: str) -> str:
         """Read a snapshot synchronously.
 
@@ -78,6 +64,7 @@ class BaseProvider(Protocol):
         """
         ...
 
+    @abstractmethod
     async def afrom_checkpoint(self, location: str) -> str:
         """Read a snapshot asynchronously.
 

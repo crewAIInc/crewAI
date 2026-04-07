@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
+from crewai.state.provider.sqlite_provider import SqliteProvider
 
 
 CheckpointEventType = Literal[
@@ -189,7 +189,10 @@ class CheckpointConfig(BaseModel):
         description="Event types that trigger a checkpoint write. "
         'Use ["*"] to checkpoint on every event.',
     )
-    provider: BaseProvider = Field(
+    provider: Annotated[
+        JsonProvider | SqliteProvider,
+        Field(discriminator="provider_type"),
+    ] = Field(
         default_factory=JsonProvider,
         description="Storage backend. Defaults to JsonProvider.",
     )
