@@ -68,3 +68,15 @@ tool = DirectorySearchTool(
     }
 )
 ```
+
+## Segurança
+
+### Validação de Caminhos
+
+Os caminhos de diretório fornecidos a esta ferramenta são validados em relação ao diretório de trabalho atual. Caminhos que resolvem fora do diretório de trabalho são rejeitados com um `ValueError`.
+
+Para permitir caminhos fora do diretório de trabalho (por exemplo, em testes ou pipelines confiáveis), defina a variável de ambiente:
+
+```shell
+CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true
+```
