@@ -78,8 +78,8 @@ class FileReadTool(BaseTool):
         if file_path is None:
             return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
 
+        validate_file_path(file_path)
         try:
-            validate_file_path(file_path)
             with open(file_path, "r") as file:
                 if start_line == 1 and line_count is None:
                     return file.read()

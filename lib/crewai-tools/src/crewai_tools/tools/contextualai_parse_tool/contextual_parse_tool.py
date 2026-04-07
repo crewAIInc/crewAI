@@ -47,6 +47,7 @@ class ContextualAIParseTool(BaseTool):
         """Parse a document using Contextual AI's parser."""
         if output_types is None:
             output_types = ["markdown-per-page"]
+        validate_file_path(file_path)
         try:
             import json
             import os
@@ -54,7 +55,6 @@ class ContextualAIParseTool(BaseTool):
 
             import requests
 
-            validate_file_path(file_path)
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"Document not found: {file_path}")
 

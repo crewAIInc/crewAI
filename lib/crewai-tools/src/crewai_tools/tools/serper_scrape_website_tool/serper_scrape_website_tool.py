@@ -44,14 +44,13 @@ class SerperScrapeWebsiteTool(BaseTool):
         Returns:
             Scraped website content as a string
         """
+        validate_url(url)
         try:
             # Serper API endpoint
             api_url = "https://scrape.serper.dev"
 
             # Get API key from environment variable for security
             api_key = os.getenv("SERPER_API_KEY")
-
-            validate_url(url)
 
             # Prepare the payload
             payload = json.dumps({"url": url, "includeMarkdown": include_markdown})
