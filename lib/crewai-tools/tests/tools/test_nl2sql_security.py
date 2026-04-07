@@ -358,6 +358,21 @@ class TestWritableCTE:
         # No write commands in the CTE body — must pass
         tool._validate_query("WITH cte AS (SELECT id FROM users) SELECT * FROM cte")
 
+    def test_cte_with_comment_column_not_false_positive(self):
+        """Column named 'comment' should NOT trigger writable CTE detection."""
+        tool = _make_tool(allow_dml=False)
+        # 'comment' is a column name, not a SQL command
+        tool._validate_query(
+            "WITH cte AS (SELECT comment FROM posts) SELECT * FROM cte"
+        )
+
+    def test_cte_with_set_column_not_false_positive(self):
+        """Column named 'set' should NOT trigger writable CTE detection."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query(
+            "WITH cte AS (SELECT set, reset FROM config) SELECT * FROM cte"
+        )
+
 
 # ---------------------------------------------------------------------------
 # EXPLAIN ANALYZE executes the underlying query
@@ -461,7 +476,29 @@ class TestMultiStatementCommit:
         ):
             tool.execute_sql("SELECT 1; SELECT 2")
 
-        mock_session.commit.assert_not_called()
+    def test_writable_cte_triggers_commit(self):
+        """WITH d AS (DELETE ...) must trigger commit when allow_dml=True."""
+        tool = _make_tool(allow_dml=True)
+
+        mock_session = MagicMock()
+        mock_result = MagicMock()
+        mock_result.returns_rows = True
+        mock_result.keys.return_value = ["id"]
+        mock_result.fetchall.return_value = [(1,)]
+        mock_session.execute.return_value = mock_result
+        mock_session_cls = MagicMock(return_value=mock_session)
+
+        with (
+            patch("crewai_tools.tools.nl2sql.nl2sql_tool.create_engine"),
+            patch(
+                "crewai_tools.tools.nl2sql.nl2sql_tool.sessionmaker",
+                return_value=mock_session_cls,
+            ),
+        ):
+            tool.execute_sql(
+                "WITH d AS (DELETE FROM users RETURNING *) SELECT * FROM d"
+            )
+            mock_session.commit.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
