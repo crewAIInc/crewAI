@@ -9,8 +9,6 @@ import contextvars
 from datetime import datetime
 import json
 from pathlib import Path
-import shutil
-import subprocess
 import time
 from typing import (
     TYPE_CHECKING,
