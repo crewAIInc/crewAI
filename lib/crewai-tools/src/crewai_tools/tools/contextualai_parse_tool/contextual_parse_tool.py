@@ -1,7 +1,7 @@
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from crewai_tools.security.safe_path import validate_path
+from crewai_tools.utilities.safe_path import validate_file_path
 
 
 class ContextualAIParseSchema(BaseModel):
@@ -54,7 +54,7 @@ class ContextualAIParseTool(BaseTool):
 
             import requests
 
-            validate_path(file_path)
+            validate_file_path(file_path)
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"Document not found: {file_path}")
 

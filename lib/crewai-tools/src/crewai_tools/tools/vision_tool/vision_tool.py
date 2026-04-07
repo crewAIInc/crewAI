@@ -7,7 +7,7 @@ from crewai.tools import BaseTool, EnvVar
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel, Field, PrivateAttr, field_validator
 
-from crewai_tools.security.safe_path import validate_path
+from crewai_tools.utilities.safe_path import validate_file_path
 
 
 class ImagePromptSchema(BaseModel):
@@ -137,6 +137,6 @@ class VisionTool(BaseTool):
         Returns:
             Base64-encoded image data
         """
-        validate_path(image_path)
+        validate_file_path(image_path)
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode()

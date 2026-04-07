@@ -7,7 +7,7 @@ from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 import requests
 
-from crewai_tools.security.safe_url import validate_url
+from crewai_tools.utilities.safe_path import validate_url
 
 
 class BrightDataConfig(BaseModel):
@@ -136,7 +136,7 @@ class BrightDataWebUnlockerTool(BaseTool):
             "Content-Type": "application/json",
         }
 
-        validate_url(url, pin_ip=False)
+        validate_url(url)
         try:
             response = requests.post(
                 self.base_url, json=payload, headers=headers, timeout=30

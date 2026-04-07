@@ -3,7 +3,7 @@ from typing import Any
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from crewai_tools.security.safe_path import validate_path
+from crewai_tools.utilities.safe_path import validate_file_path
 
 
 class ContextualAICreateAgentSchema(BaseModel):
@@ -59,7 +59,7 @@ class ContextualAICreateAgentTool(BaseTool):
             # Upload documents
             document_ids = []
             for doc_path in document_paths:
-                validate_path(doc_path)
+                validate_file_path(doc_path)
                 if not os.path.exists(doc_path):
                     raise FileNotFoundError(f"Document not found: {doc_path}")
 

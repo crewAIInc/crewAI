@@ -5,8 +5,8 @@ from crewai.tools import EnvVar
 from pydantic import BaseModel, Field
 import requests
 
-from crewai_tools.security.safe_url import validate_url
 from crewai_tools.tools.rag.rag_tool import RagTool
+from crewai_tools.utilities.safe_path import validate_url
 
 
 class SerplyWebpageToMarkdownToolSchema(BaseModel):
@@ -49,7 +49,7 @@ class SerplyWebpageToMarkdownTool(RagTool):
         if self.proxy_location and not self.headers.get("X-Proxy-Location"):
             self.headers["X-Proxy-Location"] = self.proxy_location
 
-        validate_url(url, pin_ip=False)
+        validate_url(url)
         data = {"url": url, "method": "GET", "response_type": "markdown"}
         response = requests.request(
             "POST",
