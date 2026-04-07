@@ -379,6 +379,38 @@ class TestWritableCTE:
 # ---------------------------------------------------------------------------
 
 
+    def test_cte_with_write_main_query_blocked(self):
+        """WITH cte AS (SELECT 1) DELETE FROM users — main query must be caught."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH cte AS (SELECT 1) DELETE FROM users"
+            )
+
+    def test_cte_with_write_main_query_allowed_with_dml(self):
+        """Main query write after CTE should pass when allow_dml=True."""
+        tool = _make_tool(allow_dml=True)
+        tool._validate_query(
+            "WITH cte AS (SELECT id FROM users) INSERT INTO archive SELECT * FROM cte"
+        )
+
+    def test_cte_with_newline_before_paren_blocked(self):
+        """AS followed by newline then ( should still detect writable CTE."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH cte AS\n(DELETE FROM users RETURNING *) SELECT * FROM cte"
+            )
+
+    def test_cte_with_tab_before_paren_blocked(self):
+        """AS followed by tab then ( should still detect writable CTE."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH cte AS\t(DELETE FROM users RETURNING *) SELECT * FROM cte"
+            )
+
+
 class TestExplainAnalyze:
     def test_explain_analyze_delete_blocked_in_read_only(self):
         """EXPLAIN ANALYZE DELETE actually runs the delete — block it."""
