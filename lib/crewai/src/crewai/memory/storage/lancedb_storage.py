@@ -12,7 +12,10 @@ import threading
 import time
 from typing import Any
 
-import lancedb  # type: ignore[import-untyped]
+try:
+    import lancedb  # type: ignore[import-untyped]
+except ImportError:
+    lancedb = None
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
 from crewai.utilities.lock_store import lock as store_lock
@@ -63,6 +66,12 @@ class LanceDBStorage:
                   fragment file; compaction merges them, keeping query
                   performance consistent.  Set to 0 to disable.
         """
+        if lancedb is None:
+            raise ImportError(
+                "lancedb is required for LanceDB memory storage but is not installed.\n"
+                "Install it with:  pip install 'crewai[memory]'\n"
+                "Or directly:      pip install 'lancedb>=0.29.2,<0.30.1'"
+            )
         if path is None:
             storage_dir = os.environ.get("CREWAI_STORAGE_DIR")
             if storage_dir:
