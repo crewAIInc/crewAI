@@ -303,16 +303,22 @@ class RagTool(BaseTool):
 
         # Validate keyword path/URL arguments — these are equally user-controlled
         # and must not bypass the checks applied to positional args.
-        for kwarg_name in ("path", "file_path"):
-            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:
-                _check_path(str(kwargs[kwarg_name]), kwarg_name)
+        if "path" in kwargs and kwargs.get("path") is not None:
+            _check_path(str(kwargs["path"]), "path")
+        if "file_path" in kwargs and kwargs.get("file_path") is not None:
+            _check_path(str(kwargs["file_path"]), "file_path")
 
         if "directory_path" in kwargs and kwargs.get("directory_path") is not None:
             _check_path(str(kwargs["directory_path"]), "directory_path")
 
-        for kwarg_name in ("url", "website", "github_url", "youtube_url"):
-            if kwarg_name in kwargs and kwargs[kwarg_name] is not None:
-                _check_url(str(kwargs[kwarg_name]), kwarg_name)
+        if "url" in kwargs and kwargs.get("url") is not None:
+            _check_url(str(kwargs["url"]), "url")
+        if "website" in kwargs and kwargs.get("website") is not None:
+            _check_url(str(kwargs["website"]), "website")
+        if "github_url" in kwargs and kwargs.get("github_url") is not None:
+            _check_url(str(kwargs["github_url"]), "github_url")
+        if "youtube_url" in kwargs and kwargs.get("youtube_url") is not None:
+            _check_url(str(kwargs["youtube_url"]), "youtube_url")
 
         self.adapter.add(*validated_args, **kwargs)
 
