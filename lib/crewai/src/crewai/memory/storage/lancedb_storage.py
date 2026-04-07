@@ -13,7 +13,7 @@ import time
 from typing import Any
 
 try:
-    import lancedb  # type: ignore[import-untyped]
+    import lancedb
 except ImportError:
     lancedb = None  # type: ignore[assignment]
 
