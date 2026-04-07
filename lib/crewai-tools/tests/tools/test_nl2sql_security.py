@@ -84,7 +84,7 @@ class TestReadOnlyMode:
         # Should not raise
         tool._validate_query("EXPLAIN SELECT 1")
 
-    def test_with_cte_allowed(self):
+    def test_read_only_cte_allowed(self):
         tool = _make_tool()
         tool._validate_query("WITH cte AS (SELECT 1) SELECT * FROM cte")
 
@@ -325,6 +325,135 @@ class TestSemicolonInjection:
         tool = _make_tool(allow_dml=False)
         with pytest.raises(ValueError, match="read-only mode"):
             tool._validate_query("DROP TABLE users")
+
+
+# ---------------------------------------------------------------------------
+# Writable CTEs (WITH … DELETE/INSERT/UPDATE)
+# ---------------------------------------------------------------------------
+
+
+class TestWritableCTE:
+    def test_writable_cte_delete_blocked_in_read_only(self):
+        """WITH d AS (DELETE FROM users RETURNING *) SELECT * FROM d — blocked."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH deleted AS (DELETE FROM users RETURNING *) SELECT * FROM deleted"
+            )
+
+    def test_writable_cte_insert_blocked_in_read_only(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH ins AS (INSERT INTO t VALUES (1) RETURNING id) SELECT * FROM ins"
+            )
+
+    def test_writable_cte_update_blocked_in_read_only(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH upd AS (UPDATE t SET x=1 RETURNING id) SELECT * FROM upd"
+            )
+
+    def test_writable_cte_allowed_when_dml_enabled(self):
+        tool = _make_tool(allow_dml=True)
+        # Should not raise
+        tool._validate_query(
+            "WITH deleted AS (DELETE FROM users RETURNING *) SELECT * FROM deleted"
+        )
+
+    def test_plain_read_only_cte_still_allowed(self):
+        tool = _make_tool(allow_dml=False)
+        # No write commands in the CTE body — must pass
+        tool._validate_query("WITH cte AS (SELECT id FROM users) SELECT * FROM cte")
+
+
+# ---------------------------------------------------------------------------
+# EXPLAIN ANALYZE executes the underlying query
+# ---------------------------------------------------------------------------
+
+
+class TestExplainAnalyze:
+    def test_explain_analyze_delete_blocked_in_read_only(self):
+        """EXPLAIN ANALYZE DELETE actually runs the delete — block it."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("EXPLAIN ANALYZE DELETE FROM users")
+
+    def test_explain_analyse_delete_blocked_in_read_only(self):
+        """British spelling ANALYSE is also caught."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("EXPLAIN ANALYSE DELETE FROM users")
+
+    def test_explain_analyze_drop_blocked_in_read_only(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("EXPLAIN ANALYZE DROP TABLE users")
+
+    def test_explain_analyze_select_allowed_in_read_only(self):
+        """EXPLAIN ANALYZE on a SELECT is safe — must be permitted."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("EXPLAIN ANALYZE SELECT * FROM users")
+
+    def test_explain_without_analyze_allowed(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("EXPLAIN SELECT * FROM users")
+
+    def test_explain_analyze_delete_allowed_when_dml_enabled(self):
+        tool = _make_tool(allow_dml=True)
+        tool._validate_query("EXPLAIN ANALYZE DELETE FROM users")
+
+
+# ---------------------------------------------------------------------------
+# Multi-statement commit covers ALL statements (not just the first)
+# ---------------------------------------------------------------------------
+
+
+class TestMultiStatementCommit:
+    def test_select_then_insert_triggers_commit(self):
+        """SELECT 1; INSERT … — commit must happen because INSERT is a write."""
+        tool = _make_tool(allow_dml=True)
+
+        mock_session = MagicMock()
+        mock_result = MagicMock()
+        mock_result.returns_rows = False
+        mock_session.execute.return_value = mock_result
+        mock_session_cls = MagicMock(return_value=mock_session)
+
+        with (
+            patch("crewai_tools.tools.nl2sql.nl2sql_tool.create_engine"),
+            patch(
+                "crewai_tools.tools.nl2sql.nl2sql_tool.sessionmaker",
+                return_value=mock_session_cls,
+            ),
+        ):
+            tool.execute_sql("SELECT 1; INSERT INTO t VALUES (1)")
+
+        mock_session.commit.assert_called_once()
+
+    def test_select_only_multi_statement_does_not_commit(self):
+        """Two SELECTs must not trigger a commit even when allow_dml=True."""
+        tool = _make_tool(allow_dml=True)
+
+        mock_session = MagicMock()
+        mock_result = MagicMock()
+        mock_result.returns_rows = True
+        mock_result.keys.return_value = ["v"]
+        mock_result.fetchall.return_value = [(1,)]
+        mock_session.execute.return_value = mock_result
+        mock_session_cls = MagicMock(return_value=mock_session)
+
+        with (
+            patch("crewai_tools.tools.nl2sql.nl2sql_tool.create_engine"),
+            patch(
+                "crewai_tools.tools.nl2sql.nl2sql_tool.sessionmaker",
+                return_value=mock_session_cls,
+            ),
+        ):
+            tool.execute_sql("SELECT 1; SELECT 2")
+
+        mock_session.commit.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

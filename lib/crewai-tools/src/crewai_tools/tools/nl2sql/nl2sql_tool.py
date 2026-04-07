@@ -23,7 +23,9 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Commands allowed in read-only mode
-_READ_ONLY_COMMANDS = {"SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "WITH"}
+# NOTE: WITH is intentionally excluded — writable CTEs start with WITH, so the
+# CTE body must be inspected separately (see _validate_statement).
+_READ_ONLY_COMMANDS = {"SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN"}
 
 # Commands that mutate state and are blocked by default
 _WRITE_COMMANDS = {
@@ -67,10 +69,14 @@ class NL2SQLTool(BaseTool):
     """Tool that converts natural language to SQL and executes it against a database.
 
     By default the tool operates in **read-only mode**: only SELECT, SHOW,
-    DESCRIBE, EXPLAIN, and WITH (CTE) statements are permitted.  Write
+    DESCRIBE, EXPLAIN, and read-only CTEs (WITH … SELECT) are permitted.  Write
     operations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, …) are
     blocked unless ``allow_dml=True`` is set explicitly or the environment
     variable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.
+
+    Writable CTEs (``WITH d AS (DELETE …) SELECT …``) and
+    ``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are
+    blocked in read-only mode.
 
     The ``_fetch_all_available_columns`` helper uses parameterised queries so
     that table names coming from the database catalogue cannot be used as an
@@ -81,7 +87,8 @@ class NL2SQLTool(BaseTool):
     description: str = (
         "Converts natural language to SQL queries and executes them against a "
         "database. Read-only by default — only SELECT/SHOW/DESCRIBE/EXPLAIN "
-        "queries are allowed unless the tool is configured with allow_dml=True."
+        "queries (and read-only CTEs) are allowed unless configured with "
+        "allow_dml=True."
     )
     db_uri: str = Field(
         title="Database URI",
@@ -168,6 +175,40 @@ class NL2SQLTool(BaseTool):
     def _validate_statement(self, stmt: str) -> None:
         """Validate a single SQL statement (no semicolons)."""
         command = self._extract_command(stmt)
+
+        # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
+        # query.  Resolve the real command so write operations are caught.
+        if command == "EXPLAIN":
+            tokens = stmt.strip().lstrip("(").split()
+            if len(tokens) >= 2 and tokens[1].upper().rstrip(";") in (
+                "ANALYZE",
+                "ANALYSE",
+            ):
+                # The statement being explained starts at the third token.
+                if len(tokens) >= 3:
+                    command = tokens[2].upper().rstrip(";")
+                # else: bare "EXPLAIN ANALYZE" with no query — treat as read-only.
+
+        # WITH starts a CTE.  Read-only CTEs are fine; writable CTEs
+        # (e.g. WITH d AS (DELETE …) SELECT …) must be blocked in read-only mode.
+        if command == "WITH":
+            tokens_upper = {t.upper().strip("();,") for t in stmt.split()}
+            write_found = tokens_upper & _WRITE_COMMANDS
+            if write_found:
+                found = next(iter(write_found))
+                if not self.allow_dml:
+                    raise ValueError(
+                        f"NL2SQLTool is configured in read-only mode and blocked a "
+                        f"writable CTE containing a '{found}' statement. To allow "
+                        f"write operations set allow_dml=True or "
+                        f"CREWAI_NL2SQL_ALLOW_DML=true."
+                    )
+                logger.warning(
+                    "NL2SQLTool: executing writable CTE with '%s' because allow_dml=True.",
+                    found,
+                )
+            # Both read-only and writable-but-permitted CTEs need no further checks.
+            return
 
         if command in _WRITE_COMMANDS:
             if not self.allow_dml:
@@ -260,7 +301,10 @@ class NL2SQLTool(BaseTool):
                 "`pip install crewai-tools[sqlalchemy]`"
             )
 
-        is_write = self._extract_command(sql_query) in _WRITE_COMMANDS
+        # Check ALL statements so that e.g. "SELECT 1; DROP TABLE t" triggers a
+        # commit when allow_dml=True, regardless of statement order.
+        _stmts = [s.strip() for s in sql_query.split(";") if s.strip()]
+        is_write = any(self._extract_command(s) in _WRITE_COMMANDS for s in _stmts)
 
         engine = create_engine(self.db_uri)
         Session = sessionmaker(bind=engine)  # noqa: N806
