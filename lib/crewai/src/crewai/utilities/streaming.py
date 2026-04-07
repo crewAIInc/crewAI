@@ -335,7 +335,10 @@ async def create_async_chunk_generator(
             yield item
     finally:
         if not cancel_event.is_set():
-            await task
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):  # noqa: S110
+                pass
         else:
             if not task.done():
                 task.cancel()
