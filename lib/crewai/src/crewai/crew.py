@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
+from pathlib import Path
 import re
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
+    Literal,
     cast,
 )
 import uuid
@@ -20,13 +23,14 @@ from opentelemetry.context import attach, detach
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
-    InstanceOf,
     Json,
     PrivateAttr,
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from rich.console import Console
 from rich.panel import Panel
@@ -35,6 +39,10 @@ from typing_extensions import Self
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
+    from opentelemetry.trace import Span
+
+    from crewai.context import ExecutionContext
+    from crewai.state.provider.core import BaseProvider
 
 try:
     from crewai_files import get_supported_content_types
@@ -48,7 +56,12 @@ except ImportError:
 
 
 from crewai.agent import Agent
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import (
+    BaseAgent,
+    _resolve_agent,
+    _serialize_llm_ref,
+    _validate_llm_ref,
+)
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.crews.crew_output import CrewOutput
 from crewai.crews.utils import (
@@ -83,21 +96,27 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
+from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
+from crewai.utilities.env import get_env_context
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import FileHandler
@@ -124,6 +143,12 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+
+
+def _resolve_agents(value: Any, info: Any) -> Any:
+    if not isinstance(value, list):
+        return value
+    return [_resolve_agent(a, info) for a in value]
 
 
 class Crew(FlowTrackable, BaseModel):
@@ -164,13 +189,15 @@ class Crew(FlowTrackable, BaseModel):
             fingerprinting.
     """
 
+    entity_type: Literal["crew"] = "crew"
+
     __hash__ = object.__hash__
-    _execution_span: Any = PrivateAttr()
+    _execution_span: Span | None = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default_factory=CacheHandler)
-    _memory: Any = PrivateAttr(default=None)  # Unified Memory | MemoryScope
+    _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
+    _memory: Memory | MemoryScope | MemorySlice | None = PrivateAttr(default=None)
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
     _inputs: dict[str, Any] | None = PrivateAttr(default=None)
@@ -185,10 +212,13 @@ class Crew(FlowTrackable, BaseModel):
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
     tasks: list[Task] = Field(default_factory=list)
-    agents: list[BaseAgent] = Field(default_factory=list)
+    agents: Annotated[
+        list[BaseAgent],
+        BeforeValidator(_resolve_agents),
+    ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool | Any = Field(
+    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "
@@ -203,36 +233,39 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
-    manager_agent: BaseAgent | None = Field(
-        description="Custom agent that will be used as manager.", default=None
-    )
-    function_calling_llm: str | InstanceOf[LLM] | Any | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
+    manager_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
+    manager_agent: Annotated[
+        BaseAgent | None,
+        BeforeValidator(_resolve_agent),
+    ] = Field(description="Custom agent that will be used as manager.", default=None)
+    function_calling_llm: Annotated[
+        str | LLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     share_crew: bool | None = Field(default=False)
-    step_callback: Any | None = Field(
+    step_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each step for all agents execution.",
     )
-    task_callback: Any | None = Field(
+    task_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each task for all agents execution.",
     )
-    before_kickoff_callbacks: list[
-        Callable[[dict[str, Any] | None], dict[str, Any] | None]
-    ] = Field(
+    before_kickoff_callbacks: list[SerializableCallable] = Field(
         default_factory=list,
         description=(
             "List of callbacks to be executed before crew kickoff. "
             "It may be used to adjust inputs before the crew is executed."
         ),
     )
-    after_kickoff_callbacks: list[Callable[[CrewOutput], CrewOutput]] = Field(
+    after_kickoff_callbacks: list[SerializableCallable] = Field(
         default_factory=list,
         description=(
             "List of callbacks to be executed after crew kickoff. "
@@ -262,7 +295,11 @@ class Crew(FlowTrackable, BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    planning_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(
         default=None,
         description=(
             "Language model that will run the AgentPlanner if planning is True."
@@ -283,7 +320,11 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge object."
         ),
     )
-    chat_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    chat_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
@@ -291,9 +332,19 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Skill search paths or pre-loaded Skill objects applied to all agents in the crew.",
+    )
+
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
+    )
+    checkpoint: CheckpointConfig | bool | None = Field(
+        default=None,
+        description="Automatic checkpointing configuration. "
+        "True for defaults, False to opt out, None to inherit.",
     )
     token_usage: UsageMetrics | None = Field(
         default=None,
@@ -304,14 +355,127 @@ class Crew(FlowTrackable, BaseModel):
         description="Whether to enable tracing for the crew. True=always enable, False=always disable, None=check environment/user settings.",
     )
 
+    execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint_inputs: dict[str, Any] | None = Field(default=None)
+    checkpoint_train: bool | None = Field(default=None)
+    checkpoint_kickoff_event_id: str | None = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(
+        cls, path: str, *, provider: BaseProvider | None = None
+    ) -> Crew:
+        """Restore a Crew from a checkpoint file, ready to resume via kickoff().
+
+        Args:
+            path: Path to a checkpoint JSON file.
+            provider: Storage backend to read from. Defaults to JsonProvider.
+
+        Returns:
+            A Crew instance. Call kickoff() to resume from the last completed task.
+        """
+        from crewai.context import apply_execution_context
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.runtime import RuntimeState
+
+        state = RuntimeState.from_checkpoint(
+            path,
+            provider=provider or JsonProvider(),
+            context={"from_checkpoint": True},
+        )
+        crewai_event_bus.set_runtime_state(state)
+        for entity in state.root:
+            if isinstance(entity, cls):
+                if entity.execution_context is not None:
+                    apply_execution_context(entity.execution_context)
+                entity._restore_runtime()
+                return entity
+        raise ValueError(f"No Crew found in checkpoint: {path}")
+
+    def _restore_runtime(self) -> None:
+        """Re-create runtime objects after restoring from a checkpoint."""
+        for agent in self.agents:
+            agent.crew = self
+            executor = agent.agent_executor
+            if executor and executor.messages:
+                executor.crew = self
+                executor.agent = agent
+                executor._resuming = True
+            else:
+                agent.agent_executor = None
+        for task in self.tasks:
+            if task.agent is not None:
+                for agent in self.agents:
+                    if agent.role == task.agent.role:
+                        task.agent = agent
+                        if agent.agent_executor is not None and task.output is None:
+                            agent.agent_executor.task = task
+                        break
+        if self.checkpoint_inputs is not None:
+            self._inputs = self.checkpoint_inputs
+        if self.checkpoint_kickoff_event_id is not None:
+            self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        if self.checkpoint_train is not None:
+            self._train = self.checkpoint_train
+
+        self._restore_event_scope()
+
+    def _restore_event_scope(self) -> None:
+        """Rebuild the event scope stack from the checkpoint's event record."""
+        from crewai.events.base_events import set_emission_counter
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.event_context import (
+            restore_event_scope,
+            set_last_event_id,
+        )
+
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            return
+
+        # Restore crew scope and the in-progress task scope. Inner scopes
+        # (agent, llm, tool) are re-created by the executor on resume.
+        stack: list[tuple[str, str]] = []
+        if self._kickoff_event_id:
+            stack.append((self._kickoff_event_id, "crew_kickoff_started"))
+
+        # Find the task_started event for the in-progress task (skipped on resume)
+        for task in self.tasks:
+            if task.output is None:
+                task_id_str = str(task.id)
+                for node in state.event_record.nodes.values():
+                    if (
+                        node.event.type == "task_started"
+                        and node.event.task_id == task_id_str
+                    ):
+                        stack.append((node.event.event_id, "task_started"))
+                        break
+                break
+
+        restore_event_scope(tuple(stack))
+
+        # Restore last_event_id and emission counter from the record
+        last_event_id: str | None = None
+        max_seq = 0
+        for node in state.event_record.nodes.values():
+            seq = node.event.emission_sequence or 0
+            if seq > max_seq:
+                max_seq = seq
+                last_event_id = node.event.event_id
+        if last_event_id is not None:
+            set_last_event_id(last_event_id)
+        if max_seq > 0:
+            set_emission_counter(max_seq)
+
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
+    def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
         """Prevent manual setting of the 'id' field by users."""
-        if v:
+        if v and not (info.context or {}).get("from_checkpoint"):
             raise PydanticCustomError(
                 "may_not_set_field", "The 'id' field cannot be set by the user.", {}
             )
+        return v
 
     @field_validator("config", mode="before")
     @classmethod
@@ -331,7 +495,8 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
-        self._cache_handler = CacheHandler()
+        if not getattr(self, "_cache_handler", None):
+            self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
         # Determine and set tracing state once for this execution
@@ -348,13 +513,24 @@ class Crew(FlowTrackable, BaseModel):
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
-            self.function_calling_llm = create_llm(self.function_calling_llm)
+            self.function_calling_llm = create_llm(self.function_calling_llm)  # type: ignore[assignment]
 
         return self
 
     @model_validator(mode="after")
     def create_crew_memory(self) -> Crew:
-        """Initialize unified memory, respecting crew embedder config."""
+        """Initialize unified memory, respecting crew embedder config.
+
+        When memory is enabled, sets a hierarchical root_scope based on the
+        crew name (e.g. '/crew/research-crew') so that all memories saved by
+        this crew and its agents are organized under a consistent namespace.
+        """
+        from crewai.memory.utils import sanitize_scope_name
+
+        # Compute sanitized crew name for root_scope
+        crew_name = sanitize_scope_name(self.name or "crew")
+        crew_root_scope = f"/crew/{crew_name}"
+
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
@@ -362,10 +538,11 @@ class Crew(FlowTrackable, BaseModel):
             if self.embedder is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
-                embedder = build_embedder(self.embedder)
-            self._memory = Memory(embedder=embedder)
+                embedder = build_embedder(cast(dict[str, Any], self.embedder))
+            self._memory = Memory(embedder=embedder, root_scope=crew_root_scope)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
+            # Respect user's configuration — don't auto-set root_scope
             self._memory = self.memory
         else:
             self._memory = None
@@ -679,6 +856,7 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        get_env_context()
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext()
@@ -992,6 +1170,10 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+        custom_start = self._get_execution_start_index(tasks)
+        if custom_start is not None:
+            start_index = custom_start
+
         task_outputs: list[TaskOutput] = []
         pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
@@ -1173,7 +1355,12 @@ class Crew(FlowTrackable, BaseModel):
         manager.crew = self
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
-        return None
+        if self.checkpoint_kickoff_event_id is None:
+            return None
+        for i, task in enumerate(tasks):
+            if task.output is None:
+                return i
+        return len(tasks) if tasks else None
 
     def _execute_tasks(
         self,
@@ -1289,7 +1476,7 @@ class Crew(FlowTrackable, BaseModel):
             and hasattr(agent, "multimodal")
             and getattr(agent, "multimodal", False)
         ):
-            if not (agent.llm and agent.llm.supports_multimodal()):
+            if not (isinstance(agent.llm, BaseLLM) and agent.llm.supports_multimodal()):
                 tools = self._add_multimodal_tools(agent, tools)
 
         if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
@@ -1306,7 +1493,11 @@ class Crew(FlowTrackable, BaseModel):
         files = get_all_files(self.id, task.id)
         if files:
             supported_types: list[str] = []
-            if agent and agent.llm and agent.llm.supports_multimodal():
+            if (
+                agent
+                and isinstance(agent.llm, BaseLLM)
+                and agent.llm.supports_multimodal()
+            ):
                 provider = (
                     getattr(agent.llm, "provider", None)
                     or getattr(agent.llm, "model", None)
@@ -1362,7 +1553,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         tools: list[BaseTool],
         task_agent: BaseAgent,
-        agents: list[BaseAgent],
+        agents: Sequence[BaseAgent],
     ) -> list[BaseTool]:
         if hasattr(task_agent, "get_delegation_tools"):
             delegation_tools = task_agent.get_delegation_tools(agents)
@@ -1410,9 +1601,7 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
-    def _add_memory_tools(
-        self, tools: list[BaseTool], memory: Any
-    ) -> list[BaseTool]:
+    def _add_memory_tools(self, tools: list[BaseTool], memory: Any) -> list[BaseTool]:
         """Add recall and remember tools when memory is available.
 
         Args:
@@ -1761,17 +1950,10 @@ class Crew(FlowTrackable, BaseModel):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
 
-        if (
-            self.manager_agent
-            and hasattr(self.manager_agent, "llm")
-            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
-        ):
+        if self.manager_agent:
             if isinstance(self.manager_agent.llm, BaseLLM):
                 llm_usage = self.manager_agent.llm.get_token_usage_summary()
-            else:
-                llm_usage = self.manager_agent.llm._token_process.get_summary()
-
-            total_usage_metrics.add_usage_metrics(llm_usage)
+                total_usage_metrics.add_usage_metrics(llm_usage)
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
@@ -1779,7 +1961,7 @@ class Crew(FlowTrackable, BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: str | InstanceOf[BaseLLM],
+        eval_llm: str | BaseLLM,
         inputs: dict[str, Any] | None = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations.

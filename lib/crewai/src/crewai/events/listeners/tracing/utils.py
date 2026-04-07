@@ -1,4 +1,5 @@
 from collections.abc import Callable
+import contextvars
 from contextvars import ContextVar, Token
 from datetime import datetime
 import getpass
@@ -18,6 +19,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+from crewai.utilities.lock_store import lock as store_lock
 from crewai.utilities.paths import db_storage_path
 from crewai.utilities.serialization import to_serializable
 
@@ -137,12 +139,25 @@ def _load_user_data() -> dict[str, Any]:
     return {}
 
 
-def _save_user_data(data: dict[str, Any]) -> None:
+def _user_data_lock_name() -> str:
+    """Return a stable lock name for the user data file."""
+    return f"file:{os.path.realpath(_user_data_file())}"
+
+
+def update_user_data(updates: dict[str, Any]) -> None:
+    """Atomically read-modify-write the user data file.
+
+    Args:
+        updates: Key-value pairs to merge into the existing user data.
+    """
     try:
-        p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
+        with store_lock(_user_data_lock_name()):
+            data = _load_user_data()
+            data.update(updates)
+            p = _user_data_file()
+            p.write_text(json.dumps(data, indent=2))
     except (OSError, PermissionError) as e:
-        logger.warning(f"Failed to save user data: {e}")
+        logger.warning(f"Failed to update user data: {e}")
 
 
 def has_user_declined_tracing() -> bool:
@@ -357,24 +372,30 @@ def _get_generic_system_id() -> str | None:
     return None
 
 
-def get_user_id() -> str:
-    """Stable, anonymized user identifier with caching."""
-    data = _load_user_data()
-
-    if "user_id" in data:
-        return cast(str, data["user_id"])
-
+def _generate_user_id() -> str:
+    """Compute an anonymized user identifier from username and machine ID."""
     try:
         username = getpass.getuser()
     except Exception:
         username = "unknown"
 
     seed = f"{username}|{_get_machine_id()}"
-    uid = hashlib.sha256(seed.encode()).hexdigest()
+    return hashlib.sha256(seed.encode()).hexdigest()
 
-    data["user_id"] = uid
-    _save_user_data(data)
-    return uid
+
+def get_user_id() -> str:
+    """Stable, anonymized user identifier with caching."""
+    with store_lock(_user_data_lock_name()):
+        data = _load_user_data()
+
+        if "user_id" in data:
+            return cast(str, data["user_id"])
+
+        uid = _generate_user_id()
+        data["user_id"] = uid
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
+        return uid
 
 
 def is_first_execution() -> bool:
@@ -389,20 +410,23 @@ def mark_first_execution_done(user_consented: bool = False) -> None:
     Args:
         user_consented: Whether the user consented to trace collection.
     """
-    data = _load_user_data()
-    if data.get("first_execution_done", False):
-        return
+    with store_lock(_user_data_lock_name()):
+        data = _load_user_data()
+        if data.get("first_execution_done", False):
+            return
 
-    data.update(
-        {
-            "first_execution_done": True,
-            "first_execution_at": datetime.now().timestamp(),
-            "user_id": get_user_id(),
-            "machine_id": _get_machine_id(),
-            "trace_consent": user_consented,
-        }
-    )
-    _save_user_data(data)
+        uid = data.get("user_id") or _generate_user_id()
+        data.update(
+            {
+                "first_execution_done": True,
+                "first_execution_at": datetime.now().timestamp(),
+                "user_id": uid,
+                "machine_id": _get_machine_id(),
+                "trace_consent": user_consented,
+            }
+        )
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
 
 
 def safe_serialize_to_dict(obj: Any, exclude: set[str] | None = None) -> dict[str, Any]:
@@ -457,6 +481,26 @@ def should_auto_collect_first_time_traces() -> bool:
     return is_first_execution()
 
 
+def _is_interactive_terminal() -> bool:
+    """Check if stdin is an interactive terminal.
+
+    Returns False in non-interactive contexts (CI, API servers, Docker, etc.)
+    to avoid blocking on prompts that no one can respond to.
+    """
+    import sys
+
+    try:
+        stdin = getattr(sys, "stdin", None)
+        if stdin is None:
+            return False
+        isatty = getattr(stdin, "isatty", None)
+        if not callable(isatty):
+            return False
+        return bool(isatty())
+    except Exception:
+        return False
+
+
 def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
     """
     Prompt user if they want to see their traces with timeout.
@@ -466,6 +510,11 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return False
 
     if should_suppress_tracing_messages():
+        return False
+
+    # Skip prompt in non-interactive contexts (CI, API servers, Docker, etc.)
+    # This avoids blocking for 20 seconds when no one can respond
+    if not _is_interactive_terminal():
         return False
 
     try:
@@ -509,7 +558,8 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
                 # Handle all input-related errors silently
                 result[0] = False
 
-        input_thread = threading.Thread(target=get_input, daemon=True)
+        ctx = contextvars.copy_context()
+        input_thread = threading.Thread(target=ctx.run, args=(get_input,), daemon=True)
         input_thread.start()
         input_thread.join(timeout=timeout_seconds)
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -17,14 +17,14 @@ class FlowStartedEvent(FlowEvent):
 
     flow_name: str
     inputs: dict[str, Any] | None = None
-    type: str = "flow_started"
+    type: Literal["flow_started"] = "flow_started"
 
 
 class FlowCreatedEvent(FlowEvent):
     """Event emitted when a flow is created"""
 
     flow_name: str
-    type: str = "flow_created"
+    type: Literal["flow_created"] = "flow_created"
 
 
 class MethodExecutionStartedEvent(FlowEvent):
@@ -34,7 +34,7 @@ class MethodExecutionStartedEvent(FlowEvent):
     method_name: str
     state: dict[str, Any] | BaseModel
     params: dict[str, Any] | None = None
-    type: str = "method_execution_started"
+    type: Literal["method_execution_started"] = "method_execution_started"
 
 
 class MethodExecutionFinishedEvent(FlowEvent):
@@ -44,7 +44,7 @@ class MethodExecutionFinishedEvent(FlowEvent):
     method_name: str
     result: Any = None
     state: dict[str, Any] | BaseModel
-    type: str = "method_execution_finished"
+    type: Literal["method_execution_finished"] = "method_execution_finished"
 
 
 class MethodExecutionFailedEvent(FlowEvent):
@@ -53,7 +53,7 @@ class MethodExecutionFailedEvent(FlowEvent):
     flow_name: str
     method_name: str
     error: Exception
-    type: str = "method_execution_failed"
+    type: Literal["method_execution_failed"] = "method_execution_failed"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -78,7 +78,7 @@ class MethodExecutionPausedEvent(FlowEvent):
     flow_id: str
     message: str
     emit: list[str] | None = None
-    type: str = "method_execution_paused"
+    type: Literal["method_execution_paused"] = "method_execution_paused"
 
 
 class FlowFinishedEvent(FlowEvent):
@@ -86,7 +86,7 @@ class FlowFinishedEvent(FlowEvent):
 
     flow_name: str
     result: Any | None = None
-    type: str = "flow_finished"
+    type: Literal["flow_finished"] = "flow_finished"
     state: dict[str, Any] | BaseModel
 
 
@@ -110,14 +110,14 @@ class FlowPausedEvent(FlowEvent):
     state: dict[str, Any] | BaseModel
     message: str
     emit: list[str] | None = None
-    type: str = "flow_paused"
+    type: Literal["flow_paused"] = "flow_paused"
 
 
 class FlowPlotEvent(FlowEvent):
     """Event emitted when a flow plot is created"""
 
     flow_name: str
-    type: str = "flow_plot"
+    type: Literal["flow_plot"] = "flow_plot"
 
 
 class FlowInputRequestedEvent(FlowEvent):
@@ -138,7 +138,7 @@ class FlowInputRequestedEvent(FlowEvent):
     method_name: str
     message: str
     metadata: dict[str, Any] | None = None
-    type: str = "flow_input_requested"
+    type: Literal["flow_input_requested"] = "flow_input_requested"
 
 
 class FlowInputReceivedEvent(FlowEvent):
@@ -163,7 +163,7 @@ class FlowInputReceivedEvent(FlowEvent):
     response: str | None = None
     metadata: dict[str, Any] | None = None
     response_metadata: dict[str, Any] | None = None
-    type: str = "flow_input_received"
+    type: Literal["flow_input_received"] = "flow_input_received"
 
 
 class HumanFeedbackRequestedEvent(FlowEvent):
@@ -178,13 +178,16 @@ class HumanFeedbackRequestedEvent(FlowEvent):
         output: The method output shown to the human for review.
         message: The message displayed when requesting feedback.
         emit: Optional list of possible outcomes for routing.
+        request_id: Platform-assigned identifier for this feedback request,
+            used for correlating the request across system boundaries.
     """
 
     method_name: str
     output: Any
     message: str
     emit: list[str] | None = None
-    type: str = "human_feedback_requested"
+    request_id: str | None = None
+    type: Literal["human_feedback_requested"] = "human_feedback_requested"
 
 
 class HumanFeedbackReceivedEvent(FlowEvent):
@@ -198,9 +201,12 @@ class HumanFeedbackReceivedEvent(FlowEvent):
         method_name: Name of the method that received feedback.
         feedback: The raw text feedback provided by the human.
         outcome: The collapsed outcome string (if emit was specified).
+        request_id: Platform-assigned identifier for this feedback request,
+            used for correlating the response back to its originating request.
     """
 
     method_name: str
     feedback: str
     outcome: str | None = None
-    type: str = "human_feedback_received"
+    request_id: str | None = None
+    type: Literal["human_feedback_received"] = "human_feedback_received"

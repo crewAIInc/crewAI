@@ -38,7 +38,7 @@ crewai run
 
 This command initializes the {{name}} Flow as defined in your configuration.
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+This example, unmodified, will run a content creation flow on AI Agents and save the output to `output/post.md`.
 
 ## Understanding Your Crew
 

@@ -5,16 +5,39 @@ from collections.abc import Callable
 import inspect
 import json
 import textwrap
-from typing import TYPE_CHECKING, Any, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, get_type_hints
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    PrivateAttr,
+    create_model,
+    model_validator,
+)
+from typing_extensions import Self
 
 from crewai.utilities.logger import Logger
+from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
+def _serialize_schema(v: type[BaseModel] | None) -> dict[str, Any] | None:
+    return v.model_json_schema() if v else None
+
+
+def _deserialize_schema(v: Any) -> type[BaseModel] | None:
+    if v is None or isinstance(v, type):
+        return v
+    if isinstance(v, dict):
+        return create_model_from_schema(v)
+    return None
+
+
 if TYPE_CHECKING:
-    from crewai.tools.base_tool import BaseTool
+    pass
 
 
 def build_schema_hint(args_schema: type[BaseModel]) -> str:
@@ -42,51 +65,40 @@ class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
 
-class CrewStructuredTool:
+class CrewStructuredTool(BaseModel):
     """A structured tool that can operate on any number of inputs.
 
     This tool intends to replace StructuredTool with a custom implementation
     that integrates better with CrewAI's ecosystem.
     """
 
-    def __init__(
-        self,
-        name: str,
-        description: str,
-        args_schema: type[BaseModel],
-        func: Callable[..., Any],
-        result_as_answer: bool = False,
-        max_usage_count: int | None = None,
-        current_usage_count: int = 0,
-    ) -> None:
-        """Initialize the structured tool.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        Args:
-            name: The name of the tool
-            description: A description of what the tool does
-            args_schema: The pydantic model for the tool's arguments
-            func: The function to run when the tool is called
-            result_as_answer: Whether to return the output directly
-            max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
-            current_usage_count: Current number of times this tool has been used.
-        """
-        self.name = name
-        self.description = description
-        self.args_schema = args_schema
-        self.func = func
-        self._logger = Logger()
-        self.result_as_answer = result_as_answer
-        self.max_usage_count = max_usage_count
-        self.current_usage_count = current_usage_count
-        self._original_tool: BaseTool | None = None
+    name: str = Field(default="")
+    description: str = Field(default="")
+    args_schema: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_schema),
+        PlainSerializer(_serialize_schema),
+    ] = Field(default=None)
+    func: Any = Field(default=None, exclude=True)
+    result_as_answer: bool = Field(default=False)
+    max_usage_count: int | None = Field(default=None)
+    current_usage_count: int = Field(default=0)
+    cache_function: Any = Field(default=None, exclude=True)
+    _logger: Logger = PrivateAttr(default_factory=Logger)
+    _original_tool: Any = PrivateAttr(default=None)
 
-        # Validate the function signature matches the schema
-        self._validate_function_signature()
+    @model_validator(mode="after")
+    def _validate_func(self) -> Self:
+        if self.func is not None:
+            self._validate_function_signature()
+        return self
 
     @classmethod
     def from_function(
         cls,
-        func: Callable,
+        func: Callable[..., Any],
         name: str | None = None,
         description: str | None = None,
         return_direct: bool = False,
@@ -147,7 +159,7 @@ class CrewStructuredTool:
     @staticmethod
     def _create_schema_from_function(
         name: str,
-        func: Callable,
+        func: Callable[..., Any],
     ) -> type[BaseModel]:
         """Create a Pydantic schema from a function's signature.
 
@@ -182,10 +194,12 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **fields)  # type: ignore[call-overload]
+        return create_model(schema_name, **fields)  # type: ignore[call-overload, no-any-return]
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
+        if not self.args_schema:
+            return
         sig = inspect.signature(self.func)
         schema_fields = self.args_schema.model_fields
 
@@ -210,7 +224,7 @@ class CrewStructuredTool:
                         f"not found in args_schema"
                     )
 
-    def _parse_args(self, raw_args: str | dict) -> dict:
+    def _parse_args(self, raw_args: str | dict[str, Any]) -> dict[str, Any]:
         """Parse and validate the input arguments against the schema.
 
         Args:
@@ -225,17 +239,19 @@ class CrewStructuredTool:
             except json.JSONDecodeError as e:
                 raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
 
+        if not self.args_schema:
+            return raw_args if isinstance(raw_args, dict) else {}
         try:
             validated_args = self.args_schema.model_validate(raw_args)
-            return validated_args.model_dump()
+            return dict(validated_args.model_dump())
         except Exception as e:
             hint = build_schema_hint(self.args_schema)
             raise ValueError(f"Arguments validation failed: {e}{hint}") from e
 
     async def ainvoke(
         self,
-        input: str | dict,
-        config: dict | None = None,
+        input: str | dict[str, Any],
+        config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Any:
         """Asynchronously invoke the tool.
@@ -269,15 +285,20 @@ class CrewStructuredTool:
         except Exception:
             raise
 
-    def _run(self, *args, **kwargs) -> Any:
+    def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Legacy method for compatibility."""
         # Convert args/kwargs to our expected format
+        if not self.args_schema:
+            return self.func(*args, **kwargs)
         input_dict = dict(zip(self.args_schema.model_fields.keys(), args, strict=False))
         input_dict.update(kwargs)
         return self.invoke(input_dict)
 
     def invoke(
-        self, input: str | dict, config: dict | None = None, **kwargs: Any
+        self,
+        input: str | dict[str, Any],
+        config: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
@@ -313,9 +334,12 @@ class CrewStructuredTool:
             self._original_tool.current_usage_count = self.current_usage_count
 
     @property
-    def args(self) -> dict:
+    def args(self) -> dict[str, Any]:
         """Get the tool's input arguments schema."""
-        return self.args_schema.model_json_schema()["properties"]
+        if not self.args_schema:
+            return {}
+        schema: dict[str, Any] = self.args_schema.model_json_schema()["properties"]
+        return schema
 
     def __repr__(self) -> str:
         return f"CrewStructuredTool(name='{sanitize_tool_name(self.name)}', description='{self.description}')"

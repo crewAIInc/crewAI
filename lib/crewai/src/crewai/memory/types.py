@@ -53,7 +53,9 @@ class MemoryRecord(BaseModel):
     )
     embedding: list[float] | None = Field(
         default=None,
-        description="Vector embedding for semantic search. Computed on save if not provided.",
+        exclude=True,
+        repr=False,
+        description="Vector embedding for semantic search. Excluded from serialization to save tokens.",
     )
     source: str | None = Field(
         default=None,

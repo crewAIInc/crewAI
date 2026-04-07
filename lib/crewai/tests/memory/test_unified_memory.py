@@ -40,6 +40,42 @@ def test_memory_match() -> None:
     assert m.match_reasons == ["semantic"]
 
 
+def test_memory_record_embedding_excluded_from_serialization() -> None:
+    """Embedding vectors should not appear in serialized output to save tokens."""
+    r = MemoryRecord(content="hello", embedding=[0.1, 0.2, 0.3])
+
+    # Direct access still works
+    assert r.embedding == [0.1, 0.2, 0.3]
+
+    # model_dump excludes embedding by default
+    dumped = r.model_dump()
+    assert "embedding" not in dumped
+    assert dumped["content"] == "hello"
+
+    # model_dump_json excludes embedding
+    json_str = r.model_dump_json()
+    assert "0.1" not in json_str
+    assert "embedding" not in json_str
+
+    # repr excludes embedding
+    assert "0.1" not in repr(r)
+
+    # Direct attribute access still works for storage layer
+    assert r.embedding is not None
+    assert len(r.embedding) == 3
+
+
+def test_memory_match_embedding_excluded_from_serialization() -> None:
+    """MemoryMatch serialization should not leak embedding vectors."""
+    r = MemoryRecord(content="x", embedding=[0.5] * 1536)
+    m = MemoryMatch(record=r, score=0.9, match_reasons=["semantic"])
+
+    dumped = m.model_dump()
+    assert "embedding" not in dumped["record"]
+    assert dumped["record"]["content"] == "x"
+    assert dumped["score"] == 0.9
+
+
 def test_scope_info() -> None:
     i = ScopeInfo(path="/", record_count=5, categories=["c1"], child_scopes=["/a"])
     assert i.path == "/"
@@ -172,8 +208,8 @@ def test_memory_scope_slice(tmp_path: Path, mock_embedder: MagicMock) -> None:
     sc = mem.scope("/agent/1")
     assert sc._root in ("/agent/1", "/agent/1/")
     sl = mem.slice(["/a", "/b"], read_only=True)
-    assert sl._read_only is True
-    assert "/a" in sl._scopes and "/b" in sl._scopes
+    assert sl.read_only is True
+    assert "/a" in sl.scopes and "/b" in sl.scopes
 
 
 def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -198,7 +234,7 @@ def test_memory_scope_remember_recall(tmp_path: Path, mock_embedder: MagicMock) 
     from crewai.memory.memory_scope import MemoryScope
 
     mem = Memory(storage=str(tmp_path / "db5"), llm=MagicMock(), embedder=mock_embedder)
-    scope = MemoryScope(mem, "/crew/1")
+    scope = MemoryScope(memory=mem, root_path="/crew/1")
     scope.remember("Scoped note", scope="/", categories=[], importance=0.5, metadata={})
     results = scope.recall("note", limit=5, depth="shallow")
     assert len(results) >= 1
@@ -213,7 +249,7 @@ def test_memory_slice_recall(tmp_path: Path, mock_embedder: MagicMock) -> None:
 
     mem = Memory(storage=str(tmp_path / "db6"), llm=MagicMock(), embedder=mock_embedder)
     mem.remember("In scope A", scope="/a", categories=[], importance=0.5, metadata={})
-    sl = MemorySlice(mem, ["/a"], read_only=True)
+    sl = MemorySlice(memory=mem, scopes=["/a"], read_only=True)
     matches = sl.recall("scope", limit=5, depth="shallow")
     assert isinstance(matches, list)
 
@@ -223,7 +259,7 @@ def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embed
     from crewai.memory.memory_scope import MemorySlice
 
     mem = Memory(storage=str(tmp_path / "db7"), llm=MagicMock(), embedder=mock_embedder)
-    sl = MemorySlice(mem, ["/a"], read_only=True)
+    sl = MemorySlice(memory=mem, scopes=["/a"], read_only=True)
     result = sl.remember("x", scope="/a")
     assert result is None
     assert mem.list_records() == []
@@ -315,11 +351,11 @@ def test_memory_extract_memories_empty_content_returns_empty_list(tmp_path: Path
 
 def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     """_save_to_memory calls memory.extract_memories(raw) then memory.remember(m) for each."""
-    from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
 
     mock_memory = MagicMock()
-    mock_memory._read_only = False
+    mock_memory.read_only = False
     mock_memory.extract_memories.return_value = ["Fact A.", "Fact B."]
 
     mock_agent = MagicMock()
@@ -331,17 +367,9 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     mock_task.description = "Do research"
     mock_task.expected_output = "A report"
 
-    class MinimalExecutor(CrewAgentExecutorMixin):
-        crew = None
-        agent = mock_agent
-        task = mock_task
-        iterations = 0
-        max_iter = 1
-        messages = []
-        _i18n = MagicMock()
-        _printer = Printer()
-
-    executor = MinimalExecutor()
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
     executor._save_to_memory(
         AgentFinish(thought="", output="We found X and Y.", text="We found X and Y.")
     )
@@ -355,30 +383,24 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
 
 def test_executor_save_to_memory_skips_delegation_output() -> None:
     """_save_to_memory does nothing when output contains delegate action."""
-    from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
     from crewai.utilities.string_utils import sanitize_tool_name
 
     mock_memory = MagicMock()
-    mock_memory._read_only = False
+    mock_memory.read_only = False
     mock_agent = MagicMock()
     mock_agent.memory = mock_memory
     mock_agent._logger = MagicMock()
-    mock_task = MagicMock(description="Task", expected_output="Out")
-
-    class MinimalExecutor(CrewAgentExecutorMixin):
-        crew = None
-        agent = mock_agent
-        task = mock_task
-        iterations = 0
-        max_iter = 1
-        messages = []
-        _i18n = MagicMock()
-        _printer = Printer()
+    mock_task = MagicMock()
+    mock_task.description = "Task"
+    mock_task.expected_output = "Out"
 
     delegate_text = f"Action: {sanitize_tool_name('Delegate work to coworker')}"
     full_text = delegate_text + " rest"
-    executor = MinimalExecutor()
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
     executor._save_to_memory(
         AgentFinish(thought="", output=full_text, text=full_text)
     )
@@ -393,7 +415,7 @@ def test_memory_scope_extract_memories_delegates() -> None:
 
     mock_memory = MagicMock()
     mock_memory.extract_memories.return_value = ["Scoped fact."]
-    scope = MemoryScope(mock_memory, "/agent/1")
+    scope = MemoryScope(memory=mock_memory, root_path="/agent/1")
     result = scope.extract_memories("Some content")
     mock_memory.extract_memories.assert_called_once_with("Some content")
     assert result == ["Scoped fact."]
@@ -405,7 +427,7 @@ def test_memory_slice_extract_memories_delegates() -> None:
 
     mock_memory = MagicMock()
     mock_memory.extract_memories.return_value = ["Sliced fact."]
-    sl = MemorySlice(mock_memory, ["/a", "/b"], read_only=True)
+    sl = MemorySlice(memory=mock_memory, scopes=["/a", "/b"], read_only=True)
     result = sl.extract_memories("Some content")
     mock_memory.extract_memories.assert_called_once_with("Some content")
     assert result == ["Sliced fact."]
@@ -670,10 +692,10 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
         verbose=False,
     )
 
-    # Mock recall to verify it's called, but return real results
-    with patch.object(mem, "recall", wraps=mem.recall) as recall_mock, \
-         patch.object(mem, "extract_memories", return_value=["PostgreSQL is used."]) as extract_mock, \
-         patch.object(mem, "remember_many", wraps=mem.remember_many) as remember_many_mock:
+    # Patch on the class to avoid Pydantic BaseModel __delattr__ restriction
+    with patch.object(Memory, "recall", wraps=mem.recall) as recall_mock, \
+         patch.object(Memory, "extract_memories", return_value=["PostgreSQL is used."]) as extract_mock, \
+         patch.object(Memory, "remember_many", wraps=mem.remember_many) as remember_many_mock:
         result = agent.kickoff("What database do we use?")
 
     assert result is not None

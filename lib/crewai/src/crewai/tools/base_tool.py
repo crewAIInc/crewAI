@@ -3,9 +3,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
+import importlib
 from inspect import Parameter, signature
 import json
+import threading
 from typing import (
+    Annotated,
     Any,
     Generic,
     ParamSpec,
@@ -18,12 +21,23 @@ from pydantic import (
     BaseModel as PydanticBaseModel,
     ConfigDict,
     Field,
+    GetCoreSchemaHandler,
+    PlainSerializer,
+    PrivateAttr,
+    computed_field,
     create_model,
     field_validator,
 )
+from pydantic_core import CoreSchema, core_schema
 from typing_extensions import TypeIs
 
-from crewai.tools.structured_tool import CrewStructuredTool, build_schema_hint
+from crewai.tools.structured_tool import (
+    CrewStructuredTool,
+    _deserialize_schema,
+    _serialize_schema,
+    build_schema_hint,
+)
+from crewai.types.callback import SerializableCallable, _resolve_dotted_path
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -33,6 +47,42 @@ _printer = Printer()
 
 P = ParamSpec("P")
 R = TypeVar("R", covariant=True)
+
+# Registry populated by BaseTool.__init_subclass__; used for checkpoint
+# deserialization so that list[BaseTool] fields resolve the concrete class.
+_TOOL_TYPE_REGISTRY: dict[str, type] = {}
+
+# Sentinel set after BaseTool is defined so __get_pydantic_core_schema__
+# can distinguish the base class from subclasses despite
+# ``from __future__ import annotations``.
+_BASE_TOOL_CLS: type | None = None
+
+
+def _resolve_tool_dict(value: dict[str, Any]) -> Any:
+    """Validate a dict with ``tool_type`` into the concrete BaseTool subclass."""
+    dotted = value.get("tool_type", "")
+    tool_cls = _TOOL_TYPE_REGISTRY.get(dotted)
+    if tool_cls is None:
+        mod_path, cls_name = dotted.rsplit(".", 1)
+        tool_cls = getattr(importlib.import_module(mod_path), cls_name)
+
+    # Pre-resolve serialized callback strings so SerializableCallable's
+    # BeforeValidator sees a callable and skips the env-var guard.
+    data = dict(value)
+    for key in ("cache_function",):
+        val = data.get(key)
+        if isinstance(val, str):
+            try:
+                data[key] = _resolve_dotted_path(val)
+            except (ValueError, ImportError):
+                data.pop(key)
+
+    return tool_cls.model_validate(data)  # type: ignore[union-attr]
+
+
+def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
+    """Default cache function that always allows caching."""
+    return True
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:
@@ -58,6 +108,36 @@ class BaseTool(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        key = f"{cls.__module__}.{cls.__qualname__}"
+        _TOOL_TYPE_REGISTRY[key] = cls
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        default_schema = handler(source_type)
+        if cls is not _BASE_TOOL_CLS:
+            return default_schema
+
+        def _validate_tool(value: Any, nxt: Any) -> Any:
+            if isinstance(value, _BASE_TOOL_CLS):
+                return value
+            if isinstance(value, dict) and "tool_type" in value:
+                return _resolve_tool_dict(value)
+            return nxt(value)
+
+        return core_schema.no_info_wrap_validator_function(
+            _validate_tool,
+            default_schema,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: v.model_dump(mode="json"),
+                info_arg=False,
+                when_used="json",
+            ),
+        )
+
     name: str = Field(
         description="The unique name of the tool that clearly communicates its purpose."
     )
@@ -68,7 +148,10 @@ class BaseTool(BaseModel, ABC):
         default_factory=list,
         description="List of environment variables used by the tool.",
     )
-    args_schema: type[PydanticBaseModel] = Field(
+    args_schema: Annotated[
+        type[PydanticBaseModel],
+        PlainSerializer(_serialize_schema, return_type=dict | None, when_used="json"),
+    ] = Field(
         default=_ArgsSchemaPlaceholder,
         validate_default=True,
         description="The schema for the arguments that the tool accepts.",
@@ -78,8 +161,8 @@ class BaseTool(BaseModel, ABC):
         default=False, description="Flag to check if the description has been updated."
     )
 
-    cache_function: Callable[..., bool] = Field(
-        default=lambda _args=None, _result=None: True,
+    cache_function: SerializableCallable = Field(
+        default=_default_cache_function,
         description="Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached.",
     )
     result_as_answer: bool = Field(
@@ -94,13 +177,26 @@ class BaseTool(BaseModel, ABC):
         default=0,
         description="Current number of times this tool has been used.",
     )
+    _usage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def tool_type(self) -> str:
+        cls = type(self)
+        return f"{cls.__module__}.{cls.__qualname__}"
 
     @field_validator("args_schema", mode="before")
     @classmethod
     def _default_args_schema(
-        cls, v: type[PydanticBaseModel]
+        cls, v: type[PydanticBaseModel] | dict[str, Any] | None
     ) -> type[PydanticBaseModel]:
-        if v != cls._ArgsSchemaPlaceholder:
+        if isinstance(v, dict):
+            restored = _deserialize_schema(v)
+            if restored is not None:
+                return restored
+        if v is None or v == cls._ArgsSchemaPlaceholder:
+            pass  # fall through to generate from signature
+        elif isinstance(v, type):
             return v
 
         run_sig = signature(cls._run)
@@ -173,6 +269,25 @@ class BaseTool(BaseModel, ABC):
                 ) from e
         return kwargs
 
+    def _claim_usage(self) -> str | None:
+        """Atomically check max usage and increment the counter.
+
+        Returns:
+            None if usage was claimed successfully, or an error message
+            string if the tool has reached its usage limit.
+        """
+        with self._usage_lock:
+            if (
+                self.max_usage_count is not None
+                and self.current_usage_count >= self.max_usage_count
+            ):
+                return (
+                    f"Tool '{self.name}' has reached its usage limit of "
+                    f"{self.max_usage_count} times and cannot be used anymore."
+                )
+            self.current_usage_count += 1
+            return None
+
     def run(
         self,
         *args: Any,
@@ -181,12 +296,14 @@ class BaseTool(BaseModel, ABC):
         if not args:
             kwargs = self._validate_kwargs(kwargs)
 
+        limit_error = self._claim_usage()
+        if limit_error:
+            return limit_error
+
         result = self._run(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
             result = asyncio.run(result)
-
-        self.current_usage_count += 1
 
         return result
 
@@ -206,9 +323,12 @@ class BaseTool(BaseModel, ABC):
         """
         if not args:
             kwargs = self._validate_kwargs(kwargs)
-        result = await self._arun(*args, **kwargs)
-        self.current_usage_count += 1
-        return result
+
+        limit_error = self._claim_usage()
+        if limit_error:
+            return limit_error
+
+        return await self._arun(*args, **kwargs)
 
     async def _arun(
         self,
@@ -254,6 +374,7 @@ class BaseTool(BaseModel, ABC):
             result_as_answer=self.result_as_answer,
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
+            cache_function=self.cache_function,
         )
         structured_tool._original_tool = self
         return structured_tool
@@ -337,6 +458,9 @@ class BaseTool(BaseModel, ABC):
         )
 
 
+_BASE_TOOL_CLS = BaseTool
+
+
 class Tool(BaseTool, Generic[P, R]):
     """Tool that wraps a callable function.
 
@@ -361,12 +485,15 @@ class Tool(BaseTool, Generic[P, R]):
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
 
+        limit_error = self._claim_usage()
+        if limit_error:
+            return limit_error  # type: ignore[return-value]
+
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
             result = asyncio.run(result)
 
-        self.current_usage_count += 1
         return result  # type: ignore[return-value]
 
     def _run(self, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -393,9 +520,12 @@ class Tool(BaseTool, Generic[P, R]):
         """
         if not args:
             kwargs = self._validate_kwargs(kwargs)  # type: ignore[assignment]
-        result = await self._arun(*args, **kwargs)
-        self.current_usage_count += 1
-        return result
+
+        limit_error = self._claim_usage()
+        if limit_error:
+            return limit_error  # type: ignore[return-value]
+
+        return await self._arun(*args, **kwargs)
 
     async def _arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the wrapped function asynchronously.

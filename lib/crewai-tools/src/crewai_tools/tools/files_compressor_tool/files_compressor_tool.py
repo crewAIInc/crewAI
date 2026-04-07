@@ -99,14 +99,14 @@ class FileCompressorTool(BaseTool):
     def _prepare_output(output_path: str, overwrite: bool) -> bool:
         """Ensures output path is ready for writing."""
         output_dir = os.path.dirname(output_path)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
         if os.path.exists(output_path) and not overwrite:
             return False
         return True
 
     @staticmethod
-    def _compress_zip(input_path: str, output_path: str):
+    def _compress_zip(input_path: str, output_path: str) -> None:
         """Compresses input into a zip archive."""
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
@@ -119,7 +119,7 @@ class FileCompressorTool(BaseTool):
                         zipf.write(full_path, arcname)
 
     @staticmethod
-    def _compress_tar(input_path: str, output_path: str, format: str):
+    def _compress_tar(input_path: str, output_path: str, format: str) -> None:
         """Compresses input into a tar archive with the given format."""
         format_mode = {
             "tar": "w",

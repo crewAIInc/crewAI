@@ -21,7 +21,7 @@ class SerplyNewsSearchTool(BaseTool):
     args_schema: type[BaseModel] = SerplyNewsSearchToolSchema
     search_url: str = "https://api.serply.io/v1/news/"
     proxy_location: str | None = "US"
-    headers: dict | None = Field(default_factory=dict)
+    headers: dict[str, str] | None = Field(default_factory=dict)
     limit: int | None = 10
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -34,8 +34,8 @@ class SerplyNewsSearchTool(BaseTool):
     )
 
     def __init__(
-        self, limit: int | None = 10, proxy_location: str | None = "US", **kwargs
-    ):
+        self, limit: int | None = 10, proxy_location: str | None = "US", **kwargs: Any
+    ) -> None:
         """param: limit (int): The maximum number of results to return [10-100, defaults to 10]
         proxy_location: (str): Where to get news, specifically for a specific country results.
              ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US).
@@ -46,7 +46,7 @@ class SerplyNewsSearchTool(BaseTool):
         self.headers = {
             "X-API-KEY": os.environ["SERPLY_API_KEY"],
             "User-Agent": "crew-tools",
-            "X-Proxy-Location": proxy_location,
+            "X-Proxy-Location": proxy_location or "US",
         }
 
     def _run(

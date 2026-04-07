@@ -36,7 +36,7 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
-
+from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
 from crewai.task import Task
@@ -48,7 +48,6 @@ from crewai.tools.agent_tools.add_image_tool import AddImageTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai_tools import CodeInterpreterTool
 from pydantic import BaseModel, Field
 import pydantic_core
 import pytest
@@ -1101,7 +1100,7 @@ def test_single_task_with_async_execution():
 
     result = crew.kickoff()
     assert result.raw.startswith(
-        "- Ethical implications of AI in law enforcement and surveillance."
+        "- Impact of autonomous AI agents on future workplace automation"
     )
 
 
@@ -1648,11 +1647,8 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
             _, kwargs = mock_execute_sync.call_args
             used_tools = kwargs["tools"]
 
-            # Verify that exactly one tool was used and it was a CodeInterpreterTool
-            assert len(used_tools) == 1, "Should have exactly one tool"
-            assert isinstance(used_tools[0], CodeInterpreterTool), (
-                "Tool should be CodeInterpreterTool"
-            )
+            # CodeInterpreterTool was removed; get_code_execution_tools() now returns []
+            assert len(used_tools) == 0, "Should have no tools (code execution tools are deprecated)"
 
 
 @pytest.mark.vcr()
@@ -2141,6 +2137,7 @@ def test_task_same_callback_both_on_task_and_crew():
 
 @pytest.mark.vcr()
 def test_tools_with_custom_caching():
+
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""
@@ -2618,9 +2615,9 @@ def test_memory_remember_called_after_task():
     )
 
     with patch.object(
-        crew._memory, "extract_memories", wraps=crew._memory.extract_memories
+        Memory, "extract_memories", wraps=crew._memory.extract_memories
     ) as extract_mock, patch.object(
-        crew._memory, "remember", wraps=crew._memory.remember
+        Memory, "remember", wraps=crew._memory.remember
     ) as remember_mock:
         crew.kickoff()
 
@@ -3917,16 +3914,13 @@ def test_task_tools_preserve_code_execution_tools():
         assert any(isinstance(tool, TestTool) for tool in used_tools), (
             "Task's TestTool should be present"
         )
-        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), (
-            "CodeInterpreterTool should be present"
-        )
         assert any("delegate" in tool.name.lower() for tool in used_tools), (
             "Delegation tool should be present"
         )
 
-        # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
-        assert len(used_tools) == 4, (
-            "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        # Verify the total number of tools (TestTool + 2 delegation tools; CodeInterpreterTool removed)
+        assert len(used_tools) == 3, (
+            "Should have TestTool and 2 delegation tools"
         )
 
 
@@ -4773,13 +4767,13 @@ def test_memory_remember_receives_task_content():
         # Mock extract_memories to return fake memories and capture the raw input.
         # No wraps= needed -- the test only checks what args it receives, not the output.
         patch.object(
-            crew._memory, "extract_memories", return_value=["Fake memory."]
+            Memory, "extract_memories", return_value=["Fake memory."]
         ) as extract_mock,
         # Mock recall to avoid LLM calls for query analysis (not in cassette).
-        patch.object(crew._memory, "recall", return_value=[]),
+        patch.object(Memory, "recall", return_value=[]),
         # Mock remember_many to prevent the background save from triggering
         # LLM calls (field resolution) that aren't in the cassette.
-        patch.object(crew._memory, "remember_many", return_value=[]),
+        patch.object(Memory, "remember_many", return_value=[]),
     ):
         crew.kickoff()
 

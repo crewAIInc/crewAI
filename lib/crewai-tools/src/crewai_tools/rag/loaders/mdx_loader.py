@@ -1,5 +1,5 @@
 import re
-from typing import Final
+from typing import Any, Final
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.loaders.utils import load_from_url
@@ -15,7 +15,7 @@ _EXTRA_NEWLINES_PATTERN: Final[re.Pattern[str]] = re.compile(r"\n\s*\n\s*\n")
 
 
 class MDXLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
         content = source_content.source
 

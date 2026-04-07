@@ -97,6 +97,7 @@ def test_extract_init_params_schema(mock_tool_extractor):
     assert init_params_schema.keys() == {
         "$defs",
         "properties",
+        "required",
         "title",
         "type",
     }

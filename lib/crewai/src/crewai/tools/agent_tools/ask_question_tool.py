@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
@@ -20,7 +22,7 @@ class AskQuestionTool(BaseAgentTool):
         question: str,
         context: str,
         coworker: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> str:
         coworker = self._get_coworker(coworker, **kwargs)
         return self._execute(coworker, question, context)

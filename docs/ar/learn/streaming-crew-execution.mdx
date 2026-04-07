@@ -1,0 +1,356 @@
+---
+title: بث تنفيذ الطاقم
+description: بث المخرجات في الوقت الفعلي من تنفيذ طاقم CrewAI الخاص بك
+icon: wave-pulse
+mode: "wide"
+---
+
+## مقدمة
+
+يوفر CrewAI القدرة على بث المخرجات في الوقت الفعلي أثناء تنفيذ الطاقم، مما يتيح لك عرض النتائج فور توليدها بدلاً من انتظار اكتمال العملية بالكامل. هذه الميزة مفيدة بشكل خاص لبناء التطبيقات التفاعلية وتقديم تغذية راجعة للمستخدم ومراقبة العمليات طويلة التشغيل.
+
+## كيف يعمل البث
+
+عند تفعيل البث، يلتقط CrewAI استجابات LLM واستدعاءات الأدوات فور حدوثها، ويحزمها في أجزاء منظمة تتضمن سياقاً حول المهمة والوكيل المنفذ. يمكنك التكرار على هذه الأجزاء في الوقت الفعلي والوصول إلى النتيجة النهائية بمجرد اكتمال التنفيذ.
+
+## تفعيل البث
+
+لتفعيل البث، عيّن معامل `stream` إلى `True` عند إنشاء طاقمك:
+
+```python Code
+from crewai import Agent, Crew, Task
+
+# Create your agents and tasks
+researcher = Agent(
+    role="Research Analyst",
+    goal="Gather comprehensive information on topics",
+    backstory="You are an experienced researcher with excellent analytical skills.",
+)
+
+task = Task(
+    description="Research the latest developments in AI",
+    expected_output="A detailed report on recent AI advancements",
+    agent=researcher,
+)
+
+# Enable streaming
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    stream=True  # Enable streaming output
+)
+```
+
+## البث المتزامن
+
+عند استدعاء `kickoff()` على طاقم مع تفعيل البث، يُرجع كائن `CrewStreamingOutput` يمكنك التكرار عليه لاستلام الأجزاء فور وصولها:
+
+```python Code
+# Start streaming execution
+streaming = crew.kickoff(inputs={"topic": "artificial intelligence"})
+
+# Iterate over chunks as they arrive
+for chunk in streaming:
+    print(chunk.content, end="", flush=True)
+
+# Access the final result after streaming completes
+result = streaming.result
+print(f"\n\nFinal output: {result.raw}")
+```
+
+### معلومات جزء البث
+
+يوفر كل جزء سياقاً غنياً حول التنفيذ:
+
+```python Code
+streaming = crew.kickoff(inputs={"topic": "AI"})
+
+for chunk in streaming:
+    print(f"Task: {chunk.task_name} (index {chunk.task_index})")
+    print(f"Agent: {chunk.agent_role}")
+    print(f"Content: {chunk.content}")
+    print(f"Type: {chunk.chunk_type}")  # TEXT or TOOL_CALL
+    if chunk.tool_call:
+        print(f"Tool: {chunk.tool_call.tool_name}")
+        print(f"Arguments: {chunk.tool_call.arguments}")
+```
+
+### الوصول إلى نتائج البث
+
+يوفر كائن `CrewStreamingOutput` عدة خصائص مفيدة:
+
+```python Code
+streaming = crew.kickoff(inputs={"topic": "AI"})
+
+# Iterate and collect chunks
+for chunk in streaming:
+    print(chunk.content, end="", flush=True)
+
+# After iteration completes
+print(f"\nCompleted: {streaming.is_completed}")
+print(f"Full text: {streaming.get_full_text()}")
+print(f"All chunks: {len(streaming.chunks)}")
+print(f"Final result: {streaming.result.raw}")
+```
+
+## البث غير المتزامن
+
+للتطبيقات غير المتزامنة، يمكنك استخدام إما `akickoff()` (async أصلي) أو `kickoff_async()` (قائم على الخيوط) مع التكرار غير المتزامن:
+
+### async أصلي مع `akickoff()`
+
+توفر طريقة `akickoff()` تنفيذاً غير متزامن أصلياً حقيقياً عبر السلسلة بالكامل:
+
+```python Code
+import asyncio
+
+async def stream_crew():
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        stream=True
+    )
+
+    # Start native async streaming
+    streaming = await crew.akickoff(inputs={"topic": "AI"})
+
+    # Async iteration over chunks
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+
+    # Access final result
+    result = streaming.result
+    print(f"\n\nFinal output: {result.raw}")
+
+asyncio.run(stream_crew())
+```
+
+### async قائم على الخيوط مع `kickoff_async()`
+
+للتكامل البسيط مع async أو التوافق مع الإصدارات السابقة:
+
+```python Code
+import asyncio
+
+async def stream_crew():
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        stream=True
+    )
+
+    # Start thread-based async streaming
+    streaming = await crew.kickoff_async(inputs={"topic": "AI"})
+
+    # Async iteration over chunks
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+
+    # Access final result
+    result = streaming.result
+    print(f"\n\nFinal output: {result.raw}")
+
+asyncio.run(stream_crew())
+```
+
+<Note>
+لأحمال العمل عالية التزامن، يُوصى باستخدام `akickoff()` لأنه يستخدم async أصلي لتنفيذ المهام وعمليات الذاكرة واسترجاع المعرفة. راجع دليل [تشغيل الطاقم بشكل غير متزامن](/ar/learn/kickoff-async) لمزيد من التفاصيل.
+</Note>
+
+## البث مع kickoff_for_each
+
+عند تنفيذ طاقم لمدخلات متعددة مع `kickoff_for_each()`، يعمل البث بشكل مختلف حسب ما إذا كنت تستخدم المتزامن أو غير المتزامن:
+
+### kickoff_for_each المتزامن
+
+مع `kickoff_for_each()` المتزامن، تحصل على قائمة كائنات `CrewStreamingOutput`، واحد لكل مدخل:
+
+```python Code
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    stream=True
+)
+
+inputs_list = [
+    {"topic": "AI in healthcare"},
+    {"topic": "AI in finance"}
+]
+
+# Returns list of streaming outputs
+streaming_outputs = crew.kickoff_for_each(inputs=inputs_list)
+
+# Iterate over each streaming output
+for i, streaming in enumerate(streaming_outputs):
+    print(f"\n=== Input {i + 1} ===")
+    for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+
+    result = streaming.result
+    print(f"\n\nResult {i + 1}: {result.raw}")
+```
+
+### kickoff_for_each_async غير المتزامن
+
+مع `kickoff_for_each_async()` غير المتزامن، تحصل على `CrewStreamingOutput` واحد يُخرج أجزاء من جميع الأطقم فور وصولها بشكل متزامن:
+
+```python Code
+import asyncio
+
+async def stream_multiple_crews():
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        stream=True
+    )
+
+    inputs_list = [
+        {"topic": "AI in healthcare"},
+        {"topic": "AI in finance"}
+    ]
+
+    # Returns single streaming output for all crews
+    streaming = await crew.kickoff_for_each_async(inputs=inputs_list)
+
+    # Chunks from all crews arrive as they're generated
+    async for chunk in streaming:
+        print(f"[{chunk.task_name}] {chunk.content}", end="", flush=True)
+
+    # Access all results
+    results = streaming.results  # List of CrewOutput objects
+    for i, result in enumerate(results):
+        print(f"\n\nResult {i + 1}: {result.raw}")
+
+asyncio.run(stream_multiple_crews())
+```
+
+## أنواع أجزاء البث
+
+يمكن أن تكون الأجزاء من أنواع مختلفة، يُشار إليها بحقل `chunk_type`:
+
+### أجزاء TEXT
+
+محتوى نصي قياسي من استجابات LLM:
+
+```python Code
+for chunk in streaming:
+    if chunk.chunk_type == StreamChunkType.TEXT:
+        print(chunk.content, end="", flush=True)
+```
+
+### أجزاء TOOL_CALL
+
+معلومات حول استدعاءات الأدوات الجارية:
+
+```python Code
+for chunk in streaming:
+    if chunk.chunk_type == StreamChunkType.TOOL_CALL:
+        print(f"\nCalling tool: {chunk.tool_call.tool_name}")
+        print(f"Arguments: {chunk.tool_call.arguments}")
+```
+
+## مثال عملي: بناء واجهة مستخدم مع البث
+
+إليك مثالاً كاملاً يوضح كيفية بناء تطبيق تفاعلي مع البث:
+
+```python Code
+import asyncio
+from crewai import Agent, Crew, Task
+from crewai.types.streaming import StreamChunkType
+
+async def interactive_research():
+    # Create crew with streaming enabled
+    researcher = Agent(
+        role="Research Analyst",
+        goal="Provide detailed analysis on any topic",
+        backstory="You are an expert researcher with broad knowledge.",
+    )
+
+    task = Task(
+        description="Research and analyze: {topic}",
+        expected_output="A comprehensive analysis with key insights",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        stream=True,
+        verbose=False
+    )
+
+    # Get user input
+    topic = input("Enter a topic to research: ")
+
+    print(f"\n{'='*60}")
+    print(f"Researching: {topic}")
+    print(f"{'='*60}\n")
+
+    # Start streaming execution
+    streaming = await crew.kickoff_async(inputs={"topic": topic})
+
+    current_task = ""
+    async for chunk in streaming:
+        # Show task transitions
+        if chunk.task_name != current_task:
+            current_task = chunk.task_name
+            print(f"\n[{chunk.agent_role}] Working on: {chunk.task_name}")
+            print("-" * 60)
+
+        # Display text chunks
+        if chunk.chunk_type == StreamChunkType.TEXT:
+            print(chunk.content, end="", flush=True)
+
+        # Display tool calls
+        elif chunk.chunk_type == StreamChunkType.TOOL_CALL and chunk.tool_call:
+            print(f"\n🔧 Using tool: {chunk.tool_call.tool_name}")
+
+    # Show final result
+    result = streaming.result
+    print(f"\n\n{'='*60}")
+    print("Analysis Complete!")
+    print(f"{'='*60}")
+    print(f"\nToken Usage: {result.token_usage}")
+
+asyncio.run(interactive_research())
+```
+
+## حالات الاستخدام
+
+البث ذو قيمة خاصة لـ:
+
+- **التطبيقات التفاعلية**: تقديم تغذية راجعة فورية للمستخدمين أثناء عمل الوكلاء
+- **المهام طويلة التشغيل**: عرض التقدم للبحث والتحليل أو توليد المحتوى
+- **التصحيح والمراقبة**: مراقبة سلوك الوكلاء واتخاذ القرارات في الوقت الفعلي
+- **تجربة المستخدم**: تقليل زمن الاستجابة المتصور بعرض نتائج تدريجية
+- **لوحات المعلومات الحية**: بناء واجهات مراقبة تعرض حالة تنفيذ الطاقم
+
+## ملاحظات مهمة
+
+- يفعّل البث تلقائياً بث LLM لجميع الوكلاء في الطاقم
+- يجب التكرار عبر جميع الأجزاء قبل الوصول إلى خاصية `.result`
+- لـ `kickoff_for_each_async()` مع البث، استخدم `.results` (بصيغة الجمع) للحصول على جميع المخرجات
+- يضيف البث حملاً ضئيلاً ويمكن أن يحسن الأداء المتصور فعلياً
+- يتضمن كل جزء سياقاً كاملاً (المهمة، الوكيل، نوع الجزء) لواجهات مستخدم غنية
+
+## معالجة الأخطاء
+
+التعامل مع الأخطاء أثناء تنفيذ البث:
+
+```python Code
+streaming = crew.kickoff(inputs={"topic": "AI"})
+
+try:
+    for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+
+    result = streaming.result
+    print(f"\nSuccess: {result.raw}")
+
+except Exception as e:
+    print(f"\nError during streaming: {e}")
+    if streaming.is_completed:
+        print("Streaming completed but an error occurred")
+```
+
+من خلال الاستفادة من البث، يمكنك بناء تطبيقات أكثر استجابة وتفاعلية مع CrewAI، مما يوفر للمستخدمين رؤية فورية لتنفيذ الوكلاء والنتائج.

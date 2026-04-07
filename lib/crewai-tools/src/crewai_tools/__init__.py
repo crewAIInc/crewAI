@@ -10,7 +10,18 @@ from crewai_tools.aws.s3.writer_tool import S3WriterTool
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
+from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
+    BraveLLMContextTool,
+)
+from crewai_tools.tools.brave_search_tool.brave_local_pois_tool import (
+    BraveLocalPOIsDescriptionTool,
+    BraveLocalPOIsTool,
+)
+from crewai_tools.tools.brave_search_tool.brave_news_tool import BraveNewsSearchTool
 from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
+from crewai_tools.tools.brave_search_tool.brave_video_tool import BraveVideoSearchTool
+from crewai_tools.tools.brave_search_tool.brave_web_tool import BraveWebSearchTool
 from crewai_tools.tools.brightdata_tool.brightdata_dataset import (
     BrightDataDatasetTool,
 )
@@ -23,9 +34,6 @@ from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
 )
 from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
     CodeDocsSearchTool,
-)
-from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
-    CodeInterpreterTool,
 )
 from crewai_tools.tools.composio_tool.composio_tool import ComposioTool
 from crewai_tools.tools.contextualai_create_agent_tool.contextual_create_agent_tool import (
@@ -200,14 +208,20 @@ __all__ = [
     "ArxivPaperTool",
     "BedrockInvokeAgentTool",
     "BedrockKBRetrieverTool",
+    "BraveImageSearchTool",
+    "BraveLLMContextTool",
+    "BraveLocalPOIsDescriptionTool",
+    "BraveLocalPOIsTool",
+    "BraveNewsSearchTool",
     "BraveSearchTool",
+    "BraveVideoSearchTool",
+    "BraveWebSearchTool",
     "BrightDataDatasetTool",
     "BrightDataSearchTool",
     "BrightDataWebUnlockerTool",
     "BrowserbaseLoadTool",
     "CSVSearchTool",
     "CodeDocsSearchTool",
-    "CodeInterpreterTool",
     "ComposioTool",
     "ContextualAICreateAgentTool",
     "ContextualAIParseTool",
@@ -291,4 +305,4 @@ __all__ = [
     "ZapierActionTools",
 ]
 
-__version__ = "1.10.1"
+__version__ = "1.14.0a3"

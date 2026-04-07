@@ -1,0 +1,69 @@
+---
+title: "مشغل OneDrive"
+description: "أتمتة الاستجابات لنشاط ملفات OneDrive"
+icon: "cloud"
+mode: "wide"
+---
+
+## نظرة عامة
+
+ابدأ الأتمتات عند تغيير الملفات داخل OneDrive. يمكنك إنشاء ملخصات تدقيق وإخطار فرق الأمان بشأن المشاركة الخارجية أو تحديث أنظمة الأعمال اللاحقة ببيانات المستندات الوصفية الجديدة.
+
+<Tip>
+  اربط OneDrive في **Tools & Integrations** وبدّل المشغل لعملية
+  النشر.
+</Tip>
+
+## تفعيل مشغل OneDrive
+
+1. افتح عملية النشر في CrewAI AMP
+2. انتقل إلى علامة تبويب **Triggers**
+3. حدد موقع **OneDrive** وبدّل مفتاح التبديل للتفعيل
+
+<Frame caption="اتصال مشغل Microsoft OneDrive">
+  <img
+    src="/images/enterprise/onedrive-trigger.png"
+    alt="تفعيل أو تعطيل المشغلات بالتبديل"
+  />
+</Frame>
+
+## مثال: تدقيق صلاحيات الملفات
+
+```python
+from onedrive_file_crew import OneDriveFileTrigger
+
+crew = OneDriveFileTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": onedrive_payload,
+})
+```
+
+يفحص الطاقم بيانات الملف الوصفية ونشاط المستخدم وتغييرات الصلاحيات لإنتاج ملخص متوافق مع متطلبات الامتثال.
+
+## الاختبار المحلي
+
+اختبر تكامل مشغل OneDrive محلياً باستخدام CrewAI CLI:
+
+```bash
+# عرض جميع المشغلات المتاحة
+crewai triggers list
+
+# محاكاة مشغل OneDrive بحمولة واقعية
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+سينفذ أمر `crewai triggers run` طاقمك بحمولة OneDrive كاملة، مما يتيح لك اختبار منطق التحليل قبل النشر.
+
+<Warning>
+  استخدم `crewai triggers run microsoft_onedrive/file_changed` (وليس `crewai run`)
+  لمحاكاة تنفيذ المشغل أثناء التطوير. بعد النشر، سيتلقى طاقمك
+  حمولة المشغل تلقائياً.
+</Warning>
+
+## استكشاف الأخطاء وإصلاحها
+
+- تأكد من أن الحساب المتصل لديه صلاحية قراءة بيانات الملف الوصفية المضمنة في webhook
+- اختبر محلياً بـ `crewai triggers run microsoft_onedrive/file_changed` لرؤية هيكل الحمولة بالضبط
+- إذا كان المشغل يعمل لكن الحمولة تفتقد `permissions`، تأكد من أن إعدادات المشاركة على مستوى الموقع تسمح لـ Graph بإرجاع هذا الحقل
+- للمستأجرين الكبار، صفّ الإشعارات مسبقاً حتى يعمل الطاقم فقط على المجلدات ذات الصلة
+- تذكر: استخدم `crewai triggers run` (وليس `crewai run`) لمحاكاة تنفيذ المشغل

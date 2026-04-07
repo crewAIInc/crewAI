@@ -22,7 +22,6 @@ from pydantic import (
     UUID4,
     BaseModel,
     Field,
-    InstanceOf,
     PrivateAttr,
     field_validator,
     model_validator,
@@ -204,7 +203,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+    llm: str | BaseLLM | Any | None = Field(
         default=None, description="Language model that will run the agent"
     )
     tools: list[BaseTool] = Field(
@@ -600,7 +599,7 @@ class LiteAgent(FlowTrackable, BaseModel):
 
     def _save_to_memory(self, output_text: str) -> None:
         """Extract discrete memories from the run and remember each. No-op if _memory is None or read-only."""
-        if self._memory is None or getattr(self._memory, "_read_only", False):
+        if self._memory is None or self._memory.read_only:
             return
         input_str = self._get_last_user_content() or "User request"
         try:
@@ -892,7 +891,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         callbacks=self._callbacks,
                         printer=self._printer,
-                        from_agent=self,
+                        from_agent=self,  # type: ignore[arg-type]
                         executor_context=self,
                         response_model=response_model,
                         verbose=self.verbose,

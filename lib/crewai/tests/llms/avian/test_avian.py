@@ -1,7 +1,7 @@
 import os
 import sys
 import types
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -186,3 +186,79 @@ class TestAvianContextWindowSize:
             llm = LLM(model="avian/deepseek/deepseek-v3.2")
         # OpenAI default is int(8192 * 0.85) = 6963
         assert llm.get_context_window_size() > 100000
+
+
+def test_native_avian_raises_error_when_initialization_fails():
+    """Test that LLM raises ImportError when native Avian completion fails to initialize."""
+    with patch("crewai.llm.LLM._get_native_provider") as mock_get_provider:
+
+        class FailingCompletion:
+            def __init__(self, *args, **kwargs):
+                raise Exception("Native SDK failed")
+
+        mock_get_provider.return_value = FailingCompletion
+
+        with pytest.raises(ImportError) as excinfo:
+            LLM(model="avian/deepseek/deepseek-v3.2")
+
+        assert "Error importing native provider" in str(excinfo.value)
+        assert "Native SDK failed" in str(excinfo.value)
+
+
+def test_avian_completion_initialization_parameters():
+    """Test that AvianCompletion is initialized with correct parameters."""
+    with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+        llm = LLM(
+            model="avian/deepseek/deepseek-v3.2",
+            temperature=0.7,
+            max_tokens=1000,
+        )
+
+    assert isinstance(llm, AvianCompletion)
+    assert llm.model == "deepseek/deepseek-v3.2"
+    assert llm.temperature == 0.7
+    assert llm.max_tokens == 1000
+
+
+def test_avian_completion_call():
+    """Test that AvianCompletion call method works via mock."""
+    with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+        llm = LLM(model="avian/deepseek/deepseek-v3.2")
+
+    with patch.object(llm, "call", return_value="Hello from Avian!") as mock_call:
+        result = llm.call("Hello, how are you?")
+
+        assert result == "Hello from Avian!"
+        mock_call.assert_called_once_with("Hello, how are you?")
+
+
+def test_avian_completion_call_passes_to_openai_api():
+    """Test that AvianCompletion.call routes through the OpenAI chat completions API."""
+    with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+        llm = LLM(
+            model="avian/deepseek/deepseek-v3.2",
+            temperature=0.5,
+            max_tokens=500,
+        )
+
+    with patch.object(llm.client.chat.completions, "create") as mock_create:
+        mock_create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
+            usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30),
+        )
+
+        llm.call("Hello")
+
+        assert mock_create.called
+        call_kwargs = mock_create.call_args[1]
+        assert call_kwargs["model"] == "deepseek/deepseek-v3.2"
+        assert call_kwargs["temperature"] == 0.5
+        assert call_kwargs["max_tokens"] == 500
+
+
+def test_avian_client_uses_correct_base_url():
+    """Test that the underlying OpenAI client is configured with the Avian base URL."""
+    with patch.dict(os.environ, {"AVIAN_API_KEY": "test-key"}):
+        llm = LLM(model="avian/deepseek/deepseek-v3.2")
+
+    assert str(llm.client.base_url).rstrip("/") == "https://api.avian.io/v1"

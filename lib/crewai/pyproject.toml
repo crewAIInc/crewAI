@@ -42,7 +42,9 @@ dependencies = [
     "mcp~=1.26.0",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
-    "lancedb>=0.29.2",
+    "pyyaml~=6.0",
+    "aiofiles~=24.1.0",
+    "lancedb>=0.29.2,<0.30.1",
 ]
 
 [project.urls]
@@ -53,7 +55,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.10.1",
+    "crewai-tools==1.14.0a3",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -82,7 +84,7 @@ voyageai = [
     "voyageai~=0.3.5",
 ]
 litellm = [
-    "litellm>=1.74.9,<3",
+    "litellm~=1.83.0",
 ]
 bedrock = [
     "boto3~=1.40.45",
@@ -105,11 +107,17 @@ a2a = [
 file-processing = [
     "crewai-files",
 ]
+qdrant-edge = [
+    "qdrant-edge-py>=0.6.0",
+]
 
 
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+
+[tool.uv]
+exclude-newer = "3 days"
 
 # PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
 [[tool.uv.index]]

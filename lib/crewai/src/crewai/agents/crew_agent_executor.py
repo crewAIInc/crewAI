@@ -1,3 +1,4 @@
+# mypy: disable-error-code="union-attr,arg-type"
 """Agent executor for crew AI agents.
 
 Handles agent execution flow including LLM interactions, tool execution,
@@ -8,16 +9,24 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-import contextvars
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import contextvars
 import inspect
 import logging
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
 
-from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
-from pydantic_core import CoreSchema, core_schema
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationError,
+)
+from pydantic.functional_serializers import PlainSerializer
 
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent import _serialize_llm_ref, _validate_llm_ref
+from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -38,6 +47,7 @@ from crewai.hooks.tool_hooks import (
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
 )
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     aget_llm_response,
     convert_tools_to_openai_schema,
@@ -58,8 +68,8 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import (
     aexecute_tool_and_check_finality,
     execute_tool_and_check_finality,
@@ -70,11 +80,8 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
-    from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
     from crewai.tools.tool_types import ToolResult
@@ -82,87 +89,59 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-class CrewAgentExecutor(CrewAgentExecutorMixin):
+class CrewAgentExecutor(BaseAgentExecutor):
     """Executor for crew agents.
 
     Manages the execution lifecycle of an agent including prompt formatting,
     LLM interactions, tool execution, and feedback handling.
     """
 
-    def __init__(
-        self,
-        llm: BaseLLM,
-        task: Task,
-        crew: Crew,
-        agent: Agent,
-        prompt: SystemPromptResult | StandardPromptResult,
-        max_iter: int,
-        tools: list[CrewStructuredTool],
-        tools_names: str,
-        stop_words: list[str],
-        tools_description: str,
-        tools_handler: ToolsHandler,
-        step_callback: Any = None,
-        original_tools: list[BaseTool] | None = None,
-        function_calling_llm: BaseLLM | Any | None = None,
-        respect_context_window: bool = False,
-        request_within_rpm_limit: Callable[[], bool] | None = None,
-        callbacks: list[Any] | None = None,
-        response_model: type[BaseModel] | None = None,
-        i18n: I18N | None = None,
-    ) -> None:
-        """Initialize executor.
+    executor_type: Literal["crew"] = "crew"
+    llm: Annotated[
+        BaseLLM | str | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(default=None)
+    prompt: SystemPromptResult | StandardPromptResult | None = Field(default=None)
+    tools: list[CrewStructuredTool] = Field(default_factory=list)
+    tools_names: str = Field(default="")
+    stop: list[str] = Field(
+        default_factory=list, validation_alias=AliasChoices("stop", "stop_words")
+    )
+    tools_description: str = Field(default="")
+    tools_handler: ToolsHandler | None = Field(default=None)
+    step_callback: SerializableCallable | None = Field(default=None, exclude=True)
+    original_tools: list[BaseTool] = Field(default_factory=list)
+    function_calling_llm: Annotated[
+        BaseLLM | str | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(default=None)
+    respect_context_window: bool = Field(default=False)
+    request_within_rpm_limit: SerializableCallable | None = Field(
+        default=None, exclude=True
+    )
+    callbacks: list[TokenCalcHandler] = Field(default_factory=list, exclude=True)
+    response_model: type[BaseModel] | None = Field(default=None, exclude=True)
+    ask_for_human_input: bool = Field(default=False)
+    log_error_after: int = Field(default=3)
+    before_llm_call_hooks: list[SerializableCallable] = Field(
+        default_factory=list, exclude=True
+    )
+    after_llm_call_hooks: list[SerializableCallable] = Field(
+        default_factory=list, exclude=True
+    )
 
-        Args:
-            llm: Language model instance.
-            task: Task to execute.
-            crew: Crew instance.
-            agent: Agent to execute.
-            prompt: Prompt templates.
-            max_iter: Maximum iterations.
-            tools: Available tools.
-            tools_names: Tool names string.
-            stop_words: Stop word list.
-            tools_description: Tool descriptions.
-            tools_handler: Tool handler instance.
-            step_callback: Optional step callback.
-            original_tools: Original tool list.
-            function_calling_llm: Optional function calling LLM.
-            respect_context_window: Respect context limits.
-            request_within_rpm_limit: RPM limit check function.
-            callbacks: Optional callbacks list.
-            response_model: Optional Pydantic model for structured outputs.
-        """
-        self._i18n: I18N = i18n or get_i18n()
-        self.llm = llm
-        self.task = task
-        self.agent = agent
-        self.crew = crew
-        self.prompt = prompt
-        self.tools = tools
-        self.tools_names = tools_names
-        self.stop = stop_words
-        self.max_iter = max_iter
-        self.callbacks = callbacks or []
-        self._printer: Printer = Printer()
-        self.tools_handler = tools_handler
-        self.original_tools = original_tools or []
-        self.step_callback = step_callback
-        self.tools_description = tools_description
-        self.function_calling_llm = function_calling_llm
-        self.respect_context_window = respect_context_window
-        self.request_within_rpm_limit = request_within_rpm_limit
-        self.response_model = response_model
-        self.ask_for_human_input = False
-        self.messages: list[LLMMessage] = []
-        self.iterations = 0
-        self.log_error_after = 3
-        self.before_llm_call_hooks: list[Callable[..., Any]] = []
-        self.after_llm_call_hooks: list[Callable[..., Any]] = []
-        self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
-        self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
-        if self.llm:
-            # This may be mutating the shared llm object and needs further evaluation
+    model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
+
+    def __init__(self, i18n: I18N | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._i18n = i18n or get_i18n()
+        if not self.before_llm_call_hooks:
+            self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
+        if not self.after_llm_call_hooks:
+            self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
+        if self.llm and not isinstance(self.llm, str):
             existing_stop = getattr(self.llm, "stop", [])
             self.llm.stop = list(
                 set(
@@ -179,7 +158,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             bool: True if tool should be used or not.
         """
-        return self.llm.supports_stop_words() if self.llm else False
+        from crewai.llms.base_llm import BaseLLM
+
+        return (
+            self.llm.supports_stop_words() if isinstance(self.llm, BaseLLM) else False
+        )
 
     def _setup_messages(self, inputs: dict[str, Any]) -> None:
         """Set up messages for the agent execution.
@@ -191,7 +174,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if provider.setup_messages(cast(ExecutorContext, cast(object, self))):
             return
 
-        if "system" in self.prompt:
+        if self.prompt is not None and "system" in self.prompt:
             system_prompt = self._format_prompt(
                 cast(str, self.prompt.get("system", "")), inputs
             )
@@ -200,7 +183,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             self.messages.append(format_message_for_llm(system_prompt, role="system"))
             self.messages.append(format_message_for_llm(user_prompt))
-        else:
+        elif self.prompt is not None:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
@@ -215,9 +198,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
-        self._setup_messages(inputs)
-
-        self._inject_multimodal_files(inputs)
+        if self._resuming:
+            self._resuming = False
+        else:
+            self._setup_messages(inputs)
+            self._inject_multimodal_files(inputs)
 
         self._show_start_logs()
 
@@ -344,7 +329,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         printer=self._printer,
                         i18n=self._i18n,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         verbose=self.agent.verbose,
                     )
@@ -353,7 +338,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
                 answer = get_llm_response(
-                    llm=self.llm,
+                    llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
@@ -428,8 +413,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer, tool_result
                     )
 
-                self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr]
+                self._invoke_step_callback(formatted_answer)
+                self._append_message(formatted_answer.text)
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -450,7 +435,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         i18n=self._i18n,
                         verbose=self.agent.verbose,
@@ -500,7 +485,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         printer=self._printer,
                         i18n=self._i18n,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         verbose=self.agent.verbose,
                     )
@@ -514,7 +499,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 # without executing them. The executor handles tool execution
                 # via _handle_native_tool_calls to properly manage message history.
                 answer = get_llm_response(
-                    llm=self.llm,
+                    llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
@@ -587,7 +572,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         i18n=self._i18n,
                         verbose=self.agent.verbose,
@@ -607,7 +592,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         enforce_rpm_limit(self.request_within_rpm_limit)
 
         answer = get_llm_response(
-            llm=self.llm,
+            llm=cast("BaseLLM", self.llm),
             messages=self.messages,
             callbacks=self.callbacks,
             printer=self._printer,
@@ -895,7 +880,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ToolUsageStartedEvent,
         )
 
-        args_dict, parse_error = parse_tool_call_args(func_args, func_name, call_id, original_tool)
+        args_dict, parse_error = parse_tool_call_args(
+            func_args, func_name, call_id, original_tool
+        )
         if parse_error is not None:
             return parse_error
 
@@ -946,7 +933,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
         error_event_emitted = False
 
-        track_delegation_if_needed(func_name, args_dict, self.task)
+        track_delegation_if_needed(func_name, args_dict or {}, self.task)
 
         structured_tool: CrewStructuredTool | None = None
         if original_tool is not None:
@@ -963,8 +950,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
-            tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool_input=args_dict or {},
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -989,7 +976,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
         elif not from_cache and func_name in available_functions:
             try:
-                raw_result = available_functions[func_name](**args_dict)
+                raw_result = available_functions[func_name](**(args_dict or {}))
 
                 if self.tools_handler and self.tools_handler.cache:
                     should_cache = True
@@ -999,7 +986,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         and callable(original_tool.cache_function)
                     ):
                         should_cache = original_tool.cache_function(
-                            args_dict, raw_result
+                            args_dict or {}, raw_result
                         )
                     if should_cache:
                         self.tools_handler.cache.add(
@@ -1028,8 +1015,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
-            tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool_input=args_dict or {},
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -1117,9 +1104,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
-        self._setup_messages(inputs)
-
-        await self._ainject_multimodal_files(inputs)
+        if self._resuming:
+            self._resuming = False
+        else:
+            self._setup_messages(inputs)
+            await self._ainject_multimodal_files(inputs)
 
         self._show_start_logs()
 
@@ -1182,7 +1171,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         printer=self._printer,
                         i18n=self._i18n,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         verbose=self.agent.verbose,
                     )
@@ -1191,7 +1180,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
                 answer = await aget_llm_response(
-                    llm=self.llm,
+                    llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
@@ -1265,8 +1254,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer, tool_result
                     )
 
-                await self._ainvoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr]
+                await self._ainvoke_step_callback(formatted_answer)
+                self._append_message(formatted_answer.text)
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -1286,7 +1275,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         i18n=self._i18n,
                         verbose=self.agent.verbose,
@@ -1330,7 +1319,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         printer=self._printer,
                         i18n=self._i18n,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         verbose=self.agent.verbose,
                     )
@@ -1344,7 +1333,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 # without executing them. The executor handles tool execution
                 # via _handle_native_tool_calls to properly manage message history.
                 answer = await aget_llm_response(
-                    llm=self.llm,
+                    llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
@@ -1416,7 +1405,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
                         messages=self.messages,
-                        llm=self.llm,
+                        llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
                         i18n=self._i18n,
                         verbose=self.agent.verbose,
@@ -1436,7 +1425,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         enforce_rpm_limit(self.request_within_rpm_limit)
 
         answer = await aget_llm_response(
-            llm=self.llm,
+            llm=cast("BaseLLM", self.llm),
             messages=self.messages,
             callbacks=self.callbacks,
             printer=self._printer,
@@ -1685,14 +1674,3 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return format_message_for_llm(
             self._i18n.slice("feedback_instructions").format(feedback=feedback)
         )
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _source_type: Any, _handler: GetCoreSchemaHandler
-    ) -> CoreSchema:
-        """Generate Pydantic core schema for BaseClient Protocol.
-
-        This allows the Protocol to be used in Pydantic models without
-        requiring arbitrary_types_allowed=True.
-        """
-        return core_schema.any_schema()

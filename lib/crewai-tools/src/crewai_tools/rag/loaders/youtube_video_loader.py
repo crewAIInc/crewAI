@@ -11,7 +11,7 @@ from crewai_tools.rag.source_content import SourceContent
 class YoutubeVideoLoader(BaseLoader):
     """Loader for YouTube videos."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         """Load and extract transcript from a YouTube video.
 
         Args:

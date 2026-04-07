@@ -34,6 +34,12 @@ from crewai.events.types.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
+from crewai.events.types.env_events import (
+    CCEnvEvent,
+    CodexEnvEvent,
+    CursorEnvEvent,
+    DefaultEnvEvent,
+)
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -72,13 +78,33 @@ from crewai.events.types.mcp_events import (
     MCPConnectionCompletedEvent,
     MCPConnectionFailedEvent,
     MCPConnectionStartedEvent,
+    MCPToolExecutionCompletedEvent,
     MCPToolExecutionFailedEvent,
     MCPToolExecutionStartedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryRetrievalCompletedEvent,
+    MemorySaveCompletedEvent,
+)
+from crewai.events.types.observation_events import (
+    GoalAchievedEarlyEvent,
+    PlanRefinementEvent,
+    PlanReplanTriggeredEvent,
+    StepObservationCompletedEvent,
+    StepObservationFailedEvent,
+    StepObservationStartedEvent,
 )
 from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
+)
+from crewai.events.types.skill_events import (
+    SkillActivatedEvent,
+    SkillDiscoveryCompletedEvent,
+    SkillLoadFailedEvent,
+    SkillLoadedEvent,
 )
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -135,6 +161,23 @@ class EventListener(BaseEventListener):
     # ----------- CREW EVENTS -----------
 
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
+
+        @crewai_event_bus.on(CCEnvEvent)
+        def on_cc_env(_: Any, event: CCEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
+        @crewai_event_bus.on(CodexEnvEvent)
+        def on_codex_env(_: Any, event: CodexEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
+        @crewai_event_bus.on(CursorEnvEvent)
+        def on_cursor_env(_: Any, event: CursorEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
+        @crewai_event_bus.on(DefaultEnvEvent)
+        def on_default_env(_: Any, event: DefaultEnvEvent) -> None:
+            self._telemetry.env_context_span(event.type)
+
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             self.formatter.handle_crew_started(event.crew_name or "Crew", source.id)
@@ -447,6 +490,7 @@ class EventListener(BaseEventListener):
             self.formatter.handle_guardrail_completed(
                 event.success, event.error, event.retry_count
             )
+            self._telemetry.feature_usage_span("guardrail:execution")
 
         @crewai_event_bus.on(CrewTestStartedEvent)
         def on_crew_test_started(source: Any, event: CrewTestStartedEvent) -> None:
@@ -528,12 +572,91 @@ class EventListener(BaseEventListener):
                 event.plan,
                 event.ready,
             )
+            self._telemetry.feature_usage_span("planning:creation")
 
         @crewai_event_bus.on(AgentReasoningFailedEvent)
         def on_agent_reasoning_failed(_: Any, event: AgentReasoningFailedEvent) -> None:
             self.formatter.handle_reasoning_failed(
                 event.error,
             )
+
+        # ----------- OBSERVATION EVENTS (Plan-and-Execute) -----------
+
+        @crewai_event_bus.on(StepObservationStartedEvent)
+        def on_step_observation_started(
+            _: Any, event: StepObservationStartedEvent
+        ) -> None:
+            self.formatter.handle_observation_started(
+                event.agent_role,
+                event.step_number,
+                event.step_description,
+            )
+
+        @crewai_event_bus.on(StepObservationCompletedEvent)
+        def on_step_observation_completed(
+            _: Any, event: StepObservationCompletedEvent
+        ) -> None:
+            self.formatter.handle_observation_completed(
+                event.agent_role,
+                event.step_number,
+                event.step_completed_successfully,
+                event.remaining_plan_still_valid,
+                event.key_information_learned,
+                event.needs_full_replan,
+                event.goal_already_achieved,
+            )
+
+        @crewai_event_bus.on(StepObservationFailedEvent)
+        def on_step_observation_failed(
+            _: Any, event: StepObservationFailedEvent
+        ) -> None:
+            self.formatter.handle_observation_failed(
+                event.step_number,
+                event.error,
+            )
+
+        @crewai_event_bus.on(PlanRefinementEvent)
+        def on_plan_refinement(_: Any, event: PlanRefinementEvent) -> None:
+            self.formatter.handle_plan_refinement(
+                event.step_number,
+                event.refined_step_count,
+                event.refinements,
+            )
+
+        @crewai_event_bus.on(PlanReplanTriggeredEvent)
+        def on_plan_replan_triggered(_: Any, event: PlanReplanTriggeredEvent) -> None:
+            self.formatter.handle_plan_replan(
+                event.replan_reason,
+                event.replan_count,
+                event.completed_steps_preserved,
+            )
+            self._telemetry.feature_usage_span("planning:replan")
+
+        @crewai_event_bus.on(GoalAchievedEarlyEvent)
+        def on_goal_achieved_early(_: Any, event: GoalAchievedEarlyEvent) -> None:
+            self.formatter.handle_goal_achieved_early(
+                event.steps_completed,
+                event.steps_remaining,
+            )
+            self._telemetry.feature_usage_span("planning:goal_achieved_early")
+
+        # ----------- SKILL EVENTS -----------
+
+        @crewai_event_bus.on(SkillDiscoveryCompletedEvent)
+        def on_skill_discovery(_: Any, event: SkillDiscoveryCompletedEvent) -> None:
+            self._telemetry.feature_usage_span("skill:discovery")
+
+        @crewai_event_bus.on(SkillLoadedEvent)
+        def on_skill_loaded(_: Any, event: SkillLoadedEvent) -> None:
+            self._telemetry.feature_usage_span("skill:loaded")
+
+        @crewai_event_bus.on(SkillLoadFailedEvent)
+        def on_skill_load_failed(_: Any, event: SkillLoadFailedEvent) -> None:
+            self._telemetry.feature_usage_span("skill:load_failed")
+
+        @crewai_event_bus.on(SkillActivatedEvent)
+        def on_skill_activated(_: Any, event: SkillActivatedEvent) -> None:
+            self._telemetry.feature_usage_span("skill:activated")
 
         # ----------- AGENT LOGGING EVENTS -----------
 
@@ -573,6 +696,7 @@ class EventListener(BaseEventListener):
                 event.error,
                 event.is_multiturn,
             )
+            self._telemetry.feature_usage_span("a2a:delegation")
 
         @crewai_event_bus.on(A2AConversationStartedEvent)
         def on_a2a_conversation_started(
@@ -614,6 +738,7 @@ class EventListener(BaseEventListener):
                 event.error,
                 event.total_turns,
             )
+            self._telemetry.feature_usage_span("a2a:conversation")
 
         @crewai_event_bus.on(A2APollingStartedEvent)
         def on_a2a_polling_started(_: Any, event: A2APollingStartedEvent) -> None:
@@ -655,6 +780,7 @@ class EventListener(BaseEventListener):
                 event.connection_duration_ms,
                 event.is_reconnect,
             )
+            self._telemetry.feature_usage_span("mcp:connection")
 
         @crewai_event_bus.on(MCPConnectionFailedEvent)
         def on_mcp_connection_failed(_: Any, event: MCPConnectionFailedEvent) -> None:
@@ -665,6 +791,7 @@ class EventListener(BaseEventListener):
                 event.error,
                 event.error_type,
             )
+            self._telemetry.feature_usage_span("mcp:connection_failed")
 
         @crewai_event_bus.on(MCPConfigFetchFailedEvent)
         def on_mcp_config_fetch_failed(
@@ -675,6 +802,7 @@ class EventListener(BaseEventListener):
                 event.error,
                 event.error_type,
             )
+            self._telemetry.feature_usage_span("mcp:config_fetch_failed")
 
         @crewai_event_bus.on(MCPToolExecutionStartedEvent)
         def on_mcp_tool_execution_started(
@@ -685,6 +813,12 @@ class EventListener(BaseEventListener):
                 event.tool_name,
                 event.tool_args,
             )
+
+        @crewai_event_bus.on(MCPToolExecutionCompletedEvent)
+        def on_mcp_tool_execution_completed(
+            _: Any, event: MCPToolExecutionCompletedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("mcp:tool_execution")
 
         @crewai_event_bus.on(MCPToolExecutionFailedEvent)
         def on_mcp_tool_execution_failed(
@@ -697,6 +831,45 @@ class EventListener(BaseEventListener):
                 event.error,
                 event.error_type,
             )
+            self._telemetry.feature_usage_span("mcp:tool_execution_failed")
+
+        # ----------- MEMORY TELEMETRY -----------
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def on_memory_save_completed(_: Any, event: MemorySaveCompletedEvent) -> None:
+            self._telemetry.feature_usage_span("memory:save")
+
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_memory_query_completed(_: Any, event: MemoryQueryCompletedEvent) -> None:
+            self._telemetry.feature_usage_span("memory:query")
+
+        @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+        def on_memory_retrieval_completed_telemetry(
+            _: Any, event: MemoryRetrievalCompletedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("memory:retrieval")
+
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_kickoff_hooks(_: Any, event: CrewKickoffStartedEvent) -> None:
+            from crewai.hooks.llm_hooks import (
+                get_after_llm_call_hooks,
+                get_before_llm_call_hooks,
+            )
+            from crewai.hooks.tool_hooks import (
+                get_after_tool_call_hooks,
+                get_before_tool_call_hooks,
+            )
+
+            has_hooks = any(
+                [
+                    get_before_llm_call_hooks(),
+                    get_after_llm_call_hooks(),
+                    get_before_tool_call_hooks(),
+                    get_after_tool_call_hooks(),
+                ]
+            )
+            if has_hooks:
+                self._telemetry.feature_usage_span("hooks:registered")
 
 
 event_listener = EventListener()

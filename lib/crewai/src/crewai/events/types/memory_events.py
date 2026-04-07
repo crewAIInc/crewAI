@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -23,7 +23,7 @@ class MemoryBaseEvent(BaseEvent):
 class MemoryQueryStartedEvent(MemoryBaseEvent):
     """Event emitted when a memory query is started"""
 
-    type: str = "memory_query_started"
+    type: Literal["memory_query_started"] = "memory_query_started"
     query: str
     limit: int
     score_threshold: float | None = None
@@ -32,7 +32,7 @@ class MemoryQueryStartedEvent(MemoryBaseEvent):
 class MemoryQueryCompletedEvent(MemoryBaseEvent):
     """Event emitted when a memory query is completed successfully"""
 
-    type: str = "memory_query_completed"
+    type: Literal["memory_query_completed"] = "memory_query_completed"
     query: str
     results: Any
     limit: int
@@ -43,7 +43,7 @@ class MemoryQueryCompletedEvent(MemoryBaseEvent):
 class MemoryQueryFailedEvent(MemoryBaseEvent):
     """Event emitted when a memory query fails"""
 
-    type: str = "memory_query_failed"
+    type: Literal["memory_query_failed"] = "memory_query_failed"
     query: str
     limit: int
     score_threshold: float | None = None
@@ -53,7 +53,7 @@ class MemoryQueryFailedEvent(MemoryBaseEvent):
 class MemorySaveStartedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation is started"""
 
-    type: str = "memory_save_started"
+    type: Literal["memory_save_started"] = "memory_save_started"
     value: str | None = None
     metadata: dict[str, Any] | None = None
     agent_role: str | None = None
@@ -62,7 +62,7 @@ class MemorySaveStartedEvent(MemoryBaseEvent):
 class MemorySaveCompletedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation is completed successfully"""
 
-    type: str = "memory_save_completed"
+    type: Literal["memory_save_completed"] = "memory_save_completed"
     value: str
     metadata: dict[str, Any] | None = None
     agent_role: str | None = None
@@ -72,7 +72,7 @@ class MemorySaveCompletedEvent(MemoryBaseEvent):
 class MemorySaveFailedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation fails"""
 
-    type: str = "memory_save_failed"
+    type: Literal["memory_save_failed"] = "memory_save_failed"
     value: str | None = None
     metadata: dict[str, Any] | None = None
     agent_role: str | None = None
@@ -82,14 +82,14 @@ class MemorySaveFailedEvent(MemoryBaseEvent):
 class MemoryRetrievalStartedEvent(MemoryBaseEvent):
     """Event emitted when memory retrieval for a task prompt starts"""
 
-    type: str = "memory_retrieval_started"
+    type: Literal["memory_retrieval_started"] = "memory_retrieval_started"
     task_id: str | None = None
 
 
 class MemoryRetrievalCompletedEvent(MemoryBaseEvent):
     """Event emitted when memory retrieval for a task prompt completes successfully"""
 
-    type: str = "memory_retrieval_completed"
+    type: Literal["memory_retrieval_completed"] = "memory_retrieval_completed"
     task_id: str | None = None
     memory_content: str
     retrieval_time_ms: float
@@ -98,6 +98,6 @@ class MemoryRetrievalCompletedEvent(MemoryBaseEvent):
 class MemoryRetrievalFailedEvent(MemoryBaseEvent):
     """Event emitted when memory retrieval for a task prompt fails."""
 
-    type: str = "memory_retrieval_failed"
+    type: Literal["memory_retrieval_failed"] = "memory_retrieval_failed"
     task_id: str | None = None
     error: str

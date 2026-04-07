@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from crewai.tools.agent_tools.ask_question_tool import AskQuestionTool
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 class AgentTools:
     """Manager class for agent-related tools"""
 
-    def __init__(self, agents: list[BaseAgent], i18n: I18N | None = None) -> None:
+    def __init__(self, agents: Sequence[BaseAgent], i18n: I18N | None = None) -> None:
         self.agents = agents
         self.i18n = i18n if i18n is not None else get_i18n()
 

@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+from typing import Any
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.loaders.utils import load_from_url
@@ -7,7 +8,7 @@ from crewai_tools.rag.source_content import SourceContent
 
 
 class CSVLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
 
         content_str = source_content.source

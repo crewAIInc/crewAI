@@ -34,7 +34,7 @@ class DOCXSearchTool(RagTool):
     )
     args_schema: type[BaseModel] = DOCXSearchToolSchema
 
-    def __init__(self, docx: str | None = None, **kwargs):
+    def __init__(self, docx: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if docx is not None:
             self.add(docx)
@@ -42,7 +42,7 @@ class DOCXSearchTool(RagTool):
             self.args_schema = FixedDOCXSearchToolSchema
             self._generate_description()
 
-    def add(self, docx: str) -> None:
+    def add(self, docx: str) -> None:  # type: ignore[override]
         super().add(docx, data_type=DataType.DOCX)
 
     def _run(  # type: ignore[override]

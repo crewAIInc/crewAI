@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import baggage
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
+from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files
 from crewai.utilities.streaming import (
@@ -47,8 +51,32 @@ def enable_agent_streaming(agents: Iterable[BaseAgent]) -> None:
         agents: Iterable of agents to enable streaming on.
     """
     for agent in agents:
-        if agent.llm is not None:
+        if isinstance(agent.llm, BaseLLM):
             agent.llm.stream = True
+
+
+def _resolve_crew_skills(crew: Crew) -> list[SkillModel] | None:
+    """Resolve crew-level skill paths once so agents don't repeat the work."""
+    if not isinstance(crew.skills, list) or not crew.skills:
+        return None
+
+    resolved: list[SkillModel] = []
+    seen: set[str] = set()
+    for item in crew.skills:
+        if isinstance(item, Path):
+            for skill in discover_skills(item):
+                if skill.name not in seen:
+                    seen.add(skill.name)
+                    resolved.append(activate_skill(skill))
+        elif isinstance(item, SkillModel):
+            if item.name not in seen:
+                seen.add(item.name)
+                resolved.append(
+                    activate_skill(item)
+                    if item.disclosure_level < INSTRUCTIONS
+                    else item
+                )
+    return resolved
 
 
 def setup_agents(
@@ -67,13 +95,19 @@ def setup_agents(
         function_calling_llm: Default function calling LLM for agents.
         step_callback: Default step callback for agents.
     """
+    resolved_crew_skills = _resolve_crew_skills(crew)
+
     for agent in agents:
         agent.crew = crew
         agent.set_knowledge(crew_embedder=embedder)
+        agent.set_skills(resolved_crew_skills=resolved_crew_skills)
         if not agent.function_calling_llm:  # type: ignore[attr-defined]
             agent.function_calling_llm = function_calling_llm  # type: ignore[attr-defined]
         if not agent.step_callback:  # type: ignore[attr-defined]
             agent.step_callback = step_callback  # type: ignore[attr-defined]
+        executor = getattr(agent, "agent_executor", None)
+        if executor and getattr(executor, "_resuming", False):
+            continue
         agent.create_agent_executor()
 
 
@@ -126,10 +160,8 @@ def prepare_task_execution(
     # Handle replay skip
     if start_index is not None and task_index < start_index:
         if task.output:
-            if task.async_execution:
-                task_outputs.append(task.output)
-            else:
-                task_outputs = [task.output]
+            task_outputs.append(task.output)
+            if not task.async_execution:
                 last_sync_output = task.output
         return (
             TaskExecutionData(agent=None, tools=[], should_skip=True),
@@ -152,7 +184,9 @@ def prepare_task_execution(
         tools_for_task,
     )
 
-    crew._log_task_start(task, agent_to_use.role)
+    executor = agent_to_use.agent_executor
+    if not (executor and executor._resuming):
+        crew._log_task_start(task, agent_to_use.role)
 
     return (
         TaskExecutionData(agent=agent_to_use, tools=tools_for_task),
@@ -244,10 +278,15 @@ def prepare_kickoff(
     """
     from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.event_context import get_current_parent_id, reset_last_event_id
+    from crewai.events.event_context import (
+        get_current_parent_id,
+        reset_last_event_id,
+    )
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
-    if get_current_parent_id() is None:
+    resuming = crew.checkpoint_kickoff_event_id is not None
+
+    if not resuming and get_current_parent_id() is None:
         reset_emission_counter()
         reset_last_event_id()
 
@@ -265,14 +304,29 @@ def prepare_kickoff(
             normalized = {}
         normalized = before_callback(normalized)
 
-    started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
-    crew._kickoff_event_id = started_event.event_id
-    future = crewai_event_bus.emit(crew, started_event)
-    if future is not None:
-        try:
-            future.result()
-        except Exception:  # noqa: S110
-            pass
+    if resuming and crew._kickoff_event_id:
+        if crew.verbose:
+            from crewai.events.utils.console_formatter import ConsoleFormatter
+
+            fmt = ConsoleFormatter(verbose=True)
+            content = fmt.create_status_content(
+                "Resuming from Checkpoint",
+                crew.name or "Crew",
+                "bright_magenta",
+                ID=str(crew.id),
+            )
+            fmt.print_panel(
+                content, "\U0001f504 Resuming from Checkpoint", "bright_magenta"
+            )
+    else:
+        started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
+        crew._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(crew, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: S110
+                pass
 
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"

@@ -85,7 +85,7 @@ def _get_audio_duration(content: bytes, filename: str | None = None) -> float | 
         Duration in seconds or None if tinytag unavailable.
     """
     try:
-        from tinytag import TinyTag  # type: ignore[import-untyped]
+        from tinytag import TinyTag
     except ImportError:
         logger.warning(
             "tinytag not installed - cannot validate audio duration. "

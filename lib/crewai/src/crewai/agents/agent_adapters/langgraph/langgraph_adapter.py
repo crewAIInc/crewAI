@@ -5,7 +5,7 @@ with CrewAI's agent system. Provides memory persistence, tool integration, and s
 output functionality.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any, cast
 
 from pydantic import ConfigDict, Field, PrivateAttr
@@ -30,6 +30,7 @@ from crewai.events.types.agent_events import (
 )
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool
+from crewai.types.callback import SerializableCallable
 from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
 from crewai.utilities.import_utils import require
@@ -50,7 +51,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     _memory: Any = PrivateAttr(default=None)
     _max_iterations: int = PrivateAttr(default=10)
     function_calling_llm: Any = Field(default=None)
-    step_callback: Callable[..., Any] | None = Field(default=None)
+    step_callback: SerializableCallable | None = Field(default=None)
 
     model: str = Field(default="gpt-4o")
     verbose: bool = Field(default=False)
@@ -64,7 +65,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         llm: Any = None,
         max_iterations: int = 10,
         agent_config: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Initialize the LangGraph agent adapter.
 
@@ -272,7 +273,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             available_tools: list[Any] = self._tool_adapter.tools()
             self._graph.tools = available_tools
 
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         """Implement delegation tools support for LangGraph.
 
         Creates delegation tools that allow this agent to delegate tasks to other agents.

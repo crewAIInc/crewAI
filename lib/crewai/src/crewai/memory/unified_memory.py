@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+import contextvars
 from datetime import datetime
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, PlainValidator, PrivateAttr
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
@@ -19,7 +22,6 @@ from crewai.events.types.memory_events import (
 )
 from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
-from crewai.memory.recall_flow import RecallFlow
 from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.types import (
     MemoryConfig,
@@ -29,6 +31,7 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_text,
 )
+from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 
@@ -39,13 +42,18 @@ if TYPE_CHECKING:
     )
 
 
+def _passthrough(v: Any) -> Any:
+    """PlainValidator that accepts any value, bypassing strict union discrimination."""
+    return v
+
+
 def _default_embedder() -> OpenAIEmbeddingFunction:
     """Build default OpenAI embedder for memory."""
     spec: OpenAIProviderSpec = {"provider": "openai", "config": {}}
     return build_embedder(spec)
 
 
-class Memory:
+class Memory(BaseModel):
     """Unified memory: standalone, LLM-analyzed, with intelligent recall flow.
 
     Works without agent/crew. Uses LLM to infer scope, categories, importance on save.
@@ -53,116 +61,162 @@ class Memory:
     pluggable storage (LanceDB default).
     """
 
-    def __init__(
-        self,
-        llm: BaseLLM | str = "gpt-4o-mini",
-        storage: StorageBackend | str = "lancedb",
-        embedder: Any = None,
-        # -- Scoring weights --
-        # These three weights control how recall results are ranked.
-        # The composite score is: semantic_weight * similarity + recency_weight * decay + importance_weight * importance.
-        # They should sum to ~1.0 for intuitive scoring.
-        recency_weight: float = 0.3,
-        semantic_weight: float = 0.5,
-        importance_weight: float = 0.2,
-        # How quickly old memories lose relevance. The recency score halves every
-        # N days (exponential decay). Lower = faster forgetting; higher = longer relevance.
-        recency_half_life_days: int = 30,
-        # -- Consolidation --
-        # When remembering new content, if an existing record has similarity >= this
-        # threshold, the LLM is asked to merge/update/delete. Set to 1.0 to disable.
-        consolidation_threshold: float = 0.85,
-        # Max existing records to compare against when checking for consolidation.
-        consolidation_limit: int = 5,
-        # -- Save defaults --
-        # Importance assigned to new memories when no explicit value is given and
-        # the LLM analysis path is skipped (all fields provided by the caller).
-        default_importance: float = 0.5,
-        # -- Recall depth control --
-        # These thresholds govern the RecallFlow router that decides between
-        # returning results immediately ("synthesize") vs. doing an extra
-        # LLM-driven exploration round ("explore_deeper").
-        #   confidence >= confidence_threshold_high  => always synthesize
-        #   confidence <  confidence_threshold_low   => explore deeper (if budget > 0)
-        #   complex query + confidence < complex_query_threshold => explore deeper
-        confidence_threshold_high: float = 0.8,
-        confidence_threshold_low: float = 0.5,
-        complex_query_threshold: float = 0.7,
-        # How many LLM-driven exploration rounds the RecallFlow is allowed to run.
-        # 0 = always shallow (vector search only); higher = more thorough but slower.
-        exploration_budget: int = 1,
-        # Queries shorter than this skip LLM analysis (saving ~1-3s).
-        # Longer queries (full task descriptions) benefit from LLM distillation.
-        query_analysis_threshold: int = 200,
-        # When True, all write operations (remember, remember_many) are silently
-        # skipped. Useful for sharing a read-only view of memory across agents
-        # without any of them persisting new memories.
-        read_only: bool = False,
-    ) -> None:
-        """Initialize Memory.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        Args:
-            llm: LLM for analysis (model name or BaseLLM instance).
-            storage: Backend: "lancedb" or a StorageBackend instance.
-            embedder: Embedding callable, provider config dict, or None (default OpenAI).
-            recency_weight: Weight for recency in the composite relevance score.
-            semantic_weight: Weight for semantic similarity in the composite relevance score.
-            importance_weight: Weight for importance in the composite relevance score.
-            recency_half_life_days: Recency score halves every N days (exponential decay).
-            consolidation_threshold: Similarity above which consolidation is triggered on save.
-            consolidation_limit: Max existing records to compare during consolidation.
-            default_importance: Default importance when not provided or inferred.
-            confidence_threshold_high: Recall confidence above which results are returned directly.
-            confidence_threshold_low: Recall confidence below which deeper exploration is triggered.
-            complex_query_threshold: For complex queries, explore deeper below this confidence.
-            exploration_budget: Number of LLM-driven exploration rounds during deep recall.
-            query_analysis_threshold: Queries shorter than this skip LLM analysis during deep recall.
-            read_only: If True, remember() and remember_many() are silent no-ops.
-        """
-        self._read_only = read_only
+    llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
+        default="gpt-4o-mini",
+        description="LLM for analysis (model name or BaseLLM instance).",
+    )
+    storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
+        default="lancedb",
+        description="Storage backend instance or path string.",
+    )
+    embedder: Any = Field(
+        default=None,
+        description="Embedding callable, provider config dict, or None for default OpenAI.",
+    )
+    recency_weight: float = Field(
+        default=0.3,
+        description="Weight for recency in the composite relevance score.",
+    )
+    semantic_weight: float = Field(
+        default=0.5,
+        description="Weight for semantic similarity in the composite relevance score.",
+    )
+    importance_weight: float = Field(
+        default=0.2,
+        description="Weight for importance in the composite relevance score.",
+    )
+    recency_half_life_days: int = Field(
+        default=30,
+        description="Recency score halves every N days (exponential decay).",
+    )
+    consolidation_threshold: float = Field(
+        default=0.85,
+        description="Similarity above which consolidation is triggered on save.",
+    )
+    consolidation_limit: int = Field(
+        default=5,
+        description="Max existing records to compare during consolidation.",
+    )
+    default_importance: float = Field(
+        default=0.5,
+        description="Default importance when not provided or inferred.",
+    )
+    confidence_threshold_high: float = Field(
+        default=0.8,
+        description="Recall confidence above which results are returned directly.",
+    )
+    confidence_threshold_low: float = Field(
+        default=0.5,
+        description="Recall confidence below which deeper exploration is triggered.",
+    )
+    complex_query_threshold: float = Field(
+        default=0.7,
+        description="For complex queries, explore deeper below this confidence.",
+    )
+    exploration_budget: int = Field(
+        default=1,
+        description="Number of LLM-driven exploration rounds during deep recall.",
+    )
+    query_analysis_threshold: int = Field(
+        default=200,
+        description="Queries shorter than this skip LLM analysis during deep recall.",
+    )
+    read_only: bool = Field(
+        default=False,
+        description="If True, remember() and remember_many() are silent no-ops.",
+    )
+    root_scope: str | None = Field(
+        default=None,
+        description=(
+            "Structural root scope prefix. When set, LLM-inferred or explicit scopes "
+            "are nested under this root. For example, a crew with root_scope='/crew/research' "
+            "will store memories at '/crew/research/<inferred_scope>'."
+        ),
+    )
+
+    _config: MemoryConfig = PrivateAttr()
+    _llm_instance: BaseLLM | None = PrivateAttr(default=None)
+    _embedder_instance: Any = PrivateAttr(default=None)
+    _storage: StorageBackend = PrivateAttr()
+    _save_pool: ThreadPoolExecutor = PrivateAttr(
+        default_factory=lambda: ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="memory-save"
+        )
+    )
+    _pending_saves: list[Future[Any]] = PrivateAttr(default_factory=list)
+    _pending_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Memory:
+        """Deepcopy that handles unpickleable private attrs (ThreadPoolExecutor, Lock)."""
+        import copy as _copy
+
+        cls = type(self)
+        new = cls.__new__(cls)
+        if memo is None:
+            memo = {}
+        memo[id(self)] = new
+        object.__setattr__(new, "__dict__", _copy.deepcopy(self.__dict__, memo))
+        object.__setattr__(
+            new, "__pydantic_fields_set__", _copy.copy(self.__pydantic_fields_set__)
+        )
+        object.__setattr__(
+            new, "__pydantic_extra__", _copy.deepcopy(self.__pydantic_extra__, memo)
+        )
+        # Private attrs: create fresh pool/lock instead of deepcopying
+        private = {}
+        for k, v in (self.__pydantic_private__ or {}).items():
+            if isinstance(v, (ThreadPoolExecutor, threading.Lock)):
+                attr = self.__private_attributes__[k]
+                private[k] = attr.get_default()
+            else:
+                try:
+                    private[k] = _copy.deepcopy(v, memo)
+                except Exception:
+                    private[k] = v
+        object.__setattr__(new, "__pydantic_private__", private)
+        return new
+
+    def model_post_init(self, __context: Any) -> None:
+        """Initialize runtime state from field values."""
         self._config = MemoryConfig(
-            recency_weight=recency_weight,
-            semantic_weight=semantic_weight,
-            importance_weight=importance_weight,
-            recency_half_life_days=recency_half_life_days,
-            consolidation_threshold=consolidation_threshold,
-            consolidation_limit=consolidation_limit,
-            default_importance=default_importance,
-            confidence_threshold_high=confidence_threshold_high,
-            confidence_threshold_low=confidence_threshold_low,
-            complex_query_threshold=complex_query_threshold,
-            exploration_budget=exploration_budget,
-            query_analysis_threshold=query_analysis_threshold,
+            recency_weight=self.recency_weight,
+            semantic_weight=self.semantic_weight,
+            importance_weight=self.importance_weight,
+            recency_half_life_days=self.recency_half_life_days,
+            consolidation_threshold=self.consolidation_threshold,
+            consolidation_limit=self.consolidation_limit,
+            default_importance=self.default_importance,
+            confidence_threshold_high=self.confidence_threshold_high,
+            confidence_threshold_low=self.confidence_threshold_low,
+            complex_query_threshold=self.complex_query_threshold,
+            exploration_budget=self.exploration_budget,
+            query_analysis_threshold=self.query_analysis_threshold,
         )
 
-        # Store raw config for lazy initialization. LLM and embedder are only
-        # built on first access so that Memory() never fails at construction
-        # time (e.g. when auto-created by Flow without an API key set).
-        self._llm_config: BaseLLM | str = llm
-        self._llm_instance: BaseLLM | None = None if isinstance(llm, str) else llm
-        self._embedder_config: Any = embedder
-        self._embedder_instance: Any = (
-            embedder
-            if (embedder is not None and not isinstance(embedder, dict))
+        self._llm_instance = None if isinstance(self.llm, str) else self.llm
+        self._embedder_instance = (
+            self.embedder
+            if (self.embedder is not None and not isinstance(self.embedder, dict))
             else None
         )
 
-        if isinstance(storage, str):
-            from crewai.memory.storage.lancedb_storage import LanceDBStorage
+        if isinstance(self.storage, str):
+            if self.storage == "qdrant-edge":
+                from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
 
-            self._storage = LanceDBStorage() if storage == "lancedb" else LanceDBStorage(path=storage)
+                self._storage = QdrantEdgeStorage()
+            elif self.storage == "lancedb":
+                from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+                self._storage = LanceDBStorage()
+            else:
+                from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+                self._storage = LanceDBStorage(path=self.storage)
         else:
-            self._storage = storage
-
-        # Background save queue. max_workers=1 serializes saves to avoid
-        # concurrent storage mutations (two saves finding the same similar
-        # record and both trying to update/delete it). Within each save,
-        # the parallel LLM calls still run on their own thread pool.
-        self._save_pool = ThreadPoolExecutor(
-            max_workers=1, thread_name_prefix="memory-save"
-        )
-        self._pending_saves: list[Future[Any]] = []
-        self._pending_lock = threading.Lock()
+            self._storage = self.storage
 
     _MEMORY_DOCS_URL = "https://docs.crewai.com/concepts/memory"
 
@@ -173,11 +227,7 @@ class Memory:
             from crewai.llm import LLM
 
             try:
-                model_name = (
-                    self._llm_config
-                    if isinstance(self._llm_config, str)
-                    else str(self._llm_config)
-                )
+                model_name = self.llm if isinstance(self.llm, str) else str(self.llm)
                 self._llm_instance = LLM(model=model_name)
             except Exception as e:
                 raise RuntimeError(
@@ -197,8 +247,8 @@ class Memory:
         """Lazy embedder initialization -- only created when first needed."""
         if self._embedder_instance is None:
             try:
-                if isinstance(self._embedder_config, dict):
-                    self._embedder_instance = build_embedder(self._embedder_config)
+                if isinstance(self.embedder, dict):
+                    self._embedder_instance = build_embedder(self.embedder)
                 else:
                     self._embedder_instance = _default_embedder()
             except Exception as e:
@@ -223,8 +273,9 @@ class Memory:
         If the pool has been shut down (e.g. after ``close()``), the save
         runs synchronously as a fallback so late saves still succeed.
         """
+        ctx = contextvars.copy_context()
         try:
-            future: Future[Any] = self._save_pool.submit(fn, *args, **kwargs)
+            future: Future[Any] = self._save_pool.submit(ctx.run, fn, *args, **kwargs)
         except RuntimeError:
             # Pool shut down -- run synchronously as fallback
             future = Future()
@@ -277,8 +328,10 @@ class Memory:
             future.result()  # blocks until done; re-raises exceptions
 
     def close(self) -> None:
-        """Drain pending saves and shut down the background thread pool."""
+        """Drain pending saves, flush storage, and shut down the background thread pool."""
         self.drain_writes()
+        if hasattr(self._storage, "close"):
+            self._storage.close()
         self._save_pool.shutdown(wait=True)
 
     def _encode_batch(
@@ -290,11 +343,26 @@ class Memory:
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the batch EncodingFlow for one or more items. No event emission.
 
         This is the core encoding logic shared by ``remember()`` and
         ``remember_many()``. Events are managed by the calling method.
+
+        Args:
+            contents: List of text content to encode and store.
+            scope: Optional explicit scope (inner scope, nested under root_scope).
+            categories: Optional categories for all items.
+            metadata: Optional metadata for all items.
+            importance: Optional importance score for all items.
+            source: Optional source identifier for all items.
+            private: Whether items are private.
+            root_scope: Structural root scope prefix. LLM-inferred or explicit
+                scopes are nested under this root.
+
+        Returns:
+            List of created MemoryRecord instances.
         """
         from crewai.memory.encoding_flow import EncodingFlow
 
@@ -313,6 +381,7 @@ class Memory:
                 "importance": importance,
                 "source": source,
                 "private": private,
+                "root_scope": root_scope,
             }
             for c in contents
         ]
@@ -333,6 +402,7 @@ class Memory:
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> MemoryRecord | None:
         """Store a single item in memory (synchronous).
 
@@ -342,13 +412,15 @@ class Memory:
 
         Args:
             content: Text to remember.
-            scope: Optional scope path; inferred if None.
+            scope: Optional scope path (inner scope); inferred if None.
             categories: Optional categories; inferred if None.
             metadata: Optional metadata; merged with LLM-extracted if inferred.
             importance: Optional importance 0-1; inferred if None.
             source: Optional provenance identifier (e.g. user ID, session ID).
             private: If True, only visible to recall from the same source.
             agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope override. If provided, this overrides
+                the instance-level root_scope for this call only.
 
         Returns:
             The created MemoryRecord, or None if this memory is read-only.
@@ -356,8 +428,12 @@ class Memory:
         Raises:
             Exception: On save failure (events emitted).
         """
-        if self._read_only:
+        if self.read_only:
             return None
+
+        # Determine effective root_scope: per-call override takes precedence
+        effective_root = root_scope if root_scope is not None else self.root_scope
+
         _source_type = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -381,6 +457,7 @@ class Memory:
                 importance,
                 source,
                 private,
+                effective_root,
             )
             records = future.result()
             record = records[0] if records else None
@@ -419,6 +496,7 @@ class Memory:
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Store multiple items in memory (non-blocking).
 
@@ -433,19 +511,24 @@ class Memory:
 
         Args:
             contents: List of text items to remember.
-            scope: Optional scope applied to all items.
+            scope: Optional scope (inner scope) applied to all items.
             categories: Optional categories applied to all items.
             metadata: Optional metadata applied to all items.
             importance: Optional importance applied to all items.
             source: Optional provenance identifier applied to all items.
             private: Privacy flag applied to all items.
             agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope override. If provided, this overrides
+                the instance-level root_scope for this call only.
 
         Returns:
             Empty list (records are not available until the background save completes).
         """
-        if not contents or self._read_only:
+        if not contents or self.read_only:
             return []
+
+        # Determine effective root_scope: per-call override takes precedence
+        effective_root = root_scope if root_scope is not None else self.root_scope
 
         self._submit_save(
             self._background_encode_batch,
@@ -457,6 +540,7 @@ class Memory:
             source,
             private,
             agent_role,
+            effective_root,
         )
         return []
 
@@ -470,6 +554,7 @@ class Memory:
         source: str | None,
         private: bool,
         agent_role: str | None,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the encoding pipeline in a background thread with event emission.
 
@@ -479,6 +564,20 @@ class Memory:
         All ``emit`` calls are wrapped in try/except to handle the case where
         the event bus shuts down before the background save finishes (e.g.
         during process exit).
+
+        Args:
+            contents: List of text content to encode.
+            scope: Optional inner scope for all items.
+            categories: Optional categories for all items.
+            metadata: Optional metadata for all items.
+            importance: Optional importance for all items.
+            source: Optional source identifier for all items.
+            private: Whether items are private.
+            agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope prefix for hierarchical scoping.
+
+        Returns:
+            List of created MemoryRecord instances.
         """
         try:
             crewai_event_bus.emit(
@@ -495,7 +594,14 @@ class Memory:
         try:
             start = time.perf_counter()
             records = self._encode_batch(
-                contents, scope, categories, metadata, importance, source, private
+                contents,
+                scope,
+                categories,
+                metadata,
+                importance,
+                source,
+                private,
+                root_scope,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
         except RuntimeError:
@@ -568,6 +674,14 @@ class Memory:
         # so that the search sees all persisted records.
         self.drain_writes()
 
+        # Apply root_scope as default scope_prefix for read isolation
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            # Nest provided scope under root
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
+
         _source = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -588,7 +702,7 @@ class Memory:
                 else:
                     raw = self._storage.search(
                         embedding,
-                        scope_prefix=scope,
+                        scope_prefix=effective_scope,
                         categories=categories,
                         limit=limit,
                         min_score=0.0,
@@ -612,6 +726,8 @@ class Memory:
                         )
                     results.sort(key=lambda m: m.score, reverse=True)
             else:
+                from crewai.memory.recall_flow import RecallFlow
+
                 flow = RecallFlow(
                     storage=self._storage,
                     llm=self._llm,
@@ -621,7 +737,7 @@ class Memory:
                 flow.kickoff(
                     inputs={
                         "query": query,
-                        "scope": scope,
+                        "scope": effective_scope,
                         "categories": categories or [],
                         "limit": limit,
                         "source": source,
@@ -675,11 +791,24 @@ class Memory:
     ) -> int:
         """Delete memories matching criteria.
 
+        Args:
+            scope: Scope to delete from. If None and root_scope is set, deletes
+                only within root_scope.
+            categories: Filter by categories.
+            older_than: Delete records older than this datetime.
+            metadata_filter: Filter by metadata fields.
+            record_ids: Specific record IDs to delete.
+
         Returns:
             Number of records deleted.
         """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.delete(
-            scope_prefix=scope,
+            scope_prefix=effective_scope,
             categories=categories,
             record_ids=record_ids,
             older_than=older_than,
@@ -754,9 +883,21 @@ class Memory:
             read_only=read_only,
         )
 
-    def list_scopes(self, path: str = "/") -> list[str]:
-        """List immediate child scopes under path."""
-        return self._storage.list_scopes(path)
+    def list_scopes(self, path: str | None = None) -> list[str]:
+        """List immediate child scopes under path.
+
+        Args:
+            path: Scope path to list children of. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+        return self._storage.list_scopes(effective_path)
 
     def list_records(
         self, scope: str | None = None, limit: int = 200, offset: int = 0
@@ -764,20 +905,52 @@ class Memory:
         """List records in a scope, newest first.
 
         Args:
-            scope: Optional scope path prefix to filter by.
+            scope: Optional scope path prefix to filter by. If None and root_scope
+                is set, defaults to root_scope.
             limit: Maximum number of records to return.
             offset: Number of records to skip (for pagination).
         """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.list_records(
-            scope_prefix=scope, limit=limit, offset=offset
+            scope_prefix=effective_scope, limit=limit, offset=offset
         )
 
-    def info(self, path: str = "/") -> ScopeInfo:
-        """Return scope info for path."""
-        return self._storage.get_scope_info(path)
+    def info(self, path: str | None = None) -> ScopeInfo:
+        """Return scope info for path.
 
-    def tree(self, path: str = "/", max_depth: int = 3) -> str:
-        """Return a formatted tree of scopes (string)."""
+        Args:
+            path: Scope path to get info for. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+        return self._storage.get_scope_info(effective_path)
+
+    def tree(self, path: str | None = None, max_depth: int = 3) -> str:
+        """Return a formatted tree of scopes (string).
+
+        Args:
+            path: Root path for the tree. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+            max_depth: Maximum depth to traverse.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+
         lines: list[str] = []
 
         def _walk(p: str, depth: int, prefix: str) -> None:
@@ -788,16 +961,36 @@ class Memory:
             for child in info.child_scopes[:20]:
                 _walk(child, depth + 1, prefix + "  ")
 
-        _walk(path.rstrip("/") or "/", 0, "")
-        return "\n".join(lines) if lines else f"{path or '/'} (0 records)"
+        _walk(effective_path.rstrip("/") or "/", 0, "")
+        return "\n".join(lines) if lines else f"{effective_path or '/'} (0 records)"
 
     def list_categories(self, path: str | None = None) -> dict[str, int]:
-        """List categories and counts; path=None means global."""
-        return self._storage.list_categories(scope_prefix=path)
+        """List categories and counts.
+
+        Args:
+            path: Scope path to filter categories by. If None and root_scope is set,
+                defaults to root_scope.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        return self._storage.list_categories(scope_prefix=effective_path)
 
     def reset(self, scope: str | None = None) -> None:
-        """Reset (delete all) memories in scope. None = all."""
-        self._storage.reset(scope_prefix=scope)
+        """Reset (delete all) memories in scope.
+
+        Args:
+            scope: Scope to reset. If None and root_scope is set, resets only
+                within root_scope. If None and no root_scope, resets all.
+        """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
+        self._storage.reset(scope_prefix=effective_scope)
 
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""

@@ -1,0 +1,83 @@
+---
+title: "مشغل Google Calendar"
+description: "تشغيل الطواقم عند إنشاء أو تحديث أو إلغاء أحداث Google Calendar"
+icon: "calendar"
+mode: "wide"
+---
+
+## نظرة عامة
+
+استخدم مشغل Google Calendar لإطلاق الأتمتات كلما تغيرت أحداث التقويم. تشمل حالات الاستخدام الشائعة إحاطة الفريق قبل اجتماع، وإخطار أصحاب المصلحة عند إلغاء حدث هام، أو تلخيص الجداول اليومية.
+
+<Tip>
+  تأكد من ربط Google Calendar في **Tools & Integrations** وتفعيله
+  لعملية النشر التي تريد أتمتتها.
+</Tip>
+
+## تفعيل مشغل Google Calendar
+
+1. افتح عملية النشر في CrewAI AMP
+2. انتقل إلى علامة تبويب **Triggers**
+3. حدد موقع **Google Calendar** وبدّل مفتاح التبديل للتفعيل
+
+<Frame>
+  <img
+    src="/images/enterprise/calendar-trigger.png"
+    alt="تفعيل أو تعطيل المشغلات بالتبديل"
+  />
+</Frame>
+
+## مثال: تلخيص تفاصيل الاجتماع
+
+المقتطف أدناه يعكس مثال `calendar-event-crew.py` في مستودع المشغلات. يحلل الحمولة، ويحلل الحاضرين والتوقيت، وينتج ملخصاً للاجتماع للأدوات اللاحقة.
+
+```python
+from calendar_event_crew import GoogleCalendarEventTrigger
+
+crew = GoogleCalendarEventTrigger().crew()
+result = crew.kickoff({
+    "crewai_trigger_payload": calendar_payload,
+})
+print(result.raw)
+```
+
+استخدم `crewai_trigger_payload` تماماً كما يتم تسليمه من المشغل حتى يتمكن الطاقم من استخراج الحقول المناسبة.
+
+## الاختبار المحلي
+
+اختبر تكامل مشغل Google Calendar محلياً باستخدام CrewAI CLI:
+
+```bash
+# عرض جميع المشغلات المتاحة
+crewai triggers list
+
+# محاكاة مشغل Google Calendar بحمولة واقعية
+crewai triggers run google_calendar/event_changed
+```
+
+سينفذ أمر `crewai triggers run` طاقمك بحمولة Calendar كاملة، مما يتيح لك اختبار منطق التحليل قبل النشر.
+
+<Warning>
+  استخدم `crewai triggers run google_calendar/event_changed` (وليس `crewai run`) لمحاكاة
+  تنفيذ المشغل أثناء التطوير. بعد النشر، سيتلقى طاقمك
+  حمولة المشغل تلقائياً.
+</Warning>
+
+## مراقبة عمليات التنفيذ
+
+تتبع قائمة **Executions** في لوحة تحكم النشر كل عملية تشغيل مُشغّلة وتعرض بيانات الحمولة الوصفية وملخصات المخرجات والأخطاء.
+
+<Frame>
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="قائمة عمليات التنفيذ المُشغّلة بواسطة الأتمتة"
+  />
+</Frame>
+
+## استكشاف الأخطاء وإصلاحها
+
+- تأكد من ربط حساب Google الصحيح وتفعيل المشغل
+- اختبر محلياً بـ `crewai triggers run google_calendar/event_changed` لرؤية هيكل الحمولة بالضبط
+- تأكد من أن سير عملك يتعامل مع أحداث اليوم الكامل (الحمولات تستخدم `start.date` و`end.date` بدلاً من الطوابع الزمنية)
+- تحقق من سجلات التنفيذ إذا كانت التذكيرات أو مصفوفات الحاضرين مفقودة — قد تحد صلاحيات التقويم من الحقول في الحمولة
+- تذكر: استخدم `crewai triggers run` (وليس `crewai run`) لمحاكاة تنفيذ المشغل

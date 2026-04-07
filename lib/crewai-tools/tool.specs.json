@@ -81,8 +81,16 @@
             ],
             "default": null,
             "title": "Mind Name"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "AIMindTool",
         "type": "object"
       },
@@ -160,12 +168,20 @@
             "title": "Save Dir",
             "type": "string"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "use_title_as_filename": {
             "default": false,
             "title": "Use Title As Filename",
             "type": "boolean"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "ArxivPaperTool",
         "type": "object"
       },
@@ -193,6 +209,1073 @@
           "search_query"
         ],
         "title": "ArxivToolInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs image searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Image Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs image searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/images/search",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
+        "title": "BraveImageSearchTool",
+        "type": "object"
+      },
+      "name": "BraveImageSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Image Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 200,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Default is strict.",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "ImageSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves context for LLM usage from the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave LLM Context",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves context for LLM usage from the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/llm/context",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
+        "title": "BraveLLMContextTool",
+        "type": "object"
+      },
+      "name": "BraveLLMContextTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave LLM Context endpoint.",
+        "properties": {
+          "context_threshold_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "disabled",
+                  "strict",
+                  "lenient",
+                  "balanced"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The mode to use for the context thresholding.",
+            "title": "Context Threshold Mode"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return. Actual number may be less.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "enable_local": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable local recall. Not setting this value means auto-detect and uses local recall if any of the localization headers are provided.",
+            "title": "Enable Local"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "maximum_number_of_snippets": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of different snippets to include in the context.",
+            "title": "Maximum Number Of Snippets"
+          },
+          "maximum_number_of_snippets_per_url": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of snippets to include per URL.",
+            "title": "Maximum Number Of Snippets Per Url"
+          },
+          "maximum_number_of_tokens": {
+            "anyOf": [
+              {
+                "maximum": 32768,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The approximate maximum number of tokens to include in the context.",
+            "title": "Maximum Number Of Tokens"
+          },
+          "maximum_number_of_tokens_per_url": {
+            "anyOf": [
+              {
+                "maximum": 8192,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of tokens to include for each URL in the context.",
+            "title": "Maximum Number Of Tokens Per Url"
+          },
+          "maximum_number_of_urls": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of URLs to include in the context.",
+            "title": "Maximum Number Of Urls"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "LLMContextParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves AI-generated descriptions for local POIs using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Local POI Descriptions",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves AI-generated descriptions for local POIs using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/local/descriptions",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
+        "title": "BraveLocalPOIsDescriptionTool",
+        "type": "object"
+      },
+      "name": "BraveLocalPOIsDescriptionTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Local POI Descriptions endpoint.",
+        "properties": {
+          "ids": {
+            "description": "List of POI IDs to retrieve. Maximum of 20. IDs are valid for 8 hours.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "LocalPOIsDescriptionParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves local POIs using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Local POIs",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves local POIs using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/local/pois",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
+        "title": "BraveLocalPOIsTool",
+        "type": "object"
+      },
+      "name": "BraveLocalPOIsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Local POIs endpoint.",
+        "properties": {
+          "ids": {
+            "description": "List of POI IDs to retrieve. Maximum of 20. IDs are valid for 8 hours.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "LocalPOIsParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs news searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave News Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs news searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/news/search",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
+        "title": "BraveNewsSearchTool",
+        "type": "object"
+      },
+      "name": "BraveNewsSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave News Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "extra_snippets": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include up to 5 text snippets for each page if possible.",
+            "title": "Extra Snippets"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "NewsSearchParams",
         "type": "object"
       }
     },
@@ -261,19 +1344,29 @@
             "default": "https://api.search.brave.com/res/v1/web/search",
             "title": "Search Url",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "BraveSearchTool",
         "type": "object"
       },
       "name": "BraveSearchTool",
       "package_dependencies": [],
       "run_params_schema": {
-        "description": "Input for BraveSearchTool",
+        "description": "Parameters for Brave Web Search endpoint.",
         "properties": {
           "count": {
             "anyOf": [
               {
+                "maximum": 20,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -287,6 +1380,7 @@
           "country": {
             "anyOf": [
               {
+                "pattern": "^[A-Z]{2}$",
                 "type": "string"
               },
               {
@@ -296,6 +1390,19 @@
             "default": null,
             "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
             "title": "Country"
+          },
+          "enable_rich_callback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable rich callbacks for the results. Requires Pro level subscription.",
+            "title": "Enable Rich Callback"
           },
           "extra_snippets": {
             "anyOf": [
@@ -333,9 +1440,43 @@
             "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
             "title": "Freshness"
           },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
           "offset": {
             "anyOf": [
               {
+                "maximum": 9,
+                "minimum": 0,
                 "type": "integer"
               },
               {
@@ -359,9 +1500,351 @@
             "description": "Whether to apply search operators (e.g., site:example.com).",
             "title": "Operators"
           },
-          "query": {
+          "q": {
             "description": "Search query to perform",
-            "title": "Query",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "result_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "discussions",
+                    "faq",
+                    "infobox",
+                    "news",
+                    "query",
+                    "summarizer",
+                    "videos",
+                    "web",
+                    "locations"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter the results by type. Options: discussions/faq/infobox/news/query/summarizer/videos/web/locations. Note: The `count` parameter is applied only to the `web` results.",
+            "title": "Result Filter"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to generate a summarizer ID for the results.",
+            "title": "Summary"
+          },
+          "text_decorations": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include markup to highlight search terms in the results.",
+            "title": "Text Decorations"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "WebSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs video searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Video Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs video searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/videos/search",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
+        "title": "BraveVideoSearchTool",
+        "type": "object"
+      },
+      "name": "BraveVideoSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Video Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
             "type": "string"
           },
           "safesearch": {
@@ -382,9 +1865,10 @@
             "description": "Filter out explicit content. Options: off/moderate/strict",
             "title": "Safesearch"
           },
-          "search_language": {
+          "search_lang": {
             "anyOf": [
               {
+                "pattern": "^[a-z]{2}$",
                 "type": "string"
               },
               {
@@ -393,7 +1877,7 @@
             ],
             "default": null,
             "description": "Language code for the search results (e.g., 'en', 'es').",
-            "title": "Search Language"
+            "title": "Search Lang"
           },
           "spellcheck": {
             "anyOf": [
@@ -408,6 +1892,361 @@
             "description": "Attempt to correct spelling errors in the search query.",
             "title": "Spellcheck"
           },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "VideoSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs web searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Web Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs web searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/web/search",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
+        "title": "BraveWebSearchTool",
+        "type": "object"
+      },
+      "name": "BraveWebSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Web Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 20,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return. Actual number may be less.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "enable_rich_callback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable rich callbacks for the results. Requires Pro level subscription.",
+            "title": "Enable Rich Callback"
+          },
+          "extra_snippets": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include up to 5 text snippets for each page if possible.",
+            "title": "Extra Snippets"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "result_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "discussions",
+                    "faq",
+                    "infobox",
+                    "news",
+                    "query",
+                    "summarizer",
+                    "videos",
+                    "web",
+                    "locations"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter the results by type. Options: discussions/faq/infobox/news/query/summarizer/videos/web/locations. Note: The `count` parameter is applied only to the `web` results.",
+            "title": "Result Filter"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to generate a summarizer ID for the results.",
+            "title": "Summary"
+          },
           "text_decorations": {
             "anyOf": [
               {
@@ -420,12 +2259,43 @@
             "default": null,
             "description": "Include markup to highlight search terms in the results.",
             "title": "Text Decorations"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
           }
         },
         "required": [
-          "query"
+          "q"
         ],
-        "title": "BraveSearchToolSchema",
+        "title": "WebSearchParams",
         "type": "object"
       }
     },
@@ -510,6 +2380,11 @@
             "title": "Format",
             "type": "string"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "url": {
             "anyOf": [
               {
@@ -535,6 +2410,9 @@
             "title": "Zipcode"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "BrightDataDatasetTool",
         "type": "object"
       },
@@ -712,12 +2590,20 @@
             "default": null,
             "title": "Search Type"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "zone": {
             "default": "",
             "title": "Zone",
             "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "BrightDataSearchTool",
         "type": "object"
       },
@@ -888,6 +2774,11 @@
             "title": "Format",
             "type": "string"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "url": {
             "anyOf": [
               {
@@ -906,6 +2797,9 @@
             "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "BrightDataWebUnlockerTool",
         "type": "object"
       },
@@ -1078,8 +2972,16 @@
             ],
             "default": false,
             "title": "Text Content"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "BrowserbaseLoadTool",
         "type": "object"
       },
@@ -2124,8 +4026,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "CSVSearchTool",
         "type": "object"
       },
@@ -3175,8 +5085,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "CodeDocsSearchTool",
         "type": "object"
       },
@@ -3201,127 +5119,6 @@
           "docs_url"
         ],
         "title": "CodeDocsSearchToolSchema",
-        "type": "object"
-      }
-    },
-    {
-      "description": "Interprets Python3 code strings with a final print statement.",
-      "env_vars": [],
-      "humanized_name": "Code Interpreter",
-      "init_params_schema": {
-        "$defs": {
-          "EnvVar": {
-            "properties": {
-              "default": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Default"
-              },
-              "description": {
-                "title": "Description",
-                "type": "string"
-              },
-              "name": {
-                "title": "Name",
-                "type": "string"
-              },
-              "required": {
-                "default": true,
-                "title": "Required",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "name",
-              "description"
-            ],
-            "title": "EnvVar",
-            "type": "object"
-          }
-        },
-        "description": "A tool for executing Python code in isolated environments.\n\nThis tool provides functionality to run Python code either in a Docker container\nfor safe isolation or directly in a restricted sandbox. It can handle installing\nPython packages and executing arbitrary Python code.",
-        "properties": {
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Code"
-          },
-          "default_image_tag": {
-            "default": "code-interpreter:latest",
-            "title": "Default Image Tag",
-            "type": "string"
-          },
-          "unsafe_mode": {
-            "default": false,
-            "title": "Unsafe Mode",
-            "type": "boolean"
-          },
-          "user_docker_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Docker Base Url"
-          },
-          "user_dockerfile_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Dockerfile Path"
-          }
-        },
-        "title": "CodeInterpreterTool",
-        "type": "object"
-      },
-      "name": "CodeInterpreterTool",
-      "package_dependencies": [],
-      "run_params_schema": {
-        "description": "Schema for defining inputs to the CodeInterpreterTool.\n\nThis schema defines the required parameters for code execution,\nincluding the code to run and any libraries that need to be installed.",
-        "properties": {
-          "code": {
-            "description": "Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
-            "title": "Code",
-            "type": "string"
-          },
-          "libraries_used": {
-            "description": "List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
-            "items": {
-              "type": "string"
-            },
-            "title": "Libraries Used",
-            "type": "array"
-          }
-        },
-        "required": [
-          "code",
-          "libraries_used"
-        ],
-        "title": "CodeInterpreterSchema",
         "type": "object"
       }
     },
@@ -3375,10 +5172,17 @@
           }
         },
         "description": "Wrapper for composio tools.",
-        "properties": {},
+        "properties": {
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
         "required": [
           "name",
-          "description"
+          "description",
+          "tool_type"
         ],
         "title": "ComposioTool",
         "type": "object"
@@ -3442,10 +5246,16 @@
           "contextual_client": {
             "default": null,
             "title": "Contextual Client"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "api_key"
+          "api_key",
+          "tool_type"
         ],
         "title": "ContextualAICreateAgentTool",
         "type": "object"
@@ -3538,10 +5348,16 @@
           "api_key": {
             "title": "Api Key",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "api_key"
+          "api_key",
+          "tool_type"
         ],
         "title": "ContextualAIParseTool",
         "type": "object"
@@ -3659,10 +5475,16 @@
           "contextual_client": {
             "default": null,
             "title": "Contextual Client"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "api_key"
+          "api_key",
+          "tool_type"
         ],
         "title": "ContextualAIQueryTool",
         "type": "object"
@@ -3753,10 +5575,16 @@
           "api_key": {
             "title": "Api Key",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "api_key"
+          "api_key",
+          "tool_type"
         ],
         "title": "ContextualAIRerankTool",
         "type": "object"
@@ -3874,6 +5702,10 @@
             "title": "Bucket Name",
             "type": "string"
           },
+          "cluster": {
+            "description": "An instance of the Couchbase Cluster connected to the desired Couchbase server.",
+            "title": "Cluster"
+          },
           "collection_name": {
             "description": "The name of the Couchbase collection to search",
             "title": "Collection Name",
@@ -3919,13 +5751,20 @@
             "description": "Specify whether the index is scoped. Is True by default.",
             "title": "Scoped Index",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
+          "cluster",
           "collection_name",
           "scope_name",
           "bucket_name",
-          "index_name"
+          "index_name",
+          "tool_type"
         ],
         "title": "CouchbaseFTSVectorSearchTool",
         "type": "object"
@@ -4970,8 +6809,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "DOCXSearchTool",
         "type": "object"
       },
@@ -5107,8 +6954,16 @@
             ],
             "default": "1024x1024",
             "title": "Size"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "DallETool",
         "type": "object"
       },
@@ -5209,8 +7064,16 @@
             ],
             "default": null,
             "title": "Default Warehouse Id"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "DatabricksQueryTool",
         "type": "object"
       },
@@ -5340,8 +7203,16 @@
             ],
             "default": null,
             "title": "Directory"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "DirectoryReadTool",
         "type": "object"
       },
@@ -6385,8 +8256,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "DirectorySearchTool",
         "type": "object"
       },
@@ -6530,6 +8409,11 @@
             "default": false,
             "title": "Summary"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "type": {
             "anyOf": [
               {
@@ -6543,6 +8427,9 @@
             "title": "Type"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "EXASearchTool",
         "type": "object"
       },
@@ -6649,7 +8536,16 @@
             "type": "object"
           }
         },
-        "properties": {},
+        "properties": {
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
         "title": "FileCompressorTool",
         "type": "object"
       },
@@ -6751,8 +8647,16 @@
             ],
             "default": null,
             "title": "File Path"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "FileReadTool",
         "type": "object"
       },
@@ -6842,7 +8746,16 @@
             "type": "object"
           }
         },
-        "properties": {},
+        "properties": {
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
         "title": "FileWriterTool",
         "type": "object"
       },
@@ -6965,8 +8878,16 @@
               }
             ],
             "title": "Config"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "FirecrawlCrawlWebsiteTool",
         "type": "object"
       },
@@ -7056,8 +8977,16 @@
             "additionalProperties": true,
             "title": "Config",
             "type": "object"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "FirecrawlScrapeWebsiteTool",
         "type": "object"
       },
@@ -7154,8 +9083,16 @@
               }
             ],
             "title": "Config"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "FirecrawlSearchTool",
         "type": "object"
       },
@@ -7250,8 +9187,16 @@
             ],
             "description": "The user's Personal Access Token to access CrewAI AMP API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
             "title": "Personal Access Token"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "GenerateCrewaiAutomationTool",
         "type": "object"
       },
@@ -8319,10 +10264,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "gh_token"
+          "gh_token",
+          "tool_type"
         ],
         "title": "GithubSearchTool",
         "type": "object"
@@ -8432,8 +10383,16 @@
             ],
             "default": null,
             "title": "Hyperbrowser"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "HyperbrowserLoadTool",
         "type": "object"
       },
@@ -8536,11 +10495,17 @@
             "default": 600,
             "title": "Max Polling Time",
             "type": "integer"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
           "crew_api_url",
-          "crew_bearer_token"
+          "crew_bearer_token",
+          "tool_type"
         ],
         "title": "InvokeCrewAIAutomationTool",
         "type": "object"
@@ -9585,8 +11550,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "JSONSearchTool",
         "type": "object"
       },
@@ -9670,9 +11643,16 @@
             "title": "Api Key"
           },
           "headers": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "type": "string"
+            },
             "title": "Headers",
             "type": "object"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           },
           "website_url": {
             "anyOf": [
@@ -9687,6 +11667,9 @@
             "title": "Website Url"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "JinaScrapeWebsiteTool",
         "type": "object"
       },
@@ -9757,7 +11740,16 @@
             "type": "object"
           }
         },
-        "properties": {},
+        "properties": {
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
         "title": "LinkupSearchTool",
         "type": "object"
       },
@@ -9817,12 +11809,18 @@
         "properties": {
           "llama_index_tool": {
             "title": "Llama Index Tool"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
           "name",
           "description",
-          "llama_index_tool"
+          "llama_index_tool",
+          "tool_type"
         ],
         "title": "LlamaIndexTool",
         "type": "object"
@@ -10857,8 +12855,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "MDXSearchTool",
         "type": "object"
       },
@@ -10970,6 +12976,11 @@
             "description": "UUID of the Agent Handler Tool Pack to use",
             "title": "Tool Pack Id",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
@@ -10977,7 +12988,8 @@
           "description",
           "tool_pack_id",
           "registered_user_id",
-          "tool_name"
+          "tool_name",
+          "tool_type"
         ],
         "title": "MergeAgentHandlerTool",
         "type": "object"
@@ -11161,6 +13173,11 @@
             "title": "Text Key",
             "type": "string"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "vector_index_name": {
             "default": "vector_index",
             "description": "Name of the Atlas Search vector index",
@@ -11171,7 +13188,8 @@
         "required": [
           "database_name",
           "collection_name",
-          "connection_string"
+          "connection_string",
+          "tool_type"
         ],
         "title": "MongoDBVectorSearchTool",
         "type": "object"
@@ -11278,8 +13296,16 @@
             ],
             "default": null,
             "title": "Session Id"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "MultiOnTool",
         "type": "object"
       },
@@ -12320,10 +14346,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "db_uri"
+          "db_uri",
+          "tool_type"
         ],
         "title": "MySQLSearchTool",
         "type": "object"
@@ -12390,7 +14422,20 @@
         },
         "properties": {
           "columns": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
             "title": "Columns",
             "type": "object"
           },
@@ -12400,13 +14445,22 @@
             "type": "string"
           },
           "tables": {
-            "items": {},
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
             "title": "Tables",
             "type": "array"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "db_uri"
+          "db_uri",
+          "tool_type"
         ],
         "title": "NL2SQLTool",
         "type": "object"
@@ -12468,10 +14522,363 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "JsonResponseFormat": {
+            "description": "Response format requesting raw JSON output (e.g. ``{\"type\": \"json_object\"}``).",
+            "properties": {
+              "type": {
+                "const": "json_object",
+                "title": "Type",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "title": "JsonResponseFormat",
+            "type": "object"
+          },
+          "LLM": {
+            "properties": {
+              "additional_params": {
+                "additionalProperties": true,
+                "title": "Additional Params",
+                "type": "object"
+              },
+              "api_base": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Base"
+              },
+              "api_key": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Key"
+              },
+              "api_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Version"
+              },
+              "base_url": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Base Url"
+              },
+              "callbacks": {
+                "anyOf": [
+                  {
+                    "items": {},
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Callbacks"
+              },
+              "completion_cost": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Completion Cost"
+              },
+              "context_window_size": {
+                "default": 0,
+                "title": "Context Window Size",
+                "type": "integer"
+              },
+              "frequency_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Frequency Penalty"
+              },
+              "interceptor": {
+                "default": null,
+                "title": "Interceptor"
+              },
+              "is_anthropic": {
+                "default": false,
+                "title": "Is Anthropic",
+                "type": "boolean"
+              },
+              "is_litellm": {
+                "default": false,
+                "title": "Is Litellm",
+                "type": "boolean"
+              },
+              "llm_type": {
+                "const": "litellm",
+                "default": "litellm",
+                "title": "Llm Type",
+                "type": "string"
+              },
+              "logit_bias": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logit Bias"
+              },
+              "logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logprobs"
+              },
+              "max_completion_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Completion Tokens"
+              },
+              "max_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Tokens"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "n": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "N"
+              },
+              "prefer_upload": {
+                "default": false,
+                "title": "Prefer Upload",
+                "type": "boolean"
+              },
+              "presence_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Presence Penalty"
+              },
+              "provider": {
+                "default": "openai",
+                "title": "Provider",
+                "type": "string"
+              },
+              "reasoning_effort": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reasoning Effort"
+              },
+              "response_format": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/JsonResponseFormat"
+                  },
+                  {},
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Response Format"
+              },
+              "seed": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Seed"
+              },
+              "stop": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Stop",
+                "type": "array"
+              },
+              "stream": {
+                "default": false,
+                "title": "Stream",
+                "type": "boolean"
+              },
+              "temperature": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Temperature"
+              },
+              "thinking": {
+                "default": null,
+                "title": "Thinking"
+              },
+              "timeout": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Timeout"
+              },
+              "top_logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top Logprobs"
+              },
+              "top_p": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top P"
+              }
+            },
+            "required": [
+              "model"
+            ],
+            "title": "LLM",
+            "type": "object"
           }
         },
         "description": "A tool for performing Optical Character Recognition on images.\n\nThis tool leverages LLMs to extract text from images. It can process\nboth local image files and images available via URLs.\n\nAttributes:\n    name (str): Name of the tool.\n    description (str): Description of the tool's functionality.\n    args_schema (Type[BaseModel]): Pydantic schema for input validation.\n\nPrivate Attributes:\n    _llm (Optional[LLM]): Language model instance for making API calls.",
-        "properties": {},
+        "properties": {
+          "llm": {
+            "$ref": "#/$defs/LLM"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
         "title": "OCRTool",
         "type": "object"
       },
@@ -12665,10 +15072,20 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonProductScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "config"
+          "oxylabs_api",
+          "config",
+          "tool_type"
         ],
         "title": "OxylabsAmazonProductScraperTool",
         "type": "object"
@@ -12890,10 +15307,20 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "config"
+          "oxylabs_api",
+          "config",
+          "tool_type"
         ],
         "title": "OxylabsAmazonSearchScraperTool",
         "type": "object"
@@ -13128,10 +15555,20 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsGoogleSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "config"
+          "oxylabs_api",
+          "config",
+          "tool_type"
         ],
         "title": "OxylabsGoogleSearchScraperTool",
         "type": "object"
@@ -13314,10 +15751,20 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsUniversalScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "config"
+          "oxylabs_api",
+          "config",
+          "tool_type"
         ],
         "title": "OxylabsUniversalScraperTool",
         "type": "object"
@@ -14375,8 +16822,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "PDFSearchTool",
         "type": "object"
       },
@@ -14458,8 +16913,16 @@
             "default": "https://api.parallel.ai/v1beta/search",
             "title": "Search Url",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "ParallelSearchTool",
         "type": "object"
       },
@@ -14618,8 +17081,16 @@
             },
             "title": "Evaluators",
             "type": "array"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "PatronusEvalTool",
         "type": "object"
       },
@@ -14628,6 +17099,118 @@
       "run_params_schema": {
         "properties": {},
         "title": "_ArgsSchemaPlaceholder",
+        "type": "object"
+      }
+    },
+    {
+      "description": "This tool is used to evaluate the model input and output using custom function evaluators.",
+      "env_vars": [],
+      "humanized_name": "Patronus Local Evaluator Tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "client": {
+            "default": null,
+            "title": "Client"
+          },
+          "evaluated_model_gold_answer": {
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluator": {
+            "title": "Evaluator",
+            "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluator",
+          "evaluated_model_gold_answer",
+          "tool_type"
+        ],
+        "title": "PatronusLocalEvaluatorTool",
+        "type": "object"
+      },
+      "name": "PatronusLocalEvaluatorTool",
+      "package_dependencies": [
+        "patronus"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "evaluated_model_gold_answer": {
+            "description": "The agent's gold answer only if available",
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluated_model_input": {
+            "description": "The agent's task description in simple text",
+            "title": "Evaluated Model Input",
+            "type": "string"
+          },
+          "evaluated_model_output": {
+            "description": "The agent's output of the task",
+            "title": "Evaluated Model Output",
+            "type": "string"
+          },
+          "evaluated_model_retrieved_context": {
+            "description": "The agent's context",
+            "title": "Evaluated Model Retrieved Context",
+            "type": "string"
+          },
+          "evaluator": {
+            "description": "The registered local evaluator",
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluated_model_input",
+          "evaluated_model_output",
+          "evaluated_model_retrieved_context",
+          "evaluated_model_gold_answer",
+          "evaluator"
+        ],
+        "title": "FixedLocalEvaluatorToolSchema",
         "type": "object"
       }
     },
@@ -14689,8 +17272,16 @@
             },
             "title": "Evaluators",
             "type": "array"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "PatronusPredefinedCriteriaEvalTool",
         "type": "object"
       },
@@ -14879,10 +17470,16 @@
             "description": "Base package path for Qdrant. Will dynamically import client and models.",
             "title": "Qdrant Package",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "qdrant_config"
+          "qdrant_config",
+          "tool_type"
         ],
         "title": "QdrantVectorSearchTool",
         "type": "object"
@@ -15952,8 +18549,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "RagTool",
         "type": "object"
       },
@@ -16011,7 +18616,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16036,7 +18643,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16044,6 +18653,11 @@
               }
             ],
             "title": "Headers"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           },
           "website_url": {
             "anyOf": [
@@ -16058,6 +18672,9 @@
             "title": "Website Url"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "ScrapeElementFromWebsiteTool",
         "type": "object"
       },
@@ -16131,7 +18748,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16144,7 +18763,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16152,6 +18773,11 @@
               }
             ],
             "title": "Headers"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           },
           "website_url": {
             "anyOf": [
@@ -16166,6 +18792,9 @@
             "title": "Website Url"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "ScrapeWebsiteTool",
         "type": "object"
       },
@@ -16255,6 +18884,11 @@
             "title": "Enable Logging",
             "type": "boolean"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "user_prompt": {
             "anyOf": [
               {
@@ -16280,6 +18914,9 @@
             "title": "Website Url"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "ScrapegraphScrapeTool",
         "type": "object"
       },
@@ -16380,8 +19017,16 @@
             ],
             "default": null,
             "title": "Scrapfly"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "ScrapflyScrapeWebsiteTool",
         "type": "object"
       },
@@ -16539,6 +19184,11 @@
             "default": false,
             "title": "Return Html"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "wait_time": {
             "anyOf": [
               {
@@ -16564,6 +19214,9 @@
             "title": "Website Url"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SeleniumScrapingTool",
         "type": "object"
       },
@@ -16653,8 +19306,16 @@
             ],
             "default": null,
             "title": "Client"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerpApiGoogleSearchTool",
         "type": "object"
       },
@@ -16750,8 +19411,16 @@
             ],
             "default": null,
             "title": "Client"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerpApiGoogleShoppingTool",
         "type": "object"
       },
@@ -16893,8 +19562,16 @@
             "default": "search",
             "title": "Search Type",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerperDevTool",
         "type": "object"
       },
@@ -16965,7 +19642,16 @@
             "type": "object"
           }
         },
-        "properties": {},
+        "properties": {
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerperScrapeWebsiteTool",
         "type": "object"
       },
@@ -18011,7 +20697,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18051,8 +20739,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerplyJobSearchTool",
         "type": "object"
       },
@@ -18127,7 +20823,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18164,8 +20862,16 @@
             "default": "https://api.serply.io/v1/news/",
             "title": "Search Url",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerplyNewsSearchTool",
         "type": "object"
       },
@@ -18240,7 +20946,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18277,8 +20985,16 @@
             "default": "https://api.serply.io/v1/scholar/",
             "title": "Search Url",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerplyScholarSearchTool",
         "type": "object"
       },
@@ -18365,7 +21081,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18426,8 +21144,16 @@
             "default": "https://api.serply.io/v1/search/",
             "title": "Search Url",
             "type": "string"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerplyWebSearchTool",
         "type": "object"
       },
@@ -19508,8 +22234,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SerplyWebpageToMarkdownTool",
         "type": "object"
       },
@@ -19650,8 +22384,16 @@
             ],
             "default": null,
             "title": "Connection Pool"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SingleStoreSearchTool",
         "type": "object"
       },
@@ -19862,10 +22604,16 @@
             "description": "Delay between retries in seconds",
             "title": "Retry Delay",
             "type": "number"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
         "required": [
-          "config"
+          "config",
+          "tool_type"
         ],
         "title": "SnowflakeSearchTool",
         "type": "object"
@@ -20052,6 +22800,11 @@
             "default": null,
             "title": "Spider"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "website_url": {
             "anyOf": [
               {
@@ -20065,6 +22818,9 @@
             "title": "Website Url"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "SpiderTool",
         "type": "object"
       },
@@ -20194,6 +22950,10 @@
             "default": null,
             "title": "Model Api Key"
           },
+          "model_name": {
+            "default": "anthropic.claude-3-7-sonnet-20240607",
+            "title": "Model Name"
+          },
           "project_id": {
             "anyOf": [
               {
@@ -20223,6 +22983,11 @@
             "default": "https://api.stagehand.browserbase.com/v1",
             "title": "Server Url"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "use_simplified_dom": {
             "default": true,
             "title": "Use Simplified Dom",
@@ -20239,6 +23004,9 @@
             "type": "boolean"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "StagehandTool",
         "type": "object"
       },
@@ -21316,6 +24084,11 @@
             "title": "Summarize",
             "type": "boolean"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "txt": {
             "anyOf": [
               {
@@ -21329,6 +24102,9 @@
             "title": "Txt"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "TXTSearchTool",
         "type": "object"
       },
@@ -21418,6 +24194,26 @@
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
           },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
           "extract_depth": {
             "default": "basic",
             "description": "The depth of extraction. 'basic' for basic extraction, 'advanced' for advanced extraction.",
@@ -21455,8 +24251,16 @@
             "description": "The timeout for the extraction request in seconds.",
             "title": "Timeout",
             "type": "integer"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "TavilyExtractorTool",
         "type": "object"
       },
@@ -21552,6 +24356,26 @@
             ],
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
+          },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
           },
           "days": {
             "default": 7,
@@ -21683,6 +24507,11 @@
             "title": "Timeout",
             "type": "integer"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "topic": {
             "default": "general",
             "description": "The topic to focus the search on.",
@@ -21695,6 +24524,9 @@
             "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "TavilySearchTool",
         "type": "object"
       },
@@ -21768,7 +24600,16 @@
           }
         },
         "description": "Tool for analyzing images using vision models.\n\nArgs:\n    llm: Optional LLM instance to use\n    model: Model identifier to use if no LLM is provided",
-        "properties": {},
+        "properties": {
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_type"
+        ],
         "title": "VisionTool",
         "type": "object"
       },
@@ -21854,7 +24695,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -21888,6 +24731,11 @@
             "default": null,
             "title": "Query"
           },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
+          },
           "vectorizer": {
             "title": "Vectorizer"
           },
@@ -21905,7 +24753,8 @@
         "required": [
           "collection_name",
           "weaviate_cluster_url",
-          "weaviate_api_key"
+          "weaviate_api_key",
+          "tool_type"
         ],
         "title": "WeaviateVectorSearchTool",
         "type": "object"
@@ -22952,8 +25801,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "WebsiteSearchTool",
         "type": "object"
       },
@@ -24003,8 +26860,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "XMLSearchTool",
         "type": "object"
       },
@@ -25054,8 +27919,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "YoutubeChannelSearchTool",
         "type": "object"
       },
@@ -26105,8 +28978,16 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
+          },
+          "tool_type": {
+            "readOnly": true,
+            "title": "Tool Type",
+            "type": "string"
           }
         },
+        "required": [
+          "tool_type"
+        ],
         "title": "YoutubeVideoSearchTool",
         "type": "object"
       },

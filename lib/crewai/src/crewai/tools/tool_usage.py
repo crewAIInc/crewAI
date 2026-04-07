@@ -318,6 +318,8 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_delegations(coworker)
 
+                    fingerprint_config = self._build_fingerprint_config()
+
                     if calling.arguments:
                         try:
                             acceptable_args = tool.args_schema.model_json_schema()[
@@ -328,15 +330,16 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = await tool.ainvoke(input=arguments)
+                            result = await tool.ainvoke(
+                                input=arguments, config=fingerprint_config
+                            )
                         except Exception:
                             arguments = calling.arguments
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = await tool.ainvoke(input=arguments)
+                            result = await tool.ainvoke(
+                                input=arguments, config=fingerprint_config
+                            )
                     else:
-                        arguments = self._add_fingerprint_metadata({})
-                        result = await tool.ainvoke(input=arguments)
+                        result = await tool.ainvoke(input={}, config=fingerprint_config)
 
                     if self.tools_handler:
                         should_cache = True
@@ -550,6 +553,8 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_delegations(coworker)
 
+                    fingerprint_config = self._build_fingerprint_config()
+
                     if calling.arguments:
                         try:
                             acceptable_args = tool.args_schema.model_json_schema()[
@@ -560,15 +565,16 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = tool.invoke(input=arguments)
+                            result = tool.invoke(
+                                input=arguments, config=fingerprint_config
+                            )
                         except Exception:
                             arguments = calling.arguments
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = tool.invoke(input=arguments)
+                            result = tool.invoke(
+                                input=arguments, config=fingerprint_config
+                            )
                     else:
-                        arguments = self._add_fingerprint_metadata({})
-                        result = tool.invoke(input=arguments)
+                        result = tool.invoke(input={}, config=fingerprint_config)
 
                     if self.tools_handler:
                         should_cache = True
@@ -1008,23 +1014,16 @@ class ToolUsage:
 
         return event_data
 
-    def _add_fingerprint_metadata(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Add fingerprint metadata to tool arguments if available.
+    def _build_fingerprint_config(self) -> dict[str, Any]:
+        """Build fingerprint metadata as a config dict for tool invocation.
 
-        Args:
-            arguments: The original tool arguments
+        Returns the fingerprint data in a config dict rather than injecting it
+        into tool arguments, so it doesn't conflict with strict tool schemas.
 
         Returns:
-            Updated arguments dictionary with fingerprint metadata
+            Config dictionary with security_context metadata.
         """
-        # Create a shallow copy to avoid modifying the original
-        arguments = arguments.copy()
-
-        # Add security metadata under a designated key
-        if "security_context" not in arguments:
-            arguments["security_context"] = {}
-
-        security_context = arguments["security_context"]
+        security_context: dict[str, Any] = {}
 
         # Add agent fingerprint if available
         if self.agent and hasattr(self.agent, "security_config"):
@@ -1048,4 +1047,4 @@ class ToolUsage:
                 except AttributeError:
                     pass
 
-        return arguments
+        return {"security_context": security_context} if security_context else {}

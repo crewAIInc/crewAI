@@ -122,7 +122,7 @@ def format_multimodal_content(
         return content_blocks
 
     # Use API-specific constraints for OpenAI
-    constraints_key = provider_type
+    constraints_key: str = provider_type
     if api == "responses" and "openai" in provider_type.lower():
         constraints_key = "openai_responses"
 
@@ -187,7 +187,7 @@ async def aformat_multimodal_content(
         return content_blocks
 
     # Use API-specific constraints for OpenAI
-    constraints_key = provider_type
+    constraints_key: str = provider_type
     if api == "responses" and "openai" in provider_type.lower():
         constraints_key = "openai_responses"
 

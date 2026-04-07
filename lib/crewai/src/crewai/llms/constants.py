@@ -240,6 +240,7 @@ ANTHROPIC_MODELS: list[AnthropicModels] = [
 
 GeminiModels: TypeAlias = Literal[
     "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
     "gemini-2.5-pro",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",
@@ -294,6 +295,7 @@ GeminiModels: TypeAlias = Literal[
 ]
 GEMINI_MODELS: list[GeminiModels] = [
     "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
     "gemini-2.5-pro",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",

@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
@@ -26,7 +28,7 @@ class CodeDocsSearchTool(RagTool):
     )
     args_schema: type[BaseModel] = CodeDocsSearchToolSchema
 
-    def __init__(self, docs_url: str | None = None, **kwargs):
+    def __init__(self, docs_url: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if docs_url is not None:
             self.add(docs_url)
@@ -34,7 +36,7 @@ class CodeDocsSearchTool(RagTool):
             self.args_schema = FixedCodeDocsSearchToolSchema
             self._generate_description()
 
-    def add(self, docs_url: str) -> None:
+    def add(self, docs_url: str) -> None:  # type: ignore[override]
         super().add(docs_url, data_type=DataType.DOCS_SITE)
 
     def _run(  # type: ignore[override]

@@ -1,35 +1,47 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Sequence
 from copy import copy as shallow_copy
 from hashlib import md5
+from pathlib import Path
 import re
-from typing import Any, Final, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
 
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
     PrivateAttr,
+    SerializeAsAny,
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agent.internal.meta import AgentMeta
+from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
+from crewai.skills.models import Skill
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.tools.base_tool import BaseTool, Tool
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
@@ -37,8 +49,93 @@ from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
 
 
+if TYPE_CHECKING:
+    from crewai.context import ExecutionContext
+    from crewai.crew import Crew
+    from crewai.state.provider.core import BaseProvider
+
+
+def _validate_crew_ref(value: Any) -> Any:
+    return value
+
+
+def _serialize_crew_ref(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value.id) if hasattr(value, "id") else str(value)
+
+
+_LLM_TYPE_REGISTRY: dict[str, str] = {
+    "base": "crewai.llms.base_llm.BaseLLM",
+    "litellm": "crewai.llm.LLM",
+    "openai": "crewai.llms.providers.openai.completion.OpenAICompletion",
+    "anthropic": "crewai.llms.providers.anthropic.completion.AnthropicCompletion",
+    "azure": "crewai.llms.providers.azure.completion.AzureCompletion",
+    "bedrock": "crewai.llms.providers.bedrock.completion.BedrockCompletion",
+    "gemini": "crewai.llms.providers.gemini.completion.GeminiCompletion",
+}
+
+
+def _validate_llm_ref(value: Any) -> Any:
+    if isinstance(value, dict):
+        import importlib
+
+        llm_type = value.get("llm_type")
+        if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
+            raise ValueError(
+                f"Unknown or missing llm_type: {llm_type!r}. "
+                f"Expected one of {list(_LLM_TYPE_REGISTRY)}"
+            )
+        dotted = _LLM_TYPE_REGISTRY[llm_type]
+        mod_path, cls_name = dotted.rsplit(".", 1)
+        cls = getattr(importlib.import_module(mod_path), cls_name)
+        return cls(**value)
+    return value
+
+
+def _resolve_agent(value: Any, info: Any) -> Any:
+    if isinstance(value, BaseAgent) or value is None or not isinstance(value, dict):
+        return value
+    from crewai.agent.core import Agent
+
+    return Agent.model_validate(value, context=getattr(info, "context", None))
+
+
+_EXECUTOR_TYPE_REGISTRY: dict[str, str] = {
+    "base": "crewai.agents.agent_builder.base_agent_executor.BaseAgentExecutor",
+    "crew": "crewai.agents.crew_agent_executor.CrewAgentExecutor",
+    "experimental": "crewai.experimental.agent_executor.AgentExecutor",
+}
+
+
+def _validate_executor_ref(value: Any) -> Any:
+    if isinstance(value, dict):
+        import importlib
+
+        executor_type = value.get("executor_type")
+        if not executor_type or executor_type not in _EXECUTOR_TYPE_REGISTRY:
+            raise ValueError(
+                f"Unknown or missing executor_type: {executor_type!r}. "
+                f"Expected one of {list(_EXECUTOR_TYPE_REGISTRY)}"
+            )
+        dotted = _EXECUTOR_TYPE_REGISTRY[executor_type]
+        mod_path, cls_name = dotted.rsplit(".", 1)
+        cls = getattr(importlib.import_module(mod_path), cls_name)
+        return cls.model_validate(value)
+    return value
+
+
+def _serialize_llm_ref(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return {"model": value}
+    result: dict[str, Any] = value.model_dump()
+    return result
+
+
 _SLUG_RE: Final[re.Pattern[str]] = re.compile(
-    r"^(?:crewai-amp:)?[a-zA-Z0-9][a-zA-Z0-9_-]*(?:#\w+)?$"
+    r"^(?:crewai-amp:)?[a-zA-Z0-9][a-zA-Z0-9_-]*(?:#[\w-]+)?$"
 )
 
 
@@ -114,10 +211,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             Set private attributes.
     """
 
+    entity_type: Literal["agent"] = "agent"
+
     __hash__ = object.__hash__
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
-    _request_within_rpm_limit: Any = PrivateAttr(default=None)
+    _request_within_rpm_limit: SerializableCallable | None = PrivateAttr(default=None)
     _original_role: str | None = PrivateAttr(default=None)
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
@@ -149,13 +248,27 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: Any = Field(
+    agent_executor: SerializeAsAny[BaseAgentExecutor] | None = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
-    llm: Any = Field(
-        default=None, description="Language model that will run the agent."
-    )
-    crew: Any = Field(default=None, description="Crew to which the agent belongs.")
+
+    @field_validator("agent_executor", mode="before")
+    @classmethod
+    def _validate_agent_executor(cls, v: Any) -> Any:
+        return _validate_executor_ref(v)
+
+    llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(default=None, description="Language model that will run the agent.")
+    crew: Annotated[
+        Crew | str | None,
+        BeforeValidator(_validate_crew_ref),
+        PlainSerializer(
+            _serialize_crew_ref, return_type=str | None, when_used="always"
+        ),
+    ] = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(
         default_factory=get_i18n, description="Internationalization settings."
     )
@@ -167,7 +280,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="An instance of the ToolsHandler class.",
     )
     tools_results: list[dict[str, Any]] = Field(
-        default=[], description="Results of the tools used by the agent."
+        default_factory=list, description="Results of the tools used by the agent."
     )
     max_tokens: int | None = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
@@ -179,7 +292,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="Knowledge sources for the agent.",
     )
-    knowledge_storage: Any | None = Field(
+    knowledge_storage: BaseKnowledgeStorage | None = Field(
         default=None,
         description="Custom knowledge storage for the agent.",
     )
@@ -187,7 +300,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: list[Callable[[Any], Any]] = Field(
+    checkpoint: CheckpointConfig | bool | None = Field(
+        default=None,
+        description="Automatic checkpointing configuration. "
+        "True for defaults, False to opt out, None to inherit.",
+    )
+    callbacks: list[SerializableCallable] = Field(
         default_factory=list, description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
@@ -205,7 +323,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
     )
-    memory: Any = Field(
+    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
         default=None,
         description=(
             "Enable agent memory. Pass True for default Memory(), "
@@ -213,6 +331,36 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "If not set, falls back to crew memory."
         ),
     )
+    skills: list[Path | Skill] | None = Field(
+        default=None,
+        description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
+        min_length=1,
+    )
+    execution_context: ExecutionContext | None = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(
+        cls, path: str, *, provider: BaseProvider | None = None
+    ) -> Self:
+        """Restore an Agent from a checkpoint file."""
+        from crewai.context import apply_execution_context
+        from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.runtime import RuntimeState
+
+        state = RuntimeState.from_checkpoint(
+            path,
+            provider=provider or JsonProvider(),
+            context={"from_checkpoint": True},
+        )
+        for entity in state.root:
+            if isinstance(entity, cls):
+                if entity.execution_context is not None:
+                    apply_execution_context(entity.execution_context)
+                if entity.agent_executor is not None:
+                    entity.agent_executor.agent = entity
+                    entity.agent_executor._resuming = True
+                return entity
+        raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
 
     @model_validator(mode="before")
     @classmethod
@@ -327,11 +475,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
-        if v:
+    def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
+        if v and not (info.context or {}).get("from_checkpoint"):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
+        return v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> Self:
@@ -388,7 +537,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
 
     @abstractmethod
@@ -495,4 +644,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self._rpm_controller = rpm_controller
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
+        pass
+
+    def set_skills(self, resolved_crew_skills: list[Any] | None = None) -> None:
         pass
