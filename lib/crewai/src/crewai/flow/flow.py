@@ -113,7 +113,7 @@ from crewai.flow.utils import (
 )
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
-from crewai.state.checkpoint_config import CheckpointConfig
+from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 
 
 if TYPE_CHECKING:
@@ -921,7 +921,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     max_method_calls: int = Field(default=100)
 
     execution_context: ExecutionContext | None = Field(default=None)
-    checkpoint: CheckpointConfig | bool | None = Field(default=None)
+    checkpoint: Annotated[
+        CheckpointConfig | bool | None,
+        BeforeValidator(_coerce_checkpoint),
+    ] = Field(default=None)
 
     @classmethod
     def from_checkpoint(

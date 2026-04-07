@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
@@ -158,6 +158,20 @@ CheckpointEventType = Literal[
 ]
 
 
+def _coerce_checkpoint(v: Any) -> Any:
+    """BeforeValidator for checkpoint fields on Crew/Flow/Agent.
+
+    Converts True to CheckpointConfig and triggers handler registration.
+    """
+    if v is True:
+        v = CheckpointConfig()
+    if isinstance(v, CheckpointConfig):
+        from crewai.state.checkpoint_listener import _ensure_handlers_registered
+
+        _ensure_handlers_registered()
+    return v
+
+
 class CheckpointConfig(BaseModel):
     """Configuration for automatic checkpointing.
 
@@ -184,6 +198,13 @@ class CheckpointConfig(BaseModel):
         description="Maximum checkpoints to keep. Oldest are pruned after "
         "each write. None means keep all.",
     )
+
+    @model_validator(mode="after")
+    def _register_handlers(self) -> CheckpointConfig:
+        from crewai.state.checkpoint_listener import _ensure_handlers_registered
+
+        _ensure_handlers_registered()
+        return self
 
     @property
     def trigger_all(self) -> bool:
