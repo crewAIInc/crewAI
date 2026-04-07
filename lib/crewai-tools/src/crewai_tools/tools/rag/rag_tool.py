@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from typing import Any, Literal, cast
 
@@ -246,7 +247,37 @@ class RagTool(BaseTool):
             # Auto-detect type from extension
             rag_tool.add("path/to/document.pdf")  # auto-detects PDF
         """
-        self.adapter.add(*args, **kwargs)
+        # Validate file paths and URLs before adding to prevent
+        # unauthorized file reads and SSRF.
+        from crewai_tools.utilities.safe_path import validate_file_path, validate_url
+        from urllib.parse import urlparse
+
+        validated_args: list[ContentItem] = []
+        for arg in args:
+            source_ref = str(arg.get("source", arg.get("content", ""))) if isinstance(arg, dict) else str(arg)
+
+            # Check if it's a URL
+            try:
+                parsed = urlparse(source_ref)
+                if parsed.scheme in ("http", "https", "file"):
+                    validate_url(source_ref)
+                    validated_args.append(arg)
+                    continue
+            except ValueError as e:
+                raise ValueError(f"Blocked unsafe URL: {e}") from e
+            except Exception:
+                pass
+
+            # Check if it looks like a file path (not a plain text string)
+            if os.path.sep in source_ref or source_ref.startswith(".") or os.path.isabs(source_ref):
+                try:
+                    validate_file_path(source_ref)
+                except ValueError as e:
+                    raise ValueError(f"Blocked unsafe file path: {e}") from e
+
+            validated_args.append(arg)
+
+        self.adapter.add(*validated_args, **kwargs)
 
     def _run(
         self,
