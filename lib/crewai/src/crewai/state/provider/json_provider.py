@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import glob
+import logging
+import os
 from pathlib import Path
 import uuid
 
@@ -12,42 +15,55 @@ import aiofiles.os
 from crewai.state.provider.core import BaseProvider
 
 
+logger = logging.getLogger(__name__)
+
+
 class JsonProvider(BaseProvider):
     """Persists runtime state checkpoints as JSON files on the local filesystem."""
 
-    def checkpoint(self, data: str, directory: str) -> str:
-        """Write a JSON checkpoint file to the directory.
+    def checkpoint(self, data: str, location: str) -> str:
+        """Write a JSON checkpoint file.
 
         Args:
             data: The serialized JSON string to persist.
-            directory: Filesystem path where the checkpoint will be saved.
+            location: Directory where the checkpoint will be saved.
 
         Returns:
             The path to the written checkpoint file.
         """
-        file_path = _build_path(directory)
+        file_path = _build_path(location)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(file_path, "w") as f:
             f.write(data)
         return str(file_path)
 
-    async def acheckpoint(self, data: str, directory: str) -> str:
-        """Write a JSON checkpoint file to the directory asynchronously.
+    async def acheckpoint(self, data: str, location: str) -> str:
+        """Write a JSON checkpoint file asynchronously.
 
         Args:
             data: The serialized JSON string to persist.
-            directory: Filesystem path where the checkpoint will be saved.
+            location: Directory where the checkpoint will be saved.
 
         Returns:
             The path to the written checkpoint file.
         """
-        file_path = _build_path(directory)
+        file_path = _build_path(location)
         await aiofiles.os.makedirs(str(file_path.parent), exist_ok=True)
 
         async with aiofiles.open(file_path, "w") as f:
             await f.write(data)
         return str(file_path)
+
+    def prune(self, location: str, max_keep: int) -> None:
+        """Remove oldest checkpoint files beyond *max_keep*."""
+        pattern = os.path.join(location, "*.json")
+        files = sorted(glob.glob(pattern), key=os.path.getmtime)
+        for path in files if max_keep == 0 else files[:-max_keep]:
+            try:
+                os.remove(path)
+            except OSError:  # noqa: PERF203
+                logger.debug("Failed to remove %s", path, exc_info=True)
 
     def from_checkpoint(self, location: str) -> str:
         """Read a JSON checkpoint file.

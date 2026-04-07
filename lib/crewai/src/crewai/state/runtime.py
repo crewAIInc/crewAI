@@ -90,29 +90,31 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             return state
         return handler(data)
 
-    def checkpoint(self, directory: str) -> str:
-        """Write a checkpoint file to the directory.
+    def checkpoint(self, location: str) -> str:
+        """Write a checkpoint.
 
         Args:
-            directory: Filesystem path where the checkpoint JSON will be saved.
+            location: Storage destination. For JsonProvider this is a directory
+                path; for SqliteProvider it is a database file path.
 
         Returns:
             A location identifier for the saved checkpoint.
         """
         _prepare_entities(self.root)
-        return self._provider.checkpoint(self.model_dump_json(), directory)
+        return self._provider.checkpoint(self.model_dump_json(), location)
 
-    async def acheckpoint(self, directory: str) -> str:
+    async def acheckpoint(self, location: str) -> str:
         """Async version of :meth:`checkpoint`.
 
         Args:
-            directory: Filesystem path where the checkpoint JSON will be saved.
+            location: Storage destination. For JsonProvider this is a directory
+                path; for SqliteProvider it is a database file path.
 
         Returns:
             A location identifier for the saved checkpoint.
         """
         _prepare_entities(self.root)
-        return await self._provider.acheckpoint(self.model_dump_json(), directory)
+        return await self._provider.acheckpoint(self.model_dump_json(), location)
 
     @classmethod
     def from_checkpoint(

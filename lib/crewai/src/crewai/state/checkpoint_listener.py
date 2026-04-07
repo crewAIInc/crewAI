@@ -7,9 +7,7 @@ avoids per-event overhead when no entity uses checkpointing.
 
 from __future__ import annotations
 
-import glob
 import logging
-import os
 import threading
 from typing import Any
 
@@ -105,29 +103,13 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
 
 
 def _do_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
-    """Write a checkpoint synchronously and optionally prune old files."""
+    """Write a checkpoint and prune old ones if configured."""
     _prepare_entities(state.root)
     data = state.model_dump_json()
-    cfg.provider.checkpoint(data, cfg.directory)
+    cfg.provider.checkpoint(data, cfg.location)
 
     if cfg.max_checkpoints is not None:
-        _prune(cfg.directory, cfg.max_checkpoints)
-
-
-def _safe_remove(path: str) -> None:
-    try:
-        os.remove(path)
-    except OSError:
-        logger.debug("Failed to remove checkpoint file %s", path, exc_info=True)
-
-
-def _prune(directory: str, max_keep: int) -> None:
-    """Remove oldest checkpoint files beyond *max_keep*."""
-    pattern = os.path.join(directory, "*.json")
-    files = sorted(glob.glob(pattern), key=os.path.getmtime)
-    to_remove = files if max_keep == 0 else files[:-max_keep]
-    for path in to_remove:
-        _safe_remove(path)
+        cfg.provider.prune(cfg.location, cfg.max_checkpoints)
 
 
 def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None:
