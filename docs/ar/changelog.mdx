@@ -4,6 +4,39 @@ description: "تحديثات المنتج والتحسينات وإصلاحات 
 icon: "clock"
 mode: "wide"
 ---
+<Update label="7 أبريل 2026">
+  ## v1.14.0a4
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - إضافة guardrail_type و name لتمييز الآثار
+  - إضافة SqliteProvider لتخزين نقاط التحقق
+  - إضافة CheckpointConfig للتخزين التلقائي لنقاط التحقق
+  - تنفيذ نقاط التحقق لحالة التشغيل، نظام الأحداث، وإعادة هيكلة المنفذ
+
+  ### إصلاحات الأخطاء
+  - استبعاد متجهات التضمين من تسلسل الذاكرة لتوفير الرموز
+  - رفع litellm إلى >=1.83.0 لمعالجة CVE-2026-35030
+
+  ### الوثائق
+  - تحديث أدلة البدء السريع والتثبيت لتحسين الوضوح
+  - إضافة قسم مقدمي التخزين وتصدير JsonProvider
+
+  ### الأداء
+  - استخدام JSONB لعمود بيانات نقاط التحقق
+
+  ### إعادة الهيكلة
+  - إزالة CodeInterpreterTool وإهمال معلمات تنفيذ الكود
+
+  ## المساهمون
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
 <Update label="6 أبريل 2026">
   ## v1.14.0a3
 
