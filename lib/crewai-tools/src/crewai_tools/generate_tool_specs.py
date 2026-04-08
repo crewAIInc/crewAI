@@ -181,8 +181,7 @@ class ToolSpecExtractor:
         }
         if "required" in json_schema:
             json_schema["required"] = [
-                key for key in json_schema["required"]
-                if key not in ignored_init_params
+                key for key in json_schema["required"] if key not in ignored_init_params
             ]
         return json_schema
 
