@@ -294,7 +294,14 @@ async def create_async_chunk_generator(
                 raise item
             yield item
     finally:
-        await task
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        else:
+            await task
         if output_holder:
             _finalize_streaming(state, output_holder[0])
         else:

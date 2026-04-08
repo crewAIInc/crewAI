@@ -84,6 +84,7 @@ class StreamingOutputBase(Generic[T]):
         self._completed: bool = False
         self._chunks: list[StreamChunk] = []
         self._error: Exception | None = None
+        self._cancelled: bool = False
 
     @property
     def result(self) -> T:
@@ -111,6 +112,11 @@ class StreamingOutputBase(Generic[T]):
     def is_completed(self) -> bool:
         """Check if streaming has completed."""
         return self._completed
+
+    @property
+    def is_cancelled(self) -> bool:
+        """Check if streaming was cancelled."""
+        return self._cancelled
 
     @property
     def chunks(self) -> list[StreamChunk]:
@@ -203,6 +209,39 @@ class CrewStreamingOutput(StreamingOutputBase["CrewOutput"]):
         """
         self._results = results
         self._completed = True
+
+    async def __aenter__(self) -> CrewStreamingOutput:
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(self, *exc_info: Any) -> None:
+        """Exit async context manager, cancelling if still running."""
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        """Cancel streaming and clean up resources.
+
+        Cancels any in-flight tasks and closes the underlying async iterator.
+        Safe to call multiple times.
+        """
+        if self._cancelled:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._async_iterator is not None and hasattr(self._async_iterator, "aclose"):
+            await self._async_iterator.aclose()
+
+    def close(self) -> None:
+        """Cancel streaming and clean up resources (sync).
+
+        Closes the underlying sync iterator. Safe to call multiple times.
+        """
+        if self._cancelled:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._sync_iterator is not None and hasattr(self._sync_iterator, "close"):
+            self._sync_iterator.close()
 
     def __iter__(self) -> Iterator[StreamChunk]:
         """Iterate over stream chunks synchronously.
@@ -300,6 +339,39 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
         super().__init__()
         self._sync_iterator = sync_iterator
         self._async_iterator = async_iterator
+
+    async def __aenter__(self) -> FlowStreamingOutput:
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(self, *exc_info: Any) -> None:
+        """Exit async context manager, cancelling if still running."""
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        """Cancel streaming and clean up resources.
+
+        Cancels any in-flight tasks and closes the underlying async iterator.
+        Safe to call multiple times.
+        """
+        if self._cancelled:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._async_iterator is not None and hasattr(self._async_iterator, "aclose"):
+            await self._async_iterator.aclose()
+
+    def close(self) -> None:
+        """Cancel streaming and clean up resources (sync).
+
+        Closes the underlying sync iterator. Safe to call multiple times.
+        """
+        if self._cancelled:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._sync_iterator is not None and hasattr(self._sync_iterator, "close"):
+            self._sync_iterator.close()
 
     def __iter__(self) -> Iterator[StreamChunk]:
         """Iterate over stream chunks synchronously.

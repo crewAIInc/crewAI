@@ -709,6 +709,156 @@ class TestStreamingEdgeCases:
         assert streaming.is_completed
 
 
+class TestStreamingCancellation:
+    """Tests for streaming cancellation and resource cleanup."""
+
+    @pytest.mark.asyncio
+    async def test_aclose_cancels_async_streaming(self) -> None:
+        """Test that aclose() stops iteration and marks as cancelled."""
+        chunks_yielded: list[str] = []
+
+        async def slow_gen() -> AsyncIterator[StreamChunk]:
+            for i in range(100):
+                await asyncio.sleep(0.01)
+                chunks_yielded.append(f"chunk-{i}")
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(async_iterator=slow_gen())
+        collected: list[StreamChunk] = []
+
+        async for chunk in streaming:
+            collected.append(chunk)
+            if len(collected) >= 3:
+                break
+
+        await streaming.aclose()
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(collected) == 3
+
+    @pytest.mark.asyncio
+    async def test_aclose_idempotent(self) -> None:
+        """Test that calling aclose() multiple times is safe."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+        async for _ in streaming:
+            pass
+
+        await streaming.aclose()
+        await streaming.aclose()
+        assert streaming.is_cancelled
+
+    @pytest.mark.asyncio
+    async def test_async_context_manager(self) -> None:
+        """Test using streaming output as async context manager."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="hello")
+            yield StreamChunk(content="world")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+        collected: list[StreamChunk] = []
+
+        async with streaming:
+            async for chunk in streaming:
+                collected.append(chunk)
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(collected) == 2
+
+    @pytest.mark.asyncio
+    async def test_async_context_manager_early_exit(self) -> None:
+        """Test context manager cleans up on early exit."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            for i in range(100):
+                await asyncio.sleep(0.01)
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+
+        async with streaming:
+            async for chunk in streaming:
+                if chunk.content == "chunk-2":
+                    break
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_close_cancels_sync_streaming(self) -> None:
+        """Test that close() stops sync streaming and marks as cancelled."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            for i in range(100):
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(sync_iterator=gen())
+        collected: list[StreamChunk] = []
+
+        for chunk in streaming:
+            collected.append(chunk)
+            if len(collected) >= 3:
+                break
+
+        streaming.close()
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_close_idempotent(self) -> None:
+        """Test that calling close() multiple times is safe."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(sync_iterator=gen())
+        list(streaming)
+
+        streaming.close()
+        streaming.close()
+        assert streaming.is_cancelled
+
+    @pytest.mark.asyncio
+    async def test_flow_aclose(self) -> None:
+        """Test that FlowStreamingOutput supports aclose()."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(async_iterator=gen())
+        async for _ in streaming:
+            pass
+
+        await streaming.aclose()
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    @pytest.mark.asyncio
+    async def test_flow_async_context_manager(self) -> None:
+        """Test FlowStreamingOutput as async context manager."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(async_iterator=gen())
+
+        async with streaming:
+            async for _ in streaming:
+                pass
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_flow_close(self) -> None:
+        """Test that FlowStreamingOutput supports close()."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(sync_iterator=gen())
+        list(streaming)
+
+        streaming.close()
+        assert streaming.is_cancelled
+
+
 class TestStreamingImports:
     """Tests for correct imports of streaming types."""
 
