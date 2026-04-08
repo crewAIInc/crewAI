@@ -134,6 +134,7 @@ from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
     create_chunk_generator,
+    register_cleanup,
     signal_end,
     signal_error,
 )
@@ -882,6 +883,7 @@ class Crew(FlowTrackable, BaseModel):
                     ctx.state, run_crew, ctx.output_holder
                 )
             )
+            register_cleanup(streaming_output, ctx.state)
             ctx.output_holder.append(streaming_output)
             return streaming_output
 
@@ -1007,6 +1009,7 @@ class Crew(FlowTrackable, BaseModel):
                     ctx.state, run_crew, ctx.output_holder
                 )
             )
+            register_cleanup(streaming_output, ctx.state)
             ctx.output_holder.append(streaming_output)
 
             return streaming_output
@@ -1078,6 +1081,7 @@ class Crew(FlowTrackable, BaseModel):
                     ctx.state, run_crew, ctx.output_holder
                 )
             )
+            register_cleanup(streaming_output, ctx.state)
             ctx.output_holder.append(streaming_output)
 
             return streaming_output

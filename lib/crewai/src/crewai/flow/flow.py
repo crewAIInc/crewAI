@@ -132,6 +132,7 @@ from crewai.utilities.streaming import (
     create_async_chunk_generator,
     create_chunk_generator,
     create_streaming_state,
+    register_cleanup,
     signal_end,
     signal_error,
 )
@@ -1962,6 +1963,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             streaming_output = FlowStreamingOutput(
                 sync_iterator=create_chunk_generator(state, run_flow, output_holder)
             )
+            register_cleanup(streaming_output, state)
             output_holder.append(streaming_output)
 
             return streaming_output
@@ -2035,6 +2037,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     state, run_flow, output_holder
                 )
             )
+            register_cleanup(streaming_output, state)
             output_holder.append(streaming_output)
 
             return streaming_output

@@ -3,6 +3,7 @@
 import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
 import contextvars
+import logging
 import queue
 import threading
 from typing import Any, NamedTuple
@@ -20,6 +21,9 @@ from crewai.types.streaming import (
     ToolCallChunk,
 )
 from crewai.utilities.string_utils import sanitize_tool_name
+
+
+logger = logging.getLogger(__name__)
 
 
 class TaskInfo(TypedDict):
@@ -159,8 +163,21 @@ def _finalize_streaming(
         streaming_output: The streaming output to set the result on.
     """
     _unregister_handler(state.handler)
+    streaming_output._on_cleanup = None
     if state.result_holder:
         streaming_output._set_result(state.result_holder[0])
+
+
+def register_cleanup(
+    streaming_output: CrewStreamingOutput | FlowStreamingOutput,
+    state: StreamingState,
+) -> None:
+    """Register a cleanup callback on the streaming output.
+
+    Ensures the event handler is unregistered even if aclose()/close()
+    is called before iteration starts.
+    """
+    streaming_output._on_cleanup = lambda: _unregister_handler(state.handler)
 
 
 def create_streaming_state(
@@ -294,7 +311,14 @@ async def create_async_chunk_generator(
                 raise item
             yield item
     finally:
-        await task
+        if not task.done():
+            task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.debug("Background streaming task failed", exc_info=True)
         if output_holder:
             _finalize_streaming(state, output_holder[0])
         else:
