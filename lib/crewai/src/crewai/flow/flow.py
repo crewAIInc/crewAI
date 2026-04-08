@@ -1455,11 +1455,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
 
-        if not self.suppress_flow_events:
-            if get_current_parent_id() is None:
-                reset_emission_counter()
-                reset_last_event_id()
+        if get_current_parent_id() is None:
+            reset_emission_counter()
+            reset_last_event_id()
 
+        if not self.suppress_flow_events:
             future = crewai_event_bus.emit(
                 self,
                 FlowStartedEvent(
