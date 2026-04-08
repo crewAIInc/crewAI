@@ -786,9 +786,19 @@ def traces_status() -> None:
     console.print(panel)
 
 
-@crewai.group()
-def checkpoint() -> None:
-    """Inspect checkpoint files."""
+@crewai.group(invoke_without_command=True)
+@click.option(
+    "--location", default="./.checkpoints", help="Checkpoint directory or SQLite file."
+)
+@click.pass_context
+def checkpoint(ctx: click.Context, location: str) -> None:
+    """Browse and inspect checkpoints. Launches a TUI when called without a subcommand."""
+    ctx.ensure_object(dict)
+    ctx.obj["location"] = location
+    if ctx.invoked_subcommand is None:
+        from crewai.cli.checkpoint_tui import run_checkpoint_tui
+
+        run_checkpoint_tui(location)
 
 
 @checkpoint.command("list")
