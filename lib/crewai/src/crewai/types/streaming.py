@@ -158,7 +158,7 @@ class StreamingOutputBase(Generic[T]):
         Cancels any in-flight tasks and closes the underlying async iterator.
         Safe to call multiple times. No-op if already cancelled or fully consumed.
         """
-        if self._cancelled or self._exhausted:
+        if self._cancelled or self._exhausted or self._error is not None:
             return
         self._cancelled = True
         self._completed = True
@@ -172,9 +172,9 @@ class StreamingOutputBase(Generic[T]):
         """Cancel streaming and clean up resources (sync).
 
         Closes the underlying sync iterator. Safe to call multiple times.
-        No-op if already cancelled or fully consumed.
+        No-op if already cancelled, fully consumed, or errored.
         """
-        if self._cancelled or self._exhausted:
+        if self._cancelled or self._exhausted or self._error is not None:
             return
         self._cancelled = True
         self._completed = True
