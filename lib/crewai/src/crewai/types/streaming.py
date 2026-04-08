@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -91,6 +91,7 @@ class StreamingOutputBase(Generic[T]):
         self._error: Exception | None = None
         self._cancelled: bool = False
         self._exhausted: bool = False
+        self._on_cleanup: Callable[[], None] | None = None
         self._sync_iterator = sync_iterator
         self._async_iterator = async_iterator
 
@@ -163,6 +164,9 @@ class StreamingOutputBase(Generic[T]):
         self._completed = True
         if self._async_iterator is not None and hasattr(self._async_iterator, "aclose"):
             await self._async_iterator.aclose()
+        if self._on_cleanup is not None:
+            self._on_cleanup()
+            self._on_cleanup = None
 
     def close(self) -> None:
         """Cancel streaming and clean up resources (sync).
@@ -176,6 +180,9 @@ class StreamingOutputBase(Generic[T]):
         self._completed = True
         if self._sync_iterator is not None and hasattr(self._sync_iterator, "close"):
             self._sync_iterator.close()
+        if self._on_cleanup is not None:
+            self._on_cleanup()
+            self._on_cleanup = None
 
     def __iter__(self) -> Iterator[StreamChunk]:
         """Iterate over stream chunks synchronously.

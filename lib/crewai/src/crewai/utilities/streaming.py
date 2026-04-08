@@ -163,8 +163,21 @@ def _finalize_streaming(
         streaming_output: The streaming output to set the result on.
     """
     _unregister_handler(state.handler)
+    streaming_output._on_cleanup = None
     if state.result_holder:
         streaming_output._set_result(state.result_holder[0])
+
+
+def register_cleanup(
+    streaming_output: CrewStreamingOutput | FlowStreamingOutput,
+    state: StreamingState,
+) -> None:
+    """Register a cleanup callback on the streaming output.
+
+    Ensures the event handler is unregistered even if aclose()/close()
+    is called before iteration starts.
+    """
+    streaming_output._on_cleanup = lambda: _unregister_handler(state.handler)
 
 
 def create_streaming_state(
