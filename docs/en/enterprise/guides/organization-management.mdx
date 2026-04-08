@@ -1,0 +1,163 @@
+---
+title: "Organization Management"
+description: "Learn how to manage organizations via the CrewAI CLI — list, switch, and verify your active org before publishing or deploying."
+icon: "building"
+mode: "wide"
+---
+
+## Overview
+
+When you sign up for [CrewAI AMP](https://app.crewai.com), you may belong to multiple organizations — for example, a personal org and one or more team/company orgs. The **active organization** determines where your tools are published, where deployments are created, and which resources you can access.
+
+Managing your active organization is important because actions like `crewai tool publish` and `crewai deploy create` target whatever org is currently active in your CLI session.
+
+## Authentication and Organizations
+
+When you run `crewai login`, the CLI:
+
+1. Authenticates you via a secure device code flow (OAuth2)
+2. Logs you in to the Tool Repository
+3. Sets your **active organization** to the default organization returned by the server
+
+<Warning>
+  If you belong to multiple organizations, the default org set after login may not be the one you intend to use. Always verify your active organization before publishing tools or creating deployments.
+</Warning>
+
+### Logging In
+
+```shell Terminal
+crewai login
+```
+
+After running this command:
+- A verification URL and code are displayed in your terminal
+- Your browser opens for you to confirm authentication
+- On success, your active org is automatically set
+
+## Checking Your Current Organization
+
+To see which organization is currently active:
+
+```shell Terminal
+crewai org current
+```
+
+Example output:
+
+```
+Currently logged in to organization My Company (a1b2c3d4-e5f6-7890-abcd-ef1234567890)
+```
+
+If no organization is set:
+
+```
+You're not currently logged in to any organization.
+Use 'crewai org list' to see available organizations.
+Use 'crewai org switch <id>' to switch to an organization.
+```
+
+## Listing Your Organizations
+
+To see all organizations you belong to:
+
+```shell Terminal
+crewai org list
+```
+
+Example output:
+
+```
+┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Name               ┃ ID                                   ┃
+┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Personal           │ 11111111-1111-1111-1111-111111111111 │
+│ My Company         │ 22222222-2222-2222-2222-222222222222 │
+└────────────────────┴──────────────────────────────────────┘
+```
+
+## Switching Organizations
+
+To switch your active organization:
+
+```shell Terminal
+crewai org switch <organization_id>
+```
+
+For example, to switch to "My Company":
+
+```shell Terminal
+crewai org switch 22222222-2222-2222-2222-222222222222
+```
+
+Output:
+
+```
+Successfully switched to My Company (22222222-2222-2222-2222-222222222222)
+```
+
+The organization ID is the UUID shown in `crewai org list`.
+
+<Note>
+  You must be authenticated (`crewai login`) before using any `crewai org` commands.
+</Note>
+
+## Practical Example: Publishing Tools to the Right Organization
+
+A common scenario is when you belong to both a personal org and a team org. If you run `crewai login` and immediately publish a tool, the tool may end up in your personal org rather than your team org.
+
+To avoid this:
+
+<Steps>
+  <Step title="Log in to CrewAI AMP">
+    ```shell Terminal
+    crewai login
+    ```
+  </Step>
+  <Step title="Check your current organization">
+    ```shell Terminal
+    crewai org current
+    ```
+  </Step>
+  <Step title="List available organizations (if needed)">
+    ```shell Terminal
+    crewai org list
+    ```
+  </Step>
+  <Step title="Switch to the correct organization">
+    ```shell Terminal
+    crewai org switch <your-team-org-id>
+    ```
+  </Step>
+  <Step title="Publish your tool">
+    ```shell Terminal
+    crewai tool publish
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Make it a habit to run `crewai org current` before publishing tools or creating deployments, especially if you belong to multiple organizations.
+</Tip>
+
+## How Settings Are Stored
+
+Organization settings are stored in `~/.config/crewai/settings.json`. The relevant fields are:
+
+- `org_name`: Name of the currently active organization
+- `org_uuid`: UUID of the currently active organization
+
+These fields are managed automatically by `crewai login` and `crewai org switch` — you should not edit them manually.
+
+<Note>
+  Running `crewai login` clears your current organization settings before re-authenticating. After login, the active org is set based on the server's default for your account.
+</Note>
+
+## Command Reference
+
+| Command | Description |
+| :--- | :--- |
+| `crewai login` | Authenticate to CrewAI AMP (sets active org to default) |
+| `crewai org current` | Show the currently active organization |
+| `crewai org list` | List all organizations you belong to |
+| `crewai org switch <id>` | Switch to a specific organization by UUID |
+| `crewai logout` | Log out and clear organization settings |
