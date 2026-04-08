@@ -169,6 +169,19 @@ def test_extract_package_dependencies(mock_tool_extractor):
     ]
 
 
+def test_tool_type_excluded_from_init_params(mock_tool_extractor):
+    """tool_type is an internal computed_field for checkpoint deserialization.
+    It must NOT leak into the init_params_schema that Studio reads, otherwise
+    users see a required 'Tool Type' field they can't fill in."""
+    init_schema = mock_tool_extractor["init_params_schema"]
+    assert "tool_type" not in init_schema.get("properties", {}), (
+        "tool_type should not appear in init_params_schema properties"
+    )
+    assert "tool_type" not in init_schema.get("required", []), (
+        "tool_type should not appear in init_params_schema required list"
+    )
+
+
 def test_save_to_json(extractor, tmp_path):
     extractor.tools_spec = [
         {

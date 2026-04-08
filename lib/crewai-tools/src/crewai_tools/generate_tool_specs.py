@@ -167,6 +167,7 @@ class ToolSpecExtractor:
             "max_usage_count",
             "current_usage_count",
             "package_dependencies",
+            "tool_type",
         ]
 
         json_schema = tool_class.model_json_schema(
@@ -178,6 +179,11 @@ class ToolSpecExtractor:
             for key, value in json_schema["properties"].items()
             if key not in ignored_init_params
         }
+        if "required" in json_schema:
+            json_schema["required"] = [
+                key for key in json_schema["required"]
+                if key not in ignored_init_params
+            ]
         return json_schema
 
     def save_to_json(self, output_path: str) -> None:
