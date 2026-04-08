@@ -180,6 +180,17 @@ class TestPinCrewaiDeps:
         result = _pin_crewai_deps(content, "2.0.0")
         assert '"crewai-tools~=1.0"' in result
 
+    def test_skips_crewai_extras_without_pin(self) -> None:
+        content = dedent("""\
+            [project]
+            dependencies = [
+                "crewai[tools]",
+            ]
+        """)
+        result = _pin_crewai_deps(content, "2.0.0")
+        assert '"crewai[tools]"' in result
+        assert "==" not in result
+
 
 # --- _repin_crewai_install ---
 

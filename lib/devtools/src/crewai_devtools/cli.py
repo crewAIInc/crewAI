@@ -504,7 +504,7 @@ def _pin_crewai_deps(content: str, version: str) -> str:
         for dep_list in dep_lists:
             for i, dep in enumerate(dep_list):
                 s = str(dep)
-                if not _is_crewai_dep(s):
+                if not _is_crewai_dep(s) or ("==" not in s and ">=" not in s):
                     continue
                 extras = s[6 : s.index("]") + 1] if "[" in s[6:7] else ""
                 dep_list[i] = f"crewai{extras}=={version}"
