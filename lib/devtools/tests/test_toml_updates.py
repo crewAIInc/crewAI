@@ -39,6 +39,12 @@ class TestUpdatePyprojectVersion:
 
         assert update_pyproject_version(pyproject, "1.0.0") is False
 
+    def test_returns_false_when_no_project_section(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text("[tool.ruff]\nline-length = 88\n")
+
+        assert update_pyproject_version(pyproject, "1.0.0") is False
+
     def test_returns_false_for_missing_file(self, tmp_path: Path) -> None:
         assert update_pyproject_version(tmp_path / "nope.toml", "1.0.0") is False
 

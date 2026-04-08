@@ -1,5 +1,6 @@
 """Development tools for version bumping and git automation."""
 
+from collections.abc import Mapping
 import os
 from pathlib import Path
 import subprocess
@@ -170,11 +171,13 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
         return False
 
     doc = tomlkit.parse(file_path.read_text())
-    project = doc["project"]
-    if project.get("version") == new_version:  # type: ignore[union-attr]
+    project = doc.get("project")
+    if project is None:
+        return False
+    if project.get("version") == new_version:
         return False
 
-    project["version"] = new_version  # type: ignore[index]
+    project["version"] = new_version
     file_path.write_text(tomlkit.dumps(doc))
     return True
 
@@ -469,6 +472,14 @@ def update_changelog(
     return True
 
 
+def _is_crewai_dep(spec: str) -> bool:
+    """Return True if *spec* is a ``crewai`` or ``crewai[...]`` dependency."""
+    if not spec.startswith("crewai"):
+        return False
+    rest = spec[6:]  # after "crewai"
+    return len(rest) > 0 and rest[0] in ("[", "=", ">", "<", "~", "!")
+
+
 def _pin_crewai_deps(content: str, version: str) -> str:
     """Replace crewai dependency version pins in a pyproject.toml string.
 
@@ -488,13 +499,14 @@ def _pin_crewai_deps(content: str, version: str) -> str:
         if deps is None:
             continue
         # optional-dependencies is a table of lists; dependencies is a list
-        dep_lists = deps.values() if isinstance(deps, dict) else [deps]
+        dep_lists = deps.values() if isinstance(deps, Mapping) else [deps]
         for dep_list in dep_lists:
             for i, dep in enumerate(dep_list):
                 s = str(dep)
-                if s.startswith("crewai") and ("==" in s or ">=" in s):
-                    extras = "[tools]" if "[tools]" in s else ""
-                    dep_list[i] = f"crewai{extras}=={version}"
+                if not _is_crewai_dep(s):
+                    continue
+                extras = "[tools]" if "[tools]" in s else ""
+                dep_list[i] = f"crewai{extras}=={version}"
     return tomlkit.dumps(doc)
 
 
