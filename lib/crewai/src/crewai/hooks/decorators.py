@@ -5,6 +5,8 @@ from functools import wraps
 import inspect
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from crewai.utilities.string_utils import sanitize_tool_name
+
 
 if TYPE_CHECKING:
     from crewai.hooks.llm_hooks import LLMCallHookContext
@@ -37,6 +39,13 @@ def _create_hook_decorator(
         tools: list[str] | None = None,
         agents: list[str] | None = None,
     ) -> Callable[..., Any]:
+        # Sanitize tool names so users can pass human-readable names
+        # (e.g., "File Read Tool") and still match the sanitized tool_name
+        # that appears in ToolCallHookContext at runtime.
+        sanitized_tools: list[str] | None = (
+            [sanitize_tool_name(t) for t in tools] if tools else tools
+        )
+
         def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
             setattr(f, marker_attribute, True)
 
@@ -44,17 +53,17 @@ def _create_hook_decorator(
             params = list(sig.parameters.keys())
             is_method = len(params) >= 2 and params[0] == "self"
 
-            if tools:
-                f._filter_tools = tools  # type: ignore[attr-defined]
+            if sanitized_tools:
+                f._filter_tools = sanitized_tools  # type: ignore[attr-defined]
             if agents:
                 f._filter_agents = agents  # type: ignore[attr-defined]
 
-            if tools or agents:
+            if sanitized_tools or agents:
 
                 @wraps(f)
                 def filtered_hook(context: Any) -> Any:
-                    if tools and hasattr(context, "tool_name"):
-                        if context.tool_name not in tools:
+                    if sanitized_tools and hasattr(context, "tool_name"):
+                        if context.tool_name not in sanitized_tools:
                             return None
 
                     if agents and hasattr(context, "agent"):
