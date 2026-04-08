@@ -380,7 +380,11 @@ class Crew(FlowTrackable, BaseModel):
         from crewai.context import apply_execution_context
         from crewai.events.event_bus import crewai_event_bus
         from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.provider.utils import detect_provider
         from crewai.state.runtime import RuntimeState
+
+        if provider is None:
+            provider = detect_provider(path)
 
         state = RuntimeState.from_checkpoint(
             path,
