@@ -89,7 +89,7 @@ from crewai.utilities.converter import (
 )
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -226,9 +226,6 @@ class LiteAgent(FlowTrackable, BaseModel):
     request_within_rpm_limit: Callable[[], bool] | None = Field(
         default=None,
         description="Callback to check if the request is within the RPM8 limit",
-    )
-    i18n: I18N = Field(
-        default_factory=get_i18n, description="Internationalization settings."
     )
     response_format: type[BaseModel] | None = Field(
         default=None, description="Pydantic model for structured output"
@@ -571,7 +568,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     f"- {m.record.content}" for m in matches
                 )
             if memory_block:
-                formatted = self.i18n.slice("memory").format(memory=memory_block)
+                formatted = I18N_DEFAULT.slice("memory").format(memory=memory_block)
                 if self._messages and self._messages[0].get("role") == "system":
                     existing_content = self._messages[0].get("content", "")
                     if not isinstance(existing_content, str):
@@ -644,7 +641,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             try:
                 model_schema = generate_model_description(active_response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
+                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
                     output_format=schema
                 )
 
@@ -793,7 +790,9 @@ class LiteAgent(FlowTrackable, BaseModel):
         base_prompt = ""
         if self._parsed_tools:
             # Use the prompt template for agents with tools
-            base_prompt = self.i18n.slice("lite_agent_system_prompt_with_tools").format(
+            base_prompt = I18N_DEFAULT.slice(
+                "lite_agent_system_prompt_with_tools"
+            ).format(
                 role=self.role,
                 backstory=self.backstory,
                 goal=self.goal,
@@ -802,7 +801,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
         else:
             # Use the prompt template for agents without tools
-            base_prompt = self.i18n.slice(
+            base_prompt = I18N_DEFAULT.slice(
                 "lite_agent_system_prompt_without_tools"
             ).format(
                 role=self.role,
@@ -814,7 +813,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         if active_response_format:
             model_description = generate_model_description(active_response_format)
             schema_json = json.dumps(model_description, indent=2)
-            base_prompt += self.i18n.slice("lite_agent_response_format").format(
+            base_prompt += I18N_DEFAULT.slice("lite_agent_response_format").format(
                 response_format=schema_json
             )
 
@@ -875,7 +874,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
                         printer=PRINTER,
-                        i18n=self.i18n,
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
@@ -914,7 +912,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                         tool_result = execute_tool_and_check_finality(
                             agent_action=formatted_answer,
                             tools=self._parsed_tools,
-                            i18n=self.i18n,
                             agent_key=self.key,
                             agent_role=self.role,
                             agent=self.original_agent,
@@ -956,7 +953,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
-                        i18n=self.i18n,
                         verbose=self.verbose,
                     )
                     continue

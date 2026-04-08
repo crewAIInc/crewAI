@@ -98,6 +98,7 @@ from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -499,8 +500,8 @@ class Agent(BaseAgent):
             self.tools_handler.last_used_tool = None
 
         task_prompt = task.prompt()
-        task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
-        task_prompt = format_task_with_context(task_prompt, context, self.i18n)
+        task_prompt = build_task_prompt_with_schema(task, task_prompt)
+        task_prompt = format_task_with_context(task_prompt, context)
         return self._retrieve_memory_context(task, task_prompt)
 
     def _finalize_task_prompt(
@@ -562,7 +563,7 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
             if memory.strip() != "":
-                task_prompt += self.i18n.slice("memory").format(memory=memory)
+                task_prompt += I18N_DEFAULT.slice("memory").format(memory=memory)
 
             crewai_event_bus.emit(
                 self,
@@ -968,14 +969,13 @@ class Agent(BaseAgent):
             agent=self,
             has_tools=len(raw_tools) > 0,
             use_native_tool_calling=use_native_tool_calling,
-            i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
         ).task_execution()
 
-        stop_words = [self.i18n.slice("observation")]
+        stop_words = [I18N_DEFAULT.slice("observation")]
         if self.response_template:
             stop_words.append(
                 self.response_template.split("{{ .Response }}")[1].strip()
@@ -1017,7 +1017,6 @@ class Agent(BaseAgent):
             self.agent_executor = self.executor_class(
                 llm=self.llm,
                 task=task,
-                i18n=self.i18n,
                 agent=self,
                 crew=self.crew,
                 tools=parsed_tools,
@@ -1262,10 +1261,10 @@ class Agent(BaseAgent):
                 from_agent=self,
             ),
         )
-        query = self.i18n.slice("knowledge_search_query").format(
+        query = I18N_DEFAULT.slice("knowledge_search_query").format(
             task_prompt=task_prompt
         )
-        rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
+        rewriter_prompt = I18N_DEFAULT.slice("knowledge_search_query_system_prompt")
         if not isinstance(self.llm, BaseLLM):
             self._logger.log(
                 "warning",
@@ -1384,7 +1383,6 @@ class Agent(BaseAgent):
             request_within_rpm_limit=rpm_limit_fn,
             callbacks=[TokenCalcHandler(self._token_process)],
             response_model=response_format,
-            i18n=self.i18n,
         )
 
         all_files: dict[str, Any] = {}
@@ -1420,7 +1418,7 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
                 if memory_block:
-                    formatted_messages += "\n\n" + self.i18n.slice("memory").format(
+                    formatted_messages += "\n\n" + I18N_DEFAULT.slice("memory").format(
                         memory=memory_block
                     )
                 crewai_event_bus.emit(
@@ -1624,7 +1622,7 @@ class Agent(BaseAgent):
             try:
                 model_schema = generate_model_description(response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
+                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
                     output_format=schema
                 )
 

@@ -43,7 +43,6 @@ from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
-from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
@@ -179,7 +178,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         agent_executor: An instance of the CrewAgentExecutor class.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
-        i18n (I18N): Internationalization settings.
+
         cache_handler ([CacheHandler]): An instance of the CacheHandler class.
         tools_handler ([ToolsHandler]): An instance of the ToolsHandler class.
         max_tokens: Maximum number of tokens for the agent to generate in a response.
@@ -269,9 +268,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             _serialize_crew_ref, return_type=str | None, when_used="always"
         ),
     ] = Field(default=None, description="Crew to which the agent belongs.")
-    i18n: I18N = Field(
-        default_factory=get_i18n, description="Internationalization settings."
-    )
     cache_handler: CacheHandler | None = Field(
         default=None, description="An instance of the CacheHandler class."
     )

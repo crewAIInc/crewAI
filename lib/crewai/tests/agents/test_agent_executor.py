@@ -48,8 +48,6 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._last_context_error = None
     executor._step_executor = None
     executor._planner_observer = None
-    from crewai.utilities.i18n import get_i18n
-    executor._i18n = kwargs.get("i18n") or get_i18n()
     return executor
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (

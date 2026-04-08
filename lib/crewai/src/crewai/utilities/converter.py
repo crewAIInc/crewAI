@@ -8,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
-from crewai.utilities.i18n import get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.internal_instructor import InternalInstructor
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
-_I18N = get_i18n()
+_I18N = I18N_DEFAULT
 
 
 class ConverterError(Exception):

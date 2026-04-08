@@ -91,7 +91,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import (
     PlanStep,
     StepObservation,
@@ -189,7 +189,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
     )
     callbacks: list[Any] = Field(default_factory=list, exclude=True)
     response_model: type[BaseModel] | None = Field(default=None, exclude=True)
-    i18n: I18N | None = Field(default=None, exclude=True)
     log_error_after: int = Field(default=3, exclude=True)
     before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
         Field(default_factory=list, exclude=True)
@@ -198,7 +197,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         default_factory=list, exclude=True
     )
 
-    _i18n: I18N = PrivateAttr(default_factory=get_i18n)
     _console: Console = PrivateAttr(default_factory=Console)
     _last_parser_error: OutputParserError | None = PrivateAttr(default=None)
     _last_context_error: Exception | None = PrivateAttr(default=None)
@@ -214,7 +212,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
         """Configure executor after Pydantic field initialization."""
-        self._i18n = self.i18n or get_i18n()
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
@@ -363,7 +360,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 function_calling_llm=self.function_calling_llm,
                 request_within_rpm_limit=self.request_within_rpm_limit,
                 callbacks=self.callbacks,
-                i18n=self._i18n,
             )
         return self._step_executor
 
@@ -1203,7 +1199,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
             printer=PRINTER,
-            i18n=self._i18n,
             messages=list(self.state.messages),
             llm=self.llm,
             callbacks=self.callbacks,
@@ -1430,7 +1425,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                 agent_action=action,
                 fingerprint_context=fingerprint_context,
                 tools=self.tools,
-                i18n=self._i18n,
                 agent_key=self.agent.key if self.agent else None,
                 agent_role=self.agent.role if self.agent else None,
                 tools_handler=self.tools_handler,
@@ -1450,7 +1444,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             action.result = str(e)
             self._append_message_to_state(action.text)
 
-            reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+            reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
             reasoning_message: LLMMessage = {
                 "role": "user",
                 "content": reasoning_prompt,
@@ -1471,7 +1465,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             self.state.is_finished = True
             return "tool_result_is_final"
 
-        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+        reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
         reasoning_message_post: LLMMessage = {
             "role": "user",
             "content": reasoning_prompt,
@@ -2222,10 +2216,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         # Build synthesis prompt
         role = self.agent.role if self.agent else "Assistant"
 
-        system_prompt = self._i18n.retrieve(
+        system_prompt = I18N_DEFAULT.retrieve(
             "planning", "synthesis_system_prompt"
         ).format(role=role)
-        user_prompt = self._i18n.retrieve("planning", "synthesis_user_prompt").format(
+        user_prompt = I18N_DEFAULT.retrieve("planning", "synthesis_user_prompt").format(
             task_description=task_description,
             combined_steps=combined_steps,
         )
@@ -2472,7 +2466,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             self.task.description if self.task else getattr(self, "_kickoff_input", "")
         )
 
-        enhancement = self._i18n.retrieve(
+        enhancement = I18N_DEFAULT.retrieve(
             "planning", "replan_enhancement_prompt"
         ).format(previous_context=previous_context)
 
@@ -2535,7 +2529,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             messages=self.state.messages,
             llm=self.llm,
             callbacks=self.callbacks,
-            i18n=self._i18n,
             verbose=self.agent.verbose,
         )
 
@@ -2746,7 +2739,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         Returns:
             Updated action or final answer.
         """
-        add_image_tool = self._i18n.tools("add_image")
+        add_image_tool = I18N_DEFAULT.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
