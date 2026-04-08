@@ -5,6 +5,39 @@ icon: "clock"
 mode: "wide"
 ---
 <Update label="9 أبريل 2026">
+  ## v1.14.1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - إضافة متصفح TUI لنقاط التفتيش غير المتزامنة
+  - إضافة دالة aclose()/close() ومدير سياق غير متزامن لمخرجات البث
+
+  ### إصلاحات الأخطاء
+  - إصلاح التعبير النمطي لزيادة إصدار pyproject.toml
+  - تنظيف أسماء الأدوات في مرشحات زخرفة الخطاف
+  - إصلاح تسجيل معالجات نقاط التفتيش عند إنشاء CheckpointConfig
+  - رفع إصدار transformers إلى 5.5.0 لحل CVE-2026-1839
+  - إزالة غلاف FilteredStream لـ stdout/stderr
+
+  ### الوثائق
+  - تحديث سجل التغييرات والإصدار لـ v1.14.1rc1
+
+  ### إعادة الهيكلة
+  - استبدال القائمة المحظورة الثابتة باستبعاد حقل BaseTool الديناميكي في توليد المواصفات
+  - استبدال التعبير النمطي بـ tomlkit في واجهة سطر أوامر أدوات التطوير
+  - استخدام كائن PRINTER المشترك
+  - جعل BaseProvider نموذجاً أساسياً مع مميز نوع المزود
+
+  ## المساهمون
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="9 أبريل 2026">
   ## v1.14.1rc1
 
   [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)

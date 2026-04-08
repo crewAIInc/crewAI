@@ -1,16 +1,29 @@
 name: Lint
 
-on:
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
+on: [pull_request]
 
 permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
+
   lint-run:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,12 +70,16 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
-    needs: lint-run
+    needs: [changes, lint-run]
     if: always()
     steps:
-      - name: Check lint results
+      - name: Check results
         run: |
-          if [ "${{ needs.lint-run.result }}" == "success" ] || [ "${{ needs.lint-run.result }}" == "skipped" ]; then
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, skipping lint"
+            exit 0
+          fi
+          if [ "${{ needs.lint-run.result }}" == "success" ]; then
             echo "Lint passed"
           else
             echo "Lint failed"
