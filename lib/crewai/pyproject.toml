@@ -68,7 +68,7 @@ openpyxl = [
 ]
 mem0 = ["mem0ai~=0.1.94"]
 docling = [
-    "docling~=2.75.0",
+    "docling~=2.84.0",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
