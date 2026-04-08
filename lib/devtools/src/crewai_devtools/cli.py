@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tempfile
@@ -18,6 +17,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
+import tomlkit
 
 from crewai_devtools.docs_check import docs_check
 from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
@@ -169,18 +169,14 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
     if not file_path.exists():
         return False
 
-    content = file_path.read_text()
-    new_content = re.sub(
-        r'^(version\s*=\s*")[^"]+(")',
-        rf"\g<1>{new_version}\2",
-        content,
-        count=1,
-        flags=re.MULTILINE,
-    )
-    if new_content != content:
-        file_path.write_text(new_content)
-        return True
-    return False
+    doc = tomlkit.parse(file_path.read_text())
+    project = doc["project"]
+    if project.get("version") == new_version:  # type: ignore[union-attr]
+        return False
+
+    project["version"] = new_version  # type: ignore[index]
+    file_path.write_text(tomlkit.dumps(doc))
+    return True
 
 
 _DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
@@ -486,11 +482,20 @@ def _pin_crewai_deps(content: str, version: str) -> str:
     Returns:
         Transformed content.
     """
-    return re.sub(
-        r'"crewai(\[tools\])?(==|>=)[^"]*"',
-        lambda m: f'"crewai{(m.group(1) or "")!s}=={version}"',
-        content,
-    )
+    doc = tomlkit.parse(content)
+    for key in ("dependencies", "optional-dependencies"):
+        deps = doc.get("project", {}).get(key)
+        if deps is None:
+            continue
+        # optional-dependencies is a table of lists; dependencies is a list
+        dep_lists = deps.values() if isinstance(deps, dict) else [deps]
+        for dep_list in dep_lists:
+            for i, dep in enumerate(dep_list):
+                s = str(dep)
+                if s.startswith("crewai") and ("==" in s or ">=" in s):
+                    extras = "[tools]" if "[tools]" in s else ""
+                    dep_list[i] = f"crewai{extras}=={version}"
+    return tomlkit.dumps(doc)
 
 
 def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
@@ -1099,11 +1104,7 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
 
         pyproject = repo_dir / "pyproject.toml"
         content = pyproject.read_text()
-        new_content = re.sub(
-            r'"crewai\[tools\]==[^"]+"',
-            f'"crewai[tools]=={version}"',
-            content,
-        )
+        new_content = _pin_crewai_deps(content, version)
         if new_content == content:
             console.print(
                 "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
