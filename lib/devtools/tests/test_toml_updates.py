@@ -45,6 +45,19 @@ class TestUpdatePyprojectVersion:
 
         assert update_pyproject_version(pyproject, "1.0.0") is False
 
+    def test_returns_false_when_version_is_dynamic(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            dedent("""\
+            [project]
+            name = "my-pkg"
+            dynamic = ["version"]
+        """)
+        )
+
+        assert update_pyproject_version(pyproject, "1.0.0") is False
+        assert 'version = "1.0.0"' not in pyproject.read_text()
+
     def test_returns_false_for_missing_file(self, tmp_path: Path) -> None:
         assert update_pyproject_version(tmp_path / "nope.toml", "1.0.0") is False
 
@@ -138,6 +151,16 @@ class TestPinCrewaiDeps:
         result = _pin_crewai_deps(content, "2.0.0")
         assert '"crewai==2.0.0"' in result
         assert '"crewai[tools]==2.0.0"' in result
+
+    def test_preserves_arbitrary_extras(self) -> None:
+        content = dedent("""\
+            [project]
+            dependencies = [
+                "crewai[a2a]==1.0.0",
+            ]
+        """)
+        result = _pin_crewai_deps(content, "2.0.0")
+        assert '"crewai[a2a]==2.0.0"' in result
 
     def test_no_deps_returns_unchanged(self) -> None:
         content = dedent("""\

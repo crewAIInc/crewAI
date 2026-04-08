@@ -174,7 +174,8 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
     project = doc.get("project")
     if project is None:
         return False
-    if project.get("version") == new_version:
+    old_version = project.get("version")
+    if old_version is None or old_version == new_version:
         return False
 
     project["version"] = new_version
@@ -505,7 +506,7 @@ def _pin_crewai_deps(content: str, version: str) -> str:
                 s = str(dep)
                 if not _is_crewai_dep(s):
                     continue
-                extras = "[tools]" if "[tools]" in s else ""
+                extras = s[6 : s.index("]") + 1] if "[" in s[6:7] else ""
                 dep_list[i] = f"crewai{extras}=={version}"
     return tomlkit.dumps(doc)
 
@@ -1097,9 +1098,8 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
 def _update_enterprise_workflows(repo_dir: Path, version: str) -> list[Path]:
     """Update crewai version pins in enterprise CI workflow files.
 
-    Parses each workflow to find ``run`` steps containing a
-    ``crewai[...]==`` pin, then does a targeted string replacement
-    on the raw file so only the version changes.
+    Applies ``_repin_crewai_install`` line-by-line on the raw file so
+    only version numbers change and all formatting is preserved.
 
     Args:
         repo_dir: Root of the cloned enterprise repo.
@@ -1108,8 +1108,6 @@ def _update_enterprise_workflows(repo_dir: Path, version: str) -> list[Path]:
     Returns:
         List of workflow paths that were modified.
     """
-    import yaml
-
     updated: list[Path] = []
     for rel_path in _ENTERPRISE_WORKFLOW_PATHS:
         workflow = repo_dir / rel_path
@@ -1117,20 +1115,20 @@ def _update_enterprise_workflows(repo_dir: Path, version: str) -> list[Path]:
             continue
 
         raw = workflow.read_text()
-        data = yaml.safe_load(raw)
+        lines = raw.splitlines(keepends=True)
+        changed = False
+        for i, line in enumerate(lines):
+            if "crewai[" not in line:
+                continue
+            new_line = _repin_crewai_install(line, version)
+            if new_line != line:
+                lines[i] = new_line
+                changed = True
 
-        old_pins: list[str] = []
-        for job in (data.get("jobs") or {}).values():
-            for step in job.get("steps") or []:
-                run_val = step.get("run")
-                if isinstance(run_val, str) and "crewai[" in run_val:
-                    old_pins.append(run_val)
-
-        new_raw = raw
-        for pin in old_pins:
-            new_pin = _repin_crewai_install(pin, version)
-            if new_pin != pin:
-                new_raw = new_raw.replace(pin, new_pin)
+        if changed:
+            new_raw = "".join(lines)
+        else:
+            new_raw = raw
 
         if new_raw != raw:
             workflow.write_text(new_raw)

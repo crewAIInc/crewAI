@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-05T11:04:07.098698Z"
+exclude-newer = "2026-04-05T11:09:48.9111Z"
 exclude-newer-span = "P3D"
 
 [manifest]
@@ -1357,7 +1357,6 @@ dependencies = [
     { name = "openai" },
     { name = "pygithub" },
     { name = "python-dotenv" },
-    { name = "pyyaml" },
     { name = "rich" },
     { name = "tomlkit" },
 ]
@@ -1368,7 +1367,6 @@ requires-dist = [
     { name = "openai", specifier = ">=1.83.0,<3" },
     { name = "pygithub", specifier = "~=1.59.1" },
     { name = "python-dotenv", specifier = "~=1.1.1" },
-    { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.9.4" },
     { name = "tomlkit", specifier = "~=0.13.2" },
 ]
