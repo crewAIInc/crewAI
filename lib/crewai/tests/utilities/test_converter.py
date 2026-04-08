@@ -8,6 +8,7 @@ from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
+    _strip_markdown_code_fences,
     convert_to_model,
     convert_with_instructions,
     create_converter,
@@ -952,3 +953,113 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+# Tests for _strip_markdown_code_fences
+class TestStripMarkdownCodeFences:
+    """Tests for stripping markdown code fences from LLM responses."""
+
+    def test_strip_json_code_fence(self) -> None:
+        text = '```json\n{"name": "Alice", "age": 30}\n```'
+        result = _strip_markdown_code_fences(text)
+        assert result == '{"name": "Alice", "age": 30}'
+
+    def test_strip_plain_code_fence(self) -> None:
+        text = '```\n{"name": "Bob", "age": 25}\n```'
+        result = _strip_markdown_code_fences(text)
+        assert result == '{"name": "Bob", "age": 25}'
+
+    def test_no_code_fence(self) -> None:
+        text = '{"name": "Charlie", "age": 35}'
+        result = _strip_markdown_code_fences(text)
+        assert result == '{"name": "Charlie", "age": 35}'
+
+    def test_multiline_json_in_code_fence(self) -> None:
+        text = '```json\n{\n  "name": "Diana",\n  "age": 28\n}\n```'
+        result = _strip_markdown_code_fences(text)
+        assert json.loads(result) == {"name": "Diana", "age": 28}
+
+    def test_code_fence_with_surrounding_text(self) -> None:
+        text = 'Here is the result:\n```json\n{"name": "Eve", "age": 32}\n```\nEnd of result.'
+        result = _strip_markdown_code_fences(text)
+        assert result == '{"name": "Eve", "age": 32}'
+
+    def test_plain_text_unchanged(self) -> None:
+        text = "Just some plain text without any JSON"
+        result = _strip_markdown_code_fences(text)
+        assert result == "Just some plain text without any JSON"
+
+    def test_whitespace_stripping(self) -> None:
+        text = '  {"name": "Frank", "age": 40}  '
+        result = _strip_markdown_code_fences(text)
+        assert result == '{"name": "Frank", "age": 40}'
+
+
+class TestConverterMarkdownCodeFenceHandling:
+    """Tests for Converter handling JSON wrapped in markdown code fences (issue #4509)."""
+
+    def test_converter_to_pydantic_strips_markdown_code_fences(self) -> None:
+        """Test that Converter.to_pydantic strips markdown code fences before parsing."""
+        llm = Mock(spec=LLM)
+        llm.supports_function_calling.return_value = False
+        llm.call.return_value = '```json\n{"name": "Alice", "age": 30}\n```'
+
+        converter = Converter(
+            llm=llm,
+            text="Name: Alice, Age: 30",
+            model=SimpleModel,
+            instructions="Convert to JSON.",
+        )
+
+        output = converter.to_pydantic()
+
+        assert isinstance(output, SimpleModel)
+        assert output.name == "Alice"
+        assert output.age == 30
+
+    def test_converter_to_pydantic_strips_plain_code_fences(self) -> None:
+        """Test that Converter.to_pydantic strips plain code fences (without json tag)."""
+        llm = Mock(spec=LLM)
+        llm.supports_function_calling.return_value = False
+        llm.call.return_value = '```\n{"name": "Bob", "age": 25}\n```'
+
+        converter = Converter(
+            llm=llm,
+            text="Name: Bob, Age: 25",
+            model=SimpleModel,
+            instructions="Convert to JSON.",
+        )
+
+        output = converter.to_pydantic()
+
+        assert isinstance(output, SimpleModel)
+        assert output.name == "Bob"
+        assert output.age == 25
+
+    def test_converter_to_pydantic_multiline_json_in_code_fences(self) -> None:
+        """Test that Converter.to_pydantic handles multiline JSON in code fences."""
+        llm = Mock(spec=LLM)
+        llm.supports_function_calling.return_value = False
+        llm.call.return_value = '```json\n{\n  "name": "Charlie",\n  "age": 35\n}\n```'
+
+        converter = Converter(
+            llm=llm,
+            text="Name: Charlie, Age: 35",
+            model=SimpleModel,
+            instructions="Convert to JSON.",
+        )
+
+        output = converter.to_pydantic()
+
+        assert isinstance(output, SimpleModel)
+        assert output.name == "Charlie"
+        assert output.age == 35
+
+    def test_convert_to_model_strips_markdown_code_fences(self) -> None:
+        """Test that convert_to_model strips markdown code fences before parsing."""
+        result = '```json\n{"name": "Diana", "age": 28}\n```'
+        output = convert_to_model(result, SimpleModel, None, None)
+
+        assert isinstance(output, SimpleModel)
+        assert output.name == "Diana"
+        assert output.age == 28
