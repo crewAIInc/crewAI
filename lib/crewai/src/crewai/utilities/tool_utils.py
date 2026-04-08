@@ -96,7 +96,7 @@ async def aexecute_tool_and_check_finality(
     if tool:
         tool_input = tool_calling.arguments if tool_calling.arguments else {}
         hook_context = ToolCallHookContext(
-            tool_name=tool_calling.tool_name,
+            tool_name=sanitized_tool_name,
             tool_input=tool_input,
             tool=tool,
             agent=agent,
@@ -120,7 +120,7 @@ async def aexecute_tool_and_check_finality(
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
 
         after_hook_context = ToolCallHookContext(
-            tool_name=tool_calling.tool_name,
+            tool_name=sanitized_tool_name,
             tool_input=tool_input,
             tool=tool,
             agent=agent,
@@ -216,7 +216,7 @@ def execute_tool_and_check_finality(
     if tool:
         tool_input = tool_calling.arguments if tool_calling.arguments else {}
         hook_context = ToolCallHookContext(
-            tool_name=tool_calling.tool_name,
+            tool_name=sanitized_tool_name,
             tool_input=tool_input,
             tool=tool,
             agent=agent,
@@ -240,7 +240,7 @@ def execute_tool_and_check_finality(
         tool_result = tool_usage.use(tool_calling, agent_action.text)
 
         after_hook_context = ToolCallHookContext(
-            tool_name=tool_calling.tool_name,
+            tool_name=sanitized_tool_name,
             tool_input=tool_input,
             tool=tool,
             agent=agent,

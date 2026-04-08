@@ -55,7 +55,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.14.0",
+    "crewai-tools==1.14.1rc1",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -68,7 +68,7 @@ openpyxl = [
 ]
 mem0 = ["mem0ai~=0.1.94"]
 docling = [
-    "docling~=2.75.0",
+    "docling~=2.84.0",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",

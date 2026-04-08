@@ -325,6 +325,34 @@ Streaming is particularly valuable for:
 - **User Experience**: Reduce perceived latency by showing incremental results
 - **Live Dashboards**: Build monitoring interfaces that display crew execution status
 
+## Cancellation and Resource Cleanup
+
+`CrewStreamingOutput` supports graceful cancellation so that in-flight work stops promptly when the consumer disconnects.
+
+### Async Context Manager
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+
+async with streaming:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+```
+
+### Explicit Cancellation
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+try:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+finally:
+    await streaming.aclose()  # async
+    # streaming.close()       # sync equivalent
+```
+
+After cancellation, `streaming.is_cancelled` and `streaming.is_completed` are both `True`. Both `aclose()` and `close()` are idempotent.
+
 ## Important Notes
 
 - Streaming automatically enables LLM streaming for all agents in the crew
