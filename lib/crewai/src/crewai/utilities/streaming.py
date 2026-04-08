@@ -243,20 +243,37 @@ def create_chunk_generator(
     Yields:
         StreamChunk objects as they arrive.
     """
+    cancel_event = threading.Event()
     ctx = contextvars.copy_context()
     thread = threading.Thread(target=ctx.run, args=(run_func,), daemon=True)
     thread.start()
 
+    # Wire cancellation to the streaming output once the holder is populated
+    def _wire_cancel() -> None:
+        if output_holder:
+            output_holder[0]._cancel_thread_event = cancel_event
+            output_holder[0]._background_thread = thread
+
     try:
         while True:
-            item = state.sync_queue.get()
+            # Poll the queue with a timeout so we can check cancellation
+            while True:
+                _wire_cancel()
+                if cancel_event.is_set():
+                    return
+                try:
+                    item = state.sync_queue.get(timeout=0.1)
+                    break
+                except queue.Empty:
+                    continue
             if item is None:
                 break
             if isinstance(item, Exception):
                 raise item
             yield item
     finally:
-        thread.join()
+        if not cancel_event.is_set():
+            thread.join()
         if output_holder:
             _finalize_streaming(state, output_holder[0])
         else:
@@ -283,18 +300,52 @@ async def create_async_chunk_generator(
             "Async queue not initialized. Use create_streaming_state(use_async=True)."
         )
 
+    cancel_event = asyncio.Event()
     task = asyncio.create_task(run_coro())
+
+    # Wire cancellation to the streaming output once the holder is populated
+    def _wire_cancel() -> None:
+        if output_holder:
+            output_holder[0]._cancel_event = cancel_event
+            output_holder[0]._background_task = task
 
     try:
         while True:
-            item = await state.async_queue.get()
+            _wire_cancel()
+            # Use asyncio.wait to race between the queue and cancellation
+            get_task = asyncio.ensure_future(state.async_queue.get())
+            cancel_wait = asyncio.ensure_future(cancel_event.wait())
+            done, pending = await asyncio.wait(
+                {get_task, cancel_wait}, return_when=asyncio.FIRST_COMPLETED
+            )
+            for p in pending:
+                p.cancel()
+                try:
+                    await p
+                except (asyncio.CancelledError, Exception):  # noqa: S110
+                    pass
+            if cancel_wait in done:
+                # Cancellation was requested
+                return
+            item = get_task.result()
             if item is None:
                 break
             if isinstance(item, Exception):
                 raise item
             yield item
     finally:
-        await task
+        if not cancel_event.is_set():
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):  # noqa: S110
+                pass
+        else:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except (asyncio.CancelledError, Exception):  # noqa: S110
+                    pass
         if output_holder:
             _finalize_streaming(state, output_holder[0])
         else:
