@@ -16,6 +16,7 @@ dependencies = [
     "python-dotenv~=1.1.1",
     "pygithub~=1.59.1",
     "rich>=13.9.4",
+    "pyyaml>=6.0",
 ]
 
 [project.scripts]

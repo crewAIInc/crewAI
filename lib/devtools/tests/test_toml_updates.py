@@ -3,7 +3,11 @@
 from pathlib import Path
 from textwrap import dedent
 
-from crewai_devtools.cli import _pin_crewai_deps, update_pyproject_version
+from crewai_devtools.cli import (
+    _pin_crewai_deps,
+    _repin_crewai_install,
+    update_pyproject_version,
+)
 
 
 # --- update_pyproject_version ---
@@ -146,3 +150,36 @@ class TestPinCrewaiDeps:
         """)
         result = _pin_crewai_deps(content, "2.0.0")
         assert '"crewai-tools~=1.0"' in result
+
+
+# --- _repin_crewai_install ---
+
+
+class TestRepinCrewaiInstall:
+    def test_repins_a2a_extra(self) -> None:
+        result = _repin_crewai_install('uv pip install "crewai[a2a]==1.14.0"', "2.0.0")
+        assert result == 'uv pip install "crewai[a2a]==2.0.0"'
+
+    def test_repins_tools_extra(self) -> None:
+        result = _repin_crewai_install('uv pip install "crewai[tools]==1.0.0"', "3.0.0")
+        assert result == 'uv pip install "crewai[tools]==3.0.0"'
+
+    def test_leaves_unrelated_commands_alone(self) -> None:
+        cmd = "uv pip install requests"
+        assert _repin_crewai_install(cmd, "2.0.0") == cmd
+
+    def test_handles_multiple_pins(self) -> None:
+        cmd = 'pip install "crewai[a2a]==1.0.0" "crewai[tools]==1.0.0"'
+        result = _repin_crewai_install(cmd, "2.0.0")
+        assert result == 'pip install "crewai[a2a]==2.0.0" "crewai[tools]==2.0.0"'
+
+    def test_preserves_surrounding_text(self) -> None:
+        cmd = 'echo hello && uv pip install "crewai[a2a]==1.14.0" && echo done'
+        result = _repin_crewai_install(cmd, "2.0.0")
+        assert (
+            result == 'echo hello && uv pip install "crewai[a2a]==2.0.0" && echo done'
+        )
+
+    def test_no_version_specifier_unchanged(self) -> None:
+        cmd = 'pip install "crewai[tools]>=1.0"'
+        assert _repin_crewai_install(cmd, "2.0.0") == cmd
