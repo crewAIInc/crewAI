@@ -159,6 +159,39 @@ class TestRun:
             result = tool._run(website_url="https://example.com")
         assert "not found" in result.lower() or "plasmate" in result.lower()
 
+    def test_import_error_returns_error_string(self, tool):
+        """ImportError from _build_cmd (missing binary) is caught and returned as string."""
+        with patch(
+            "crewai_tools.tools.plasmate_website_tool.plasmate_website_tool._find_plasmate",
+            return_value=None,
+        ), patch(
+            "crewai_tools.tools.plasmate_website_tool.plasmate_website_tool.validate_url",
+            return_value="https://example.com",
+        ):
+            result = tool._run(website_url="https://example.com")
+        assert "Error" in result
+        assert "plasmate" in result.lower()
+
+    def test_url_validation_blocks_private_ip(self, tool):
+        """validate_url rejection is returned as an error string, not an exception."""
+        with patch(
+            "crewai_tools.tools.plasmate_website_tool.plasmate_website_tool.validate_url",
+            side_effect=ValueError("resolves to private/reserved IP"),
+        ):
+            result = tool._run(website_url="http://192.168.1.1/admin")
+        assert "Error" in result
+        assert "URL validation failed" in result
+
+    def test_url_validation_blocks_file_scheme(self, tool):
+        """file:// URLs are rejected by validate_url and returned as error strings."""
+        with patch(
+            "crewai_tools.tools.plasmate_website_tool.plasmate_website_tool.validate_url",
+            side_effect=ValueError("file:// URLs are not allowed"),
+        ):
+            result = tool._run(website_url="file:///etc/passwd")
+        assert "Error" in result
+        assert "URL validation failed" in result
+
     def test_empty_content_returns_warning(self, tool):
         with patch("shutil.which", return_value="/usr/local/bin/plasmate"), \
              patch("subprocess.run", return_value=_completed_process("")):

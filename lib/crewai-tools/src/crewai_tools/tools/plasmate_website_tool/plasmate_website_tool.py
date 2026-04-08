@@ -3,6 +3,7 @@ import subprocess
 from typing import Any, List, Literal, Optional, Type
 
 from crewai.tools import BaseTool
+from crewai_tools.security.safe_path import validate_url
 from pydantic import BaseModel, Field
 
 _VALID_FORMATS = ("markdown", "text", "som", "links")
@@ -159,6 +160,11 @@ class PlasmateWebsiteTool(BaseTool):
             return "Error: no URL provided.  Pass a website_url argument."
 
         try:
+            url = validate_url(url)
+        except ValueError as exc:
+            return f"Error: URL validation failed — {exc}"
+
+        try:
             result = subprocess.run(
                 self._build_cmd(url),
                 capture_output=True,
@@ -170,6 +176,11 @@ class PlasmateWebsiteTool(BaseTool):
         except FileNotFoundError:
             return (
                 "Error: plasmate binary not found.  "
+                "Install it with: pip install plasmate"
+            )
+        except ImportError:
+            return (
+                "Error: plasmate is not installed.  "
                 "Install it with: pip install plasmate"
             )
 
