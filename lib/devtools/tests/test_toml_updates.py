@@ -7,6 +7,7 @@ from crewai_devtools.cli import (
     _pin_crewai_deps,
     _repin_crewai_install,
     update_pyproject_version,
+    update_template_dependencies,
 )
 
 
@@ -223,3 +224,51 @@ class TestRepinCrewaiInstall:
     def test_no_version_specifier_unchanged(self) -> None:
         cmd = 'pip install "crewai[tools]>=1.0"'
         assert _repin_crewai_install(cmd, "2.0.0") == cmd
+
+
+# --- update_template_dependencies ---
+
+
+class TestUpdateTemplateDependencies:
+    def test_updates_jinja_template(self, tmp_path: Path) -> None:
+        """Template pyproject.toml files with Jinja placeholders should not break."""
+        tpl = tmp_path / "crew" / "pyproject.toml"
+        tpl.parent.mkdir()
+        tpl.write_text(
+            dedent("""\
+            [project]
+            name = "{{folder_name}}"
+            version = "0.1.0"
+            dependencies = [
+                "crewai[tools]==1.14.0"
+            ]
+
+            [project.scripts]
+            {{folder_name}} = "{{folder_name}}.main:run"
+        """)
+        )
+
+        updated = update_template_dependencies(tmp_path, "2.0.0")
+
+        assert len(updated) == 1
+        content = tpl.read_text()
+        assert '"crewai[tools]==2.0.0"' in content
+        assert "{{folder_name}}" in content
+
+    def test_updates_bare_crewai(self, tmp_path: Path) -> None:
+        tpl = tmp_path / "pyproject.toml"
+        tpl.write_text('dependencies = [\n    "crewai==1.0.0"\n]\n')
+
+        updated = update_template_dependencies(tmp_path, "3.0.0")
+
+        assert len(updated) == 1
+        assert '"crewai==3.0.0"' in tpl.read_text()
+
+    def test_skips_unrelated_deps(self, tmp_path: Path) -> None:
+        tpl = tmp_path / "pyproject.toml"
+        tpl.write_text('dependencies = [\n    "requests>=2.0"\n]\n')
+
+        updated = update_template_dependencies(tmp_path, "2.0.0")
+
+        assert len(updated) == 0
+        assert '"requests>=2.0"' in tpl.read_text()

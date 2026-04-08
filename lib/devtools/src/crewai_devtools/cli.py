@@ -514,6 +514,10 @@ def _pin_crewai_deps(content: str, version: str) -> str:
 def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
     """Update crewai dependency versions in CLI template pyproject.toml files.
 
+    Uses simple string replacement instead of TOML parsing because
+    template files contain Jinja placeholders (``{{folder_name}}``)
+    that are not valid TOML.
+
     Args:
         templates_dir: Path to the CLI templates directory.
         new_version: New version string.
@@ -521,10 +525,13 @@ def update_template_dependencies(templates_dir: Path, new_version: str) -> list[
     Returns:
         List of paths that were updated.
     """
+    import re
+
+    pattern = re.compile(r"(crewai(?:\[[\w,]+\])?)(?:==|>=)[^\s\"']+")
     updated = []
     for pyproject in templates_dir.rglob("pyproject.toml"):
         content = pyproject.read_text()
-        new_content = _pin_crewai_deps(content, new_version)
+        new_content = pattern.sub(rf"\1=={new_version}", content)
         if new_content != content:
             pyproject.write_text(new_content)
             updated.append(pyproject)
