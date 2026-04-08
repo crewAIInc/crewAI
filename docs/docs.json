@@ -79,6 +79,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -551,6 +552,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -1023,6 +1025,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -1495,6 +1498,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -1965,6 +1969,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -2435,6 +2440,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -2906,6 +2912,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -3378,6 +3385,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -3848,6 +3856,7 @@
                     "group": "Get Started",
                     "pages": [
                       "en/introduction",
+                      "en/skills",
                       "en/installation",
                       "en/quickstart"
                     ]
@@ -4351,6 +4360,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -4808,6 +4818,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -5265,6 +5276,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -5722,6 +5734,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -6178,6 +6191,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -6634,6 +6648,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -7090,6 +7105,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -7545,6 +7561,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -8000,6 +8017,7 @@
                     "group": "Começando",
                     "pages": [
                       "pt-BR/introduction",
+                      "pt-BR/skills",
                       "pt-BR/installation",
                       "pt-BR/quickstart"
                     ]
@@ -8486,6 +8504,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -8955,6 +8974,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -9424,6 +9444,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -9893,6 +9914,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -10361,6 +10383,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -10829,6 +10852,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -11297,6 +11321,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -11764,6 +11789,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -12231,6 +12257,7 @@
                     "group": "시작 안내",
                     "pages": [
                       "ko/introduction",
+                      "ko/skills",
                       "ko/installation",
                       "ko/quickstart"
                     ]
@@ -12729,6 +12756,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -13198,6 +13226,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -13667,6 +13696,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -14136,6 +14166,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -14604,6 +14635,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -15072,6 +15104,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -15540,6 +15573,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -16007,6 +16041,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -16474,6 +16509,7 @@
                     "group": "البدء",
                     "pages": [
                       "ar/introduction",
+                      "ar/skills",
                       "ar/installation",
                       "ar/quickstart"
                     ]
@@ -16984,6 +17020,10 @@
     {
       "source": "/introduction",
       "destination": "/en/introduction"
+    },
+    {
+      "source": "/skills",
+      "destination": "/en/skills"
     },
     {
       "source": "/installation",
