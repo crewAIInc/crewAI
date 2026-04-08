@@ -1,6 +1,10 @@
 name: Lint
 
-on: [pull_request]
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
 
 permissions:
   contents: read
