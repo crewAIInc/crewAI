@@ -81,6 +81,7 @@ _track_install_async()
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
+    "MemoryPromptConfig": ("crewai.memory.types", "MemoryPromptConfig"),
 }
 
 
@@ -233,6 +234,7 @@ __all__ = [
     "Knowledge",
     "LLMGuardrail",
     "Memory",
+    "MemoryPromptConfig",
     "PlanningConfig",
     "Process",
     "RuntimeState",

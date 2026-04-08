@@ -51,6 +51,7 @@ from crewai.telemetry.utils import (
     add_crew_and_task_attributes,
     add_crew_attributes,
     close_span,
+    crew_memory_span_attribute_value,
 )
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -280,7 +281,11 @@ class Telemetry:
             self._add_attribute(span, "python_version", platform.python_version())
             add_crew_attributes(span, crew, self._add_attribute)
             self._add_attribute(span, "crew_process", crew.process)
-            self._add_attribute(span, "crew_memory", crew.memory)
+            self._add_attribute(
+                span,
+                "crew_memory",
+                crew_memory_span_attribute_value(crew.memory),
+            )
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
 

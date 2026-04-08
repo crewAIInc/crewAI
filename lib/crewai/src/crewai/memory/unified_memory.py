@@ -9,7 +9,13 @@ import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PlainValidator, PrivateAttr
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainValidator,
+    PrivateAttr,
+)
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
@@ -26,6 +32,7 @@ from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
+    MemoryPromptConfig,
     MemoryRecord,
     ScopeInfo,
     compute_composite_score,
@@ -59,6 +66,10 @@ class Memory(BaseModel):
     Works without agent/crew. Uses LLM to infer scope, categories, importance on save.
     Uses RecallFlow for adaptive-depth recall. Supports scope/slice views and
     pluggable storage (LanceDB default).
+
+    Override LLM prompts per step via ``memory_prompt`` (same idea as
+    ``PlanningConfig.system_prompt`` / ``plan_prompt``): set only the strings you
+    need; the rest stay on bundled translations.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -135,6 +146,13 @@ class Memory(BaseModel):
             "will store memories at '/crew/research/<inferred_scope>'."
         ),
     )
+    memory_prompt: MemoryPromptConfig | None = Field(
+        default=None,
+        description=(
+            "Optional prompt strings for save, query, extract, and consolidation steps. "
+            "See MemoryPromptConfig; unset fields use translations/en.json defaults."
+        ),
+    )
 
     _config: MemoryConfig = PrivateAttr()
     _llm_instance: BaseLLM | None = PrivateAttr(default=None)
@@ -181,6 +199,7 @@ class Memory(BaseModel):
     def model_post_init(self, __context: Any) -> None:
         """Initialize runtime state from field values."""
         self._config = MemoryConfig(
+            memory_prompt=self.memory_prompt,
             recency_weight=self.recency_weight,
             semantic_weight=self.semantic_weight,
             importance_weight=self.importance_weight,
@@ -638,7 +657,9 @@ class Memory(BaseModel):
         Returns:
             List of short, self-contained memory statements.
         """
-        return extract_memories_from_content(content, self._llm)
+        return extract_memories_from_content(
+            content, self._llm, self._config.memory_prompt
+        )
 
     def recall(
         self,

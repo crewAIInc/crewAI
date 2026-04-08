@@ -227,6 +227,7 @@ class RecallFlow(Flow[RecallState]):
                 available,
                 scope_info,
                 self._llm,
+                self._config.memory_prompt,
             )
             self.state.query_analysis = analysis
 

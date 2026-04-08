@@ -650,6 +650,58 @@ def test_remember_survives_llm_failure(
     assert mem._storage.count() == 1
 
 
+# --- Per-Memory prompt config (MemoryPromptConfig) ---
+
+
+def test_memory_prompt_config_custom_strings() -> None:
+    """Library stays domain-agnostic; apps pass their own MemoryPromptConfig."""
+    from crewai.memory.types import MemoryPromptConfig
+
+    po = MemoryPromptConfig(
+        save_system="Prefer categories: search_query, exa_search, result_domain.",
+        extract_memories_system="Record Exa queries and canonical URLs first.",
+        query_system="Distill recall_queries toward domains and past queries.",
+    )
+    assert "search_query" in (po.save_system or "")
+    assert "Exa" in (po.extract_memories_system or "")
+    assert "recall_queries" in (po.query_system or "")
+
+
+def test_memory_prompt_overrides_save_system_used_in_analyze(tmp_path: Path) -> None:
+    from crewai.memory.analyze import analyze_for_save
+    from crewai.memory.types import MemoryPromptConfig
+    from crewai.memory.unified_memory import Memory
+
+    custom_system = "CUSTOM_SAVE_SYSTEM_OVERRIDE"
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    llm.call.return_value = (
+        '{"suggested_scope": "/", "categories": [], "importance": 0.5, '
+        '"extracted_metadata": {"entities": [], "dates": [], "topics": []}}'
+    )
+
+    mem = Memory(
+        storage=str(tmp_path / "ov_db"),
+        embedder=MagicMock(),
+        llm=llm,
+        memory_prompt=MemoryPromptConfig(save_system=custom_system),
+    )
+    assert mem._config.memory_prompt is not None
+    assert mem._config.memory_prompt.save_system == custom_system
+
+    analyze_for_save(
+        "hello",
+        existing_scopes=["/"],
+        existing_categories=[],
+        llm=llm,
+        memory_prompt=mem._config.memory_prompt,
+    )
+    call_args = llm.call.call_args
+    messages = call_args[0][0]
+    assert messages[0]["role"] == "system"
+    assert messages[0]["content"] == custom_system
+
+
 # --- Agent.kickoff() memory integration ---
 
 

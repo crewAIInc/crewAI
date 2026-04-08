@@ -314,6 +314,7 @@ class EncodingFlow(Flow[EncodingState]):
                         item.content,
                         list(item.similar_records),
                         self._llm,
+                        self._config.memory_prompt,
                     )
                 elif not fields_provided and not has_similar:
                     # Group C: field resolution only
@@ -324,6 +325,7 @@ class EncodingFlow(Flow[EncodingState]):
                         existing_scopes,
                         existing_categories,
                         self._llm,
+                        self._config.memory_prompt,
                     )
                 else:
                     # Group D: both in parallel
@@ -334,6 +336,7 @@ class EncodingFlow(Flow[EncodingState]):
                         existing_scopes,
                         existing_categories,
                         self._llm,
+                        self._config.memory_prompt,
                     )
                     consol_futures[i] = pool.submit(
                         contextvars.copy_context().run,
@@ -341,6 +344,7 @@ class EncodingFlow(Flow[EncodingState]):
                         item.content,
                         list(item.similar_records),
                         self._llm,
+                        self._config.memory_prompt,
                     )
 
             # Collect field-resolution results

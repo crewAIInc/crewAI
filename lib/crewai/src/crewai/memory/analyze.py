@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.types import MemoryPromptConfig, MemoryRecord, ScopeInfo
 from crewai.utilities.i18n import get_i18n
 
 
@@ -140,19 +140,23 @@ class ConsolidationPlan(BaseModel):
     )
 
 
-def _get_prompt(key: str) -> str:
-    """Retrieve a memory prompt from the i18n translations.
-
-    Args:
-        key: The prompt key under the "memory" section.
-
-    Returns:
-        The prompt string.
-    """
+def _memory_prompt_line(
+    memory_prompt: MemoryPromptConfig | None,
+    key: str,
+) -> str:
+    """Resolve one memory prompt: override string or bundled translation."""
+    if memory_prompt is not None:
+        raw = getattr(memory_prompt, key, None)
+        if isinstance(raw, str) and raw.strip():
+            return raw
     return get_i18n().memory(key)
 
 
-def extract_memories_from_content(content: str, llm: Any) -> list[str]:
+def extract_memories_from_content(
+    content: str,
+    llm: Any,
+    memory_prompt: MemoryPromptConfig | None = None,
+) -> list[str]:
     """Use the LLM to extract discrete memory statements from raw content.
 
     This is a pure helper: it does NOT store anything. Callers should call
@@ -164,15 +168,21 @@ def extract_memories_from_content(content: str, llm: Any) -> list[str]:
     Args:
         content: Raw text (e.g. task description + result dump).
         llm: The LLM instance to use.
+        memory_prompt: Optional per-step prompt strings (see ``MemoryPromptConfig``).
 
     Returns:
         List of short, self-contained memory statements (or [content] on failure).
     """
     if not (content or "").strip():
         return []
-    user = _get_prompt("extract_memories_user").format(content=content)
+    user = _memory_prompt_line(memory_prompt, "extract_memories_user").format(
+        content=content
+    )
     messages = [
-        {"role": "system", "content": _get_prompt("extract_memories_system")},
+        {
+            "role": "system",
+            "content": _memory_prompt_line(memory_prompt, "extract_memories_system"),
+        },
         {"role": "user", "content": user},
     ]
     try:
@@ -202,6 +212,7 @@ def analyze_query(
     available_scopes: list[str],
     scope_info: ScopeInfo | None,
     llm: Any,
+    memory_prompt: MemoryPromptConfig | None = None,
 ) -> QueryAnalysis:
     """Use the LLM to analyze a recall query.
 
@@ -212,6 +223,7 @@ def analyze_query(
         available_scopes: Scope paths that exist in the store.
         scope_info: Optional info about the current scope.
         llm: The LLM instance to use.
+        memory_prompt: Optional per-step prompt strings.
 
     Returns:
         QueryAnalysis with keywords, suggested_scopes, complexity, recall_queries, time_filter.
@@ -219,13 +231,16 @@ def analyze_query(
     scope_desc = ""
     if scope_info:
         scope_desc = f"Current scope has {scope_info.record_count} records, categories: {scope_info.categories}"
-    user = _get_prompt("query_user").format(
+    user = _memory_prompt_line(memory_prompt, "query_user").format(
         query=query,
         available_scopes=available_scopes or ["/"],
         scope_desc=scope_desc,
     )
     messages = [
-        {"role": "system", "content": _get_prompt("query_system")},
+        {
+            "role": "system",
+            "content": _memory_prompt_line(memory_prompt, "query_system"),
+        },
         {"role": "user", "content": user},
     ]
     try:
@@ -269,6 +284,7 @@ def analyze_for_save(
     existing_scopes: list[str],
     existing_categories: list[str],
     llm: Any,
+    memory_prompt: MemoryPromptConfig | None = None,
 ) -> MemoryAnalysis:
     """Infer scope, categories, importance, and metadata for a single memory.
 
@@ -280,17 +296,21 @@ def analyze_for_save(
         existing_scopes: Current scope paths in the memory store.
         existing_categories: Current categories in use.
         llm: The LLM instance to use.
+        memory_prompt: Optional per-step prompt strings.
 
     Returns:
         MemoryAnalysis with suggested_scope, categories, importance, extracted_metadata.
     """
-    user = _get_prompt("save_user").format(
+    user = _memory_prompt_line(memory_prompt, "save_user").format(
         content=content,
         existing_scopes=existing_scopes or ["/"],
         existing_categories=existing_categories or [],
     )
     messages = [
-        {"role": "system", "content": _get_prompt("save_system")},
+        {
+            "role": "system",
+            "content": _memory_prompt_line(memory_prompt, "save_system"),
+        },
         {"role": "user", "content": user},
     ]
     try:
@@ -322,6 +342,7 @@ def analyze_for_consolidation(
     new_content: str,
     existing_records: list[MemoryRecord],
     llm: Any,
+    memory_prompt: MemoryPromptConfig | None = None,
 ) -> ConsolidationPlan:
     """Decide insert/update/delete for a single memory against similar existing records.
 
@@ -332,6 +353,7 @@ def analyze_for_consolidation(
         new_content: The new content to store.
         existing_records: Existing records that are semantically similar.
         llm: The LLM instance to use.
+        memory_prompt: Optional per-step prompt strings.
 
     Returns:
         ConsolidationPlan with actions per record and whether to insert the new content.
@@ -345,12 +367,15 @@ def analyze_for_consolidation(
             f"- id={r.id} | scope={r.scope} | importance={r.importance:.2f} | created={created}\n"
             f"  content: {r.content[:200]}{'...' if len(r.content) > 200 else ''}"
         )
-    user = _get_prompt("consolidation_user").format(
+    user = _memory_prompt_line(memory_prompt, "consolidation_user").format(
         new_content=new_content,
         records_summary="\n\n".join(records_lines),
     )
     messages = [
-        {"role": "system", "content": _get_prompt("consolidation_system")},
+        {
+            "role": "system",
+            "content": _memory_prompt_line(memory_prompt, "consolidation_system"),
+        },
         {"role": "user", "content": user},
     ]
     try:

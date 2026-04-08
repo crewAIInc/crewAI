@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # When searching the vector store, we ask for more results than the caller
@@ -132,6 +132,28 @@ class ScopeInfo(BaseModel):
     )
 
 
+class MemoryPromptConfig(BaseModel):
+    """Configuration for memory LLM prompts (like ``PlanningConfig`` for planning).
+
+    Field names match translation keys under ``memory`` in ``translations/en.json``.
+    When set, the string replaces the bundled prompt for that step; omitted keys
+    keep the default i18n text. Templates must include the same ``str.format``
+    placeholders as the defaults (e.g. ``save_user`` uses ``{content}``,
+    ``{existing_scopes}``, ``{existing_categories}``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    save_system: str | None = None
+    save_user: str | None = None
+    query_system: str | None = None
+    query_user: str | None = None
+    extract_memories_system: str | None = None
+    extract_memories_user: str | None = None
+    consolidation_system: str | None = None
+    consolidation_user: str | None = None
+
+
 class MemoryConfig(BaseModel):
     """Internal configuration for memory scoring, consolidation, and recall behavior.
 
@@ -140,6 +162,11 @@ class MemoryConfig(BaseModel):
     can be passed as a single object to RecallFlow, EncodingFlow, and
     compute_composite_score.
     """
+
+    memory_prompt: MemoryPromptConfig | None = Field(
+        default=None,
+        description="Per-step prompt strings overriding bundled memory prompts.",
+    )
 
     # -- Composite score weights --
     # The recall composite score is:
