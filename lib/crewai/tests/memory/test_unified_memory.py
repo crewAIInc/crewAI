@@ -653,13 +653,18 @@ def test_remember_survives_llm_failure(
 # --- Per-Memory prompt config (MemoryPromptConfig) ---
 
 
-def test_memory_prompt_overrides_for_online_people_research() -> None:
+def test_memory_prompt_config_custom_strings() -> None:
+    """Library stays domain-agnostic; apps pass their own MemoryPromptConfig."""
     from crewai.memory.types import MemoryPromptConfig
 
-    po = MemoryPromptConfig.for_online_people_research()
-    assert po.save_system and "search_query" in po.save_system
-    assert po.extract_memories_system and "Exa" in po.extract_memories_system
-    assert po.query_system and "recall_queries" in po.query_system
+    po = MemoryPromptConfig(
+        save_system="Prefer categories: search_query, exa_search, result_domain.",
+        extract_memories_system="Record Exa queries and canonical URLs first.",
+        query_system="Distill recall_queries toward domains and past queries.",
+    )
+    assert "search_query" in (po.save_system or "")
+    assert "Exa" in (po.extract_memories_system or "")
+    assert "recall_queries" in (po.query_system or "")
 
 
 def test_memory_prompt_overrides_save_system_used_in_analyze(tmp_path: Path) -> None:
