@@ -38,13 +38,9 @@ Use Asqav with CrewAI when you need:
 
     ```python
     from crewai import Agent, Crew, Task, Process
-    from asqav.integrations.crewai import AsqavCrewHook
+    from asqav.extras.crewai import AsqavCrewHook
 
-    hook = AsqavCrewHook(
-        project="my-crew-project",
-        # Optional: push records to a remote endpoint
-        # endpoint="https://your-asqav-server/ingest",
-    )
+    hook = AsqavCrewHook(agent_name="my-crew-project")
 
     researcher = Agent(
         role="Researcher",
@@ -63,7 +59,8 @@ Use Asqav with CrewAI when you need:
         agents=[researcher],
         tasks=[task],
         process=Process.sequential,
-        callbacks=[hook],
+        step_callback=hook.step_callback,
+        task_callback=hook.task_callback,
     )
 
     result = crew.kickoff()
