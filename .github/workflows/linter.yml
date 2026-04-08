@@ -4,13 +4,13 @@ on:
   pull_request:
     paths-ignore:
       - 'docs/**'
-      - '*.md'
+      - '**/*.md'
 
 permissions:
   contents: read
 
 jobs:
-  lint:
+  lint-run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,3 +52,19 @@ jobs:
             ~/.local/share/uv
             .venv
           key: uv-main-py3.11-${{ hashFiles('uv.lock') }}
+
+  # Summary job to provide single status for branch protection
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: lint-run
+    if: always()
+    steps:
+      - name: Check lint results
+        run: |
+          if [ "${{ needs.lint-run.result }}" == "success" ] || [ "${{ needs.lint-run.result }}" == "skipped" ]; then
+            echo "Lint passed"
+          else
+            echo "Lint failed"
+            exit 1
+          fi
