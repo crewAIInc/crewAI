@@ -1,18 +1,17 @@
 ---
 title: Asqav Integration
-description: Add signed audit trails and governance checks to your CrewAI agents with Asqav.
+description: Add signed audit trails to your CrewAI agents with Asqav.
 icon: shield-check
 mode: "wide"
 ---
 
 # Asqav Integration
 
-[Asqav](https://github.com/asqav/asqav) is an open-source AI governance and compliance tool. It captures cryptographically signed audit trails for every agent action and provides a CI scanner (`asqav-compliance`) that flags governance violations on pull requests.
+[Asqav](https://github.com/jagmarques/asqav-sdk) is an open-source Python SDK for AI agent governance. It captures cryptographically signed audit trails for every agent action using ML-DSA-65 post-quantum signatures.
 
 Use Asqav with CrewAI when you need:
 
-- **Signed audit trails**: Tamper-evident logs of every task execution, tool call, and agent decision
-- **Compliance scanning**: Automated governance checks that run in CI alongside your test suite
+- **Signed audit trails**: Tamper-evident records of every task execution, tool call, and agent decision
 - **Incident traceability**: Reproduce and verify exactly what an agent did and when
 
 ## Setup
@@ -23,15 +22,14 @@ Use Asqav with CrewAI when you need:
     pip install "asqav[crewai]"
     ```
   </Step>
-  <Step title="Set your signing key">
-    Asqav signs every audit record with an Ed25519 key. Generate one and export it:
+  <Step title="Set your API key">
+    Asqav signs audit records server-side with ML-DSA-65. Export your API key:
 
     ```bash
-    asqav keygen --out ~/.asqav/signing.key
-    export ASQAV_SIGNING_KEY=~/.asqav/signing.key
+    export ASQAV_API_KEY=your-api-key
     ```
 
-    For CI, store the key as a repository secret and inject it as `ASQAV_SIGNING_KEY`.
+    For CI, store the key as a repository secret and inject it as `ASQAV_API_KEY`.
   </Step>
   <Step title="Attach the callback hook to your Crew">
     `AsqavCrewHook` is a CrewAI callback that records task lifecycle events.
@@ -40,7 +38,7 @@ Use Asqav with CrewAI when you need:
     from crewai import Agent, Crew, Task, Process
     from asqav.extras.crewai import AsqavCrewHook
 
-    hook = AsqavCrewHook(agent_name="my-crew-project")
+    hook = AsqavCrewHook(agent_name="my-crew")
 
     researcher = Agent(
         role="Researcher",
@@ -66,59 +64,14 @@ Use Asqav with CrewAI when you need:
     result = crew.kickoff()
     print(result)
     ```
-
-    After the run, Asqav writes a signed JSONL audit log to `~/.asqav/logs/` by default.
   </Step>
 </Steps>
 
-## Audit Log Format
+## How It Works
 
-Each record is a JSON line containing the event type, agent role, task description, timestamp, and an Ed25519 signature over the record body:
-
-```json
-{
-  "event": "task_completed",
-  "agent": "Researcher",
-  "task": "Summarize AI governance news from the past 30 days.",
-  "output_hash": "sha256:a3f1...",
-  "timestamp": "2026-04-08T12:00:00Z",
-  "signature": "base64:..."
-}
-```
-
-Verify a log file with:
-
-```bash
-asqav verify --log ~/.asqav/logs/my-crew-project.jsonl
-```
-
-## CI Governance Scanning
-
-The `asqav-compliance` scanner analyzes agent logs and source code for governance policy violations - things like missing human-in-the-loop gates, unscoped tool permissions, or agents writing to production systems without approval.
-
-Add it to your CI pipeline:
-
-```yaml
-# .github/workflows/compliance.yml
-name: Compliance
-
-on: [push, pull_request]
-
-jobs:
-  asqav-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: pip install "asqav[crewai]"
-      - run: asqav-compliance scan --path . --fail-on high
-        env:
-          ASQAV_SIGNING_KEY: ${{ secrets.ASQAV_SIGNING_KEY }}
-```
-
-`--fail-on high` exits non-zero only for high-severity findings, so low-risk warnings do not block merges.
+The hook signs each task lifecycle event (`task:start`, `task:complete`, `task:fail`, `step:execute`) via the Asqav API. All signing happens server-side using ML-DSA-65 post-quantum signatures. The hook is fail-open - governance failures are logged but never interrupt your crew's execution.
 
 ## Resources
 
-- [Asqav on GitHub](https://github.com/asqav/asqav)
-- [Asqav documentation](https://asqav.github.io/docs)
-- [asqav-compliance scanner reference](https://asqav.github.io/docs/ci-scanner)
+- [Asqav on GitHub](https://github.com/jagmarques/asqav-sdk)
+- [Asqav documentation](https://asqav.com/docs/integrations)
