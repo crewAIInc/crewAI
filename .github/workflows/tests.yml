@@ -1,17 +1,30 @@
 name: Run Tests
 
-on:
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
+on: [pull_request]
 
 permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
+
   tests-matrix:
     name: tests (${{ matrix.python-version }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -107,12 +120,16 @@ jobs:
   tests:
     name: tests
     runs-on: ubuntu-latest
-    needs: tests-matrix
+    needs: [changes, tests-matrix]
     if: always()
     steps:
-      - name: Check matrix results
+      - name: Check results
         run: |
-          if [ "${{ needs.tests-matrix.result }}" == "success" ] || [ "${{ needs.tests-matrix.result }}" == "skipped" ]; then
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, skipping tests"
+            exit 0
+          fi
+          if [ "${{ needs.tests-matrix.result }}" == "success" ]; then
             echo "All tests passed"
           else
             echo "Tests failed"
