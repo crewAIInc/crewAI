@@ -3,6 +3,7 @@
 import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
 import contextvars
+import logging
 import queue
 import threading
 from typing import Any, NamedTuple
@@ -20,6 +21,9 @@ from crewai.types.streaming import (
     ToolCallChunk,
 )
 from crewai.utilities.string_utils import sanitize_tool_name
+
+
+logger = logging.getLogger(__name__)
 
 
 class TaskInfo(TypedDict):
@@ -298,8 +302,10 @@ async def create_async_chunk_generator(
             task.cancel()
         try:
             await task
-        except (asyncio.CancelledError, Exception):  # noqa: S110
+        except asyncio.CancelledError:
             pass
+        except Exception:
+            logger.debug("Background streaming task failed", exc_info=True)
         if output_holder:
             _finalize_streaming(state, output_holder[0])
         else:
