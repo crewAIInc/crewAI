@@ -1,8 +1,8 @@
 """Development tools for version bumping and git automation."""
 
+from collections.abc import Mapping
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tempfile
@@ -18,6 +18,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
+import tomlkit
 
 from crewai_devtools.docs_check import docs_check
 from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
@@ -169,18 +170,17 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
     if not file_path.exists():
         return False
 
-    content = file_path.read_text()
-    new_content = re.sub(
-        r'^(version\s*=\s*")[^"]+(")',
-        rf"\g<1>{new_version}\2",
-        content,
-        count=1,
-        flags=re.MULTILINE,
-    )
-    if new_content != content:
-        file_path.write_text(new_content)
-        return True
-    return False
+    doc = tomlkit.parse(file_path.read_text())
+    project = doc.get("project")
+    if project is None:
+        return False
+    old_version = project.get("version")
+    if old_version is None or old_version == new_version:
+        return False
+
+    project["version"] = new_version
+    file_path.write_text(tomlkit.dumps(doc))
+    return True
 
 
 _DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
@@ -473,6 +473,14 @@ def update_changelog(
     return True
 
 
+def _is_crewai_dep(spec: str) -> bool:
+    """Return True if *spec* is a ``crewai`` or ``crewai[...]`` dependency."""
+    if not spec.startswith("crewai"):
+        return False
+    rest = spec[6:]  # after "crewai"
+    return len(rest) > 0 and rest[0] in ("[", "=", ">", "<", "~", "!")
+
+
 def _pin_crewai_deps(content: str, version: str) -> str:
     """Replace crewai dependency version pins in a pyproject.toml string.
 
@@ -486,11 +494,21 @@ def _pin_crewai_deps(content: str, version: str) -> str:
     Returns:
         Transformed content.
     """
-    return re.sub(
-        r'"crewai(\[tools\])?(==|>=)[^"]*"',
-        lambda m: f'"crewai{(m.group(1) or "")!s}=={version}"',
-        content,
-    )
+    doc = tomlkit.parse(content)
+    for key in ("dependencies", "optional-dependencies"):
+        deps = doc.get("project", {}).get(key)
+        if deps is None:
+            continue
+        # optional-dependencies is a table of lists; dependencies is a list
+        dep_lists = deps.values() if isinstance(deps, Mapping) else [deps]
+        for dep_list in dep_lists:
+            for i, dep in enumerate(dep_list):
+                s = str(dep)
+                if not _is_crewai_dep(s) or ("==" not in s and ">=" not in s):
+                    continue
+                extras = s[6 : s.index("]") + 1] if "[" in s[6:7] else ""
+                dep_list[i] = f"crewai{extras}=={version}"
+    return tomlkit.dumps(doc)
 
 
 def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
@@ -1049,6 +1067,11 @@ _ENTERPRISE_EXTRA_PACKAGES: Final[tuple[str, ...]] = tuple(
     for p in os.getenv("ENTERPRISE_EXTRA_PACKAGES", "").split(",")
     if p.strip()
 )
+_ENTERPRISE_WORKFLOW_PATHS: Final[tuple[str, ...]] = tuple(
+    p.strip()
+    for p in os.getenv("ENTERPRISE_WORKFLOW_PATHS", "").split(",")
+    if p.strip()
+)
 
 
 def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
@@ -1070,6 +1093,86 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
         pyproject_path.write_text(new_content)
         return True
     return False
+
+
+def _update_enterprise_workflows(repo_dir: Path, version: str) -> list[Path]:
+    """Update crewai version pins in enterprise CI workflow files.
+
+    Applies ``_repin_crewai_install`` line-by-line on the raw file so
+    only version numbers change and all formatting is preserved.
+
+    Args:
+        repo_dir: Root of the cloned enterprise repo.
+        version: New crewai version string.
+
+    Returns:
+        List of workflow paths that were modified.
+    """
+    updated: list[Path] = []
+    for rel_path in _ENTERPRISE_WORKFLOW_PATHS:
+        workflow = repo_dir / rel_path
+        if not workflow.exists():
+            continue
+
+        raw = workflow.read_text()
+        lines = raw.splitlines(keepends=True)
+        changed = False
+        for i, line in enumerate(lines):
+            if "crewai[" not in line:
+                continue
+            new_line = _repin_crewai_install(line, version)
+            if new_line != line:
+                lines[i] = new_line
+                changed = True
+
+        if changed:
+            new_raw = "".join(lines)
+        else:
+            new_raw = raw
+
+        if new_raw != raw:
+            workflow.write_text(new_raw)
+            updated.append(workflow)
+
+    return updated
+
+
+def _repin_crewai_install(run_value: str, version: str) -> str:
+    """Rewrite ``crewai[extras]==old`` pins in a shell command string.
+
+    Splits on the known ``crewai[`` prefix and reconstructs the pin
+    with the new version, avoiding regex.
+
+    Args:
+        run_value: The ``run:`` string from a workflow step.
+        version: New version to pin to.
+
+    Returns:
+        The updated string.
+    """
+    result: list[str] = []
+    remainder = run_value
+    marker = "crewai["
+    while marker in remainder:
+        before, _, after = remainder.partition(marker)
+        result.append(before)
+        # after looks like: a2a]==1.14.0" ...
+        bracket_end = after.index("]")
+        extras = after[:bracket_end]
+        rest = after[bracket_end + 1 :]
+        if rest.startswith("=="):
+            # Find end of version — next quote or whitespace
+            ver_start = 2  # len("==")
+            ver_end = ver_start
+            while ver_end < len(rest) and rest[ver_end] not in ('"', "'", " ", "\n"):
+                ver_end += 1
+            result.append(f"crewai[{extras}]=={version}")
+            remainder = rest[ver_end:]
+        else:
+            result.append(f"crewai[{extras}]")
+            remainder = rest
+    result.append(remainder)
+    return "".join(result)
 
 
 _DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
@@ -1099,11 +1202,7 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
 
         pyproject = repo_dir / "pyproject.toml"
         content = pyproject.read_text()
-        new_content = re.sub(
-            r'"crewai\[tools\]==[^"]+"',
-            f'"crewai[tools]=={version}"',
-            content,
-        )
+        new_content = _pin_crewai_deps(content, version)
         if new_content == content:
             console.print(
                 "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
@@ -1260,6 +1359,12 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         if _update_enterprise_crewai_dep(enterprise_pyproject, version):
             console.print(
                 f"[green]✓[/green] Updated crewai[tools] dep in {enterprise_dep_path}"
+            )
+
+        # --- update crewai pins in CI workflows ---
+        for wf in _update_enterprise_workflows(repo_dir, version):
+            console.print(
+                f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
             )
 
         _wait_for_pypi("crewai", version)
