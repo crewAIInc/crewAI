@@ -90,6 +90,7 @@ class StreamingOutputBase(Generic[T]):
         self._chunks: list[StreamChunk] = []
         self._error: Exception | None = None
         self._cancelled: bool = False
+        self._exhausted: bool = False
         self._sync_iterator = sync_iterator
         self._async_iterator = async_iterator
 
@@ -154,9 +155,9 @@ class StreamingOutputBase(Generic[T]):
         """Cancel streaming and clean up resources.
 
         Cancels any in-flight tasks and closes the underlying async iterator.
-        Safe to call multiple times.
+        Safe to call multiple times. No-op if already cancelled or fully consumed.
         """
-        if self._cancelled:
+        if self._cancelled or self._exhausted:
             return
         self._cancelled = True
         self._completed = True
@@ -167,8 +168,9 @@ class StreamingOutputBase(Generic[T]):
         """Cancel streaming and clean up resources (sync).
 
         Closes the underlying sync iterator. Safe to call multiple times.
+        No-op if already cancelled or fully consumed.
         """
-        if self._cancelled:
+        if self._cancelled or self._exhausted:
             return
         self._cancelled = True
         self._completed = True
@@ -190,6 +192,7 @@ class StreamingOutputBase(Generic[T]):
             for chunk in self._sync_iterator:
                 self._chunks.append(chunk)
                 yield chunk
+            self._exhausted = True
         except Exception as e:
             self._error = e
             raise
@@ -219,6 +222,7 @@ class StreamingOutputBase(Generic[T]):
             async for chunk in self._async_iterator:
                 self._chunks.append(chunk)
                 yield chunk
+            self._exhausted = True
         except Exception as e:
             self._error = e
             raise

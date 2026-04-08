@@ -749,7 +749,8 @@ class TestStreamingCancellation:
 
         await streaming.aclose()
         await streaming.aclose()
-        assert streaming.is_cancelled
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
 
     @pytest.mark.asyncio
     async def test_async_context_manager(self) -> None:
@@ -765,7 +766,7 @@ class TestStreamingCancellation:
             async for chunk in streaming:
                 collected.append(chunk)
 
-        assert streaming.is_cancelled
+        assert not streaming.is_cancelled
         assert streaming.is_completed
         assert len(collected) == 2
 
@@ -816,11 +817,12 @@ class TestStreamingCancellation:
 
         streaming.close()
         streaming.close()
-        assert streaming.is_cancelled
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
 
     @pytest.mark.asyncio
     async def test_flow_aclose(self) -> None:
-        """Test that FlowStreamingOutput supports aclose()."""
+        """Test that FlowStreamingOutput aclose() is no-op after normal completion."""
         async def gen() -> AsyncIterator[StreamChunk]:
             yield StreamChunk(content="flow-chunk")
 
@@ -829,12 +831,12 @@ class TestStreamingCancellation:
             pass
 
         await streaming.aclose()
-        assert streaming.is_cancelled
+        assert not streaming.is_cancelled
         assert streaming.is_completed
 
     @pytest.mark.asyncio
     async def test_flow_async_context_manager(self) -> None:
-        """Test FlowStreamingOutput as async context manager."""
+        """Test FlowStreamingOutput as async context manager with full consumption."""
         async def gen() -> AsyncIterator[StreamChunk]:
             yield StreamChunk(content="flow-chunk")
 
@@ -844,11 +846,11 @@ class TestStreamingCancellation:
             async for _ in streaming:
                 pass
 
-        assert streaming.is_cancelled
+        assert not streaming.is_cancelled
         assert streaming.is_completed
 
     def test_flow_close(self) -> None:
-        """Test that FlowStreamingOutput supports close()."""
+        """Test that FlowStreamingOutput close() is no-op after normal completion."""
         def gen() -> Generator[StreamChunk, None, None]:
             yield StreamChunk(content="flow-chunk")
 
@@ -856,7 +858,7 @@ class TestStreamingCancellation:
         list(streaming)
 
         streaming.close()
-        assert streaming.is_cancelled
+        assert not streaming.is_cancelled
 
 
 class TestStreamingImports:
