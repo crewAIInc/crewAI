@@ -4,6 +4,40 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="09 abr 2026">
+  ## v1.14.1rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar navegador TUI de ponto de verificação assíncrono
+  - Adicionar aclose()/close() e gerenciador de contexto assíncrono para saídas de streaming
+
+  ### Correções de Bugs
+  - Corrigir aumentos de versão do template pyproject.toml usando regex
+  - Sanitizar nomes de ferramentas nos filtros do decorador de hook
+  - Atualizar transformers para 5.5.0 para resolver CVE-2026-1839
+  - Registrar manipuladores de ponto de verificação quando CheckpointConfig é criado
+
+  ### Refatoração
+  - Substituir lista de negação codificada por exclusão dinâmica de campo BaseTool na geração de especificações
+  - Substituir regex por tomlkit na CLI do devtools
+  - Usar singleton PRINTER compartilhado
+  - Tornar BaseProvider um BaseModel com discriminador de tipo de provedor
+  - Remover wrapper stdout/stderr de FilteredStream
+  - Remover flow/config.py não utilizado
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0
+
+  ## Contribuidores
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
 <Update label="07 abr 2026">
   ## v1.14.0
 
