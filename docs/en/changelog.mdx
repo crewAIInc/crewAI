@@ -4,6 +4,40 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 09, 2026">
+  ## v1.14.1rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## What's Changed
+
+  ### Features
+  - Add async checkpoint TUI browser
+  - Add aclose()/close() and async context manager to streaming outputs
+
+  ### Bug Fixes
+  - Fix template pyproject.toml version bumps using regex
+  - Sanitize tool names in hook decorator filters
+  - Bump transformers to 5.5.0 to resolve CVE-2026-1839
+  - Register checkpoint handlers when CheckpointConfig is created
+
+  ### Refactoring
+  - Replace hardcoded denylist with dynamic BaseTool field exclusion in spec gen
+  - Replace regex with tomlkit in devtools CLI
+  - Use shared PRINTER singleton
+  - Make BaseProvider a BaseModel with provider_type discriminator
+  - Remove FilteredStream stdout/stderr wrapper
+  - Remove unused flow/config.py
+
+  ### Documentation
+  - Update changelog and version for v1.14.0
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
 <Update label="Apr 07, 2026">
   ## v1.14.0
 
