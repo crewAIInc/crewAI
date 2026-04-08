@@ -67,7 +67,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -135,9 +135,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
-    def __init__(self, i18n: I18N | None = None, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._i18n = i18n or get_i18n()
         if not self.before_llm_call_hooks:
             self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         if not self.after_llm_call_hooks:
@@ -328,7 +327,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
                         printer=PRINTER,
-                        i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -401,7 +399,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
                         tools=self.tools,
-                        i18n=self._i18n,
                         agent_key=self.agent.key if self.agent else None,
                         agent_role=self.agent.role if self.agent else None,
                         tools_handler=self.tools_handler,
@@ -438,7 +435,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
@@ -484,7 +480,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     formatted_answer = handle_max_iterations_exceeded(
                         None,
                         printer=PRINTER,
-                        i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -575,7 +570,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
@@ -771,7 +765,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     if tool_finish:
                         return tool_finish
 
-                reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+                reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
                 reasoning_message: LLMMessage = {
                     "role": "user",
                     "content": reasoning_prompt,
@@ -795,7 +789,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if tool_finish:
             return tool_finish
 
-        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+        reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
         reasoning_message = {
             "role": "user",
             "content": reasoning_prompt,
@@ -1170,7 +1164,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
                         printer=PRINTER,
-                        i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -1242,7 +1235,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
                         tools=self.tools,
-                        i18n=self._i18n,
                         agent_key=self.agent.key if self.agent else None,
                         agent_role=self.agent.role if self.agent else None,
                         tools_handler=self.tools_handler,
@@ -1278,7 +1270,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
@@ -1318,7 +1309,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     formatted_answer = handle_max_iterations_exceeded(
                         None,
                         printer=PRINTER,
-                        i18n=self._i18n,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -1408,7 +1398,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
@@ -1467,7 +1456,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             Updated action or final answer.
         """
         # Special case for add_image_tool
-        add_image_tool = self._i18n.tools("add_image")
+        add_image_tool = I18N_DEFAULT.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
@@ -1673,5 +1662,5 @@ class CrewAgentExecutor(BaseAgentExecutor):
             Formatted message dict.
         """
         return format_message_for_llm(
-            self._i18n.slice("feedback_instructions").format(feedback=feedback)
+            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
         )

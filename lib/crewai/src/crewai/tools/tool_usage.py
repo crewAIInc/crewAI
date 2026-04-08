@@ -28,7 +28,7 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.converter import Converter
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -93,7 +93,6 @@ class ToolUsage:
         action: Any = None,
         fingerprint_context: dict[str, str] | None = None,
     ) -> None:
-        self._i18n: I18N = agent.i18n if agent else get_i18n()
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
@@ -146,7 +145,7 @@ class ToolUsage:
         if (
             isinstance(tool, CrewStructuredTool)
             and sanitize_tool_name(tool.name)
-            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
+            == sanitize_tool_name(I18N_DEFAULT.tools("add_image")["name"])  # type: ignore
         ):
             try:
                 return self._use(tool_string=tool_string, tool=tool, calling=calling)
@@ -194,7 +193,7 @@ class ToolUsage:
         if (
             isinstance(tool, CrewStructuredTool)
             and sanitize_tool_name(tool.name)
-            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
+            == sanitize_tool_name(I18N_DEFAULT.tools("add_image")["name"])  # type: ignore
         ):
             try:
                 return await self._ause(
@@ -230,7 +229,7 @@ class ToolUsage:
         """
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = self._i18n.errors("task_repeated_usage").format(
+                result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
                 self._telemetry.tool_repeated_usage(
@@ -415,7 +414,7 @@ class ToolUsage:
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                        error_message = self._i18n.errors(
+                        error_message = I18N_DEFAULT.errors(
                             "tool_usage_exception"
                         ).format(
                             error=e,
@@ -423,7 +422,7 @@ class ToolUsage:
                             tool_inputs=tool.description,
                         )
                         result = ToolUsageError(
-                            f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                            f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
                         if self.task:
                             self.task.increment_tools_errors()
@@ -461,7 +460,7 @@ class ToolUsage:
         # Repeated usage check happens before event emission - safe to return early
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = self._i18n.errors("task_repeated_usage").format(
+                result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
                 self._telemetry.tool_repeated_usage(
@@ -648,7 +647,7 @@ class ToolUsage:
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                        error_message = self._i18n.errors(
+                        error_message = I18N_DEFAULT.errors(
                             "tool_usage_exception"
                         ).format(
                             error=e,
@@ -656,7 +655,7 @@ class ToolUsage:
                             tool_inputs=tool.description,
                         )
                         result = ToolUsageError(
-                            f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                            f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
                         if self.task:
                             self.task.increment_tools_errors()
@@ -699,7 +698,7 @@ class ToolUsage:
 
     def _remember_format(self, result: str) -> str:
         result = str(result)
-        result += "\n\n" + self._i18n.slice("tools").format(
+        result += "\n\n" + I18N_DEFAULT.slice("tools").format(
             tools=self.tools_description, tool_names=self.tools_names
         )
         return result
@@ -825,12 +824,12 @@ class ToolUsage:
         except Exception:
             if raise_error:
                 raise
-            return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
+            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         if not isinstance(arguments, dict):
             if raise_error:
                 raise
-            return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
+            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         return ToolCalling(
             tool_name=sanitize_tool_name(tool.name),
@@ -856,7 +855,7 @@ class ToolUsage:
                 if self.agent and self.agent.verbose:
                     PRINTER.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageError(
-                    f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                    f"{I18N_DEFAULT.errors('tool_usage_error').format(error=e)}\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                 )
             return self._tool_calling(tool_string)
 

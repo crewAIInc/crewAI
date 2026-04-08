@@ -147,8 +147,6 @@ class TestAgentReasoningWithMockedLLM:
         agent.backstory = "Test backstory"
         agent.verbose = False
         agent.planning_config = PlanningConfig()
-        agent.i18n = MagicMock()
-        agent.i18n.retrieve.return_value = "Test prompt: {description}"
         # Mock the llm attribute
         agent.llm = MagicMock()
         agent.llm.supports_function_calling.return_value = True
