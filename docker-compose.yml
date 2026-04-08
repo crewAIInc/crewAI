@@ -1,0 +1,30 @@
+# =============================================================================
+# docker-compose.yml — Local development / quick-start for crewAI
+#
+# Usage:
+#   docker compose run --rm crewai version        # check installed version
+#   docker compose run --rm crewai create crew demo # scaffold a new crew
+#
+# To include optional extras (e.g. litellm, tools):
+#   CREWAI_EXTRAS=litellm docker compose build
+# =============================================================================
+
+services:
+  crewai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CREWAI_EXTRAS: "${CREWAI_EXTRAS:-}"
+    volumes:
+      # Mount the current directory so generated projects appear on the host
+      - .:/app/workspace
+    working_dir: /app/workspace
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-}
+    # Override entrypoint for interactive use:
+    #   docker compose run --rm --entrypoint bash crewai
+    stdin_open: true
+    tty: true

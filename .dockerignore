@@ -1,0 +1,38 @@
+# Version control
+.git
+.github
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+.mypy_cache
+.ruff_cache
+.pytest_cache
+
+# Virtual environments
+.venv
+venv
+
+# IDE / editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific
+.env
+assets/
+docs/
+db/
+*.pkl
+temp/
+.claude
+.codesight
