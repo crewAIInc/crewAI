@@ -5,6 +5,39 @@ icon: "clock"
 mode: "wide"
 ---
 <Update label="2026년 4월 9일">
+  ## v1.14.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 비동기 체크포인트 TUI 브라우저 추가
+  - 스트리밍 출력에 aclose()/close() 및 비동기 컨텍스트 관리자 추가
+
+  ### 버그 수정
+  - 템플릿 pyproject.toml 버전 증가를 위한 정규 표현식 수정
+  - 훅 데코레이터 필터에서 도구 이름 정리
+  - CheckpointConfig 생성 시 체크포인트 핸들러 등록 수정
+  - CVE-2026-1839 해결을 위해 transformers를 5.5.0으로 업데이트
+  - FilteredStream stdout/stderr 래퍼 제거
+
+  ### 문서
+  - v1.14.1rc1에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - 하드코딩된 거부 목록을 동적 BaseTool 필드 제외로 교체
+  - devtools CLI에서 정규 표현식을 tomlkit으로 교체
+  - 공유 PRINTER 싱글톤 사용
+  - BaseProvider를 provider_type 식별자가 있는 BaseModel로 변경
+
+  ## 기여자
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="2026년 4월 9일">
   ## v1.14.1rc1
 
   [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
