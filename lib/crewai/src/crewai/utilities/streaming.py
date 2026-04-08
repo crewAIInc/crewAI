@@ -296,12 +296,10 @@ async def create_async_chunk_generator(
     finally:
         if not task.done():
             task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        else:
+        try:
             await task
+        except (asyncio.CancelledError, Exception):  # noqa: S110
+            pass
         if output_holder:
             _finalize_streaming(state, output_holder[0])
         else:
