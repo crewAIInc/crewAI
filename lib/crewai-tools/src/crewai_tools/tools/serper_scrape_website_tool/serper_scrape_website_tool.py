@@ -5,6 +5,8 @@ from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 import requests
 
+from crewai_tools.security.safe_path import validate_url
+
 
 class SerperScrapeWebsiteInput(BaseModel):
     """Input schema for SerperScrapeWebsite."""
@@ -42,6 +44,7 @@ class SerperScrapeWebsiteTool(BaseTool):
         Returns:
             Scraped website content as a string
         """
+        validate_url(url)
         try:
             # Serper API endpoint
             api_url = "https://scrape.serper.dev"

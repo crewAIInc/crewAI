@@ -2,25 +2,33 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypedDict
 
 from crewai.utilities.i18n import I18N, get_i18n
 
 
-class StandardPromptResult(TypedDict):
+class StandardPromptResult(BaseModel):
     """Result with only prompt field for standard mode."""
 
-    prompt: Annotated[str, "The generated prompt string"]
+    prompt: str = Field(default="")
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __contains__(self, key: str) -> bool:
+        return hasattr(self, key) and getattr(self, key) is not None
 
 
 class SystemPromptResult(StandardPromptResult):
     """Result with system, user, and prompt fields for system prompt mode."""
 
-    system: Annotated[str, "The system prompt component"]
-    user: Annotated[str, "The user prompt component"]
+    system: str = Field(default="")
+    user: str = Field(default="")
 
 
 COMPONENTS = Literal[

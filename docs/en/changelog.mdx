@@ -4,6 +4,77 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 07, 2026">
+  ## v1.14.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## What's Changed
+
+  ### Features
+  - Add checkpoint list/info CLI commands
+  - Add guardrail_type and name to distinguish traces
+  - Add SqliteProvider for checkpoint storage
+  - Add CheckpointConfig for automatic checkpointing
+  - Implement runtime state checkpointing, event system, and executor refactor
+
+  ### Bug Fixes
+  - Add SSRF and path traversal protections
+  - Add path and URL validation to RAG tools
+  - Exclude embedding vectors from memory serialization to save tokens
+  - Ensure output directory exists before writing in flow template
+  - Bump litellm to >=1.83.0 to address CVE-2026-35030
+  - Remove SEO indexing field causing Arabic page rendering
+
+  ### Documentation
+  - Update changelog and version for v1.14.0
+  - Update quickstart and installation guides for improved clarity
+  - Add storage providers section, export JsonProvider
+  - Add AMP Training Tab guide
+
+  ### Refactoring
+  - Clean up checkpoint API
+  - Remove CodeInterpreterTool and deprecate code execution parameters
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="Apr 07, 2026">
+  ## v1.14.0a4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## What's Changed
+
+  ### Features
+  - Add guardrail_type and name to distinguish traces
+  - Add SqliteProvider for checkpoint storage
+  - Add CheckpointConfig for automatic checkpointing
+  - Implement runtime state checkpointing, event system, and executor refactor
+
+  ### Bug Fixes
+  - Exclude embedding vectors from memory serialization to save tokens
+  - Bump litellm to >=1.83.0 to address CVE-2026-35030
+
+  ### Documentation
+  - Update quickstart and installation guides for improved clarity
+  - Add storage providers section and export JsonProvider
+
+  ### Performance
+  - Use JSONB for checkpoint data column
+
+  ### Refactoring
+  - Remove CodeInterpreterTool and deprecate code execution params
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
 <Update label="Apr 06, 2026">
   ## v1.14.0a3
 

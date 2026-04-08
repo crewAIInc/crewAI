@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 import httpx
 from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
 from openai.lib.streaming.chat import ChatCompletionStream
-from openai.types.chat import ChatCompletion, ChatCompletionChunk
+from openai.types.chat import (
+    ChatCompletion,
+    ChatCompletionChunk,
+    ChatCompletionMessageFunctionToolCall,
+)
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.responses import (
@@ -37,7 +41,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent.core import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
 
@@ -183,6 +187,8 @@ class OpenAICompletion(BaseLLM):
             from responses, and passes them back in subsequent calls to preserve
             chain-of-thought without storing data on OpenAI servers.
     """
+
+    llm_type: Literal["openai"] = "openai"
 
     BUILTIN_TOOL_TYPES: ClassVar[dict[str, str]] = {
         "web_search": "web_search_preview",
@@ -367,7 +373,7 @@ class OpenAICompletion(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI API (Chat Completions or Responses based on api setting).
@@ -435,7 +441,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI Chat Completions API."""
@@ -467,7 +473,7 @@ class OpenAICompletion(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI API (Chat Completions or Responses).
@@ -530,7 +536,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI Chat Completions API."""
@@ -561,7 +567,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call OpenAI Responses API."""
@@ -592,7 +598,7 @@ class OpenAICompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async call to OpenAI Responses API."""
@@ -1630,10 +1636,8 @@ class OpenAICompletion(BaseLLM):
             # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
-                if not hasattr(tool_call, "function") or tool_call.function is None:
-                    raise ValueError(
-                        f"Unsupported tool call type: {type(tool_call).__name__}"
-                    )
+                if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
+                    return message.content
                 function_name = tool_call.function.name
 
                 try:
@@ -2018,11 +2022,13 @@ class OpenAICompletion(BaseLLM):
 
             # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
+                from openai.types.chat.chat_completion_message_function_tool_call import (
+                    ChatCompletionMessageFunctionToolCall,
+                )
+
                 tool_call = message.tool_calls[0]
-                if not hasattr(tool_call, "function") or tool_call.function is None:
-                    raise ValueError(
-                        f"Unsupported tool call type: {type(tool_call).__name__}"
-                    )
+                if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
+                    return message.content
                 function_name = tool_call.function.name
 
                 try:

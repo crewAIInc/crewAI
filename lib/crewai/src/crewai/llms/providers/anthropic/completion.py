@@ -148,6 +148,7 @@ class AnthropicCompletion(BaseLLM):
     offering native tool use, streaming support, and proper message formatting.
     """
 
+    llm_type: Literal["anthropic"] = "anthropic"
     model: str = "claude-3-5-sonnet-20241022"
     timeout: float | None = None
     max_retries: int = 2

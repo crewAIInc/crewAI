@@ -1,5 +1,7 @@
 import asyncio
 from collections.abc import Coroutine
+import concurrent.futures
+import contextvars
 import inspect
 from typing import Any
 
@@ -17,6 +19,21 @@ def _is_coroutine(
 ) -> TypeIs[Coroutine[Any, Any, LiteAgentOutput]]:
     """Check if obj is a coroutine for type narrowing."""
     return inspect.iscoroutine(obj)
+
+
+def _run_coroutine_sync(coro: Coroutine[Any, Any, LiteAgentOutput]) -> LiteAgentOutput:
+    """Run a coroutine synchronously, handling an already-running event loop."""
+    try:
+        asyncio.get_running_loop()
+        has_running_loop = True
+    except RuntimeError:
+        has_running_loop = False
+
+    if has_running_loop:
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, coro).result()
+    return asyncio.run(coro)
 
 
 class LLMGuardrailResult(BaseModel):
@@ -75,7 +92,7 @@ class LLMGuardrail:
 
         kickoff_result = agent.kickoff(query, response_format=LLMGuardrailResult)
         if _is_coroutine(kickoff_result):
-            return asyncio.run(kickoff_result)
+            return _run_coroutine_sync(kickoff_result)
         return kickoff_result
 
     def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:

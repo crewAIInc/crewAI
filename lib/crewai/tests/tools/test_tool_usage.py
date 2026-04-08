@@ -529,9 +529,6 @@ def test_tool_validate_input_error_event():
     mock_task = MagicMock()
     mock_tools_handler = MagicMock()
 
-    # Mock printer
-    mock_printer = MagicMock()
-
     # Create test tool
     class TestTool(BaseTool):
         name: str = "Test Tool"
@@ -551,8 +548,6 @@ def test_tool_validate_input_error_event():
         agent=mock_agent,
         action=MagicMock(tool="test_tool"),
     )
-    tool_usage._printer = mock_printer
-
     # Mock all parsing attempts to fail
     with (
         patch("json.loads", side_effect=json.JSONDecodeError("Test Error", "", 0)),

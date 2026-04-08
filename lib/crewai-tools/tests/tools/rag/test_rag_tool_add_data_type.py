@@ -10,6 +10,15 @@ from crewai_tools.rag.data_types import DataType
 from crewai_tools.tools.rag.rag_tool import RagTool
 
 
+@pytest.fixture(autouse=True)
+def allow_tmp_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Allow absolute paths outside CWD (e.g. /tmp/) for these data-type tests.
+
+    Path validation is tested separately in test_rag_tool_path_validation.py.
+    """
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+
+
 @pytest.fixture
 def mock_rag_client() -> MagicMock:
     """Create a mock RAG client for testing."""

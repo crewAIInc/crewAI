@@ -9,8 +9,6 @@ import contextvars
 from datetime import datetime
 import json
 from pathlib import Path
-import shutil
-import subprocess
 import time
 from typing import (
     TYPE_CHECKING,
@@ -27,7 +25,6 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
-    InstanceOf,
     PrivateAttr,
     model_validator,
 )
@@ -117,7 +114,6 @@ except ImportError:
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
-    from crewai_tools import CodeInterpreterTool
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
@@ -195,12 +191,12 @@ class Agent(BaseAgent):
     llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     function_calling_llm: Annotated[
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
-        PlainSerializer(_serialize_llm_ref, return_type=str | None, when_used="json"),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
     ] = Field(description="Language model that will run the agent.", default=None)
     system_template: str | None = Field(
         default=None, description="System format for the agent."
@@ -212,7 +208,9 @@ class Agent(BaseAgent):
         default=None, description="Response format for the agent."
     )
     allow_code_execution: bool | None = Field(
-        default=False, description="Enable code execution for the agent."
+        default=False,
+        deprecated=True,
+        description="Deprecated. CodeInterpreterTool is no longer available. Use dedicated sandbox services instead.",
     )
     respect_context_window: bool = Field(
         default=True,
@@ -237,7 +235,8 @@ class Agent(BaseAgent):
     )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
-        description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
+        deprecated=True,
+        description="Deprecated. CodeInterpreterTool is no longer available. Use dedicated sandbox services instead.",
     )
     planning_config: PlanningConfig | None = Field(
         default=None,
@@ -297,8 +296,8 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    agent_executor: InstanceOf[CrewAgentExecutor] | InstanceOf[AgentExecutor] | None = (
-        Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
+        default=None, description="An instance of the CrewAgentExecutor class."
     )
     executor_class: Annotated[
         type[CrewAgentExecutor] | type[AgentExecutor],
@@ -330,7 +329,13 @@ class Agent(BaseAgent):
             self._setup_agent_executor()
 
         if self.allow_code_execution:
-            self._validate_docker_installation()
+            warnings.warn(
+                "allow_code_execution is deprecated and will be removed in v2.0. "
+                "CodeInterpreterTool is no longer available. "
+                "Use dedicated sandbox services like E2B or Modal.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         self.set_skills()
 
@@ -1011,10 +1016,10 @@ class Agent(BaseAgent):
                 )
             self.agent_executor = self.executor_class(
                 llm=self.llm,
-                task=task,  # type: ignore[arg-type]
+                task=task,
                 i18n=self.i18n,
                 agent=self,
-                crew=self.crew,  # type: ignore[arg-type]
+                crew=self.crew,
                 tools=parsed_tools,
                 prompt=prompt,
                 original_tools=raw_tools,
@@ -1057,7 +1062,8 @@ class Agent(BaseAgent):
         if self.agent_executor is None:
             raise RuntimeError("Agent executor is not initialized.")
 
-        self.agent_executor.task = task
+        if task is not None:
+            self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
@@ -1076,7 +1082,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
-        if self.agent_executor.llm:
+        if isinstance(self.agent_executor.llm, BaseLLM):
             existing_stop = getattr(self.agent_executor.llm, "stop", [])
             self.agent_executor.llm.stop = list(
                 set(
@@ -1123,20 +1129,15 @@ class Agent(BaseAgent):
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self) -> list[CodeInterpreterTool]:
-        """Return code interpreter tools based on the agent's execution mode."""
-        try:
-            from crewai_tools import (
-                CodeInterpreterTool,
-            )
-
-            unsafe_mode = self.code_execution_mode == "unsafe"
-            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
-        except ModuleNotFoundError:
-            self._logger.log(
-                "info", "Coding tools not available. Install crewai_tools. "
-            )
-            return []
+    def get_code_execution_tools(self) -> list[Any]:
+        """Deprecated: CodeInterpreterTool is no longer available."""
+        warnings.warn(
+            "CodeInterpreterTool is no longer available. "
+            "Use dedicated sandbox services like E2B or Modal.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return []
 
     @staticmethod
     def get_output_converter(
@@ -1216,28 +1217,14 @@ class Agent(BaseAgent):
                 self._logger.log("warning", f"Failed to inject date: {e!s}")
 
     def _validate_docker_installation(self) -> None:
-        """Check if Docker is installed and running."""
-        docker_path = shutil.which("docker")
-        if not docker_path:
-            raise RuntimeError(
-                f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}"
-            )
-
-        try:
-            subprocess.run(  # noqa: S603
-                [str(docker_path), "info"],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
-            ) from e
-        except subprocess.TimeoutExpired as e:
-            raise RuntimeError(
-                f"Docker command timed out. Please check your Docker installation for agent: {self.role}"
-            ) from e
+        """Deprecated: No-op. CodeInterpreterTool is no longer available."""
+        warnings.warn(
+            "CodeInterpreterTool is no longer available. "
+            "Use dedicated sandbox services like E2B or Modal.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return
 
     def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
