@@ -16,6 +16,19 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 
+def crew_memory_span_attribute_value(memory: Any) -> bool | str:
+    """Serialize ``Crew.memory`` for OpenTelemetry span attributes.
+
+    OTLP only allows bool, str, bytes, int, float, and homogeneous sequences
+    of those types — not arbitrary objects like :class:`~crewai.memory.unified_memory.Memory`.
+    """
+    if memory is None or memory is False:
+        return False
+    if memory is True:
+        return True
+    return type(memory).__name__
+
+
 def add_agent_fingerprint_to_span(
     span: Span, agent: Any, add_attribute_fn: Callable[[Span, str, Any], None]
 ) -> None:
