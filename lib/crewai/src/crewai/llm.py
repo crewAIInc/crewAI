@@ -3,18 +3,14 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
-import io
 import json
 import logging
 import os
-import sys
-import threading
 from typing import (
     TYPE_CHECKING,
     Any,
     Final,
     Literal,
-    TextIO,
     TypedDict,
     cast,
 )
@@ -66,7 +62,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from crewai.agent.core import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -100,72 +96,6 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 if LITELLM_AVAILABLE:
     litellm.suppress_debug_info = True
-
-
-class FilteredStream(io.TextIOBase):
-    _lock = None
-
-    def __init__(self, original_stream: TextIO):
-        self._original_stream = original_stream
-        self._lock = threading.Lock()
-
-    def write(self, s: str) -> int:
-        if not self._lock:
-            self._lock = threading.Lock()
-
-        with self._lock:
-            lower_s = s.lower()
-
-            # Skip common noisy LiteLLM banners and any other lines that contain "litellm"
-            if (
-                "litellm.info:" in lower_s
-                or "Consider using a smaller input or implementing a text splitting strategy"
-                in lower_s
-            ):
-                return 0
-
-            return self._original_stream.write(s)
-
-    def flush(self) -> None:
-        if self._lock:
-            with self._lock:
-                return self._original_stream.flush()
-        return None
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access to the wrapped original stream.
-
-        This ensures compatibility with libraries (e.g., Rich) that rely on
-        attributes such as `encoding`, `isatty`, `buffer`, etc., which may not
-        be explicitly defined on this proxy class.
-        """
-        return getattr(self._original_stream, name)
-
-    # Delegate common properties/methods explicitly so they aren't shadowed by
-    # the TextIOBase defaults (e.g., .encoding returns None by default, which
-    # confuses Rich). These explicit pass-throughs ensure the wrapped Console
-    # still sees a fully-featured stream.
-    @property
-    def encoding(self) -> str | Any:  # type: ignore[override]
-        return getattr(self._original_stream, "encoding", "utf-8")
-
-    def isatty(self) -> bool:
-        return self._original_stream.isatty()
-
-    def fileno(self) -> int:
-        return self._original_stream.fileno()
-
-    def writable(self) -> bool:
-        return True
-
-
-# Apply the filtered stream globally so that any subsequent writes containing the filtered
-# keywords (e.g., "litellm") are hidden from terminal output. We guard against double
-# wrapping to ensure idempotency in environments where this module might be reloaded.
-if not isinstance(sys.stdout, FilteredStream):
-    sys.stdout = FilteredStream(sys.stdout)
-if not isinstance(sys.stderr, FilteredStream):
-    sys.stderr = FilteredStream(sys.stderr)
 
 
 MIN_CONTEXT: Final[int] = 1024
@@ -343,6 +273,7 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
+    llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
     timeout: float | int | None = None
     top_p: float | None = None
@@ -735,7 +666,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
         """Handle a streaming response from the LLM.
@@ -1048,7 +979,7 @@ class LLM(BaseLLM):
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_id: str | None = None,
     ) -> Any:
         for tool_call in tool_calls:
@@ -1137,7 +1068,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle a non-streaming response from the LLM.
@@ -1289,7 +1220,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle an async non-streaming response from the LLM.
@@ -1430,7 +1361,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
         """Handle an async streaming response from the LLM.
@@ -1606,7 +1537,7 @@ class LLM(BaseLLM):
         tool_calls: list[Any],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> Any:
         """Handle a tool call from the LLM.
 
@@ -1702,7 +1633,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """High-level LLM call method.
@@ -1852,7 +1783,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async high-level LLM call method.
@@ -2001,7 +1932,7 @@ class LLM(BaseLLM):
         response: Any,
         call_type: LLMCallType,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
     ) -> None:

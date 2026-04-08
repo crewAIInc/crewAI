@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
+from crewai_tools.security.safe_path import validate_url
 from crewai_tools.tools.rag.rag_tool import RagTool
 
 
@@ -37,6 +38,7 @@ class WebsiteSearchTool(RagTool):
             self._generate_description()
 
     def add(self, website: str) -> None:  # type: ignore[override]
+        website = validate_url(website)
         super().add(website, data_type=DataType.WEBSITE)
 
     def _run(  # type: ignore[override]

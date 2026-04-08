@@ -4,6 +4,224 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="09 abr 2026">
+  ## v1.14.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar navegador TUI de ponto de verificação assíncrono
+  - Adicionar aclose()/close() e gerenciador de contexto assíncrono para saídas de streaming
+
+  ### Correções de Bugs
+  - Corrigir regex para aumentos de versão do template pyproject.toml
+  - Sanitizar nomes de ferramentas nos filtros do decorador de hook
+  - Corrigir registro de manipuladores de ponto de verificação quando CheckpointConfig é criado
+  - Atualizar transformers para 5.5.0 para resolver CVE-2026-1839
+  - Remover wrapper stdout/stderr de FilteredStream
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.1rc1
+
+  ### Refatoração
+  - Substituir lista de negação codificada por exclusão dinâmica de campo BaseTool na geração de especificações
+  - Substituir regex por tomlkit na CLI do devtools
+  - Usar singleton PRINTER compartilhado
+  - Fazer BaseProvider um BaseModel com discriminador provider_type
+
+  ## Contribuidores
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="09 abr 2026">
+  ## v1.14.1rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar navegador TUI de ponto de verificação assíncrono
+  - Adicionar aclose()/close() e gerenciador de contexto assíncrono para saídas de streaming
+
+  ### Correções de Bugs
+  - Corrigir aumentos de versão do template pyproject.toml usando regex
+  - Sanitizar nomes de ferramentas nos filtros do decorador de hook
+  - Atualizar transformers para 5.5.0 para resolver CVE-2026-1839
+  - Registrar manipuladores de ponto de verificação quando CheckpointConfig é criado
+
+  ### Refatoração
+  - Substituir lista de negação codificada por exclusão dinâmica de campo BaseTool na geração de especificações
+  - Substituir regex por tomlkit na CLI do devtools
+  - Usar singleton PRINTER compartilhado
+  - Tornar BaseProvider um BaseModel com discriminador de tipo de provedor
+  - Remover wrapper stdout/stderr de FilteredStream
+  - Remover flow/config.py não utilizado
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0
+
+  ## Contribuidores
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="07 abr 2026">
+  ## v1.14.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar comandos CLI de lista/informações de checkpoint
+  - Adicionar guardrail_type e nome para distinguir rastros
+  - Adicionar SqliteProvider para armazenamento de checkpoints
+  - Adicionar CheckpointConfig para checkpointing automático
+  - Implementar checkpointing de estado em tempo de execução, sistema de eventos e refatoração do executor
+
+  ### Correções de Bugs
+  - Adicionar proteções contra SSRF e travessia de caminho
+  - Adicionar validação de caminho e URL às ferramentas RAG
+  - Excluir vetores de incorporação da serialização de memória para economizar tokens
+  - Garantir que o diretório de saída exista antes de escrever no modelo de fluxo
+  - Atualizar litellm para >=1.83.0 para resolver CVE-2026-35030
+  - Remover campo de indexação SEO que causava renderização de página em árabe
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0
+  - Atualizar guias de início rápido e instalação para maior clareza
+  - Adicionar seção de provedores de armazenamento, exportar JsonProvider
+  - Adicionar guia da aba de Treinamento AMP
+
+  ### Refatoração
+  - Limpar API de checkpoint
+  - Remover CodeInterpreterTool e descontinuar parâmetros de execução de código
+
+  ## Contribuidores
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="07 abr 2026">
+  ## v1.14.0a4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar guardrail_type e nome para distinguir rastros
+  - Adicionar SqliteProvider para armazenamento de checkpoints
+  - Adicionar CheckpointConfig para checkpointing automático
+  - Implementar checkpointing de estado em tempo de execução, sistema de eventos e refatoração do executor
+
+  ### Correções de Bugs
+  - Excluir vetores de incorporação da serialização de memória para economizar tokens
+  - Atualizar litellm para >=1.83.0 para resolver CVE-2026-35030
+
+  ### Documentação
+  - Atualizar guias de início rápido e instalação para melhor clareza
+  - Adicionar seção de provedores de armazenamento e exportar JsonProvider
+
+  ### Desempenho
+  - Usar JSONB para a coluna de dados de checkpoint
+
+  ### Refatoração
+  - Remover CodeInterpreterTool e descontinuar parâmetros de execução de código
+
+  ## Contribuidores
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="06 abr 2026">
+  ## v1.14.0a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a3)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0a2
+
+  ## Contribuidores
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="06 abr 2026">
+  ## v1.14.0a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a2)
+
+  ## Lançamento 1.14.0a2
+
+  ### Instruções:
+  - Traduza todos os cabeçalhos de seção e descrições de forma natural
+  - Mantenha a formatação markdown (##, ###, -, etc.) exatamente como está
+  - Mantenha todos os nomes próprios, identificadores de código, nomes de classes e termos técnicos inalterados
+    (por exemplo, "CrewAI", "LiteAgent", "ChromaDB", "MCP", "@username")
+  - Mantenha a seção ## Contribuidores e os nomes de usuários do GitHub inalterados
+  - Não adicione nem remova nenhum conteúdo, apenas traduza
+
+</Update>
+
+<Update label="02 abr 2026">
+  ## v1.13.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar RuntimeState RootModel para serialização de estado unificado
+  - Melhorar o listener de eventos com novos spans de telemetria para eventos de habilidade e memória
+  - Adicionar extensão A2UI com suporte a v0.8/v0.9, esquemas e documentação
+  - Emitir dados de uso de token no LLMCallCompletedEvent
+  - Atualizar automaticamente o repositório de testes de implantação durante o lançamento
+  - Melhorar a resiliência e a experiência do usuário na versão empresarial
+
+  ### Correções de Bugs
+  - Adicionar credenciais do repositório de ferramentas ao crewai install
+  - Adicionar credenciais do repositório de ferramentas ao uv build na publicação de ferramentas
+  - Passar metadados de impressão digital via configuração em vez de argumentos de ferramenta
+  - Lidar com modelos GPT-5.x que não suportam o parâmetro API `stop`
+  - Adicionar GPT-5 e a série o aos prefixos de visão multimodal
+  - Limpar cache uv para pacotes recém-publicados na versão empresarial
+  - Limitar lancedb abaixo de 0.30.1 para compatibilidade com Windows
+  - Corrigir níveis de permissão RBAC para corresponder às opções reais da interface do usuário
+  - Corrigir imprecisões nas capacidades do agente em todos os idiomas
+
+  ### Documentação
+  - Adicionar vídeo de demonstração de habilidades do agente de codificação às páginas de introdução
+  - Adicionar guia abrangente de configuração SSO
+  - Adicionar matriz de permissões RBAC abrangente e guia de implantação
+  - Atualizar changelog e versão para v1.13.0
+
+  ### Desempenho
+  - Reduzir a sobrecarga do framework com bus de eventos preguiçoso, pular rastreamento quando desativado
+
+  ### Refatoração
+  - Converter Flow para Pydantic BaseModel
+  - Converter classes LLM para Pydantic BaseModel
+  - Substituir InstanceOf[T] por anotações de tipo simples
+  - Remover diretório LLM de terceiros não utilizado
+
+  ## Contribuidores
+
+  @alex-clawd, @dependabot[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
 <Update label="02 abr 2026">
   ## v1.13.0a7
 

@@ -9,7 +9,7 @@ from crewai.hooks.types import (
     BeforeToolCallHookCallable,
     BeforeToolCallHookType,
 )
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:
@@ -100,16 +100,15 @@ class ToolCallHookContext:
             ...     return None  # Allow execution
         """
 
-        printer = Printer()
         event_listener.formatter.pause_live_updates()
 
         try:
-            printer.print(content=f"\n{prompt}", color="bold_yellow")
-            printer.print(content=default_message, color="cyan")
+            PRINTER.print(content=f"\n{prompt}", color="bold_yellow")
+            PRINTER.print(content=default_message, color="cyan")
             response = input().strip()
 
             if response:
-                printer.print(content="\nProcessing your input...", color="cyan")
+                PRINTER.print(content="\nProcessing your input...", color="cyan")
 
             return response
         finally:

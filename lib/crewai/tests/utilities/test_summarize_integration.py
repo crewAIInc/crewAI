@@ -14,7 +14,6 @@ from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.utilities.agent_utils import summarize_messages
-from crewai.utilities.i18n import I18N
 
 
 def _build_conversation_messages(
@@ -90,7 +89,7 @@ class TestSummarizeDirectOpenAI:
     def test_summarize_direct_openai(self) -> None:
         """Test summarize_messages with gpt-4o-mini preserves system messages."""
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
+
         messages = _build_conversation_messages(include_system=True)
 
         original_system_content = messages[0]["content"]
@@ -99,7 +98,7 @@ class TestSummarizeDirectOpenAI:
             messages=messages,
             llm=llm,
             callbacks=[],
-            i18n=i18n,
+
         )
 
         # System message should be preserved
@@ -122,14 +121,14 @@ class TestSummarizeDirectAnthropic:
     def test_summarize_direct_anthropic(self) -> None:
         """Test summarize_messages with claude-3-5-haiku."""
         llm = LLM(model="anthropic/claude-3-5-haiku-latest", temperature=0)
-        i18n = I18N()
+
         messages = _build_conversation_messages(include_system=True)
 
         summarize_messages(
             messages=messages,
             llm=llm,
             callbacks=[],
-            i18n=i18n,
+
         )
 
         assert len(messages) >= 2
@@ -148,14 +147,14 @@ class TestSummarizeDirectGemini:
     def test_summarize_direct_gemini(self) -> None:
         """Test summarize_messages with gemini-2.0-flash."""
         llm = LLM(model="gemini/gemini-2.0-flash", temperature=0)
-        i18n = I18N()
+
         messages = _build_conversation_messages(include_system=True)
 
         summarize_messages(
             messages=messages,
             llm=llm,
             callbacks=[],
-            i18n=i18n,
+
         )
 
         assert len(messages) >= 2
@@ -174,14 +173,14 @@ class TestSummarizeDirectAzure:
     def test_summarize_direct_azure(self) -> None:
         """Test summarize_messages with azure/gpt-4o-mini."""
         llm = LLM(model="azure/gpt-4o-mini", temperature=0)
-        i18n = I18N()
+
         messages = _build_conversation_messages(include_system=True)
 
         summarize_messages(
             messages=messages,
             llm=llm,
             callbacks=[],
-            i18n=i18n,
+
         )
 
         assert len(messages) >= 2
@@ -261,7 +260,7 @@ class TestSummarizePreservesFiles:
     def test_summarize_preserves_files_integration(self) -> None:
         """Test that file references survive a real summarization call."""
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
+
         messages = _build_conversation_messages(
             include_system=True, include_files=True
         )
@@ -270,7 +269,7 @@ class TestSummarizePreservesFiles:
             messages=messages,
             llm=llm,
             callbacks=[],
-            i18n=i18n,
+
         )
 
         # System message preserved

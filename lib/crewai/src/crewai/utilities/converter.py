@@ -8,9 +8,9 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
-from crewai.utilities.i18n import get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.internal_instructor import InternalInstructor
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
-_I18N = get_i18n()
+_I18N = I18N_DEFAULT
 
 
 class ConverterError(Exception):
@@ -209,7 +209,7 @@ def convert_to_model(
 
     except Exception as e:
         if agent and getattr(agent, "verbose", True):
-            Printer().print(
+            PRINTER.print(
                 content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
                 color="red",
             )
@@ -267,7 +267,7 @@ def handle_partial_json(
             raise
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
-                Printer().print(
+                PRINTER.print(
                     content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
                     color="red",
                 )
@@ -329,7 +329,7 @@ def convert_with_instructions(
 
     if isinstance(exported_result, ConverterError):
         if agent and getattr(agent, "verbose", True):
-            Printer().print(
+            PRINTER.print(
                 content=f"Failed to convert result to model: {exported_result}",
                 color="red",
             )

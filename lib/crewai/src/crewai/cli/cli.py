@@ -27,7 +27,7 @@ from crewai.cli.tools.main import ToolCommand
 from crewai.cli.train_crew import train_crew
 from crewai.cli.triggers.main import TriggersCommand
 from crewai.cli.update_crew import update_crew
-from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
+from crewai.cli.utils import build_env_with_all_tool_credentials, read_toml
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
@@ -48,23 +48,17 @@ def crewai() -> None:
 @click.argument("uv_args", nargs=-1, type=click.UNPROCESSED)
 def uv(uv_args: tuple[str, ...]) -> None:
     """A wrapper around uv commands that adds custom tool authentication through env vars."""
-    env = os.environ.copy()
     try:
-        pyproject_data = read_toml()
-        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
-
-        for source_config in sources.values():
-            if isinstance(source_config, dict):
-                index = source_config.get("index")
-                if index:
-                    index_env = build_env_with_tool_repository_credentials(index)
-                    env.update(index_env)
-    except (FileNotFoundError, KeyError) as e:
+        # Verify pyproject.toml exists first
+        read_toml()
+    except FileNotFoundError as e:
         raise SystemExit(
             "Error. A valid pyproject.toml file is required. Check that a valid pyproject.toml file exists in the current directory."
         ) from e
     except Exception as e:
         raise SystemExit(f"Error: {e}") from e
+
+    env = build_env_with_all_tool_credentials()
 
     try:
         subprocess.run(  # noqa: S603
@@ -615,7 +609,6 @@ def env() -> None:
 @env.command("view")
 def env_view() -> None:
     """View tracing-related environment variables."""
-    import os
     from pathlib import Path
 
     from rich.console import Console
@@ -744,7 +737,6 @@ def traces_disable() -> None:
 @traces.command("status")
 def traces_status() -> None:
     """Show current trace collection status."""
-    import os
 
     from rich.console import Console
     from rich.panel import Panel
@@ -792,6 +784,39 @@ def traces_status() -> None:
         padding=(1, 2),
     )
     console.print(panel)
+
+
+@crewai.group(invoke_without_command=True)
+@click.option(
+    "--location", default="./.checkpoints", help="Checkpoint directory or SQLite file."
+)
+@click.pass_context
+def checkpoint(ctx: click.Context, location: str) -> None:
+    """Browse and inspect checkpoints. Launches a TUI when called without a subcommand."""
+    ctx.ensure_object(dict)
+    ctx.obj["location"] = location
+    if ctx.invoked_subcommand is None:
+        from crewai.cli.checkpoint_tui import run_checkpoint_tui
+
+        run_checkpoint_tui(location)
+
+
+@checkpoint.command("list")
+@click.argument("location", default="./.checkpoints")
+def checkpoint_list(location: str) -> None:
+    """List checkpoints in a directory."""
+    from crewai.cli.checkpoint_cli import list_checkpoints
+
+    list_checkpoints(location)
+
+
+@checkpoint.command("info")
+@click.argument("path", default="./.checkpoints")
+def checkpoint_info(path: str) -> None:
+    """Show details of a checkpoint. Pass a file or directory for latest."""
+    from crewai.cli.checkpoint_cli import info_checkpoint
+
+    info_checkpoint(path)
 
 
 if __name__ == "__main__":

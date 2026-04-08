@@ -80,12 +80,9 @@ from crewai.utilities.guardrail_types import (
     GuardrailType,
     GuardrailsType,
 )
-from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.printer import Printer
+from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
-
-
-_printer = Printer()
 
 
 class Task(BaseModel):
@@ -118,7 +115,6 @@ class Task(BaseModel):
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
-    i18n: I18N = Field(default_factory=get_i18n)
     name: str | None = Field(default=None)
     prompt_context: str | None = None
     description: str = Field(description="Description of the actual task.")
@@ -598,7 +594,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
+            if not (agent.agent_executor and agent.agent_executor._resuming):
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
             result = await agent.aexecute_task(
                 task=self,
                 context=context,
@@ -717,7 +716,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
+            if not (agent.agent_executor and agent.agent_executor._resuming):
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -893,7 +895,7 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = self.i18n.slice("expected_output").format(
+        output = I18N_DEFAULT.slice("expected_output").format(
             expected_output=self.expected_output
         )
         tasks_slices = [description, output]
@@ -965,7 +967,7 @@ Follow these guidelines:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
 
         if inputs.get("crew_chat_messages"):
-            conversation_instruction = self.i18n.slice(
+            conversation_instruction = I18N_DEFAULT.slice(
                 "conversation_history_instruction"
             )
 
@@ -975,7 +977,7 @@ Follow these guidelines:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
                 if self.agent and self.agent.verbose:
-                    _printer.print(
+                    PRINTER.print(
                         f"An error occurred while parsing crew chat messages: {e}",
                         color="red",
                     )
@@ -1216,13 +1218,12 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = self.i18n.errors("validation_error").format(
+            context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
-                printer = Printer()
-                printer.print(
+                PRINTER.print(
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
@@ -1314,13 +1315,12 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = self.i18n.errors("validation_error").format(
+            context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
-                printer = Printer()
-                printer.print(
+                PRINTER.print(
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )

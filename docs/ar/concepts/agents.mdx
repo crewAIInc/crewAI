@@ -250,16 +250,12 @@ analysis_agent = Agent(
 
 #### تنفيذ الكود
 
-- `allow_code_execution`: يجب أن يكون True لتشغيل الكود
-- `code_execution_mode`:
-  - `"safe"`: يستخدم Docker (موصى به للإنتاج)
-  - `"unsafe"`: تنفيذ مباشر (استخدم فقط في بيئات موثوقة)
+<Warning>
+  `allow_code_execution` و`code_execution_mode` مهجوران. تمت إزالة `CodeInterpreterTool` من `crewai-tools`. استخدم خدمة بيئة معزولة مخصصة مثل [E2B](https://e2b.dev) أو [Modal](https://modal.com) لتنفيذ الكود بأمان.
+</Warning>
 
-<Note>
-  يشغّل هذا صورة Docker افتراضية. إذا أردت تهيئة صورة Docker،
-  راجع أداة Code Interpreter في قسم الأدوات. أضف أداة
-  مفسر الكود كأداة في معامل أداة الوكيل.
-</Note>
+- `allow_code_execution` _(مهجور)_: كان يُمكّن تنفيذ الكود المدمج عبر `CodeInterpreterTool`.
+- `code_execution_mode` _(مهجور)_: كان يتحكم في وضع التنفيذ (`"safe"` لـ Docker، `"unsafe"` للتنفيذ المباشر).
 
 #### الميزات المتقدمة
 
@@ -332,9 +328,9 @@ print(result.raw)
 
 ### الأمان وتنفيذ الكود
 
-- عند استخدام `allow_code_execution`، كن حذرًا مع مدخلات المستخدم وتحقق منها دائمًا
-- استخدم `code_execution_mode: "safe"` (Docker) في بيئات الإنتاج
-- فكّر في تعيين حدود `max_execution_time` مناسبة لمنع الحلقات اللانهائية
+<Warning>
+  `allow_code_execution` و`code_execution_mode` مهجوران وتمت إزالة `CodeInterpreterTool`. استخدم خدمة بيئة معزولة مخصصة مثل [E2B](https://e2b.dev) أو [Modal](https://modal.com) لتنفيذ الكود بأمان.
+</Warning>
 
 ### تحسين الأداء
 
