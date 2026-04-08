@@ -952,3 +952,106 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for #4509: markdown-wrapped JSON must parse correctly
+# ---------------------------------------------------------------------------
+
+
+class _Strip:
+    """Import target for _strip_markdown_fences — imported lazily to keep
+    the fixture lightweight."""
+
+
+def _get_strip_fn():
+    from crewai.utilities.converter import _strip_markdown_fences
+    return _strip_markdown_fences
+
+
+class TestStripMarkdownFences:
+    """Unit tests for the _strip_markdown_fences helper."""
+
+    def test_strips_json_fenced_block(self):
+        raw = '```json\n{"name": "Alice", "age": 30}\n```'
+        result = _get_strip_fn()(raw)
+        assert result == '{"name": "Alice", "age": 30}'
+
+    def test_strips_plain_fenced_block(self):
+        raw = '```\n{"name": "Bob"}\n```'
+        result = _get_strip_fn()(raw)
+        assert result == '{"name": "Bob"}'
+
+    def test_leaves_raw_json_unchanged(self):
+        raw = '{"name": "Carol", "age": 25}'
+        result = _get_strip_fn()(raw)
+        assert result == raw
+
+    def test_strips_surrounding_whitespace(self):
+        raw = '  ```json\n{"x": 1}\n```  '
+        result = _get_strip_fn()(raw)
+        assert result == '{"x": 1}'
+
+    def test_empty_string_unchanged(self):
+        assert _get_strip_fn()("") == ""
+
+
+class TestValidateModelWithMarkdownFences:
+    """validate_model must accept markdown-fenced JSON without raising."""
+
+    def test_json_fenced_validates_correctly(self):
+        fenced = '```json\n{"name": "Dave", "age": 40}\n```'
+        result = validate_model(fenced, SimpleModel, is_json_output=False)
+        assert isinstance(result, SimpleModel)
+        assert result.name == "Dave"
+        assert result.age == 40
+
+    def test_plain_fenced_validates_correctly(self):
+        fenced = '```\n{"name": "Eve", "age": 22}\n```'
+        result = validate_model(fenced, SimpleModel, is_json_output=False)
+        assert isinstance(result, SimpleModel)
+        assert result.name == "Eve"
+
+    def test_raw_json_still_validates(self):
+        raw = '{"name": "Frank", "age": 55}'
+        result = validate_model(raw, SimpleModel, is_json_output=False)
+        assert isinstance(result, SimpleModel)
+        assert result.name == "Frank"
+
+
+class TestConverterToModelWithMarkdownFences:
+    """Converter.to_pydantic must not crash when the LLM wraps JSON in fences."""
+
+    def _make_converter(self, llm_response: str) -> Converter:
+        mock_llm = MagicMock()
+        mock_llm.supports_function_calling.return_value = False
+        mock_llm.call.return_value = llm_response
+        return Converter(
+            text="Tell me about Alice",
+            llm=mock_llm,
+            model=SimpleModel,
+            instructions="Return JSON",
+            max_attempts=1,
+        )
+
+    def test_json_fenced_response_parses(self):
+        fenced = '```json\n{"name": "Alice", "age": 30}\n```'
+        converter = self._make_converter(fenced)
+        result = converter.to_pydantic()
+        assert isinstance(result, SimpleModel)
+        assert result.name == "Alice"
+        assert result.age == 30
+
+    def test_plain_fenced_response_parses(self):
+        fenced = '```\n{"name": "Bob", "age": 25}\n```'
+        converter = self._make_converter(fenced)
+        result = converter.to_pydantic()
+        assert isinstance(result, SimpleModel)
+        assert result.name == "Bob"
+
+    def test_raw_json_response_still_works(self):
+        raw = '{"name": "Carol", "age": 28}'
+        converter = self._make_converter(raw)
+        result = converter.to_pydantic()
+        assert isinstance(result, SimpleModel)
+        assert result.name == "Carol"
