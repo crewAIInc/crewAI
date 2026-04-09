@@ -90,9 +90,7 @@ class SQLiteFlowPersistence(FlowPersistence):
             )
             # Migration: add flow_class column for existing databases
             try:
-                conn.execute(
-                    "ALTER TABLE flow_states ADD COLUMN flow_class TEXT"
-                )
+                conn.execute("ALTER TABLE flow_states ADD COLUMN flow_class TEXT")
             except sqlite3.OperationalError:
                 pass  # Column already exists
             # Add index for faster UUID lookups
