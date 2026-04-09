@@ -348,7 +348,8 @@ class TestJsonProviderFork:
             assert state._parent_id == id2
 
             # Verify the second checkpoint blob has parent_id == id1
-            data2 = json.loads(open(loc2).read())
+            with open(loc2) as f:
+                data2 = json.loads(f.read())
             assert data2["parent_id"] == id1
 
     def _make_state(self) -> RuntimeState:
