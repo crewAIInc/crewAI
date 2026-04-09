@@ -1,0 +1,39 @@
+---
+title: "تصدير OpenTelemetry"
+description: "تصدير التتبعات والسجلات من عمليات نشر CrewAI AMP إلى مجمّع OpenTelemetry الخاص بك"
+icon: "magnifying-glass-chart"
+mode: "wide"
+---
+
+يمكن لـ CrewAI AMP تصدير **التتبعات** و**السجلات** من OpenTelemetry من عمليات النشر مباشرة إلى مجمّعك الخاص. يتيح لك ذلك مراقبة أداء الوكلاء وتتبع استدعاءات LLM وتصحيح الأخطاء باستخدام مجموعة المراقبة الحالية.
+
+تتبع بيانات القياس [اتفاقيات OpenTelemetry GenAI الدلالية](https://opentelemetry.io/docs/specs/semconv/gen-ai/) بالإضافة إلى سمات خاصة بـ CrewAI.
+
+## المتطلبات المسبقة
+
+<CardGroup cols={2}>
+  <Card title="حساب CrewAI AMP" icon="users">
+    يجب أن يكون لدى مؤسستك حساب CrewAI AMP نشط.
+  </Card>
+  <Card title="مجمّع OpenTelemetry" icon="server">
+    تحتاج إلى نقطة نهاية مجمّع متوافقة مع OpenTelemetry (مثل OTel Collector الخاص بك أو Datadog أو Grafana أو أي واجهة خلفية متوافقة مع OTLP).
+  </Card>
+</CardGroup>
+
+## إعداد مجمّع
+
+1. في CrewAI AMP، انتقل إلى **Settings** > **OpenTelemetry Collectors**.
+2. انقر على **Add Collector**.
+3. اختر نوع التكامل — **OpenTelemetry Traces** أو **OpenTelemetry Logs**.
+4. هيّئ الاتصال:
+   - **Endpoint** — نقطة نهاية OTLP لمجمّعك (مثل `https://otel-collector.example.com:4317`).
+   - **Service Name** — اسم لتعريف هذه الخدمة في منصة المراقبة.
+   - **Custom Headers** *(اختياري)* — أضف رؤوس المصادقة أو التوجيه كأزواج مفتاح-قيمة.
+   - **Certificate** *(اختياري)* — قدم شهادة TLS إذا كان مجمّعك يتطلبها.
+5. انقر على **Save**.
+
+<Frame>![تهيئة مجمّع OpenTelemetry](/images/crewai-otel-collector-config.png)</Frame>
+
+<Tip>
+  يمكنك إضافة مجمّعات متعددة — على سبيل المثال، واحد للتتبعات وآخر للسجلات، أو الإرسال إلى واجهات خلفية مختلفة لأغراض مختلفة.
+</Tip>

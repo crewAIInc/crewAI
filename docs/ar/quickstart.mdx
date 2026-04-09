@@ -1,0 +1,278 @@
+---
+title: البدء السريع
+description: ابنِ أول Flow في CrewAI خلال دقائق — التنسيق والحالة وفريقًا بوكيل واحد ينتج تقريرًا فعليًا.
+icon: rocket
+mode: "wide"
+---
+
+### شاهد: بناء Agents و Flows في CrewAI باستخدام Coding Agent Skills
+
+قم بتثبيت مهارات وكيل البرمجة الخاصة بنا (Claude Code، Codex، ...) لتشغيل وكلاء البرمجة بسرعة مع CrewAI.
+
+يمكنك تثبيتها باستخدام `npx skills add crewaiinc/skills`
+
+<iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
+
+في هذا الدليل ستُنشئ **Flow** يحدد موضوع بحث، ويشغّل **طاقمًا بوكيل واحد** (باحث يستخدم البحث على الويب)، وينتهي بتقرير **Markdown** على القرص. يُعد Flow الطريقة الموصى بها لتنظيم التطبيقات الإنتاجية: يمتلك **الحالة** و**ترتيب التنفيذ**، بينما **الوكلاء** ينفّذون العمل داخل خطوة الطاقم.
+
+إذا لم تُكمل تثبيت CrewAI بعد، اتبع [دليل التثبيت](/ar/installation) أولًا.
+
+## المتطلبات الأساسية
+
+- بيئة Python وواجهة سطر أوامر CrewAI (راجع [التثبيت](/ar/installation))
+- نموذج لغوي مهيأ بالمفاتيح الصحيحة — راجع [LLMs](/ar/concepts/llms#setting-up-your-llm)
+- مفتاح API من [Serper.dev](https://serper.dev/) (`SERPER_API_KEY`) للبحث على الويب في هذا الدرس
+
+## ابنِ أول Flow لك
+
+<Steps>
+  <Step title="أنشئ مشروع Flow">
+  من الطرفية، أنشئ مشروع Flow (اسم المجلد يستخدم شرطة سفلية، مثل `latest_ai_flow`):
+
+    <CodeGroup>
+      ```shell Terminal
+      crewai create flow latest-ai-flow
+      cd latest_ai_flow
+      ```
+    </CodeGroup>
+
+  يُنشئ ذلك تطبيق Flow ضمن `src/latest_ai_flow/`، بما في ذلك طاقمًا أوليًا في `crews/content_crew/` ستستبدله بطاقم بحث **بوكيل واحد** في الخطوات التالية.
+  </Step>
+
+  <Step title="اضبط وكيلًا واحدًا في `agents.yaml`">
+  استبدل محتوى `src/latest_ai_flow/crews/content_crew/config/agents.yaml` بباحث واحد. تُملأ المتغيرات مثل `{topic}` من `crew.kickoff(inputs=...)`.
+
+    ```yaml agents.yaml
+    # src/latest_ai_flow/crews/content_crew/config/agents.yaml
+    researcher:
+      role: >
+        باحث بيانات أول في {topic}
+      goal: >
+        اكتشاف أحدث التطورات في {topic}
+      backstory: >
+        أنت باحث مخضرم تكشف أحدث المستجدات في {topic}.
+        تجد المعلومات الأكثر صلة وتعرضها بوضوح.
+    ```
+
+  </Step>
+
+  <Step title="اضبط مهمة واحدة في `tasks.yaml`">
+    ```yaml tasks.yaml
+    # src/latest_ai_flow/crews/content_crew/config/tasks.yaml
+    research_task:
+      description: >
+        أجرِ بحثًا معمقًا عن {topic}. استخدم البحث على الويب للعثور على معلومات
+        حديثة وموثوقة. السنة الحالية 2026.
+      expected_output: >
+        تقرير بصيغة Markdown بأقسام واضحة: الاتجاهات الرئيسية، أدوات أو شركات بارزة،
+        والآثار. بين 800 و1200 كلمة تقريبًا. دون إحاطة المستند بأكمله بكتل كود.
+      agent: researcher
+      output_file: output/report.md
+    ```
+
+  </Step>
+
+  <Step title="اربط صف الطاقم (`content_crew.py`)">
+  اجعل الطاقم المُولَّد يشير إلى YAML وأرفق `SerperDevTool` بالباحث.
+
+    ```python content_crew.py
+    # src/latest_ai_flow/crews/content_crew/content_crew.py
+    from typing import List
+
+    from crewai import Agent, Crew, Process, Task
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai_tools import SerperDevTool
+
+
+    @CrewBase
+    class ResearchCrew:
+      """طاقم بحث بوكيل واحد داخل Flow."""
+
+      agents: List[BaseAgent]
+      tasks: List[Task]
+
+      agents_config = "config/agents.yaml"
+      tasks_config = "config/tasks.yaml"
+
+      @agent
+      def researcher(self) -> Agent:
+        return Agent(
+          config=self.agents_config["researcher"],  # type: ignore[index]
+          verbose=True,
+          tools=[SerperDevTool()],
+        )
+
+      @task
+      def research_task(self) -> Task:
+        return Task(
+          config=self.tasks_config["research_task"],  # type: ignore[index]
+        )
+
+      @crew
+      def crew(self) -> Crew:
+        return Crew(
+          agents=self.agents,
+          tasks=self.tasks,
+          process=Process.sequential,
+          verbose=True,
+        )
+    ```
+
+  </Step>
+
+  <Step title="عرّف Flow في `main.py`">
+  اربط الطاقم بـ Flow: خطوة `@start()` تضبط الموضوع في **الحالة**، وخطوة `@listen` تشغّل الطاقم. يظل `output_file` للمهمة يكتب `output/report.md`.
+
+    ```python main.py
+    # src/latest_ai_flow/main.py
+    from pydantic import BaseModel
+
+    from crewai.flow import Flow, listen, start
+
+    from latest_ai_flow.crews.content_crew.content_crew import ResearchCrew
+
+
+    class ResearchFlowState(BaseModel):
+      topic: str = ""
+      report: str = ""
+
+
+    class LatestAiFlow(Flow[ResearchFlowState]):
+      @start()
+      def prepare_topic(self, crewai_trigger_payload: dict | None = None):
+        if crewai_trigger_payload:
+          self.state.topic = crewai_trigger_payload.get("topic", "AI Agents")
+        else:
+          self.state.topic = "AI Agents"
+        print(f"الموضوع: {self.state.topic}")
+
+      @listen(prepare_topic)
+      def run_research(self):
+        result = ResearchCrew().crew().kickoff(inputs={"topic": self.state.topic})
+        self.state.report = result.raw
+        print("اكتمل طاقم البحث.")
+
+      @listen(run_research)
+      def summarize(self):
+        print("مسار التقرير: output/report.md")
+
+
+    def kickoff():
+      LatestAiFlow().kickoff()
+
+
+    def plot():
+      LatestAiFlow().plot()
+
+
+    if __name__ == "__main__":
+      kickoff()
+    ```
+
+  <Tip>
+  إذا كان اسم الحزمة ليس `latest_ai_flow`، عدّل استيراد `ResearchCrew` ليطابق مسار الوحدة في مشروعك.
+  </Tip>
+  </Step>
+
+  <Step title="متغيرات البيئة">
+  في جذر المشروع، ضبط `.env`:
+
+    - `SERPER_API_KEY` — من [Serper.dev](https://serper.dev/)
+    - مفاتيح مزوّد النموذج حسب الحاجة — راجع [إعداد LLM](/ar/concepts/llms#setting-up-your-llm)
+  </Step>
+
+  <Step title="التثبيت والتشغيل">
+    <CodeGroup>
+      ```shell Terminal
+      crewai install
+      crewai run
+      ```
+    </CodeGroup>
+
+  يُنفّذ `crewai run` نقطة دخول Flow المعرّفة في المشروع (نفس أمر الطواقم؛ نوع المشروع `"flow"` في `pyproject.toml`).
+  </Step>
+
+  <Step title="تحقق من المخرجات">
+  يجب أن ترى سجلات من Flow والطاقم. افتح **`output/report.md`** للتقرير المُولَّد (مقتطف):
+
+  <CodeGroup>
+    ```markdown output/report.md
+    # وكلاء الذكاء الاصطناعي في 2026: المشهد والاتجاهات
+
+    ## ملخص تنفيذي
+    …
+
+    ## أبرز الاتجاهات
+    - **استخدام الأدوات والتنسيق** — …
+    - **التبني المؤسسي** — …
+
+    ## الآثار
+    …
+    ```
+  </CodeGroup>
+
+  سيكون الملف الفعلي أطول ويعكس نتائج بحث مباشرة.
+  </Step>
+</Steps>
+
+## كيف يترابط هذا
+
+1. **Flow** — يشغّل `LatestAiFlow` أولًا `prepare_topic` ثم `run_research` ثم `summarize`. الحالة (`topic`، `report`) على Flow.
+2. **الطاقم** — يشغّل `ResearchCrew` مهمة واحدة بوكيل واحد: الباحث يستخدم **Serper** للبحث على الويب ثم يكتب التقرير.
+3. **المُخرَج** — يكتب `output_file` للمهمة التقرير في `output/report.md`.
+
+للتعمق في أنماط Flow (التوجيه، الاستمرارية، الإنسان في الحلقة)، راجع [ابنِ أول Flow](/ar/guides/flows/first-flow) و[Flows](/ar/concepts/flows). للطواقم دون Flow، راجع [Crews](/ar/concepts/crews). لوكيل `Agent` واحد و`kickoff()` بلا مهام، راجع [Agents](/ar/concepts/agents#direct-agent-interaction-with-kickoff).
+
+<Check>
+أصبح لديك Flow كامل مع طاقم وكيل وتقرير محفوظ — قاعدة قوية لإضافة خطوات أو طواقم أو أدوات.
+</Check>
+
+### اتساق التسمية
+
+يجب أن تطابق مفاتيح YAML (`researcher`، `research_task`) أسماء الدوال في صف `@CrewBase`. راجع [Crews](/ar/concepts/crews) لنمط الديكورات الكامل.
+
+## النشر
+
+ادفع Flow إلى **[CrewAI AMP](https://app.crewai.com)** بعد أن يعمل محليًا ويكون المشروع في مستودع **GitHub**. من جذر المشروع:
+
+<CodeGroup>
+```bash المصادقة
+crewai login
+```
+
+```bash إنشاء نشر
+crewai deploy create
+```
+
+```bash الحالة والسجلات
+crewai deploy status
+crewai deploy logs
+```
+
+```bash إرسال التحديثات بعد تغيير الكود
+crewai deploy push
+```
+
+```bash عرض النشرات أو حذفها
+crewai deploy list
+crewai deploy remove <deployment_id>
+```
+</CodeGroup>
+
+<Tip>
+  غالبًا ما يستغرق **النشر الأول حوالي دقيقة**. المتطلبات الكاملة ومسار الواجهة الويب في [النشر على AMP](/ar/enterprise/guides/deploy-to-amp).
+</Tip>
+
+<CardGroup cols={2}>
+  <Card title="دليل النشر" icon="book" href="/ar/enterprise/guides/deploy-to-amp">
+    النشر على AMP خطوة بخطوة (CLI ولوحة التحكم).
+  </Card>
+  <Card
+    title="المجتمع"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    ناقش الأفكار وشارك مشاريعك وتواصل مع مطوري CrewAI.
+  </Card>
+</CardGroup>

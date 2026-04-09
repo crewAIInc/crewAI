@@ -4,13 +4,15 @@ from typing import Any, Literal
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_url
+
 
 class HyperbrowserLoadToolSchema(BaseModel):
     url: str = Field(description="Website URL")
     operation: Literal["scrape", "crawl"] = Field(
         description="Operation to perform on the website. Either 'scrape' or 'crawl'"
     )
-    params: dict | None = Field(
+    params: dict[str, Any] | None = Field(
         description="Optional params for scrape or crawl. For more information on the supported params, visit https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait or https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait"
     )
 
@@ -42,7 +44,7 @@ class HyperbrowserLoadTool(BaseTool):
         ]
     )
 
-    def __init__(self, api_key: str | None = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("HYPERBROWSER_API_KEY")
         if not api_key:
@@ -65,7 +67,7 @@ class HyperbrowserLoadTool(BaseTool):
         self.hyperbrowser = Hyperbrowser(api_key=self.api_key)
 
     @staticmethod
-    def _prepare_params(params: dict) -> dict:
+    def _prepare_params(params: dict[str, Any]) -> dict[str, Any]:
         """Prepare session and scrape options parameters."""
         try:
             from hyperbrowser.models.scrape import (  # type: ignore[import-untyped]
@@ -91,7 +93,7 @@ class HyperbrowserLoadTool(BaseTool):
             params["scrape_options"] = ScrapeOptions(**params["scrape_options"])
         return params
 
-    def _extract_content(self, data: Any | None):
+    def _extract_content(self, data: Any | None) -> str:
         """Extract content from response data."""
         content = ""
         if data:
@@ -102,15 +104,15 @@ class HyperbrowserLoadTool(BaseTool):
         self,
         url: str,
         operation: Literal["scrape", "crawl"] = "scrape",
-        params: dict | None = None,
-    ):
+        params: dict[str, Any] | None = None,
+    ) -> str:
         if params is None:
             params = {}
         try:
             from hyperbrowser.models.crawl import (  # type: ignore[import-untyped]
                 StartCrawlJobParams,
             )
-            from hyperbrowser.models.scrape import (  # type: ignore[import-untyped]
+            from hyperbrowser.models.scrape import (
                 StartScrapeJobParams,
             )
         except ImportError as e:
@@ -119,6 +121,7 @@ class HyperbrowserLoadTool(BaseTool):
             ) from e
 
         params = self._prepare_params(params)
+        url = validate_url(url)
 
         if operation == "scrape":
             scrape_params = StartScrapeJobParams(url=url, **params)

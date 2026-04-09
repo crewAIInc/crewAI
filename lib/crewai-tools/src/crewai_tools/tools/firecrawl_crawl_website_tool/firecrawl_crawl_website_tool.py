@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
+from crewai_tools.security.safe_path import validate_url
 
-if TYPE_CHECKING:
-    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
 
 try:
     from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
@@ -63,7 +62,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
             },
         }
     )
-    _firecrawl: FirecrawlApp | None = PrivateAttr(None)
+    _firecrawl: Any = PrivateAttr(None)
     package_dependencies: list[str] = Field(default_factory=lambda: ["firecrawl-py"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -75,14 +74,14 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
         ]
     )
 
-    def __init__(self, api_key: str | None = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.api_key = api_key
         self._initialize_firecrawl()
 
     def _initialize_firecrawl(self) -> None:
         try:
-            from firecrawl import FirecrawlApp  # type: ignore
+            from firecrawl import FirecrawlApp
 
             self._firecrawl = FirecrawlApp(api_key=self.api_key)
         except ImportError:
@@ -105,21 +104,19 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
                     "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
                 ) from None
 
-    def _run(self, url: str):
+    def _run(self, url: str) -> Any:
         if not self._firecrawl:
             raise RuntimeError("FirecrawlApp not properly initialized")
 
+        url = validate_url(url)
         return self._firecrawl.crawl(url=url, poll_interval=2, **self.config)
 
 
 try:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp  # noqa: F401
 
-    # Only rebuild if the class hasn't been initialized yet
-    if not hasattr(FirecrawlCrawlWebsiteTool, "_model_rebuilt"):
+    if not getattr(FirecrawlCrawlWebsiteTool, "_model_rebuilt", False):
         FirecrawlCrawlWebsiteTool.model_rebuild()
         FirecrawlCrawlWebsiteTool._model_rebuilt = True  # type: ignore[attr-defined]
 except ImportError:
-    """
-    When this tool is not used, then exception can be ignored.
-    """
+    pass

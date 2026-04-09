@@ -83,6 +83,7 @@
             "title": "Mind Name"
           }
         },
+        "required": [],
         "title": "AIMindTool",
         "type": "object"
       },
@@ -166,6 +167,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "ArxivPaperTool",
         "type": "object"
       },
@@ -283,6 +285,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveImageSearchTool",
         "type": "object"
       },
@@ -466,6 +469,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveLLMContextTool",
         "type": "object"
       },
@@ -745,6 +749,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveLocalPOIsDescriptionTool",
         "type": "object"
       },
@@ -858,6 +863,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveLocalPOIsTool",
         "type": "object"
       },
@@ -1016,6 +1022,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveNewsSearchTool",
         "type": "object"
       },
@@ -1290,6 +1297,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveSearchTool",
         "type": "object"
       },
@@ -1667,6 +1675,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveVideoSearchTool",
         "type": "object"
       },
@@ -1929,6 +1938,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveWebSearchTool",
         "type": "object"
       },
@@ -2325,6 +2335,7 @@
             "title": "Zipcode"
           }
         },
+        "required": [],
         "title": "BrightDataDatasetTool",
         "type": "object"
       },
@@ -2508,6 +2519,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BrightDataSearchTool",
         "type": "object"
       },
@@ -2696,6 +2708,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BrightDataWebUnlockerTool",
         "type": "object"
       },
@@ -2870,6 +2883,7 @@
             "title": "Text Content"
           }
         },
+        "required": [],
         "title": "BrowserbaseLoadTool",
         "type": "object"
       },
@@ -3916,6 +3930,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "CSVSearchTool",
         "type": "object"
       },
@@ -4967,6 +4982,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "CodeDocsSearchTool",
         "type": "object"
       },
@@ -4991,127 +5007,6 @@
           "docs_url"
         ],
         "title": "CodeDocsSearchToolSchema",
-        "type": "object"
-      }
-    },
-    {
-      "description": "Interprets Python3 code strings with a final print statement.",
-      "env_vars": [],
-      "humanized_name": "Code Interpreter",
-      "init_params_schema": {
-        "$defs": {
-          "EnvVar": {
-            "properties": {
-              "default": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Default"
-              },
-              "description": {
-                "title": "Description",
-                "type": "string"
-              },
-              "name": {
-                "title": "Name",
-                "type": "string"
-              },
-              "required": {
-                "default": true,
-                "title": "Required",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "name",
-              "description"
-            ],
-            "title": "EnvVar",
-            "type": "object"
-          }
-        },
-        "description": "A tool for executing Python code in isolated environments.\n\nThis tool provides functionality to run Python code either in a Docker container\nfor safe isolation or directly in a restricted sandbox. It can handle installing\nPython packages and executing arbitrary Python code.",
-        "properties": {
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Code"
-          },
-          "default_image_tag": {
-            "default": "code-interpreter:latest",
-            "title": "Default Image Tag",
-            "type": "string"
-          },
-          "unsafe_mode": {
-            "default": false,
-            "title": "Unsafe Mode",
-            "type": "boolean"
-          },
-          "user_docker_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Docker Base Url"
-          },
-          "user_dockerfile_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Dockerfile Path"
-          }
-        },
-        "title": "CodeInterpreterTool",
-        "type": "object"
-      },
-      "name": "CodeInterpreterTool",
-      "package_dependencies": [],
-      "run_params_schema": {
-        "description": "Schema for defining inputs to the CodeInterpreterTool.\n\nThis schema defines the required parameters for code execution,\nincluding the code to run and any libraries that need to be installed.",
-        "properties": {
-          "code": {
-            "description": "Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
-            "title": "Code",
-            "type": "string"
-          },
-          "libraries_used": {
-            "description": "List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
-            "items": {
-              "type": "string"
-            },
-            "title": "Libraries Used",
-            "type": "array"
-          }
-        },
-        "required": [
-          "code",
-          "libraries_used"
-        ],
-        "title": "CodeInterpreterSchema",
         "type": "object"
       }
     },
@@ -5166,10 +5061,7 @@
         },
         "description": "Wrapper for composio tools.",
         "properties": {},
-        "required": [
-          "name",
-          "description"
-        ],
+        "required": [],
         "title": "ComposioTool",
         "type": "object"
       },
@@ -5664,6 +5556,10 @@
             "title": "Bucket Name",
             "type": "string"
           },
+          "cluster": {
+            "description": "An instance of the Couchbase Cluster connected to the desired Couchbase server.",
+            "title": "Cluster"
+          },
           "collection_name": {
             "description": "The name of the Couchbase collection to search",
             "title": "Collection Name",
@@ -5712,6 +5608,7 @@
           }
         },
         "required": [
+          "cluster",
           "collection_name",
           "scope_name",
           "bucket_name",
@@ -6762,6 +6659,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "DOCXSearchTool",
         "type": "object"
       },
@@ -6899,6 +6797,7 @@
             "title": "Size"
           }
         },
+        "required": [],
         "title": "DallETool",
         "type": "object"
       },
@@ -7001,6 +6900,7 @@
             "title": "Default Warehouse Id"
           }
         },
+        "required": [],
         "title": "DatabricksQueryTool",
         "type": "object"
       },
@@ -7132,6 +7032,7 @@
             "title": "Directory"
           }
         },
+        "required": [],
         "title": "DirectoryReadTool",
         "type": "object"
       },
@@ -8177,6 +8078,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "DirectorySearchTool",
         "type": "object"
       },
@@ -8333,6 +8235,7 @@
             "title": "Type"
           }
         },
+        "required": [],
         "title": "EXASearchTool",
         "type": "object"
       },
@@ -8440,6 +8343,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "FileCompressorTool",
         "type": "object"
       },
@@ -8543,6 +8447,7 @@
             "title": "File Path"
           }
         },
+        "required": [],
         "title": "FileReadTool",
         "type": "object"
       },
@@ -8633,6 +8538,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "FileWriterTool",
         "type": "object"
       },
@@ -8757,6 +8663,7 @@
             "title": "Config"
           }
         },
+        "required": [],
         "title": "FirecrawlCrawlWebsiteTool",
         "type": "object"
       },
@@ -8848,6 +8755,7 @@
             "type": "object"
           }
         },
+        "required": [],
         "title": "FirecrawlScrapeWebsiteTool",
         "type": "object"
       },
@@ -8946,6 +8854,7 @@
             "title": "Config"
           }
         },
+        "required": [],
         "title": "FirecrawlSearchTool",
         "type": "object"
       },
@@ -9042,6 +8951,7 @@
             "title": "Personal Access Token"
           }
         },
+        "required": [],
         "title": "GenerateCrewaiAutomationTool",
         "type": "object"
       },
@@ -10224,6 +10134,7 @@
             "title": "Hyperbrowser"
           }
         },
+        "required": [],
         "title": "HyperbrowserLoadTool",
         "type": "object"
       },
@@ -11377,6 +11288,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "JSONSearchTool",
         "type": "object"
       },
@@ -11460,7 +11372,9 @@
             "title": "Api Key"
           },
           "headers": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "type": "string"
+            },
             "title": "Headers",
             "type": "object"
           },
@@ -11477,6 +11391,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "JinaScrapeWebsiteTool",
         "type": "object"
       },
@@ -11548,6 +11463,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "LinkupSearchTool",
         "type": "object"
       },
@@ -11610,8 +11526,6 @@
           }
         },
         "required": [
-          "name",
-          "description",
           "llama_index_tool"
         ],
         "title": "LlamaIndexTool",
@@ -12649,6 +12563,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "MDXSearchTool",
         "type": "object"
       },
@@ -12763,8 +12678,6 @@
           }
         },
         "required": [
-          "name",
-          "description",
           "tool_pack_id",
           "registered_user_id",
           "tool_name"
@@ -13070,6 +12983,7 @@
             "title": "Session Id"
           }
         },
+        "required": [],
         "title": "MultiOnTool",
         "type": "object"
       },
@@ -14137,7 +14051,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -14178,9 +14092,29 @@
             "type": "object"
           }
         },
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
+          "allow_dml": {
+            "default": false,
+            "description": "When False (default) only read statements are permitted. Set to True to allow INSERT/UPDATE/DELETE/DROP and other write operations.",
+            "title": "Allow DML",
+            "type": "boolean"
+          },
           "columns": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
             "title": "Columns",
             "type": "object"
           },
@@ -14190,7 +14124,10 @@
             "type": "string"
           },
           "tables": {
-            "items": {},
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
             "title": "Tables",
             "type": "array"
           }
@@ -14258,10 +14195,356 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "JsonResponseFormat": {
+            "description": "Response format requesting raw JSON output (e.g. ``{\"type\": \"json_object\"}``).",
+            "properties": {
+              "type": {
+                "const": "json_object",
+                "title": "Type",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "title": "JsonResponseFormat",
+            "type": "object"
+          },
+          "LLM": {
+            "properties": {
+              "additional_params": {
+                "additionalProperties": true,
+                "title": "Additional Params",
+                "type": "object"
+              },
+              "api_base": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Base"
+              },
+              "api_key": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Key"
+              },
+              "api_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Version"
+              },
+              "base_url": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Base Url"
+              },
+              "callbacks": {
+                "anyOf": [
+                  {
+                    "items": {},
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Callbacks"
+              },
+              "completion_cost": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Completion Cost"
+              },
+              "context_window_size": {
+                "default": 0,
+                "title": "Context Window Size",
+                "type": "integer"
+              },
+              "frequency_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Frequency Penalty"
+              },
+              "interceptor": {
+                "default": null,
+                "title": "Interceptor"
+              },
+              "is_anthropic": {
+                "default": false,
+                "title": "Is Anthropic",
+                "type": "boolean"
+              },
+              "is_litellm": {
+                "default": false,
+                "title": "Is Litellm",
+                "type": "boolean"
+              },
+              "llm_type": {
+                "const": "litellm",
+                "default": "litellm",
+                "title": "Llm Type",
+                "type": "string"
+              },
+              "logit_bias": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logit Bias"
+              },
+              "logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logprobs"
+              },
+              "max_completion_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Completion Tokens"
+              },
+              "max_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Tokens"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "n": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "N"
+              },
+              "prefer_upload": {
+                "default": false,
+                "title": "Prefer Upload",
+                "type": "boolean"
+              },
+              "presence_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Presence Penalty"
+              },
+              "provider": {
+                "default": "openai",
+                "title": "Provider",
+                "type": "string"
+              },
+              "reasoning_effort": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reasoning Effort"
+              },
+              "response_format": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/JsonResponseFormat"
+                  },
+                  {},
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Response Format"
+              },
+              "seed": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Seed"
+              },
+              "stop": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Stop",
+                "type": "array"
+              },
+              "stream": {
+                "default": false,
+                "title": "Stream",
+                "type": "boolean"
+              },
+              "temperature": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Temperature"
+              },
+              "thinking": {
+                "default": null,
+                "title": "Thinking"
+              },
+              "timeout": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Timeout"
+              },
+              "top_logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top Logprobs"
+              },
+              "top_p": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top P"
+              }
+            },
+            "required": [
+              "model"
+            ],
+            "title": "LLM",
+            "type": "object"
           }
         },
         "description": "A tool for performing Optical Character Recognition on images.\n\nThis tool leverages LLMs to extract text from images. It can process\nboth local image files and images available via URLs.\n\nAttributes:\n    name (str): Name of the tool.\n    description (str): Description of the tool's functionality.\n    args_schema (Type[BaseModel]): Pydantic schema for input validation.\n\nPrivate Attributes:\n    _llm (Optional[LLM]): Language model instance for making API calls.",
-        "properties": {},
+        "properties": {
+          "llm": {
+            "$ref": "#/$defs/LLM"
+          }
+        },
+        "required": [],
         "title": "OCRTool",
         "type": "object"
       },
@@ -14455,9 +14738,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonProductScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonProductScraperTool",
@@ -14680,9 +14967,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonSearchScraperTool",
@@ -14918,9 +15209,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsGoogleSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsGoogleSearchScraperTool",
@@ -15104,9 +15399,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsUniversalScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsUniversalScraperTool",
@@ -16167,6 +16466,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "PDFSearchTool",
         "type": "object"
       },
@@ -16250,6 +16550,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "ParallelSearchTool",
         "type": "object"
       },
@@ -16410,6 +16711,7 @@
             "type": "array"
           }
         },
+        "required": [],
         "title": "PatronusEvalTool",
         "type": "object"
       },
@@ -16418,6 +16720,112 @@
       "run_params_schema": {
         "properties": {},
         "title": "_ArgsSchemaPlaceholder",
+        "type": "object"
+      }
+    },
+    {
+      "description": "This tool is used to evaluate the model input and output using custom function evaluators.",
+      "env_vars": [],
+      "humanized_name": "Patronus Local Evaluator Tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "client": {
+            "default": null,
+            "title": "Client"
+          },
+          "evaluated_model_gold_answer": {
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluator": {
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluator",
+          "evaluated_model_gold_answer"
+        ],
+        "title": "PatronusLocalEvaluatorTool",
+        "type": "object"
+      },
+      "name": "PatronusLocalEvaluatorTool",
+      "package_dependencies": [
+        "patronus"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "evaluated_model_gold_answer": {
+            "description": "The agent's gold answer only if available",
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluated_model_input": {
+            "description": "The agent's task description in simple text",
+            "title": "Evaluated Model Input",
+            "type": "string"
+          },
+          "evaluated_model_output": {
+            "description": "The agent's output of the task",
+            "title": "Evaluated Model Output",
+            "type": "string"
+          },
+          "evaluated_model_retrieved_context": {
+            "description": "The agent's context",
+            "title": "Evaluated Model Retrieved Context",
+            "type": "string"
+          },
+          "evaluator": {
+            "description": "The registered local evaluator",
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluated_model_input",
+          "evaluated_model_output",
+          "evaluated_model_retrieved_context",
+          "evaluated_model_gold_answer",
+          "evaluator"
+        ],
+        "title": "FixedLocalEvaluatorToolSchema",
         "type": "object"
       }
     },
@@ -16481,6 +16889,7 @@
             "type": "array"
           }
         },
+        "required": [],
         "title": "PatronusPredefinedCriteriaEvalTool",
         "type": "object"
       },
@@ -17744,6 +18153,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "RagTool",
         "type": "object"
       },
@@ -17801,7 +18211,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17826,7 +18238,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17848,6 +18262,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapeElementFromWebsiteTool",
         "type": "object"
       },
@@ -17921,7 +18336,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17934,7 +18351,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -17956,6 +18375,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapeWebsiteTool",
         "type": "object"
       },
@@ -18070,6 +18490,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapegraphScrapeTool",
         "type": "object"
       },
@@ -18172,6 +18593,7 @@
             "title": "Scrapfly"
           }
         },
+        "required": [],
         "title": "ScrapflyScrapeWebsiteTool",
         "type": "object"
       },
@@ -18354,6 +18776,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "SeleniumScrapingTool",
         "type": "object"
       },
@@ -18445,6 +18868,7 @@
             "title": "Client"
           }
         },
+        "required": [],
         "title": "SerpApiGoogleSearchTool",
         "type": "object"
       },
@@ -18542,6 +18966,7 @@
             "title": "Client"
           }
         },
+        "required": [],
         "title": "SerpApiGoogleShoppingTool",
         "type": "object"
       },
@@ -18685,6 +19110,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerperDevTool",
         "type": "object"
       },
@@ -18756,6 +19182,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "SerperScrapeWebsiteTool",
         "type": "object"
       },
@@ -19801,7 +20228,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -19843,6 +20272,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "SerplyJobSearchTool",
         "type": "object"
       },
@@ -19917,7 +20347,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -19956,6 +20388,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyNewsSearchTool",
         "type": "object"
       },
@@ -20030,7 +20463,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -20069,6 +20504,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyScholarSearchTool",
         "type": "object"
       },
@@ -20155,7 +20591,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -20218,6 +20656,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyWebSearchTool",
         "type": "object"
       },
@@ -21300,6 +21739,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "SerplyWebpageToMarkdownTool",
         "type": "object"
       },
@@ -21442,6 +21882,7 @@
             "title": "Connection Pool"
           }
         },
+        "required": [],
         "title": "SingleStoreSearchTool",
         "type": "object"
       },
@@ -21855,6 +22296,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "SpiderTool",
         "type": "object"
       },
@@ -21984,6 +22426,10 @@
             "default": null,
             "title": "Model Api Key"
           },
+          "model_name": {
+            "default": "anthropic.claude-3-7-sonnet-20240607",
+            "title": "Model Name"
+          },
           "project_id": {
             "anyOf": [
               {
@@ -22029,6 +22475,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "StagehandTool",
         "type": "object"
       },
@@ -23119,6 +23566,7 @@
             "title": "Txt"
           }
         },
+        "required": [],
         "title": "TXTSearchTool",
         "type": "object"
       },
@@ -23208,6 +23656,26 @@
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
           },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
           "extract_depth": {
             "default": "basic",
             "description": "The depth of extraction. 'basic' for basic extraction, 'advanced' for advanced extraction.",
@@ -23247,6 +23715,7 @@
             "type": "integer"
           }
         },
+        "required": [],
         "title": "TavilyExtractorTool",
         "type": "object"
       },
@@ -23342,6 +23811,26 @@
             ],
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
+          },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
           },
           "days": {
             "default": 7,
@@ -23485,6 +23974,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "TavilySearchTool",
         "type": "object"
       },
@@ -23559,6 +24049,7 @@
         },
         "description": "Tool for analyzing images using vision models.\n\nArgs:\n    llm: Optional LLM instance to use\n    model: Model identifier to use if no LLM is provided",
         "properties": {},
+        "required": [],
         "title": "VisionTool",
         "type": "object"
       },
@@ -23644,7 +24135,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -24744,6 +25237,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "WebsiteSearchTool",
         "type": "object"
       },
@@ -25795,6 +26289,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "XMLSearchTool",
         "type": "object"
       },
@@ -26846,6 +27341,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "YoutubeChannelSearchTool",
         "type": "object"
       },
@@ -27897,6 +28393,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "YoutubeVideoSearchTool",
         "type": "object"
       },

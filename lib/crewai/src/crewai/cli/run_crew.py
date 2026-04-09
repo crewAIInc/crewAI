@@ -1,12 +1,11 @@
 from enum import Enum
-import os
 import subprocess
 
 import click
 from packaging import version
 
-from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
-from crewai.cli.version import get_crewai_version
+from crewai.cli.utils import build_env_with_all_tool_credentials, read_toml
+from crewai.utilities.version import get_crewai_version
 
 
 class CrewType(Enum):
@@ -56,19 +55,7 @@ def execute_command(crew_type: CrewType) -> None:
     """
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
-    env = os.environ.copy()
-    try:
-        pyproject_data = read_toml()
-        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
-
-        for source_config in sources.values():
-            if isinstance(source_config, dict):
-                index = source_config.get("index")
-                if index:
-                    index_env = build_env_with_tool_repository_credentials(index)
-                    env.update(index_env)
-    except Exception:  # noqa: S110
-        pass
+    env = build_env_with_all_tool_credentials()
 
     try:
         subprocess.run(command, capture_output=False, text=True, check=True, env=env)  # noqa: S603

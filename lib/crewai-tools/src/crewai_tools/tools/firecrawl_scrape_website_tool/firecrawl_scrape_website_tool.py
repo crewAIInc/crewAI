@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
+from crewai_tools.security.safe_path import validate_url
 
-if TYPE_CHECKING:
-    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
 
 try:
     from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
@@ -70,7 +69,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         }
     )
 
-    _firecrawl: FirecrawlApp | None = PrivateAttr(None)
+    _firecrawl: Any = PrivateAttr(None)
     package_dependencies: list[str] = Field(default_factory=lambda: ["firecrawl-py"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -82,10 +81,10 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         ]
     )
 
-    def __init__(self, api_key: str | None = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         try:
-            from firecrawl import FirecrawlApp  # type: ignore
+            from firecrawl import FirecrawlApp
         except ImportError:
             import click
 
@@ -105,21 +104,19 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
 
         self._firecrawl = FirecrawlApp(api_key=api_key)
 
-    def _run(self, url: str):
+    def _run(self, url: str) -> Any:
         if not self._firecrawl:
             raise RuntimeError("FirecrawlApp not properly initialized")
 
+        url = validate_url(url)
         return self._firecrawl.scrape(url=url, **self.config)
 
 
 try:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp  # noqa: F401
 
-    # Must rebuild model after class is defined
-    if not hasattr(FirecrawlScrapeWebsiteTool, "_model_rebuilt"):
+    if not getattr(FirecrawlScrapeWebsiteTool, "_model_rebuilt", False):
         FirecrawlScrapeWebsiteTool.model_rebuild()
         FirecrawlScrapeWebsiteTool._model_rebuilt = True  # type: ignore[attr-defined]
 except ImportError:
-    """
-    When this tool is not used, then exception can be ignored.
-    """
+    pass

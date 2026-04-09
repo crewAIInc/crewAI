@@ -4,11 +4,14 @@ This tool provides functionality for extracting text from images using supported
 """
 
 import base64
+from typing import Any
 
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel, Field
+
+from crewai_tools.security.safe_path import validate_file_path
 
 
 class OCRToolSchema(BaseModel):
@@ -43,7 +46,7 @@ class OCRTool(BaseTool):
     llm: LLM = Field(default_factory=lambda: LLM(model="gpt-4o", temperature=0.7))
     args_schema: type[BaseModel] = OCRToolSchema
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         """Execute the OCR operation on the provided image.
 
         Args:
@@ -88,7 +91,7 @@ class OCRTool(BaseTool):
         return self.llm.call(messages=messages)
 
     @staticmethod
-    def _encode_image(image_path: str):
+    def _encode_image(image_path: str) -> str:
         """Encode an image file to base64 format.
 
         Args:
@@ -97,5 +100,6 @@ class OCRTool(BaseTool):
         Returns:
             str: Base64-encoded image data as a UTF-8 string.
         """
+        image_path = validate_file_path(image_path)
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode()

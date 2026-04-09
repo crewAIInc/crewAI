@@ -1,0 +1,97 @@
+---
+title: "مشغل Gmail"
+description: "تشغيل الأتمتات عند حدوث أحداث Gmail (مثل رسائل بريد إلكتروني جديدة، تسميات)."
+icon: "envelope"
+mode: "wide"
+---
+
+## نظرة عامة
+
+استخدم مشغل Gmail لتشغيل طواقمك المنشورة عند حدوث أحداث Gmail في الحسابات المتصلة، مثل استلام رسالة بريد إلكتروني جديدة أو رسائل تطابق تسمية/فلتر.
+
+<Tip>
+  تأكد من ربط Gmail في Tools & Integrations وتفعيل المشغل
+  لعملية النشر.
+</Tip>
+
+## تفعيل مشغل Gmail
+
+1. افتح عملية النشر في CrewAI AMP
+2. انتقل إلى علامة تبويب **Triggers**
+3. حدد موقع **Gmail** وبدّل مفتاح التبديل للتفعيل
+
+<Frame>
+  <img
+    src="/images/enterprise/trigger-selected.png"
+    alt="تفعيل أو تعطيل المشغلات بالتبديل"
+  />
+</Frame>
+
+## مثال: معالجة الرسائل الجديدة
+
+عند وصول رسالة بريد إلكتروني جديدة، سيرسل مشغل Gmail الحمولة إلى طاقمك أو تدفقك. فيما يلي مثال على طاقم يحلل ويعالج حمولة المشغل.
+
+```python
+@CrewBase
+class GmailProcessingCrew:
+    @agent
+    def parser(self) -> Agent:
+        return Agent(
+            config=self.agents_config['parser'],
+        )
+
+    @task
+    def parse_gmail_payload(self) -> Task:
+        return Task(
+            config=self.tasks_config['parse_gmail_payload'],
+            agent=self.parser(),
+        )
+
+    @task
+    def act_on_email(self) -> Task:
+        return Task(
+            config=self.tasks_config['act_on_email'],
+            agent=self.parser(),
+        )
+```
+
+ستكون حمولة Gmail متاحة عبر آليات السياق القياسية.
+
+### الاختبار المحلي
+
+اختبر تكامل مشغل Gmail محلياً باستخدام CrewAI CLI:
+
+```bash
+# عرض جميع المشغلات المتاحة
+crewai triggers list
+
+# محاكاة مشغل Gmail بحمولة واقعية
+crewai triggers run gmail/new_email_received
+```
+
+سينفذ أمر `crewai triggers run` طاقمك بحمولة Gmail كاملة، مما يتيح لك اختبار منطق التحليل قبل النشر.
+
+<Warning>
+  استخدم `crewai triggers run gmail/new_email_received` (وليس `crewai run`) لمحاكاة
+  تنفيذ المشغل أثناء التطوير. بعد النشر، سيتلقى طاقمك
+  حمولة المشغل تلقائياً.
+</Warning>
+
+## مراقبة عمليات التنفيذ
+
+تتبع سجل وأداء عمليات التشغيل المُشغّلة:
+
+<Frame>
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="قائمة عمليات التنفيذ المُشغّلة بواسطة الأتمتة"
+  />
+</Frame>
+
+## استكشاف الأخطاء وإصلاحها
+
+- تأكد من ربط Gmail في Tools & Integrations
+- تحقق من تفعيل مشغل Gmail في علامة تبويب Triggers
+- اختبر محلياً بـ `crewai triggers run gmail/new_email_received` لرؤية هيكل الحمولة بالضبط
+- تحقق من سجلات التنفيذ وتأكد من تمرير الحمولة كـ `crewai_trigger_payload`
+- تذكر: استخدم `crewai triggers run` (وليس `crewai run`) لمحاكاة تنفيذ المشغل

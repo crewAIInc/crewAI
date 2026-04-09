@@ -29,6 +29,7 @@ dev = [
     "types-psycopg2==2.9.21.20251012",
     "types-pymysql==1.1.0.20250916",
     "types-aiofiles~=25.1.0",
+    "commitizen>=4.13.9",
 ]
 
 
@@ -106,6 +107,7 @@ ignore-decorators = ["typing.overload"]
 "lib/crewai/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements, unnecessary assignments, and hardcoded passwords in tests
 "lib/crewai-tools/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "RUF012", "N818", "E402", "RUF043", "S110", "B017"]  # Allow various test-specific patterns
 "lib/crewai-files/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "B017", "F841"]  # Allow assert statements and blind exception assertions in tests
+"lib/devtools/tests/**/*.py" = ["S101"]
 
 
 [tool.mypy]
@@ -142,18 +144,39 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 
+[tool.commitizen]
+name = "cz_customize"
+version_provider = "scm"
+tag_format = "$version"
+allowed_prefixes = ["Merge", "Revert"]
+changelog_incremental = true
+update_changelog_on_bump = false
+
+[tool.commitizen.customize]
+schema = "<type>(<scope>): <description>"
+schema_pattern = "^(feat|fix|refactor|perf|test|docs|chore|ci|style|revert)(\\(.+\\))?!?: .{1,72}"
+bump_pattern = "^(feat|fix|perf|refactor|revert)"
+bump_map = { feat = "MINOR", fix = "PATCH", perf = "PATCH", refactor = "PATCH", revert = "PATCH" }
+info = "Commits must follow Conventional Commits 1.0.0."
+
+
 [tool.uv]
+exclude-newer = "2026-04-10"  # pinned for CVE-2026-39892; restore to "3 days" after 2026-04-11
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
 # fastembed 0.7.x and docling 2.63 cap pillow<12; the removed APIs don't affect them.
-# langchain-core 0.3.76 has a template-injection vuln (GHSA); force >=0.3.80.
+# langchain-core <1.2.28 has GHSA-926x-3r5x-gfhw (incomplete f-string validation).
+# transformers 4.57.6 has CVE-2026-1839; force 5.4+ (docling 2.84 allows huggingface-hub>=1).
+# cryptography 46.0.6 has CVE-2026-39892; force 46.0.7+.
 override-dependencies = [
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
     "pillow>=12.1.1",
-    "langchain-core>=0.3.80,<1",
+    "langchain-core>=1.2.28,<2",
     "urllib3>=2.6.3",
+    "transformers>=5.4.0; python_version >= '3.10'",
+    "cryptography>=46.0.7",
 ]
 
 [tool.uv.workspace]

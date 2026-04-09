@@ -6,7 +6,7 @@ from pydantic import Field
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 logger = logging.getLogger(__name__)
@@ -16,9 +16,6 @@ class BaseAgentTool(BaseTool):
     """Base class for agent-related tools"""
 
     agents: list[BaseAgent] = Field(description="List of available agents")
-    i18n: I18N = Field(
-        default_factory=get_i18n, description="Internationalization settings"
-    )
 
     def sanitize_agent_name(self, name: str) -> str:
         """
@@ -93,7 +90,7 @@ class BaseAgentTool(BaseTool):
             )
         except (AttributeError, ValueError) as e:
             # Handle specific exceptions that might occur during role name processing
-            return self.i18n.errors("agent_tool_unexisting_coworker").format(
+            return I18N_DEFAULT.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [
                         f"- {self.sanitize_agent_name(agent.role)}"
@@ -105,7 +102,7 @@ class BaseAgentTool(BaseTool):
 
         if not agent:
             # No matching agent found after sanitization
-            return self.i18n.errors("agent_tool_unexisting_coworker").format(
+            return I18N_DEFAULT.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [
                         f"- {self.sanitize_agent_name(agent.role)}"
@@ -120,8 +117,7 @@ class BaseAgentTool(BaseTool):
             task_with_assigned_agent = Task(
                 description=task,
                 agent=selected_agent,
-                expected_output=selected_agent.i18n.slice("manager_request"),
-                i18n=selected_agent.i18n,
+                expected_output=I18N_DEFAULT.slice("manager_request"),
             )
             logger.debug(
                 f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}"
@@ -129,6 +125,6 @@ class BaseAgentTool(BaseTool):
             return selected_agent.execute_task(task_with_assigned_agent, context)
         except Exception as e:
             # Handle task creation or execution errors
-            return self.i18n.errors("agent_tool_execution_error").format(
+            return I18N_DEFAULT.errors("agent_tool_execution_error").format(
                 agent_role=self.sanitize_agent_name(selected_agent.role), error=str(e)
             )

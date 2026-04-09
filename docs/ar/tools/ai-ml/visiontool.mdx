@@ -1,0 +1,50 @@
+---
+title: أداة الرؤية
+description: أداة `VisionTool` مصممة لاستخراج النص من الصور.
+icon: eye
+mode: "wide"
+---
+
+# `VisionTool`
+
+## الوصف
+
+تُستخدم هذه الأداة لاستخراج النص من الصور. عند تمريرها إلى الوكيل، ستستخرج النص من الصورة ثم تستخدمه لتوليد استجابة أو تقرير أو أي مخرج آخر.
+يجب تمرير عنوان URL أو مسار الصورة إلى الوكيل.
+
+## التثبيت
+
+ثبّت حزمة crewai_tools
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## الاستخدام
+
+لاستخدام VisionTool، يجب تعيين مفتاح API الخاص بـ OpenAI في متغير البيئة `OPENAI_API_KEY`.
+
+```python Code
+from crewai_tools import VisionTool
+
+vision_tool = VisionTool()
+
+@agent
+def researcher(self) -> Agent:
+    '''
+    This agent uses the VisionTool to extract text from images.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[vision_tool]
+    )
+```
+
+## المعاملات
+
+تتطلب VisionTool المعاملات التالية:
+
+| المعامل           | النوع     | الوصف                                                                      |
+| :----------------- | :------- | :------------------------------------------------------------------------------- |
+| **image_path_url** | `string` | **إلزامي**. مسار ملف الصورة المراد استخراج النص منها. |

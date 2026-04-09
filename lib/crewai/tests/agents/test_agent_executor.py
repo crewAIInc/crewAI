@@ -4,13 +4,51 @@ Tests the Flow-based agent executor implementation including state management,
 flow methods, routing logic, and error handling.
 """
 
+from __future__ import annotations
+
 import asyncio
 import time
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
 from crewai.agents.step_executor import StepExecutor
+
+
+def _build_executor(**kwargs: Any) -> AgentExecutor:
+    """Create an AgentExecutor without validation — for unit tests.
+
+    Uses model_construct to skip Pydantic validators so plain Mock()
+    objects are accepted for typed fields like llm, agent, crew, task.
+    """
+    executor = AgentExecutor.model_construct(**kwargs)
+    executor._state = AgentExecutorState()
+    executor._methods = {}
+    executor._method_outputs = []
+    executor._completed_methods = set()
+    executor._fired_or_listeners = set()
+    executor._pending_and_listeners = {}
+    executor._method_execution_counts = {}
+    executor._method_call_counts = {}
+    executor._event_futures = []
+    executor._human_feedback_method_outputs = {}
+    executor._input_history = []
+    executor._is_execution_resuming = False
+    import threading
+    executor._state_lock = threading.Lock()
+    executor._or_listeners_lock = threading.Lock()
+    executor._execution_lock = threading.Lock()
+    executor._finalize_lock = threading.Lock()
+    executor._finalize_called = False
+    executor._is_executing = False
+    executor._has_been_invoked = False
+    executor._last_parser_error = None
+    executor._last_context_error = None
+    executor._step_executor = None
+    executor._planner_observer = None
+    return executor
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (
     AgentExecutorState,
@@ -75,6 +113,7 @@ class TestAgentExecutor:
         """Create mock dependencies for executor."""
         llm = Mock()
         llm.supports_stop_words.return_value = True
+        llm.stop = []
 
         task = Mock()
         task.description = "Test task"
@@ -94,7 +133,7 @@ class TestAgentExecutor:
         prompt = {"prompt": "Test prompt with {input}, {tool_names}, {tools}"}
 
         tools = []
-        tools_handler = Mock()
+        tools_handler = Mock(spec=_ToolsHandler)
 
         return {
             "llm": llm,
@@ -112,7 +151,7 @@ class TestAgentExecutor:
 
     def test_executor_initialization(self, mock_dependencies):
         """Test AgentExecutor initialization."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         assert executor.llm == mock_dependencies["llm"]
         assert executor.task == mock_dependencies["task"]
@@ -126,7 +165,7 @@ class TestAgentExecutor:
         with patch.object(
             AgentExecutor, "_show_start_logs"
         ) as mock_show_start:
-            executor = AgentExecutor(**mock_dependencies)
+            executor = _build_executor(**mock_dependencies)
             result = executor.initialize_reasoning()
 
             assert result == "initialized"
@@ -134,7 +173,7 @@ class TestAgentExecutor:
 
     def test_check_max_iterations_not_reached(self, mock_dependencies):
         """Test routing when iterations < max."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor.state.iterations = 5
 
         result = executor.check_max_iterations()
@@ -142,7 +181,7 @@ class TestAgentExecutor:
 
     def test_check_max_iterations_reached(self, mock_dependencies):
         """Test routing when iterations >= max."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor.state.iterations = 10
 
         result = executor.check_max_iterations()
@@ -150,7 +189,7 @@ class TestAgentExecutor:
 
     def test_route_by_answer_type_action(self, mock_dependencies):
         """Test routing for AgentAction."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor.state.current_answer = AgentAction(
             thought="thinking", tool="search", tool_input="query", text="action text"
         )
@@ -160,7 +199,7 @@ class TestAgentExecutor:
 
     def test_route_by_answer_type_finish(self, mock_dependencies):
         """Test routing for AgentFinish."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor.state.current_answer = AgentFinish(
             thought="final thoughts", output="Final answer", text="complete"
         )
@@ -170,7 +209,7 @@ class TestAgentExecutor:
 
     def test_continue_iteration(self, mock_dependencies):
         """Test iteration continuation."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         result = executor.continue_iteration()
 
@@ -179,7 +218,7 @@ class TestAgentExecutor:
     def test_finalize_success(self, mock_dependencies):
         """Test finalize with valid AgentFinish."""
         with patch.object(AgentExecutor, "_show_logs") as mock_show_logs:
-            executor = AgentExecutor(**mock_dependencies)
+            executor = _build_executor(**mock_dependencies)
             executor.state.current_answer = AgentFinish(
                 thought="final thinking", output="Done", text="complete"
             )
@@ -192,7 +231,7 @@ class TestAgentExecutor:
 
     def test_finalize_failure(self, mock_dependencies):
         """Test finalize skips when given AgentAction instead of AgentFinish."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor.state.current_answer = AgentAction(
             thought="thinking", tool="search", tool_input="query", text="action text"
         )
@@ -208,7 +247,7 @@ class TestAgentExecutor:
     ):
         """Finalize should skip synthesis when last todo is already a complete answer."""
         with patch.object(AgentExecutor, "_show_logs") as mock_show_logs:
-            executor = AgentExecutor(**mock_dependencies)
+            executor = _build_executor(**mock_dependencies)
             executor.state.todos.items = [
                 TodoItem(
                     step_number=1,
@@ -252,7 +291,7 @@ class TestAgentExecutor:
     ):
         """Finalize should still synthesize when response_model is configured."""
         with patch.object(AgentExecutor, "_show_logs"):
-            executor = AgentExecutor(**mock_dependencies)
+            executor = _build_executor(**mock_dependencies)
             executor.response_model = Mock()
             executor.state.todos.items = [
                 TodoItem(
@@ -287,7 +326,7 @@ class TestAgentExecutor:
 
     def test_format_prompt(self, mock_dependencies):
         """Test prompt formatting."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         inputs = {"input": "test input", "tool_names": "tool1, tool2", "tools": "desc"}
 
         result = executor._format_prompt("Prompt {input} {tool_names} {tools}", inputs)
@@ -298,18 +337,18 @@ class TestAgentExecutor:
 
     def test_is_training_mode_false(self, mock_dependencies):
         """Test training mode detection when not in training."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         assert executor._is_training_mode() is False
 
     def test_is_training_mode_true(self, mock_dependencies):
         """Test training mode detection when in training."""
         mock_dependencies["crew"]._train = True
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         assert executor._is_training_mode() is True
 
     def test_append_message_to_state(self, mock_dependencies):
         """Test message appending to state."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         initial_count = len(executor.state.messages)
 
         executor._append_message_to_state("test message")
@@ -322,7 +361,7 @@ class TestAgentExecutor:
         callback = Mock()
         mock_dependencies["step_callback"] = callback
 
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         answer = AgentFinish(thought="thinking", output="test", text="final")
 
         executor._invoke_step_callback(answer)
@@ -332,7 +371,7 @@ class TestAgentExecutor:
     def test_invoke_step_callback_none(self, mock_dependencies):
         """Test step callback when none provided."""
         mock_dependencies["step_callback"] = None
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         # Should not raise error
         executor._invoke_step_callback(
@@ -346,7 +385,7 @@ class TestAgentExecutor:
         """Test async step callback scheduling when already in an event loop."""
         callback = AsyncMock()
         mock_dependencies["step_callback"] = callback
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         answer = AgentFinish(thought="thinking", output="test", text="final")
         with patch("crewai.experimental.agent_executor.asyncio.run") as mock_run:
@@ -364,6 +403,7 @@ class TestStepExecutorCriticalFixes:
     def mock_dependencies(self):
         """Create mock dependencies for AgentExecutor tests in this class."""
         llm = Mock()
+        llm.stop = []
         llm.supports_stop_words.return_value = True
 
         task = Mock()
@@ -393,6 +433,7 @@ class TestStepExecutorCriticalFixes:
     @pytest.fixture
     def step_executor(self):
         llm = Mock()
+        llm.stop = []
         llm.supports_stop_words.return_value = True
 
         agent = Mock()
@@ -485,7 +526,7 @@ class TestStepExecutorCriticalFixes:
 
         mock_handle_exception.return_value = None
 
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor._last_parser_error = OutputParserError("test error")
         initial_iterations = executor.state.iterations
 
@@ -500,7 +541,7 @@ class TestStepExecutorCriticalFixes:
         self, mock_handle_context, mock_dependencies
     ):
         """Test recovery from context length error."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor._last_context_error = Exception("context too long")
         initial_iterations = executor.state.iterations
 
@@ -513,16 +554,16 @@ class TestStepExecutorCriticalFixes:
     def test_use_stop_words_property(self, mock_dependencies):
         """Test use_stop_words property."""
         mock_dependencies["llm"].supports_stop_words.return_value = True
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         assert executor.use_stop_words is True
 
         mock_dependencies["llm"].supports_stop_words.return_value = False
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         assert executor.use_stop_words is False
 
     def test_compatibility_properties(self, mock_dependencies):
         """Test compatibility properties for mixin."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor.state.messages = [{"role": "user", "content": "test"}]
         executor.state.iterations = 5
 
@@ -538,6 +579,7 @@ class TestFlowErrorHandling:
     def mock_dependencies(self):
         """Create mock dependencies."""
         llm = Mock()
+        llm.stop = []
         llm.supports_stop_words.return_value = True
 
         task = Mock()
@@ -575,7 +617,7 @@ class TestFlowErrorHandling:
         mock_enforce_rpm.return_value = None
         mock_get_llm.side_effect = OutputParserError("parse failed")
 
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         result = executor.call_llm_and_parse()
 
         assert result == "parser_error"
@@ -596,7 +638,7 @@ class TestFlowErrorHandling:
         mock_get_llm.side_effect = Exception("context length")
         mock_is_context_exceeded.return_value = True
 
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         result = executor.call_llm_and_parse()
 
         assert result == "context_error"
@@ -610,6 +652,7 @@ class TestFlowInvoke:
     def mock_dependencies(self):
         """Create mock dependencies."""
         llm = Mock()
+        llm.stop = []
         task = Mock()
         task.description = "Test"
         task.human_input = False
@@ -646,7 +689,7 @@ class TestFlowInvoke:
         mock_dependencies,
     ):
         """Test successful invoke without human feedback."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         # Mock kickoff to set the final answer in state
         def mock_kickoff_side_effect():
@@ -666,7 +709,7 @@ class TestFlowInvoke:
     @patch.object(AgentExecutor, "kickoff")
     def test_invoke_failure_no_agent_finish(self, mock_kickoff, mock_dependencies):
         """Test invoke fails without AgentFinish."""
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         executor.state.current_answer = AgentAction(
             thought="thinking", tool="test", tool_input="test", text="action text"
         )
@@ -689,7 +732,7 @@ class TestFlowInvoke:
             "system": "System: {input}",
             "user": "User: {input} {tool_names} {tools}",
         }
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         def mock_kickoff_side_effect():
             executor.state.current_answer = AgentFinish(
@@ -713,6 +756,7 @@ class TestNativeToolExecution:
     @pytest.fixture
     def mock_dependencies(self):
         llm = Mock()
+        llm.stop = []
         llm.supports_stop_words.return_value = True
 
         task = Mock()
@@ -734,7 +778,7 @@ class TestNativeToolExecution:
 
         prompt = {"prompt": "Test {input} {tool_names} {tools}"}
 
-        tools_handler = Mock()
+        tools_handler = Mock(spec=_ToolsHandler)
         tools_handler.cache = None
 
         return {
@@ -754,7 +798,7 @@ class TestNativeToolExecution:
     def test_execute_native_tool_runs_parallel_for_multiple_calls(
         self, mock_dependencies
     ):
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         def slow_one() -> str:
             time.sleep(0.2)
@@ -790,7 +834,7 @@ class TestNativeToolExecution:
     def test_execute_native_tool_falls_back_to_sequential_for_result_as_answer(
         self, mock_dependencies
     ):
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         def slow_one() -> str:
             time.sleep(0.2)
@@ -832,7 +876,7 @@ class TestNativeToolExecution:
     def test_execute_native_tool_result_as_answer_short_circuits_remaining_calls(
         self, mock_dependencies
     ):
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
         call_counts = {"slow_one": 0, "slow_two": 0}
 
         def slow_one() -> str:
@@ -884,7 +928,7 @@ class TestNativeToolExecution:
     ):
         from crewai.utilities.planning_types import TodoList
 
-        executor = AgentExecutor(**mock_dependencies)
+        executor = _build_executor(**mock_dependencies)
 
         # No current todo → not satisfied
         executor.state.todos = TodoList(items=[])
@@ -1443,7 +1487,6 @@ class TestReasoningEffort:
         executor.handle_step_observed_medium = (
             AgentExecutor.handle_step_observed_medium.__get__(executor)
         )
-        executor._printer = Mock()
 
         # --- Case 1: step succeeded → should return "continue_plan" ---
         success_todo = TodoItem(
@@ -1514,7 +1557,6 @@ class TestReasoningEffort:
         executor.handle_step_observed_low = (
             AgentExecutor.handle_step_observed_low.__get__(executor)
         )
-        executor._printer = Mock()
 
         todo = TodoItem(
             step_number=1,
@@ -1571,8 +1613,9 @@ class TestReasoningEffort:
         executor.agent.planning_config = None
         assert executor._get_reasoning_effort() == "medium"
 
-        # Case 3: planning_config without reasoning_effort attr → defaults to "medium"
-        executor.agent.planning_config = Mock(spec=[])
+        # Case 3: planning_config with default reasoning_effort
+        executor.agent.planning_config = Mock()
+        executor.agent.planning_config.reasoning_effort = "medium"
         assert executor._get_reasoning_effort() == "medium"
 
 

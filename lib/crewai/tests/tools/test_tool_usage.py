@@ -308,7 +308,6 @@ def test_validate_tool_input_invalid_input():
     mock_agent.key = "test_agent_key"  # Must be a string
     mock_agent.role = "test_agent_role"  # Must be a string
     mock_agent._original_role = "test_agent_role"  # Must be a string
-    mock_agent.i18n = MagicMock()
     mock_agent.verbose = False
 
     # Create mock action with proper string value
@@ -443,7 +442,6 @@ def test_tool_selection_error_event_direct():
     mock_agent = MagicMock()
     mock_agent.key = "test_key"
     mock_agent.role = "test_role"
-    mock_agent.i18n = MagicMock()
     mock_agent.verbose = False
 
     mock_task = MagicMock()
@@ -518,19 +516,9 @@ def test_tool_validate_input_error_event():
     mock_agent.verbose = False
     mock_agent._original_role = "test_role"
 
-    # Mock i18n with error message
-    mock_i18n = MagicMock()
-    mock_i18n.errors.return_value = (
-        "Tool input must be a valid dictionary in JSON or Python literal format"
-    )
-    mock_agent.i18n = mock_i18n
-
     # Mock task and tools handler
     mock_task = MagicMock()
     mock_tools_handler = MagicMock()
-
-    # Mock printer
-    mock_printer = MagicMock()
 
     # Create test tool
     class TestTool(BaseTool):
@@ -551,8 +539,6 @@ def test_tool_validate_input_error_event():
         agent=mock_agent,
         action=MagicMock(tool="test_tool"),
     )
-    tool_usage._printer = mock_printer
-
     # Mock all parsing attempts to fail
     with (
         patch("json.loads", side_effect=json.JSONDecodeError("Test Error", "", 0)),
@@ -595,7 +581,6 @@ def test_tool_usage_finished_event_with_result():
     mock_agent.key = "test_agent_key"
     mock_agent.role = "test_agent_role"
     mock_agent._original_role = "test_agent_role"
-    mock_agent.i18n = MagicMock()
     mock_agent.verbose = False
 
     # Create mock task
@@ -675,7 +660,6 @@ def test_tool_usage_finished_event_with_cached_result():
     mock_agent.key = "test_agent_key"
     mock_agent.role = "test_agent_role"
     mock_agent._original_role = "test_agent_role"
-    mock_agent.i18n = MagicMock()
     mock_agent.verbose = False
 
     # Create mock task
@@ -766,9 +750,6 @@ def test_tool_error_does_not_emit_finished_event():
     mock_agent._original_role = "test_agent_role"
     mock_agent.verbose = False
     mock_agent.fingerprint = None
-    mock_agent.i18n.tools.return_value = {"name": "Add Image"}
-    mock_agent.i18n.errors.return_value = "Error: {error}"
-    mock_agent.i18n.slice.return_value = "Available tools: {tool_names}"
 
     mock_task = MagicMock()
     mock_task.delegations = 0

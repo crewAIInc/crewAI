@@ -31,7 +31,7 @@ class ContextualAIQueryTool(BaseTool):
         default_factory=lambda: ["contextual-client"]
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         try:
             from contextual import ContextualAI
@@ -99,20 +99,19 @@ class ContextualAIQueryTool(BaseTool):
             response = self.contextual_client.agents.query.create(
                 agent_id=agent_id, messages=[{"role": "user", "content": query}]
             )
-            if hasattr(response, "content"):
-                return response.content
-            if hasattr(response, "message"):
+            content = getattr(response, "content", None)
+            if content is not None:
+                return str(content)
+            message = getattr(response, "message", None)
+            if message is not None:
+                msg_content = getattr(message, "content", None)
+                return str(msg_content) if msg_content is not None else str(message)
+            messages = getattr(response, "messages", None)
+            if messages and len(messages) > 0:
+                last_message = messages[-1]
+                last_content = getattr(last_message, "content", None)
                 return (
-                    response.message.content
-                    if hasattr(response.message, "content")
-                    else str(response.message)
-                )
-            if hasattr(response, "messages") and len(response.messages) > 0:
-                last_message = response.messages[-1]
-                return (
-                    last_message.content
-                    if hasattr(last_message, "content")
-                    else str(last_message)
+                    str(last_content) if last_content is not None else str(last_message)
                 )
             return str(response)
         except Exception as e:

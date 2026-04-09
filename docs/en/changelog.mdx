@@ -4,6 +4,686 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 09, 2026">
+  ## v1.14.2a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a1)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix emission of flow_finished event after HITL resume
+  - Fix cryptography version to 46.0.7 to address CVE-2026-39892
+
+  ### Refactoring
+  - Refactor to use shared I18N_DEFAULT singleton
+
+  ### Documentation
+  - Update changelog and version for v1.14.1
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Apr 09, 2026">
+  ## v1.14.1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## What's Changed
+
+  ### Features
+  - Add async checkpoint TUI browser
+  - Add aclose()/close() and async context manager to streaming outputs
+
+  ### Bug Fixes
+  - Fix regex for template pyproject.toml version bumps
+  - Sanitize tool names in hook decorator filters
+  - Fix checkpoint handlers registration when CheckpointConfig is created
+  - Bump transformers to 5.5.0 to resolve CVE-2026-1839
+  - Remove FilteredStream stdout/stderr wrapper
+
+  ### Documentation
+  - Update changelog and version for v1.14.1rc1
+
+  ### Refactoring
+  - Replace hardcoded denylist with dynamic BaseTool field exclusion in spec gen
+  - Replace regex with tomlkit in devtools CLI
+  - Use shared PRINTER singleton
+  - Make BaseProvider a BaseModel with provider_type discriminator
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="Apr 09, 2026">
+  ## v1.14.1rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## What's Changed
+
+  ### Features
+  - Add async checkpoint TUI browser
+  - Add aclose()/close() and async context manager to streaming outputs
+
+  ### Bug Fixes
+  - Fix template pyproject.toml version bumps using regex
+  - Sanitize tool names in hook decorator filters
+  - Bump transformers to 5.5.0 to resolve CVE-2026-1839
+  - Register checkpoint handlers when CheckpointConfig is created
+
+  ### Refactoring
+  - Replace hardcoded denylist with dynamic BaseTool field exclusion in spec gen
+  - Replace regex with tomlkit in devtools CLI
+  - Use shared PRINTER singleton
+  - Make BaseProvider a BaseModel with provider_type discriminator
+  - Remove FilteredStream stdout/stderr wrapper
+  - Remove unused flow/config.py
+
+  ### Documentation
+  - Update changelog and version for v1.14.0
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="Apr 07, 2026">
+  ## v1.14.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## What's Changed
+
+  ### Features
+  - Add checkpoint list/info CLI commands
+  - Add guardrail_type and name to distinguish traces
+  - Add SqliteProvider for checkpoint storage
+  - Add CheckpointConfig for automatic checkpointing
+  - Implement runtime state checkpointing, event system, and executor refactor
+
+  ### Bug Fixes
+  - Add SSRF and path traversal protections
+  - Add path and URL validation to RAG tools
+  - Exclude embedding vectors from memory serialization to save tokens
+  - Ensure output directory exists before writing in flow template
+  - Bump litellm to >=1.83.0 to address CVE-2026-35030
+  - Remove SEO indexing field causing Arabic page rendering
+
+  ### Documentation
+  - Update changelog and version for v1.14.0
+  - Update quickstart and installation guides for improved clarity
+  - Add storage providers section, export JsonProvider
+  - Add AMP Training Tab guide
+
+  ### Refactoring
+  - Clean up checkpoint API
+  - Remove CodeInterpreterTool and deprecate code execution parameters
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="Apr 07, 2026">
+  ## v1.14.0a4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## What's Changed
+
+  ### Features
+  - Add guardrail_type and name to distinguish traces
+  - Add SqliteProvider for checkpoint storage
+  - Add CheckpointConfig for automatic checkpointing
+  - Implement runtime state checkpointing, event system, and executor refactor
+
+  ### Bug Fixes
+  - Exclude embedding vectors from memory serialization to save tokens
+  - Bump litellm to >=1.83.0 to address CVE-2026-35030
+
+  ### Documentation
+  - Update quickstart and installation guides for improved clarity
+  - Add storage providers section and export JsonProvider
+
+  ### Performance
+  - Use JSONB for checkpoint data column
+
+  ### Refactoring
+  - Remove CodeInterpreterTool and deprecate code execution params
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="Apr 06, 2026">
+  ## v1.14.0a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a3)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.14.0a2
+
+  ## Contributors
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="Apr 06, 2026">
+  ## v1.14.0a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a2)
+
+  Release 1.14.0a2
+
+</Update>
+
+<Update label="Apr 02, 2026">
+  ## v1.13.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0)
+
+  ## What's Changed
+
+  ### Features
+  - Add RuntimeState RootModel for unified state serialization
+  - Enhance event listener with new telemetry spans for skill and memory events
+  - Add A2UI extension with v0.8/v0.9 support, schemas, and docs
+  - Emit token usage data in LLMCallCompletedEvent
+  - Auto-update deployment test repo during release
+  - Improve enterprise release resilience and UX
+
+  ### Bug Fixes
+  - Add tool repository credentials to crewai install
+  - Add tool repository credentials to uv build in tool publish
+  - Pass fingerprint metadata via config instead of tool args
+  - Handle GPT-5.x models not supporting the `stop` API parameter
+  - Add GPT-5 and o-series to multimodal vision prefixes
+  - Bust uv cache for freshly published packages in enterprise release
+  - Cap lancedb below 0.30.1 for Windows compatibility
+  - Fix RBAC permission levels to match actual UI options
+  - Fix inaccuracies in agent-capabilities across all languages
+
+  ### Documentation
+  - Add coding agent skills demo video to getting started pages
+  - Add comprehensive SSO configuration guide
+  - Add comprehensive RBAC permissions matrix and deployment guide
+  - Update changelog and version for v1.13.0
+
+  ### Performance
+  - Reduce framework overhead with lazy event bus, skip tracing when disabled
+
+  ### Refactoring
+  - Convert Flow to Pydantic BaseModel
+  - Convert LLM classes to Pydantic BaseModel
+  - Replace InstanceOf[T] with plain type annotations
+  - Remove unused third_party LLM directory
+
+  ## Contributors
+
+  @alex-clawd, @dependabot[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="Apr 02, 2026">
+  ## v1.13.0a7
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a7)
+
+  ## What's Changed
+
+  ### Features
+  - Add A2UI extension with v0.8/v0.9 support, schemas, and docs
+
+  ### Bug Fixes
+  - Fix multimodal vision prefixes by adding GPT-5 and o-series
+
+  ### Documentation
+  - Update changelog and version for v1.13.0a6
+
+  ## Contributors
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="Apr 01, 2026">
+  ## v1.13.0a6
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a6)
+
+  ## What's Changed
+
+  ### Documentation
+  - Fix RBAC permission levels to match actual UI options (#5210)
+  - Update changelog and version for v1.13.0a5 (#5200)
+
+  ### Performance
+  - Reduce framework overhead by implementing a lazy event bus and skipping tracing when disabled (#5187)
+
+  ## Contributors
+
+  @alex-clawd, @joaomdmoura, @lucasgomide
+
+</Update>
+
+<Update label="Mar 31, 2026">
+  ## v1.13.0a5
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a5)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.13.0a4
+
+  ## Contributors
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="Apr 01, 2026">
+  ## v1.13.0a4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a4)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.13.0a3
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Apr 01, 2026">
+  ## v1.13.0a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a3)
+
+  ## What's Changed
+
+  ### Features
+  - Emit token usage data in LLMCallCompletedEvent
+  - Extract and publish tool metadata to AMP
+
+  ### Bug Fixes
+  - Handle GPT-5.x models not supporting the `stop` API parameter
+
+  ### Documentation
+  - Fix inaccuracies in agent-capabilities across all languages
+  - Add Agent Capabilities overview and improve Skills documentation
+  - Add comprehensive SSO configuration guide
+  - Update changelog and version for v1.13.0rc1
+
+  ### Refactoring
+  - Convert Flow to Pydantic BaseModel
+  - Convert LLM classes to Pydantic BaseModel
+  - Replace InstanceOf[T] with plain type annotations
+  - Remove unused methods
+
+  ## Contributors
+
+  @dependabot[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="Mar 27, 2026">
+  ## v1.13.0rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0rc1)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.13.0a2
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Mar 27, 2026">
+  ## v1.13.0a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a2)
+
+  ## What's Changed
+
+  ### Features
+  - Auto-update deployment test repo during release
+  - Improve enterprise release resilience and UX
+
+  ### Documentation
+  - Update changelog and version for v1.13.0a1
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Mar 27, 2026">
+  ## v1.13.0a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a1)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix broken links in documentation workflow by pinning Node to LTS 22
+  - Bust the uv cache for freshly published packages in enterprise release
+
+  ### Documentation
+  - Add comprehensive RBAC permissions matrix and deployment guide
+  - Update changelog and version for v1.12.2
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="Mar 25, 2026">
+  ## v1.12.2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.2)
+
+  ## What's Changed
+
+  ### Features
+  - Add enterprise release phase to devtools release
+
+  ### Bug Fixes
+  - Preserve method return value as flow output for @human_feedback with emit
+
+  ### Documentation
+  - Update changelog and version for v1.12.1
+  - Revise security policy and reporting instructions
+
+  ## Contributors
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura, @theCyberTech
+
+</Update>
+
+<Update label="Mar 25, 2026">
+  ## v1.12.1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.1)
+
+  ## What's Changed
+
+  ### Features
+  - Add request_id to HumanFeedbackRequestedEvent
+  - Add Qdrant Edge storage backend for memory system
+  - Add docs-check command to analyze changes and generate docs with translations
+  - Add Arabic language support to changelog and release tooling
+  - Add modern standard Arabic translation of all documentation
+  - Add logout command in CLI
+  - Add agent skills
+  - Implement automatic root_scope for hierarchical memory isolation
+  - Implement native OpenAI-compatible providers (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### Bug Fixes
+  - Fix bad credentials for traces batch push (404)
+  - Resolve multiple bugs in HITL flow system
+  - Fix agent memory saving
+  - Resolve all strict mypy errors across crewai package
+  - Fix use of __router_paths__ for listener+router methods in FlowMeta
+  - Fix value error on no file support
+  - Correct litellm quarantine wording in docs
+  - Fix all mypy errors in crewai-files and add all packages to CI type checks
+  - Pin litellm upper bound to last tested version (1.82.6)
+
+  ### Documentation
+  - Update changelog and version for v1.12.0
+  - Add CONTRIBUTING.md
+  - Add guide for using CrewAI without LiteLLM
+
+  ## Contributors
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @nicoferdi96
+
+</Update>
+
+<Update label="Mar 25, 2026">
+  ## v1.12.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0)
+
+  ## What's Changed
+
+  ### Features
+  - Add Qdrant Edge storage backend for memory system
+  - Add docs-check command to analyze changes and generate docs with translations
+  - Add Arabic language support to changelog and release tooling
+  - Add modern standard Arabic translation of all documentation
+  - Add logout command in CLI
+  - Implement agent skills
+  - Implement automatic root_scope for hierarchical memory isolation
+  - Implement native OpenAI-compatible providers (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### Bug Fixes
+  - Fix bad credentials for traces batch push (404)
+  - Resolve multiple bugs in HITL flow system
+  - Resolve mypy errors in crewai-files and add all packages to CI type checks
+  - Resolve all strict mypy errors across crewai-tools package
+  - Resolve all mypy errors across crewai package
+  - Fix memory saving in agent
+  - Fix usage of __router_paths__ for listener+router methods in FlowMeta
+  - Raise value error on no file support
+  - Correct litellm quarantine wording in docs
+  - Use None check instead of isinstance for memory in human feedback learn
+  - Pin litellm upper bound to last tested version (1.82.6)
+
+  ### Documentation
+  - Update changelog and version for v1.12.0
+  - Add CONTRIBUTING.md
+  - Add guide for using CrewAI without LiteLLM
+
+  ### Refactoring
+  - Refactor to deduplicate sync/async task execution and kickoff in agent
+  - Simplify internal plumbing from litellm (token counting, callbacks, feature detection, errors)
+
+  ## Contributors
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @nicoferdi96
+
+</Update>
+
+<Update label="Mar 26, 2026">
+  ## v1.12.0a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a3)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix bad credentials for traces batch push (404) 
+  - Resolve multiple bugs in HITL flow system
+
+  ### Documentation
+  - Update changelog and version for v1.12.0a2
+
+  ## Contributors
+
+  @akaKuruma, @greysonlalonde
+
+</Update>
+
+<Update label="Mar 25, 2026">
+  ## v1.12.0a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a2)
+
+  ## What's Changed
+
+  ### Features
+  - Add Qdrant Edge storage backend for memory system
+
+  ### Documentation
+  - Update changelog and version for v1.12.0a1
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Mar 25, 2026">
+  ## v1.12.0a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a1)
+
+  ## What's Changed
+
+  ### Features
+  - Add docs-check command to analyze changes and generate docs with translations
+  - Add Arabic language support to changelog and release tooling
+  - Add modern standard Arabic translation of all documentation
+  - Add native OpenAI-compatible providers (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+  - Add agent skills
+  - Add logout command in CLI
+  - Implement automatic root_scope for hierarchical memory isolation
+
+  ### Bug Fixes
+  - Fix agent memory saving
+  - Resolve mypy errors in crewai-files and add all packages to CI type checks
+  - Resolve all strict mypy errors across crewai-tools package
+  - Resolve all mypy errors across crewai package
+  - Fix usage of __router_paths__ for listener+router methods in FlowMeta
+  - Pin litellm upper bound to last tested version (1.82.6)
+  - Raise value error on no file support
+  - Correct litellm quarantine wording in docs
+
+  ### Documentation
+  - Add CONTRIBUTING.md
+  - Add guide for using CrewAI without LiteLLM
+  - Update changelog and version for v1.11.1
+
+  ### Refactoring
+  - Refactor to deduplicate sync/async task execution and kickoff in agent
+  - Decouple internal plumbing from litellm (token counting, callbacks, feature detection, errors)
+
+  ## Contributors
+
+  @alex-clawd, @greysonlalonde, @iris-clawd, @lorenzejay, @nicoferdi96
+
+</Update>
+
+<Update label="Mar 23, 2026">
+  ## v1.11.1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## What's Changed
+
+  ### Features
+  - Add flow_structure() serializer for Flow class introspection.
+
+  ### Bug Fixes
+  - Fix security vulnerabilities by bumping pypdf, tinytag, and langchain-core.
+  - Preserve full LLM config across HITL resume for non-OpenAI providers.
+  - Prevent path traversal in FileWriterTool.
+  - Fix lock_store crash when redis package is not installed.
+  - Pass cache_function from BaseTool to CrewStructuredTool.
+
+  ### Documentation
+  - Add publish custom tools guide with translations.
+  - Update changelog and version for v1.11.0.
+  - Add missing event listeners documentation.
+
+  ### Refactoring
+  - Replace urllib with requests in pdf loader.
+  - Replace Any-typed callback and model fields with serializable types.
+
+  ## Contributors
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="Mar 18, 2026">
+  ## v1.11.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.11.0rc2
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Mar 17, 2026">
+  ## v1.11.0rc2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc2)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Enhance LLM response handling and serialization.
+  - Upgrade vulnerable transitive dependencies (authlib, PyJWT, snowflake-connector-python).
+  - Replace `os.system` with `subprocess.run` in unsafe mode pip install.
+
+  ### Documentation
+  - Update Exa Search Tool page with improved naming, description, and configuration options.
+  - Add Custom MCP Servers in How-To Guide.
+  - Update OTEL collectors documentation.
+  - Update MCP documentation.
+  - Update changelog and version for v1.11.0rc1.
+
+  ## Contributors
+
+  @10ishq, @greysonlalonde, @joaomdmoura, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="Mar 15, 2026">
+  ## v1.11.0rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc1)
+
+  ## What's Changed
+
+  ### Features
+  - Add Plus API token authentication in a2a
+  - Implement plan execute pattern
+
+  ### Bug Fixes
+  - Resolve code interpreter sandbox escape issue
+
+  ### Documentation
+  - Update changelog and version for v1.10.2rc2
+
+  ## Contributors
+
+  @Copilot, @greysonlalonde, @lorenzejay, @theCyberTech
+
+</Update>
+
 <Update label="Mar 14, 2026">
   ## v1.10.2rc2
 

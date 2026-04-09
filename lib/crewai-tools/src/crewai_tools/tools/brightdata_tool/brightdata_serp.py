@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from typing import Any
 import urllib.parse
@@ -11,7 +13,7 @@ class BrightDataConfig(BaseModel):
     API_URL: str = "https://api.brightdata.com/request"
 
     @classmethod
-    def from_env(cls):
+    def from_env(cls) -> BrightDataConfig:
         return cls(
             API_URL=os.environ.get(
                 "BRIGHTDATA_API_URL", "https://api.brightdata.com/request"
@@ -127,7 +129,7 @@ class BrightDataSearchTool(BaseTool):
         if not self.zone:
             raise ValueError("BRIGHT_DATA_ZONE environment variable is required.")
 
-    def get_search_url(self, engine: str, query: str):
+    def get_search_url(self, engine: str, query: str) -> str:
         if engine == "yandex":
             return f"https://yandex.com/search/?text=${query}"
         if engine == "bing":
@@ -143,7 +145,7 @@ class BrightDataSearchTool(BaseTool):
         search_type: str | None = None,
         device_type: str | None = None,
         parse_results: bool | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         """Executes a search query using Bright Data SERP API and returns results.
 

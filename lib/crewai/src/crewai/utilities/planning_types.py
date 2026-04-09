@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -259,7 +259,7 @@ class StepObservation(BaseModel):
 
     @field_validator("suggested_refinements", mode="before")
     @classmethod
-    def coerce_single_refinement_to_list(cls, v):
+    def coerce_single_refinement_to_list(cls, v: Any) -> Any:
         """Coerce a single dict refinement into a list to handle LLM returning a single object."""
         if isinstance(v, dict):
             return [v]

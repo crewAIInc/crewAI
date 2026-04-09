@@ -52,7 +52,7 @@ class ChromaDBClient(BaseClient):
     def __init__(
         self,
         client: ChromaDBClientType,
-        embedding_function: ChromaEmbeddingFunction,
+        embedding_function: ChromaEmbeddingFunction,  # type: ignore[type-arg]
         default_limit: int = 5,
         default_score_threshold: float = 0.6,
         default_batch_size: int = 100,

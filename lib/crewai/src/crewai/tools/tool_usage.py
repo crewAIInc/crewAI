@@ -28,8 +28,8 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.converter import Converter
-from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.printer import Printer
+from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -93,8 +93,6 @@ class ToolUsage:
         action: Any = None,
         fingerprint_context: dict[str, str] | None = None,
     ) -> None:
-        self._i18n: I18N = agent.i18n if agent else get_i18n()
-        self._printer: Printer = Printer()
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
@@ -129,7 +127,7 @@ class ToolUsage:
         if isinstance(calling, ToolUsageError):
             error = calling.message
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             if self.task:
                 self.task.increment_tools_errors()
             return error
@@ -141,13 +139,13 @@ class ToolUsage:
             if self.task:
                 self.task.increment_tools_errors()
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             return error
 
         if (
             isinstance(tool, CrewStructuredTool)
             and sanitize_tool_name(tool.name)
-            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
+            == sanitize_tool_name(I18N_DEFAULT.tools("add_image")["name"])  # type: ignore
         ):
             try:
                 return self._use(tool_string=tool_string, tool=tool, calling=calling)
@@ -157,7 +155,7 @@ class ToolUsage:
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
-                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                    PRINTER.print(content=f"\n\n{error}\n", color="red")
                 return error
 
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
@@ -177,7 +175,7 @@ class ToolUsage:
         if isinstance(calling, ToolUsageError):
             error = calling.message
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             if self.task:
                 self.task.increment_tools_errors()
             return error
@@ -189,13 +187,13 @@ class ToolUsage:
             if self.task:
                 self.task.increment_tools_errors()
             if self.agent and self.agent.verbose:
-                self._printer.print(content=f"\n\n{error}\n", color="red")
+                PRINTER.print(content=f"\n\n{error}\n", color="red")
             return error
 
         if (
             isinstance(tool, CrewStructuredTool)
             and sanitize_tool_name(tool.name)
-            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
+            == sanitize_tool_name(I18N_DEFAULT.tools("add_image")["name"])  # type: ignore
         ):
             try:
                 return await self._ause(
@@ -206,7 +204,7 @@ class ToolUsage:
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
-                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                    PRINTER.print(content=f"\n\n{error}\n", color="red")
                 return error
 
         return (
@@ -231,7 +229,7 @@ class ToolUsage:
         """
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = self._i18n.errors("task_repeated_usage").format(
+                result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
                 self._telemetry.tool_repeated_usage(
@@ -318,6 +316,8 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_delegations(coworker)
 
+                    fingerprint_config = self._build_fingerprint_config()
+
                     if calling.arguments:
                         try:
                             acceptable_args = tool.args_schema.model_json_schema()[
@@ -328,15 +328,16 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = await tool.ainvoke(input=arguments)
+                            result = await tool.ainvoke(
+                                input=arguments, config=fingerprint_config
+                            )
                         except Exception:
                             arguments = calling.arguments
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = await tool.ainvoke(input=arguments)
+                            result = await tool.ainvoke(
+                                input=arguments, config=fingerprint_config
+                            )
                     else:
-                        arguments = self._add_fingerprint_metadata({})
-                        result = await tool.ainvoke(input=arguments)
+                        result = await tool.ainvoke(input={}, config=fingerprint_config)
 
                     if self.tools_handler:
                         should_cache = True
@@ -388,7 +389,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -402,7 +403,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -413,7 +414,7 @@ class ToolUsage:
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                        error_message = self._i18n.errors(
+                        error_message = I18N_DEFAULT.errors(
                             "tool_usage_exception"
                         ).format(
                             error=e,
@@ -421,14 +422,12 @@ class ToolUsage:
                             tool_inputs=tool.description,
                         )
                         result = ToolUsageError(
-                            f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                            f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
-                            self._printer.print(
-                                content=f"\n\n{error_message}\n", color="red"
-                            )
+                            PRINTER.print(content=f"\n\n{error_message}\n", color="red")
                     else:
                         if self.task:
                             self.task.increment_tools_errors()
@@ -461,7 +460,7 @@ class ToolUsage:
         # Repeated usage check happens before event emission - safe to return early
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = self._i18n.errors("task_repeated_usage").format(
+                result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
                 self._telemetry.tool_repeated_usage(
@@ -550,6 +549,8 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_delegations(coworker)
 
+                    fingerprint_config = self._build_fingerprint_config()
+
                     if calling.arguments:
                         try:
                             acceptable_args = tool.args_schema.model_json_schema()[
@@ -560,15 +561,16 @@ class ToolUsage:
                                 for k, v in calling.arguments.items()
                                 if k in acceptable_args
                             }
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = tool.invoke(input=arguments)
+                            result = tool.invoke(
+                                input=arguments, config=fingerprint_config
+                            )
                         except Exception:
                             arguments = calling.arguments
-                            arguments = self._add_fingerprint_metadata(arguments)
-                            result = tool.invoke(input=arguments)
+                            result = tool.invoke(
+                                input=arguments, config=fingerprint_config
+                            )
                     else:
-                        arguments = self._add_fingerprint_metadata({})
-                        result = tool.invoke(input=arguments)
+                        result = tool.invoke(input={}, config=fingerprint_config)
 
                     if self.tools_handler:
                         should_cache = True
@@ -620,7 +622,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -634,7 +636,7 @@ class ToolUsage:
                             and self.agent
                             and self.agent.verbose
                         ):
-                            self._printer.print(
+                            PRINTER.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
@@ -645,7 +647,7 @@ class ToolUsage:
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                        error_message = self._i18n.errors(
+                        error_message = I18N_DEFAULT.errors(
                             "tool_usage_exception"
                         ).format(
                             error=e,
@@ -653,14 +655,12 @@ class ToolUsage:
                             tool_inputs=tool.description,
                         )
                         result = ToolUsageError(
-                            f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                            f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
-                            self._printer.print(
-                                content=f"\n\n{error_message}\n", color="red"
-                            )
+                            PRINTER.print(content=f"\n\n{error_message}\n", color="red")
                     else:
                         if self.task:
                             self.task.increment_tools_errors()
@@ -698,7 +698,7 @@ class ToolUsage:
 
     def _remember_format(self, result: str) -> str:
         result = str(result)
-        result += "\n\n" + self._i18n.slice("tools").format(
+        result += "\n\n" + I18N_DEFAULT.slice("tools").format(
             tools=self.tools_description, tool_names=self.tools_names
         )
         return result
@@ -824,12 +824,12 @@ class ToolUsage:
         except Exception:
             if raise_error:
                 raise
-            return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
+            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         if not isinstance(arguments, dict):
             if raise_error:
                 raise
-            return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
+            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         return ToolCalling(
             tool_name=sanitize_tool_name(tool.name),
@@ -853,9 +853,9 @@ class ToolUsage:
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
-                    self._printer.print(content=f"\n\n{e}\n", color="red")
+                    PRINTER.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageError(
-                    f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
+                    f"{I18N_DEFAULT.errors('tool_usage_error').format(error=e)}\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                 )
             return self._tool_calling(tool_string)
 
@@ -897,16 +897,14 @@ class ToolUsage:
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             if self.agent and self.agent.verbose:
-                self._printer.print(
-                    content=f"Repaired JSON: {repaired_input}", color="blue"
-                )
+                PRINTER.print(content=f"Repaired JSON: {repaired_input}", color="blue")
             arguments = json.loads(repaired_input)
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
             error = f"Failed to repair JSON: {e}"
             if self.agent and self.agent.verbose:
-                self._printer.print(content=error, color="red")
+                PRINTER.print(content=error, color="red")
 
         error_message = (
             "Tool input must be a valid dictionary in JSON or Python literal format"
@@ -1008,23 +1006,16 @@ class ToolUsage:
 
         return event_data
 
-    def _add_fingerprint_metadata(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Add fingerprint metadata to tool arguments if available.
+    def _build_fingerprint_config(self) -> dict[str, Any]:
+        """Build fingerprint metadata as a config dict for tool invocation.
 
-        Args:
-            arguments: The original tool arguments
+        Returns the fingerprint data in a config dict rather than injecting it
+        into tool arguments, so it doesn't conflict with strict tool schemas.
 
         Returns:
-            Updated arguments dictionary with fingerprint metadata
+            Config dictionary with security_context metadata.
         """
-        # Create a shallow copy to avoid modifying the original
-        arguments = arguments.copy()
-
-        # Add security metadata under a designated key
-        if "security_context" not in arguments:
-            arguments["security_context"] = {}
-
-        security_context = arguments["security_context"]
+        security_context: dict[str, Any] = {}
 
         # Add agent fingerprint if available
         if self.agent and hasattr(self.agent, "security_config"):
@@ -1048,4 +1039,4 @@ class ToolUsage:
                 except AttributeError:
                     pass
 
-        return arguments
+        return {"security_context": security_context} if security_context else {}

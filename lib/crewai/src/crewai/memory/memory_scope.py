@@ -32,6 +32,10 @@ class MemoryScope(BaseModel):
         """Extract memory dependency and normalize root path before validation."""
         if isinstance(data, MemoryScope):
             return data
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected dict or MemoryScope, got {type(data).__name__}")
+        if "memory" not in data:
+            raise ValueError("MemoryScope requires a 'memory' key")
         memory = data.pop("memory")
         instance: MemoryScope = handler(data)
         instance._memory = memory
@@ -77,6 +81,30 @@ class MemoryScope(BaseModel):
             importance=importance,
             source=source,
             private=private,
+        )
+
+    def remember_many(
+        self,
+        contents: list[str],
+        scope: str | None = "/",
+        categories: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
+        agent_role: str | None = None,
+    ) -> list[MemoryRecord]:
+        """Remember multiple items; scope is relative to this scope's root."""
+        path = self._scope_path(scope)
+        return self._memory.remember_many(
+            contents,
+            scope=path,
+            categories=categories,
+            metadata=metadata,
+            importance=importance,
+            source=source,
+            private=private,
+            agent_role=agent_role,
         )
 
     def recall(
@@ -175,6 +203,10 @@ class MemorySlice(BaseModel):
         """Extract memory dependency and normalize scopes before validation."""
         if isinstance(data, MemorySlice):
             return data
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected dict or MemorySlice, got {type(data).__name__}")
+        if "memory" not in data:
+            raise ValueError("MemorySlice requires a 'memory' key")
         memory = data.pop("memory")
         data["scopes"] = [s.rstrip("/") or "/" for s in data.get("scopes", [])]
         instance: MemorySlice = handler(data)

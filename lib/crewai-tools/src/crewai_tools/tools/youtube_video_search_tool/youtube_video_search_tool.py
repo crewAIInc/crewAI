@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
@@ -26,7 +28,7 @@ class YoutubeVideoSearchTool(RagTool):
     description: str = "A tool that can be used to semantic search a query from a Youtube Video content."
     args_schema: type[BaseModel] = YoutubeVideoSearchToolSchema
 
-    def __init__(self, youtube_video_url: str | None = None, **kwargs):
+    def __init__(self, youtube_video_url: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if youtube_video_url is not None:
             self.add(youtube_video_url)
@@ -34,7 +36,7 @@ class YoutubeVideoSearchTool(RagTool):
             self.args_schema = FixedYoutubeVideoSearchToolSchema
             self._generate_description()
 
-    def add(self, youtube_video_url: str) -> None:
+    def add(self, youtube_video_url: str) -> None:  # type: ignore[override]
         super().add(youtube_video_url, data_type=DataType.YOUTUBE_VIDEO)
 
     def _run(  # type: ignore[override]

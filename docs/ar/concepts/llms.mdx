@@ -1,0 +1,1464 @@
+---
+title: 'نماذج اللغة الكبيرة (LLMs)'
+description: 'دليل شامل لإعداد واستخدام نماذج اللغة الكبيرة (LLMs) في مشاريع CrewAI'
+icon: 'microchip-ai'
+mode: "wide"
+---
+
+## نظرة عامة
+
+يتكامل CrewAI مع مزودي LLM متعددين من خلال حزم SDK الأصلية للمزودين، مما يمنحك المرونة لاختيار النموذج المناسب لحالة الاستخدام الخاصة بك. سيساعدك هذا الدليل على فهم كيفية إعداد واستخدام مزودي LLM المختلفين في مشاريع CrewAI.
+
+
+## ما هي نماذج اللغة الكبيرة؟
+
+نماذج اللغة الكبيرة (LLMs) هي الذكاء الأساسي وراء وكلاء CrewAI. تمكّن الوكلاء من فهم السياق واتخاذ القرارات وتوليد استجابات شبيهة بالبشر. إليك ما تحتاج معرفته:
+
+<CardGroup cols={2}>
+  <Card title="أساسيات LLM" icon="brain">
+    نماذج اللغة الكبيرة هي أنظمة ذكاء اصطناعي مدربة على كميات هائلة من البيانات النصية. تدعم ذكاء وكلاء CrewAI، مما يمكّنهم من فهم وتوليد نصوص شبيهة بالبشر.
+  </Card>
+  <Card title="نافذة السياق" icon="window">
+    تحدد نافذة السياق مقدار النص الذي يمكن لـ LLM معالجته في وقت واحد. النوافذ الأكبر (مثل 128K رمز) تتيح سياقًا أكثر لكنها قد تكون أكثر تكلفة وأبطأ.
+  </Card>
+  <Card title="درجة الحرارة" icon="temperature-three-quarters">
+    تتحكم درجة الحرارة (0.0 إلى 1.0) في عشوائية الاستجابة. القيم المنخفضة (مثل 0.2) تنتج مخرجات أكثر تركيزًا وحتمية، بينما القيم الأعلى (مثل 0.8) تزيد الإبداع والتنوع.
+  </Card>
+  <Card title="اختيار المزود" icon="server">
+    يقدم كل مزود LLM (مثل OpenAI و Anthropic و Google) نماذج مختلفة بقدرات وأسعار وميزات متفاوتة. اختر بناءً على احتياجاتك من الدقة والسرعة والتكلفة.
+  </Card>
+</CardGroup>
+
+## إعداد LLM الخاص بك
+
+هناك أماكن مختلفة في كود CrewAI حيث يمكنك تحديد النموذج المُستخدم. بمجرد تحديد النموذج، ستحتاج إلى توفير الإعداد (مثل مفتاح API) لكل مزود نموذج تستخدمه. انظر قسم [أمثلة إعداد المزودين](#أمثلة-إعداد-المزودين) لمزودك.
+
+<Tabs>
+  <Tab title="1. متغيرات البيئة">
+    أبسط طريقة للبدء. عيّن النموذج في بيئتك مباشرة، من خلال ملف `.env` أو في كود تطبيقك. إذا استخدمت `crewai create` لبدء مشروعك، سيكون مُعيّنًا بالفعل.
+
+    ```bash .env
+    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
+
+    # Be sure to set your API keys here too. See the Provider
+    # section below.
+    ```
+
+    <Warning>
+      لا تقم أبدًا بتأكيد مفاتيح API في التحكم بالإصدارات. استخدم ملفات البيئة (.env) أو إدارة أسرار نظامك.
+    </Warning>
+  </Tab>
+  <Tab title="2. إعداد YAML">
+    أنشئ ملف YAML لتعريف إعدادات الوكلاء. هذه الطريقة رائعة للتحكم بالإصدارات والتعاون بين الفريق:
+
+    ```yaml agents.yaml {6}
+    researcher:
+        role: Research Specialist
+        goal: Conduct comprehensive research and analysis
+        backstory: A dedicated research professional with years of experience
+        verbose: true
+        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+        # (see provider configuration examples below for more)
+    ```
+
+    <Info>
+      يتيح لك إعداد YAML:
+      - التحكم بإصدارات إعدادات الوكلاء
+      - التبديل بسهولة بين النماذج المختلفة
+      - مشاركة الإعدادات بين أعضاء الفريق
+      - توثيق خيارات النماذج وأغراضها
+    </Info>
+  </Tab>
+  <Tab title="3. كود مباشر">
+    لأقصى مرونة، أعدّ LLMs مباشرة في كود Python:
+
+    ```python {4,8}
+    from crewai import LLM
+
+    # Basic configuration
+    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+
+    # Advanced configuration with detailed parameters
+    llm = LLM(
+        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+        temperature=0.7,        # Higher for more creative outputs
+        timeout=120,            # Seconds to wait for response
+        max_tokens=4000,        # Maximum length of response
+        top_p=0.9,              # Nucleus sampling parameter
+        frequency_penalty=0.1 , # Reduce repetition
+        presence_penalty=0.1,   # Encourage topic diversity
+        response_format={"type": "json"},  # For structured outputs
+        seed=42                 # For reproducible results
+    )
+    ```
+
+    <Info>
+      شرح المعاملات:
+      - `temperature`: تتحكم في العشوائية (0.0-1.0)
+      - `timeout`: أقصى وقت انتظار للاستجابة
+      - `max_tokens`: تحدد طول الاستجابة
+      - `top_p`: بديل لدرجة الحرارة للعينات
+      - `frequency_penalty`: تقلل تكرار الكلمات
+      - `presence_penalty`: تشجع موضوعات جديدة
+      - `response_format`: تحدد هيكل المخرجات
+      - `seed`: تضمن مخرجات متسقة
+    </Info>
+  </Tab>
+</Tabs>
+
+<Info>
+  يوفر CrewAI تكاملات SDK أصلية لـ OpenAI و Anthropic و Google (Gemini API) و Azure و AWS Bedrock -- لا حاجة لتثبيت إضافي بخلاف الملحقات الخاصة بالمزود (مثل `uv add "crewai[openai]"`).
+
+  جميع المزودين الآخرين مدعومون بواسطة **LiteLLM**. إذا كنت تخطط لاستخدام أي منهم، أضفه كتبعية لمشروعك:
+  ```bash
+  uv add 'crewai[litellm]'
+  ```
+</Info>
+
+## أمثلة إعداد المزودين
+
+يدعم CrewAI العديد من مزودي LLM، كل منهم يقدم ميزات فريدة وطرق مصادقة وقدرات نماذج.
+في هذا القسم، ستجد أمثلة مفصلة تساعدك في اختيار وإعداد وتحسين LLM الأنسب لاحتياجات مشروعك.
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    يوفر CrewAI تكاملًا أصليًا مع OpenAI من خلال OpenAI Python SDK.
+
+    ```toml Code
+    # Required
+    OPENAI_API_KEY=sk-...
+
+    # Optional
+    OPENAI_BASE_URL=<custom-base-url>
+    ```
+
+    **الاستخدام الأساسي:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-4o",
+        api_key="your-api-key",  # Or set OPENAI_API_KEY
+        temperature=0.7,
+        max_tokens=4000
+    )
+    ```
+
+    **الإعداد المتقدم:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-4o",
+        api_key="your-api-key",
+        base_url="https://api.openai.com/v1",  # Optional custom endpoint
+        organization="org-...",  # Optional organization ID
+        project="proj_...",  # Optional project ID
+        temperature=0.7,
+        max_tokens=4000,
+        max_completion_tokens=4000,  # For newer models
+        top_p=0.9,
+        frequency_penalty=0.1,
+        presence_penalty=0.1,
+        stop=["END"],
+        seed=42,  # For reproducible outputs
+        stream=True,  # Enable streaming
+        timeout=60.0,  # Request timeout in seconds
+        max_retries=3,  # Maximum retry attempts
+        logprobs=True,  # Return log probabilities
+        top_logprobs=5,  # Number of most likely tokens
+        reasoning_effort="medium"  # For o1 models: low, medium, high
+    )
+    ```
+
+    **المخرجات المهيكلة:**
+    ```python Code
+    from pydantic import BaseModel
+    from crewai import LLM
+
+    class ResponseFormat(BaseModel):
+        name: str
+        age: int
+        summary: str
+
+    llm = LLM(
+        model="openai/gpt-4o",
+    )
+    ```
+
+    **متغيرات البيئة المدعومة:**
+    - `OPENAI_API_KEY`: مفتاح OpenAI API (مطلوب)
+    - `OPENAI_BASE_URL`: عنوان URL مخصص لـ OpenAI API (اختياري)
+
+    **الميزات:**
+    - دعم استدعاء الدوال الأصلي (باستثناء نماذج o1)
+    - مخرجات منظمة مع JSON schema
+    - دعم البث للاستجابات في الوقت الفعلي
+    - تتبع استخدام الرموز
+    - دعم تسلسلات التوقف (باستثناء نماذج o1)
+    - احتمالات السجل لرؤى على مستوى الرموز
+    - التحكم في جهد الاستدلال لنماذج o1
+
+    **النماذج المدعومة:**
+
+    | النموذج              | نافذة السياق     | الأفضل لـ                                     |
+    |---------------------|------------------|-----------------------------------------------|
+    | gpt-4.1             | 1M tokens        | أحدث نموذج بقدرات محسّنة                      |
+    | gpt-4.1-mini        | 1M tokens        | إصدار فعال بسياق كبير                         |
+    | gpt-4.1-nano        | 1M tokens        | متغير فائق الكفاءة                            |
+    | gpt-4o              | 128,000 tokens   | محسّن للسرعة والذكاء                          |
+    | gpt-4o-mini         | 200,000 tokens   | فعال من حيث التكلفة بسياق كبير                |
+    | gpt-4-turbo         | 128,000 tokens   | المحتوى الطويل، تحليل المستندات               |
+    | gpt-4               | 8,192 tokens     | مهام الدقة العالية، الاستدلال المعقد           |
+    | o1                  | 200,000 tokens   | الاستدلال المتقدم، حل المشكلات المعقدة        |
+    | o1-preview          | 128,000 tokens   | معاينة قدرات الاستدلال                        |
+    | o1-mini             | 128,000 tokens   | نموذج استدلال فعال                            |
+    | o3-mini             | 200,000 tokens   | نموذج استدلال خفيف                            |
+    | o4-mini             | 200,000 tokens   | استدلال فعال من الجيل التالي                  |
+
+    **Responses API:**
+
+    تقدم OpenAI واجهتي API: Chat Completions (الافتراضية) و Responses API الأحدث. تم تصميم Responses API من الأساس مع دعم أصلي متعدد الوسائط -- النص والصور والصوت واستدعاءات الدوال كلها مكوّنات أساسية. توفر أداءً أفضل مع نماذج الاستدلال وتدعم ميزات إضافية مثل السلسلة التلقائية والأدوات المدمجة.
+
+    ```python Code
+    from crewai import LLM
+
+    # Use the Responses API instead of Chat Completions
+    llm = LLM(
+        model="openai/gpt-4o",
+        api="responses",  # Enable Responses API
+        store=True,  # Store responses for multi-turn (optional)
+        auto_chain=True,  # Auto-chain for reasoning models (optional)
+    )
+    ```
+
+    **معاملات Responses API:**
+    - `api`: عيّن إلى `"responses"` لاستخدام Responses API (الافتراضي: `"completions"`)
+    - `instructions`: تعليمات على مستوى النظام (Responses API فقط)
+    - `store`: ما إذا كان يجب تخزين الاستجابات للمحادثات متعددة الأدوار
+    - `previous_response_id`: معرّف الاستجابة السابقة للمحادثات متعددة الأدوار
+    - `include`: بيانات إضافية لتضمينها في الاستجابة (مثل `["reasoning.encrypted_content"]`)
+    - `builtin_tools`: قائمة أدوات OpenAI المدمجة: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `parse_tool_outputs`: إعادة `ResponsesAPIResult` منظمة مع مخرجات أدوات مدمجة محللة
+    - `auto_chain`: تتبع واستخدام معرّفات الاستجابة تلقائيًا للمحادثات متعددة الأدوار
+    - `auto_chain_reasoning`: تتبع عناصر الاستدلال المشفرة للامتثال لـ ZDR
+
+    <Tip>
+      استخدم Responses API للمشاريع الجديدة، خاصة عند العمل مع نماذج الاستدلال (o1, o3, o4) أو عندما تحتاج دعمًا أصليًا متعدد الوسائط لـ [الملفات](/ar/concepts/files).
+    </Tip>
+
+    **ملاحظة:** لاستخدام OpenAI، ثبّت التبعيات المطلوبة:
+    ```bash
+    uv add "crewai[openai]"
+    ```
+  </Accordion>
+
+  <Accordion title="Meta-Llama">
+    توفر Meta Llama API الوصول إلى عائلة نماذج اللغة الكبيرة من Meta.
+    الـ API متاحة عبر [Meta Llama API](https://llama.developer.meta.com?utm_source=partner-crewai&utm_medium=website).
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+
+    ```toml Code
+    # Meta Llama API Key Configuration
+    LLAMA_API_KEY=LLM|your_api_key_here
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    # Initialize Meta Llama LLM
+    llm = LLM(
+        model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
+        temperature=0.8,
+        stop=["END"],
+        seed=42
+    )
+    ```
+
+    جميع النماذج المدرجة هنا https://llama.developer.meta.com/docs/models/ مدعومة.
+
+    | معرّف النموذج | طول سياق الإدخال | طول سياق المخرجات | وسائط الإدخال | وسائط المخرجات |
+    | --- | --- | --- | --- | --- |
+    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028 | نص، صورة | نص |
+    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | نص، صورة | نص |
+    | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | نص | نص |
+    | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | نص | نص |
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Anthropic">
+    يوفر CrewAI تكاملًا أصليًا مع Anthropic من خلال Anthropic Python SDK.
+
+    ```toml Code
+    # Required
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+
+    **الاستخدام الأساسي:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        api_key="your-api-key",  # Or set ANTHROPIC_API_KEY
+        max_tokens=4096  # Required for Anthropic
+    )
+    ```
+
+    **الإعداد المتقدم:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        api_key="your-api-key",
+        base_url="https://api.anthropic.com",  # Optional custom endpoint
+        temperature=0.7,
+        max_tokens=4096,  # Required parameter
+        top_p=0.9,
+        stop_sequences=["END", "STOP"],  # Anthropic uses stop_sequences
+        stream=True,  # Enable streaming
+        timeout=60.0,  # Request timeout in seconds
+        max_retries=3  # Maximum retry attempts
+    )
+    ```
+
+    **التفكير الموسّع (Claude Sonnet 4 وما بعده):**
+
+    يدعم CrewAI ميزة التفكير الموسّع من Anthropic، التي تتيح لـ Claude التفكير في المشكلات بطريقة أكثر شبهًا بالبشر قبل الاستجابة. مفيد بشكل خاص لمهام الاستدلال والتحليل وحل المشكلات المعقدة.
+
+    ```python Code
+    from crewai import LLM
+
+    # Enable extended thinking with default settings
+    llm = LLM(
+        model="anthropic/claude-sonnet-4",
+        thinking={"type": "enabled"},
+        max_tokens=10000
+    )
+
+    # Configure thinking with budget control
+    llm = LLM(
+        model="anthropic/claude-sonnet-4",
+        thinking={
+            "type": "enabled",
+            "budget_tokens": 5000  # Limit thinking tokens
+        },
+        max_tokens=10000
+    )
+    ```
+
+    **خيارات إعداد التفكير:**
+    - `type`: عيّن إلى `"enabled"` لتفعيل وضع التفكير الموسّع
+    - `budget_tokens` (اختياري): أقصى رموز للتفكير (يساعد في التحكم بالتكاليف)
+
+    **النماذج التي تدعم التفكير الموسّع:**
+    - `claude-sonnet-4` والنماذج الأحدث
+    - `claude-3-7-sonnet` (مع قدرات التفكير الموسّع)
+
+    **متى تستخدم التفكير الموسّع:**
+    - الاستدلال المعقد وحل المشكلات متعددة الخطوات
+    - الحسابات الرياضية والبراهين
+    - تحليل الكود وتصحيح الأخطاء
+    - التخطيط الاستراتيجي واتخاذ القرارات
+    - البحث والمهام التحليلية
+
+    **ملاحظة:** يستهلك التفكير الموسّع رموزًا إضافية لكنه يمكن أن يحسّن جودة الاستجابة بشكل كبير للمهام المعقدة.
+
+    **متغيرات البيئة المدعومة:**
+    - `ANTHROPIC_API_KEY`: مفتاح Anthropic API (مطلوب)
+
+    **الميزات:**
+    - دعم استخدام الأدوات الأصلي لنماذج Claude 3+
+    - دعم التفكير الموسّع لـ Claude Sonnet 4+
+    - دعم البث للاستجابات في الوقت الفعلي
+    - معالجة تلقائية لرسائل النظام
+    - تسلسلات التوقف للتحكم في المخرجات
+    - تتبع استخدام الرموز
+    - محادثات استخدام أدوات متعددة الأدوار
+
+    **ملاحظات مهمة:**
+    - `max_tokens` معامل **مطلوب** لجميع نماذج Anthropic
+    - يستخدم Claude `stop_sequences` بدلاً من `stop`
+    - يتم التعامل مع رسائل النظام بشكل منفصل عن رسائل المحادثة
+    - يجب أن تكون الرسالة الأولى من المستخدم (يتم التعامل معها تلقائيًا)
+    - يجب أن تتناوب الرسائل بين المستخدم والمساعد
+
+    **النماذج المدعومة:**
+
+    | النموذج                      | نافذة السياق     | الأفضل لـ                                     |
+    |------------------------------|------------------|-----------------------------------------------|
+    | claude-sonnet-4              | 200,000 tokens   | الأحدث مع قدرات التفكير الموسّع              |
+    | claude-3-7-sonnet            | 200,000 tokens   | الاستدلال المتقدم والمهام الوكيلية            |
+    | claude-3-5-sonnet-20241022   | 200,000 tokens   | أحدث Sonnet بأفضل أداء                       |
+    | claude-3-5-haiku             | 200,000 tokens   | نموذج سريع وصغير للاستجابات السريعة          |
+    | claude-3-opus                | 200,000 tokens   | الأكثر قدرة للمهام المعقدة                    |
+    | claude-3-sonnet              | 200,000 tokens   | توازن بين الذكاء والسرعة                      |
+    | claude-3-haiku               | 200,000 tokens   | الأسرع للمهام البسيطة                         |
+    | claude-2.1                   | 200,000 tokens   | سياق موسّع، هلوسات أقل                       |
+    | claude-2                     | 100,000 tokens   | نموذج متعدد الاستخدامات                       |
+    | claude-instant               | 100,000 tokens   | سريع وفعال من حيث التكلفة للمهام اليومية     |
+
+    **ملاحظة:** لاستخدام Anthropic، ثبّت التبعيات المطلوبة:
+    ```bash
+    uv add "crewai[anthropic]"
+    ```
+  </Accordion>
+
+  <Accordion title="Google (Gemini API)">
+    يوفر CrewAI تكاملًا أصليًا مع Google Gemini من خلال Google Gen AI Python SDK.
+
+    عيّن مفتاح API في ملف `.env`. إذا كنت بحاجة إلى مفتاح، تحقق من [AI Studio](https://aistudio.google.com/apikey).
+
+    ```toml .env
+    # Required (one of the following)
+    GOOGLE_API_KEY=<your-api-key>
+    GEMINI_API_KEY=<your-api-key>
+
+    # For Vertex AI Express mode (API key authentication)
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+
+    # For Vertex AI with service account
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>  # Defaults to us-central1
+    ```
+
+    **الاستخدام الأساسي:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        api_key="your-api-key",  # Or set GOOGLE_API_KEY/GEMINI_API_KEY
+        temperature=0.7
+    )
+    ```
+
+    **الإعداد المتقدم:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.5-flash",
+        api_key="your-api-key",
+        temperature=0.7,
+        top_p=0.9,
+        top_k=40,  # Top-k sampling parameter
+        max_output_tokens=8192,
+        stop_sequences=["END", "STOP"],
+        stream=True,  # Enable streaming
+        safety_settings={
+            "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+            "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE"
+        }
+    )
+    ```
+
+    **وضع Vertex AI Express (مصادقة بمفتاح API):**
+
+    يتيح لك وضع Vertex AI Express استخدام Vertex AI مع مصادقة بسيطة بمفتاح API بدلاً من بيانات اعتماد حساب الخدمة. هذه أسرع طريقة للبدء مع Vertex AI.
+
+    لتفعيل وضع Express، عيّن متغيري البيئة في ملف `.env`:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+    ```
+
+    ثم استخدم LLM كالمعتاد:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      للحصول على مفتاح API لوضع Express:
+      - مستخدمو Google Cloud الجدد: احصل على [مفتاح API لوضع Express](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)
+      - مستخدمو Google Cloud الحاليون: احصل على [مفتاح Google Cloud API مرتبط بحساب خدمة](https://cloud.google.com/docs/authentication/api-keys)
+
+      لمزيد من التفاصيل، انظر [وثائق وضع Vertex AI Express](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey).
+    </Info>
+
+    **إعداد Vertex AI (حساب خدمة):**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-1.5-pro",
+        project="your-gcp-project-id",
+        location="us-central1"  # GCP region
+    )
+    ```
+
+    **متغيرات البيئة المدعومة:**
+    - `GOOGLE_API_KEY` أو `GEMINI_API_KEY`: مفتاح Google API (مطلوب لـ Gemini API ووضع Vertex AI Express)
+    - `GOOGLE_GENAI_USE_VERTEXAI`: عيّن إلى `true` لاستخدام Vertex AI (مطلوب لوضع Express)
+    - `GOOGLE_CLOUD_PROJECT`: معرّف مشروع Google Cloud (لـ Vertex AI مع حساب خدمة)
+    - `GOOGLE_CLOUD_LOCATION`: موقع GCP (الافتراضي `us-central1`)
+
+    **الميزات:**
+    - دعم استدعاء الدوال الأصلي لنماذج Gemini 1.5+ و 2.x
+    - دعم البث للاستجابات في الوقت الفعلي
+    - قدرات متعددة الوسائط (نص، صور، فيديو)
+    - إعداد إعدادات الأمان
+    - دعم لكل من Gemini API و Vertex AI
+    - معالجة تلقائية لتعليمات النظام
+    - تتبع استخدام الرموز
+
+    **نماذج Gemini:**
+
+    | النموذج                        | نافذة السياق    | الأفضل لـ                                                         |
+    |--------------------------------|-----------------|-------------------------------------------------------------------|
+    | gemini-2.5-flash               | 1M tokens       | التفكير التكيفي، كفاءة التكلفة                                   |
+    | gemini-2.5-pro                 | 1M tokens       | التفكير والاستدلال المحسّن، الفهم متعدد الوسائط                  |
+    | gemini-2.0-flash               | 1M tokens       | ميزات الجيل التالي، السرعة، التفكير                               |
+    | gemini-2.0-flash-thinking      | 32,768 tokens   | الاستدلال المتقدم مع عملية التفكير                                |
+    | gemini-2.0-flash-lite          | 1M tokens       | كفاءة التكلفة ووقت الاستجابة المنخفض                             |
+    | gemini-1.5-pro                 | 2M tokens       | الأفضل أداءً، الاستدلال المنطقي، البرمجة                         |
+    | gemini-1.5-flash               | 1M tokens       | نموذج متعدد الوسائط متوازن، جيد لمعظم المهام                     |
+    | gemini-1.5-flash-8b            | 1M tokens       | الأسرع والأكثر كفاءة من حيث التكلفة                              |
+    | gemini-1.0-pro                 | 32,768 tokens   | نموذج الجيل السابق                                               |
+
+    **ملاحظة:** لاستخدام Google Gemini، ثبّت التبعيات المطلوبة:
+    ```bash
+    uv add "crewai[google-genai]"
+    ```
+
+    القائمة الكاملة للنماذج متاحة في [وثائق نماذج Gemini](https://ai.google.dev/gemini-api/docs/models).
+  </Accordion>
+
+  <Accordion title="Google (Vertex AI)">
+    احصل على بيانات الاعتماد من Google Cloud Console واحفظها في ملف JSON، ثم حمّلها بالكود التالي:
+    ```python Code
+    import json
+
+    file_path = 'path/to/vertex_ai_service_account.json'
+
+    # Load the JSON file
+    with open(file_path, 'r') as file:
+        vertex_credentials = json.load(file)
+
+    # Convert the credentials to a JSON string
+    vertex_credentials_json = json.dumps(vertex_credentials)
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini-1.5-pro-latest", # or vertex_ai/gemini-1.5-pro-latest
+        temperature=0.7,
+        vertex_credentials=vertex_credentials_json
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Azure">
+    يوفر CrewAI تكاملًا أصليًا مع Azure AI Inference و Azure OpenAI من خلال Azure AI Inference Python SDK.
+
+    ```toml Code
+    # Required
+    AZURE_API_KEY=<your-api-key>
+    AZURE_ENDPOINT=<your-endpoint-url>
+
+    # Optional
+    AZURE_API_VERSION=<api-version>  # Defaults to 2024-06-01
+    ```
+
+    **الاستخدام الأساسي:**
+    ```python Code
+    llm = LLM(
+        model="azure/gpt-4",
+        api_key="<your-api-key>",  # Or set AZURE_API_KEY
+        endpoint="<your-endpoint-url>",
+        api_version="2024-06-01"
+    )
+    ```
+
+    **ملاحظة:** لاستخدام Azure AI Inference، ثبّت التبعيات المطلوبة:
+    ```bash
+    uv add "crewai[azure-ai-inference]"
+    ```
+  </Accordion>
+
+  <Accordion title="AWS Bedrock">
+    يوفر CrewAI تكاملًا أصليًا مع AWS Bedrock من خلال boto3 SDK باستخدام Converse API.
+
+    ```toml Code
+    # Required
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+
+    # Optional
+    AWS_SESSION_TOKEN=<your-session-token>  # For temporary credentials
+    AWS_DEFAULT_REGION=<your-region>  # Defaults to us-east-1
+    AWS_REGION_NAME=<your-region>  # Alternative configuration for backwards compatibility with LiteLLM. Defaults to us-east-1
+    ```
+
+    **الاستخدام الأساسي:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        region_name="us-east-1"
+    )
+    ```
+
+    **الإعداد المتقدم:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_access_key_id="your-access-key",  # Or set AWS_ACCESS_KEY_ID
+        aws_secret_access_key="your-secret-key",  # Or set AWS_SECRET_ACCESS_KEY
+        aws_session_token="your-session-token",  # For temporary credentials
+        region_name="us-east-1",
+        temperature=0.7,
+        max_tokens=4096,
+        top_p=0.9,
+        top_k=250,  # For Claude models
+        stop_sequences=["END", "STOP"],
+        stream=True,  # Enable streaming
+        guardrail_config={  # Optional content filtering
+            "guardrailIdentifier": "your-guardrail-id",
+            "guardrailVersion": "1"
+        },
+        additional_model_request_fields={  # Model-specific parameters
+            "top_k": 250
+        }
+    )
+    ```
+
+    **متغيرات البيئة المدعومة:**
+    - `AWS_ACCESS_KEY_ID`: مفتاح وصول AWS (مطلوب)
+    - `AWS_SECRET_ACCESS_KEY`: مفتاح AWS السري (مطلوب)
+    - `AWS_SESSION_TOKEN`: رمز جلسة AWS لبيانات الاعتماد المؤقتة (اختياري)
+    - `AWS_DEFAULT_REGION`: منطقة AWS (الافتراضي `us-east-1`)
+    - `AWS_REGION_NAME`: منطقة AWS (الافتراضي `us-east-1`). إعداد بديل للتوافق مع LiteLLM
+
+    **الميزات:**
+    - دعم استدعاء الأدوات الأصلي عبر Converse API
+    - استجابات بث وبدون بث
+    - معالجة أخطاء شاملة مع منطق إعادة المحاولة
+    - إعداد حواجز الحماية لتصفية المحتوى
+    - معاملات خاصة بالنموذج عبر `additional_model_request_fields`
+    - تتبع استخدام الرموز وتسجيل سبب التوقف
+    - دعم جميع نماذج Bedrock الأساسية
+    - معالجة تلقائية لتنسيق المحادثة
+
+    **ملاحظات مهمة:**
+    - يستخدم Converse API الحديث للوصول الموحد للنماذج
+    - معالجة تلقائية لمتطلبات المحادثة الخاصة بالنموذج
+    - يتم التعامل مع رسائل النظام بشكل منفصل عن المحادثة
+    - يجب أن تكون الرسالة الأولى من المستخدم (يتم التعامل معها تلقائيًا)
+    - بعض النماذج (مثل Cohere) تتطلب أن تنتهي المحادثة برسالة المستخدم
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) هو خدمة مُدارة توفر الوصول إلى نماذج أساسية متعددة من أبرز شركات الذكاء الاصطناعي عبر واجهة API موحدة.
+
+    | النموذج                   | نافذة السياق       | الأفضل لـ                                                          |
+    |-------------------------|----------------------|-------------------------------------------------------------------|
+    | Amazon Nova Pro         | حتى 300k tokens    | أداء عالٍ، نموذج يوازن بين الدقة والسرعة والفعالية من حيث التكلفة عبر مهام متنوعة. |
+    | Amazon Nova Micro       | حتى 128k tokens    | نموذج نصي فقط عالي الأداء وفعال من حيث التكلفة ومحسّن لأقل وقت استجابة. |
+    | Amazon Nova Lite        | حتى 300k tokens    | معالجة متعددة الوسائط بأسعار معقولة للصور والفيديو والنص مع قدرات في الوقت الفعلي. |
+    | Claude 3.7 Sonnet       | حتى 128k tokens    | الأفضل أداءً للاستدلال المعقد والبرمجة ووكلاء الذكاء الاصطناعي |
+    | Claude 3.5 Sonnet v2    | حتى 200k tokens    | نموذج متطور متخصص في هندسة البرمجيات والقدرات الوكيلية والتفاعل مع الحاسوب بتكلفة محسّنة. |
+    | Claude 3.5 Sonnet       | حتى 200k tokens    | نموذج عالي الأداء يقدم ذكاءً واستدلالًا فائقين عبر مهام متنوعة مع توازن مثالي بين السرعة والتكلفة. |
+    | Claude 3.5 Haiku        | حتى 200k tokens    | نموذج متعدد الوسائط سريع وصغير محسّن للاستجابات السريعة والتفاعلات الشبيهة بالبشر |
+    | Claude 3 Sonnet         | حتى 200k tokens    | نموذج متعدد الوسائط يوازن بين الذكاء والسرعة للنشر بكميات كبيرة. |
+    | Claude 3 Haiku          | حتى 200k tokens    | نموذج متعدد الوسائط صغير وسريع محسّن للاستجابات السريعة والتفاعلات المحادثية الطبيعية |
+    | Claude 3 Opus           | حتى 200k tokens    | أكثر النماذج متعددة الوسائط تقدمًا يتفوق في المهام المعقدة بالاستدلال الشبيه بالبشر والفهم السياقي الفائق. |
+    | Claude 2.1              | حتى 200k tokens    | إصدار محسّن بنافذة سياق موسّعة وموثوقية محسّنة وهلوسات أقل لتطبيقات النصوص الطويلة وRAG |
+    | Claude                  | حتى 100k tokens    | نموذج متعدد الاستخدامات يتفوق في الحوار المتقدم والمحتوى الإبداعي واتباع التعليمات الدقيقة. |
+    | Claude Instant          | حتى 100k tokens    | نموذج سريع وفعال من حيث التكلفة للمهام اليومية مثل الحوار والتحليل والتلخيص والأسئلة والأجوبة |
+    | Llama 3.1 405B Instruct | حتى 128k tokens    | نموذج LLM متقدم لتوليد البيانات الاصطناعية والتقطير والاستدلال لروبوتات المحادثة والبرمجة والمهام المتخصصة. |
+    | Llama 3.1 70B Instruct  | حتى 128k tokens    | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
+    | Llama 3.1 8B Instruct   | حتى 128k tokens    | نموذج متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | Llama 3 70B Instruct    | حتى 8k tokens      | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
+    | Llama 3 8B Instruct     | حتى 8k tokens      | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | Titan Text G1 - Lite    | حتى 4k tokens      | نموذج خفيف وفعال من حيث التكلفة محسّن لمهام اللغة الإنجليزية والضبط الدقيق مع التركيز على التلخيص وتوليد المحتوى. |
+    | Titan Text G1 - Express | حتى 8k tokens      | نموذج متعدد الاستخدامات لمهام اللغة العامة والمحادثة وتطبيقات RAG مع دعم الإنجليزية وأكثر من 100 لغة. |
+    | Cohere Command          | حتى 4k tokens      | نموذج متخصص في اتباع أوامر المستخدم وتقديم حلول عملية للمؤسسات. |
+    | Jurassic-2 Mid          | حتى 8,191 tokens   | نموذج فعال من حيث التكلفة يوازن بين الجودة والسعر لمهام اللغة المتنوعة مثل الأسئلة والأجوبة والتلخيص وتوليد المحتوى. |
+    | Jurassic-2 Ultra        | حتى 8,191 tokens   | نموذج لتوليد النص المتقدم والفهم، يتفوق في المهام المعقدة مثل التحليل وإنشاء المحتوى. |
+    | Jamba-Instruct          | حتى 256k tokens    | نموذج بنافذة سياق موسّعة محسّن لتوليد النص الفعال من حيث التكلفة والتلخيص والأسئلة والأجوبة. |
+    | Mistral 7B Instruct     | حتى 32k tokens     | نموذج LLM يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
+    | Mistral 8x7B Instruct   | حتى 32k tokens     | نموذج LLM بمعمارية MOE يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
+    | DeepSeek R1             | 32,768 tokens        | نموذج استدلال متقدم                                                       |
+
+    **ملاحظة:** لاستخدام AWS Bedrock، ثبّت التبعيات المطلوبة:
+    ```bash
+    uv add "crewai[bedrock]"
+    ```
+  </Accordion>
+
+  <Accordion title="Amazon SageMaker">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="sagemaker/<my-endpoint>"
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Mistral">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    MISTRAL_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="mistral/mistral-large-latest",
+        temperature=0.7
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Nvidia NIM">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="nvidia_nim/meta/llama3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    يوفر Nvidia NIM مجموعة شاملة من النماذج لحالات الاستخدام المتنوعة، من المهام ذات الأغراض العامة إلى التطبيقات المتخصصة.
+
+    | النموذج                                                                   | نافذة السياق   | الأفضل لـ                                                          |
+    |-------------------------------------------------------------------------|----------------|-------------------------------------------------------------------|
+    | nvidia/mistral-nemo-minitron-8b-8k-instruct                              | 8,192 tokens   | نموذج لغة صغير متطور يقدم دقة فائقة لروبوتات المحادثة والمساعدين الافتراضيين وتوليد المحتوى. |
+    | nvidia/nemotron-4-mini-hindi-4b-instruct                                 | 4,096 tokens   | نموذج لغة صغير ثنائي اللغة هندي-إنجليزي للاستدلال على الجهاز، مصمم خصيصًا للغة الهندية. |
+    | nvidia/llama-3.1-nemotron-70b-instruct                                  | 128k tokens    | مخصص لتعزيز فائدة الاستجابات                  |
+    | nvidia/llama3-chatqa-1.5-8b                                                | 128k tokens    | نموذج LLM متقدم لتوليد استجابات عالية الجودة ومدركة للسياق لروبوتات المحادثة ومحركات البحث. |
+    | nvidia/llama3-chatqa-1.5-70b                                               | 128k tokens    | نموذج LLM متقدم لتوليد استجابات عالية الجودة ومدركة للسياق لروبوتات المحادثة ومحركات البحث. |
+    | nvidia/vila                                                             | 128k tokens    | نموذج رؤية-لغة متعدد الوسائط يفهم النص والصور والفيديو وينشئ استجابات غنية بالمعلومات |
+    | nvidia/neva-22                                                          | 4,096 tokens   | نموذج رؤية-لغة متعدد الوسائط يفهم النص والصور ويولد استجابات غنية بالمعلومات |
+    | nvidia/nemotron-mini-4b-instruct                                         | 8,192 tokens   | مهام ذات أغراض عامة |
+    | nvidia/usdcode-llama3-70b-instruct                                       | 128k tokens    | نموذج LLM متطور يجيب على استعلامات معرفة OpenUSD ويولد كود USD-Python. |
+    | nvidia/nemotron-4-340b-instruct                                          | 4,096 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
+    | meta/codellama-70b                                                      | 100k tokens    | نموذج LLM قادر على توليد الكود من اللغة الطبيعية والعكس. |
+    | meta/llama2-70b                                                         | 4,096 tokens   | نموذج لغة كبير متطور قادر على توليد النص والكود استجابة للمطالبات. |
+    | meta/llama3-8b-instruct                                                | 8,192 tokens   | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | meta/llama3-70b-instruct                                               | 8,192 tokens   | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
+    | meta/llama-3.1-8b-instruct                                             | 128k tokens    | نموذج متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | meta/llama-3.1-70b-instruct                                            | 128k tokens    | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
+    | meta/llama-3.1-405b-instruct                                           | 128k tokens    | نموذج LLM متقدم لتوليد البيانات الاصطناعية والتقطير والاستدلال لروبوتات المحادثة والبرمجة والمهام المتخصصة. |
+    | meta/llama-3.2-1b-instruct                                             | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | meta/llama-3.2-3b-instruct                                             | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | meta/llama-3.2-11b-vision-instruct                                     | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | meta/llama-3.2-90b-vision-instruct                                     | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | google/gemma-7b                                                        | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
+    | google/gemma-2b                                                        | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
+    | google/codegemma-7b                                                    | 8,192 tokens   | نموذج متطور مبني على Gemma-7B من Google متخصص في توليد الكود وإكماله. |
+    | google/codegemma-1.1-7b                                               | 8,192 tokens   | نموذج برمجة متقدم لتوليد الكود وإكماله والاستدلال واتباع التعليمات. |
+    | google/recurrentgemma-2b                                              | 8,192 tokens   | نموذج لغة بمعمارية تكرارية جديدة لاستدلال أسرع عند توليد تسلسلات طويلة. |
+    | google/gemma-2-9b-it                                                  | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
+    | google/gemma-2-27b-it                                                 | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
+    | google/gemma-2-2b-it                                                  | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
+    | google/deplot                                                         | 512 tokens     | نموذج فهم لغة بصرية بلقطة واحدة يترجم صور الرسوم البيانية إلى جداول. |
+    | google/paligemma                                                      | 8,192 tokens   | نموذج لغة بصري بارع في استيعاب مدخلات النص والصور لإنتاج استجابات غنية بالمعلومات. |
+    | mistralai/mistral-7b-instruct-v0.2                                   | 32k tokens     | نموذج LLM يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
+    | mistralai/mixtral-8x7b-instruct-v0.1                                 | 8,192 tokens   | نموذج LLM بمعمارية MOE يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
+    | mistralai/mistral-large                                              | 4,096 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
+    | mistralai/mixtral-8x22b-instruct-v0.1                               | 8,192 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
+    | mistralai/mistral-7b-instruct-v0.3                                  | 32k tokens     | نموذج LLM يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
+    | nv-mistralai/mistral-nemo-12b-instruct                              | 128k tokens    | أكثر نموذج لغة تقدمًا للاستدلال والبرمجة والمهام متعددة اللغات؛ يعمل على وحدة GPU واحدة. |
+    | mistralai/mamba-codestral-7b-v0.1                                   | 256k tokens    | نموذج للكتابة والتفاعل مع الكود عبر مجموعة واسعة من لغات البرمجة والمهام. |
+    | microsoft/phi-3-mini-128k-instruct                                  | 128K tokens    | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
+    | microsoft/phi-3-mini-4k-instruct                                    | 4,096 tokens   | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
+    | microsoft/phi-3-small-8k-instruct                                   | 8,192 tokens   | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
+    | microsoft/phi-3-small-128k-instruct                                 | 128K tokens    | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
+    | microsoft/phi-3-medium-4k-instruct                                  | 4,096 tokens   | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
+    | microsoft/phi-3-medium-128k-instruct                                | 128K tokens    | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
+    | microsoft/phi-3.5-mini-instruct                                     | 128K tokens    | نموذج LLM خفيف متعدد اللغات يدعم تطبيقات الذكاء الاصطناعي في البيئات المحدودة بالكمون والذاكرة والحوسبة |
+    | microsoft/phi-3.5-moe-instruct                                      | 128K tokens    | نموذج LLM متقدم يعتمد على معمارية خليط الخبراء لتوليد محتوى فعال حوسبيًا |
+    | microsoft/kosmos-2                                                  | 1,024 tokens   | نموذج متعدد الوسائط رائد مصمم لفهم العناصر المرئية في الصور والاستدلال عليها. |
+    | microsoft/phi-3-vision-128k-instruct                               | 128k tokens    | نموذج متعدد الوسائط مفتوح متطور يتفوق في الاستدلال عالي الجودة من الصور. |
+    | microsoft/phi-3.5-vision-instruct                                  | 128k tokens    | نموذج متعدد الوسائط مفتوح متطور يتفوق في الاستدلال عالي الجودة من الصور. |
+    | databricks/dbrx-instruct                                           | 12k tokens     | نموذج LLM للأغراض العامة بأداء متطور في فهم اللغة والبرمجة وRAG. |
+    | snowflake/arctic                                                   | 1,024 tokens   | يقدم استدلالًا عالي الكفاءة لتطبيقات المؤسسات مع التركيز على توليد SQL والبرمجة. |
+    | aisingapore/sea-lion-7b-instruct                                  | 4,096 tokens   | نموذج LLM لتمثيل وخدمة التنوع اللغوي والثقافي لجنوب شرق آسيا |
+    | ibm/granite-8b-code-instruct                                      | 4,096 tokens   | نموذج LLM لبرمجة البرمجيات لتوليد الكود وإكماله وشرحه والتحويل متعدد الأدوار. |
+    | ibm/granite-34b-code-instruct                                     | 8,192 tokens   | نموذج LLM لبرمجة البرمجيات لتوليد الكود وإكماله وشرحه والتحويل متعدد الأدوار. |
+    | ibm/granite-3.0-8b-instruct                                       | 4,096 tokens   | نموذج لغة صغير متقدم يدعم RAG والتلخيص والتصنيف والكود والذكاء الاصطناعي الوكيلي |
+    | ibm/granite-3.0-3b-a800m-instruct                                | 4,096 tokens   | نموذج خليط خبراء عالي الكفاءة لـ RAG والتلخيص واستخراج الكيانات والتصنيف |
+    | mediatek/breeze-7b-instruct                                       | 4,096 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
+    | upstage/solar-10.7b-instruct                                      | 4,096 tokens   | يتفوق في مهام NLP، خاصة في اتباع التعليمات والاستدلال والرياضيات. |
+    | writer/palmyra-med-70b-32k                                        | 32k tokens     | نموذج LLM رائد للاستجابات الدقيقة والمناسبة للسياق في المجال الطبي. |
+    | writer/palmyra-med-70b                                            | 32k tokens     | نموذج LLM رائد للاستجابات الدقيقة والمناسبة للسياق في المجال الطبي. |
+    | writer/palmyra-fin-70b-32k                                        | 32k tokens     | نموذج LLM متخصص في التحليل المالي وإعداد التقارير ومعالجة البيانات |
+    | 01-ai/yi-large                                                    | 32k tokens     | نموذج قوي مدرب على الإنجليزية والصينية لمهام متنوعة بما في ذلك روبوتات المحادثة والكتابة الإبداعية. |
+    | deepseek-ai/deepseek-coder-6.7b-instruct                         | 2k tokens      | نموذج برمجة قوي يقدم قدرات متقدمة في توليد الكود وإكماله وملء الفراغات |
+    | rakuten/rakutenai-7b-instruct                                     | 1,024 tokens   | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | rakuten/rakutenai-7b-chat                                         | 1,024 tokens   | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
+    | baichuan-inc/baichuan2-13b-chat                                  | 4,096 tokens   | يدعم المحادثة بالصينية والإنجليزية والبرمجة والرياضيات واتباع التعليمات وحل الألغاز |
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Local NVIDIA NIM Deployed using WSL2">
+
+    يتيح لك NVIDIA NIM تشغيل نماذج LLM قوية محليًا على جهاز Windows باستخدام WSL2 (نظام Windows الفرعي لـ Linux).
+    يتيح لك هذا النهج الاستفادة من وحدة GPU من NVIDIA لاستدلال ذكاء اصطناعي خاص وآمن وفعال من حيث التكلفة دون الاعتماد على الخدمات السحابية.
+    مثالي لسيناريوهات التطوير والاختبار أو الإنتاج حيث تكون خصوصية البيانات أو القدرات غير المتصلة مطلوبة.
+
+    إليك دليلًا خطوة بخطوة لإعداد نموذج NVIDIA NIM محلي:
+
+    1. اتبع تعليمات التثبيت من [موقع NVIDIA](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)
+
+    2. ثبّت النموذج المحلي. لـ Llama 3.1-8b اتبع [التعليمات](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy)
+
+    3. أعدّ نماذج crewai المحلية:
+
+    ```python Code
+    from crewai.llm import LLM
+
+    local_nvidia_nim_llm = LLM(
+        model="openai/meta/llama-3.1-8b-instruct", # it's an openai-api compatible model
+        base_url="http://localhost:8000/v1",
+        api_key="<your_api_key|any text if you have not configured it>", # api_key is required, but you can use any text
+    )
+
+    # Then you can use it in your crew:
+
+    @CrewBase
+    class MyCrew():
+        # ...
+
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'], # type: ignore[index]
+                llm=local_nvidia_nim_llm
+            )
+
+        # ...
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Groq">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+
+    ```toml Code
+    GROQ_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="groq/llama-3.2-90b-text-preview",
+        temperature=0.7
+    )
+    ```
+    | النموذج           | نافذة السياق     | الأفضل لـ                                    |
+    |-------------------|------------------|--------------------------------------------|
+    | Llama 3.1 70B/8B  | 131,072 tokens   | مهام عالية الأداء بسياق كبير               |
+    | Llama 3.2 Series  | 8,192 tokens     | مهام ذات أغراض عامة                        |
+    | Mixtral 8x7B      | 32,768 tokens    | أداء متوازن وسياق جيد                      |
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="IBM watsonx.ai">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    WATSONX_URL=<your-url>
+    WATSONX_APIKEY=<your-apikey>
+    WATSONX_PROJECT_ID=<your-project-id>
+
+    # Optional
+    WATSONX_TOKEN=<your-token>
+    WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="watsonx/meta-llama/llama-3-1-70b-instruct",
+        base_url="https://api.watsonx.ai/v1"
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Ollama (نماذج LLM محلية)">
+    1. ثبّت Ollama: [ollama.ai](https://ollama.ai/)
+    2. شغّل نموذجًا: `ollama run llama3`
+    3. أعدّ:
+
+    ```python Code
+    llm = LLM(
+        model="ollama/llama3:70b",
+        base_url="http://localhost:11434"
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Fireworks AI">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    FIREWORKS_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Perplexity AI">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    PERPLEXITY_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="llama-3.1-sonar-large-128k-online",
+        base_url="https://api.perplexity.ai/"
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Hugging Face">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    HF_TOKEN=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
+    )
+    ```
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="SambaNova">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+
+    ```toml Code
+    SAMBANOVA_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="sambanova/Meta-Llama-3.1-8B-Instruct",
+        temperature=0.7
+    )
+    ```
+    | النموذج            | نافذة السياق           | الأفضل لـ                                      |
+    |--------------------|------------------------|----------------------------------------------|
+    | Llama 3.1 70B/8B   | حتى 131,072 tokens    | مهام عالية الأداء بسياق كبير                 |
+    | Llama 3.1 405B     | 8,192 tokens           | أداء عالٍ وجودة مخرجات                       |
+    | Llama 3.2 Series   | 8,192 tokens           | مهام عامة ومتعددة الوسائط                    |
+    | Llama 3.3 70B      | حتى 131,072 tokens    | أداء عالٍ وجودة مخرجات                       |
+    | Qwen2 familly      | 8,192 tokens           | أداء عالٍ وجودة مخرجات                       |
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Cerebras">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    CEREBRAS_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="cerebras/llama3.1-70b",
+        temperature=0.7,
+        max_tokens=8192
+    )
+    ```
+
+    <Info>
+      ميزات Cerebras:
+      - سرعات استدلال عالية
+      - أسعار تنافسية
+      - توازن جيد بين السرعة والجودة
+      - دعم نوافذ سياق طويلة
+    </Info>
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Open Router">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    OPENROUTER_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+    ```
+
+    <Info>
+      نماذج Open Router:
+      - openrouter/deepseek/deepseek-r1
+      - openrouter/deepseek/deepseek-chat
+    </Info>
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Nebius AI Studio">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    NEBIUS_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="nebius/Qwen/Qwen3-30B-A3B"
+    )
+    ```
+
+    <Info>
+      ميزات Nebius AI Studio:
+      - مجموعة كبيرة من النماذج مفتوحة المصدر
+      - حدود معدل أعلى
+      - أسعار تنافسية
+      - توازن جيد بين السرعة والجودة
+    </Info>
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## بث الاستجابات
+
+يدعم CrewAI بث الاستجابات من LLMs، مما يتيح لتطبيقك تلقي ومعالجة المخرجات في الوقت الفعلي فور توليدها.
+
+<Tabs>
+  <Tab title="الإعداد الأساسي">
+    فعّل البث بتعيين معامل `stream` إلى `True` عند تهيئة LLM:
+
+    ```python
+    from crewai import LLM
+
+    # Create an LLM with streaming enabled
+    llm = LLM(
+        model="openai/gpt-4o",
+        stream=True  # Enable streaming
+    )
+    ```
+
+    عند تفعيل البث، يتم تسليم الاستجابات في أجزاء فور توليدها، مما يخلق تجربة مستخدم أكثر استجابة.
+  </Tab>
+
+  <Tab title="معالجة الأحداث">
+    يُصدر CrewAI أحداثًا لكل جزء يتم تلقيه أثناء البث:
+
+    ```python
+    from crewai.events import (
+      LLMStreamChunkEvent
+    )
+    from crewai.events import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+              # Process each chunk as it arrives
+              print(f"Received chunk: {event.chunk}")
+
+    my_listener = MyCustomListener()
+    ```
+
+    <Tip>
+      [انقر هنا](/ar/concepts/event-listener#event-listeners) لمزيد من التفاصيل
+    </Tip>
+  </Tab>
+
+  <Tab title="تتبع Agent والمهمة">
+    جميع أحداث LLM في CrewAI تتضمن معلومات Agent والمهمة، مما يتيح لك تتبع وتصفية تفاعلات LLM بواسطة وكلاء أو مهام محددة:
+
+    ```python
+    from crewai import LLM, Agent, Task, Crew
+    from crewai.events import LLMStreamChunkEvent
+    from crewai.events import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(source, event):
+                if researcher.id == event.agent_id:
+                    print("\n==============\n Got event:", event, "\n==============\n")
+
+
+    my_listener = MyCustomListener()
+
+    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+
+    researcher = Agent(
+        role="About User",
+        goal="You know everything about the user.",
+        backstory="""You are a master at understanding people and their preferences.""",
+        llm=llm,
+    )
+
+    search = Task(
+        description="Answer the following questions about the user: {question}",
+        expected_output="An answer to the question.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[search])
+
+    result = crew.kickoff(
+        inputs={"question": "..."}
+    )
+    ```
+
+    <Info>
+      هذه الميزة مفيدة بشكل خاص لـ:
+      - تصحيح سلوكيات وكلاء محددة
+      - تسجيل استخدام LLM حسب نوع المهمة
+      - مراجعة أي الوكلاء يجرون أنواع استدعاءات LLM
+      - مراقبة أداء مهام محددة
+    </Info>
+  </Tab>
+</Tabs>
+
+## استدعاءات LLM غير المتزامنة
+
+يدعم CrewAI استدعاءات LLM غير المتزامنة لأداء وتزامن محسّنين في سير عمل الذكاء الاصطناعي. تتيح لك الاستدعاءات غير المتزامنة تشغيل طلبات LLM متعددة بشكل متزامن دون حجب، مما يجعلها مثالية لتطبيقات الإنتاجية العالية وعمليات الوكلاء المتوازية.
+
+<Tabs>
+  <Tab title="الاستخدام الأساسي">
+    استخدم دالة `acall` لطلبات LLM غير المتزامنة:
+
+    ```python
+    import asyncio
+    from crewai import LLM
+
+    async def main():
+        llm = LLM(model="openai/gpt-4o")
+
+        # Single async call
+        response = await llm.acall("What is the capital of France?")
+        print(response)
+
+    asyncio.run(main())
+    ```
+
+    تدعم دالة `acall` جميع المعاملات نفسها كدالة `call` المتزامنة، بما في ذلك الرسائل والأدوات ودوال الاسترجاع.
+  </Tab>
+
+  <Tab title="مع البث">
+    اجمع بين الاستدعاءات غير المتزامنة والبث للاستجابات المتزامنة في الوقت الفعلي:
+
+    ```python
+    import asyncio
+    from crewai import LLM
+
+    async def stream_async():
+        llm = LLM(model="openai/gpt-4o", stream=True)
+
+        response = await llm.acall("Write a short story about AI")
+
+        print(response)
+
+    asyncio.run(stream_async())
+    ```
+  </Tab>
+</Tabs>
+
+## استدعاءات LLM المهيكلة
+
+يدعم CrewAI الاستجابات المهيكلة من استدعاءات LLM من خلال السماح لك بتحديد `response_format` باستخدام نموذج Pydantic. يمكّن هذا الإطار من تحليل المخرجات والتحقق منها تلقائيًا، مما يسهّل دمج الاستجابة في تطبيقك دون معالجة لاحقة يدوية.
+
+```python Code
+from crewai import LLM
+
+class Dog(BaseModel):
+    name: str
+    age: int
+    breed: str
+
+
+llm = LLM(model="gpt-4o", response_format=Dog)
+
+response = llm.call(
+    "Analyze the following messages and return the name, age, and breed. "
+    "Meet Kona! She is 3 years old and is a black german shepherd."
+)
+print(response)
+
+# Output:
+# Dog(name='Kona', age=3, breed='black german shepherd')
+```
+
+## الميزات المتقدمة والتحسين
+
+تعلّم كيفية الاستفادة القصوى من إعداد LLM:
+
+<AccordionGroup>
+  <Accordion title="إدارة نافذة السياق">
+    يتضمن CrewAI ميزات إدارة سياق ذكية:
+
+    ```python
+    from crewai import LLM
+
+    # CrewAI automatically handles:
+    # 1. Token counting and tracking
+    # 2. Content summarization when needed
+    # 3. Task splitting for large contexts
+
+    llm = LLM(
+        model="gpt-4",
+        max_tokens=4000,  # Limit response length
+    )
+    ```
+
+    <Info>
+      أفضل الممارسات لإدارة السياق:
+      1. اختر نماذج بنوافذ سياق مناسبة
+      2. عالج المدخلات الطويلة مسبقًا عند الإمكان
+      3. استخدم التقسيم للمستندات الكبيرة
+      4. راقب استخدام الرموز لتحسين التكاليف
+    </Info>
+  </Accordion>
+
+  <Accordion title="تحسين الأداء">
+    <Steps>
+      <Step title="تحسين استخدام الرموز">
+        اختر نافذة السياق المناسبة لمهمتك:
+        - المهام الصغيرة (حتى 4K رمز): النماذج القياسية
+        - المهام المتوسطة (بين 4K-32K): النماذج المحسّنة
+        - المهام الكبيرة (أكثر من 32K): نماذج السياق الكبير
+
+        ```python
+        # Configure model with appropriate settings
+        llm = LLM(
+            model="openai/gpt-4-turbo-preview",
+            temperature=0.7,    # Adjust based on task
+            max_tokens=4096,    # Set based on output needs
+            timeout=300        # Longer timeout for complex tasks
+        )
+        ```
+        <Tip>
+          - درجة حرارة منخفضة (0.1 إلى 0.3) للاستجابات الواقعية
+          - درجة حرارة عالية (0.7 إلى 0.9) للمهام الإبداعية
+        </Tip>
+      </Step>
+
+      <Step title="أفضل الممارسات">
+        1. راقب استخدام الرموز
+        2. نفّذ تحديد المعدل
+        3. استخدم التخزين المؤقت عند الإمكان
+        4. عيّن حدود max_tokens مناسبة
+      </Step>
+    </Steps>
+
+    <Info>
+      تذكّر مراقبة استخدام الرموز بانتظام وضبط إعداداتك حسب الحاجة لتحسين التكاليف والأداء.
+    </Info>
+  </Accordion>
+
+  <Accordion title="إسقاط المعاملات الإضافية">
+    يستخدم CrewAI داخليًا حزم SDK أصلية لاستدعاءات LLM، مما يتيح لك إسقاط معاملات إضافية غير مطلوبة لحالة الاستخدام الخاصة بك. يمكن أن يساعد هذا في تبسيط كودك وتقليل تعقيد إعداد LLM.
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="معترضات النقل">
+    يوفر CrewAI معترضات رسائل لعدة مزودين، مما يتيح لك الربط بدورات الطلب/الاستجابة على مستوى طبقة النقل.
+
+    **المزودون المدعومون:**
+    - OpenAI
+    - Anthropic
+
+    **الاستخدام الأساسي:**
+    ```python
+import httpx
+from crewai import LLM
+from crewai.llms.hooks import BaseInterceptor
+
+class CustomInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):
+    """Custom interceptor to modify requests and responses."""
+
+    def on_outbound(self, request: httpx.Request) -> httpx.Request:
+        """Print request before sending to the LLM provider."""
+        print(request)
+        return request
+
+    def on_inbound(self, response: httpx.Response) -> httpx.Response:
+        """Process response after receiving from the LLM provider."""
+        print(f"Status: {response.status_code}")
+        print(f"Response time: {response.elapsed}")
+        return response
+
+# Use the interceptor with an LLM
+llm = LLM(
+    model="openai/gpt-4o",
+    interceptor=CustomInterceptor()
+)
+    ```
+
+    **ملاحظات مهمة:**
+    - يجب على كلتا الدالتين إعادة الكائن المستلم أو نوعه.
+    - تعديل الكائنات المستلمة قد يؤدي إلى سلوك غير متوقع أو أعطال في التطبيق.
+    - ليس كل المزودين يدعمون المعترضات -- تحقق من قائمة المزودين المدعومين أعلاه
+
+    <Info>
+      تعمل المعترضات على مستوى طبقة النقل. مفيدة بشكل خاص لـ:
+      - تحويل الرسائل وتصفيتها
+      - تصحيح تفاعلات API
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+## المشاكل الشائعة والحلول
+
+<Tabs>
+  <Tab title="المصادقة">
+    <Warning>
+      يمكن حل معظم مشاكل المصادقة بالتحقق من تنسيق مفتاح API وأسماء متغيرات البيئة.
+    </Warning>
+
+    ```bash
+    # OpenAI
+    OPENAI_API_KEY=sk-...
+
+    # Anthropic
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+  </Tab>
+  <Tab title="أسماء النماذج">
+    <Check>
+      ضمّن دائمًا بادئة المزود في أسماء النماذج
+    </Check>
+
+    ```python
+    # Correct
+    llm = LLM(model="openai/gpt-4")
+
+    # Incorrect
+    llm = LLM(model="gpt-4")
+    ```
+  </Tab>
+  <Tab title="طول السياق">
+    <Tip>
+      استخدم نماذج سياق أكبر للمهام الواسعة
+    </Tip>
+
+    ```python
+    # Large context model
+    llm = LLM(model="openai/gpt-4o")  # 128K tokens
+    ```
+  </Tab>
+</Tabs>

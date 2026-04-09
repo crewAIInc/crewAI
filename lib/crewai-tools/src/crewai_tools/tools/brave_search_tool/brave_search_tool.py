@@ -50,7 +50,7 @@ class BraveSearchTool(BaseTool):
     _last_request_time: ClassVar[float] = 0
     _min_request_interval: ClassVar[float] = 1.0  # seconds
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         if "BRAVE_API_KEY" not in os.environ:
             raise ValueError(

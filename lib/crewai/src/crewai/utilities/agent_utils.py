@@ -31,8 +31,8 @@ from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.i18n import I18N
-from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.printer import PRINTER, ColoredText, Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -40,7 +40,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.experimental.agent_executor import AgentExecutor
@@ -254,7 +254,6 @@ def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
 def handle_max_iterations_exceeded(
     formatted_answer: AgentAction | AgentFinish | None,
     printer: Printer,
-    i18n: I18N,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
@@ -265,7 +264,6 @@ def handle_max_iterations_exceeded(
     Args:
         formatted_answer: The last formatted answer from the agent.
         printer: Printer instance for output.
-        i18n: I18N instance for internationalization.
         messages: List of messages to send to the LLM.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
@@ -282,10 +280,10 @@ def handle_max_iterations_exceeded(
 
     if formatted_answer and hasattr(formatted_answer, "text"):
         assistant_message = (
-            formatted_answer.text + f"\n{i18n.errors('force_final_answer')}"
+            formatted_answer.text + f"\n{I18N_DEFAULT.errors('force_final_answer')}"
         )
     else:
-        assistant_message = i18n.errors("force_final_answer")
+        assistant_message = I18N_DEFAULT.errors("force_final_answer")
 
     messages.append(format_message_for_llm(assistant_message, role="assistant"))
 
@@ -431,7 +429,7 @@ def get_llm_response(
     tools: list[dict[str, Any]] | None = None,
     available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
-    from_agent: Agent | LiteAgent | None = None,
+    from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
     verbose: bool = True,
@@ -468,7 +466,7 @@ def get_llm_response(
             callbacks=callbacks,
             available_functions=available_functions,
             from_task=from_task,
-            from_agent=from_agent,  # type: ignore[arg-type]
+            from_agent=from_agent,
             response_model=response_model,
         )
     except Exception as e:
@@ -487,7 +485,7 @@ async def aget_llm_response(
     tools: list[dict[str, Any]] | None = None,
     available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
-    from_agent: Agent | LiteAgent | None = None,
+    from_agent: BaseAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | AgentExecutor | None = None,
     verbose: bool = True,
@@ -524,7 +522,7 @@ async def aget_llm_response(
             callbacks=callbacks,
             available_functions=available_functions,
             from_task=from_task,
-            from_agent=from_agent,  # type: ignore[arg-type]
+            from_agent=from_agent,
             response_model=response_model,
         )
     except Exception as e:
@@ -687,7 +685,6 @@ def handle_context_length(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
-    i18n: I18N,
     verbose: bool = True,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
@@ -698,7 +695,6 @@ def handle_context_length(
         messages: List of messages to summarize
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
-        i18n: I18N instance for messages
 
     Raises:
         SystemExit: If context length is exceeded and user opts not to summarize
@@ -710,7 +706,7 @@ def handle_context_length(
                 color="yellow",
             )
         summarize_messages(
-            messages=messages, llm=llm, callbacks=callbacks, i18n=i18n, verbose=verbose
+            messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
         )
     else:
         if verbose:
@@ -863,7 +859,6 @@ async def _asummarize_chunks(
     chunks: list[list[LLMMessage]],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
-    i18n: I18N,
 ) -> list[SummaryContent]:
     """Summarize multiple message chunks concurrently using asyncio.
 
@@ -871,7 +866,6 @@ async def _asummarize_chunks(
         chunks: List of message chunks to summarize.
         llm: LLM instance (must support ``acall``).
         callbacks: List of callbacks for the LLM.
-        i18n: I18N instance for prompt templates.
 
     Returns:
         Ordered list of summary contents, one per chunk.
@@ -881,10 +875,10 @@ async def _asummarize_chunks(
         conversation_text = _format_messages_for_summary(chunk)
         summarization_messages = [
             format_message_for_llm(
-                i18n.slice("summarizer_system_message"), role="system"
+                I18N_DEFAULT.slice("summarizer_system_message"), role="system"
             ),
             format_message_for_llm(
-                i18n.slice("summarize_instruction").format(
+                I18N_DEFAULT.slice("summarize_instruction").format(
                     conversation=conversation_text
                 ),
             ),
@@ -901,7 +895,6 @@ def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
-    i18n: I18N,
     verbose: bool = True,
 ) -> None:
     """Summarize messages to fit within context window.
@@ -917,7 +910,6 @@ def summarize_messages(
         messages: List of messages to summarize (modified in-place)
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
-        i18n: I18N instance for messages
         verbose: Whether to print progress.
     """
     # 1. Extract & preserve file attachments from user messages
@@ -946,17 +938,17 @@ def summarize_messages(
         summarized_contents: list[SummaryContent] = []
         for idx, chunk in enumerate(chunks, 1):
             if verbose:
-                Printer().print(
+                PRINTER.print(
                     content=f"Summarizing {idx}/{total_chunks}...",
                     color="yellow",
                 )
             conversation_text = _format_messages_for_summary(chunk)
             summarization_messages = [
                 format_message_for_llm(
-                    i18n.slice("summarizer_system_message"), role="system"
+                    I18N_DEFAULT.slice("summarizer_system_message"), role="system"
                 ),
                 format_message_for_llm(
-                    i18n.slice("summarize_instruction").format(
+                    I18N_DEFAULT.slice("summarize_instruction").format(
                         conversation=conversation_text
                     ),
                 ),
@@ -967,13 +959,11 @@ def summarize_messages(
     else:
         # Multiple chunks — summarize in parallel via asyncio
         if verbose:
-            Printer().print(
+            PRINTER.print(
                 content=f"Summarizing {total_chunks} chunks in parallel...",
                 color="yellow",
             )
-        coro = _asummarize_chunks(
-            chunks=chunks, llm=llm, callbacks=callbacks, i18n=i18n
-        )
+        coro = _asummarize_chunks(chunks=chunks, llm=llm, callbacks=callbacks)
         if is_inside_event_loop():
             ctx = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
@@ -988,7 +978,7 @@ def summarize_messages(
     messages.extend(system_messages)
 
     summary_message = format_message_for_llm(
-        i18n.slice("summary").format(merged_summary=merged_summary)
+        I18N_DEFAULT.slice("summary").format(merged_summary=merged_summary)
     )
     if preserved_files:
         summary_message["files"] = preserved_files
@@ -1363,7 +1353,7 @@ def execute_single_native_tool_call(
     original_tools: list[BaseTool],
     structured_tools: list[CrewStructuredTool] | None,
     tools_handler: ToolsHandler | None,
-    agent: Agent | None,
+    agent: BaseAgent | None,
     task: Task | None,
     crew: Any | None,
     event_source: Any,

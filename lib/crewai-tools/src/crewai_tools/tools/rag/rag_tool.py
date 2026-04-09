@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import os
 from typing import Any, Literal, cast
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
@@ -246,7 +247,94 @@ class RagTool(BaseTool):
             # Auto-detect type from extension
             rag_tool.add("path/to/document.pdf")  # auto-detects PDF
         """
-        self.adapter.add(*args, **kwargs)
+        # Validate file paths and URLs before adding to prevent
+        # unauthorized file reads and SSRF.
+        from urllib.parse import urlparse
+
+        from crewai_tools.security.safe_path import validate_file_path, validate_url
+
+        def _check_url(value: str, label: str) -> None:
+            try:
+                validate_url(value)
+            except ValueError as e:
+                raise ValueError(f"Blocked unsafe {label}: {e}") from e
+
+        def _check_path(value: str, label: str) -> str:
+            try:
+                return validate_file_path(value)
+            except ValueError as e:
+                raise ValueError(f"Blocked unsafe {label}: {e}") from e
+
+        validated_args: list[ContentItem] = []
+        for arg in args:
+            source_ref = (
+                str(arg.get("source", arg.get("content", "")))
+                if isinstance(arg, dict)
+                else str(arg)
+            )
+
+            # Check if it's a URL — only catch urlparse-specific errors here;
+            # validate_url's ValueError must propagate so it is never silently bypassed.
+            try:
+                parsed = urlparse(source_ref)
+            except (ValueError, AttributeError):
+                parsed = None
+
+            if parsed is not None and parsed.scheme in ("http", "https", "file"):
+                try:
+                    validate_url(source_ref)
+                except ValueError as e:
+                    raise ValueError(f"Blocked unsafe URL: {e}") from e
+                validated_args.append(arg)
+                continue
+
+            # Check if it looks like a file path (not a plain text string).
+            # Check both os.sep (backslash on Windows) and "/" so that
+            # forward-slash paths like "sub/file.txt" are caught on all platforms.
+            if (
+                os.path.sep in source_ref
+                or "/" in source_ref
+                or source_ref.startswith(".")
+                or os.path.isabs(source_ref)
+            ):
+                try:
+                    resolved_ref = validate_file_path(source_ref)
+                except ValueError as e:
+                    raise ValueError(f"Blocked unsafe file path: {e}") from e
+                # Use the resolved path to prevent symlink TOCTOU
+                if isinstance(arg, dict):
+                    arg = {**arg}
+                    if "source" in arg:
+                        arg["source"] = resolved_ref
+                    elif "content" in arg:
+                        arg["content"] = resolved_ref
+                else:
+                    arg = resolved_ref
+
+            validated_args.append(arg)
+
+        # Validate keyword path/URL arguments — these are equally user-controlled
+        # and must not bypass the checks applied to positional args.
+        if "path" in kwargs and kwargs.get("path") is not None:
+            kwargs["path"] = _check_path(str(kwargs["path"]), "path")
+        if "file_path" in kwargs and kwargs.get("file_path") is not None:
+            kwargs["file_path"] = _check_path(str(kwargs["file_path"]), "file_path")
+
+        if "directory_path" in kwargs and kwargs.get("directory_path") is not None:
+            kwargs["directory_path"] = _check_path(
+                str(kwargs["directory_path"]), "directory_path"
+            )
+
+        if "url" in kwargs and kwargs.get("url") is not None:
+            _check_url(str(kwargs["url"]), "url")
+        if "website" in kwargs and kwargs.get("website") is not None:
+            _check_url(str(kwargs["website"]), "website")
+        if "github_url" in kwargs and kwargs.get("github_url") is not None:
+            _check_url(str(kwargs["github_url"]), "github_url")
+        if "youtube_url" in kwargs and kwargs.get("youtube_url") is not None:
+            _check_url(str(kwargs["youtube_url"]), "youtube_url")
+
+        self.adapter.add(*validated_args, **kwargs)
 
     def _run(
         self,

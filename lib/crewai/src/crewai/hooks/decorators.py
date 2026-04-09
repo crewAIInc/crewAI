@@ -5,6 +5,8 @@ from functools import wraps
 import inspect
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from crewai.utilities.string_utils import sanitize_tool_name
+
 
 if TYPE_CHECKING:
     from crewai.hooks.llm_hooks import LLMCallHookContext
@@ -37,6 +39,9 @@ def _create_hook_decorator(
         tools: list[str] | None = None,
         agents: list[str] | None = None,
     ) -> Callable[..., Any]:
+        if tools:
+            tools = [sanitize_tool_name(t) for t in tools]
+
         def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
             setattr(f, marker_attribute, True)
 
@@ -122,7 +127,7 @@ def before_llm_call(
     """
     from crewai.hooks.llm_hooks import register_before_llm_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="llm",
         register_function=register_before_llm_call_hook,
         marker_attribute="is_before_llm_call_hook",
@@ -176,7 +181,7 @@ def after_llm_call(
     """
     from crewai.hooks.llm_hooks import register_after_llm_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="llm",
         register_function=register_after_llm_call_hook,
         marker_attribute="is_after_llm_call_hook",
@@ -237,7 +242,7 @@ def before_tool_call(
     """
     from crewai.hooks.tool_hooks import register_before_tool_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="tool",
         register_function=register_before_tool_call_hook,
         marker_attribute="is_before_tool_call_hook",
@@ -293,7 +298,7 @@ def after_tool_call(
     """
     from crewai.hooks.tool_hooks import register_after_tool_call_hook
 
-    return _create_hook_decorator(  # type: ignore[return-value]
+    return _create_hook_decorator(  # type: ignore[no-any-return]
         hook_type="tool",
         register_function=register_after_tool_call_hook,
         marker_attribute="is_after_tool_call_hook",

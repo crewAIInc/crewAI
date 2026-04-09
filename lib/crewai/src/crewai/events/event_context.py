@@ -133,6 +133,11 @@ def triggered_by_scope(event_id: str) -> Generator[None, None, None]:
         _triggering_event_id.set(previous)
 
 
+def restore_event_scope(stack: tuple[tuple[str, str], ...]) -> None:
+    """Restore the event scope stack from a checkpoint."""
+    _event_id_stack.set(stack)
+
+
 def push_event_scope(event_id: str, event_type: str = "") -> None:
     """Push an event ID and type onto the scope stack."""
     config = _event_context_config.get() or _default_config

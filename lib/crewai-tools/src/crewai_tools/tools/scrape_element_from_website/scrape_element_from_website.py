@@ -5,6 +5,8 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import requests
 
+from crewai_tools.security.safe_path import validate_url
+
 
 try:
     from bs4 import BeautifulSoup
@@ -33,9 +35,9 @@ class ScrapeElementFromWebsiteTool(BaseTool):
     description: str = "A tool that can be used to read a website content."
     args_schema: type[BaseModel] = ScrapeElementFromWebsiteToolSchema
     website_url: str | None = None
-    cookies: dict | None = None
+    cookies: dict[str, str] | None = None
     css_element: str | None = None
-    headers: dict | None = Field(
+    headers: dict[str, str] | None = Field(
         default_factory=lambda: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -50,9 +52,9 @@ class ScrapeElementFromWebsiteTool(BaseTool):
     def __init__(
         self,
         website_url: str | None = None,
-        cookies: dict | None = None,
+        cookies: dict[str, str] | None = None,
         css_element: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(**kwargs)
         if website_url is not None:
@@ -64,7 +66,7 @@ class ScrapeElementFromWebsiteTool(BaseTool):
             self.args_schema = FixedScrapeElementFromWebsiteToolSchema
             self._generate_description()
             if cookies is not None:
-                self.cookies = {cookies["name"]: os.getenv(cookies["value"])}
+                self.cookies = {cookies["name"]: os.getenv(cookies["value"]) or ""}
 
     def _run(
         self,
@@ -81,6 +83,7 @@ class ScrapeElementFromWebsiteTool(BaseTool):
         if website_url is None or css_element is None:
             raise ValueError("Both website_url and css_element must be provided.")
 
+        website_url = validate_url(website_url)
         page = requests.get(
             website_url,
             headers=self.headers,

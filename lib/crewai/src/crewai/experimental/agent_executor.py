@@ -1,3 +1,4 @@
+# mypy: disable-error-code="union-attr,arg-type"
 from __future__ import annotations
 
 import asyncio
@@ -8,21 +9,30 @@ from datetime import datetime
 import inspect
 import json
 import threading
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, GetCoreSchemaHandler
-from pydantic_core import CoreSchema, core_schema
+from pydantic import (
+    BaseModel,
+    Field,
+    PrivateAttr,
+    model_validator,
+)
 from rich.console import Console
 from rich.text import Text
+from typing_extensions import Self
 
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
     OutputParserError,
 )
-from crewai.core.providers.human_input import get_provider
+from crewai.core.providers.human_input import (
+    AsyncExecutorContext,
+    ExecutorContext,
+    get_provider,
+)
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled_in_context,
@@ -81,15 +91,15 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import (
     PlanStep,
     StepObservation,
     TodoItem,
     TodoList,
 )
-from crewai.utilities.printer import Printer
-from crewai.utilities.step_execution_context import StepExecutionContext
+from crewai.utilities.printer import PRINTER
+from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -97,13 +107,12 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
-    from crewai.task import Task
     from crewai.tools.tool_types import ToolResult
     from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
+
+_RouteT = TypeVar("_RouteT", bound=str)
 
 
 class AgentExecutorState(BaseModel):
@@ -113,6 +122,7 @@ class AgentExecutorState(BaseModel):
     (todos, observations, replan tracking) in a single validated model.
     """
 
+    id: str = Field(default_factory=lambda: str(uuid4()))
     messages: list[LLMMessage] = Field(default_factory=list)
     iterations: int = Field(default=0)
     current_answer: AgentAction | AgentFinish | None = Field(default=None)
@@ -143,146 +153,81 @@ class AgentExecutorState(BaseModel):
     )
 
 
-class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
+class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignore[pydantic-unexpected]
     """Agent Executor for both standalone agents and crew-bound agents.
+
+    _skip_auto_memory prevents Flow from eagerly allocating a Memory
+    instance — the executor uses agent/crew memory, not its own.
 
     Inherits from:
     - Flow[AgentExecutorState]: Provides flow orchestration capabilities
-    - CrewAgentExecutorMixin: Provides memory methods (short/long/external term)
+    - BaseAgentExecutor: Provides memory methods (short/long/external term)
 
     This executor can operate in two modes:
     - Standalone mode: When crew and task are None (used by Agent.kickoff())
     - Crew mode: When crew and task are provided (used by Agent.execute_task())
-
-    Note: Multiple instances may be created during agent initialization
-    (cache setup, RPM controller setup, etc.) but only the final instance
-    should execute tasks via invoke().
     """
 
-    def __init__(
-        self,
-        llm: BaseLLM,
-        agent: Agent,
-        prompt: SystemPromptResult | StandardPromptResult,
-        max_iter: int,
-        tools: list[CrewStructuredTool],
-        tools_names: str,
-        stop_words: list[str],
-        tools_description: str,
-        tools_handler: ToolsHandler,
-        task: Task | None = None,
-        crew: Crew | None = None,
-        step_callback: Any = None,
-        original_tools: list[BaseTool] | None = None,
-        function_calling_llm: BaseLLM | Any | None = None,
-        respect_context_window: bool = False,
-        request_within_rpm_limit: Callable[[], bool] | None = None,
-        callbacks: list[Any] | None = None,
-        response_model: type[BaseModel] | None = None,
-        i18n: I18N | None = None,
-    ) -> None:
-        """Initialize the flow-based agent executor.
+    _skip_auto_memory: bool = True
 
-        Args:
-            llm: Language model instance.
-            agent: Agent to execute.
-            prompt: Prompt templates.
-            max_iter: Maximum iterations.
-            tools: Available tools.
-            tools_names: Tool names string.
-            stop_words: Stop word list.
-            tools_description: Tool descriptions.
-            tools_handler: Tool handler instance.
-            task: Optional task to execute (None for standalone agent execution).
-            crew: Optional crew instance (None for standalone agent execution).
-            step_callback: Optional step callback.
-            original_tools: Original tool list.
-            function_calling_llm: Optional function calling LLM.
-            respect_context_window: Respect context limits.
-            request_within_rpm_limit: RPM limit check function.
-            callbacks: Optional callbacks list.
-            response_model: Optional Pydantic model for structured outputs.
-        """
-        self._i18n: I18N = i18n or get_i18n()
-        self.llm = llm
-        self.task: Task | None = task
-        self.agent = agent
-        self.crew: Crew | None = crew
-        self.prompt = prompt
-        self.tools = tools
-        self.tools_names = tools_names
-        self.stop = stop_words
-        self.max_iter = max_iter
-        self.callbacks = callbacks or []
-        self._printer: Printer = Printer()
-        self.tools_handler = tools_handler
-        self.original_tools = original_tools or []
-        self.step_callback = step_callback
-        self.tools_description = tools_description
-        self.function_calling_llm = function_calling_llm
-        self.respect_context_window = respect_context_window
-        self.request_within_rpm_limit = request_within_rpm_limit
-        self.response_model = response_model
-        self.log_error_after = 3
-        self._console: Console = Console()
+    executor_type: Literal["experimental"] = "experimental"
+    suppress_flow_events: bool = True  # always suppress for executor
+    llm: BaseLLM = Field(exclude=True)
+    prompt: SystemPromptResult | StandardPromptResult = Field(exclude=True)
+    max_iter: int = Field(default=25, exclude=True)
+    tools: list[CrewStructuredTool] = Field(default_factory=list, exclude=True)
+    tools_names: str = Field(default="", exclude=True)
+    stop_words: list[str] = Field(default_factory=list, exclude=True)
+    tools_description: str = Field(default="", exclude=True)
+    tools_handler: ToolsHandler | None = Field(default=None, exclude=True)
+    step_callback: Any = Field(default=None, exclude=True)
+    original_tools: list[BaseTool] = Field(default_factory=list, exclude=True)
+    function_calling_llm: BaseLLM | None = Field(default=None, exclude=True)
+    respect_context_window: bool = Field(default=False, exclude=True)
+    request_within_rpm_limit: Callable[[], bool] | None = Field(
+        default=None, exclude=True
+    )
+    callbacks: list[Any] = Field(default_factory=list, exclude=True)
+    response_model: type[BaseModel] | None = Field(default=None, exclude=True)
+    log_error_after: int = Field(default=3, exclude=True)
+    before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
+        Field(default_factory=list, exclude=True)
+    )
+    after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = Field(
+        default_factory=list, exclude=True
+    )
 
-        # Error context storage for recovery
-        self._last_parser_error: OutputParserError | None = None
-        self._last_context_error: Exception | None = None
+    _console: Console = PrivateAttr(default_factory=Console)
+    _last_parser_error: OutputParserError | None = PrivateAttr(default=None)
+    _last_context_error: Exception | None = PrivateAttr(default=None)
+    _execution_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _finalize_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _finalize_called: bool = PrivateAttr(default=False)
+    _is_executing: bool = PrivateAttr(default=False)
+    _has_been_invoked: bool = PrivateAttr(default=False)
+    _instance_id: str = PrivateAttr(default_factory=lambda: str(uuid4())[:8])
+    _step_executor: Any = PrivateAttr(default=None)
+    _planner_observer: Any = PrivateAttr(default=None)
 
-        # Execution guard to prevent concurrent/duplicate executions
-        self._execution_lock = threading.Lock()
-        self._finalize_lock = threading.Lock()
-        self._finalize_called: bool = False
-        self._is_executing: bool = False
-        self._has_been_invoked: bool = False
-        self._flow_initialized: bool = False
-
-        self._instance_id = str(uuid4())[:8]
-
-        self.before_llm_call_hooks: list[
-            BeforeLLMCallHookType | BeforeLLMCallHookCallable
-        ] = []
-        self.after_llm_call_hooks: list[
-            AfterLLMCallHookType | AfterLLMCallHookCallable
-        ] = []
+    @model_validator(mode="after")
+    def _setup_executor(self) -> Self:
+        """Configure executor after Pydantic field initialization."""
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
         if self.llm:
             existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
-                set(
-                    existing_stop + self.stop
-                    if isinstance(existing_stop, list)
-                    else self.stop
-                )
-            )
+            if not isinstance(existing_stop, list):
+                existing_stop = []
+            self.llm.stop = list(set(existing_stop + self.stop_words))
+
         self._state = AgentExecutorState()
+        self.max_method_calls = self.max_iter * 10
 
-        # Plan-and-Execute components (Phase 2)
-        # Lazy-imported to avoid circular imports during module load
-        self._step_executor: Any = None
-        self._planner_observer: Any = None
-
-    def _ensure_flow_initialized(self) -> None:
-        """Ensure Flow.__init__() has been called.
-
-        This is deferred from __init__ to prevent FlowCreatedEvent emission
-        during agent setup when multiple executor instances are created.
-        Only the instance that actually executes via invoke() will emit events.
-        """
-        if not self._flow_initialized:
-            current_tracing = is_tracing_enabled_in_context()
-            # Now call Flow's __init__ which will replace self._state
-            # with Flow's managed state. Suppress flow events since this is
-            # an agent executor, not a user-facing flow.
-            super().__init__(
-                suppress_flow_events=True,
-                tracing=current_tracing if current_tracing else None,
-                max_method_calls=self.max_iter * 10,
-            )
-            self._flow_initialized = True
+        current_tracing = is_tracing_enabled_in_context()
+        self.tracing = current_tracing if current_tracing else None
+        self._flow_post_init()
+        return self
 
     def _check_native_tool_support(self) -> bool:
         """Check if LLM supports native function calling."""
@@ -312,29 +257,23 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
     @property
     def state(self) -> AgentExecutorState:
-        """Get state - returns temporary state if Flow not yet initialized.
+        """Get thread-safe state proxy."""
+        return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
-        Flow initialization is deferred to prevent event emission during agent setup.
-        Returns the temporary state until invoke() is called.
-        """
-        if self._flow_initialized and hasattr(self, "_state_lock"):
-            return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
-        return self._state
-
-    @property
+    @property  # type: ignore[misc]
     def iterations(self) -> int:
         """Compatibility property for mixin - returns state iterations."""
-        return self._state.iterations
+        return int(self._state.iterations)
 
     @iterations.setter
     def iterations(self, value: int) -> None:
         """Set state iterations."""
         self._state.iterations = value
 
-    @property
+    @property  # type: ignore[misc]
     def messages(self) -> list[LLMMessage]:
         """Compatibility property - returns state messages."""
-        return self._state.messages
+        return self._state.messages  # type: ignore[no-any-return]
 
     @messages.setter
     def messages(self, value: list[LLMMessage]) -> None:
@@ -421,7 +360,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 function_calling_llm=self.function_calling_llm,
                 request_within_rpm_limit=self.request_within_rpm_limit,
                 callbacks=self.callbacks,
-                i18n=self._i18n,
             )
         return self._step_executor
 
@@ -446,30 +384,30 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             step failures reliably trigger replanning rather than being
             silently ignored.
         """
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "reasoning_effort"):
-            return config.reasoning_effort
+        config = self.agent.planning_config
+        if config is not None:
+            return str(config.reasoning_effort)
         return "medium"
 
     def _get_max_replans(self) -> int:
         """Get max replans from planning config or default to 3."""
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "max_replans"):
-            return config.max_replans
+        config = self.agent.planning_config
+        if config is not None:
+            return int(config.max_replans)
         return 3
 
     def _get_max_step_iterations(self) -> int:
         """Get max step iterations from planning config or default to 15."""
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "max_step_iterations"):
-            return config.max_step_iterations
+        config = self.agent.planning_config
+        if config is not None:
+            return int(config.max_step_iterations)
         return 15
 
     def _get_step_timeout(self) -> int | None:
         """Get per-step timeout from planning config or default to None."""
-        config = getattr(self.agent, "planning_config", None)
-        if config is not None and hasattr(config, "step_timeout"):
-            return config.step_timeout
+        config = self.agent.planning_config
+        if config is not None:
+            return int(config.step_timeout) if config.step_timeout is not None else None
         return None
 
     def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:
@@ -560,7 +498,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         )
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content=(
                     f"[Observe] Step {current_todo.step_number} "
                     f"(effort={effort}): "
@@ -610,7 +548,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Low] Step {current_todo.step_number} hard-failed "
                         f"— triggering replan: {observation.replan_reason}"
@@ -629,7 +567,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=f"[Low] Step {current_todo.step_number} done ({completed}/{total}) — continuing",
                 color="green",
             )
@@ -662,7 +600,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             if self.agent.verbose:
                 completed = self.state.todos.completed_count
                 total = len(self.state.todos.items)
-                self._printer.print(
+                PRINTER.print(
                     content=f"[Medium] Step {current_todo.step_number} succeeded ({completed}/{total}) — continuing",
                     color="green",
                 )
@@ -675,7 +613,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Medium] Step {current_todo.step_number} failed + replan required "
                         f"— triggering replan: {observation.replan_reason}"
@@ -695,7 +633,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         if self.agent.verbose:
             failed = len(self.state.todos.get_failed_todos())
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=(
                     f"[Medium] Step {current_todo.step_number} failed but no replan needed "
                     f"({failed} failed/{total} total) — continuing"
@@ -737,7 +675,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="[Decide] Goal achieved early — finalizing",
                     color="green",
                 )
@@ -749,7 +687,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"[Decide] Full replan needed: {observation.replan_reason}",
                     color="yellow",
                 )
@@ -762,7 +700,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="[Decide] Step failed — triggering replan",
                     color="yellow",
                 )
@@ -775,7 +713,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="[Decide] Plan valid but refining upcoming steps",
                     color="cyan",
                 )
@@ -788,7 +726,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=f"[Decide] Continue plan ({completed}/{total} done)",
                 color="green",
             )
@@ -833,7 +771,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             )
 
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"[Refine] Updated {len(remaining)} pending step(s)",
                     color="cyan",
                 )
@@ -868,7 +806,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         )
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content="Goal achieved early — skipping remaining steps",
                 color="green",
             )
@@ -886,7 +824,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         if self.state.replan_count >= max_replans:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Max replans ({max_replans}) reached — finalizing with current results",
                     color="yellow",
                 )
@@ -993,7 +931,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         # Plan-and-Execute path: use StepExecutor for isolated execution
         if getattr(self.agent, "planning_enabled", False):
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Execute] Step {current.step_number}: "
                         f"{current.description[:60]}..."
@@ -1028,7 +966,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
             if self.agent.verbose:
                 status = "success" if result.success else "failed"
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Execute] Step {current.step_number} {status} "
                         f"({result.execution_time:.1f}s, "
@@ -1130,44 +1068,47 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         # Process results: store on todos and log, then observe each.
         # asyncio.gather preserves input order, so zip gives us the exact
         # todo ↔ result (or exception) mapping.
-        step_results: list[tuple[TodoItem, object]] = []
+        step_results: list[tuple[TodoItem, StepResult]] = []
         for todo, item in zip(ready, gathered, strict=True):
-            if isinstance(item, Exception):
+            if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
                 self.state.todos.mark_failed(todo.step_number, result=error_msg)
                 if self.agent.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content=f"Todo {todo.step_number} failed: {error_msg}",
                         color="red",
                     )
             else:
                 _returned_todo, result = item
-                todo.result = result.result
+                step_result = cast(StepResult, result)
+                todo.result = step_result.result
 
                 self.state.execution_log.append(
                     {
                         "type": "step_execution",
                         "step_number": todo.step_number,
-                        "success": result.success,
-                        "result_preview": result.result[:200] if result.result else "",
-                        "error": result.error,
-                        "tool_calls": result.tool_calls_made,
-                        "execution_time": result.execution_time,
+                        "success": step_result.success,
+                        "result_preview": step_result.result[:200]
+                        if step_result.result
+                        else "",
+                        "error": step_result.error,
+                        "tool_calls": step_result.tool_calls_made,
+                        "execution_time": step_result.execution_time,
                     }
                 )
 
                 if self.agent.verbose:
-                    status = "success" if result.success else "failed"
-                    self._printer.print(
+                    status = "success" if step_result.success else "failed"
+                    PRINTER.print(
                         content=(
                             f"[Execute] Step {todo.step_number} {status} "
-                            f"({result.execution_time:.1f}s, "
-                            f"{len(result.tool_calls_made)} tool calls)"
+                            f"({step_result.execution_time:.1f}s, "
+                            f"{len(step_result.tool_calls_made)} tool calls)"
                         ),
-                        color="green" if result.success else "red",
+                        color="green" if step_result.success else "red",
                     )
-                step_results.append((todo, result))
+                step_results.append((todo, step_result))
 
         # Observe each completed step sequentially (observation updates shared state)
         effort = self._get_reasoning_effort()
@@ -1206,7 +1147,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 self.state.todos.mark_failed(todo.step_number, result=todo.result)
 
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=(
                         f"[Observe] Step {todo.step_number} "
                         f"(effort={effort}): "
@@ -1257,8 +1198,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """Force agent to provide final answer when max iterations exceeded."""
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
-            printer=self._printer,
-            i18n=self._i18n,
+            printer=PRINTER,
             messages=list(self.state.messages),
             llm=self.llm,
             callbacks=self.callbacks,
@@ -1286,7 +1226,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,
-                printer=self._printer,
+                printer=PRINTER,
                 from_task=self.task,
                 from_agent=self.agent,
                 response_model=self.response_model,
@@ -1336,7 +1276,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 return "context_error"
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
 
     @router("continue_reasoning_native")
@@ -1372,7 +1312,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 llm=self.llm,
                 messages=list(self.state.messages),
                 callbacks=self.callbacks,
-                printer=self._printer,
+                printer=PRINTER,
                 tools=self._openai_tools,
                 available_functions=None,
                 from_task=self.task,
@@ -1427,12 +1367,12 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 return "context_error"
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
 
     def _route_finish_with_todos(
-        self, default_route: str
-    ) -> Literal["native_finished", "agent_finished", "todo_satisfied"]:
+        self, default_route: _RouteT
+    ) -> _RouteT | Literal["todo_satisfied"]:
         """Helper to route finish events, checking for pending todos first.
 
         If there are pending todos, route to todo_satisfied instead of the
@@ -1448,7 +1388,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             current_todo = self.state.todos.current_todo
             if current_todo:
                 return "todo_satisfied"
-        return default_route  # type: ignore[return-value]
+        return default_route
 
     @router(call_llm_and_parse)
     def route_by_answer_type(
@@ -1485,7 +1425,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 agent_action=action,
                 fingerprint_context=fingerprint_context,
                 tools=self.tools,
-                i18n=self._i18n,
                 agent_key=self.agent.key if self.agent else None,
                 agent_role=self.agent.role if self.agent else None,
                 tools_handler=self.tools_handler,
@@ -1496,9 +1435,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             )
         except Exception as e:
             if self.agent and self.agent.verbose:
-                self._printer.print(
-                    content=f"Error in tool execution: {e}", color="red"
-                )
+                PRINTER.print(content=f"Error in tool execution: {e}", color="red")
             if self.task:
                 self.task.increment_tools_errors()
 
@@ -1507,7 +1444,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             action.result = str(e)
             self._append_message_to_state(action.text)
 
-            reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+            reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
             reasoning_message: LLMMessage = {
                 "role": "user",
                 "content": reasoning_prompt,
@@ -1528,7 +1465,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             self.state.is_finished = True
             return "tool_result_is_final"
 
-        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+        reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
         reasoning_message_post: LLMMessage = {
             "role": "user",
             "content": reasoning_prompt,
@@ -1652,7 +1589,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 # Log the tool execution
                 if self.agent and self.agent.verbose:
                     cache_info = " (from cache)" if from_cache else ""
-                    self._printer.print(
+                    PRINTER.print(
                         content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
                         color="green",
                     )
@@ -1690,7 +1627,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             # Log the tool execution
             if self.agent and self.agent.verbose:
                 cache_info = " (from cache)" if from_cache else ""
-                self._printer.print(
+                PRINTER.print(
                     content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
                     color="green",
                 )
@@ -1840,7 +1777,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -1854,7 +1791,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                     break
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in before_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -1914,7 +1851,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
-            tool=structured_tool,  # type: ignore[arg-type]
+            tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
@@ -1929,7 +1866,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                     after_hook_context.tool_result = result
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in after_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -1991,8 +1928,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
     @listen("initialized")
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
-        if self._flow_initialized:
-            self._discard_or_listener(FlowMethodName("continue_iteration"))
+        self._discard_or_listener(FlowMethodName("continue_iteration"))
         return "check_iteration"
 
     @router(or_(initialize_reasoning, continue_iteration))
@@ -2063,7 +1999,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         elif not self.state.current_answer and self.state.messages:
             # For native tools, results are in the message history as 'tool' roles
             # We take the content of the most recent tool results
-            tool_results = []
+            tool_results: list[str] = []
             for msg in reversed(self.state.messages):
                 if msg.get("role") == "tool":
                     tool_results.insert(0, str(msg.get("content", "")))
@@ -2088,7 +2024,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
-            self._printer.print(
+            PRINTER.print(
                 content=f"✓ Todo {step_number} completed ({completed}/{total})",
                 color="green",
             )
@@ -2155,7 +2091,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             self._finalize_called = True
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content=f"[Finalize] todos_count={len(self.state.todos.items)}, todos_with_results={sum(1 for t in self.state.todos.items if t.result)}",
                 color="magenta",
             )
@@ -2280,10 +2216,10 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         # Build synthesis prompt
         role = self.agent.role if self.agent else "Assistant"
 
-        system_prompt = self._i18n.retrieve(
+        system_prompt = I18N_DEFAULT.retrieve(
             "planning", "synthesis_system_prompt"
         ).format(role=role)
-        user_prompt = self._i18n.retrieve("planning", "synthesis_user_prompt").format(
+        user_prompt = I18N_DEFAULT.retrieve("planning", "synthesis_user_prompt").format(
             task_description=task_description,
             combined_steps=combined_steps,
         )
@@ -2318,7 +2254,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         except Exception as e:
             if self.agent and self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Synthesis LLM call failed ({e}), falling back to concatenation",
                     color="yellow",
                 )
@@ -2403,7 +2339,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         self.state.last_replan_reason = reason
 
         if self.agent.verbose:
-            self._printer.print(
+            PRINTER.print(
                 content=f"Triggering replan (attempt {self.state.replan_count}): {reason}",
                 color="yellow",
             )
@@ -2463,7 +2399,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
                 self.state.todos.replace_pending_todos(new_todos)
 
                 if self.agent.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content=f"Replan: {len(new_todos)} new steps (completed history preserved)",
                         color="green",
                     )
@@ -2530,7 +2466,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             self.task.description if self.task else getattr(self, "_kickoff_input", "")
         )
 
-        enhancement = self._i18n.retrieve(
+        enhancement = I18N_DEFAULT.retrieve(
             "planning", "replan_enhancement_prompt"
         ).format(previous_context=previous_context)
 
@@ -2547,7 +2483,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
 
         if self.state.replan_count >= max_replans:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Max replans ({max_replans}) reached — finalizing with current results",
                     color="yellow",
                 )
@@ -2573,7 +2509,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             messages=list(self.state.messages),
             iterations=self.state.iterations,
             log_error_after=self.log_error_after,
-            printer=self._printer,
+            printer=PRINTER,
             verbose=self.agent.verbose,
         )
 
@@ -2589,11 +2525,10 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         """Recover from context length errors and retry."""
         handle_context_length(
             respect_context_window=self.respect_context_window,
-            printer=self._printer,
+            printer=PRINTER,
             messages=self.state.messages,
             llm=self.llm,
             callbacks=self.callbacks,
-            i18n=self._i18n,
             verbose=self.agent.verbose,
         )
 
@@ -2619,8 +2554,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         # Magic auto-async: if inside event loop, return coroutine for Flow to await
         if is_inside_event_loop():
             return self.invoke_async(inputs)
-
-        self._ensure_flow_initialized()
 
         with self._execution_lock:
             if self._is_executing:
@@ -2694,7 +2627,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
@@ -2712,8 +2645,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
-        self._ensure_flow_initialized()
-
         with self._execution_lock:
             if self._is_executing:
                 raise RuntimeError(
@@ -2787,7 +2718,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
@@ -2808,7 +2739,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
         Returns:
             Updated action or final answer.
         """
-        add_image_tool = self._i18n.tools("add_image")
+        add_image_tool = I18N_DEFAULT.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
@@ -2852,7 +2783,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             task.result()
         except Exception as e:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in async step_callback task: {e!s}",
                     color="red",
                 )
@@ -3003,7 +2934,7 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             Final answer after feedback.
         """
         provider = get_provider()
-        return provider.handle_feedback(formatted_answer, self)
+        return provider.handle_feedback(formatted_answer, cast("ExecutorContext", self))
 
     async def _ahandle_human_feedback(
         self, formatted_answer: AgentFinish
@@ -3017,7 +2948,9 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             Final answer after feedback.
         """
         provider = get_provider()
-        return await provider.handle_feedback_async(formatted_answer, self)
+        return await provider.handle_feedback_async(
+            formatted_answer, cast("AsyncExecutorContext", self)
+        )
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
@@ -3026,17 +2959,6 @@ class AgentExecutor(Flow[AgentExecutorState], CrewAgentExecutorMixin):
             True if in training mode.
         """
         return bool(self.crew and self.crew._train)
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _source_type: Any, _handler: GetCoreSchemaHandler
-    ) -> CoreSchema:
-        """Generate Pydantic core schema for Protocol compatibility.
-
-        Allows the executor to be used in Pydantic models without
-        requiring arbitrary_types_allowed=True.
-        """
-        return core_schema.any_schema()
 
 
 # Backward compatibility alias (deprecated)

@@ -3,25 +3,20 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
-import io
 import json
 import logging
 import os
-import sys
-import threading
 from typing import (
     TYPE_CHECKING,
     Any,
     Final,
     Literal,
-    TextIO,
     TypedDict,
     cast,
 )
 
 from dotenv import load_dotenv
-import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -37,7 +32,12 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms.base_llm import BaseLLM, get_current_call_id, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    get_current_call_id,
+    llm_call_context,
+)
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -62,29 +62,13 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from litellm.exceptions import ContextWindowExceededError
-    from litellm.litellm_core_utils.get_supported_openai_params import (
-        get_supported_openai_params,
-    )
-    from litellm.types.utils import (
-        ChatCompletionDeltaToolCall,
-        Choices,
-        Function,
-        ModelResponse,
-    )
-    from litellm.utils import supports_response_schema
-
-    from crewai.agent.core import Agent
-    from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
 try:
     import litellm
-    from litellm.exceptions import ContextWindowExceededError
-    from litellm.integrations.custom_logger import CustomLogger
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
@@ -99,87 +83,19 @@ try:
     LITELLM_AVAILABLE = True
 except ImportError:
     LITELLM_AVAILABLE = False
-    litellm = None  # type: ignore
-    Choices = None  # type: ignore
-    ContextWindowExceededError = Exception  # type: ignore
-    get_supported_openai_params = None  # type: ignore
-    ChatCompletionDeltaToolCall = None  # type: ignore
-    Function = None  # type: ignore
-    ModelResponse = None  # type: ignore
-    supports_response_schema = None  # type: ignore
-    CustomLogger = None  # type: ignore
+    litellm = None  # type: ignore[assignment]
+    Choices = None  # type: ignore[assignment, misc]
+    get_supported_openai_params = None  # type: ignore[assignment]
+    ChatCompletionDeltaToolCall = None  # type: ignore[assignment, misc]
+    Function = None  # type: ignore[assignment, misc]
+    ModelResponse = None  # type: ignore[assignment, misc]
+    supports_response_schema = None  # type: ignore[assignment]
 
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 if LITELLM_AVAILABLE:
     litellm.suppress_debug_info = True
-
-
-class FilteredStream(io.TextIOBase):
-    _lock = None
-
-    def __init__(self, original_stream: TextIO):
-        self._original_stream = original_stream
-        self._lock = threading.Lock()
-
-    def write(self, s: str) -> int:
-        if not self._lock:
-            self._lock = threading.Lock()
-
-        with self._lock:
-            lower_s = s.lower()
-
-            # Skip common noisy LiteLLM banners and any other lines that contain "litellm"
-            if (
-                "litellm.info:" in lower_s
-                or "Consider using a smaller input or implementing a text splitting strategy"
-                in lower_s
-            ):
-                return 0
-
-            return self._original_stream.write(s)
-
-    def flush(self) -> None:
-        if self._lock:
-            with self._lock:
-                return self._original_stream.flush()
-        return None
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access to the wrapped original stream.
-
-        This ensures compatibility with libraries (e.g., Rich) that rely on
-        attributes such as `encoding`, `isatty`, `buffer`, etc., which may not
-        be explicitly defined on this proxy class.
-        """
-        return getattr(self._original_stream, name)
-
-    # Delegate common properties/methods explicitly so they aren't shadowed by
-    # the TextIOBase defaults (e.g., .encoding returns None by default, which
-    # confuses Rich). These explicit pass-throughs ensure the wrapped Console
-    # still sees a fully-featured stream.
-    @property
-    def encoding(self) -> str | Any:  # type: ignore[override]
-        return getattr(self._original_stream, "encoding", "utf-8")
-
-    def isatty(self) -> bool:
-        return self._original_stream.isatty()
-
-    def fileno(self) -> int:
-        return self._original_stream.fileno()
-
-    def writable(self) -> bool:
-        return True
-
-
-# Apply the filtered stream globally so that any subsequent writes containing the filtered
-# keywords (e.g., "litellm") are hidden from terminal output. We guard against double
-# wrapping to ensure idempotency in environments where this module might be reloaded.
-if not isinstance(sys.stdout, FilteredStream):
-    sys.stdout = FilteredStream(sys.stdout)
-if not isinstance(sys.stderr, FilteredStream):
-    sys.stderr = FilteredStream(sys.stderr)
 
 
 MIN_CONTEXT: Final[int] = 1024
@@ -325,6 +241,14 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    # OpenAI-compatible providers
+    "openrouter",
+    "deepseek",
+    "ollama",
+    "ollama_chat",
+    "hosted_vllm",
+    "cerebras",
+    "dashscope",
 ]
 
 
@@ -349,7 +273,29 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
+    llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
+    timeout: float | int | None = None
+    top_p: float | None = None
+    n: int | None = None
+    max_completion_tokens: int | None = None
+    max_tokens: int | float | None = None
+    presence_penalty: float | None = None
+    frequency_penalty: float | None = None
+    logit_bias: dict[int, float] | None = None
+    response_format: JsonResponseFormat | type[BaseModel] | None = None
+    seed: int | None = None
+    logprobs: int | None = None
+    top_logprobs: int | None = None
+    api_base: str | None = None
+    api_version: str | None = None
+    callbacks: list[Any] | None = None
+    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    stream: bool = False
+    interceptor: Any = None
+    thinking: Any = None
+    context_window_size: int = 0
+    is_anthropic: bool = False
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
         """Factory method that routes to native SDK or falls back to LiteLLM.
@@ -384,6 +330,14 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                # OpenAI-compatible providers
+                "openrouter": "openrouter",
+                "deepseek": "deepseek",
+                "ollama": "ollama",
+                "ollama_chat": "ollama_chat",
+                "hosted_vllm": "hosted_vllm",
+                "cerebras": "cerebras",
+                "dashscope": "dashscope",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -436,10 +390,7 @@ class LLM(BaseLLM):
             logger.error(error_msg)
             raise ImportError(error_msg) from None
 
-        instance = object.__new__(cls)
-        super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
-        instance.is_litellm = True
-        return instance
+        return object.__new__(cls)
 
     @classmethod
     def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
@@ -482,6 +433,29 @@ class LLM(BaseLLM):
                 model_lower.startswith(prefix)
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
+
+        # OpenAI-compatible providers - most accept any model name, but some
+        # (DeepSeek, Dashscope) restrict to their own model prefixes
+        if provider == "deepseek":
+            return model_lower.startswith("deepseek")
+
+        if provider == "ollama" or provider == "ollama_chat":
+            # Ollama accepts any local model name
+            return True
+
+        if provider == "hosted_vllm":
+            # vLLM serves any model
+            return True
+
+        if provider == "cerebras":
+            return True
+
+        if provider == "dashscope":
+            return model_lower.startswith("qwen")
+
+        if provider == "openrouter":
+            # OpenRouter uses org/model format but accepts anything
+            return True
 
         return False
 
@@ -582,91 +556,42 @@ class LLM(BaseLLM):
 
             return BedrockCompletion
 
+        # OpenAI-compatible providers
+        openai_compatible_providers = {
+            "openrouter",
+            "deepseek",
+            "ollama",
+            "ollama_chat",
+            "hosted_vllm",
+            "cerebras",
+            "dashscope",
+        }
+        if provider in openai_compatible_providers:
+            from crewai.llms.providers.openai_compatible.completion import (
+                OpenAICompatibleCompletion,
+            )
+
+            return OpenAICompatibleCompletion
+
         return None
 
-    def __init__(
-        self,
-        model: str,
-        timeout: float | int | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        n: int | None = None,
-        stop: str | list[str] | None = None,
-        max_completion_tokens: int | None = None,
-        max_tokens: int | float | None = None,
-        presence_penalty: float | None = None,
-        frequency_penalty: float | None = None,
-        logit_bias: dict[int, float] | None = None,
-        response_format: type[BaseModel] | None = None,
-        seed: int | None = None,
-        logprobs: int | None = None,
-        top_logprobs: int | None = None,
-        base_url: str | None = None,
-        api_base: str | None = None,
-        api_version: str | None = None,
-        api_key: str | None = None,
-        callbacks: list[Any] | None = None,
-        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
-        prefer_upload: bool = False,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize LLM instance.
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_llm_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        model = data.get("model", "")
+        data["is_anthropic"] = cls._is_anthropic_model(model)
+        return data
 
-        Note: This __init__ method is only called for fallback instances.
-        Native provider instances handle their own initialization in their respective classes.
-        """
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            api_key=api_key,
-            base_url=base_url,
-            timeout=timeout,
-            **kwargs,
-        )
-        self.model = model
-        self.timeout = timeout
-        self.temperature = temperature
-        self.top_p = top_p
-        self.n = n
-        self.max_completion_tokens = max_completion_tokens
-        self.max_tokens = max_tokens
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.logit_bias = logit_bias
-        self.response_format = response_format
-        self.seed = seed
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.base_url = base_url
-        self.api_base = api_base
-        self.api_version = api_version
-        self.api_key = api_key
-        self.callbacks = callbacks
-        self.context_window_size = 0
-        self.reasoning_effort = reasoning_effort
-        self.prefer_upload = prefer_upload
-        self.additional_params = {
-            k: v for k, v in kwargs.items() if k not in ("is_litellm", "provider")
-        }
-        self.is_anthropic = self._is_anthropic_model(model)
-        self.stream = stream
-        self.interceptor = interceptor
-
-        litellm.drop_params = True
-
-        # Normalize self.stop to always be a list[str]
-        if stop is None:
-            self.stop: list[str] = []
-        elif isinstance(stop, str):
-            self.stop = [stop]
-        else:
-            self.stop = stop
-
-        self.set_callbacks(callbacks or [])
-        self.set_env_callbacks()
+    @model_validator(mode="after")
+    def _init_litellm(self) -> LLM:
+        self.is_litellm = True
+        if LITELLM_AVAILABLE:
+            litellm.drop_params = True
+            self.set_callbacks(self.callbacks or [])
+            self.set_env_callbacks()
+        return self
 
     @staticmethod
     def _is_anthropic_model(model: str) -> bool:
@@ -713,7 +638,7 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop or None,
+            "stop": (self.stop or None) if self.supports_stop_words() else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -741,7 +666,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
         """Handle a streaming response from the LLM.
@@ -976,21 +901,25 @@ class LLM(BaseLLM):
                     )
                     result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
+                    usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
                         response=structured_response,
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage_dict,
                     )
                     return structured_response
 
+                usage_dict = self._usage_to_dict(usage_info)
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage_dict,
                 )
                 return full_response
 
@@ -1000,21 +929,26 @@ class LLM(BaseLLM):
                 return tool_result
 
             # --- 10) Emit completion event and return response
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_dict,
             )
             return full_response
 
-        except ContextWindowExceededError as e:
-            # Catch context window errors from litellm and convert them to our own exception type.
-            # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
-            # decide whether to summarize the content or abort based on the respect_context_window flag.
-            raise LLMContextLengthExceededError(str(e)) from e
+        except LLMContextLengthExceededError:
+            # Re-raise our own context length error
+            raise
         except Exception as e:
+            # Check if this is a context window error and convert to our exception type
+            error_msg = str(e)
+            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+                raise LLMContextLengthExceededError(error_msg) from e
+
             logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {e!s}")
@@ -1024,6 +958,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
 
@@ -1044,7 +979,7 @@ class LLM(BaseLLM):
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_id: str | None = None,
     ) -> Any:
         for tool_call in tool_calls:
@@ -1133,7 +1068,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle a non-streaming response from the LLM.
@@ -1175,6 +1110,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=None,
             )
             return structured_response
 
@@ -1195,10 +1131,17 @@ class LLM(BaseLLM):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
-        except ContextWindowExceededError as e:
-            # Convert litellm's context window error to our own exception type
-            # for consistent handling in the rest of the codebase
-            raise LLMContextLengthExceededError(str(e)) from e
+        except LLMContextLengthExceededError:
+            # Re-raise our own context length error
+            raise
+        except Exception as e:
+            # Check if this is a context window error and convert to our exception type
+            error_msg = str(e)
+            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+                raise LLMContextLengthExceededError(error_msg) from e
+            raise
+
+        response_usage = self._usage_to_dict(getattr(response, "usage", None))
 
         # --- 2) Handle structured output response (when response_model is provided)
         if response_model is not None:
@@ -1211,6 +1154,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1242,6 +1186,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
 
@@ -1265,6 +1210,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1274,7 +1220,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle an async non-streaming response from the LLM.
@@ -1314,6 +1260,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=None,
             )
             return structured_response
 
@@ -1330,8 +1277,17 @@ class LLM(BaseLLM):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
-        except ContextWindowExceededError as e:
-            raise LLMContextLengthExceededError(str(e)) from e
+        except LLMContextLengthExceededError:
+            # Re-raise our own context length error
+            raise
+        except Exception as e:
+            # Check if this is a context window error and convert to our exception type
+            error_msg = str(e)
+            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+                raise LLMContextLengthExceededError(error_msg) from e
+            raise
+
+        response_usage = self._usage_to_dict(getattr(response, "usage", None))
 
         if response_model is not None:
             if isinstance(response, BaseModel):
@@ -1342,6 +1298,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1371,6 +1328,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
 
@@ -1393,6 +1351,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1402,7 +1361,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
         """Handle an async streaming response from the LLM.
@@ -1539,18 +1498,26 @@ class LLM(BaseLLM):
                     if result is not None:
                         return result
 
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("messages"),
+                usage=usage_dict,
             )
             return full_response
 
-        except ContextWindowExceededError as e:
-            raise LLMContextLengthExceededError(str(e)) from e
-        except Exception:
+        except LLMContextLengthExceededError:
+            # Re-raise our own context length error
+            raise
+        except Exception as e:
+            # Check if this is a context window error and convert to our exception type
+            error_msg = str(e)
+            if LLMContextLengthExceededError._is_context_limit_error(error_msg):
+                raise LLMContextLengthExceededError(error_msg) from e
+
             if chunk_count == 0:
                 raise
             if full_response:
@@ -1560,6 +1527,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("messages"),
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
             raise
@@ -1569,7 +1537,7 @@ class LLM(BaseLLM):
         tool_calls: list[Any],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> Any:
         """Handle a tool call from the LLM.
 
@@ -1665,7 +1633,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """High-level LLM call method.
@@ -1764,9 +1732,11 @@ class LLM(BaseLLM):
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:
-                    unsupported_stop = "Unsupported parameter" in str(
-                        e
-                    ) and "'stop'" in str(e)
+                    error_str = str(e)
+                    unsupported_stop = "'stop'" in error_str and (
+                        "Unsupported parameter" in error_str
+                        or "does not support parameters" in error_str
+                    )
 
                     if unsupported_stop:
                         if (
@@ -1813,7 +1783,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async high-level LLM call method.
@@ -1900,9 +1870,11 @@ class LLM(BaseLLM):
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:
-                    unsupported_stop = "Unsupported parameter" in str(
-                        e
-                    ) and "'stop'" in str(e)
+                    error_str = str(e)
+                    unsupported_stop = "'stop'" in error_str and (
+                        "Unsupported parameter" in error_str
+                        or "does not support parameters" in error_str
+                    )
 
                     if unsupported_stop:
                         if (
@@ -1942,13 +1914,27 @@ class LLM(BaseLLM):
                     )
                     raise
 
+    @staticmethod
+    def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        if usage is None:
+            return None
+        if isinstance(usage, dict):
+            return usage
+        if hasattr(usage, "model_dump"):
+            result: dict[str, Any] = usage.model_dump()
+            return result
+        if hasattr(usage, "__dict__"):
+            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        return None
+
     def _handle_emit_call_events(
         self,
         response: Any,
         call_type: LLMCallType,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -1958,6 +1944,7 @@ class LLM(BaseLLM):
             from_task: Optional task object
             from_agent: Optional agent object
             messages: Optional messages object
+            usage: Optional token usage data
         """
         crewai_event_bus.emit(
             self,
@@ -1969,6 +1956,7 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                usage=usage,
             ),
         )
 
@@ -1984,7 +1972,16 @@ class LLM(BaseLLM):
         Returns:
             Messages with files formatted into content blocks.
         """
-        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+        if not HAS_CREWAI_FILES:
+            return messages
+
+        if not self.supports_multimodal():
+            if any(msg.get("files") for msg in messages):
+                raise ValueError(
+                    f"Model '{self.model}' does not support multimodal input, "
+                    "but files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the file inputs."
+                )
             return messages
 
         provider = getattr(self, "provider", None) or self.model
@@ -2026,7 +2023,16 @@ class LLM(BaseLLM):
         Returns:
             Messages with files formatted into content blocks.
         """
-        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+        if not HAS_CREWAI_FILES:
+            return messages
+
+        if not self.supports_multimodal():
+            if any(msg.get("files") for msg in messages):
+                raise ValueError(
+                    f"Model '{self.model}' does not support multimodal input, "
+                    "but files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the file inputs."
+                )
             return messages
 
         provider = getattr(self, "provider", None) or self.model
@@ -2139,7 +2145,15 @@ class LLM(BaseLLM):
           - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
           - "gemini/gemini-1.5-pro" yields "gemini"
           - If no slash is present, "openai" is assumed.
+
+        Note: This validation only applies to the litellm fallback path.
+        Native providers have their own validation.
         """
+        if not LITELLM_AVAILABLE or supports_response_schema is None:
+            # When litellm is not available, skip validation
+            # (this path should only be reached for litellm fallback models)
+            return
+
         provider = self._get_custom_llm_provider()
         if self.response_format is not None and not supports_response_schema(
             model=self.model,
@@ -2151,6 +2165,16 @@ class LLM(BaseLLM):
             )
 
     def supports_function_calling(self) -> bool:
+        """Check if the model supports function calling.
+
+        Note: This method is only used by the litellm fallback path.
+        Native providers override this method with their own implementation.
+        """
+        if not LITELLM_AVAILABLE:
+            # When litellm is not available, assume function calling is supported
+            # (all modern models support it)
+            return True
+
         try:
             provider = self._get_custom_llm_provider()
             return litellm.utils.supports_function_calling(
@@ -2158,15 +2182,28 @@ class LLM(BaseLLM):
             )
         except Exception as e:
             logging.error(f"Failed to check function calling support: {e!s}")
-            return False
+            return True  # Default to True for modern models
 
     def supports_stop_words(self) -> bool:
+        """Check if the model supports stop words.
+
+        Note: This method is only used by the litellm fallback path.
+        Native providers override this method with their own implementation.
+        """
+        model_lower = self.model.lower() if self.model else ""
+        if "gpt-5" in model_lower:
+            return False
+
+        if not LITELLM_AVAILABLE or get_supported_openai_params is None:
+            # When litellm is not available, assume stop words are supported
+            return True
+
         try:
             params = get_supported_openai_params(model=self.model)
             return params is not None and "stop" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {e!s}")
-            return False
+            return True  # Default to True
 
     def get_context_window_size(self) -> int:
         """
@@ -2202,7 +2239,15 @@ class LLM(BaseLLM):
         """
         Attempt to keep a single set of callbacks in litellm by removing old
         duplicates and adding new ones.
+
+        Note: This only affects the litellm fallback path. Native providers
+        don't use litellm callbacks - they emit events via base_llm.py.
         """
+        if not LITELLM_AVAILABLE:
+            # When litellm is not available, callbacks are still stored
+            # but not registered with litellm globals
+            return
+
         with suppress_warnings():
             callback_types = [type(callback) for callback in callbacks]
             for callback in litellm.success_callback[:]:
@@ -2227,6 +2272,9 @@ class LLM(BaseLLM):
         If the environment variables are not set or are empty, the corresponding callback lists
         will be set to empty lists.
 
+        Note: This only affects the litellm fallback path. Native providers
+        don't use litellm callbacks - they emit events via base_llm.py.
+
         Examples:
             LITELLM_SUCCESS_CALLBACKS="langfuse,langsmith"
             LITELLM_FAILURE_CALLBACKS="langfuse"
@@ -2234,9 +2282,13 @@ class LLM(BaseLLM):
         This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
         `litellm.failure_callback` to ["langfuse"].
         """
+        if not LITELLM_AVAILABLE:
+            # When litellm is not available, env callbacks have no effect
+            return
+
         with suppress_warnings():
             success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
-            success_callbacks: list[str | Callable[..., Any] | CustomLogger] = []
+            success_callbacks: list[str | Callable[..., Any]] = []
             if success_callbacks_str:
                 success_callbacks = [
                     cb.strip() for cb in success_callbacks_str.split(",") if cb.strip()
@@ -2244,12 +2296,12 @@ class LLM(BaseLLM):
 
             failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
             if failure_callbacks_str:
-                failure_callbacks: list[str | Callable[..., Any] | CustomLogger] = [
+                failure_callbacks: list[str | Callable[..., Any]] = [
                     cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
                 ]
 
-                litellm.success_callback = success_callbacks
-                litellm.failure_callback = failure_callbacks
+                litellm.success_callback = success_callbacks  # type: ignore[assignment]
+                litellm.failure_callback = failure_callbacks  # type: ignore[assignment]
 
     def __copy__(self) -> LLM:
         """Create a shallow copy of the LLM instance."""
@@ -2313,7 +2365,7 @@ class LLM(BaseLLM):
             **filtered_params,
         )
 
-    def __deepcopy__(self, memo: dict[int, Any] | None) -> LLM:
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> LLM:
         """Create a deep copy of the LLM instance."""
         import copy
 
@@ -2392,15 +2444,51 @@ class LLM(BaseLLM):
             True if the model likely supports images.
         """
         vision_prefixes = (
+            # OpenAI — GPT-4 vision models
             "gpt-4o",
             "gpt-4-turbo",
             "gpt-4-vision",
             "gpt-4.1",
+            # OpenAI — GPT-5 family (all variants support multimodal)
+            "gpt-5",
+            # OpenAI — o-series reasoning models with vision
+            # o1, o3, o4, o4-mini support multimodal
+            # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
+            "o1",
+            "o3",
+            "o4-mini",
+            "o4",
+            # Anthropic — Claude 3+ models support vision
             "claude-3",
             "claude-4",
+            "claude-sonnet-4",
+            "claude-opus-4",
+            "claude-haiku-4",
+            # Google — all Gemini models support multimodal
             "gemini",
+            # xAI — Grok models support vision
+            "grok",
+            # Mistral — Pixtral vision model
+            "pixtral",
+            # Open-source vision models
+            "llava",
+            # Alibaba — Qwen vision-language models
+            "qwen-vl",
+            "qwen2-vl",
+            "qwen3-vl",
         )
+        # Text-only models that would otherwise match vision prefixes
+        text_only_models = ("o3-mini", "o1-mini", "o1-preview")
+
         model_lower = self.model.lower()
+
+        # Check exclusion first
+        if any(
+            model_lower.startswith(m) or f"/{m}" in model_lower
+            for m in text_only_models
+        ):
+            return False
+
         return any(
             model_lower.startswith(p) or f"/{p}" in model_lower for p in vision_prefixes
         )

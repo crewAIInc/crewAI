@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 import inspect
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from crewai.tools.base_tool import BaseTool, EnvVar
 from pydantic import BaseModel
@@ -115,7 +115,8 @@ class ToolSpecExtractor:
         default_value = field.default
         if default_value is PydanticUndefined or default_value is None:
             if field.default_factory:
-                return field.default_factory()
+                factory = cast(Callable[[], Any], field.default_factory)
+                return factory()
             return None
 
         return default_value
@@ -153,21 +154,19 @@ class ToolSpecExtractor:
 
         return default_value
 
+    # Dynamically computed from BaseTool so that any future fields or
+    # computed_fields added to BaseTool are automatically excluded from
+    # the generated spec — no hardcoded denylist to maintain.
+    # ``package_dependencies`` is not a BaseTool field but is extracted
+    # into its own top-level key, so it's also excluded from init_params.
+    _BASE_TOOL_FIELDS: set[str] = (
+        set(BaseTool.model_fields)
+        | set(BaseTool.model_computed_fields)
+        | {"package_dependencies"}
+    )
+
     @staticmethod
     def _extract_init_params(tool_class: type[BaseTool]) -> dict[str, Any]:
-        ignored_init_params = [
-            "name",
-            "description",
-            "env_vars",
-            "args_schema",
-            "description_updated",
-            "cache_function",
-            "result_as_answer",
-            "max_usage_count",
-            "current_usage_count",
-            "package_dependencies",
-        ]
-
         json_schema = tool_class.model_json_schema(
             schema_generator=SchemaGenerator, mode="serialization"
         )
@@ -175,8 +174,14 @@ class ToolSpecExtractor:
         json_schema["properties"] = {
             key: value
             for key, value in json_schema["properties"].items()
-            if key not in ignored_init_params
+            if key not in ToolSpecExtractor._BASE_TOOL_FIELDS
         }
+        if "required" in json_schema:
+            json_schema["required"] = [
+                key
+                for key in json_schema["required"]
+                if key not in ToolSpecExtractor._BASE_TOOL_FIELDS
+            ]
         return json_schema
 
     def save_to_json(self, output_path: str) -> None:

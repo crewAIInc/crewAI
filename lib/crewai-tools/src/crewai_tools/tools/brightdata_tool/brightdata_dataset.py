@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import os
 from typing import Any
@@ -13,7 +15,7 @@ class BrightDataConfig(BaseModel):
     DEFAULT_POLLING_INTERVAL: int = 1
 
     @classmethod
-    def from_env(cls):
+    def from_env(cls) -> BrightDataConfig:
         return cls(
             API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com"),
             DEFAULT_TIMEOUT=int(os.environ.get("BRIGHTDATA_DEFAULT_TIMEOUT", "600")),
@@ -26,12 +28,12 @@ class BrightDataConfig(BaseModel):
 class BrightDataDatasetToolException(Exception):  # noqa: N818
     """Exception raised for custom error in the application."""
 
-    def __init__(self, message, error_code):
+    def __init__(self, message: str, error_code: int) -> None:
         self.message = message
         super().__init__(message)
         self.error_code = error_code
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.message} (Error Code: {self.error_code})"
 
 
@@ -62,7 +64,7 @@ config = BrightDataConfig.from_env()
 BRIGHTDATA_API_URL = config.API_URL
 timeout = config.DEFAULT_TIMEOUT
 
-datasets = [
+datasets: list[dict[str, Any]] = [
     {
         "id": "amazon_product",
         "dataset_id": "gd_l7q7dkf244hwjntr0",
@@ -440,7 +442,7 @@ class BrightDataDatasetTool(BaseTool):
         self.zipcode = zipcode
         self.additional_params = additional_params
 
-    def filter_dataset_by_id(self, target_id):
+    def filter_dataset_by_id(self, target_id: str) -> list[dict[str, Any]]:
         return [dataset for dataset in datasets if dataset["id"] == target_id]
 
     async def get_dataset_data_async(

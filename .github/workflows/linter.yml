@@ -6,17 +6,27 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  changes:
+    name: Detect changes
     runs-on: ubuntu-latest
-    env:
-      TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          fetch-depth: 0
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
 
-      - name: Fetch Target Branch
-        run: git fetch origin $TARGET_BRANCH --depth=1
+  lint-run:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Restore global uv cache
         id: cache-restore
@@ -33,30 +43,18 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.4"
+          version: "0.11.3"
           python-version: "3.11"
           enable-cache: false
 
       - name: Install dependencies
         run: uv sync --all-groups --all-extras --no-install-project
 
-      - name: Get Changed Python Files
-        id: changed-files
-        run: |
-          merge_base=$(git merge-base origin/"$TARGET_BRANCH" HEAD)
-          changed_files=$(git diff --name-only --diff-filter=ACMRTUB "$merge_base" | grep '\.py$' || true)
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$changed_files" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Ruff check
+        run: uv run ruff check lib/
 
-      - name: Run Ruff on Changed Files
-        if: ${{ steps.changed-files.outputs.files != '' }}
-        run: |
-         echo "${{ steps.changed-files.outputs.files }}" \
-           | tr ' ' '\n' \
-           | grep -v 'src/crewai/cli/templates/' \
-           | grep -v '/tests/' \
-           | xargs -I{} uv run ruff check "{}"
+      - name: Ruff format
+        run: uv run ruff format --check lib/
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'
@@ -67,3 +65,23 @@ jobs:
             ~/.local/share/uv
             .venv
           key: uv-main-py3.11-${{ hashFiles('uv.lock') }}
+
+  # Summary job to provide single status for branch protection
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: [changes, lint-run]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, skipping lint"
+            exit 0
+          fi
+          if [ "${{ needs.lint-run.result }}" == "success" ]; then
+            echo "Lint passed"
+          else
+            echo "Lint failed"
+            exit 1
+          fi

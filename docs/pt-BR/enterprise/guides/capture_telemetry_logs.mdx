@@ -1,0 +1,39 @@
+---
+title: "Exportação OpenTelemetry"
+description: "Exporte traces e logs das suas implantações CrewAI AMP para seu próprio coletor OpenTelemetry"
+icon: "magnifying-glass-chart"
+mode: "wide"
+---
+
+O CrewAI AMP pode exportar **traces** e **logs** do OpenTelemetry das suas implantações diretamente para seu próprio coletor. Isso permite que você monitore o desempenho dos agentes, rastreie chamadas de LLM e depure problemas usando sua stack de observabilidade existente.
+
+Os dados de telemetria seguem as [convenções semânticas GenAI do OpenTelemetry](https://opentelemetry.io/docs/specs/semconv/gen-ai/) além de atributos adicionais específicos do CrewAI.
+
+## Pré-requisitos
+
+<CardGroup cols={2}>
+  <Card title="Conta CrewAI AMP" icon="users">
+    Sua organização deve ter uma conta CrewAI AMP ativa.
+  </Card>
+  <Card title="Coletor OpenTelemetry" icon="server">
+    Você precisa de um endpoint de coletor compatível com OpenTelemetry (por exemplo, seu próprio OTel Collector, Datadog, Grafana ou qualquer backend compatível com OTLP).
+  </Card>
+</CardGroup>
+
+## Configurando um coletor
+
+1. No CrewAI AMP, vá para **Settings** > **OpenTelemetry Collectors**.
+2. Clique em **Add Collector**.
+3. Selecione um tipo de integração — **OpenTelemetry Traces** ou **OpenTelemetry Logs**.
+4. Configure a conexão:
+   - **Endpoint** — O endpoint OTLP do seu coletor (por exemplo, `https://otel-collector.example.com:4317`).
+   - **Service Name** — Um nome para identificar este serviço na sua plataforma de observabilidade.
+   - **Custom Headers** *(opcional)* — Adicione headers de autenticação ou roteamento como pares chave-valor.
+   - **Certificate** *(opcional)* — Forneça um certificado TLS se o seu coletor exigir um.
+5. Clique em **Save**.
+
+<Frame>![Configuração do Coletor OpenTelemetry](/images/crewai-otel-collector-config.png)</Frame>
+
+<Tip>
+  Você pode adicionar múltiplos coletores — por exemplo, um para traces e outro para logs, ou enviar para diferentes backends para diferentes propósitos.
+</Tip>

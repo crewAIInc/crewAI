@@ -6,7 +6,7 @@ import httpx
 
 from crewai.cli.config import Settings
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 
 
 class PlusAPI:
@@ -73,6 +73,7 @@ class PlusAPI:
         description: str | None,
         encoded_file: str,
         available_exports: list[dict[str, Any]] | None = None,
+        tools_metadata: list[dict[str, Any]] | None = None,
     ) -> httpx.Response:
         params = {
             "handle": handle,
@@ -81,6 +82,9 @@ class PlusAPI:
             "file": encoded_file,
             "description": description,
             "available_exports": available_exports,
+            "tools_metadata": {"package": handle, "tools": tools_metadata}
+            if tools_metadata is not None
+            else None,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
@@ -192,6 +196,16 @@ class PlusAPI:
         return self._make_request(
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
+            json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )
+
+    def mark_ephemeral_trace_batch_as_failed(
+        self, trace_batch_id: str, error_message: str
+    ) -> httpx.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}",
             json={"status": "failed", "failure_reason": error_message},
             timeout=30,
         )

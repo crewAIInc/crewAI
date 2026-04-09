@@ -5,6 +5,8 @@ from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 import requests
 
+from crewai_tools.security.safe_path import validate_url
+
 
 class SerperScrapeWebsiteInput(BaseModel):
     """Input schema for SerperScrapeWebsite."""
@@ -42,6 +44,7 @@ class SerperScrapeWebsiteTool(BaseTool):
         Returns:
             Scraped website content as a string
         """
+        validate_url(url)
         try:
             # Serper API endpoint
             api_url = "https://scrape.serper.dev"
@@ -53,7 +56,7 @@ class SerperScrapeWebsiteTool(BaseTool):
             payload = json.dumps({"url": url, "includeMarkdown": include_markdown})
 
             # Set headers
-            headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
+            headers = {"X-API-KEY": api_key or "", "Content-Type": "application/json"}
 
             # Make the API request
             response = requests.post(
@@ -69,7 +72,7 @@ class SerperScrapeWebsiteTool(BaseTool):
 
                 # Extract the scraped content
                 if "text" in result:
-                    return result["text"]
+                    return str(result["text"])
                 return f"Successfully scraped {url}, but no text content found in response: {response.text}"
             return (
                 f"Error scraping {url}: HTTP {response.status_code} - {response.text}"

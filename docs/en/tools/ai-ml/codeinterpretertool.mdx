@@ -7,6 +7,10 @@ mode: "wide"
 
 # `CodeInterpreterTool`
 
+<Warning>
+  **Deprecated:** `CodeInterpreterTool` has been removed from `crewai-tools`. The `allow_code_execution` and `code_execution_mode` parameters on `Agent` are also deprecated. Use a dedicated sandbox service — [E2B](https://e2b.dev) or [Modal](https://modal.com) — for secure, isolated code execution.
+</Warning>
+
 ## Description
 
 The `CodeInterpreterTool` enables CrewAI agents to execute Python 3 code that they generate autonomously. This functionality is particularly valuable as it allows agents to create code, execute it, obtain the results, and utilize that information to inform subsequent decisions and actions.

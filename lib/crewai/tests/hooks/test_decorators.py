@@ -192,6 +192,38 @@ class TestToolHookDecorators:
         # Should still be 1 (hook didn't execute for read_file)
         assert len(execution_log) == 1
 
+    def test_before_tool_call_tool_filter_sanitizes_names(self):
+        """Tool filter should auto-sanitize names so users can pass BaseTool.name directly."""
+        execution_log = []
+
+        # User passes the human-readable tool name (e.g. BaseTool.name)
+        @before_tool_call(tools=["Delete File", "Execute Code"])
+        def filtered_hook(context):
+            execution_log.append(context.tool_name)
+            return None
+
+        hooks = get_before_tool_call_hooks()
+        assert len(hooks) == 1
+
+        mock_tool = Mock()
+        # Context uses the sanitized name (as set by the executor)
+        context = ToolCallHookContext(
+            tool_name="delete_file",
+            tool_input={},
+            tool=mock_tool,
+        )
+        hooks[0](context)
+        assert execution_log == ["delete_file"]
+
+        # Non-matching tool still filtered out
+        context2 = ToolCallHookContext(
+            tool_name="read_file",
+            tool_input={},
+            tool=mock_tool,
+        )
+        hooks[0](context2)
+        assert execution_log == ["delete_file"]
+
     def test_before_tool_call_with_combined_filters(self):
         """Test that combined tool and agent filters work."""
         execution_log = []
