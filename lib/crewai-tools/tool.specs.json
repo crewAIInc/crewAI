@@ -14051,7 +14051,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -14092,7 +14092,14 @@
             "type": "object"
           }
         },
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
+          "allow_dml": {
+            "default": false,
+            "description": "When False (default) only read statements are permitted. Set to True to allow INSERT/UPDATE/DELETE/DROP and other write operations.",
+            "title": "Allow DML",
+            "type": "boolean"
+          },
           "columns": {
             "additionalProperties": {
               "anyOf": [
