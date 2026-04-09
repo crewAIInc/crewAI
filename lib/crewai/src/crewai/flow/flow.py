@@ -113,7 +113,11 @@ from crewai.flow.utils import (
 )
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
-from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
+from crewai.state.checkpoint_config import (
+    CheckpointConfig,
+    _coerce_checkpoint,
+    apply_checkpoint,
+)
 
 
 if TYPE_CHECKING:
@@ -122,7 +126,6 @@ if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
-    from crewai.state.provider.core import BaseProvider
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
@@ -928,20 +931,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     ] = Field(default=None)
 
     @classmethod
-    def from_checkpoint(
-        cls, path: str, *, provider: BaseProvider | None = None
-    ) -> Flow:  # type: ignore[type-arg]
-        """Restore a Flow from a checkpoint file."""
+    def from_checkpoint(cls, config: CheckpointConfig) -> Flow:  # type: ignore[type-arg]
+        """Restore a Flow from a checkpoint.
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
+
+        Returns:
+            A Flow instance ready to resume.
+        """
         from crewai.context import apply_execution_context
         from crewai.events.event_bus import crewai_event_bus
-        from crewai.state.provider.json_provider import JsonProvider
         from crewai.state.runtime import RuntimeState
 
-        state = RuntimeState.from_checkpoint(
-            path,
-            provider=provider or JsonProvider(),
-            context={"from_checkpoint": True},
-        )
+        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
         crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if not isinstance(entity, Flow):
@@ -958,27 +962,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             instance.checkpoint_state = entity.checkpoint_state
             instance._restore_from_checkpoint()
             return instance
-        raise ValueError(f"No Flow found in checkpoint: {path}")
+        raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
 
     @classmethod
     def fork(
         cls,
-        path: str,
-        *,
+        config: CheckpointConfig,
         branch: str | None = None,
-        provider: BaseProvider | None = None,
     ) -> Flow:  # type: ignore[type-arg]
         """Fork a Flow from a checkpoint, creating a new execution branch.
 
         Args:
-            path: Path to a checkpoint file.
+            config: Checkpoint configuration with ``restore_from`` set.
             branch: Branch label for the fork. Auto-generated if not provided.
-            provider: Storage backend to read from. Defaults to auto-detect.
 
         Returns:
             A Flow instance on the new branch. Call kickoff() to run.
         """
-        flow = cls.from_checkpoint(path, provider=provider)
+        flow = cls.from_checkpoint(config)
         state = crewai_event_bus._runtime_state
         if state is None:
             raise RuntimeError(
@@ -1984,6 +1985,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution in a synchronous context.
 
@@ -1993,10 +1995,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Args:
             inputs: Optional dictionary containing input values and/or a state ID.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
 
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(inputs=inputs, input_files=input_files)
         get_env_context()
         if self.stream:
             result_holder: list[Any] = []
@@ -2053,6 +2060,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution asynchronously.
 
@@ -2064,10 +2072,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2326,17 +2339,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> Any | FlowStreamingOutput:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        return await self.kickoff_async(inputs, input_files)
+        return await self.kickoff_async(inputs, input_files, from_checkpoint)
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.

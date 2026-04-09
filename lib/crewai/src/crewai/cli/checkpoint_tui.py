@@ -353,8 +353,9 @@ async def _run_checkpoint_tui_async(location: str) -> None:
     click.echo(f"\nResuming from: {selected}\n")
 
     from crewai.crew import Crew
+    from crewai.state.checkpoint_config import CheckpointConfig
 
-    crew = Crew.from_checkpoint(selected)
+    crew = Crew.from_checkpoint(CheckpointConfig(restore_from=selected))
     result = await crew.akickoff()
     click.echo(f"\nResult: {getattr(result, 'raw', result)}")
 
