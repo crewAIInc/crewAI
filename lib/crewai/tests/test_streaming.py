@@ -861,6 +861,266 @@ class TestStreamingCancellation:
         assert not streaming.is_cancelled
 
 
+class TestStreamingRunIsolation:
+    """Tests for concurrent streaming run isolation (issue #5376).
+
+    The singleton event bus fans out events to all registered handlers.
+    Without run_id scoping, concurrent streaming runs receive each other's
+    chunks.  These tests verify that the run_id filtering prevents
+    cross-run chunk contamination.
+    """
+
+    def test_handler_ignores_events_from_different_run(self) -> None:
+        """A handler with run_id must reject events carrying a different run_id."""
+        import queue as _queue
+
+        from crewai.utilities.streaming import _create_stream_handler, TaskInfo
+
+        task_info: TaskInfo = {
+            "index": 0,
+            "name": "task-a",
+            "id": "tid-a",
+            "agent_role": "Agent",
+            "agent_id": "aid-a",
+        }
+        q: _queue.Queue[StreamChunk | None | Exception] = _queue.Queue()
+        handler = _create_stream_handler(task_info, q, run_id="run-A")
+
+        # Event from a *different* run – must be silently dropped.
+        foreign_event = LLMStreamChunkEvent(
+            chunk="foreign-chunk",
+            call_id="cid",
+            run_id="run-B",
+        )
+        handler(None, foreign_event)
+        assert q.empty(), "Handler must not enqueue events from a different run_id"
+
+        # Event from the *same* run – must be enqueued.
+        own_event = LLMStreamChunkEvent(
+            chunk="own-chunk",
+            call_id="cid",
+            run_id="run-A",
+        )
+        handler(None, own_event)
+        assert not q.empty(), "Handler must enqueue events with matching run_id"
+        item = q.get_nowait()
+        assert item.content == "own-chunk"
+
+    def test_concurrent_streaming_states_do_not_cross_contaminate(self) -> None:
+        """Two streaming states created concurrently must each receive only
+        their own events, even though both handlers are registered on the
+        same global event bus.
+        """
+        import threading
+
+        from crewai.utilities.streaming import (
+            create_streaming_state,
+            TaskInfo,
+            _unregister_handler,
+        )
+
+        task_a: TaskInfo = {
+            "index": 0,
+            "name": "task-a",
+            "id": "tid-a",
+            "agent_role": "Agent-A",
+            "agent_id": "aid-a",
+        }
+        task_b: TaskInfo = {
+            "index": 1,
+            "name": "task-b",
+            "id": "tid-b",
+            "agent_role": "Agent-B",
+            "agent_id": "aid-b",
+        }
+
+        state_a = create_streaming_state(task_a, [])
+        run_id_a = state_a.sync_queue  # we'll read from this queue
+
+        state_b = create_streaming_state(task_b, [])
+        run_id_b = state_b.sync_queue
+
+        # We need the run_ids that were generated.  They were set on the
+        # contextvar but we can infer them by emitting known events.
+        # Instead, peek at the handler closure – or simply emit tagged events
+        # directly and check which queue gets them.
+
+        # Emit event tagged for state_a's run.
+        # We need the run_id.  Retrieve it by inspecting the handler's closure.
+        import types
+
+        def _get_run_id_from_handler(handler: Any) -> str | None:
+            """Extract the run_id captured in the handler closure."""
+            fn = handler
+            if hasattr(fn, "__wrapped__"):
+                fn = fn.__wrapped__
+            for cell in (fn.__closure__ or []):
+                try:
+                    val = cell.cell_contents
+                    if isinstance(val, str) and len(val) == 36 and val.count("-") == 4:
+                        return val
+                except ValueError:
+                    continue
+            return None
+
+        rid_a = _get_run_id_from_handler(state_a.handler)
+        rid_b = _get_run_id_from_handler(state_b.handler)
+        assert rid_a is not None and rid_b is not None
+        assert rid_a != rid_b, "Each streaming state must have a unique run_id"
+
+        # Emit events for run A.
+        for i in range(3):
+            crewai_event_bus.emit(
+                self,
+                LLMStreamChunkEvent(
+                    chunk=f"A-{i}",
+                    call_id="cid-a",
+                    run_id=rid_a,
+                ),
+            )
+
+        # Emit events for run B.
+        for i in range(3):
+            crewai_event_bus.emit(
+                self,
+                LLMStreamChunkEvent(
+                    chunk=f"B-{i}",
+                    call_id="cid-b",
+                    run_id=rid_b,
+                ),
+            )
+
+        # Drain queues.
+        chunks_a = []
+        while not state_a.sync_queue.empty():
+            chunks_a.append(state_a.sync_queue.get_nowait())
+
+        chunks_b = []
+        while not state_b.sync_queue.empty():
+            chunks_b.append(state_b.sync_queue.get_nowait())
+
+        # Verify isolation.
+        contents_a = [c.content for c in chunks_a]
+        contents_b = [c.content for c in chunks_b]
+
+        assert contents_a == ["A-0", "A-1", "A-2"], (
+            f"State A must only contain its own chunks, got {contents_a}"
+        )
+        assert contents_b == ["B-0", "B-1", "B-2"], (
+            f"State B must only contain its own chunks, got {contents_b}"
+        )
+
+        # No cross-contamination.
+        for c in contents_a:
+            assert not c.startswith("B-"), f"Run A received run B chunk: {c}"
+        for c in contents_b:
+            assert not c.startswith("A-"), f"Run B received run A chunk: {c}"
+
+        # Cleanup.
+        _unregister_handler(state_a.handler)
+        _unregister_handler(state_b.handler)
+
+    def test_concurrent_threads_isolated(self) -> None:
+        """Simulate two concurrent streaming runs in separate threads and
+        verify that each collects only its own chunks.
+        """
+        import contextvars
+        import threading
+        import time
+
+        from crewai.utilities.streaming import (
+            create_streaming_state,
+            get_current_stream_run_id,
+            TaskInfo,
+            _unregister_handler,
+        )
+
+        results: dict[str, list[str]] = {"A": [], "B": []}
+        errors: list[Exception] = []
+
+        def run_streaming(label: str, task_info: TaskInfo) -> None:
+            try:
+                state = create_streaming_state(task_info, [])
+                run_id = get_current_stream_run_id()
+                assert run_id is not None
+
+                # Simulate LLM emitting chunks stamped with this run's id.
+                for i in range(5):
+                    crewai_event_bus.emit(
+                        None,
+                        LLMStreamChunkEvent(
+                            chunk=f"{label}-{i}",
+                            call_id=f"cid-{label}",
+                            run_id=run_id,
+                        ),
+                    )
+                    time.sleep(0.005)
+
+                # Drain the queue.
+                while not state.sync_queue.empty():
+                    item = state.sync_queue.get_nowait()
+                    results[label].append(item.content)
+
+                _unregister_handler(state.handler)
+            except Exception as exc:
+                errors.append(exc)
+
+        task_a: TaskInfo = {
+            "index": 0,
+            "name": "task-a",
+            "id": "tid-a",
+            "agent_role": "Agent-A",
+            "agent_id": "aid-a",
+        }
+        task_b: TaskInfo = {
+            "index": 1,
+            "name": "task-b",
+            "id": "tid-b",
+            "agent_role": "Agent-B",
+            "agent_id": "aid-b",
+        }
+
+        t_a = threading.Thread(target=run_streaming, args=("A", task_a))
+        t_b = threading.Thread(target=run_streaming, args=("B", task_b))
+
+        t_a.start()
+        t_b.start()
+        t_a.join(timeout=10)
+        t_b.join(timeout=10)
+
+        assert not errors, f"Threads raised errors: {errors}"
+
+        # Each thread must see only its own chunks.
+        for c in results["A"]:
+            assert c.startswith("A-"), f"Run A received foreign chunk: {c}"
+        for c in results["B"]:
+            assert c.startswith("B-"), f"Run B received foreign chunk: {c}"
+
+        assert len(results["A"]) == 5, (
+            f"Run A expected 5 chunks, got {len(results['A'])}: {results['A']}"
+        )
+        assert len(results["B"]) == 5, (
+            f"Run B expected 5 chunks, got {len(results['B'])}: {results['B']}"
+        )
+
+    def test_run_id_stamped_on_llm_stream_chunk_event(self) -> None:
+        """Verify that LLMStreamChunkEvent accepts and stores run_id."""
+        event = LLMStreamChunkEvent(
+            chunk="test",
+            call_id="cid",
+            run_id="my-run-id",
+        )
+        assert event.run_id == "my-run-id"
+
+    def test_run_id_defaults_to_none(self) -> None:
+        """Verify that run_id defaults to None when not provided."""
+        event = LLMStreamChunkEvent(
+            chunk="test",
+            call_id="cid",
+        )
+        assert event.run_id is None
+
+
 class TestStreamingImports:
     """Tests for correct imports of streaming types."""
 

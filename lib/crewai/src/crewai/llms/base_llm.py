@@ -36,6 +36,7 @@ from crewai.events.types.llm_events import (
     LLMStreamChunkEvent,
     LLMThinkingChunkEvent,
 )
+from crewai.utilities.streaming import get_current_stream_run_id
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
@@ -527,6 +528,7 @@ class BaseLLM(BaseModel, ABC):
                 call_type=call_type,
                 response_id=response_id,
                 call_id=get_current_call_id(),
+                run_id=get_current_stream_run_id(),
             ),
         )
 
