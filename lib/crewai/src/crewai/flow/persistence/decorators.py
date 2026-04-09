@@ -110,21 +110,12 @@ class PersistenceDecorator:
             try:
                 state_data = state._unwrap() if hasattr(state, "_unwrap") else state
                 flow_class_name = type(flow_instance).__name__
-                try:
-                    persistence_instance.save_state(
-                        flow_uuid=flow_uuid,
-                        method_name=method_name,
-                        state_data=state_data,
-                        flow_class=flow_class_name,
-                    )
-                except TypeError:
-                    # Fallback for custom persistence backends that
-                    # don't accept the flow_class parameter
-                    persistence_instance.save_state(
-                        flow_uuid=flow_uuid,
-                        method_name=method_name,
-                        state_data=state_data,
-                    )
+                persistence_instance.save_state(
+                    flow_uuid=flow_uuid,
+                    method_name=method_name,
+                    state_data=state_data,
+                    flow_class=flow_class_name,
+                )
             except Exception as e:
                 error_msg = LOG_MESSAGES["save_error"].format(method_name, str(e))
                 if verbose:

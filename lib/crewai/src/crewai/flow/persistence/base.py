@@ -46,7 +46,11 @@ class FlowPersistence(BaseModel, ABC):
 
     @abstractmethod
     def save_state(
-        self, flow_uuid: str, method_name: str, state_data: dict[str, Any] | BaseModel
+        self,
+        flow_uuid: str,
+        method_name: str,
+        state_data: dict[str, Any] | BaseModel,
+        flow_class: str | None = None,
     ) -> None:
         """Persist the flow state after method completion.
 
@@ -54,6 +58,7 @@ class FlowPersistence(BaseModel, ABC):
             flow_uuid: Unique identifier for the flow instance
             method_name: Name of the method that just completed
             state_data: Current state data (either dict or Pydantic model)
+            flow_class: Optional name of the flow class for auto-restore support
         """
 
     @abstractmethod
