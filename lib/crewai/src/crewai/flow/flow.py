@@ -929,13 +929,33 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     @classmethod
     def from_checkpoint(
-        cls, path: str, *, provider: BaseProvider | None = None
+        cls,
+        path: str | CheckpointConfig,
+        *,
+        provider: BaseProvider | None = None,
     ) -> Flow:  # type: ignore[type-arg]
-        """Restore a Flow from a checkpoint file."""
+        """Restore a Flow from a checkpoint file.
+
+        Args:
+            path: Path to a checkpoint file, or a CheckpointConfig whose
+                ``restore_from`` and ``provider`` fields are used.
+            provider: Storage backend to read from. Overrides the config's
+                provider if both are given. Defaults to auto-detect.
+
+        Returns:
+            A Flow instance ready to resume.
+        """
         from crewai.context import apply_execution_context
         from crewai.events.event_bus import crewai_event_bus
         from crewai.state.provider.json_provider import JsonProvider
         from crewai.state.runtime import RuntimeState
+
+        if isinstance(path, CheckpointConfig):
+            config = path
+            if config.restore_from is None:
+                raise ValueError("CheckpointConfig.restore_from must be set")
+            path = str(config.restore_from)
+            provider = provider or config.provider
 
         state = RuntimeState.from_checkpoint(
             path,
@@ -2002,7 +2022,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = type(self).from_checkpoint(str(from_checkpoint.restore_from))
+                restored = type(self).from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )
@@ -2084,7 +2104,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = type(self).from_checkpoint(str(from_checkpoint.restore_from))
+                restored = type(self).from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )

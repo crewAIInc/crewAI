@@ -366,13 +366,18 @@ class Crew(FlowTrackable, BaseModel):
 
     @classmethod
     def from_checkpoint(
-        cls, path: str, *, provider: BaseProvider | None = None
+        cls,
+        path: str | CheckpointConfig,
+        *,
+        provider: BaseProvider | None = None,
     ) -> Crew:
         """Restore a Crew from a checkpoint file, ready to resume via kickoff().
 
         Args:
-            path: Path to a checkpoint JSON file.
-            provider: Storage backend to read from. Defaults to JsonProvider.
+            path: Path to a checkpoint file, or a CheckpointConfig whose
+                ``restore_from`` and ``provider`` fields are used.
+            provider: Storage backend to read from. Overrides the config's
+                provider if both are given. Defaults to auto-detect.
 
         Returns:
             A Crew instance. Call kickoff() to resume from the last completed task.
@@ -382,6 +387,13 @@ class Crew(FlowTrackable, BaseModel):
         from crewai.state.provider.json_provider import JsonProvider
         from crewai.state.provider.utils import detect_provider
         from crewai.state.runtime import RuntimeState
+
+        if isinstance(path, CheckpointConfig):
+            config = path
+            if config.restore_from is None:
+                raise ValueError("CheckpointConfig.restore_from must be set")
+            path = str(config.restore_from)
+            provider = provider or config.provider
 
         if provider is None:
             provider = detect_provider(path)
@@ -898,7 +910,7 @@ class Crew(FlowTrackable, BaseModel):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = Crew.from_checkpoint(str(from_checkpoint.restore_from))
+                restored = Crew.from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )
@@ -1035,7 +1047,7 @@ class Crew(FlowTrackable, BaseModel):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = Crew.from_checkpoint(str(from_checkpoint.restore_from))
+                restored = Crew.from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )
@@ -1122,7 +1134,7 @@ class Crew(FlowTrackable, BaseModel):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = Crew.from_checkpoint(str(from_checkpoint.restore_from))
+                restored = Crew.from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )
