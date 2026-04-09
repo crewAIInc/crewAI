@@ -960,6 +960,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return instance
         raise ValueError(f"No Flow found in checkpoint: {path}")
 
+    @classmethod
+    def fork(
+        cls,
+        path: str,
+        *,
+        branch: str | None = None,
+        provider: BaseProvider | None = None,
+    ) -> Flow:  # type: ignore[type-arg]
+        """Fork a Flow from a checkpoint, creating a new execution branch.
+
+        Args:
+            path: Path to a checkpoint file.
+            branch: Branch label for the fork. Auto-generated if not provided.
+            provider: Storage backend to read from. Defaults to auto-detect.
+
+        Returns:
+            A Flow instance on the new branch. Call kickoff() to run.
+        """
+        flow = cls.from_checkpoint(path, provider=provider)
+        state = crewai_event_bus._runtime_state
+        if state is not None:
+            state.fork(branch)
+        return flow
+
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)
