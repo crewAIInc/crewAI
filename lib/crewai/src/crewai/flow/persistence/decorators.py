@@ -46,8 +46,7 @@ T = TypeVar("T")
 
 # Constants for log messages
 LOG_MESSAGES: Final[dict[str, str]] = {
-    "save_state": "Saving flow state for ID: {}",
-    "save_state_location": "Saving flow state for ID: {} (storage: {})",
+    "save_state": "Saving flow state for ID: {} (storage: {})",
     "save_error": "Failed to persist state for method {}: {}",
     "state_missing": "Flow instance has no state",
     "id_missing": "Flow state must have an 'id' field for persistence",
@@ -101,13 +100,6 @@ class PersistenceDecorator:
             if not flow_uuid:
                 raise ValueError("Flow state must have an 'id' field for persistence")
 
-            # Log state saving only if verbose is True
-            if verbose:
-                PRINTER.print(
-                    LOG_MESSAGES["save_state"].format(flow_uuid), color="cyan"
-                )
-                logger.info(LOG_MESSAGES["save_state"].format(flow_uuid))
-
             try:
                 state_data = state._unwrap() if hasattr(state, "_unwrap") else state
                 persistence_instance.save_state(
@@ -126,14 +118,10 @@ class PersistenceDecorator:
             storage_location = getattr(
                 persistence_instance, "db_path", type(persistence_instance).__name__
             )
+            msg = LOG_MESSAGES["save_state"].format(flow_uuid, storage_location)
             if verbose:
-                msg = LOG_MESSAGES["save_state_location"].format(
-                    flow_uuid, storage_location
-                )
                 PRINTER.print(msg, color="cyan")
-            logger.info(
-                LOG_MESSAGES["save_state_location"].format(flow_uuid, storage_location)
-            )
+            logger.info(msg)
         except AttributeError as e:
             error_msg = LOG_MESSAGES["state_missing"]
             if verbose:
