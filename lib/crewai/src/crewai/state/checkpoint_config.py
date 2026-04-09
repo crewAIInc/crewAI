@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -200,6 +201,12 @@ class CheckpointConfig(BaseModel):
         default=None,
         description="Maximum checkpoints to keep. Oldest are pruned after "
         "each write. None means keep all.",
+    )
+    restore_from: Path | str | None = Field(
+        default=None,
+        description="Path or location of a checkpoint to restore from. "
+        "When passed via a kickoff method's from_checkpoint parameter, "
+        "the crew or flow resumes from this checkpoint.",
     )
 
     @model_validator(mode="after")

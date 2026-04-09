@@ -172,6 +172,14 @@ class TestCheckpointConfig:
         cfg = CheckpointConfig(on_events=["*"])
         assert cfg.trigger_all
 
+    def test_restore_from_field(self) -> None:
+        cfg = CheckpointConfig(restore_from="/path/to/checkpoint.json")
+        assert cfg.restore_from == "/path/to/checkpoint.json"
+
+    def test_restore_from_default_none(self) -> None:
+        cfg = CheckpointConfig()
+        assert cfg.restore_from is None
+
     def test_trigger_events(self) -> None:
         cfg = CheckpointConfig(
             on_events=["task_completed", "crew_kickoff_completed"]
@@ -480,3 +488,51 @@ class TestSqliteProviderFork:
         agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
         crew = Crew(agents=[agent], tasks=[], verbose=False)
         return RuntimeState(root=[crew])
+
+
+# ---------- Kickoff from_checkpoint parameter ----------
+
+
+class TestKickoffFromCheckpoint:
+    def test_crew_kickoff_delegates_to_from_checkpoint(self) -> None:
+        mock_restored = MagicMock(spec=Crew)
+        mock_restored.kickoff.return_value = "result"
+
+        cfg = CheckpointConfig(restore_from="/path/to/cp.json")
+        with patch.object(Crew, "from_checkpoint", return_value=mock_restored):
+            agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+            crew = Crew(agents=[agent], tasks=[], verbose=False)
+            result = crew.kickoff(inputs={"k": "v"}, from_checkpoint=cfg)
+
+        mock_restored.kickoff.assert_called_once_with(
+            inputs={"k": "v"}, input_files=None
+        )
+        assert mock_restored.checkpoint is cfg
+        assert result == "result"
+
+    def test_crew_kickoff_config_only_sets_checkpoint(self) -> None:
+        cfg = CheckpointConfig(on_events=["task_completed"])
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        crew = Crew(agents=[agent], tasks=[], verbose=False)
+        assert crew.checkpoint is None
+        with patch("crewai.crew.get_env_context"), \
+             patch("crewai.crew.prepare_kickoff", side_effect=RuntimeError("stop")):
+            with pytest.raises(RuntimeError, match="stop"):
+                crew.kickoff(from_checkpoint=cfg)
+        assert isinstance(crew.checkpoint, CheckpointConfig)
+        assert crew.checkpoint.on_events == ["task_completed"]
+
+    def test_flow_kickoff_delegates_to_from_checkpoint(self) -> None:
+        mock_restored = MagicMock(spec=Flow)
+        mock_restored.kickoff.return_value = "flow_result"
+
+        cfg = CheckpointConfig(restore_from="/path/to/flow_cp.json")
+        with patch.object(Flow, "from_checkpoint", return_value=mock_restored):
+            flow = Flow()
+            result = flow.kickoff(from_checkpoint=cfg)
+
+        mock_restored.kickoff.assert_called_once_with(
+            inputs=None, input_files=None
+        )
+        assert mock_restored.checkpoint is cfg
+        assert result == "flow_result"

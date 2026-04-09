@@ -882,16 +882,26 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Execute the crew's workflow.
 
         Args:
             inputs: Optional input dictionary for task interpolation.
             input_files: Optional dict of named file inputs for the crew.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the crew resumes from that checkpoint. Remaining
+                config fields enable checkpointing for the run.
 
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        if from_checkpoint is not None:
+            if from_checkpoint.restore_from is not None:
+                restored = Crew.from_checkpoint(str(from_checkpoint.restore_from))
+                restored.checkpoint = from_checkpoint
+                return restored.kickoff(inputs=inputs, input_files=input_files)
+            self.checkpoint = from_checkpoint
         get_env_context()
         if self.stream:
             enable_agent_streaming(self.agents)
@@ -1004,12 +1014,15 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Asynchronous kickoff method to start the crew execution.
 
         Args:
             inputs: Optional input dictionary for task interpolation.
             input_files: Optional dict of named file inputs for the crew.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the crew resumes from that checkpoint.
 
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
@@ -1018,6 +1031,14 @@ class Crew(FlowTrackable, BaseModel):
         to get stream chunks. After iteration completes, access the final result
         via .result.
         """
+        if from_checkpoint is not None:
+            if from_checkpoint.restore_from is not None:
+                restored = Crew.from_checkpoint(str(from_checkpoint.restore_from))
+                restored.checkpoint = from_checkpoint
+                return await restored.kickoff_async(
+                    inputs=inputs, input_files=input_files
+                )
+            self.checkpoint = from_checkpoint
         inputs = inputs or {}
 
         if self.stream:
@@ -1078,6 +1099,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Native async kickoff method using async task execution throughout.
 
@@ -1088,10 +1110,18 @@ class Crew(FlowTrackable, BaseModel):
         Args:
             inputs: Optional input dictionary for task interpolation.
             input_files: Optional dict of named file inputs for the crew.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the crew resumes from that checkpoint.
 
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        if from_checkpoint is not None:
+            if from_checkpoint.restore_from is not None:
+                restored = Crew.from_checkpoint(str(from_checkpoint.restore_from))
+                restored.checkpoint = from_checkpoint
+                return await restored.akickoff(inputs=inputs, input_files=input_files)
+            self.checkpoint = from_checkpoint
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext(use_async=True)
