@@ -208,6 +208,181 @@ def test_persist_decorator_verbose_logging(tmp_path, caplog):
     assert "Saving flow state" in caplog.text
 
 
+def test_class_level_persist_auto_restores_state(tmp_path):
+    """Test that class-level @persist automatically restores state on new instance.
+
+    This is the documented behavior from the PersistentCounterFlow example:
+    when @persist is applied at the class level, a new flow instance should
+    automatically load the most recent persisted state for that flow class.
+    """
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class CounterState(FlowState):
+        value: int = 0
+
+    @persist(persistence)
+    class PersistentCounterFlow(Flow[CounterState]):
+        @start()
+        def increment(self):
+            self.state.value += 1
+            return self.state.value
+
+        @listen(increment)
+        def double(self, value):
+            self.state.value = value * 2
+            return self.state.value
+
+    # First run: 0 -> increment to 1 -> double to 2
+    flow1 = PersistentCounterFlow()
+    result1 = flow1.kickoff()
+    assert result1 == 2
+    assert flow1.state.value == 2
+
+    # Second run: state auto-restored to 2 -> increment to 3 -> double to 6
+    flow2 = PersistentCounterFlow()
+    # State should be auto-restored before kickoff
+    assert flow2.state.value == 2
+    result2 = flow2.kickoff()
+    assert result2 == 6
+    assert flow2.state.value == 6
+
+    # Third run: state auto-restored to 6 -> increment to 7 -> double to 14
+    flow3 = PersistentCounterFlow()
+    assert flow3.state.value == 6
+    result3 = flow3.kickoff()
+    assert result3 == 14
+    assert flow3.state.value == 14
+
+
+def test_class_level_persist_auto_restores_dict_state(tmp_path):
+    """Test auto-restore with unstructured (dict) state."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    @persist(persistence)
+    class DictCounterFlow(Flow):
+        @start()
+        def count(self):
+            current = self.state.get("counter", 0)
+            self.state["counter"] = current + 1
+            return self.state["counter"]
+
+    # First run
+    flow1 = DictCounterFlow()
+    result1 = flow1.kickoff()
+    assert result1 == 1
+    assert flow1.state["counter"] == 1
+
+    # Second run: auto-restores state
+    flow2 = DictCounterFlow()
+    assert flow2.state["counter"] == 1
+    result2 = flow2.kickoff()
+    assert result2 == 2
+    assert flow2.state["counter"] == 2
+
+
+def test_class_level_persist_different_classes_dont_interfere(tmp_path):
+    """Test that different flow classes with @persist don't interfere."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class SharedState(FlowState):
+        value: int = 0
+
+    @persist(persistence)
+    class FlowA(Flow[SharedState]):
+        @start()
+        def step(self):
+            self.state.value += 10
+            return self.state.value
+
+    @persist(persistence)
+    class FlowB(Flow[SharedState]):
+        @start()
+        def step(self):
+            self.state.value += 100
+            return self.state.value
+
+    # Run FlowA
+    flow_a1 = FlowA()
+    flow_a1.kickoff()
+    assert flow_a1.state.value == 10
+
+    # Run FlowB
+    flow_b1 = FlowB()
+    flow_b1.kickoff()
+    assert flow_b1.state.value == 100
+
+    # New FlowA should restore FlowA's state (10), not FlowB's (100)
+    flow_a2 = FlowA()
+    assert flow_a2.state.value == 10
+
+    # New FlowB should restore FlowB's state (100), not FlowA's (10)
+    flow_b2 = FlowB()
+    assert flow_b2.state.value == 100
+
+
+def test_load_latest_by_class_returns_none_when_empty(tmp_path):
+    """Test that load_latest_by_class returns None for unknown classes."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    assert persistence.load_latest_by_class("NonExistentFlow") is None
+
+
+def test_save_state_stores_flow_class(tmp_path):
+    """Test that save_state stores the flow_class when provided."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    persistence.save_state(
+        flow_uuid="test-uuid",
+        method_name="test_method",
+        state_data={"id": "test-uuid", "value": 42},
+        flow_class="MyTestFlow",
+    )
+
+    # Should be retrievable by class name
+    loaded = persistence.load_latest_by_class("MyTestFlow")
+    assert loaded is not None
+    assert loaded["value"] == 42
+    assert loaded["id"] == "test-uuid"
+
+    # Should still be retrievable by UUID
+    loaded_by_uuid = persistence.load_state("test-uuid")
+    assert loaded_by_uuid is not None
+    assert loaded_by_uuid["value"] == 42
+
+
+def test_method_level_persist_does_not_auto_restore(tmp_path):
+    """Test that method-level @persist does NOT auto-restore state.
+
+    Only class-level @persist should trigger auto-restore. Method-level
+    @persist only saves state after method execution.
+    """
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class CounterState(FlowState):
+        value: int = 0
+
+    class MethodLevelFlow(Flow[CounterState]):
+        @start()
+        @persist(persistence)
+        def increment(self):
+            self.state.value += 1
+            return self.state.value
+
+    # First run
+    flow1 = MethodLevelFlow(persistence=persistence)
+    flow1.kickoff()
+    assert flow1.state.value == 1
+
+    # Second run: no auto-restore since @persist is method-level
+    flow2 = MethodLevelFlow(persistence=persistence)
+    assert flow2.state.value == 0  # Default, not restored
+
+
 def test_persistence_with_base_model(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)

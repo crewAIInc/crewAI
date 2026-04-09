@@ -83,15 +83,30 @@ class SQLiteFlowPersistence(FlowPersistence):
                 flow_uuid TEXT NOT NULL,
                 method_name TEXT NOT NULL,
                 timestamp DATETIME NOT NULL,
-                state_json TEXT NOT NULL
+                state_json TEXT NOT NULL,
+                flow_class TEXT
             )
             """
             )
+            # Migration: add flow_class column for existing databases
+            try:
+                conn.execute(
+                    "ALTER TABLE flow_states ADD COLUMN flow_class TEXT"
+                )
+            except sqlite3.OperationalError:
+                pass  # Column already exists
             # Add index for faster UUID lookups
             conn.execute(
                 """
             CREATE INDEX IF NOT EXISTS idx_flow_states_uuid
             ON flow_states(flow_uuid)
+            """
+            )
+            # Add index for faster flow class lookups
+            conn.execute(
+                """
+            CREATE INDEX IF NOT EXISTS idx_flow_states_class
+            ON flow_states(flow_class)
             """
             )
 
@@ -121,6 +136,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         flow_uuid: str,
         method_name: str,
         state_dict: dict[str, Any],
+        flow_class: str | None = None,
     ) -> None:
         """Execute the save-state INSERT without acquiring the lock.
 
@@ -129,6 +145,7 @@ class SQLiteFlowPersistence(FlowPersistence):
             flow_uuid: Unique identifier for the flow instance.
             method_name: Name of the method that just completed.
             state_dict: State data as a plain dict.
+            flow_class: Optional name of the flow class for auto-restore support.
         """
         conn.execute(
             """
@@ -136,14 +153,16 @@ class SQLiteFlowPersistence(FlowPersistence):
                 flow_uuid,
                 method_name,
                 timestamp,
-                state_json
-            ) VALUES (?, ?, ?, ?)
+                state_json,
+                flow_class
+            ) VALUES (?, ?, ?, ?, ?)
             """,
             (
                 flow_uuid,
                 method_name,
                 datetime.now(timezone.utc).isoformat(),
                 json.dumps(state_dict),
+                flow_class,
             ),
         )
 
@@ -163,6 +182,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         flow_uuid: str,
         method_name: str,
         state_data: dict[str, Any] | BaseModel,
+        flow_class: str | None = None,
     ) -> None:
         """Save the current flow state to SQLite.
 
@@ -170,6 +190,7 @@ class SQLiteFlowPersistence(FlowPersistence):
             flow_uuid: Unique identifier for the flow instance
             method_name: Name of the method that just completed
             state_data: Current state data (either dict or Pydantic model)
+            flow_class: Optional name of the flow class for auto-restore support
         """
         state_dict = self._to_state_dict(state_data)
 
@@ -177,7 +198,7 @@ class SQLiteFlowPersistence(FlowPersistence):
             store_lock(self._lock_name),
             sqlite3.connect(self.db_path, timeout=30) as conn,
         ):
-            self._save_state_sql(conn, flow_uuid, method_name, state_dict)
+            self._save_state_sql(conn, flow_uuid, method_name, state_dict, flow_class)
 
     def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
         """Load the most recent state for a given flow UUID.
@@ -198,6 +219,38 @@ class SQLiteFlowPersistence(FlowPersistence):
             LIMIT 1
             """,
                 (flow_uuid,),
+            )
+            row = cursor.fetchone()
+
+        if row:
+            result = json.loads(row[0])
+            return result if isinstance(result, dict) else None
+        return None
+
+    def load_latest_by_class(self, flow_class: str) -> dict[str, Any] | None:
+        """Load the most recent state for a given flow class name.
+
+        This enables automatic state restoration when @persist is applied at
+        the class level. The most recent state entry for the given flow class
+        is returned, allowing new flow instances to seamlessly continue from
+        where the previous run left off.
+
+        Args:
+            flow_class: The name of the flow class
+
+        Returns:
+            The most recent state as a dictionary, or None if no state exists
+        """
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
+            cursor = conn.execute(
+                """
+            SELECT state_json
+            FROM flow_states
+            WHERE flow_class = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+                (flow_class,),
             )
             row = cursor.fetchone()
 

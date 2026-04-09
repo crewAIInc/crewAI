@@ -109,11 +109,22 @@ class PersistenceDecorator:
 
             try:
                 state_data = state._unwrap() if hasattr(state, "_unwrap") else state
-                persistence_instance.save_state(
-                    flow_uuid=flow_uuid,
-                    method_name=method_name,
-                    state_data=state_data,
-                )
+                flow_class_name = type(flow_instance).__name__
+                try:
+                    persistence_instance.save_state(
+                        flow_uuid=flow_uuid,
+                        method_name=method_name,
+                        state_data=state_data,
+                        flow_class=flow_class_name,
+                    )
+                except TypeError:
+                    # Fallback for custom persistence backends that
+                    # don't accept the flow_class parameter
+                    persistence_instance.save_state(
+                        flow_uuid=flow_uuid,
+                        method_name=method_name,
+                        state_data=state_data,
+                    )
             except Exception as e:
                 error_msg = LOG_MESSAGES["save_error"].format(method_name, str(e))
                 if verbose:
@@ -177,6 +188,23 @@ def persist(
                 if "persistence" not in kwargs:
                     kwargs["persistence"] = actual_persistence
                 original_init(self, *args, **kwargs)
+
+                # Auto-restore the latest persisted state for this flow class
+                # so that a new instance seamlessly continues from the previous run.
+                if hasattr(actual_persistence, "load_latest_by_class"):
+                    flow_class_name = type(self).__name__
+                    stored_state = actual_persistence.load_latest_by_class(
+                        flow_class_name
+                    )
+                    if stored_state is not None:
+                        try:
+                            self._restore_state(stored_state)
+                        except Exception:
+                            logger.debug(
+                                "Could not auto-restore persisted state for %s",
+                                flow_class_name,
+                                exc_info=True,
+                            )
 
             target.__init__ = new_init  # type: ignore[misc]
 

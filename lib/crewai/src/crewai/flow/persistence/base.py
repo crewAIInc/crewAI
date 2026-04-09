@@ -67,6 +67,24 @@ class FlowPersistence(BaseModel, ABC):
             The most recent state as a dictionary, or None if no state exists
         """
 
+    def load_latest_by_class(self, flow_class: str) -> dict[str, Any] | None:
+        """Load the most recent state for a given flow class name.
+
+        This method is used to auto-restore persisted state when the @persist
+        decorator is applied at the class level. When a new flow instance is
+        created, this method is called to find and restore the latest persisted
+        state for that flow class, enabling seamless state continuity across runs.
+
+        Override in subclasses to support automatic state restoration.
+
+        Args:
+            flow_class: The name of the flow class
+
+        Returns:
+            The most recent state as a dictionary, or None if no state exists
+        """
+        return None
+
     def save_pending_feedback(
         self,
         flow_uuid: str,
