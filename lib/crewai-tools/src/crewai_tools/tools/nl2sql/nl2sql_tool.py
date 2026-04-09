@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import logging
 import os
 import re
@@ -77,7 +78,7 @@ _CTE_WRITE_INDICATORS = {
 _AS_PAREN_RE = re.compile(r"\bAS\s*\(", re.IGNORECASE)
 
 
-def _iter_as_paren_matches(stmt: str):
+def _iter_as_paren_matches(stmt: str) -> Iterator[re.Match[str]]:
     """Yield regex matches for ``AS\\s*(`` outside of string literals."""
     # Build a set of character positions that are inside string literals.
     in_string: set[int] = set()
