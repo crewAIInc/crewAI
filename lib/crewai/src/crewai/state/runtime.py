@@ -162,7 +162,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if branch:
             self._branch = branch
         elif self._checkpoint_id:
-            self._branch = f"fork/{self._checkpoint_id[:8]}"
+            self._branch = f"fork/{self._checkpoint_id}"
         else:
             self._branch = f"fork/{uuid.uuid4().hex[:8]}"
 

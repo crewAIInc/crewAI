@@ -253,9 +253,9 @@ class TestRuntimeStateLineage:
 
     def test_fork_auto_branch(self) -> None:
         state = self._make_state()
-        state._checkpoint_id = "abc12345_deadbeef"
+        state._checkpoint_id = "20260409T120000_abc12345"
         state.fork()
-        assert state._branch == "fork/abc12345"
+        assert state._branch == "fork/20260409T120000_abc12345"
 
     def test_fork_no_checkpoint_id_unique(self) -> None:
         state = self._make_state()
