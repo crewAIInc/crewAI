@@ -10,6 +10,7 @@ via ``RuntimeState.model_rebuild()``.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+import uuid
 
 from pydantic import (
     ModelWrapValidatorHandler,
@@ -64,6 +65,9 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     root: list[Entity]
     _provider: BaseProvider = PrivateAttr(default_factory=JsonProvider)
     _event_record: EventRecord = PrivateAttr(default_factory=EventRecord)
+    _checkpoint_id: str | None = PrivateAttr(default=None)
+    _parent_id: str | None = PrivateAttr(default=None)
+    _branch: str = PrivateAttr(default="main")
 
     @property
     def event_record(self) -> EventRecord:
@@ -73,6 +77,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     @model_serializer(mode="plain")
     def _serialize(self) -> dict[str, Any]:
         return {
+            "parent_id": self._parent_id,
+            "branch": self._branch,
             "entities": [e.model_dump(mode="json") for e in self.root],
             "event_record": self._event_record.model_dump(),
         }
@@ -87,8 +93,23 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             state = handler(data["entities"])
             if record_data:
                 state._event_record = EventRecord.model_validate(record_data)
+            state._parent_id = data.get("parent_id")
+            state._branch = data.get("branch", "main")
             return state
         return handler(data)
+
+    def _chain_lineage(self, provider: BaseProvider, location: str) -> None:
+        """Update lineage fields after a successful checkpoint write.
+
+        Sets ``_checkpoint_id`` and ``_parent_id`` so the next write
+        records the correct parent in the lineage chain.
+
+        Args:
+            provider: The provider that performed the write.
+            location: The location string returned by the provider.
+        """
+        self._checkpoint_id = provider.extract_id(location)
+        self._parent_id = self._checkpoint_id
 
     def checkpoint(self, location: str) -> str:
         """Write a checkpoint.
@@ -101,7 +122,14 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             A location identifier for the saved checkpoint.
         """
         _prepare_entities(self.root)
-        return self._provider.checkpoint(self.model_dump_json(), location)
+        result = self._provider.checkpoint(
+            self.model_dump_json(),
+            location,
+            parent_id=self._parent_id,
+            branch=self._branch,
+        )
+        self._chain_lineage(self._provider, result)
+        return result
 
     async def acheckpoint(self, location: str) -> str:
         """Async version of :meth:`checkpoint`.
@@ -114,7 +142,29 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             A location identifier for the saved checkpoint.
         """
         _prepare_entities(self.root)
-        return await self._provider.acheckpoint(self.model_dump_json(), location)
+        result = await self._provider.acheckpoint(
+            self.model_dump_json(),
+            location,
+            parent_id=self._parent_id,
+            branch=self._branch,
+        )
+        self._chain_lineage(self._provider, result)
+        return result
+
+    def fork(self, branch: str | None = None) -> None:
+        """Mark this state as a fork for subsequent checkpoints.
+
+        Args:
+            branch: Branch label. Auto-generated from the current checkpoint
+                ID if not provided. Always unique — safe to call multiple
+                times without collisions.
+        """
+        if branch:
+            self._branch = branch
+        elif self._checkpoint_id:
+            self._branch = f"fork/{self._checkpoint_id}"
+        else:
+            self._branch = f"fork/{uuid.uuid4().hex[:8]}"
 
     @classmethod
     def from_checkpoint(
@@ -131,7 +181,11 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             A restored RuntimeState.
         """
         raw = provider.from_checkpoint(location)
-        return cls.model_validate_json(raw, **kwargs)
+        state = cls.model_validate_json(raw, **kwargs)
+        checkpoint_id = provider.extract_id(location)
+        state._checkpoint_id = checkpoint_id
+        state._parent_id = checkpoint_id
+        return state
 
     @classmethod
     async def afrom_checkpoint(
@@ -148,7 +202,11 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             A restored RuntimeState.
         """
         raw = await provider.afrom_checkpoint(location)
-        return cls.model_validate_json(raw, **kwargs)
+        state = cls.model_validate_json(raw, **kwargs)
+        checkpoint_id = provider.extract_id(location)
+        state._checkpoint_id = checkpoint_id
+        state._parent_id = checkpoint_id
+        return state
 
 
 def _prepare_entities(root: list[Entity]) -> None:

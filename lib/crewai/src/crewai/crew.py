@@ -400,6 +400,34 @@ class Crew(FlowTrackable, BaseModel):
                 return entity
         raise ValueError(f"No Crew found in checkpoint: {path}")
 
+    @classmethod
+    def fork(
+        cls,
+        path: str,
+        *,
+        branch: str | None = None,
+        provider: BaseProvider | None = None,
+    ) -> Crew:
+        """Fork a Crew from a checkpoint, creating a new execution branch.
+
+        Args:
+            path: Path to a checkpoint file.
+            branch: Branch label for the fork. Auto-generated if not provided.
+            provider: Storage backend to read from. Defaults to auto-detect.
+
+        Returns:
+            A Crew instance on the new branch. Call kickoff() to run.
+        """
+        crew = cls.from_checkpoint(path, provider=provider)
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            raise RuntimeError(
+                "Cannot fork: no runtime state on the event bus. "
+                "Ensure from_checkpoint() succeeded before calling fork()."
+            )
+        state.fork(branch)
+        return crew
+
     def _restore_runtime(self) -> None:
         """Re-create runtime objects after restoring from a checkpoint."""
         for agent in self.agents:

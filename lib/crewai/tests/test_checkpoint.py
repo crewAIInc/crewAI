@@ -1,8 +1,10 @@
-"""Tests for CheckpointConfig, checkpoint listener, and pruning."""
+"""Tests for CheckpointConfig, checkpoint listener, pruning, and forking."""
 
 from __future__ import annotations
 
+import json
 import os
+import sqlite3
 import tempfile
 import time
 from typing import Any
@@ -21,6 +23,8 @@ from crewai.state.checkpoint_listener import (
     _SENTINEL,
 )
 from crewai.state.provider.json_provider import JsonProvider
+from crewai.state.provider.sqlite_provider import SqliteProvider
+from crewai.state.runtime import RuntimeState
 from crewai.task import Task
 
 
@@ -116,35 +120,41 @@ class TestFindCheckpoint:
 class TestPrune:
     def test_prune_keeps_newest(self) -> None:
         with tempfile.TemporaryDirectory() as d:
+            branch_dir = os.path.join(d, "main")
+            os.makedirs(branch_dir)
             for i in range(5):
-                path = os.path.join(d, f"cp_{i}.json")
+                path = os.path.join(branch_dir, f"cp_{i}.json")
                 with open(path, "w") as f:
                     f.write("{}")
                 # Ensure distinct mtime
                 time.sleep(0.01)
 
-            JsonProvider().prune(d, max_keep=2)
-            remaining = os.listdir(d)
+            JsonProvider().prune(d, max_keep=2, branch="main")
+            remaining = os.listdir(branch_dir)
             assert len(remaining) == 2
             assert "cp_3.json" in remaining
             assert "cp_4.json" in remaining
 
     def test_prune_zero_removes_all(self) -> None:
         with tempfile.TemporaryDirectory() as d:
+            branch_dir = os.path.join(d, "main")
+            os.makedirs(branch_dir)
             for i in range(3):
-                with open(os.path.join(d, f"cp_{i}.json"), "w") as f:
+                with open(os.path.join(branch_dir, f"cp_{i}.json"), "w") as f:
                     f.write("{}")
 
-            JsonProvider().prune(d, max_keep=0)
-            assert os.listdir(d) == []
+            JsonProvider().prune(d, max_keep=0, branch="main")
+            assert os.listdir(branch_dir) == []
 
     def test_prune_more_than_existing(self) -> None:
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "cp.json"), "w") as f:
+            branch_dir = os.path.join(d, "main")
+            os.makedirs(branch_dir)
+            with open(os.path.join(branch_dir, "cp.json"), "w") as f:
                 f.write("{}")
 
-            JsonProvider().prune(d, max_keep=10)
-            assert len(os.listdir(d)) == 1
+            JsonProvider().prune(d, max_keep=10, branch="main")
+            assert len(os.listdir(branch_dir)) == 1
 
 
 # ---------- CheckpointConfig ----------
@@ -167,3 +177,273 @@ class TestCheckpointConfig:
             on_events=["task_completed", "crew_kickoff_completed"]
         )
         assert cfg.trigger_events == {"task_completed", "crew_kickoff_completed"}
+
+
+# ---------- RuntimeState lineage ----------
+
+
+class TestRuntimeStateLineage:
+    def _make_state(self) -> RuntimeState:
+        from crewai import Agent, Crew
+
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        crew = Crew(agents=[agent], tasks=[], verbose=False)
+        return RuntimeState(root=[crew])
+
+    def test_default_lineage_fields(self) -> None:
+        state = self._make_state()
+        assert state._checkpoint_id is None
+        assert state._parent_id is None
+        assert state._branch == "main"
+
+    def test_serialize_includes_lineage(self) -> None:
+        state = self._make_state()
+        state._parent_id = "parent456"
+        state._branch = "experiment"
+        dumped = json.loads(state.model_dump_json())
+        assert dumped["parent_id"] == "parent456"
+        assert dumped["branch"] == "experiment"
+        assert "checkpoint_id" not in dumped
+
+    def test_deserialize_restores_lineage(self) -> None:
+        state = self._make_state()
+        state._parent_id = "parent456"
+        state._branch = "experiment"
+        raw = state.model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+        assert restored._parent_id == "parent456"
+        assert restored._branch == "experiment"
+
+    def test_deserialize_defaults_missing_lineage(self) -> None:
+        state = self._make_state()
+        raw = state.model_dump_json()
+        data = json.loads(raw)
+        data.pop("parent_id", None)
+        data.pop("branch", None)
+        restored = RuntimeState.model_validate_json(
+            json.dumps(data), context={"from_checkpoint": True}
+        )
+        assert restored._parent_id is None
+        assert restored._branch == "main"
+
+    def test_from_checkpoint_sets_checkpoint_id(self) -> None:
+        """from_checkpoint sets _checkpoint_id from the location, not the blob."""
+        state = self._make_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            written_id = state._checkpoint_id
+
+            provider = JsonProvider()
+            restored = RuntimeState.from_checkpoint(
+                loc, provider, context={"from_checkpoint": True}
+            )
+            assert restored._checkpoint_id == written_id
+            assert restored._parent_id == written_id
+
+    def test_fork_sets_branch(self) -> None:
+        state = self._make_state()
+        state._checkpoint_id = "abc12345"
+        state._parent_id = "abc12345"
+        state.fork("my-experiment")
+        assert state._branch == "my-experiment"
+        assert state._parent_id == "abc12345"
+
+    def test_fork_auto_branch(self) -> None:
+        state = self._make_state()
+        state._checkpoint_id = "20260409T120000_abc12345"
+        state.fork()
+        assert state._branch == "fork/20260409T120000_abc12345"
+
+    def test_fork_no_checkpoint_id_unique(self) -> None:
+        state = self._make_state()
+        state.fork()
+        assert state._branch.startswith("fork/")
+        assert len(state._branch) == len("fork/") + 8
+        # Two forks without checkpoint_id produce different branches
+        first = state._branch
+        state.fork()
+        assert state._branch != first
+
+
+# ---------- JsonProvider forking ----------
+
+
+class TestJsonProviderFork:
+    def test_checkpoint_writes_to_branch_subdir(self) -> None:
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            path = provider.checkpoint("{}", d, branch="main")
+            assert "/main/" in path
+            assert path.endswith(".json")
+            assert os.path.isfile(path)
+
+    def test_checkpoint_fork_branch_subdir(self) -> None:
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            path = provider.checkpoint("{}", d, branch="fork/exp1")
+            assert "/fork/exp1/" in path
+            assert os.path.isfile(path)
+
+    def test_prune_branch_aware(self) -> None:
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            # Write 3 checkpoints on main, 2 on fork
+            for _ in range(3):
+                provider.checkpoint("{}", d, branch="main")
+                time.sleep(0.01)
+            for _ in range(2):
+                provider.checkpoint("{}", d, branch="fork/a")
+                time.sleep(0.01)
+
+            # Prune main to 1
+            provider.prune(d, max_keep=1, branch="main")
+
+            main_dir = os.path.join(d, "main")
+            fork_dir = os.path.join(d, "fork", "a")
+            assert len(os.listdir(main_dir)) == 1
+            assert len(os.listdir(fork_dir)) == 2  # untouched
+
+    def test_extract_id(self) -> None:
+        provider = JsonProvider()
+        assert provider.extract_id("/dir/main/20260409T120000_abc12345_p-none.json") == "20260409T120000_abc12345"
+        assert provider.extract_id("/dir/main/20260409T120000_abc12345_p-20260409T115900_def67890.json") == "20260409T120000_abc12345"
+
+    def test_branch_traversal_rejected(self) -> None:
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            with pytest.raises(ValueError, match="escapes checkpoint directory"):
+                provider.checkpoint("{}", d, branch="../../etc")
+            with pytest.raises(ValueError, match="escapes checkpoint directory"):
+                provider.prune(d, max_keep=1, branch="../../etc")
+
+    def test_filename_encodes_parent_id(self) -> None:
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            # First checkpoint — no parent
+            path1 = provider.checkpoint("{}", d, branch="main")
+            assert "_p-none.json" in path1
+
+            # Second checkpoint — with parent
+            id1 = provider.extract_id(path1)
+            path2 = provider.checkpoint("{}", d, parent_id=id1, branch="main")
+            assert f"_p-{id1}.json" in path2
+
+    def test_checkpoint_chaining(self) -> None:
+        """RuntimeState.checkpoint() chains parent_id after each write."""
+        state = self._make_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            state.checkpoint(d)
+            id1 = state._checkpoint_id
+            assert id1 is not None
+            assert state._parent_id == id1
+
+            loc2 = state.checkpoint(d)
+            id2 = state._checkpoint_id
+            assert id2 is not None
+            assert id2 != id1
+            assert state._parent_id == id2
+
+            # Verify the second checkpoint blob has parent_id == id1
+            with open(loc2) as f:
+                data2 = json.loads(f.read())
+            assert data2["parent_id"] == id1
+
+    @pytest.mark.asyncio
+    async def test_acheckpoint_chaining(self) -> None:
+        """Async checkpoint path chains lineage identically to sync."""
+        state = self._make_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            await state.acheckpoint(d)
+            id1 = state._checkpoint_id
+            assert id1 is not None
+
+            loc2 = await state.acheckpoint(d)
+            id2 = state._checkpoint_id
+            assert id2 != id1
+            assert state._parent_id == id2
+
+            with open(loc2) as f:
+                data2 = json.loads(f.read())
+            assert data2["parent_id"] == id1
+
+    def _make_state(self) -> RuntimeState:
+        from crewai import Agent, Crew
+
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        crew = Crew(agents=[agent], tasks=[], verbose=False)
+        return RuntimeState(root=[crew])
+
+
+# ---------- SqliteProvider forking ----------
+
+
+class TestSqliteProviderFork:
+    def test_checkpoint_stores_branch_and_parent(self) -> None:
+        provider = SqliteProvider()
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "cp.db")
+            loc = provider.checkpoint("{}", db, parent_id="p1", branch="exp")
+            cid = provider.extract_id(loc)
+
+            with sqlite3.connect(db) as conn:
+                row = conn.execute(
+                    "SELECT parent_id, branch FROM checkpoints WHERE id = ?",
+                    (cid,),
+                ).fetchone()
+            assert row == ("p1", "exp")
+
+    def test_prune_branch_aware(self) -> None:
+        provider = SqliteProvider()
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "cp.db")
+            for _ in range(3):
+                provider.checkpoint("{}", db, branch="main")
+            for _ in range(2):
+                provider.checkpoint("{}", db, branch="fork/a")
+
+            provider.prune(db, max_keep=1, branch="main")
+
+            with sqlite3.connect(db) as conn:
+                main_count = conn.execute(
+                    "SELECT COUNT(*) FROM checkpoints WHERE branch = 'main'"
+                ).fetchone()[0]
+                fork_count = conn.execute(
+                    "SELECT COUNT(*) FROM checkpoints WHERE branch = 'fork/a'"
+                ).fetchone()[0]
+            assert main_count == 1
+            assert fork_count == 2
+
+    def test_extract_id(self) -> None:
+        provider = SqliteProvider()
+        assert provider.extract_id("/path/to/db#abc123") == "abc123"
+
+    def test_checkpoint_chaining_sqlite(self) -> None:
+        state = self._make_state()
+        state._provider = SqliteProvider()
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "cp.db")
+            state.checkpoint(db)
+            id1 = state._checkpoint_id
+
+            state.checkpoint(db)
+            id2 = state._checkpoint_id
+            assert id2 != id1
+
+            # Second row should have parent_id == id1
+            with sqlite3.connect(db) as conn:
+                row = conn.execute(
+                    "SELECT parent_id FROM checkpoints WHERE id = ?", (id2,)
+                ).fetchone()
+            assert row[0] == id1
+
+    def _make_state(self) -> RuntimeState:
+        from crewai import Agent, Crew
+
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        crew = Crew(agents=[agent], tasks=[], verbose=False)
+        return RuntimeState(root=[crew])
