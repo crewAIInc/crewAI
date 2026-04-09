@@ -113,7 +113,11 @@ from crewai.flow.utils import (
 )
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
-from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
+from crewai.state.checkpoint_config import (
+    CheckpointConfig,
+    _coerce_checkpoint,
+    apply_checkpoint,
+)
 
 
 if TYPE_CHECKING:
@@ -1997,14 +2001,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
-        if from_checkpoint is not None:
-            if from_checkpoint.restore_from is not None:
-                restored = type(self).from_checkpoint(from_checkpoint)
-                restored.checkpoint = from_checkpoint.model_copy(
-                    update={"restore_from": None}
-                )
-                return restored.kickoff(inputs=inputs, input_files=input_files)
-            self.checkpoint = from_checkpoint
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(inputs=inputs, input_files=input_files)
         get_env_context()
         if self.stream:
             result_holder: list[Any] = []
@@ -2079,16 +2078,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        if from_checkpoint is not None:
-            if from_checkpoint.restore_from is not None:
-                restored = type(self).from_checkpoint(from_checkpoint)
-                restored.checkpoint = from_checkpoint.model_copy(
-                    update={"restore_from": None}
-                )
-                return await restored.kickoff_async(
-                    inputs=inputs, input_files=input_files
-                )
-            self.checkpoint = from_checkpoint
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {

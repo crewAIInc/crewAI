@@ -223,3 +223,25 @@ class CheckpointConfig(BaseModel):
     @property
     def trigger_events(self) -> set[str]:
         return set(self.on_events)
+
+
+def apply_checkpoint(instance: Any, from_checkpoint: CheckpointConfig | None) -> Any:
+    """Handle checkpoint config for a kickoff method.
+
+    If *from_checkpoint* carries a ``restore_from`` path, builds and returns a
+    restored instance (with ``restore_from`` cleared).  The caller should
+    dispatch into its own kickoff variant on that restored instance.
+
+    If *from_checkpoint* is present but has no ``restore_from``, sets
+    ``instance.checkpoint`` and returns ``None`` (proceed normally).
+
+    If *from_checkpoint* is ``None``, returns ``None`` immediately.
+    """
+    if from_checkpoint is None:
+        return None
+    if from_checkpoint.restore_from is not None:
+        restored = type(instance).from_checkpoint(from_checkpoint)
+        restored.checkpoint = from_checkpoint.model_copy(update={"restore_from": None})
+        return restored
+    instance.checkpoint = from_checkpoint
+    return None

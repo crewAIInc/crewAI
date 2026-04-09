@@ -103,7 +103,11 @@ from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
-from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
+from crewai.state.checkpoint_config import (
+    CheckpointConfig,
+    _coerce_checkpoint,
+    apply_checkpoint,
+)
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -881,14 +885,9 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
-        if from_checkpoint is not None:
-            if from_checkpoint.restore_from is not None:
-                restored = type(self).from_checkpoint(from_checkpoint)
-                restored.checkpoint = from_checkpoint.model_copy(
-                    update={"restore_from": None}
-                )
-                return restored.kickoff(inputs=inputs, input_files=input_files)
-            self.checkpoint = from_checkpoint
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
         get_env_context()
         if self.stream:
             enable_agent_streaming(self.agents)
@@ -1018,16 +1017,9 @@ class Crew(FlowTrackable, BaseModel):
         to get stream chunks. After iteration completes, access the final result
         via .result.
         """
-        if from_checkpoint is not None:
-            if from_checkpoint.restore_from is not None:
-                restored = type(self).from_checkpoint(from_checkpoint)
-                restored.checkpoint = from_checkpoint.model_copy(
-                    update={"restore_from": None}
-                )
-                return await restored.kickoff_async(
-                    inputs=inputs, input_files=input_files
-                )
-            self.checkpoint = from_checkpoint
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
         inputs = inputs or {}
 
         if self.stream:
@@ -1105,14 +1097,9 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
-        if from_checkpoint is not None:
-            if from_checkpoint.restore_from is not None:
-                restored = type(self).from_checkpoint(from_checkpoint)
-                restored.checkpoint = from_checkpoint.model_copy(
-                    update={"restore_from": None}
-                )
-                return await restored.akickoff(inputs=inputs, input_files=input_files)
-            self.checkpoint = from_checkpoint
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.akickoff(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext(use_async=True)
