@@ -406,7 +406,6 @@ class Crew(FlowTrackable, BaseModel):
     def fork(
         cls,
         config: CheckpointConfig,
-        *,
         branch: str | None = None,
     ) -> Crew:
         """Fork a Crew from a checkpoint, creating a new execution branch.

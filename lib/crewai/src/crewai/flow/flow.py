@@ -978,7 +978,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def fork(
         cls,
         config: CheckpointConfig,
-        *,
         branch: str | None = None,
     ) -> Flow:  # type: ignore[type-arg]
         """Fork a Flow from a checkpoint, creating a new execution branch.
