@@ -1,5 +1,6 @@
 """Test flow state persistence functionality."""
 
+import logging
 import os
 from typing import Dict, List
 
@@ -176,23 +177,6 @@ def test_persist_decorator_verbose_logging(tmp_path, caplog):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    # Test with verbose=False (default)
-    class QuietFlow(Flow[Dict[str, str]]):
-        initial_state = dict()
-
-        @start()
-        @persist(persistence)  # Default verbose=False
-        def init_step(self):
-            self.state["message"] = "Hello, World!"
-            self.state["id"] = "test-uuid-1"
-
-    flow = QuietFlow(persistence=persistence)
-    flow.kickoff()
-    assert "Saving flow state" not in caplog.text
-
-    # Clear the log
-    caplog.clear()
-
     # Test with verbose=True
     class VerboseFlow(Flow[Dict[str, str]]):
         initial_state = dict()
@@ -248,3 +232,92 @@ def test_persistence_with_base_model(tmp_path):
     assert message.type == "text"
     assert message.content == "Hello, World!"
     assert isinstance(flow.state._unwrap(), State)
+
+
+def test_sqlite_persistence_logs_db_path_on_init(tmp_path, caplog):
+    """Test that SQLiteFlowPersistence logs its db_path on initialization."""
+    caplog.set_level("INFO")
+
+    db_path = os.path.join(tmp_path, "my_custom.db")
+    SQLiteFlowPersistence(db_path)
+
+    assert "SQLiteFlowPersistence initialized with db_path" in caplog.text
+    assert db_path in caplog.text
+
+
+def test_sqlite_persistence_default_path_is_logged(caplog):
+    """Test that the default persistence path is logged so users can discover it."""
+    caplog.set_level("INFO")
+
+    persistence = SQLiteFlowPersistence()
+
+    assert "SQLiteFlowPersistence initialized with db_path" in caplog.text
+    assert "flow_states.db" in caplog.text
+    # Verify the db_path attribute is accessible for programmatic discovery
+    assert persistence.db_path.endswith("flow_states.db")
+
+
+def test_persist_logs_storage_location_on_save(tmp_path, caplog):
+    """Test that the persist decorator logs the storage location when state is saved."""
+    caplog.set_level("INFO")
+
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class LocationLogFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def init_step(self):
+            self.state.message = "test"
+
+    flow = LocationLogFlow(persistence=persistence)
+    flow.kickoff()
+
+    # Verify that the storage location (db_path) is logged after saving
+    assert "storage:" in caplog.text
+    assert db_path in caplog.text
+
+
+def test_persist_verbose_shows_storage_location_with_db_path(tmp_path, caplog):
+    """Test that verbose persist includes storage location with actual db_path."""
+    caplog.set_level("INFO")
+
+    db_path = os.path.join(tmp_path, "verbose_test.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class VerboseLocationFlow(Flow[Dict[str, str]]):
+        initial_state = dict()
+
+        @start()
+        @persist(persistence, verbose=True)
+        def init_step(self):
+            self.state["message"] = "Hello!"
+            self.state["id"] = "verbose-uuid"
+
+    flow = VerboseLocationFlow(persistence=persistence)
+    flow.kickoff()
+
+    # Verbose mode should log both save message and storage location
+    assert "Saving flow state for ID: verbose-uuid" in caplog.text
+    assert f"storage: {db_path}" in caplog.text
+
+
+def test_persist_class_level_logs_storage_location(tmp_path, caplog):
+    """Test that class-level @persist also logs the storage location."""
+    caplog.set_level("INFO")
+
+    db_path = os.path.join(tmp_path, "class_level_test.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    @persist(persistence)
+    class ClassLevelFlow(Flow[TestState]):
+        @start()
+        def init_step(self):
+            self.state.message = "class level"
+
+    flow = ClassLevelFlow(persistence=persistence)
+    flow.kickoff()
+
+    # Verify storage location is logged even with class-level decorator
+    assert "storage:" in caplog.text
+    assert db_path in caplog.text

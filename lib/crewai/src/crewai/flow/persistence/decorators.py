@@ -46,7 +46,8 @@ T = TypeVar("T")
 
 # Constants for log messages
 LOG_MESSAGES: Final[dict[str, str]] = {
-    "save_state": "Saving flow state to memory for ID: {}",
+    "save_state": "Saving flow state for ID: {}",
+    "save_state_location": "Saving flow state for ID: {} (storage: {})",
     "save_error": "Failed to persist state for method {}: {}",
     "state_missing": "Flow instance has no state",
     "id_missing": "Flow state must have an 'id' field for persistence",
@@ -120,6 +121,15 @@ class PersistenceDecorator:
                     PRINTER.print(error_msg, color="red")
                 logger.error(error_msg)
                 raise RuntimeError(f"State persistence failed: {e!s}") from e
+
+            # Log storage location so users can find their persisted data
+            storage_location = getattr(persistence_instance, "db_path", type(persistence_instance).__name__)
+            if verbose:
+                msg = LOG_MESSAGES["save_state_location"].format(flow_uuid, storage_location)
+                PRINTER.print(msg, color="cyan")
+            logger.info(
+                LOG_MESSAGES["save_state_location"].format(flow_uuid, storage_location)
+            )
         except AttributeError as e:
             error_msg = LOG_MESSAGES["state_missing"]
             if verbose:
