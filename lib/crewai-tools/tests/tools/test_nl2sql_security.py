@@ -634,3 +634,38 @@ class TestExplainAnalyzeCommit:
         ):
             tool.execute_sql("EXPLAIN ANALYZE DELETE FROM users")
             mock_session.commit.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# AS( inside string literals must not confuse CTE detection
+# ---------------------------------------------------------------------------
+
+
+class TestCTEStringLiteralAS:
+    def test_as_paren_inside_string_does_not_bypass(self):
+        """'AS (' inside a string literal must not be treated as a CTE body."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH cte AS (SELECT 'AS (' FROM t) DELETE FROM users"
+            )
+
+    def test_as_paren_inside_string_read_only_ok(self):
+        """Read-only CTE with 'AS (' in a string should be allowed."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query(
+            "WITH cte AS (SELECT 'AS (' FROM t) SELECT * FROM cte"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Unknown command after CTE should be blocked
+# ---------------------------------------------------------------------------
+
+
+class TestCTEUnknownCommand:
+    def test_unknown_command_after_cte_blocked(self):
+        """WITH cte AS (SELECT 1) FOOBAR should be blocked as unknown."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="unrecognised"):
+            tool._validate_query("WITH cte AS (SELECT 1) FOOBAR")

@@ -77,6 +77,25 @@ _CTE_WRITE_INDICATORS = {
 _AS_PAREN_RE = re.compile(r"\bAS\s*\(", re.IGNORECASE)
 
 
+def _iter_as_paren_matches(stmt: str):
+    """Yield regex matches for ``AS\\s*(`` outside of string literals."""
+    # Build a set of character positions that are inside string literals.
+    in_string: set[int] = set()
+    i = 0
+    while i < len(stmt):
+        if stmt[i] == "'":
+            start = i
+            end = _skip_string_literal(stmt, i)
+            in_string.update(range(start, end))
+            i = end
+        else:
+            i += 1
+
+    for m in _AS_PAREN_RE.finditer(stmt):
+        if m.start() not in in_string:
+            yield m
+
+
 def _detect_writable_cte(stmt: str) -> str | None:
     """Return the first write command inside a CTE body, or None.
 
@@ -84,9 +103,9 @@ def _detect_writable_cte(stmt: str) -> str | None:
     names like ``comment``), this walks through parenthesized CTE bodies and
     checks only the *first keyword after* an opening ``AS (`` for a write
     command.  Uses a regex to handle any whitespace (spaces, tabs, newlines)
-    between ``AS`` and ``(``.
+    between ``AS`` and ``(``.  Skips matches inside string literals.
     """
-    for m in _AS_PAREN_RE.finditer(stmt):
+    for m in _iter_as_paren_matches(stmt):
         body = stmt[m.end() :].lstrip()
         first_word = body.split()[0].upper().strip("()") if body.split() else ""
         if first_word in _CTE_WRITE_INDICATORS:
@@ -138,7 +157,7 @@ def _extract_main_query_after_cte(stmt: str) -> str | None:
     Handles parentheses inside string literals (e.g., ``SELECT '(' FROM t``).
     """
     last_cte_end = 0
-    for m in _AS_PAREN_RE.finditer(stmt):
+    for m in _iter_as_paren_matches(stmt):
         last_cte_end = _find_matching_close_paren(stmt, m.end())
 
     if last_cte_end > 0:
@@ -305,36 +324,12 @@ class NL2SQLTool(BaseTool):
         # query.  Resolve the real command so write operations are caught.
         # Handles both space-separated ("EXPLAIN ANALYZE DELETE …") and
         # parenthesized ("EXPLAIN (ANALYZE) DELETE …", "EXPLAIN (ANALYZE, VERBOSE) DELETE …").
+        # EXPLAIN ANALYZE actually executes the underlying query — resolve the
+        # real command so write operations are caught.
         if command == "EXPLAIN":
-            rest = stmt.strip()[len("EXPLAIN") :].strip()
-            analyze_found = False
-
-            if rest.startswith("("):
-                # Parenthesized options: EXPLAIN (ANALYZE, VERBOSE, …) <stmt>
-                close = rest.find(")")
-                if close != -1:
-                    options_str = rest[1:close].upper()
-                    analyze_found = any(
-                        opt.strip() in ("ANALYZE", "ANALYSE")
-                        for opt in options_str.split(",")
-                    )
-                    rest = rest[close + 1 :].strip()
-            else:
-                # Space-separated: EXPLAIN [ANALYZE] [VERBOSE] <stmt>
-                # Consume all known EXPLAIN options before extracting the real command.
-                _explain_opts = {"ANALYZE", "ANALYSE", "VERBOSE"}
-                while rest:
-                    first_opt = (
-                        rest.split()[0].upper().rstrip(";") if rest.split() else ""
-                    )
-                    if first_opt in ("ANALYZE", "ANALYSE"):
-                        analyze_found = True
-                    if first_opt not in _explain_opts:
-                        break
-                    rest = rest[len(first_opt) :].strip()
-
-            if analyze_found and rest:
-                command = rest.split()[0].upper().rstrip(";")
+            resolved = _resolve_explain_command(stmt)
+            if resolved:
+                command = resolved
 
         # WITH starts a CTE.  Read-only CTEs are fine; writable CTEs
         # (e.g. WITH d AS (DELETE …) SELECT …) must be blocked in read-only mode.
@@ -372,6 +367,13 @@ class NL2SQLTool(BaseTool):
                         "NL2SQLTool: executing '%s' after CTE because allow_dml=True.",
                         main_cmd,
                     )
+                elif main_cmd not in _READ_ONLY_COMMANDS:
+                    if not self.allow_dml:
+                        raise ValueError(
+                            f"NL2SQLTool blocked an unrecognised SQL command '{main_cmd}' "
+                            f"after a CTE. Only {sorted(_READ_ONLY_COMMANDS)} are allowed "
+                            f"in read-only mode."
+                        )
             return
 
         if command in _WRITE_COMMANDS:
