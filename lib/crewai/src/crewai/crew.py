@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from opentelemetry.trace import Span
 
     from crewai.context import ExecutionContext
-    from crewai.state.provider.core import BaseProvider
 
 try:
     from crewai_files import get_supported_content_types
@@ -365,19 +364,12 @@ class Crew(FlowTrackable, BaseModel):
     checkpoint_kickoff_event_id: str | None = Field(default=None)
 
     @classmethod
-    def from_checkpoint(
-        cls,
-        path: str | CheckpointConfig,
-        *,
-        provider: BaseProvider | None = None,
-    ) -> Crew:
-        """Restore a Crew from a checkpoint file, ready to resume via kickoff().
+    def from_checkpoint(cls, config: CheckpointConfig) -> Crew:
+        """Restore a Crew from a checkpoint, ready to resume via kickoff().
 
         Args:
-            path: Path to a checkpoint file, or a CheckpointConfig whose
-                ``restore_from`` and ``provider`` fields are used.
-            provider: Storage backend to read from. Overrides the config's
-                provider if both are given. Defaults to auto-detect.
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
 
         Returns:
             A Crew instance. Call kickoff() to resume from the last completed task.
@@ -388,12 +380,10 @@ class Crew(FlowTrackable, BaseModel):
         from crewai.state.provider.utils import detect_provider
         from crewai.state.runtime import RuntimeState
 
-        if isinstance(path, CheckpointConfig):
-            config = path
-            if config.restore_from is None:
-                raise ValueError("CheckpointConfig.restore_from must be set")
-            path = str(config.restore_from)
-            provider = provider or config.provider
+        if config.restore_from is None:
+            raise ValueError("CheckpointConfig.restore_from must be set")
+        path = str(config.restore_from)
+        provider = config.provider
 
         if provider is None:
             provider = detect_provider(path)
@@ -415,22 +405,20 @@ class Crew(FlowTrackable, BaseModel):
     @classmethod
     def fork(
         cls,
-        path: str,
+        config: CheckpointConfig,
         *,
         branch: str | None = None,
-        provider: BaseProvider | None = None,
     ) -> Crew:
         """Fork a Crew from a checkpoint, creating a new execution branch.
 
         Args:
-            path: Path to a checkpoint file.
+            config: Checkpoint configuration with ``restore_from`` set.
             branch: Branch label for the fork. Auto-generated if not provided.
-            provider: Storage backend to read from. Defaults to auto-detect.
 
         Returns:
             A Crew instance on the new branch. Call kickoff() to run.
         """
-        crew = cls.from_checkpoint(path, provider=provider)
+        crew = cls.from_checkpoint(config)
         state = crewai_event_bus._runtime_state
         if state is None:
             raise RuntimeError(

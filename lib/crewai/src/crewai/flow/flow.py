@@ -122,7 +122,6 @@ if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
-    from crewai.state.provider.core import BaseProvider
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
@@ -928,19 +927,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     ] = Field(default=None)
 
     @classmethod
-    def from_checkpoint(
-        cls,
-        path: str | CheckpointConfig,
-        *,
-        provider: BaseProvider | None = None,
-    ) -> Flow:  # type: ignore[type-arg]
-        """Restore a Flow from a checkpoint file.
+    def from_checkpoint(cls, config: CheckpointConfig) -> Flow:  # type: ignore[type-arg]
+        """Restore a Flow from a checkpoint.
 
         Args:
-            path: Path to a checkpoint file, or a CheckpointConfig whose
-                ``restore_from`` and ``provider`` fields are used.
-            provider: Storage backend to read from. Overrides the config's
-                provider if both are given. Defaults to auto-detect.
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
 
         Returns:
             A Flow instance ready to resume.
@@ -948,14 +940,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         from crewai.context import apply_execution_context
         from crewai.events.event_bus import crewai_event_bus
         from crewai.state.provider.json_provider import JsonProvider
+        from crewai.state.provider.utils import detect_provider
         from crewai.state.runtime import RuntimeState
 
-        if isinstance(path, CheckpointConfig):
-            config = path
-            if config.restore_from is None:
-                raise ValueError("CheckpointConfig.restore_from must be set")
-            path = str(config.restore_from)
-            provider = provider or config.provider
+        if config.restore_from is None:
+            raise ValueError("CheckpointConfig.restore_from must be set")
+        path = str(config.restore_from)
+        provider = config.provider
+
+        if provider is None:
+            provider = detect_provider(path)
 
         state = RuntimeState.from_checkpoint(
             path,
@@ -983,22 +977,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @classmethod
     def fork(
         cls,
-        path: str,
+        config: CheckpointConfig,
         *,
         branch: str | None = None,
-        provider: BaseProvider | None = None,
     ) -> Flow:  # type: ignore[type-arg]
         """Fork a Flow from a checkpoint, creating a new execution branch.
 
         Args:
-            path: Path to a checkpoint file.
+            config: Checkpoint configuration with ``restore_from`` set.
             branch: Branch label for the fork. Auto-generated if not provided.
-            provider: Storage backend to read from. Defaults to auto-detect.
 
         Returns:
             A Flow instance on the new branch. Call kickoff() to run.
         """
-        flow = cls.from_checkpoint(path, provider=provider)
+        flow = cls.from_checkpoint(config)
         state = crewai_event_bus._runtime_state
         if state is None:
             raise RuntimeError(
