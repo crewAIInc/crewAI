@@ -34,6 +34,25 @@ LIMIT 1
 """
 
 
+_DEFAULT_DIR = "./.checkpoints"
+_DEFAULT_DB = "./.checkpoints.db"
+
+
+def _detect_location(location: str) -> str:
+    """Resolve the default checkpoint location.
+
+    When the caller passes the default directory path, check whether a
+    SQLite database exists at the conventional ``.db`` path and prefer it.
+    """
+    if (
+        location == _DEFAULT_DIR
+        and not os.path.exists(_DEFAULT_DIR)
+        and os.path.exists(_DEFAULT_DB)
+    ):
+        return _DEFAULT_DB
+    return location
+
+
 def _is_sqlite(path: str) -> bool:
     """Check if a file is a SQLite database by reading its magic bytes."""
     if not os.path.isfile(path):
@@ -86,6 +105,8 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
         "event_count": event_count,
         "trigger": trigger_event,
         "entities": parsed_entities,
+        "branch": data.get("branch", "main"),
+        "parent_id": data.get("parent_id"),
     }
 
 
@@ -311,6 +332,10 @@ def _print_info(meta: dict[str, Any]) -> None:
     trigger = meta.get("trigger")
     if trigger:
         click.echo(f"Trigger: {trigger}")
+    click.echo(f"Branch:  {meta.get('branch', 'main')}")
+    parent_id = meta.get("parent_id")
+    if parent_id:
+        click.echo(f"Parent:  {parent_id}")
 
     for ent in meta.get("entities", []):
         eid = str(ent.get("id", ""))[:8]

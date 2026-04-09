@@ -10,6 +10,7 @@ via ``RuntimeState.model_rebuild()``.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 import uuid
 
@@ -35,6 +36,19 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from crewai import Entity
+
+
+def _base_location(location: str, provider: BaseProvider) -> str:
+    """Extract the base storage location from a restore path.
+
+    For SQLite (``db_path#id``), returns ``db_path``.
+    For JSON (a file path), returns the parent directory.
+    """
+    from crewai.state.provider.sqlite_provider import SqliteProvider
+
+    if isinstance(provider, SqliteProvider):
+        return location.rsplit("#", 1)[0]
+    return str(Path(location).parent)
 
 
 def _sync_checkpoint_fields(entity: object) -> None:
@@ -108,6 +122,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     _checkpoint_id: str | None = PrivateAttr(default=None)
     _parent_id: str | None = PrivateAttr(default=None)
     _branch: str = PrivateAttr(default="main")
+    _location: str | None = PrivateAttr(default=None)
 
     @property
     def event_record(self) -> EventRecord:
@@ -194,7 +209,10 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         return result
 
     def fork(self, branch: str | None = None) -> None:
-        """Mark this state as a fork for subsequent checkpoints.
+        """Create a new execution branch and write an initial checkpoint.
+
+        If this state was restored from a checkpoint, an initial checkpoint
+        is written on the new branch so the fork point is recorded.
 
         Args:
             branch: Branch label. Auto-generated from the current checkpoint
@@ -207,6 +225,9 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             self._branch = f"fork/{self._checkpoint_id}"
         else:
             self._branch = f"fork/{uuid.uuid4().hex[:8]}"
+
+        if self._location is not None:
+            self.checkpoint(self._location)
 
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig, **kwargs: Any) -> RuntimeState:
@@ -227,6 +248,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         provider = detect_provider(location)
         raw = provider.from_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
+        state._provider = provider
+        state._location = _base_location(location, provider)
         checkpoint_id = provider.extract_id(location)
         state._checkpoint_id = checkpoint_id
         state._parent_id = checkpoint_id
@@ -253,6 +276,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         provider = detect_provider(location)
         raw = await provider.afrom_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
+        state._provider = provider
+        state._location = _base_location(location, provider)
         checkpoint_id = provider.extract_id(location)
         state._checkpoint_id = checkpoint_id
         state._parent_id = checkpoint_id

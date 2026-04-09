@@ -793,6 +793,9 @@ def traces_status() -> None:
 @click.pass_context
 def checkpoint(ctx: click.Context, location: str) -> None:
     """Browse and inspect checkpoints. Launches a TUI when called without a subcommand."""
+    from crewai.cli.checkpoint_cli import _detect_location
+
+    location = _detect_location(location)
     ctx.ensure_object(dict)
     ctx.obj["location"] = location
     if ctx.invoked_subcommand is None:
@@ -805,18 +808,18 @@ def checkpoint(ctx: click.Context, location: str) -> None:
 @click.argument("location", default="./.checkpoints")
 def checkpoint_list(location: str) -> None:
     """List checkpoints in a directory."""
-    from crewai.cli.checkpoint_cli import list_checkpoints
+    from crewai.cli.checkpoint_cli import _detect_location, list_checkpoints
 
-    list_checkpoints(location)
+    list_checkpoints(_detect_location(location))
 
 
 @checkpoint.command("info")
 @click.argument("path", default="./.checkpoints")
 def checkpoint_info(path: str) -> None:
     """Show details of a checkpoint. Pass a file or directory for latest."""
-    from crewai.cli.checkpoint_cli import info_checkpoint
+    from crewai.cli.checkpoint_cli import _detect_location, info_checkpoint
 
-    info_checkpoint(path)
+    info_checkpoint(_detect_location(path))
 
 
 if __name__ == "__main__":
