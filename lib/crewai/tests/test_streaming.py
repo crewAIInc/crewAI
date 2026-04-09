@@ -907,14 +907,15 @@ class TestStreamingRunIsolation:
         assert item.content == "own-chunk"
 
     def test_concurrent_streaming_states_do_not_cross_contaminate(self) -> None:
-        """Two streaming states created concurrently must each receive only
-        their own events, even though both handlers are registered on the
-        same global event bus.
+        """Two streaming states created in separate contexts (simulating
+        concurrent runs) must each receive only their own events, even
+        though both handlers are registered on the same global event bus.
         """
-        import threading
+        import contextvars
 
         from crewai.utilities.streaming import (
             create_streaming_state,
+            _current_stream_run_id,
             TaskInfo,
             _unregister_handler,
         )
@@ -934,21 +935,19 @@ class TestStreamingRunIsolation:
             "agent_id": "aid-b",
         }
 
-        state_a = create_streaming_state(task_a, [])
-        run_id_a = state_a.sync_queue  # we'll read from this queue
+        def _create_in_fresh_context(
+            task_info: TaskInfo,
+        ) -> "StreamingState":
+            """Reset the run_id contextvar and create streaming state."""
+            _current_stream_run_id.set(None)
+            return create_streaming_state(task_info, [])
 
-        state_b = create_streaming_state(task_b, [])
-        run_id_b = state_b.sync_queue
+        # Create each streaming state in a *separate* context so they get
+        # distinct run_ids (simulates truly concurrent runs).
+        state_a = contextvars.copy_context().run(_create_in_fresh_context, task_a)
+        state_b = contextvars.copy_context().run(_create_in_fresh_context, task_b)
 
-        # We need the run_ids that were generated.  They were set on the
-        # contextvar but we can infer them by emitting known events.
-        # Instead, peek at the handler closure – or simply emit tagged events
-        # directly and check which queue gets them.
-
-        # Emit event tagged for state_a's run.
-        # We need the run_id.  Retrieve it by inspecting the handler's closure.
-        import types
-
+        # Extract run_ids from handler closures.
         def _get_run_id_from_handler(handler: Any) -> str | None:
             """Extract the run_id captured in the handler closure."""
             fn = handler

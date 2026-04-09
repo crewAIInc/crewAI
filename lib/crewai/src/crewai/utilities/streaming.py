@@ -207,11 +207,15 @@ def create_streaming_state(
 ) -> StreamingState:
     """Create and register streaming state.
 
-    Each call generates a unique ``run_id`` that is:
+    Each call assigns a ``run_id`` that is:
     * stored in a ``contextvars.ContextVar`` so that downstream LLM emit
       paths can stamp ``LLMStreamChunkEvent.run_id`` automatically, and
     * passed to the stream handler so it only accepts events with a
       matching ``run_id``, preventing cross-run chunk contamination.
+
+    If the current context already carries a ``run_id`` (e.g. a parent
+    flow already created a streaming state), the existing value is reused
+    so that nested streaming (flow → crew) shares the same scope.
 
     Args:
         current_task_info: Task context info.
@@ -221,7 +225,7 @@ def create_streaming_state(
     Returns:
         Initialized StreamingState with registered handler.
     """
-    run_id = str(uuid.uuid4())
+    run_id = _current_stream_run_id.get() or str(uuid.uuid4())
     _current_stream_run_id.set(run_id)
 
     sync_queue: queue.Queue[StreamChunk | None | Exception] = queue.Queue()
