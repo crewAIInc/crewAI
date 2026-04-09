@@ -883,7 +883,7 @@ class Crew(FlowTrackable, BaseModel):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = Crew.from_checkpoint(from_checkpoint)
+                restored = type(self).from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )
@@ -1020,7 +1020,7 @@ class Crew(FlowTrackable, BaseModel):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = Crew.from_checkpoint(from_checkpoint)
+                restored = type(self).from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )
@@ -1107,7 +1107,7 @@ class Crew(FlowTrackable, BaseModel):
         """
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
-                restored = Crew.from_checkpoint(from_checkpoint)
+                restored = type(self).from_checkpoint(from_checkpoint)
                 restored.checkpoint = from_checkpoint.model_copy(
                     update={"restore_from": None}
                 )
