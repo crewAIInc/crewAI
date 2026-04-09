@@ -9,6 +9,7 @@ via ``RuntimeState.model_rebuild()``.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 import uuid
 
@@ -20,10 +21,15 @@ from pydantic import (
     model_validator,
 )
 
+from packaging.version import Version
+
 from crewai.context import capture_execution_context
 from crewai.state.event_record import EventRecord
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
+from crewai.utilities.version import get_crewai_version
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -61,6 +67,41 @@ def _sync_checkpoint_fields(entity: object) -> None:
         entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
 
 
+def _migrate(data: dict[str, Any]) -> dict[str, Any]:
+    """Apply version-based migrations to checkpoint data.
+
+    Each block handles checkpoints older than a specific version,
+    transforming them forward to the current format. Blocks run in
+    version order so migrations compose.
+
+    Args:
+        data: The raw deserialized checkpoint dict.
+
+    Returns:
+        The migrated checkpoint dict.
+    """
+    raw = data.get("crewai_version")
+    current = Version(get_crewai_version())
+
+    if raw is None:
+        logger.warning("Checkpoint has no crewai_version — assuming current format")
+        return data
+
+    stored = Version(raw)
+    if stored != current:
+        logger.debug(
+            "Migrating checkpoint from crewAI %s to %s",
+            stored,
+            current,
+        )
+
+    # --- migrations in version order ---
+    # if stored < Version("X.Y.Z"):
+    #     data.setdefault("some_field", "default")
+
+    return data
+
+
 class RuntimeState(RootModel):  # type: ignore[type-arg]
     root: list[Entity]
     _provider: BaseProvider = PrivateAttr(default_factory=JsonProvider)
@@ -77,6 +118,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     @model_serializer(mode="plain")
     def _serialize(self) -> dict[str, Any]:
         return {
+            "crewai_version": get_crewai_version(),
             "parent_id": self._parent_id,
             "branch": self._branch,
             "entities": [e.model_dump(mode="json") for e in self.root],
@@ -89,6 +131,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         cls, data: Any, handler: ModelWrapValidatorHandler[RuntimeState]
     ) -> RuntimeState:
         if isinstance(data, dict) and "entities" in data:
+            data = _migrate(data)
             record_data = data.get("event_record")
             state = handler(data["entities"])
             if record_data:

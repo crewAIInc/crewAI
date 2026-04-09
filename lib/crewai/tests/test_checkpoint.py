@@ -196,6 +196,39 @@ class TestRuntimeStateLineage:
         assert state._parent_id is None
         assert state._branch == "main"
 
+    def test_serialize_includes_version(self) -> None:
+        from crewai.utilities.version import get_crewai_version
+
+        state = self._make_state()
+        dumped = json.loads(state.model_dump_json())
+        assert dumped["crewai_version"] == get_crewai_version()
+
+    def test_deserialize_migrates_on_version_mismatch(self, caplog: Any) -> None:
+        import logging
+
+        state = self._make_state()
+        raw = state.model_dump_json()
+        data = json.loads(raw)
+        data["crewai_version"] = "0.1.0"
+        with caplog.at_level(logging.DEBUG):
+            RuntimeState.model_validate_json(
+                json.dumps(data), context={"from_checkpoint": True}
+            )
+        assert "Migrating checkpoint from crewAI 0.1.0" in caplog.text
+
+    def test_deserialize_warns_on_missing_version(self, caplog: Any) -> None:
+        import logging
+
+        state = self._make_state()
+        raw = state.model_dump_json()
+        data = json.loads(raw)
+        data.pop("crewai_version", None)
+        with caplog.at_level(logging.WARNING):
+            RuntimeState.model_validate_json(
+                json.dumps(data), context={"from_checkpoint": True}
+            )
+        assert "no crewai_version" in caplog.text
+
     def test_serialize_includes_lineage(self) -> None:
         state = self._make_state()
         state._parent_id = "parent456"
