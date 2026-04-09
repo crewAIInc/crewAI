@@ -82,13 +82,11 @@ def _migrate(data: dict[str, Any]) -> dict[str, Any]:
     """
     raw = data.get("crewai_version")
     current = Version(get_crewai_version())
+    stored = Version(raw) if raw else Version("0.0.0")
 
     if raw is None:
-        logger.warning("Checkpoint has no crewai_version — assuming current format")
-        return data
-
-    stored = Version(raw)
-    if stored != current:
+        logger.warning("Checkpoint has no crewai_version — treating as 0.0.0")
+    elif stored != current:
         logger.debug(
             "Migrating checkpoint from crewAI %s to %s",
             stored,

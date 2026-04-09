@@ -227,7 +227,7 @@ class TestRuntimeStateLineage:
             RuntimeState.model_validate_json(
                 json.dumps(data), context={"from_checkpoint": True}
             )
-        assert "no crewai_version" in caplog.text
+        assert "treating as 0.0.0" in caplog.text
 
     def test_serialize_includes_lineage(self) -> None:
         state = self._make_state()
