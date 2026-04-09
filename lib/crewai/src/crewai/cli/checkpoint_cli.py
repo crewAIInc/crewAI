@@ -137,7 +137,6 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
     }
 
 
-
 def _format_size(size: int) -> str:
     if size < 1024:
         return f"{size}B"

@@ -40,7 +40,6 @@ def _load_entries(location: str) -> list[dict[str, Any]]:
     return _list_json(location)
 
 
-
 def _short_id(name: str) -> str:
     """Shorten a checkpoint name for tree display."""
     if len(name) > 30:
@@ -482,7 +481,9 @@ class CheckpointTUI(App[_TuiResult]):
                 break
         for task_idx, editor_id in self._task_output_ids:
             editor = self.query_one(f"#{editor_id}", TextArea)
-            original = str(tasks[task_idx].get("output", "")) if task_idx < len(tasks) else ""
+            original = (
+                str(tasks[task_idx].get("output", "")) if task_idx < len(tasks) else ""
+            )
             if editor.text != original:
                 overrides[task_idx] = editor.text
         return overrides or None
