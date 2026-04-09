@@ -7,7 +7,7 @@ import uuid
 from typing_extensions import Self
 
 from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus

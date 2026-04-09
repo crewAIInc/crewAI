@@ -13,7 +13,7 @@ from packaging import version
 import tomli
 
 from crewai.cli.utils import read_toml
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM

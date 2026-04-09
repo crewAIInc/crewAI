@@ -13,7 +13,7 @@ from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.config import Settings
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.plus_api import PlusAPI
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
     get_user_id,
