@@ -80,6 +80,9 @@ def _sync_checkpoint_fields(entity: object) -> None:
         entity.checkpoint_inputs = entity._inputs
         entity.checkpoint_train = entity._train
         entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
+        for task in entity.tasks:
+            task.checkpoint_original_description = task._original_description
+            task.checkpoint_original_expected_output = task._original_expected_output
 
 
 def _migrate(data: dict[str, Any]) -> dict[str, Any]:
@@ -123,6 +126,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     _parent_id: str | None = PrivateAttr(default=None)
     _branch: str = PrivateAttr(default="main")
     _location: str | None = PrivateAttr(default=None)
+    _trigger: str | None = PrivateAttr(default=None)
 
     @property
     def event_record(self) -> EventRecord:
@@ -131,13 +135,16 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
 
     @model_serializer(mode="plain")
     def _serialize(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "crewai_version": get_crewai_version(),
             "parent_id": self._parent_id,
             "branch": self._branch,
             "entities": [e.model_dump(mode="json") for e in self.root],
             "event_record": self._event_record.model_dump(),
         }
+        if self._trigger:
+            d["trigger"] = self._trigger
+        return d
 
     @model_validator(mode="wrap")
     @classmethod
@@ -222,12 +229,9 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if branch:
             self._branch = branch
         elif self._checkpoint_id:
-            self._branch = f"fork/{self._checkpoint_id}"
+            self._branch = f"fork/{self._checkpoint_id}_{uuid.uuid4().hex[:6]}"
         else:
             self._branch = f"fork/{uuid.uuid4().hex[:8]}"
-
-        if self._location is not None:
-            self.checkpoint(self._location)
 
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig, **kwargs: Any) -> RuntimeState:

@@ -6,10 +6,14 @@ from datetime import datetime
 import glob
 import json
 import os
+import re
 import sqlite3
 from typing import Any
 
 import click
+
+
+_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
 
 
 _SQLITE_MAGIC = b"SQLite format 3\x00"
@@ -71,13 +75,7 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
     nodes = data.get("event_record", {}).get("nodes", {})
     event_count = len(nodes)
 
-    trigger_event = None
-    if nodes:
-        last_node = max(
-            nodes.values(),
-            key=lambda n: n.get("event", {}).get("emission_sequence") or 0,
-        )
-        trigger_event = last_node.get("event", {}).get("type")
+    trigger_event = data.get("trigger")
 
     parsed_entities: list[dict[str, Any]] = []
     for entity in entities:
@@ -95,19 +93,49 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
                 {
                     "description": t.get("description", ""),
                     "completed": t.get("output") is not None,
+                    "output": (t.get("output") or {}).get("raw", ""),
                 }
                 for t in tasks
             ]
         parsed_entities.append(info)
+
+    inputs: dict[str, Any] = {}
+    for entity in entities:
+        cp_inputs = entity.get("checkpoint_inputs")
+        if isinstance(cp_inputs, dict) and cp_inputs:
+            inputs = dict(cp_inputs)
+            break
+
+    for entity in entities:
+        for task in entity.get("tasks", []):
+            for field in (
+                "checkpoint_original_description",
+                "checkpoint_original_expected_output",
+            ):
+                text = task.get(field) or ""
+                for match in _PLACEHOLDER_RE.findall(text):
+                    if match not in inputs:
+                        inputs[match] = ""
+        for agent in entity.get("agents", []):
+            for field in ("role", "goal", "backstory"):
+                text = agent.get(field) or ""
+                for match in _PLACEHOLDER_RE.findall(text):
+                    if match not in inputs:
+                        inputs[match] = ""
+
+    branch = data.get("branch", "main")
+    parent_id = data.get("parent_id")
 
     return {
         "source": source,
         "event_count": event_count,
         "trigger": trigger_event,
         "entities": parsed_entities,
-        "branch": data.get("branch", "main"),
-        "parent_id": data.get("parent_id"),
+        "branch": branch,
+        "parent_id": parent_id,
+        "inputs": inputs,
     }
+
 
 
 def _format_size(size: int) -> str:

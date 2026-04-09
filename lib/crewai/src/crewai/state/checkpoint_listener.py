@@ -102,8 +102,12 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
     return None
 
 
-def _do_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
+def _do_checkpoint(
+    state: RuntimeState, cfg: CheckpointConfig, event: BaseEvent | None = None
+) -> None:
     """Write a checkpoint and prune old ones if configured."""
+    if event is not None:
+        state._trigger = event.type
     _prepare_entities(state.root)
     data = state.model_dump_json()
     location = cfg.provider.checkpoint(
@@ -134,7 +138,7 @@ def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
     if cfg is None:
         return
     try:
-        _do_checkpoint(state, cfg)
+        _do_checkpoint(state, cfg, event)
     except Exception:
         logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
 
