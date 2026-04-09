@@ -2003,7 +2003,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
                 restored = type(self).from_checkpoint(str(from_checkpoint.restore_from))
-                restored.checkpoint = from_checkpoint
+                restored.checkpoint = from_checkpoint.model_copy(
+                    update={"restore_from": None}
+                )
                 return restored.kickoff(inputs=inputs, input_files=input_files)
             self.checkpoint = from_checkpoint
         get_env_context()
@@ -2083,7 +2085,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if from_checkpoint is not None:
             if from_checkpoint.restore_from is not None:
                 restored = type(self).from_checkpoint(str(from_checkpoint.restore_from))
-                restored.checkpoint = from_checkpoint
+                restored.checkpoint = from_checkpoint.model_copy(
+                    update={"restore_from": None}
+                )
                 return await restored.kickoff_async(
                     inputs=inputs, input_files=input_files
                 )

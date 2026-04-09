@@ -507,7 +507,7 @@ class TestKickoffFromCheckpoint:
         mock_restored.kickoff.assert_called_once_with(
             inputs={"k": "v"}, input_files=None
         )
-        assert mock_restored.checkpoint is cfg
+        assert mock_restored.checkpoint.restore_from is None
         assert result == "result"
 
     def test_crew_kickoff_config_only_sets_checkpoint(self) -> None:
@@ -534,5 +534,5 @@ class TestKickoffFromCheckpoint:
         mock_restored.kickoff.assert_called_once_with(
             inputs=None, input_files=None
         )
-        assert mock_restored.checkpoint is cfg
+        assert mock_restored.checkpoint.restore_from is None
         assert result == "flow_result"
