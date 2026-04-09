@@ -94,32 +94,92 @@ def _detect_writable_cte(stmt: str) -> str | None:
     return None
 
 
+def _skip_string_literal(stmt: str, pos: int) -> int:
+    """Skip past a string literal starting at pos (single-quoted).
+
+    Handles escaped quotes ('') inside the literal.
+    Returns the index after the closing quote.
+    """
+    quote_char = stmt[pos]
+    i = pos + 1
+    while i < len(stmt):
+        if stmt[i] == quote_char:
+            # Check for escaped quote ('')
+            if i + 1 < len(stmt) and stmt[i + 1] == quote_char:
+                i += 2
+                continue
+            return i + 1
+        i += 1
+    return i  # Unterminated literal — return end
+
+
+def _find_matching_close_paren(stmt: str, start: int) -> int:
+    """Find the matching close paren, skipping string literals."""
+    depth = 1
+    i = start
+    while i < len(stmt) and depth > 0:
+        ch = stmt[i]
+        if ch == "'":
+            i = _skip_string_literal(stmt, i)
+            continue
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        i += 1
+    return i
+
+
 def _extract_main_query_after_cte(stmt: str) -> str | None:
     """Extract the main (outer) query that follows all CTE definitions.
 
     For ``WITH cte AS (SELECT 1) DELETE FROM users``, returns ``DELETE FROM users``.
     Returns None if no main query is found after the last CTE body.
+    Handles parentheses inside string literals (e.g., ``SELECT '(' FROM t``).
     """
-    # Walk through balanced parens after each AS( to find the end of CTE bodies.
     last_cte_end = 0
     for m in _AS_PAREN_RE.finditer(stmt):
-        # Find the matching closing paren for this CTE body.
-        depth = 1
-        i = m.end()
-        while i < len(stmt) and depth > 0:
-            if stmt[i] == "(":
-                depth += 1
-            elif stmt[i] == ")":
-                depth -= 1
-            i += 1
-        last_cte_end = i
+        last_cte_end = _find_matching_close_paren(stmt, m.end())
 
     if last_cte_end > 0:
         remainder = stmt[last_cte_end:].strip().lstrip(",").strip()
-        # Skip additional CTE definitions (name AS (...))
-        # The remainder after the last CTE closing paren is the main query
         if remainder:
             return remainder
+    return None
+
+
+def _resolve_explain_command(stmt: str) -> str | None:
+    """Resolve the underlying command from an EXPLAIN [ANALYZE] [VERBOSE] statement.
+
+    Returns the real command (e.g., 'DELETE') if ANALYZE is present, else None.
+    Handles both space-separated and parenthesized syntax.
+    """
+    rest = stmt.strip()[len("EXPLAIN") :].strip()
+    if not rest:
+        return None
+
+    analyze_found = False
+    explain_opts = {"ANALYZE", "ANALYSE", "VERBOSE"}
+
+    if rest.startswith("("):
+        close = rest.find(")")
+        if close != -1:
+            options_str = rest[1:close].upper()
+            analyze_found = any(
+                opt.strip() in ("ANALYZE", "ANALYSE") for opt in options_str.split(",")
+            )
+            rest = rest[close + 1 :].strip()
+    else:
+        while rest:
+            first_opt = rest.split()[0].upper().rstrip(";") if rest.split() else ""
+            if first_opt in ("ANALYZE", "ANALYSE"):
+                analyze_found = True
+            if first_opt not in explain_opts:
+                break
+            rest = rest[len(first_opt) :].strip()
+
+    if analyze_found and rest:
+        return rest.split()[0].upper().rstrip(";")
     return None
 
 
@@ -260,10 +320,17 @@ class NL2SQLTool(BaseTool):
                     )
                     rest = rest[close + 1 :].strip()
             else:
-                # Space-separated: EXPLAIN ANALYZE <stmt>
-                first_opt = rest.split()[0].upper().rstrip(";") if rest.split() else ""
-                if first_opt in ("ANALYZE", "ANALYSE"):
-                    analyze_found = True
+                # Space-separated: EXPLAIN [ANALYZE] [VERBOSE] <stmt>
+                # Consume all known EXPLAIN options before extracting the real command.
+                _explain_opts = {"ANALYZE", "ANALYSE", "VERBOSE"}
+                while rest:
+                    first_opt = (
+                        rest.split()[0].upper().rstrip(";") if rest.split() else ""
+                    )
+                    if first_opt in ("ANALYZE", "ANALYSE"):
+                        analyze_found = True
+                    if first_opt not in _explain_opts:
+                        break
                     rest = rest[len(first_opt) :].strip()
 
             if analyze_found and rest:
@@ -406,6 +473,11 @@ class NL2SQLTool(BaseTool):
             cmd = self._extract_command(s)
             if cmd in _WRITE_COMMANDS:
                 return True
+            if cmd == "EXPLAIN":
+                # Resolve the underlying command for EXPLAIN ANALYZE
+                resolved = _resolve_explain_command(s)
+                if resolved and resolved in _WRITE_COMMANDS:
+                    return True
             if cmd == "WITH":
                 if _detect_writable_cte(s):
                     return True

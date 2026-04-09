@@ -560,3 +560,77 @@ class TestExtendedWriteCommands:
         tool = _make_tool(allow_dml=False)
         with pytest.raises(ValueError, match="read-only mode"):
             tool._validate_query(stmt)
+
+
+# ---------------------------------------------------------------------------
+# EXPLAIN ANALYZE VERBOSE handling
+# ---------------------------------------------------------------------------
+
+
+class TestExplainAnalyzeVerbose:
+    def test_explain_analyze_verbose_select_allowed(self):
+        """EXPLAIN ANALYZE VERBOSE SELECT should be allowed (read-only)."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("EXPLAIN ANALYZE VERBOSE SELECT * FROM users")
+
+    def test_explain_analyze_verbose_delete_blocked(self):
+        """EXPLAIN ANALYZE VERBOSE DELETE should be blocked."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("EXPLAIN ANALYZE VERBOSE DELETE FROM users")
+
+    def test_explain_verbose_select_allowed(self):
+        """EXPLAIN VERBOSE SELECT (no ANALYZE) should be allowed."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("EXPLAIN VERBOSE SELECT * FROM users")
+
+
+# ---------------------------------------------------------------------------
+# CTE with string literal parens
+# ---------------------------------------------------------------------------
+
+
+class TestCTEStringLiteralParens:
+    def test_cte_string_paren_does_not_bypass(self):
+        """Parens inside string literals should not confuse the paren walker."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH cte AS (SELECT '(' FROM t) DELETE FROM users"
+            )
+
+    def test_cte_string_paren_read_only_allowed(self):
+        """Read-only CTE with string literal parens should be allowed."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query(
+            "WITH cte AS (SELECT '(' FROM t) SELECT * FROM cte"
+        )
+
+
+# ---------------------------------------------------------------------------
+# EXPLAIN ANALYZE commit logic
+# ---------------------------------------------------------------------------
+
+
+class TestExplainAnalyzeCommit:
+    def test_explain_analyze_delete_triggers_commit(self):
+        """EXPLAIN ANALYZE DELETE should trigger commit when allow_dml=True."""
+        tool = _make_tool(allow_dml=True)
+
+        mock_session = MagicMock()
+        mock_result = MagicMock()
+        mock_result.returns_rows = True
+        mock_result.keys.return_value = ["QUERY PLAN"]
+        mock_result.fetchall.return_value = [("Delete on users",)]
+        mock_session.execute.return_value = mock_result
+        mock_session_cls = MagicMock(return_value=mock_session)
+
+        with (
+            patch("crewai_tools.tools.nl2sql.nl2sql_tool.create_engine"),
+            patch(
+                "crewai_tools.tools.nl2sql.nl2sql_tool.sessionmaker",
+                return_value=mock_session_cls,
+            ),
+        ):
+            tool.execute_sql("EXPLAIN ANALYZE DELETE FROM users")
+            mock_session.commit.assert_called_once()
