@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import importlib.metadata
 from functools import cache
+import importlib.metadata
 
 
 @cache

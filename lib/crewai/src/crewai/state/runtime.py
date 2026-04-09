@@ -13,6 +13,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 import uuid
 
+from packaging.version import Version
 from pydantic import (
     ModelWrapValidatorHandler,
     PrivateAttr,
@@ -21,13 +22,12 @@ from pydantic import (
     model_validator,
 )
 
-from packaging.version import Version
-
 from crewai.context import capture_execution_context
 from crewai.state.event_record import EventRecord
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
 from crewai.utilities.version import get_crewai_version
+
 
 logger = logging.getLogger(__name__)
 

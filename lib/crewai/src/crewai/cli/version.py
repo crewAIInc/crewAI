@@ -12,6 +12,8 @@ from urllib.error import URLError
 import appdirs
 from packaging.version import InvalidVersion, Version, parse
 
+from crewai.utilities.version import get_crewai_version
+
 
 @lru_cache(maxsize=1)
 def _get_cache_file() -> Path:
