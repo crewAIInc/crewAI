@@ -980,8 +980,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         flow = cls.from_checkpoint(path, provider=provider)
         state = crewai_event_bus._runtime_state
-        if state is not None:
-            state.fork(branch)
+        if state is None:
+            raise RuntimeError(
+                "Cannot fork: no runtime state on the event bus. "
+                "Ensure from_checkpoint() succeeded before calling fork()."
+            )
+        state.fork(branch)
         return flow
 
     checkpoint_completed_methods: set[str] | None = Field(default=None)

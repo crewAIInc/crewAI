@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sqlite3
@@ -348,6 +349,25 @@ class TestJsonProviderFork:
             assert state._parent_id == id2
 
             # Verify the second checkpoint blob has parent_id == id1
+            with open(loc2) as f:
+                data2 = json.loads(f.read())
+            assert data2["parent_id"] == id1
+
+    @pytest.mark.asyncio
+    async def test_acheckpoint_chaining(self) -> None:
+        """Async checkpoint path chains lineage identically to sync."""
+        state = self._make_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            await state.acheckpoint(d)
+            id1 = state._checkpoint_id
+            assert id1 is not None
+
+            loc2 = await state.acheckpoint(d)
+            id2 = state._checkpoint_id
+            assert id2 != id1
+            assert state._parent_id == id2
+
             with open(loc2) as f:
                 data2 = json.loads(f.read())
             assert data2["parent_id"] == id1
