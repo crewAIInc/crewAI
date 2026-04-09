@@ -336,7 +336,7 @@ class TestJsonProviderFork:
         state = self._make_state()
         state._provider = JsonProvider()
         with tempfile.TemporaryDirectory() as d:
-            loc1 = state.checkpoint(d)
+            state.checkpoint(d)
             id1 = state._checkpoint_id
             assert id1 is not None
             assert state._parent_id == id1
