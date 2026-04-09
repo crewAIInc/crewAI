@@ -277,9 +277,9 @@ class TestRuntimeStateLineage:
             loc = state.checkpoint(d)
             written_id = state._checkpoint_id
 
-            provider = JsonProvider()
+            cfg = CheckpointConfig(restore_from=loc)
             restored = RuntimeState.from_checkpoint(
-                loc, provider, context={"from_checkpoint": True}
+                cfg, context={"from_checkpoint": True}
             )
             assert restored._checkpoint_id == written_id
             assert restored._parent_id == written_id

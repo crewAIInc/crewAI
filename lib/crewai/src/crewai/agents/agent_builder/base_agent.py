@@ -51,7 +51,6 @@ from crewai.utilities.string_utils import interpolate_only
 if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.crew import Crew
-    from crewai.state.provider.core import BaseProvider
 
 
 def _validate_crew_ref(value: Any) -> Any:
@@ -338,19 +337,16 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     execution_context: ExecutionContext | None = Field(default=None)
 
     @classmethod
-    def from_checkpoint(
-        cls, path: str, *, provider: BaseProvider | None = None
-    ) -> Self:
-        """Restore an Agent from a checkpoint file."""
+    def from_checkpoint(cls, config: CheckpointConfig) -> Self:
+        """Restore an Agent from a checkpoint.
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set.
+        """
         from crewai.context import apply_execution_context
-        from crewai.state.provider.json_provider import JsonProvider
         from crewai.state.runtime import RuntimeState
 
-        state = RuntimeState.from_checkpoint(
-            path,
-            provider=provider or JsonProvider(),
-            context={"from_checkpoint": True},
-        )
+        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
         for entity in state.root:
             if isinstance(entity, cls):
                 if entity.execution_context is not None:
@@ -359,7 +355,9 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
                     entity.agent_executor.agent = entity
                     entity.agent_executor._resuming = True
                 return entity
-        raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
+        raise ValueError(
+            f"No {cls.__name__} found in checkpoint: {config.restore_from}"
+        )
 
     @model_validator(mode="before")
     @classmethod

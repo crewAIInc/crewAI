@@ -23,6 +23,7 @@ from pydantic import (
 )
 
 from crewai.context import capture_execution_context
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.event_record import EventRecord
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
@@ -208,19 +209,22 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             self._branch = f"fork/{uuid.uuid4().hex[:8]}"
 
     @classmethod
-    def from_checkpoint(
-        cls, location: str, provider: BaseProvider, **kwargs: Any
-    ) -> RuntimeState:
+    def from_checkpoint(cls, config: CheckpointConfig, **kwargs: Any) -> RuntimeState:
         """Restore a RuntimeState from a checkpoint.
 
         Args:
-            location: The identifier returned by a previous ``checkpoint`` call.
-            provider: The storage backend to read from.
+            config: Checkpoint configuration with ``restore_from`` set.
             **kwargs: Passed to ``model_validate_json``.
 
         Returns:
             A restored RuntimeState.
         """
+        from crewai.state.provider.utils import detect_provider
+
+        if config.restore_from is None:
+            raise ValueError("CheckpointConfig.restore_from must be set")
+        location = str(config.restore_from)
+        provider = detect_provider(location)
         raw = provider.from_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
         checkpoint_id = provider.extract_id(location)
@@ -230,18 +234,23 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
 
     @classmethod
     async def afrom_checkpoint(
-        cls, location: str, provider: BaseProvider, **kwargs: Any
+        cls, config: CheckpointConfig, **kwargs: Any
     ) -> RuntimeState:
         """Async version of :meth:`from_checkpoint`.
 
         Args:
-            location: The identifier returned by a previous ``acheckpoint`` call.
-            provider: The storage backend to read from.
+            config: Checkpoint configuration with ``restore_from`` set.
             **kwargs: Passed to ``model_validate_json``.
 
         Returns:
             A restored RuntimeState.
         """
+        from crewai.state.provider.utils import detect_provider
+
+        if config.restore_from is None:
+            raise ValueError("CheckpointConfig.restore_from must be set")
+        location = str(config.restore_from)
+        provider = detect_provider(location)
         raw = await provider.afrom_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
         checkpoint_id = provider.extract_id(location)

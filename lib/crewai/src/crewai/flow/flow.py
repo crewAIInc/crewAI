@@ -939,19 +939,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         from crewai.context import apply_execution_context
         from crewai.events.event_bus import crewai_event_bus
-        from crewai.state.provider.utils import detect_provider
         from crewai.state.runtime import RuntimeState
 
-        if config.restore_from is None:
-            raise ValueError("CheckpointConfig.restore_from must be set")
-        path = str(config.restore_from)
-        provider = detect_provider(path)
-
-        state = RuntimeState.from_checkpoint(
-            path,
-            provider=provider,
-            context={"from_checkpoint": True},
-        )
+        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
         crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if not isinstance(entity, Flow):
@@ -968,7 +958,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             instance.checkpoint_state = entity.checkpoint_state
             instance._restore_from_checkpoint()
             return instance
-        raise ValueError(f"No Flow found in checkpoint: {path}")
+        raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
 
     @classmethod
     def fork(
