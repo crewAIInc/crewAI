@@ -123,9 +123,13 @@ class PersistenceDecorator:
                 raise RuntimeError(f"State persistence failed: {e!s}") from e
 
             # Log storage location so users can find their persisted data
-            storage_location = getattr(persistence_instance, "db_path", type(persistence_instance).__name__)
+            storage_location = getattr(
+                persistence_instance, "db_path", type(persistence_instance).__name__
+            )
             if verbose:
-                msg = LOG_MESSAGES["save_state_location"].format(flow_uuid, storage_location)
+                msg = LOG_MESSAGES["save_state_location"].format(
+                    flow_uuid, storage_location
+                )
                 PRINTER.print(msg, color="cyan")
             logger.info(
                 LOG_MESSAGES["save_state_location"].format(flow_uuid, storage_location)
