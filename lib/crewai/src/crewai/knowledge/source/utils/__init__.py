@@ -1,1 +1,0 @@
-"""Knowledge source utilities."""
