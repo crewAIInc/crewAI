@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import logging
 import os
 from pathlib import Path
 import sqlite3
@@ -15,6 +16,9 @@ from typing_extensions import Self
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.utilities.lock_store import lock as store_lock
 from crewai.utilities.paths import db_storage_path
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -66,6 +70,7 @@ class SQLiteFlowPersistence(FlowPersistence):
     def _setup(self) -> Self:
         self._lock_name = f"sqlite:{os.path.realpath(self.db_path)}"
         self.init_db()
+        logger.info("SQLiteFlowPersistence initialized with db_path: %s", self.db_path)
         return self
 
     def init_db(self) -> None:
