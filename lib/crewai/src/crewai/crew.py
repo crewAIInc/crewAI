@@ -120,7 +120,6 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.printer import PrinterColor
 from crewai.utilities.replanning_evaluator import (
     EvaluationCriteria,
-    ReplanDecision,
     ReplanningEvaluator,
 )
 from crewai.utilities.rpm_controller import RPMController
@@ -1245,10 +1244,9 @@ class Crew(FlowTrackable, BaseModel):
             )
             return
 
-        self._replan_count += 1
         self._logger.log(
             "info",
-            f"Replanning triggered (attempt {self._replan_count}/{self.max_replans}). "
+            f"Replanning triggered (attempt {self._replan_count + 1}/{self.max_replans}). "
             f"Reason: {decision.reason}",
         )
 
@@ -1271,6 +1269,7 @@ class Crew(FlowTrackable, BaseModel):
                         + f"\n\n[REVISED PLAN] {step_plan.plan}"
                     )
 
+            self._replan_count += 1
             self._logger.log("info", "Replanning complete. Revised plans applied.")
         except Exception as e:
             self._logger.log(
