@@ -1175,3 +1175,81 @@ def test_bedrock_tool_results_not_merged_across_assistant_messages():
     )
     assert tool_result_messages[0]["content"][0]["toolResult"]["toolUseId"] == "call_a"
     assert tool_result_messages[1]["content"][0]["toolResult"]["toolUseId"] == "call_b"
+
+
+def test_bedrock_cached_token_tracking():
+    """Test that cached tokens (cacheReadInputTokenCount) are tracked for Bedrock."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 100,
+                'outputTokens': 50,
+                'totalTokens': 150,
+                'cacheReadInputTokenCount': 30,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        result = llm.call("Hello")
+        assert result == "test response"
+        assert llm._token_usage['prompt_tokens'] == 100
+        assert llm._token_usage['completion_tokens'] == 50
+        assert llm._token_usage['total_tokens'] == 150
+        assert llm._token_usage['cached_prompt_tokens'] == 30
+
+
+def test_bedrock_cached_token_alternate_key():
+    """Test that the alternate key cacheReadInputTokens also works."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 80,
+                'outputTokens': 40,
+                'totalTokens': 120,
+                'cacheReadInputTokens': 25,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Hello")
+        assert llm._token_usage['cached_prompt_tokens'] == 25
+
+
+def test_bedrock_no_cache_tokens_defaults_to_zero():
+    """Test that missing cache token keys default to zero."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 60,
+                'outputTokens': 30,
+                'totalTokens': 90,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Hello")
+        assert llm._token_usage['cached_prompt_tokens'] == 0

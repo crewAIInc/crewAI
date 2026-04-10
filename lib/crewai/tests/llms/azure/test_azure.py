@@ -1403,3 +1403,44 @@ def test_azure_stop_words_still_applied_to_regular_responses():
         assert "Observation:" not in result
         assert "Found results" not in result
         assert "I need to search for more information" in result
+
+
+def test_azure_reasoning_tokens_and_cached_tokens():
+    """Test that reasoning_tokens and cached_tokens are extracted from Azure responses."""
+    llm = LLM(model="azure/gpt-4")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=100,
+        completion_tokens=200,
+        total_tokens=300,
+    )
+    mock_response.usage.prompt_tokens_details = MagicMock(cached_tokens=40)
+    mock_response.usage.completion_tokens_details = MagicMock(reasoning_tokens=60)
+
+    usage = llm._extract_azure_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 100
+    assert usage["completion_tokens"] == 200
+    assert usage["total_tokens"] == 300
+    assert usage["cached_prompt_tokens"] == 40
+    assert usage["reasoning_tokens"] == 60
+
+
+def test_azure_no_detail_fields():
+    """Test Azure extraction without detail fields."""
+    llm = LLM(model="azure/gpt-4")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=50,
+        completion_tokens=30,
+        total_tokens=80,
+    )
+    mock_response.usage.prompt_tokens_details = None
+    mock_response.usage.completion_tokens_details = None
+
+    usage = llm._extract_azure_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 50
+    assert usage["completion_tokens"] == 30
+    assert usage["cached_prompt_tokens"] == 0
+    assert usage["reasoning_tokens"] == 0
