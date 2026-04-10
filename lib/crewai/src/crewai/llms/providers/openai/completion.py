@@ -32,11 +32,15 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import (
+    generate_model_description,
+    sanitize_tool_params_for_openai_strict,
+)
 from crewai.utilities.types import LLMMessage
 
 
@@ -782,8 +786,6 @@ class OpenAICompletion(BaseLLM):
             "function": {"name": "...", "description": "...", "parameters": {...}}
         }
         """
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         responses_tools = []
 
         for tool in tools:
@@ -1568,11 +1570,6 @@ class OpenAICompletion(BaseLLM):
         self, tools: list[dict[str, BaseTool]]
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to OpenAI function calling format."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-        from crewai.utilities.pydantic_schema_utils import (
-            force_additional_properties_false,
-        )
-
         openai_tools = []
 
         for tool in tools:
@@ -1591,8 +1588,9 @@ class OpenAICompletion(BaseLLM):
                 params_dict = (
                     parameters if isinstance(parameters, dict) else dict(parameters)
                 )
-                params_dict = force_additional_properties_false(params_dict)
-                openai_tool["function"]["parameters"] = params_dict
+                openai_tool["function"]["parameters"] = (
+                    sanitize_tool_params_for_openai_strict(params_dict)
+                )
 
             openai_tools.append(openai_tool)
         return openai_tools

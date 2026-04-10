@@ -11,9 +11,13 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
+)
+from crewai.utilities.pydantic_schema_utils import (
+    sanitize_tool_params_for_anthropic_strict,
 )
 from crewai.utilities.types import LLMMessage
 
@@ -494,10 +498,8 @@ class AnthropicCompletion(BaseLLM):
                 continue
 
             try:
-                from crewai.llms.providers.utils.common import safe_tool_conversion
-
                 name, description, parameters = safe_tool_conversion(tool, "Anthropic")
-            except (ImportError, KeyError, ValueError) as e:
+            except (KeyError, ValueError) as e:
                 logging.error(f"Error converting tool to Anthropic format: {e}")
                 raise e
 
@@ -506,8 +508,15 @@ class AnthropicCompletion(BaseLLM):
                 "description": description,
             }
 
+            func_info = tool.get("function", {})
+            strict_enabled = bool(func_info.get("strict"))
+
             if parameters and isinstance(parameters, dict):
-                anthropic_tool["input_schema"] = parameters
+                anthropic_tool["input_schema"] = (
+                    sanitize_tool_params_for_anthropic_strict(parameters)
+                    if strict_enabled
+                    else parameters
+                )
             else:
                 anthropic_tool["input_schema"] = {
                     "type": "object",
@@ -515,8 +524,7 @@ class AnthropicCompletion(BaseLLM):
                     "required": [],
                 }
 
-            func_info = tool.get("function", {})
-            if func_info.get("strict"):
+            if strict_enabled:
                 anthropic_tool["strict"] = True
 
             anthropic_tools.append(anthropic_tool)
