@@ -46,7 +46,11 @@ class FlowPersistence(BaseModel, ABC):
 
     @abstractmethod
     def save_state(
-        self, flow_uuid: str, method_name: str, state_data: dict[str, Any] | BaseModel
+        self,
+        flow_uuid: str,
+        method_name: str,
+        state_data: dict[str, Any] | BaseModel,
+        flow_class: str | None = None,
     ) -> None:
         """Persist the flow state after method completion.
 
@@ -54,6 +58,7 @@ class FlowPersistence(BaseModel, ABC):
             flow_uuid: Unique identifier for the flow instance
             method_name: Name of the method that just completed
             state_data: Current state data (either dict or Pydantic model)
+            flow_class: Optional name of the flow class for auto-restore support
         """
 
     @abstractmethod
@@ -66,6 +71,24 @@ class FlowPersistence(BaseModel, ABC):
         Returns:
             The most recent state as a dictionary, or None if no state exists
         """
+
+    def load_latest_by_class(self, flow_class: str) -> dict[str, Any] | None:
+        """Load the most recent state for a given flow class name.
+
+        This method is used to auto-restore persisted state when the @persist
+        decorator is applied at the class level. When a new flow instance is
+        created, this method is called to find and restore the latest persisted
+        state for that flow class, enabling seamless state continuity across runs.
+
+        Override in subclasses to support automatic state restoration.
+
+        Args:
+            flow_class: The name of the flow class
+
+        Returns:
+            The most recent state as a dictionary, or None if no state exists
+        """
+        return None
 
     def save_pending_feedback(
         self,
