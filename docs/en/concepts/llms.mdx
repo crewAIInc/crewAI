@@ -1191,17 +1191,17 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="MLflow AI Gateway">
-    [MLflow AI Gateway](https://mlflow.org/docs/latest/llms/gateway/index.html) is a database-backed LLM proxy built into the MLflow tracking server (MLflow ≥ 3.0). It provides a unified OpenAI-compatible API across dozens of providers — OpenAI, Anthropic, Gemini, Mistral, Bedrock, Ollama, and more — with built-in secrets management, fallback/retry, traffic splitting, and budget tracking.
+    [MLflow AI Gateway](https://mlflow.org/docs/latest/genai/governance/ai-gateway/) is a database-backed LLM proxy built into the MLflow tracking server (MLflow ≥ 3.0). It provides a unified OpenAI-compatible API across dozens of providers — OpenAI, Anthropic, Gemini, Mistral, Bedrock, Ollama, and more — with built-in secrets management, fallback/retry, traffic splitting, and budget tracking.
 
-    **Start the MLflow server:**
+    **1. Install MLflow and start the server:**
     ```bash
-    pip install mlflow
+    pip install mlflow[genai]
     mlflow server --host 127.0.0.1 --port 5000
     ```
 
-    Create a gateway endpoint in the MLflow UI at `http://localhost:5000` under **AI Gateway → Create Endpoint**. Provider API keys are stored encrypted on the server — no env vars needed in your application.
+    **2. Create a gateway endpoint** in the MLflow UI at [http://localhost:5000](http://localhost:5000). Navigate to **AI Gateway → Create Endpoint**, select a provider and model, and enter your provider API key (stored encrypted on the server). See the [MLflow AI Gateway documentation](https://mlflow.org/docs/latest/genai/governance/ai-gateway/endpoints/) for details.
 
-    Example usage in your CrewAI project:
+    **3. Use in your CrewAI project:**
     ```python Code
     from crewai import LLM
 
