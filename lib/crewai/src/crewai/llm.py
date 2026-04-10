@@ -38,6 +38,7 @@ from crewai.llms.base_llm import (
     get_current_call_id,
     llm_call_context,
 )
+from crewai.utilities.streaming import get_current_stream_run_id
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -790,6 +791,7 @@ class LLM(BaseLLM):
                             call_type=LLMCallType.LLM_CALL,
                             response_id=response_id,
                             call_id=get_current_call_id(),
+                            run_id=get_current_stream_run_id(),
                         ),
                     )
             # --- 4) Fallback to non-streaming if no content received
@@ -1003,6 +1005,7 @@ class LLM(BaseLLM):
                     call_type=LLMCallType.TOOL_CALL,
                     response_id=response_id,
                     call_id=get_current_call_id(),
+                    run_id=get_current_stream_run_id(),
                 ),
             )
 
@@ -1456,6 +1459,7 @@ class LLM(BaseLLM):
                             from_agent=from_agent,
                             response_id=response_id,
                             call_id=get_current_call_id(),
+                            run_id=get_current_stream_run_id(),
                         ),
                     )
 

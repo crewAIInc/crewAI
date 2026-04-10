@@ -7,6 +7,7 @@ import logging
 import queue
 import threading
 from typing import Any, NamedTuple
+import uuid
 
 from typing_extensions import TypedDict
 
@@ -24,6 +25,17 @@ from crewai.utilities.string_utils import sanitize_tool_name
 
 
 logger = logging.getLogger(__name__)
+
+# ContextVar that tracks the current streaming run_id.
+# Set by create_streaming_state() so that LLM emit paths can stamp events.
+_current_stream_run_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_current_stream_run_id", default=None
+)
+
+
+def get_current_stream_run_id() -> str | None:
+    """Return the active streaming run_id for the current context, if any."""
+    return _current_stream_run_id.get()
 
 
 class TaskInfo(TypedDict):
@@ -106,6 +118,7 @@ def _create_stream_handler(
     sync_queue: queue.Queue[StreamChunk | None | Exception],
     async_queue: asyncio.Queue[StreamChunk | None | Exception] | None = None,
     loop: asyncio.AbstractEventLoop | None = None,
+    run_id: str | None = None,
 ) -> Callable[[Any, BaseEvent], None]:
     """Create a stream handler function.
 
@@ -114,6 +127,9 @@ def _create_stream_handler(
         sync_queue: Synchronous queue for chunks.
         async_queue: Optional async queue for chunks.
         loop: Optional event loop for async operations.
+        run_id: Unique identifier for this streaming run. When set, the handler
+            only accepts events whose ``run_id`` matches, preventing cross-run
+            chunk contamination in concurrent streaming scenarios.
 
     Returns:
         Handler function that can be registered with the event bus.
@@ -127,6 +143,10 @@ def _create_stream_handler(
             event: The event to process.
         """
         if not isinstance(event, LLMStreamChunkEvent):
+            return
+
+        # Filter: only accept events belonging to this streaming run.
+        if run_id is not None and event.run_id is not None and event.run_id != run_id:
             return
 
         chunk = _create_stream_chunk(event, current_task_info)
@@ -187,6 +207,16 @@ def create_streaming_state(
 ) -> StreamingState:
     """Create and register streaming state.
 
+    Each call assigns a ``run_id`` that is:
+    * stored in a ``contextvars.ContextVar`` so that downstream LLM emit
+      paths can stamp ``LLMStreamChunkEvent.run_id`` automatically, and
+    * passed to the stream handler so it only accepts events with a
+      matching ``run_id``, preventing cross-run chunk contamination.
+
+    If the current context already carries a ``run_id`` (e.g. a parent
+    flow already created a streaming state), the existing value is reused
+    so that nested streaming (flow → crew) shares the same scope.
+
     Args:
         current_task_info: Task context info.
         result_holder: List to hold the final result.
@@ -195,6 +225,9 @@ def create_streaming_state(
     Returns:
         Initialized StreamingState with registered handler.
     """
+    run_id = _current_stream_run_id.get() or str(uuid.uuid4())
+    _current_stream_run_id.set(run_id)
+
     sync_queue: queue.Queue[StreamChunk | None | Exception] = queue.Queue()
     async_queue: asyncio.Queue[StreamChunk | None | Exception] | None = None
     loop: asyncio.AbstractEventLoop | None = None
@@ -203,7 +236,9 @@ def create_streaming_state(
         async_queue = asyncio.Queue()
         loop = asyncio.get_event_loop()
 
-    handler = _create_stream_handler(current_task_info, sync_queue, async_queue, loop)
+    handler = _create_stream_handler(
+        current_task_info, sync_queue, async_queue, loop, run_id=run_id
+    )
     crewai_event_bus.register_handler(LLMStreamChunkEvent, handler)
 
     return StreamingState(
