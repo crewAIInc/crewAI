@@ -1291,7 +1291,11 @@ class Crew(FlowTrackable, BaseModel):
     ) -> TaskOutput | None:
         """Handle conditional task evaluation using native async."""
         if pending_tasks:
-            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            async_outputs = await self._aprocess_async_tasks(
+                pending_tasks, was_replayed
+            )
+            task_outputs.clear()
+            task_outputs.extend(async_outputs)
             pending_tasks.clear()
 
         return check_conditional_skip(
@@ -1494,7 +1498,9 @@ class Crew(FlowTrackable, BaseModel):
         was_replayed: bool,
     ) -> TaskOutput | None:
         if futures:
-            task_outputs = self._process_async_tasks(futures, was_replayed)
+            async_outputs = self._process_async_tasks(futures, was_replayed)
+            task_outputs.clear()
+            task_outputs.extend(async_outputs)
             futures.clear()
 
         return check_conditional_skip(
