@@ -42,6 +42,7 @@ from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
     BEDROCK_MODELS,
+    CORTEX_MODELS,
     GEMINI_MODELS,
     OPENAI_MODELS,
 )
@@ -249,6 +250,8 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "cortex",
+    "snowflake",
 ]
 
 
@@ -338,6 +341,8 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "cortex": "cortex",
+                "snowflake": "cortex",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -457,6 +462,28 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "cortex":
+            # Guard against matching when Snowflake is not configured —
+            # these prefixes overlap with other providers (e.g., claude-, gemma-).
+            if not (
+                os.getenv("SNOWFLAKE_ACCOUNT")
+                and (
+                    os.getenv("SNOWFLAKE_PAT")
+                    or os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH")
+                    or os.getenv("SNOWFLAKE_PRIVATE_KEY")
+                    or os.path.isfile("/snowflake/session/token")
+                )
+            ):
+                return False
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in [
+                    "llama3.", "llama4-", "mistral-", "mixtral-", "snowflake-",
+                    "reka-", "jamba-", "gemma-", "claude-3-5-sonnet", "claude-3-7-sonnet",
+                    "claude-sonnet-4", "claude-opus-4", "deepseek-",
+                ]
+            )
+
         return False
 
     @classmethod
@@ -492,6 +519,9 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if (provider == "cortex" or provider == "snowflake") and model in CORTEX_MODELS:
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -523,6 +553,18 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        if model in CORTEX_MODELS:
+            # Only infer cortex when Snowflake credentials are configured,
+            # otherwise short model names like "claude-3-5-sonnet" would hijack
+            # routing from other providers for users without a Snowflake account.
+            if os.getenv("SNOWFLAKE_ACCOUNT") and (
+                os.getenv("SNOWFLAKE_PAT")
+                or os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH")
+                or os.getenv("SNOWFLAKE_PRIVATE_KEY")
+                or os.path.isfile("/snowflake/session/token")
+            ):
+                return "cortex"
 
         return "openai"
 
@@ -572,6 +614,11 @@ class LLM(BaseLLM):
             )
 
             return OpenAICompatibleCompletion
+
+        if provider == "cortex" or provider == "snowflake":
+            from crewai.llms.providers.cortex.completion import CortexCompletion
+
+            return CortexCompletion
 
         return None
 
