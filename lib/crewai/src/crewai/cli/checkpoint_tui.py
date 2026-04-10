@@ -576,13 +576,10 @@ async def _run_checkpoint_tui_async(location: str) -> None:
         for subsequent in crew.tasks[earliest + 1 :]:
             if subsequent.output and crew.tasks.index(subsequent) not in task_overrides:
                 subsequent.output = None
-            if (
-                subsequent.agent
-                and id(subsequent.agent) not in overridden_agents
-                and subsequent.agent.agent_executor
-            ):
+            if subsequent.agent and subsequent.agent.agent_executor:
                 subsequent.agent.agent_executor._resuming = False
-                subsequent.agent.agent_executor.messages = []
+                if id(subsequent.agent) not in overridden_agents:
+                    subsequent.agent.agent_executor.messages = []
         click.echo()
 
     if inputs:
