@@ -14,18 +14,10 @@ from datetime import datetime
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final
 import uuid
 
-from pydantic import (
-    AliasChoices,
-    BaseModel,
-    ConfigDict,
-    Field,
-    PrivateAttr,
-    model_validator,
-)
-from typing_extensions import TypedDict
+from pydantic import BaseModel
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
@@ -53,16 +45,10 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.agent.core import Agent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
-
-
-class JsonResponseFormat(TypedDict):
-    """Response format requesting raw JSON output (e.g. ``{"type": "json_object"}``)."""
-
-    type: Literal["json_object"]
 
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
@@ -96,7 +82,7 @@ def get_current_call_id() -> str:
     return call_id
 
 
-class BaseLLM(BaseModel, ABC):
+class BaseLLM(ABC):
     """Abstract base class for LLM implementations.
 
     This class defines the interface that all LLM implementations must follow.
@@ -115,103 +101,56 @@ class BaseLLM(BaseModel, ABC):
         additional_params: Additional provider-specific parameters.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
-
-    llm_type: str = "base"
-    model: str
-    temperature: float | None = None
-    api_key: str | None = None
-    base_url: str | None = None
-    provider: str = Field(default="openai")
-    prefer_upload: bool = False
     is_litellm: bool = False
-    stop: list[str] = Field(
-        default_factory=list,
-        validation_alias=AliasChoices("stop", "stop_sequences"),
-    )
-    additional_params: dict[str, Any] = Field(default_factory=dict)
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        if name in ("stop", "stop_sequences"):
-            if value is None:
-                value = []
-            elif isinstance(value, str):
-                value = [value]
-            elif not isinstance(value, list):
-                value = list(value)
-            name = "stop"
-        try:
-            super().__setattr__(name, value)
-        except ValueError:
-            if name in self.model_fields:
-                raise  # Re-raise validation errors on declared fields
-            # Fallback for attributes not declared as fields (e.g. mock patching)
-            object.__setattr__(self, name, value)
-        except AttributeError:
-            object.__setattr__(self, name, value)
+    def __init__(
+        self,
+        model: str,
+        temperature: float | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        provider: str | None = None,
+        prefer_upload: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize the BaseLLM with default attributes.
 
-    def __delattr__(self, name: str) -> None:
-        try:
-            super().__delattr__(name)
-        except AttributeError:
-            object.__delattr__(self, name)
-
-    @property
-    def stop_sequences(self) -> list[str]:
-        """Alias for ``stop`` — kept for backward compatibility with provider APIs.
-
-        Writes are handled by ``__setattr__``, which normalizes and redirects
-        ``stop_sequences`` assignments to the ``stop`` field.
+        Args:
+            model: The model identifier/name.
+            temperature: Optional temperature setting for response generation.
+            stop: Optional list of stop sequences for generation.
+            prefer_upload: Whether to prefer file upload over inline base64.
+            **kwargs: Additional provider-specific parameters.
         """
-        return self.stop
+        if not model:
+            raise ValueError("Model name is required and cannot be empty")
 
-    _token_usage: dict[str, int] = PrivateAttr(
-        default_factory=lambda: {
+        self.model = model
+        self.temperature = temperature
+        self.api_key = api_key
+        self.base_url = base_url
+        self.prefer_upload = prefer_upload
+        # Store additional parameters for provider-specific use
+        self.additional_params = kwargs
+        self._provider = provider or "openai"
+
+        stop = kwargs.pop("stop", None)
+        if stop is None:
+            self.stop: list[str] = []
+        elif isinstance(stop, str):
+            self.stop = [stop]
+        elif isinstance(stop, list):
+            self.stop = stop
+        else:
+            self.stop = []
+
+        self._token_usage = {
             "total_tokens": 0,
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "successful_requests": 0,
             "cached_prompt_tokens": 0,
-            "reasoning_tokens": 0,
-            "cache_creation_tokens": 0,
         }
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def _validate_init_fields(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-
-        if not data.get("model"):
-            raise ValueError("Model name is required and cannot be empty")
-
-        # Normalize stop: accept str, list, or None; also accept stop_sequences alias
-        stop_seqs = data.pop("stop_sequences", None)
-        stop = stop_seqs if stop_seqs is not None else data.get("stop")
-        if stop is None:
-            data["stop"] = []
-        elif isinstance(stop, str):
-            data["stop"] = [stop]
-        elif isinstance(stop, list):
-            data["stop"] = stop
-        else:
-            data["stop"] = list(stop)
-
-        # Default provider
-        if not data.get("provider"):
-            data["provider"] = "openai"
-
-        # Collect unknown kwargs into additional_params
-        known_fields = set(cls.model_fields.keys())
-        extras = {k: v for k, v in data.items() if k not in known_fields}
-        for k in extras:
-            data.pop(k)
-        existing = data.get("additional_params") or {}
-        existing.update(extras)
-        data["additional_params"] = existing
-
-        return data
 
     def to_config_dict(self) -> dict[str, Any]:
         """Serialize this LLM to a dict that can reconstruct it via ``LLM(**config)``.
@@ -235,6 +174,16 @@ class BaseLLM(BaseModel, ABC):
 
         return config
 
+    @property
+    def provider(self) -> str:
+        """Get the provider of the LLM."""
+        return self._provider
+
+    @provider.setter
+    def provider(self, value: str) -> None:
+        """Set the provider of the LLM."""
+        self._provider = value
+
     @abstractmethod
     def call(
         self,
@@ -243,7 +192,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call the LLM with the given messages.
@@ -280,7 +229,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call the LLM with the given messages.
@@ -437,7 +386,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
@@ -461,11 +410,21 @@ class BaseLLM(BaseModel, ABC):
         response: Any,
         call_type: LLMCallType,
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
         messages: str | list[LLMMessage] | None = None,
-        usage: dict[str, Any] | None = None,
+        stop_reason: str | None = None,
     ) -> None:
-        """Emit LLM call completed event."""
+        """Emit LLM call completed event.
+
+        Args:
+            response: The LLM response content.
+            call_type: Whether this was a tool call or a regular LLM call.
+            from_task: The task that initiated the call.
+            from_agent: The agent that initiated the call.
+            messages: The messages sent to the LLM.
+            stop_reason: The stop reason from the LLM provider (e.g.
+                ``"end_turn"``, ``"max_tokens"``, ``"tool_use"``).
+        """
         from crewai.utilities.serialization import to_serializable
 
         crewai_event_bus.emit(
@@ -478,7 +437,7 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
-                usage=usage,
+                stop_reason=stop_reason,
             ),
         )
 
@@ -486,7 +445,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         error: str,
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call failed event."""
         crewai_event_bus.emit(
@@ -504,7 +463,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         chunk: str,
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
         response_id: str | None = None,
@@ -536,7 +495,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         chunk: str,
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
         response_id: str | None = None,
     ) -> None:
         """Emit thinking/reasoning chunk event from a thinking model.
@@ -564,7 +523,7 @@ class BaseLLM(BaseModel, ABC):
         function_args: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
     ) -> str | None:
         """Handle tool execution with proper event emission.
 
@@ -810,24 +769,14 @@ class BaseLLM(BaseModel, ABC):
         cached_tokens = (
             usage_data.get("cached_tokens")
             or usage_data.get("cached_prompt_tokens")
-            or usage_data.get("cache_read_input_tokens")
             or 0
         )
-        if not cached_tokens:
-            prompt_details = usage_data.get("prompt_tokens_details")
-            if isinstance(prompt_details, dict):
-                cached_tokens = prompt_details.get("cached_tokens", 0) or 0
-
-        reasoning_tokens = usage_data.get("reasoning_tokens", 0) or 0
-        cache_creation_tokens = usage_data.get("cache_creation_tokens", 0) or 0
 
         self._token_usage["prompt_tokens"] += prompt_tokens
         self._token_usage["completion_tokens"] += completion_tokens
         self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
         self._token_usage["successful_requests"] += 1
         self._token_usage["cached_prompt_tokens"] += cached_tokens
-        self._token_usage["reasoning_tokens"] += reasoning_tokens
-        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
@@ -840,7 +789,7 @@ class BaseLLM(BaseModel, ABC):
     def _invoke_before_llm_call_hooks(
         self,
         messages: list[LLMMessage],
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
     ) -> bool:
         """Invoke before_llm_call hooks for direct LLM calls (no agent context).
 
@@ -869,7 +818,7 @@ class BaseLLM(BaseModel, ABC):
             LLMCallHookContext,
             get_before_llm_call_hooks,
         )
-        from crewai.utilities.printer import PRINTER
+        from crewai.utilities.printer import Printer
 
         before_hooks = get_before_llm_call_hooks()
         if not before_hooks:
@@ -884,20 +833,21 @@ class BaseLLM(BaseModel, ABC):
             crew=None,
         )
         verbose = getattr(from_agent, "verbose", True) if from_agent else True
+        printer = Printer()
 
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
                     if verbose:
-                        PRINTER.print(
+                        printer.print(
                             content="LLM call blocked by before_llm_call hook",
                             color="yellow",
                         )
                     return False
         except Exception as e:
             if verbose:
-                PRINTER.print(
+                printer.print(
                     content=f"Error in before_llm_call hook: {e}",
                     color="yellow",
                 )
@@ -908,7 +858,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         messages: list[LLMMessage],
         response: str,
-        from_agent: BaseAgent | None = None,
+        from_agent: Agent | None = None,
     ) -> str:
         """Invoke after_llm_call hooks for direct LLM calls (no agent context).
 
@@ -938,7 +888,7 @@ class BaseLLM(BaseModel, ABC):
             LLMCallHookContext,
             get_after_llm_call_hooks,
         )
-        from crewai.utilities.printer import PRINTER
+        from crewai.utilities.printer import Printer
 
         after_hooks = get_after_llm_call_hooks()
         if not after_hooks:
@@ -954,6 +904,7 @@ class BaseLLM(BaseModel, ABC):
             response=response,
         )
         verbose = getattr(from_agent, "verbose", True) if from_agent else True
+        printer = Printer()
         modified_response = response
 
         try:
@@ -964,7 +915,7 @@ class BaseLLM(BaseModel, ABC):
                     hook_context.response = modified_response
         except Exception as e:
             if verbose:
-                PRINTER.print(
+                printer.print(
                     content=f"Error in after_llm_call hook: {e}",
                     color="yellow",
                 )

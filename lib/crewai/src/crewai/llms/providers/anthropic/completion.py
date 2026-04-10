@@ -3,13 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Final, Literal, TypeGuard, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeGuard, cast
 
-from pydantic import BaseModel, PrivateAttr, model_validator
+from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
-from crewai.llms.hooks.base import BaseInterceptor
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -17,6 +16,9 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.types import LLMMessage
 
+
+if TYPE_CHECKING:
+    from crewai.llms.hooks.base import BaseInterceptor
 
 try:
     from anthropic import Anthropic, AsyncAnthropic, transform_schema
@@ -148,48 +150,60 @@ class AnthropicCompletion(BaseLLM):
     offering native tool use, streaming support, and proper message formatting.
     """
 
-    llm_type: Literal["anthropic"] = "anthropic"
-    model: str = "claude-3-5-sonnet-20241022"
-    timeout: float | None = None
-    max_retries: int = 2
-    max_tokens: int = 4096
-    top_p: float | None = None
-    stream: bool = False
-    client_params: dict[str, Any] | None = None
-    interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None
-    thinking: AnthropicThinkingConfig | None = None
-    response_format: JsonResponseFormat | type[BaseModel] | None = None
-    tool_search: AnthropicToolSearchConfig | None = None
-    is_claude_3: bool = False
-    supports_tools: bool = True
+    def __init__(
+        self,
+        model: str = "claude-3-5-sonnet-20241022",
+        api_key: str | None = None,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        max_retries: int = 2,
+        temperature: float | None = None,
+        max_tokens: int = 4096,  # Required for Anthropic
+        top_p: float | None = None,
+        stop_sequences: list[str] | None = None,
+        stream: bool = False,
+        client_params: dict[str, Any] | None = None,
+        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
+        thinking: AnthropicThinkingConfig | None = None,
+        response_format: type[BaseModel] | None = None,
+        tool_search: AnthropicToolSearchConfig | bool | None = None,
+        **kwargs: Any,
+    ):
+        """Initialize Anthropic chat completion client.
 
-    _client: Any = PrivateAttr(default=None)
-    _async_client: Any = PrivateAttr(default=None)
-    _previous_thinking_blocks: list[Any] = PrivateAttr(default_factory=list)
+        Args:
+            model: Anthropic model name (e.g., 'claude-3-5-sonnet-20241022')
+            api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+            base_url: Custom base URL for Anthropic API
+            timeout: Request timeout in seconds
+            max_retries: Maximum number of retries
+            temperature: Sampling temperature (0-1)
+            max_tokens: Maximum tokens in response (required for Anthropic)
+            top_p: Nucleus sampling parameter
+            stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
+            stream: Enable streaming responses
+            client_params: Additional parameters for the Anthropic client
+            interceptor: HTTP interceptor for modifying requests/responses at transport level.
+            response_format: Pydantic model for structured output. When provided, responses
+                will be validated against this model schema.
+            tool_search: Enable Anthropic's server-side tool search. When True, uses "bm25"
+                variant by default. Pass an AnthropicToolSearchConfig to choose "regex" or
+                "bm25". When enabled, tools are automatically marked with defer_loading=True
+                and a tool search tool is injected into the tools list.
+            **kwargs: Additional parameters
+        """
+        super().__init__(
+            model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
+        )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _normalize_anthropic_fields(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-        # Anthropic uses stop_sequences; normalize from stop kwarg
-        popped = data.pop("stop_sequences", None)
-        seqs = popped if popped is not None else (data.get("stop") or [])
-        if isinstance(seqs, str):
-            seqs = [seqs]
-        data["stop"] = seqs
-        data["is_claude_3"] = "claude-3" in data.get("model", "").lower()
-        # Normalize tool_search
-        ts = data.get("tool_search")
-        if ts is True:
-            data["tool_search"] = AnthropicToolSearchConfig()
-        elif ts is not None and not isinstance(ts, AnthropicToolSearchConfig):
-            data["tool_search"] = None
-        return data
+        # Client params
+        self.interceptor = interceptor
+        self.client_params = client_params
+        self.base_url = base_url
+        self.timeout = timeout
+        self.max_retries = max_retries
 
-    @model_validator(mode="after")
-    def _init_clients(self) -> AnthropicCompletion:
-        self._client = Anthropic(**self._get_client_params())
+        self.client = Anthropic(**self._get_client_params())
 
         async_client_params = self._get_client_params()
         if self.interceptor:
@@ -197,8 +211,51 @@ class AnthropicCompletion(BaseLLM):
             async_http_client = httpx.AsyncClient(transport=async_transport)
             async_client_params["http_client"] = async_http_client
 
-        self._async_client = AsyncAnthropic(**async_client_params)
-        return self
+        self.async_client = AsyncAnthropic(**async_client_params)
+
+        # Store completion parameters
+        self.max_tokens = max_tokens
+        self.top_p = top_p
+        self.stream = stream
+        self.stop_sequences = stop_sequences or []
+        self.thinking = thinking
+        self.previous_thinking_blocks: list[ThinkingBlock] = []
+        self.response_format = response_format
+        # Tool search config
+        self.tool_search: AnthropicToolSearchConfig | None
+        if tool_search is True:
+            self.tool_search = AnthropicToolSearchConfig()
+        elif isinstance(tool_search, AnthropicToolSearchConfig):
+            self.tool_search = tool_search
+        else:
+            self.tool_search = None
+        # Model-specific settings
+        self.is_claude_3 = "claude-3" in model.lower()
+        self.supports_tools = True
+
+    @property
+    def stop(self) -> list[str]:
+        """Get stop sequences sent to the API."""
+        return self.stop_sequences
+
+    @stop.setter
+    def stop(self, value: list[str] | str | None) -> None:
+        """Set stop sequences.
+
+        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
+        are properly sent to the Anthropic API.
+
+        Args:
+            value: Stop sequences as a list, single string, or None
+        """
+        if value is None:
+            self.stop_sequences = []
+        elif isinstance(value, str):
+            self.stop_sequences = [value]
+        elif isinstance(value, list):
+            self.stop_sequences = value
+        else:
+            self.stop_sequences = []
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
@@ -494,10 +551,6 @@ class AnthropicCompletion(BaseLLM):
                     "required": [],
                 }
 
-            func_info = tool.get("function", {})
-            if func_info.get("strict"):
-                anthropic_tool["strict"] = True
-
             anthropic_tools.append(anthropic_tool)
 
         return anthropic_tools
@@ -698,11 +751,11 @@ class AnthropicCompletion(BaseLLM):
                         )
                 elif isinstance(content, list):
                     formatted_messages.append({"role": "assistant", "content": content})
-                elif self.thinking and self._previous_thinking_blocks:
+                elif self.thinking and self.previous_thinking_blocks:
                     structured_content = cast(
                         list[dict[str, Any]],
                         [
-                            *self._previous_thinking_blocks,
+                            *self.previous_thinking_blocks,
                             {"type": "text", "text": content if content else ""},
                         ],
                     )
@@ -756,7 +809,7 @@ class AnthropicCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-        response_model: JsonResponseFormat | type[BaseModel] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming message completion."""
         uses_file_api = _contains_file_id_reference(params.get("messages", []))
@@ -790,11 +843,11 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = self._client.beta.messages.create(
+                response = self.client.beta.messages.create(
                     **params, extra_body=extra_body
                 )
             else:
-                response = self._client.messages.create(**params)
+                response = self.client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -804,6 +857,7 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+        stop_reason = self._check_and_get_stop_reason(response, from_agent)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -816,7 +870,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
-                            usage=usage,
+                            stop_reason=stop_reason,
                         )
                         return structured_data
             else:
@@ -832,7 +886,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
-                            usage=usage,
+                            stop_reason=stop_reason,
                         )
                         return structured_data
 
@@ -855,7 +909,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
-                        usage=usage,
+                        stop_reason=stop_reason,
                     )
                     return list(tool_uses)
 
@@ -878,7 +932,7 @@ class AnthropicCompletion(BaseLLM):
                         thinking_blocks.append(cast(ThinkingBlock, thinking_block))
 
         if thinking_blocks:
-            self._previous_thinking_blocks = thinking_blocks
+            self.previous_thinking_blocks = thinking_blocks
 
         content = self._apply_stop_words(content)
         self._emit_call_completed_event(
@@ -887,7 +941,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
-            usage=usage,
+            stop_reason=stop_reason,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -903,7 +957,7 @@ class AnthropicCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-        response_model: JsonResponseFormat | type[BaseModel] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle streaming message completion."""
         betas: list[str] = []
@@ -942,9 +996,9 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self._client.beta.messages.stream(**stream_params, extra_body=extra_body)
+            self.client.beta.messages.stream(**stream_params, extra_body=extra_body)
             if betas
-            else self._client.messages.stream(**stream_params)
+            else self.client.messages.stream(**stream_params)
         )
         with stream_context as stream:
             response_id = None
@@ -1023,10 +1077,11 @@ class AnthropicCompletion(BaseLLM):
                     thinking_blocks.append(cast(ThinkingBlock, thinking_block))
 
         if thinking_blocks:
-            self._previous_thinking_blocks = thinking_blocks
+            self.previous_thinking_blocks = thinking_blocks
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
+        stop_reason = self._check_and_get_stop_reason(final_message, from_agent)
 
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
@@ -1037,7 +1092,7 @@ class AnthropicCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
-                    usage=usage,
+                    stop_reason=stop_reason,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1052,7 +1107,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
-                        usage=usage,
+                        stop_reason=stop_reason,
                     )
                     return structured_data
 
@@ -1082,7 +1137,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
-            usage=usage,
+            stop_reason=stop_reason,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1223,11 +1278,14 @@ class AnthropicCompletion(BaseLLM):
 
         try:
             # Send tool results back to Claude for final response
-            final_response: Message = self._client.messages.create(**follow_up_params)
+            final_response: Message = self.client.messages.create(**follow_up_params)
 
             # Track token usage for follow-up call
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
+            stop_reason = self._check_and_get_stop_reason(
+                final_response, from_agent
+            )
 
             final_content = ""
             thinking_blocks: list[ThinkingBlock] = []
@@ -1242,7 +1300,7 @@ class AnthropicCompletion(BaseLLM):
                             thinking_blocks.append(cast(ThinkingBlock, thinking_block))
 
             if thinking_blocks:
-                self._previous_thinking_blocks = thinking_blocks
+                self.previous_thinking_blocks = thinking_blocks
 
             final_content = self._apply_stop_words(final_content)
 
@@ -1253,7 +1311,7 @@ class AnthropicCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
-                usage=follow_up_usage,
+                stop_reason=stop_reason,
             )
 
             # Log combined token usage
@@ -1285,7 +1343,7 @@ class AnthropicCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-        response_model: JsonResponseFormat | type[BaseModel] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming async message completion."""
         uses_file_api = _contains_file_id_reference(params.get("messages", []))
@@ -1319,11 +1377,11 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = await self._async_client.beta.messages.create(
+                response = await self.async_client.beta.messages.create(
                     **params, extra_body=extra_body
                 )
             else:
-                response = await self._async_client.messages.create(**params)
+                response = await self.async_client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -1333,6 +1391,7 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+        stop_reason = self._check_and_get_stop_reason(response, from_agent)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1345,7 +1404,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
-                            usage=usage,
+                            stop_reason=stop_reason,
                         )
                         return structured_data
             else:
@@ -1361,7 +1420,7 @@ class AnthropicCompletion(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
-                            usage=usage,
+                            stop_reason=stop_reason,
                         )
                         return structured_data
 
@@ -1382,7 +1441,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
-                        usage=usage,
+                        stop_reason=stop_reason,
                     )
                     return list(tool_uses)
 
@@ -1406,7 +1465,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
-            usage=usage,
+            stop_reason=stop_reason,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1420,7 +1479,7 @@ class AnthropicCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-        response_model: JsonResponseFormat | type[BaseModel] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle async streaming message completion."""
         betas: list[str] = []
@@ -1457,11 +1516,11 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self._async_client.beta.messages.stream(
+            self.async_client.beta.messages.stream(
                 **stream_params, extra_body=extra_body
             )
             if betas
-            else self._async_client.messages.stream(**stream_params)
+            else self.async_client.messages.stream(**stream_params)
         )
         async with stream_context as stream:
             response_id = None
@@ -1534,6 +1593,7 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
+        stop_reason = self._check_and_get_stop_reason(final_message, from_agent)
 
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
@@ -1544,7 +1604,7 @@ class AnthropicCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
-                    usage=usage,
+                    stop_reason=stop_reason,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1559,7 +1619,7 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
-                        usage=usage,
+                        stop_reason=stop_reason,
                     )
                     return structured_data
 
@@ -1588,7 +1648,7 @@ class AnthropicCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
-            usage=usage,
+            stop_reason=stop_reason,
         )
 
         return full_response
@@ -1626,12 +1686,15 @@ class AnthropicCompletion(BaseLLM):
         ]
 
         try:
-            final_response: Message = await self._async_client.messages.create(
+            final_response: Message = await self.async_client.messages.create(
                 **follow_up_params
             )
 
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
+            stop_reason = self._check_and_get_stop_reason(
+                final_response, from_agent
+            )
 
             final_content = ""
             if final_response.content:
@@ -1647,7 +1710,7 @@ class AnthropicCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
-                usage=follow_up_usage,
+                stop_reason=stop_reason,
             )
 
             total_usage = {
@@ -1704,27 +1767,50 @@ class AnthropicCompletion(BaseLLM):
         # Default context window size for Claude models
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
+    def _check_and_get_stop_reason(
+        self,
+        response: Message | BetaMessage,
+        from_agent: Any | None = None,
+    ) -> str | None:
+        """Extract stop_reason from an Anthropic response and warn on truncation.
+
+        Anthropic responses carry a ``stop_reason`` field that indicates *why*
+        generation stopped (e.g. ``"end_turn"``, ``"max_tokens"``,
+        ``"tool_use"``).  When the value is ``"max_tokens"`` the output was
+        truncated and downstream consumers should be alerted.
+
+        Args:
+            response: The raw Anthropic ``Message`` / ``BetaMessage``.
+            from_agent: The agent that initiated the call (used for log context).
+
+        Returns:
+            The ``stop_reason`` string, or ``None`` when unavailable.
+        """
+        stop_reason = getattr(response, "stop_reason", None)
+        if stop_reason == "max_tokens":
+            agent_hint = f" [{from_agent.role}]" if from_agent and hasattr(from_agent, "role") else ""
+            logging.warning(
+                f"Truncated response{agent_hint}: stop_reason='max_tokens'. "
+                f"Consider increasing max_tokens (current: {self.max_tokens})."
+            )
+        return stop_reason
+
     @staticmethod
     def _extract_anthropic_token_usage(
         response: Message | BetaMessage,
     ) -> dict[str, Any]:
-        """Extract token usage and response metadata from Anthropic response."""
+        """Extract token usage from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
             input_tokens = getattr(usage, "input_tokens", 0)
             output_tokens = getattr(usage, "output_tokens", 0)
             cache_read_tokens = getattr(usage, "cache_read_input_tokens", 0) or 0
-            cache_creation_tokens = (
-                getattr(usage, "cache_creation_input_tokens", 0) or 0
-            )
-            result: dict[str, Any] = {
+            return {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "total_tokens": input_tokens + output_tokens,
                 "cached_prompt_tokens": cache_read_tokens,
-                "cache_creation_tokens": cache_creation_tokens,
             }
-            return result
         return {"total_tokens": 0}
 
     def supports_multimodal(self) -> bool:
@@ -1754,8 +1840,8 @@ class AnthropicCompletion(BaseLLM):
             from crewai_files.uploaders.anthropic import AnthropicFileUploader
 
             return AnthropicFileUploader(
-                client=self._client,
-                async_client=self._async_client,
+                client=self.client,
+                async_client=self.async_client,
             )
         except ImportError:
             return None

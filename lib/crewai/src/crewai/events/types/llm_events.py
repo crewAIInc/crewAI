@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -43,7 +43,7 @@ class LLMCallStartedEvent(LLMEventBase):
             multimodal content (text, images, etc.)
     """
 
-    type: Literal["llm_call_started"] = "llm_call_started"
+    type: str = "llm_call_started"
     messages: str | list[dict[str, Any]] | None = None
     tools: list[dict[str, Any]] | None = None
     callbacks: list[Any] | None = None
@@ -51,20 +51,27 @@ class LLMCallStartedEvent(LLMEventBase):
 
 
 class LLMCallCompletedEvent(LLMEventBase):
-    """Event emitted when a LLM call completes"""
+    """Event emitted when a LLM call completes
 
-    type: Literal["llm_call_completed"] = "llm_call_completed"
+    Attributes:
+        stop_reason: The stop reason returned by the LLM provider (e.g.
+            ``"end_turn"``, ``"max_tokens"``, ``"tool_use"``).  ``None``
+            when the provider does not expose a stop reason or the
+            information is unavailable (e.g. streaming aggregation).
+    """
+
+    type: str = "llm_call_completed"
     messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
-    usage: dict[str, Any] | None = None
+    stop_reason: str | None = None
 
 
 class LLMCallFailedEvent(LLMEventBase):
     """Event emitted when a LLM call fails"""
 
     error: str
-    type: Literal["llm_call_failed"] = "llm_call_failed"
+    type: str = "llm_call_failed"
 
 
 class FunctionCall(BaseModel):
@@ -82,7 +89,7 @@ class ToolCall(BaseModel):
 class LLMStreamChunkEvent(LLMEventBase):
     """Event emitted when a streaming chunk is received"""
 
-    type: Literal["llm_stream_chunk"] = "llm_stream_chunk"
+    type: str = "llm_stream_chunk"
     chunk: str
     tool_call: ToolCall | None = None
     call_type: LLMCallType | None = None
@@ -92,6 +99,6 @@ class LLMStreamChunkEvent(LLMEventBase):
 class LLMThinkingChunkEvent(LLMEventBase):
     """Event emitted when a thinking/reasoning chunk is received from a thinking model"""
 
-    type: Literal["llm_thinking_chunk"] = "llm_thinking_chunk"
+    type: str = "llm_thinking_chunk"
     chunk: str
     response_id: str | None = None
