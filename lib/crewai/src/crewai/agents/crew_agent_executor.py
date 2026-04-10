@@ -997,19 +997,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 result = (
                     str(raw_result) if not isinstance(raw_result, str) else raw_result
                 )
-
-                # Increment tool usage count after successful execution
-                # so that max_usage_count is enforced in the native
-                # function-calling path (mirrors the ReAct path in
-                # tool_usage.py).
-                if structured_tool and hasattr(
-                    structured_tool, "_increment_usage_count"
-                ):
-                    structured_tool._increment_usage_count()
-                elif original_tool and hasattr(
-                    original_tool, "current_usage_count"
-                ):
-                    original_tool.current_usage_count += 1
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 if self.task:
