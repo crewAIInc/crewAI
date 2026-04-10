@@ -29,6 +29,14 @@ class UsageMetrics(BaseModel):
     completion_tokens: int = Field(
         default=0, description="Number of tokens used in completions."
     )
+    reasoning_tokens: int = Field(
+        default=0,
+        description="Number of reasoning/thinking tokens (e.g. OpenAI o-series, Gemini thinking).",
+    )
+    cache_creation_tokens: int = Field(
+        default=0,
+        description="Number of cache creation tokens (e.g. Anthropic cache writes).",
+    )
     successful_requests: int = Field(
         default=0, description="Number of successful requests made."
     )
@@ -43,4 +51,6 @@ class UsageMetrics(BaseModel):
         self.prompt_tokens += usage_metrics.prompt_tokens
         self.cached_prompt_tokens += usage_metrics.cached_prompt_tokens
         self.completion_tokens += usage_metrics.completion_tokens
+        self.reasoning_tokens += usage_metrics.reasoning_tokens
+        self.cache_creation_tokens += usage_metrics.cache_creation_tokens
         self.successful_requests += usage_metrics.successful_requests

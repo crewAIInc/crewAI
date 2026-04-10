@@ -174,3 +174,51 @@ class TestEmitCallCompletedEventPassesUsage:
         event = mock_emit.call_args[1]["event"]
         assert isinstance(event, LLMCallCompletedEvent)
         assert event.usage is None
+
+class TestUsageMetricsNewFields:
+    def test_add_usage_metrics_aggregates_reasoning_and_cache_creation(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics1 = UsageMetrics(
+            total_tokens=100,
+            prompt_tokens=60,
+            completion_tokens=40,
+            cached_prompt_tokens=10,
+            reasoning_tokens=15,
+            cache_creation_tokens=5,
+            successful_requests=1,
+        )
+        metrics2 = UsageMetrics(
+            total_tokens=200,
+            prompt_tokens=120,
+            completion_tokens=80,
+            cached_prompt_tokens=20,
+            reasoning_tokens=25,
+            cache_creation_tokens=10,
+            successful_requests=1,
+        )
+
+        metrics1.add_usage_metrics(metrics2)
+
+        assert metrics1.total_tokens == 300
+        assert metrics1.prompt_tokens == 180
+        assert metrics1.completion_tokens == 120
+        assert metrics1.cached_prompt_tokens == 30
+        assert metrics1.reasoning_tokens == 40
+        assert metrics1.cache_creation_tokens == 15
+        assert metrics1.successful_requests == 2
+
+    def test_new_fields_default_to_zero(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics()
+        assert metrics.reasoning_tokens == 0
+        assert metrics.cache_creation_tokens == 0
+
+    def test_model_dump_includes_new_fields(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics(reasoning_tokens=10, cache_creation_tokens=5)
+        dumped = metrics.model_dump()
+        assert dumped["reasoning_tokens"] == 10
+        assert dumped["cache_creation_tokens"] == 5

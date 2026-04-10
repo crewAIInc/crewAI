@@ -494,6 +494,10 @@ class AnthropicCompletion(BaseLLM):
                     "required": [],
                 }
 
+            func_info = tool.get("function", {})
+            if func_info.get("strict"):
+                anthropic_tool["strict"] = True
+
             anthropic_tools.append(anthropic_tool)
 
         return anthropic_tools
@@ -1704,18 +1708,23 @@ class AnthropicCompletion(BaseLLM):
     def _extract_anthropic_token_usage(
         response: Message | BetaMessage,
     ) -> dict[str, Any]:
-        """Extract token usage from Anthropic response."""
+        """Extract token usage and response metadata from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
             input_tokens = getattr(usage, "input_tokens", 0)
             output_tokens = getattr(usage, "output_tokens", 0)
             cache_read_tokens = getattr(usage, "cache_read_input_tokens", 0) or 0
-            return {
+            cache_creation_tokens = (
+                getattr(usage, "cache_creation_input_tokens", 0) or 0
+            )
+            result: dict[str, Any] = {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "total_tokens": input_tokens + output_tokens,
                 "cached_prompt_tokens": cache_read_tokens,
+                "cache_creation_tokens": cache_creation_tokens,
             }
+            return result
         return {"total_tokens": 0}
 
     def supports_multimodal(self) -> bool:
