@@ -77,24 +77,39 @@ def _extract_tool_call_info(
 def _create_stream_chunk(
     event: LLMStreamChunkEvent,
     current_task_info: TaskInfo,
+    task_id_to_index: dict[str, int] | None = None,
 ) -> StreamChunk:
     """Create a StreamChunk from an LLM stream chunk event.
 
     Args:
         event: The LLM stream chunk event to process.
         current_task_info: Task context info.
+        task_id_to_index: Optional mapping from task UUID to task index.
 
     Returns:
         A StreamChunk populated with event and task info.
     """
     chunk_type, tool_call_chunk = _extract_tool_call_info(event)
 
+    # Prefer event-level task/agent metadata (populated from from_task/from_agent
+    # in LLMEventBase.__init__) over the current_task_info fallback, consistent
+    # with how agent_role and agent_id are already resolved.
+    task_id = event.task_id or current_task_info["id"]
+    task_name = event.task_name or current_task_info["name"]
+
+    # Resolve task_index: look up from the task_id_to_index mapping when the
+    # event carries a task_id, otherwise fall back to current_task_info.
+    if task_id and task_id_to_index and task_id in task_id_to_index:
+        task_index = task_id_to_index[task_id]
+    else:
+        task_index = current_task_info["index"]
+
     return StreamChunk(
         content=event.chunk,
         chunk_type=chunk_type,
-        task_index=current_task_info["index"],
-        task_name=current_task_info["name"],
-        task_id=current_task_info["id"],
+        task_index=task_index,
+        task_name=task_name,
+        task_id=task_id,
         agent_role=event.agent_role or current_task_info["agent_role"],
         agent_id=event.agent_id or current_task_info["agent_id"],
         tool_call=tool_call_chunk,
@@ -106,6 +121,7 @@ def _create_stream_handler(
     sync_queue: queue.Queue[StreamChunk | None | Exception],
     async_queue: asyncio.Queue[StreamChunk | None | Exception] | None = None,
     loop: asyncio.AbstractEventLoop | None = None,
+    task_id_to_index: dict[str, int] | None = None,
 ) -> Callable[[Any, BaseEvent], None]:
     """Create a stream handler function.
 
@@ -114,6 +130,7 @@ def _create_stream_handler(
         sync_queue: Synchronous queue for chunks.
         async_queue: Optional async queue for chunks.
         loop: Optional event loop for async operations.
+        task_id_to_index: Optional mapping from task UUID to task index.
 
     Returns:
         Handler function that can be registered with the event bus.
@@ -129,7 +146,7 @@ def _create_stream_handler(
         if not isinstance(event, LLMStreamChunkEvent):
             return
 
-        chunk = _create_stream_chunk(event, current_task_info)
+        chunk = _create_stream_chunk(event, current_task_info, task_id_to_index)
 
         if async_queue is not None and loop is not None:
             loop.call_soon_threadsafe(async_queue.put_nowait, chunk)
@@ -184,6 +201,7 @@ def create_streaming_state(
     current_task_info: TaskInfo,
     result_holder: list[Any],
     use_async: bool = False,
+    task_id_to_index: dict[str, int] | None = None,
 ) -> StreamingState:
     """Create and register streaming state.
 
@@ -191,6 +209,7 @@ def create_streaming_state(
         current_task_info: Task context info.
         result_holder: List to hold the final result.
         use_async: Whether to use async queue.
+        task_id_to_index: Optional mapping from task UUID to task index.
 
     Returns:
         Initialized StreamingState with registered handler.
@@ -203,7 +222,9 @@ def create_streaming_state(
         async_queue = asyncio.Queue()
         loop = asyncio.get_event_loop()
 
-    handler = _create_stream_handler(current_task_info, sync_queue, async_queue, loop)
+    handler = _create_stream_handler(
+        current_task_info, sync_queue, async_queue, loop, task_id_to_index
+    )
     crewai_event_bus.register_handler(LLMStreamChunkEvent, handler)
 
     return StreamingState(
