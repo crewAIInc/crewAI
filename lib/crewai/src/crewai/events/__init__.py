@@ -14,7 +14,12 @@ from typing import TYPE_CHECKING, Any
 
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.depends import Depends
-from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_bus import (
+    crewai_event_bus,
+    get_current_run_id,
+    run_scope,
+    set_current_run_id,
+)
 from crewai.events.handler_graph import CircularDependencyError
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
@@ -213,6 +218,9 @@ __all__ = [
     "ToolValidateInputErrorEvent",
     "_extension_exports",
     "crewai_event_bus",
+    "get_current_run_id",
+    "run_scope",
+    "set_current_run_id",
 ]
 
 _AGENT_EVENT_MAPPING = {

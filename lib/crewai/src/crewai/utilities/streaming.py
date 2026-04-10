@@ -11,7 +11,7 @@ from typing import Any, NamedTuple
 from typing_extensions import TypedDict
 
 from crewai.events.base_events import BaseEvent
-from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_bus import crewai_event_bus, get_current_run_id
 from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.types.streaming import (
     CrewStreamingOutput,
@@ -106,6 +106,7 @@ def _create_stream_handler(
     sync_queue: queue.Queue[StreamChunk | None | Exception],
     async_queue: asyncio.Queue[StreamChunk | None | Exception] | None = None,
     loop: asyncio.AbstractEventLoop | None = None,
+    run_id: str | None = None,
 ) -> Callable[[Any, BaseEvent], None]:
     """Create a stream handler function.
 
@@ -114,10 +115,15 @@ def _create_stream_handler(
         sync_queue: Synchronous queue for chunks.
         async_queue: Optional async queue for chunks.
         loop: Optional event loop for async operations.
+        run_id: Optional run identifier for concurrent isolation.  When set,
+                the handler will only process events whose ``run_id`` matches.
 
     Returns:
         Handler function that can be registered with the event bus.
     """
+    # Capture the run_id at handler creation time so that events from
+    # other concurrent runs are silently ignored.
+    captured_run_id = run_id
 
     def stream_handler(_: Any, event: BaseEvent) -> None:
         """Handle LLM stream chunk events and enqueue them.
@@ -127,6 +133,10 @@ def _create_stream_handler(
             event: The event to process.
         """
         if not isinstance(event, LLMStreamChunkEvent):
+            return
+
+        # ── Run isolation: skip events that belong to a different run ──
+        if captured_run_id is not None and event.run_id != captured_run_id:
             return
 
         chunk = _create_stream_chunk(event, current_task_info)
@@ -203,7 +213,12 @@ def create_streaming_state(
         async_queue = asyncio.Queue()
         loop = asyncio.get_event_loop()
 
-    handler = _create_stream_handler(current_task_info, sync_queue, async_queue, loop)
+    # Capture the current run_id so the handler only accepts events
+    # belonging to this run (safe for concurrent streaming).
+    current_run_id = get_current_run_id()
+    handler = _create_stream_handler(
+        current_task_info, sync_queue, async_queue, loop, run_id=current_run_id
+    )
     crewai_event_bus.register_handler(LLMStreamChunkEvent, handler)
 
     return StreamingState(

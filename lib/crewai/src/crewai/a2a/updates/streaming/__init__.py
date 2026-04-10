@@ -1,1 +1,0 @@
-"""Streaming update mechanism module."""

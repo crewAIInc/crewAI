@@ -16,6 +16,7 @@ import contextvars
 import logging
 import threading
 from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypeVar
+import uuid
 
 from typing_extensions import Self
 
@@ -59,6 +60,54 @@ from crewai.utilities.rw_lock import RWLock
 
 
 logger = logging.getLogger(__name__)
+
+# ── Run-scoped isolation ──────────────────────────────────────────────
+# A ContextVar that carries a unique run_id for each concurrent execution.
+# When set, every event emitted via emit() is tagged with this run_id so
+# that handlers can filter events belonging to their own run only.
+_current_run_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_current_run_id", default=None
+)
+
+
+def get_current_run_id() -> str | None:
+    """Return the run_id for the current execution context, or None."""
+    return _current_run_id.get()
+
+
+def set_current_run_id(run_id: str | None) -> None:
+    """Explicitly set the run_id for the current execution context."""
+    _current_run_id.set(run_id)
+
+
+@contextmanager
+def run_scope(run_id: str | None = None) -> Generator[str, Any, None]:
+    """Context manager that establishes a unique run scope.
+
+    Every event emitted inside this scope will carry the ``run_id`` so that
+    handlers can decide whether a given event belongs to their run.
+
+    Args:
+        run_id: Optional explicit run identifier.  When *None* a new UUID
+                is generated automatically.
+
+    Yields:
+        The active run_id string.
+
+    Example::
+
+        with run_scope() as rid:
+            crewai_event_bus.emit(source, my_event)
+            assert my_event.run_id == rid
+    """
+    if run_id is None:
+        run_id = str(uuid.uuid4())
+    token = _current_run_id.set(run_id)
+    try:
+        yield run_id
+    finally:
+        _current_run_id.reset(token)
+
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -463,6 +512,10 @@ class CrewAIEventsBus:
         and must only be called from synchronous emit paths.
         """
         self._register_source(source)
+
+        # Stamp the current run_id onto the event for concurrent isolation
+        if event.run_id is None:
+            event.run_id = _current_run_id.get()
 
         event.previous_event_id = get_last_event_id()
         event.triggered_by_event_id = get_triggering_event_id()

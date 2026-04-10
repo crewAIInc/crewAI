@@ -1,1 +1,0 @@
-ALGORITHMS = ["RS256"]
