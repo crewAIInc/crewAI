@@ -38,9 +38,9 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
     setup_native_tools,
 )
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import TodoItem
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -48,7 +48,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
@@ -81,14 +81,14 @@ class StepExecutor:
         function_calling_llm: Optional separate LLM for function calling.
         request_within_rpm_limit: Optional RPM limit function.
         callbacks: Optional list of callbacks.
-        i18n: Optional i18n instance.
+
     """
 
     def __init__(
         self,
         llm: BaseLLM,
         tools: list[CrewStructuredTool],
-        agent: Agent,
+        agent: BaseAgent,
         original_tools: list[BaseTool] | None = None,
         tools_handler: ToolsHandler | None = None,
         task: Task | None = None,
@@ -96,7 +96,6 @@ class StepExecutor:
         function_calling_llm: BaseLLM | None = None,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
-        i18n: I18N | None = None,
     ) -> None:
         self.llm = llm
         self.tools = tools
@@ -108,8 +107,6 @@ class StepExecutor:
         self.function_calling_llm = function_calling_llm
         self.request_within_rpm_limit = request_within_rpm_limit
         self.callbacks = callbacks or []
-        self._i18n: I18N = i18n or get_i18n()
-        self._printer: Printer = Printer()
 
         # Native tool support — set up once
         self._use_native_tools = check_native_tool_support(
@@ -222,14 +219,14 @@ class StepExecutor:
         tools_section = ""
         if self.tools and not self._use_native_tools:
             tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
-            tools_section = self._i18n.retrieve(
+            tools_section = I18N_DEFAULT.retrieve(
                 "planning", "step_executor_tools_section"
             ).format(tool_names=tool_names)
         elif self.tools:
             tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
             tools_section = f"\n\nAvailable tools: {tool_names}"
 
-        return self._i18n.retrieve("planning", "step_executor_system_prompt").format(
+        return I18N_DEFAULT.retrieve("planning", "step_executor_system_prompt").format(
             role=role,
             backstory=backstory,
             goal=goal,
@@ -248,7 +245,7 @@ class StepExecutor:
             task_section = extract_task_section(context.task_description)
             if task_section:
                 parts.append(
-                    self._i18n.retrieve(
+                    I18N_DEFAULT.retrieve(
                         "planning", "step_executor_task_context"
                     ).format(
                         task_context=task_section,
@@ -256,14 +253,16 @@ class StepExecutor:
                 )
 
         parts.append(
-            self._i18n.retrieve("planning", "step_executor_user_prompt").format(
+            I18N_DEFAULT.retrieve("planning", "step_executor_user_prompt").format(
                 step_description=todo.description,
             )
         )
 
         if todo.tool_to_use:
             parts.append(
-                self._i18n.retrieve("planning", "step_executor_suggested_tool").format(
+                I18N_DEFAULT.retrieve(
+                    "planning", "step_executor_suggested_tool"
+                ).format(
                     tool_to_use=todo.tool_to_use,
                 )
             )
@@ -271,16 +270,16 @@ class StepExecutor:
         # Include dependency results (final results only, no traces)
         if context.dependency_results:
             parts.append(
-                self._i18n.retrieve("planning", "step_executor_context_header")
+                I18N_DEFAULT.retrieve("planning", "step_executor_context_header")
             )
             for step_num, result in sorted(context.dependency_results.items()):
                 parts.append(
-                    self._i18n.retrieve(
+                    I18N_DEFAULT.retrieve(
                         "planning", "step_executor_context_entry"
                     ).format(step_number=step_num, result=result)
                 )
 
-        parts.append(self._i18n.retrieve("planning", "step_executor_complete_step"))
+        parts.append(I18N_DEFAULT.retrieve("planning", "step_executor_complete_step"))
 
         return "\n".join(parts)
 
@@ -376,7 +375,6 @@ class StepExecutor:
                 agent_action=formatted,
                 fingerprint_context=fingerprint_context,
                 tools=self.tools,
-                i18n=self._i18n,
                 agent_key=self.agent.key if self.agent else None,
                 agent_role=self.agent.role if self.agent else None,
                 tools_handler=self.tools_handler,
@@ -585,7 +583,7 @@ class StepExecutor:
                 task=self.task,
                 crew=self.crew,
                 event_source=self,
-                printer=self._printer,
+                printer=PRINTER,
                 verbose=bool(self.agent and self.agent.verbose),
             )
 

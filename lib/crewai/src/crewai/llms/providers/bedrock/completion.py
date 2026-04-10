@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
@@ -169,6 +169,7 @@ class ToolSpec(TypedDict, total=False):
     name: Required[str]
     description: Required[str]
     inputSchema: ToolInputSchema
+    strict: bool
 
 
 class ConverseToolTypeDef(TypedDict):
@@ -228,6 +229,7 @@ class BedrockCompletion(BaseLLM):
     - Model-specific conversation format handling (e.g., Cohere requirements)
     """
 
+    llm_type: Literal["bedrock"] = "bedrock"
     model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
@@ -1964,6 +1966,10 @@ class BedrockCompletion(BaseLLM):
                     input_schema: ToolInputSchema = {"json": parameters}
                     tool_spec["inputSchema"] = input_schema
 
+                func_info = tool.get("function", {})
+                if func_info.get("strict"):
+                    tool_spec["strict"] = True
+
                 converse_tool: ConverseToolTypeDef = {"toolSpec": tool_spec}
 
                 converse_tools.append(converse_tool)
@@ -2024,11 +2030,18 @@ class BedrockCompletion(BaseLLM):
         input_tokens = usage.get("inputTokens", 0)
         output_tokens = usage.get("outputTokens", 0)
         total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
+        raw_cached = (
+            usage.get("cacheReadInputTokenCount")
+            or usage.get("cacheReadInputTokens")
+            or 0
+        )
+        cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
 
         self._token_usage["prompt_tokens"] += input_tokens
         self._token_usage["completion_tokens"] += output_tokens
         self._token_usage["total_tokens"] += total_tokens
         self._token_usage["successful_requests"] += 1
+        self._token_usage["cached_prompt_tokens"] += cached_tokens
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""

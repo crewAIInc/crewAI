@@ -5,6 +5,8 @@ from typing import Any, Literal
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_url
+
 
 logger = logging.getLogger(__file__)
 
@@ -72,6 +74,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
     ) -> str | None:
         from scrapfly import ScrapeConfig
 
+        url = validate_url(url)
         scrape_config = scrape_config if scrape_config is not None else {}
         try:
             response = self.scrapfly.scrape(  # type: ignore[union-attr]

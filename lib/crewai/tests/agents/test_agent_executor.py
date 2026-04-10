@@ -48,10 +48,6 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._last_context_error = None
     executor._step_executor = None
     executor._planner_observer = None
-    from crewai.utilities.printer import Printer
-    executor._printer = Printer()
-    from crewai.utilities.i18n import get_i18n
-    executor._i18n = kwargs.get("i18n") or get_i18n()
     return executor
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (
@@ -1491,7 +1487,6 @@ class TestReasoningEffort:
         executor.handle_step_observed_medium = (
             AgentExecutor.handle_step_observed_medium.__get__(executor)
         )
-        executor._printer = Mock()
 
         # --- Case 1: step succeeded → should return "continue_plan" ---
         success_todo = TodoItem(
@@ -1562,7 +1557,6 @@ class TestReasoningEffort:
         executor.handle_step_observed_low = (
             AgentExecutor.handle_step_observed_low.__get__(executor)
         )
-        executor._printer = Mock()
 
         todo = TodoItem(
             step_number=1,

@@ -89,9 +89,9 @@ from crewai.utilities.converter import (
 )
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -227,9 +227,6 @@ class LiteAgent(FlowTrackable, BaseModel):
         default=None,
         description="Callback to check if the request is within the RPM8 limit",
     )
-    i18n: I18N = Field(
-        default_factory=get_i18n, description="Internationalization settings."
-    )
     response_format: type[BaseModel] | None = Field(
         default=None, description="Pydantic model for structured output"
     )
@@ -270,7 +267,6 @@ class LiteAgent(FlowTrackable, BaseModel):
     _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
     _messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
-    _printer: Printer = PrivateAttr(default_factory=Printer)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
@@ -528,11 +524,11 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         except Exception as e:
             if self.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="Agent failed to reach a final answer. This is likely a bug - please report it.",
                     color="red",
                 )
-            handle_unknown_error(self._printer, e, verbose=self.verbose)
+            handle_unknown_error(PRINTER, e, verbose=self.verbose)
             # Emit error event
             crewai_event_bus.emit(
                 self,
@@ -572,7 +568,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     f"- {m.record.content}" for m in matches
                 )
             if memory_block:
-                formatted = self.i18n.slice("memory").format(memory=memory_block)
+                formatted = I18N_DEFAULT.slice("memory").format(memory=memory_block)
                 if self._messages and self._messages[0].get("role") == "system":
                     existing_content = self._messages[0].get("content", "")
                     if not isinstance(existing_content, str):
@@ -609,7 +605,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 self._memory.remember_many(extracted, agent_role=self.role)
         except Exception as e:
             if self.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Failed to save to memory: {e}",
                     color="yellow",
                 )
@@ -645,7 +641,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             try:
                 model_schema = generate_model_description(active_response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
+                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
                     output_format=schema
                 )
 
@@ -661,7 +657,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     formatted_result = result
             except ConverterError as e:
                 if self.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content=f"Failed to parse output into response format after retries: {e.message}",
                         color="yellow",
                     )
@@ -704,7 +700,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     )
                 self._guardrail_retry_count += 1
                 if self.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         f"Guardrail failed. Retrying ({self._guardrail_retry_count}/{self.guardrail_max_retries})..."
                         f"\n{guardrail_result.error}"
                     )
@@ -794,7 +790,9 @@ class LiteAgent(FlowTrackable, BaseModel):
         base_prompt = ""
         if self._parsed_tools:
             # Use the prompt template for agents with tools
-            base_prompt = self.i18n.slice("lite_agent_system_prompt_with_tools").format(
+            base_prompt = I18N_DEFAULT.slice(
+                "lite_agent_system_prompt_with_tools"
+            ).format(
                 role=self.role,
                 backstory=self.backstory,
                 goal=self.goal,
@@ -803,7 +801,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
         else:
             # Use the prompt template for agents without tools
-            base_prompt = self.i18n.slice(
+            base_prompt = I18N_DEFAULT.slice(
                 "lite_agent_system_prompt_without_tools"
             ).format(
                 role=self.role,
@@ -815,7 +813,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         if active_response_format:
             model_description = generate_model_description(active_response_format)
             schema_json = json.dumps(model_description, indent=2)
-            base_prompt += self.i18n.slice("lite_agent_response_format").format(
+            base_prompt += I18N_DEFAULT.slice("lite_agent_response_format").format(
                 response_format=schema_json
             )
 
@@ -875,8 +873,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
-                        printer=self._printer,
-                        i18n=self.i18n,
+                        printer=PRINTER,
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
@@ -890,8 +887,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                         llm=cast(LLM, self.llm),
                         messages=self._messages,
                         callbacks=self._callbacks,
-                        printer=self._printer,
-                        from_agent=self,
+                        printer=PRINTER,
+                        from_agent=self,  # type: ignore[arg-type]
                         executor_context=self,
                         response_model=response_model,
                         verbose=self.verbose,
@@ -915,7 +912,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                         tool_result = execute_tool_and_check_finality(
                             agent_action=formatted_answer,
                             tools=self._parsed_tools,
-                            i18n=self.i18n,
                             agent_key=self.key,
                             agent_role=self.role,
                             agent=self.original_agent,
@@ -933,7 +929,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 self._append_message(formatted_answer.text, role="assistant")
             except OutputParserError as e:
                 if self.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content="Failed to parse LLM output. Retrying...",
                         color="yellow",
                     )
@@ -942,7 +938,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     messages=self._messages,
                     iterations=self._iterations,
                     log_error_after=3,
-                    printer=self._printer,
+                    printer=PRINTER,
                     verbose=self.verbose,
                 )
 
@@ -953,15 +949,14 @@ class LiteAgent(FlowTrackable, BaseModel):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
-                        i18n=self.i18n,
                         verbose=self.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.verbose)
                 raise e
 
             finally:

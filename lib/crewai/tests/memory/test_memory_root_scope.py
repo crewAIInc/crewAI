@@ -523,11 +523,10 @@ class TestAgentScopeExtension:
 
     def test_agent_save_extends_crew_root_scope(self) -> None:
         """Agent._save_to_memory extends crew's root_scope with agent info."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
@@ -543,17 +542,10 @@ class TestAgentScopeExtension:
         mock_task.description = "Research task"
         mock_task.expected_output = "Report"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = BaseAgentExecutor()
+        executor.agent = mock_agent
+        executor.task = mock_task
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="Result", text="Result"))
 
         mock_memory.remember_many.assert_called_once()
@@ -562,11 +554,10 @@ class TestAgentScopeExtension:
 
     def test_agent_save_sanitizes_role(self) -> None:
         """Agent role with special chars is sanitized for scope path."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
@@ -582,17 +573,10 @@ class TestAgentScopeExtension:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = BaseAgentExecutor()
+        executor.agent = mock_agent
+        executor.task = mock_task
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
         call_kwargs = mock_memory.remember_many.call_args.kwargs
@@ -1057,11 +1041,10 @@ class TestAgentExecutorBackwardCompat:
 
     def test_agent_executor_no_root_scope_when_memory_has_none(self) -> None:
         """Agent executor doesn't inject root_scope when memory has none."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
@@ -1077,17 +1060,10 @@ class TestAgentExecutorBackwardCompat:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = BaseAgentExecutor()
+        executor.agent = mock_agent
+        executor.task = mock_task
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
         # Should NOT pass root_scope when memory has none
@@ -1097,11 +1073,10 @@ class TestAgentExecutorBackwardCompat:
 
     def test_agent_executor_extends_root_scope_when_memory_has_one(self) -> None:
         """Agent executor extends root_scope when memory has one."""
-        from crewai.agents.agent_builder.base_agent_executor_mixin import (
-            CrewAgentExecutorMixin,
+        from crewai.agents.agent_builder.base_agent_executor import (
+            BaseAgentExecutor,
         )
         from crewai.agents.parser import AgentFinish
-        from crewai.utilities.printer import Printer
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
@@ -1117,17 +1092,10 @@ class TestAgentExecutorBackwardCompat:
         mock_task.description = "Task"
         mock_task.expected_output = "Output"
 
-        class MinimalExecutor(CrewAgentExecutorMixin):
-            crew = None
-            agent = mock_agent
-            task = mock_task
-            iterations = 0
-            max_iter = 1
-            messages = []
-            _i18n = MagicMock()
-            _printer = Printer()
+        executor = BaseAgentExecutor()
+        executor.agent = mock_agent
+        executor.task = mock_task
 
-        executor = MinimalExecutor()
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
         # Should pass extended root_scope

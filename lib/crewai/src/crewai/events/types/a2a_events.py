@@ -73,7 +73,7 @@ class A2ADelegationStartedEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_delegation_started"
+    type: Literal["a2a_delegation_started"] = "a2a_delegation_started"
     endpoint: str
     task_description: str
     agent_id: str
@@ -106,7 +106,7 @@ class A2ADelegationCompletedEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_delegation_completed"
+    type: Literal["a2a_delegation_completed"] = "a2a_delegation_completed"
     status: str
     result: str | None = None
     error: str | None = None
@@ -140,7 +140,7 @@ class A2AConversationStartedEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_conversation_started"
+    type: Literal["a2a_conversation_started"] = "a2a_conversation_started"
     agent_id: str
     endpoint: str
     context_id: str | None = None
@@ -171,7 +171,7 @@ class A2AMessageSentEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_message_sent"
+    type: Literal["a2a_message_sent"] = "a2a_message_sent"
     message: str
     turn_number: int
     context_id: str | None = None
@@ -203,7 +203,7 @@ class A2AResponseReceivedEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_response_received"
+    type: Literal["a2a_response_received"] = "a2a_response_received"
     response: str
     turn_number: int
     context_id: str | None = None
@@ -237,7 +237,7 @@ class A2AConversationCompletedEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_conversation_completed"
+    type: Literal["a2a_conversation_completed"] = "a2a_conversation_completed"
     status: Literal["completed", "failed"]
     final_result: str | None = None
     error: str | None = None
@@ -263,7 +263,7 @@ class A2APollingStartedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_polling_started"
+    type: Literal["a2a_polling_started"] = "a2a_polling_started"
     task_id: str
     context_id: str | None = None
     polling_interval: float
@@ -286,7 +286,7 @@ class A2APollingStatusEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_polling_status"
+    type: Literal["a2a_polling_status"] = "a2a_polling_status"
     task_id: str
     context_id: str | None = None
     state: str
@@ -309,7 +309,9 @@ class A2APushNotificationRegisteredEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_push_notification_registered"
+    type: Literal["a2a_push_notification_registered"] = (
+        "a2a_push_notification_registered"
+    )
     task_id: str
     context_id: str | None = None
     callback_url: str
@@ -334,7 +336,7 @@ class A2APushNotificationReceivedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_push_notification_received"
+    type: Literal["a2a_push_notification_received"] = "a2a_push_notification_received"
     task_id: str
     context_id: str | None = None
     state: str
@@ -359,7 +361,7 @@ class A2APushNotificationSentEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_push_notification_sent"
+    type: Literal["a2a_push_notification_sent"] = "a2a_push_notification_sent"
     task_id: str
     context_id: str | None = None
     callback_url: str
@@ -381,7 +383,7 @@ class A2APushNotificationTimeoutEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_push_notification_timeout"
+    type: Literal["a2a_push_notification_timeout"] = "a2a_push_notification_timeout"
     task_id: str
     context_id: str | None = None
     timeout_seconds: float
@@ -405,7 +407,7 @@ class A2AStreamingStartedEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_streaming_started"
+    type: Literal["a2a_streaming_started"] = "a2a_streaming_started"
     task_id: str | None = None
     context_id: str | None = None
     endpoint: str
@@ -434,7 +436,7 @@ class A2AStreamingChunkEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_streaming_chunk"
+    type: Literal["a2a_streaming_chunk"] = "a2a_streaming_chunk"
     task_id: str | None = None
     context_id: str | None = None
     chunk: str
@@ -462,7 +464,7 @@ class A2AAgentCardFetchedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_agent_card_fetched"
+    type: Literal["a2a_agent_card_fetched"] = "a2a_agent_card_fetched"
     endpoint: str
     a2a_agent_name: str | None = None
     agent_card: dict[str, Any] | None = None
@@ -486,7 +488,7 @@ class A2AAuthenticationFailedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_authentication_failed"
+    type: Literal["a2a_authentication_failed"] = "a2a_authentication_failed"
     endpoint: str
     auth_type: str | None = None
     error: str
@@ -517,7 +519,7 @@ class A2AArtifactReceivedEvent(A2AEventBase):
         extensions: List of A2A extension URIs in use.
     """
 
-    type: str = "a2a_artifact_received"
+    type: Literal["a2a_artifact_received"] = "a2a_artifact_received"
     task_id: str
     artifact_id: str
     artifact_name: str | None = None
@@ -550,7 +552,7 @@ class A2AConnectionErrorEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_connection_error"
+    type: Literal["a2a_connection_error"] = "a2a_connection_error"
     endpoint: str
     error: str
     error_type: str | None = None
@@ -571,7 +573,7 @@ class A2AServerTaskStartedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_server_task_started"
+    type: Literal["a2a_server_task_started"] = "a2a_server_task_started"
     task_id: str
     context_id: str
     metadata: dict[str, Any] | None = None
@@ -587,7 +589,7 @@ class A2AServerTaskCompletedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_server_task_completed"
+    type: Literal["a2a_server_task_completed"] = "a2a_server_task_completed"
     task_id: str
     context_id: str
     result: str
@@ -603,7 +605,7 @@ class A2AServerTaskCanceledEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_server_task_canceled"
+    type: Literal["a2a_server_task_canceled"] = "a2a_server_task_canceled"
     task_id: str
     context_id: str
     metadata: dict[str, Any] | None = None
@@ -619,7 +621,7 @@ class A2AServerTaskFailedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_server_task_failed"
+    type: Literal["a2a_server_task_failed"] = "a2a_server_task_failed"
     task_id: str
     context_id: str
     error: str
@@ -634,7 +636,7 @@ class A2AParallelDelegationStartedEvent(A2AEventBase):
         task_description: Description of the task being delegated.
     """
 
-    type: str = "a2a_parallel_delegation_started"
+    type: Literal["a2a_parallel_delegation_started"] = "a2a_parallel_delegation_started"
     endpoints: list[str]
     task_description: str
 
@@ -649,7 +651,9 @@ class A2AParallelDelegationCompletedEvent(A2AEventBase):
         results: Summary of results from each agent.
     """
 
-    type: str = "a2a_parallel_delegation_completed"
+    type: Literal["a2a_parallel_delegation_completed"] = (
+        "a2a_parallel_delegation_completed"
+    )
     endpoints: list[str]
     success_count: int
     failure_count: int
@@ -675,7 +679,7 @@ class A2ATransportNegotiatedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_transport_negotiated"
+    type: Literal["a2a_transport_negotiated"] = "a2a_transport_negotiated"
     endpoint: str
     a2a_agent_name: str | None = None
     negotiated_transport: str
@@ -708,7 +712,7 @@ class A2AContentTypeNegotiatedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_content_type_negotiated"
+    type: Literal["a2a_content_type_negotiated"] = "a2a_content_type_negotiated"
     endpoint: str
     a2a_agent_name: str | None = None
     skill_name: str | None = None
@@ -738,7 +742,7 @@ class A2AContextCreatedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_context_created"
+    type: Literal["a2a_context_created"] = "a2a_context_created"
     context_id: str
     created_at: float
     metadata: dict[str, Any] | None = None
@@ -755,7 +759,7 @@ class A2AContextExpiredEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_context_expired"
+    type: Literal["a2a_context_expired"] = "a2a_context_expired"
     context_id: str
     created_at: float
     age_seconds: float
@@ -775,7 +779,7 @@ class A2AContextIdleEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_context_idle"
+    type: Literal["a2a_context_idle"] = "a2a_context_idle"
     context_id: str
     idle_seconds: float
     task_count: int
@@ -792,7 +796,7 @@ class A2AContextCompletedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_context_completed"
+    type: Literal["a2a_context_completed"] = "a2a_context_completed"
     context_id: str
     total_tasks: int
     duration_seconds: float
@@ -811,7 +815,7 @@ class A2AContextPrunedEvent(A2AEventBase):
         metadata: Custom A2A metadata key-value pairs.
     """
 
-    type: str = "a2a_context_pruned"
+    type: Literal["a2a_context_pruned"] = "a2a_context_pruned"
     context_id: str
     task_count: int
     age_seconds: float

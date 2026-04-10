@@ -4,6 +4,219 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 10, 2026">
+  ## v1.14.2a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a2)
+
+  ## What's Changed
+
+  ### Features
+  - Add checkpoint TUI with tree view, fork support, and editable inputs/outputs
+  - Enrich LLM token tracking with reasoning tokens and cache creation tokens
+  - Add `from_checkpoint` parameter to kickoff methods
+  - Embed `crewai_version` in checkpoints with migration framework
+  - Add checkpoint forking with lineage tracking
+
+  ### Bug Fixes
+  - Fix strict mode forwarding to Anthropic and Bedrock providers
+  - Harden NL2SQLTool with read-only default, query validation, and parameterized queries
+
+  ### Documentation
+  - Update changelog and version for v1.14.2a1
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @lucasgomide
+
+</Update>
+
+<Update label="Apr 09, 2026">
+  ## v1.14.2a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a1)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix emission of flow_finished event after HITL resume
+  - Fix cryptography version to 46.0.7 to address CVE-2026-39892
+
+  ### Refactoring
+  - Refactor to use shared I18N_DEFAULT singleton
+
+  ### Documentation
+  - Update changelog and version for v1.14.1
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Apr 09, 2026">
+  ## v1.14.1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## What's Changed
+
+  ### Features
+  - Add async checkpoint TUI browser
+  - Add aclose()/close() and async context manager to streaming outputs
+
+  ### Bug Fixes
+  - Fix regex for template pyproject.toml version bumps
+  - Sanitize tool names in hook decorator filters
+  - Fix checkpoint handlers registration when CheckpointConfig is created
+  - Bump transformers to 5.5.0 to resolve CVE-2026-1839
+  - Remove FilteredStream stdout/stderr wrapper
+
+  ### Documentation
+  - Update changelog and version for v1.14.1rc1
+
+  ### Refactoring
+  - Replace hardcoded denylist with dynamic BaseTool field exclusion in spec gen
+  - Replace regex with tomlkit in devtools CLI
+  - Use shared PRINTER singleton
+  - Make BaseProvider a BaseModel with provider_type discriminator
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="Apr 09, 2026">
+  ## v1.14.1rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## What's Changed
+
+  ### Features
+  - Add async checkpoint TUI browser
+  - Add aclose()/close() and async context manager to streaming outputs
+
+  ### Bug Fixes
+  - Fix template pyproject.toml version bumps using regex
+  - Sanitize tool names in hook decorator filters
+  - Bump transformers to 5.5.0 to resolve CVE-2026-1839
+  - Register checkpoint handlers when CheckpointConfig is created
+
+  ### Refactoring
+  - Replace hardcoded denylist with dynamic BaseTool field exclusion in spec gen
+  - Replace regex with tomlkit in devtools CLI
+  - Use shared PRINTER singleton
+  - Make BaseProvider a BaseModel with provider_type discriminator
+  - Remove FilteredStream stdout/stderr wrapper
+  - Remove unused flow/config.py
+
+  ### Documentation
+  - Update changelog and version for v1.14.0
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="Apr 07, 2026">
+  ## v1.14.0
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## What's Changed
+
+  ### Features
+  - Add checkpoint list/info CLI commands
+  - Add guardrail_type and name to distinguish traces
+  - Add SqliteProvider for checkpoint storage
+  - Add CheckpointConfig for automatic checkpointing
+  - Implement runtime state checkpointing, event system, and executor refactor
+
+  ### Bug Fixes
+  - Add SSRF and path traversal protections
+  - Add path and URL validation to RAG tools
+  - Exclude embedding vectors from memory serialization to save tokens
+  - Ensure output directory exists before writing in flow template
+  - Bump litellm to >=1.83.0 to address CVE-2026-35030
+  - Remove SEO indexing field causing Arabic page rendering
+
+  ### Documentation
+  - Update changelog and version for v1.14.0
+  - Update quickstart and installation guides for improved clarity
+  - Add storage providers section, export JsonProvider
+  - Add AMP Training Tab guide
+
+  ### Refactoring
+  - Clean up checkpoint API
+  - Remove CodeInterpreterTool and deprecate code execution parameters
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="Apr 07, 2026">
+  ## v1.14.0a4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## What's Changed
+
+  ### Features
+  - Add guardrail_type and name to distinguish traces
+  - Add SqliteProvider for checkpoint storage
+  - Add CheckpointConfig for automatic checkpointing
+  - Implement runtime state checkpointing, event system, and executor refactor
+
+  ### Bug Fixes
+  - Exclude embedding vectors from memory serialization to save tokens
+  - Bump litellm to >=1.83.0 to address CVE-2026-35030
+
+  ### Documentation
+  - Update quickstart and installation guides for improved clarity
+  - Add storage providers section and export JsonProvider
+
+  ### Performance
+  - Use JSONB for checkpoint data column
+
+  ### Refactoring
+  - Remove CodeInterpreterTool and deprecate code execution params
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="Apr 06, 2026">
+  ## v1.14.0a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a3)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.14.0a2
+
+  ## Contributors
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="Apr 06, 2026">
+  ## v1.14.0a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a2)
+
+  Release 1.14.0a2
+
+</Update>
+
 <Update label="Apr 02, 2026">
   ## v1.13.0
 

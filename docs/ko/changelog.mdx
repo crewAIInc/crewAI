@@ -4,6 +4,227 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 4월 10일">
+  ## v1.14.2a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 트리 뷰, 포크 지원 및 편집 가능한 입력/출력을 갖춘 체크포인트 TUI 추가
+  - 추론 토큰 및 캐시 생성 토큰으로 LLM 토큰 추적 강화
+  - 킥오프 메서드에 `from_checkpoint` 매개변수 추가
+  - 마이그레이션 프레임워크와 함께 체크포인트에 `crewai_version` 포함
+  - 계보 추적이 가능한 체크포인트 포킹 추가
+
+  ### 버그 수정
+  - Anthropic 및 Bedrock 공급자로의 엄격 모드 포워딩 수정
+  - 읽기 전용 기본값, 쿼리 검증 및 매개변수화된 쿼리로 NL2SQLTool 강화
+
+  ### 문서
+  - v1.14.2a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @lucasgomide
+
+</Update>
+
+<Update label="2026년 4월 9일">
+  ## v1.14.2a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - HITL 재개 후 flow_finished 이벤트 방출 수정
+  - CVE-2026-39892 문제를 해결하기 위해 암호화 버전을 46.0.7로 수정
+
+  ### 리팩토링
+  - 공유 I18N_DEFAULT 싱글톤을 사용하도록 리팩토링
+
+  ### 문서
+  - v1.14.1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 9일">
+  ## v1.14.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 비동기 체크포인트 TUI 브라우저 추가
+  - 스트리밍 출력에 aclose()/close() 및 비동기 컨텍스트 관리자 추가
+
+  ### 버그 수정
+  - 템플릿 pyproject.toml 버전 증가를 위한 정규 표현식 수정
+  - 훅 데코레이터 필터에서 도구 이름 정리
+  - CheckpointConfig 생성 시 체크포인트 핸들러 등록 수정
+  - CVE-2026-1839 해결을 위해 transformers를 5.5.0으로 업데이트
+  - FilteredStream stdout/stderr 래퍼 제거
+
+  ### 문서
+  - v1.14.1rc1에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - 하드코딩된 거부 목록을 동적 BaseTool 필드 제외로 교체
+  - devtools CLI에서 정규 표현식을 tomlkit으로 교체
+  - 공유 PRINTER 싱글톤 사용
+  - BaseProvider를 provider_type 식별자가 있는 BaseModel로 변경
+
+  ## 기여자
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="2026년 4월 9일">
+  ## v1.14.1rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 비동기 체크포인트 TUI 브라우저 추가
+  - 스트리밍 출력에 aclose()/close() 및 비동기 컨텍스트 관리자 추가
+
+  ### 버그 수정
+  - 정규 표현식을 사용하여 템플릿 pyproject.toml 버전 증가 수정
+  - 후크 데코레이터 필터에서 도구 이름 정리
+  - CVE-2026-1839 해결을 위해 transformers를 5.5.0으로 업데이트
+  - CheckpointConfig가 생성될 때 체크포인트 핸들러 등록
+
+  ### 리팩토링
+  - 하드코딩된 거부 목록을 동적 BaseTool 필드 제외로 교체
+  - devtools CLI에서 정규 표현식을 tomlkit으로 교체
+  - 공유 PRINTER 싱글톤 사용
+  - BaseProvider를 provider_type 구분자가 있는 BaseModel로 변경
+  - FilteredStream stdout/stderr 래퍼 제거
+  - 사용되지 않는 flow/config.py 제거
+
+  ### 문서
+  - v1.14.0에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 7일">
+  ## v1.14.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 체크포인트 목록/정보 CLI 명령 추가
+  - 추적을 구분하기 위한 guardrail_type 및 이름 추가
+  - 체크포인트 저장을 위한 SqliteProvider 추가
+  - 자동 체크포인트 생성을 위한 CheckpointConfig 추가
+  - 런타임 상태 체크포인트, 이벤트 시스템 및 실행기 리팩토링 구현
+
+  ### 버그 수정
+  - SSRF 및 경로 탐색 보호 추가
+  - RAG 도구에 경로 및 URL 유효성 검사 추가
+  - 토큰 절약을 위해 메모리 직렬화에서 임베딩 벡터 제외
+  - 흐름 템플릿에 쓰기 전에 출력 디렉토리가 존재하는지 확인
+  - CVE-2026-35030 문제를 해결하기 위해 litellm을 >=1.83.0으로 업데이트
+  - 아랍어 페이지 렌더링을 유발하는 SEO 인덱싱 필드 제거
+
+  ### 문서
+  - v1.14.0에 대한 변경 로그 및 버전 업데이트
+  - 명확성을 개선하기 위해 빠른 시작 및 설치 가이드 업데이트
+  - 저장소 제공자 섹션 추가, JsonProvider 내보내기
+  - AMP 교육 탭 가이드 추가
+
+  ### 리팩토링
+  - 체크포인트 API 정리
+  - CodeInterpreterTool 제거 및 코드 실행 매개변수 사용 중단
+
+  ## 기여자
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2026년 4월 7일">
+  ## v1.14.0a4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## 변경 사항
+
+  ### 기능
+  - 추적을 구분하기 위해 guardrail_type 및 이름 추가
+  - 체크포인트 저장을 위한 SqliteProvider 추가
+  - 자동 체크포인트 생성을 위한 CheckpointConfig 추가
+  - 런타임 상태 체크포인트, 이벤트 시스템 및 실행기 리팩토링 구현
+
+  ### 버그 수정
+  - 토큰 절약을 위해 메모리 직렬화에서 임베딩 벡터 제외
+  - CVE-2026-35030 문제를 해결하기 위해 litellm을 >=1.83.0으로 업데이트
+
+  ### 문서
+  - 명확성을 개선하기 위해 빠른 시작 및 설치 가이드 업데이트
+  - 저장소 제공자 섹션 추가 및 JsonProvider 내보내기
+
+  ### 성능
+  - 체크포인트 데이터 열에 JSONB 사용
+
+  ### 리팩토링
+  - CodeInterpreterTool 제거 및 코드 실행 매개변수 사용 중단
+
+  ## 기여자
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2026년 4월 6일">
+  ## v1.14.0a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a3)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.14.0a2의 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 6일">
+  ## v1.14.0a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a2)
+
+  ## 릴리스 1.14.0a2
+
+  ### 지침:
+  - 모든 섹션 제목과 설명을 자연스럽게 번역합니다.
+  - 마크다운 형식을 그대로 유지합니다 (##, ###, -, 등).
+  - 모든 고유 명사, 코드 식별자, 클래스 이름 및 기술 용어는 변경하지 않습니다.
+    (예: "CrewAI", "LiteAgent", "ChromaDB", "MCP", "@username")
+  - ## 기여자 섹션과 GitHub 사용자 이름은 변경하지 않습니다.
+  - 내용을 추가하거나 제거하지 않고 오직 번역만 합니다.
+
+</Update>
+
 <Update label="2026년 4월 2일">
   ## v1.13.0
 

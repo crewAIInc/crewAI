@@ -1190,3 +1190,42 @@ def test_gemini_cached_prompt_tokens_with_tools():
     # cached_prompt_tokens should be populated (may be 0 if Gemini
     # doesn't cache for this particular request, but the field should exist)
     assert usage.cached_prompt_tokens >= 0
+
+
+def test_gemini_reasoning_tokens_extraction():
+    """Test that thoughts_token_count is extracted as reasoning_tokens from Gemini."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    mock_response = MagicMock()
+    mock_response.usage_metadata = MagicMock(
+        prompt_token_count=100,
+        candidates_token_count=50,
+        total_token_count=150,
+        cached_content_token_count=10,
+        thoughts_token_count=30,
+    )
+    usage = llm._extract_token_usage(mock_response)
+    assert usage["prompt_token_count"] == 100
+    assert usage["candidates_token_count"] == 50
+    assert usage["total_tokens"] == 150
+    assert usage["cached_prompt_tokens"] == 10
+    assert usage["reasoning_tokens"] == 30
+
+
+def test_gemini_no_thinking_tokens_defaults_to_zero():
+    """Test that missing thoughts_token_count defaults to zero."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    mock_response = MagicMock()
+    mock_response.usage_metadata = MagicMock(
+        prompt_token_count=80,
+        candidates_token_count=40,
+        total_token_count=120,
+        cached_content_token_count=0,
+        thoughts_token_count=None,
+    )
+    mock_response.candidates = []
+
+    usage = llm._extract_token_usage(mock_response)
+    assert usage["reasoning_tokens"] == 0
+    assert usage["cached_prompt_tokens"] == 0

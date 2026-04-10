@@ -83,6 +83,7 @@
             "title": "Mind Name"
           }
         },
+        "required": [],
         "title": "AIMindTool",
         "type": "object"
       },
@@ -166,6 +167,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "ArxivPaperTool",
         "type": "object"
       },
@@ -283,6 +285,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveImageSearchTool",
         "type": "object"
       },
@@ -466,6 +469,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveLLMContextTool",
         "type": "object"
       },
@@ -745,6 +749,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveLocalPOIsDescriptionTool",
         "type": "object"
       },
@@ -858,6 +863,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveLocalPOIsTool",
         "type": "object"
       },
@@ -1016,6 +1022,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveNewsSearchTool",
         "type": "object"
       },
@@ -1290,6 +1297,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveSearchTool",
         "type": "object"
       },
@@ -1667,6 +1675,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveVideoSearchTool",
         "type": "object"
       },
@@ -1929,6 +1938,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveWebSearchTool",
         "type": "object"
       },
@@ -2325,6 +2335,7 @@
             "title": "Zipcode"
           }
         },
+        "required": [],
         "title": "BrightDataDatasetTool",
         "type": "object"
       },
@@ -2508,6 +2519,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BrightDataSearchTool",
         "type": "object"
       },
@@ -2696,6 +2708,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BrightDataWebUnlockerTool",
         "type": "object"
       },
@@ -2870,6 +2883,7 @@
             "title": "Text Content"
           }
         },
+        "required": [],
         "title": "BrowserbaseLoadTool",
         "type": "object"
       },
@@ -3916,6 +3930,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "CSVSearchTool",
         "type": "object"
       },
@@ -4967,6 +4982,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "CodeDocsSearchTool",
         "type": "object"
       },
@@ -4991,127 +5007,6 @@
           "docs_url"
         ],
         "title": "CodeDocsSearchToolSchema",
-        "type": "object"
-      }
-    },
-    {
-      "description": "Interprets Python3 code strings with a final print statement.",
-      "env_vars": [],
-      "humanized_name": "Code Interpreter",
-      "init_params_schema": {
-        "$defs": {
-          "EnvVar": {
-            "properties": {
-              "default": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Default"
-              },
-              "description": {
-                "title": "Description",
-                "type": "string"
-              },
-              "name": {
-                "title": "Name",
-                "type": "string"
-              },
-              "required": {
-                "default": true,
-                "title": "Required",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "name",
-              "description"
-            ],
-            "title": "EnvVar",
-            "type": "object"
-          }
-        },
-        "description": "A tool for executing Python code in isolated environments.\n\nThis tool provides functionality to run Python code either in a Docker container\nfor safe isolation or directly in a restricted sandbox. It can handle installing\nPython packages and executing arbitrary Python code.",
-        "properties": {
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Code"
-          },
-          "default_image_tag": {
-            "default": "code-interpreter:latest",
-            "title": "Default Image Tag",
-            "type": "string"
-          },
-          "unsafe_mode": {
-            "default": false,
-            "title": "Unsafe Mode",
-            "type": "boolean"
-          },
-          "user_docker_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Docker Base Url"
-          },
-          "user_dockerfile_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Dockerfile Path"
-          }
-        },
-        "title": "CodeInterpreterTool",
-        "type": "object"
-      },
-      "name": "CodeInterpreterTool",
-      "package_dependencies": [],
-      "run_params_schema": {
-        "description": "Schema for defining inputs to the CodeInterpreterTool.\n\nThis schema defines the required parameters for code execution,\nincluding the code to run and any libraries that need to be installed.",
-        "properties": {
-          "code": {
-            "description": "Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
-            "title": "Code",
-            "type": "string"
-          },
-          "libraries_used": {
-            "description": "List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
-            "items": {
-              "type": "string"
-            },
-            "title": "Libraries Used",
-            "type": "array"
-          }
-        },
-        "required": [
-          "code",
-          "libraries_used"
-        ],
-        "title": "CodeInterpreterSchema",
         "type": "object"
       }
     },
@@ -5166,10 +5061,7 @@
         },
         "description": "Wrapper for composio tools.",
         "properties": {},
-        "required": [
-          "name",
-          "description"
-        ],
+        "required": [],
         "title": "ComposioTool",
         "type": "object"
       },
@@ -6767,6 +6659,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "DOCXSearchTool",
         "type": "object"
       },
@@ -6904,6 +6797,7 @@
             "title": "Size"
           }
         },
+        "required": [],
         "title": "DallETool",
         "type": "object"
       },
@@ -7006,6 +6900,7 @@
             "title": "Default Warehouse Id"
           }
         },
+        "required": [],
         "title": "DatabricksQueryTool",
         "type": "object"
       },
@@ -7137,6 +7032,7 @@
             "title": "Directory"
           }
         },
+        "required": [],
         "title": "DirectoryReadTool",
         "type": "object"
       },
@@ -8182,6 +8078,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "DirectorySearchTool",
         "type": "object"
       },
@@ -8338,6 +8235,7 @@
             "title": "Type"
           }
         },
+        "required": [],
         "title": "EXASearchTool",
         "type": "object"
       },
@@ -8445,6 +8343,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "FileCompressorTool",
         "type": "object"
       },
@@ -8548,6 +8447,7 @@
             "title": "File Path"
           }
         },
+        "required": [],
         "title": "FileReadTool",
         "type": "object"
       },
@@ -8638,6 +8538,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "FileWriterTool",
         "type": "object"
       },
@@ -8762,6 +8663,7 @@
             "title": "Config"
           }
         },
+        "required": [],
         "title": "FirecrawlCrawlWebsiteTool",
         "type": "object"
       },
@@ -8853,6 +8755,7 @@
             "type": "object"
           }
         },
+        "required": [],
         "title": "FirecrawlScrapeWebsiteTool",
         "type": "object"
       },
@@ -8951,6 +8854,7 @@
             "title": "Config"
           }
         },
+        "required": [],
         "title": "FirecrawlSearchTool",
         "type": "object"
       },
@@ -9047,6 +8951,7 @@
             "title": "Personal Access Token"
           }
         },
+        "required": [],
         "title": "GenerateCrewaiAutomationTool",
         "type": "object"
       },
@@ -10229,6 +10134,7 @@
             "title": "Hyperbrowser"
           }
         },
+        "required": [],
         "title": "HyperbrowserLoadTool",
         "type": "object"
       },
@@ -11382,6 +11288,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "JSONSearchTool",
         "type": "object"
       },
@@ -11484,6 +11391,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "JinaScrapeWebsiteTool",
         "type": "object"
       },
@@ -11555,6 +11463,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "LinkupSearchTool",
         "type": "object"
       },
@@ -11617,8 +11526,6 @@
           }
         },
         "required": [
-          "name",
-          "description",
           "llama_index_tool"
         ],
         "title": "LlamaIndexTool",
@@ -12656,6 +12563,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "MDXSearchTool",
         "type": "object"
       },
@@ -12770,8 +12678,6 @@
           }
         },
         "required": [
-          "name",
-          "description",
           "tool_pack_id",
           "registered_user_id",
           "tool_name"
@@ -13077,6 +12983,7 @@
             "title": "Session Id"
           }
         },
+        "required": [],
         "title": "MultiOnTool",
         "type": "object"
       },
@@ -14144,7 +14051,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -14185,7 +14092,14 @@
             "type": "object"
           }
         },
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
+          "allow_dml": {
+            "default": false,
+            "description": "When False (default) only read statements are permitted. Set to True to allow INSERT/UPDATE/DELETE/DROP and other write operations.",
+            "title": "Allow DML",
+            "type": "boolean"
+          },
           "columns": {
             "additionalProperties": {
               "anyOf": [
@@ -14408,6 +14322,12 @@
                 "title": "Is Litellm",
                 "type": "boolean"
               },
+              "llm_type": {
+                "const": "litellm",
+                "default": "litellm",
+                "title": "Llm Type",
+                "type": "string"
+              },
               "logit_bias": {
                 "anyOf": [
                   {
@@ -14624,6 +14544,7 @@
             "$ref": "#/$defs/LLM"
           }
         },
+        "required": [],
         "title": "OCRTool",
         "type": "object"
       },
@@ -16545,6 +16466,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "PDFSearchTool",
         "type": "object"
       },
@@ -16628,6 +16550,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "ParallelSearchTool",
         "type": "object"
       },
@@ -16788,6 +16711,7 @@
             "type": "array"
           }
         },
+        "required": [],
         "title": "PatronusEvalTool",
         "type": "object"
       },
@@ -16965,6 +16889,7 @@
             "type": "array"
           }
         },
+        "required": [],
         "title": "PatronusPredefinedCriteriaEvalTool",
         "type": "object"
       },
@@ -18228,6 +18153,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "RagTool",
         "type": "object"
       },
@@ -18336,6 +18262,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapeElementFromWebsiteTool",
         "type": "object"
       },
@@ -18448,6 +18375,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapeWebsiteTool",
         "type": "object"
       },
@@ -18562,6 +18490,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapegraphScrapeTool",
         "type": "object"
       },
@@ -18664,6 +18593,7 @@
             "title": "Scrapfly"
           }
         },
+        "required": [],
         "title": "ScrapflyScrapeWebsiteTool",
         "type": "object"
       },
@@ -18846,6 +18776,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "SeleniumScrapingTool",
         "type": "object"
       },
@@ -18937,6 +18868,7 @@
             "title": "Client"
           }
         },
+        "required": [],
         "title": "SerpApiGoogleSearchTool",
         "type": "object"
       },
@@ -19034,6 +18966,7 @@
             "title": "Client"
           }
         },
+        "required": [],
         "title": "SerpApiGoogleShoppingTool",
         "type": "object"
       },
@@ -19177,6 +19110,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerperDevTool",
         "type": "object"
       },
@@ -19248,6 +19182,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "SerperScrapeWebsiteTool",
         "type": "object"
       },
@@ -20337,6 +20272,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "SerplyJobSearchTool",
         "type": "object"
       },
@@ -20452,6 +20388,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyNewsSearchTool",
         "type": "object"
       },
@@ -20567,6 +20504,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyScholarSearchTool",
         "type": "object"
       },
@@ -20718,6 +20656,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyWebSearchTool",
         "type": "object"
       },
@@ -21800,6 +21739,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "SerplyWebpageToMarkdownTool",
         "type": "object"
       },
@@ -21942,6 +21882,7 @@
             "title": "Connection Pool"
           }
         },
+        "required": [],
         "title": "SingleStoreSearchTool",
         "type": "object"
       },
@@ -22355,6 +22296,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "SpiderTool",
         "type": "object"
       },
@@ -22533,6 +22475,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "StagehandTool",
         "type": "object"
       },
@@ -23623,6 +23566,7 @@
             "title": "Txt"
           }
         },
+        "required": [],
         "title": "TXTSearchTool",
         "type": "object"
       },
@@ -23771,6 +23715,7 @@
             "type": "integer"
           }
         },
+        "required": [],
         "title": "TavilyExtractorTool",
         "type": "object"
       },
@@ -24029,6 +23974,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "TavilySearchTool",
         "type": "object"
       },
@@ -24215,6 +24161,7 @@
         },
         "description": "Tool for analyzing images using vision models.\n\nArgs:\n    llm: Optional LLM instance to use\n    model: Model identifier to use if no LLM is provided",
         "properties": {},
+        "required": [],
         "title": "VisionTool",
         "type": "object"
       },
@@ -25402,6 +25349,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "WebsiteSearchTool",
         "type": "object"
       },
@@ -26453,6 +26401,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "XMLSearchTool",
         "type": "object"
       },
@@ -27504,6 +27453,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "YoutubeChannelSearchTool",
         "type": "object"
       },
@@ -28555,6 +28505,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "YoutubeVideoSearchTool",
         "type": "object"
       },

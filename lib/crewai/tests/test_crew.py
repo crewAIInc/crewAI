@@ -48,7 +48,6 @@ from crewai.tools.agent_tools.add_image_tool import AddImageTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai_tools import CodeInterpreterTool
 from pydantic import BaseModel, Field
 import pydantic_core
 import pytest
@@ -1648,11 +1647,8 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
             _, kwargs = mock_execute_sync.call_args
             used_tools = kwargs["tools"]
 
-            # Verify that exactly one tool was used and it was a CodeInterpreterTool
-            assert len(used_tools) == 1, "Should have exactly one tool"
-            assert isinstance(used_tools[0], CodeInterpreterTool), (
-                "Tool should be CodeInterpreterTool"
-            )
+            # CodeInterpreterTool was removed; get_code_execution_tools() now returns []
+            assert len(used_tools) == 0, "Should have no tools (code execution tools are deprecated)"
 
 
 @pytest.mark.vcr()
@@ -2141,6 +2137,7 @@ def test_task_same_callback_both_on_task_and_crew():
 
 @pytest.mark.vcr()
 def test_tools_with_custom_caching():
+
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""
@@ -3917,16 +3914,13 @@ def test_task_tools_preserve_code_execution_tools():
         assert any(isinstance(tool, TestTool) for tool in used_tools), (
             "Task's TestTool should be present"
         )
-        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), (
-            "CodeInterpreterTool should be present"
-        )
         assert any("delegate" in tool.name.lower() for tool in used_tools), (
             "Delegation tool should be present"
         )
 
-        # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
-        assert len(used_tools) == 4, (
-            "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        # Verify the total number of tools (TestTool + 2 delegation tools; CodeInterpreterTool removed)
+        assert len(used_tools) == 3, (
+            "Should have TestTool and 2 delegation tools"
         )
 
 

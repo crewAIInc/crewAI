@@ -1,6 +1,6 @@
 """Agent logging events that don't reference BaseAgent to avoid circular imports."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ConfigDict
 
@@ -13,7 +13,7 @@ class AgentLogsStartedEvent(BaseEvent):
     agent_role: str
     task_description: str | None = None
     verbose: bool = False
-    type: str = "agent_logs_started"
+    type: Literal["agent_logs_started"] = "agent_logs_started"
 
 
 class AgentLogsExecutionEvent(BaseEvent):
@@ -22,6 +22,6 @@ class AgentLogsExecutionEvent(BaseEvent):
     agent_role: str
     formatted_answer: Any
     verbose: bool = False
-    type: str = "agent_logs_execution"
+    type: Literal["agent_logs_execution"] = "agent_logs_execution"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

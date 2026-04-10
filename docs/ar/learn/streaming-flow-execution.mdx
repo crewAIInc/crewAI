@@ -420,6 +420,34 @@ except Exception as e:
         print("Streaming completed but flow encountered an error")
 ```
 
+## الإلغاء وتنظيف الموارد
+
+يدعم `FlowStreamingOutput` الإلغاء السلس بحيث يتوقف العمل الجاري فوراً عند انقطاع اتصال المستهلك.
+
+### مدير السياق غير المتزامن
+
+```python Code
+streaming = await flow.kickoff_async()
+
+async with streaming:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+```
+
+### الإلغاء الصريح
+
+```python Code
+streaming = await flow.kickoff_async()
+try:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+finally:
+    await streaming.aclose()  # غير متزامن
+    # streaming.close()       # المكافئ المتزامن
+```
+
+بعد الإلغاء، يكون كل من `streaming.is_cancelled` و `streaming.is_completed` بقيمة `True`. كل من `aclose()` و `close()` متساويان القوة.
+
 ## ملاحظات مهمة
 
 - يفعّل البث تلقائياً بث LLM لأي أطقم مستخدمة داخل التدفق

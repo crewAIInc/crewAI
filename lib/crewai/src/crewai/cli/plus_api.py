@@ -6,7 +6,7 @@ import httpx
 
 from crewai.cli.config import Settings
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 
 
 class PlusAPI:

@@ -113,6 +113,11 @@ from crewai.flow.utils import (
 )
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
+from crewai.state.checkpoint_config import (
+    CheckpointConfig,
+    _coerce_checkpoint,
+    apply_checkpoint,
+)
 
 
 if TYPE_CHECKING:
@@ -130,6 +135,7 @@ from crewai.utilities.streaming import (
     create_async_chunk_generator,
     create_chunk_generator,
     create_streaming_state,
+    register_cleanup,
     signal_end,
     signal_error,
 )
@@ -919,10 +925,89 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     max_method_calls: int = Field(default=100)
 
     execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint: Annotated[
+        CheckpointConfig | bool | None,
+        BeforeValidator(_coerce_checkpoint),
+    ] = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(cls, config: CheckpointConfig) -> Flow:  # type: ignore[type-arg]
+        """Restore a Flow from a checkpoint.
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
+
+        Returns:
+            A Flow instance ready to resume.
+        """
+        from crewai.context import apply_execution_context
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.runtime import RuntimeState
+
+        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
+        crewai_event_bus.set_runtime_state(state)
+        for entity in state.root:
+            if not isinstance(entity, Flow):
+                continue
+            if entity.execution_context is not None:
+                apply_execution_context(entity.execution_context)
+            if isinstance(entity, cls):
+                entity._restore_from_checkpoint()
+                return entity
+            instance = cls()
+            instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
+            instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
+            instance.checkpoint_method_counts = entity.checkpoint_method_counts
+            instance.checkpoint_state = entity.checkpoint_state
+            instance._restore_from_checkpoint()
+            return instance
+        raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
+
+    @classmethod
+    def fork(
+        cls,
+        config: CheckpointConfig,
+        branch: str | None = None,
+    ) -> Flow:  # type: ignore[type-arg]
+        """Fork a Flow from a checkpoint, creating a new execution branch.
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set.
+            branch: Branch label for the fork. Auto-generated if not provided.
+
+        Returns:
+            A Flow instance on the new branch. Call kickoff() to run.
+        """
+        flow = cls.from_checkpoint(config)
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            raise RuntimeError(
+                "Cannot fork: no runtime state on the event bus. "
+                "Ensure from_checkpoint() succeeded before calling fork()."
+            )
+        state.fork(branch)
+        return flow
+
     checkpoint_completed_methods: set[str] | None = Field(default=None)
     checkpoint_method_outputs: list[Any] | None = Field(default=None)
     checkpoint_method_counts: dict[str, int] | None = Field(default=None)
     checkpoint_state: dict[str, Any] | None = Field(default=None)
+
+    def _restore_from_checkpoint(self) -> None:
+        """Restore private execution state from checkpoint fields."""
+        if self.checkpoint_completed_methods is not None:
+            self._completed_methods = {
+                FlowMethodName(m) for m in self.checkpoint_completed_methods
+            }
+        if self.checkpoint_method_outputs is not None:
+            self._method_outputs = list(self.checkpoint_method_outputs)
+        if self.checkpoint_method_counts is not None:
+            self._method_execution_counts = {
+                FlowMethodName(k): v for k, v in self.checkpoint_method_counts.items()
+            }
+        if self.checkpoint_state is not None:
+            self._restore_state(self.checkpoint_state)
 
     _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
         default_factory=dict
@@ -1399,6 +1484,25 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
 
+        if get_current_parent_id() is None:
+            reset_emission_counter()
+            reset_last_event_id()
+
+        if not self.suppress_flow_events:
+            future = crewai_event_bus.emit(
+                self,
+                FlowStartedEvent(
+                    type="flow_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    inputs=None,
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
@@ -1538,16 +1642,39 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         final_result = self._method_outputs[-1] if self._method_outputs else result
 
-        # Emit flow finished
-        crewai_event_bus.emit(
-            self,
-            FlowFinishedEvent(
-                type="flow_finished",
-                flow_name=self.name or self.__class__.__name__,
-                result=final_result,
-                state=self._state,
-            ),
-        )
+        if self._event_futures:
+            await asyncio.gather(
+                *[
+                    asyncio.wrap_future(f)
+                    for f in self._event_futures
+                    if isinstance(f, Future)
+                ]
+            )
+            self._event_futures.clear()
+
+        if not self.suppress_flow_events:
+            future = crewai_event_bus.emit(
+                self,
+                FlowFinishedEvent(
+                    type="flow_finished",
+                    flow_name=self.name or self.__class__.__name__,
+                    result=final_result,
+                    state=self._copy_and_serialize_state(),
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning("FlowFinishedEvent handler failed", exc_info=True)
+
+            trace_listener = TraceCollectionListener()
+            if trace_listener.batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
 
         return final_result
 
@@ -1858,6 +1985,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution in a synchronous context.
 
@@ -1867,10 +1995,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Args:
             inputs: Optional dictionary containing input values and/or a state ID.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
 
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(inputs=inputs, input_files=input_files)
         get_env_context()
         if self.stream:
             result_holder: list[Any] = []
@@ -1907,6 +2040,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             streaming_output = FlowStreamingOutput(
                 sync_iterator=create_chunk_generator(state, run_flow, output_holder)
             )
+            register_cleanup(streaming_output, state)
             output_holder.append(streaming_output)
 
             return streaming_output
@@ -1926,6 +2060,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution asynchronously.
 
@@ -1937,10 +2072,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -1980,6 +2120,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     state, run_flow, output_holder
                 )
             )
+            register_cleanup(streaming_output, state)
             output_holder.append(streaming_output)
 
             return streaming_output
@@ -2198,17 +2339,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> Any | FlowStreamingOutput:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        return await self.kickoff_async(inputs, input_files)
+        return await self.kickoff_async(inputs, input_files, from_checkpoint)
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.
@@ -3136,7 +3280,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         from crewai.llm import LLM
         from crewai.llms.base_llm import BaseLLM as BaseLLMClass
-        from crewai.utilities.i18n import get_i18n
+        from crewai.utilities.i18n import I18N_DEFAULT
 
         llm_instance: BaseLLMClass
         if isinstance(llm, str):
@@ -3156,9 +3300,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 description=f"The outcome that best matches the feedback. Must be one of: {', '.join(outcomes)}"
             )
 
-        # Load prompt from translations (using cached instance)
-        i18n = get_i18n()
-        prompt_template = i18n.slice("human_feedback_collapse")
+        prompt_template = I18N_DEFAULT.slice("human_feedback_collapse")
 
         prompt = prompt_template.format(
             feedback=feedback,
