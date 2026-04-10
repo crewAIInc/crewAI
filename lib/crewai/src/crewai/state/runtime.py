@@ -10,7 +10,6 @@ via ``RuntimeState.model_rebuild()``.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 import uuid
 
@@ -36,19 +35,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from crewai import Entity
-
-
-def _base_location(location: str, provider: BaseProvider) -> str:
-    """Extract the base storage location from a restore path.
-
-    For SQLite (``db_path#id``), returns ``db_path``.
-    For JSON (a file path), returns the parent directory.
-    """
-    from crewai.state.provider.sqlite_provider import SqliteProvider
-
-    if isinstance(provider, SqliteProvider):
-        return location.rsplit("#", 1)[0]
-    return str(Path(location).parent)
 
 
 def _sync_checkpoint_fields(entity: object) -> None:
@@ -125,7 +111,6 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     _checkpoint_id: str | None = PrivateAttr(default=None)
     _parent_id: str | None = PrivateAttr(default=None)
     _branch: str = PrivateAttr(default="main")
-    _location: str | None = PrivateAttr(default=None)
     _trigger: str | None = PrivateAttr(default=None)
 
     @property
@@ -253,7 +238,6 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         raw = provider.from_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
         state._provider = provider
-        state._location = _base_location(location, provider)
         checkpoint_id = provider.extract_id(location)
         state._checkpoint_id = checkpoint_id
         state._parent_id = checkpoint_id
@@ -281,7 +265,6 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         raw = await provider.afrom_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
         state._provider = provider
-        state._location = _base_location(location, provider)
         checkpoint_id = provider.extract_id(location)
         state._checkpoint_id = checkpoint_id
         state._parent_id = checkpoint_id

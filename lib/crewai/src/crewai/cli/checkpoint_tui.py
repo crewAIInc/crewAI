@@ -552,14 +552,24 @@ async def _run_checkpoint_tui_async(location: str) -> None:
                     preview = preview[:77] + "..."
                 click.echo(f"  Task {task_idx + 1}: {desc}")
                 click.echo(f"    -> {preview}")
-                # Update the assistant message in the executor's history
-                # so the LLM sees the override in its conversation
                 agent = crew.tasks[task_idx].agent
                 if agent and agent.agent_executor:
-                    for msg in reversed(agent.agent_executor.messages):
-                        if msg.get("role") == "assistant":
-                            msg["content"] = new_output
-                            break
+                    nth = sum(1 for t in crew.tasks[:task_idx] if t.agent is agent)
+                    messages = agent.agent_executor.messages
+                    system_positions = [
+                        i for i, m in enumerate(messages) if m.get("role") == "system"
+                    ]
+                    if nth < len(system_positions):
+                        seg_start = system_positions[nth]
+                        seg_end = (
+                            system_positions[nth + 1]
+                            if nth + 1 < len(system_positions)
+                            else len(messages)
+                        )
+                        for j in range(seg_end - 1, seg_start, -1):
+                            if messages[j].get("role") == "assistant":
+                                messages[j]["content"] = new_output
+                                break
                     overridden_agents.add(id(agent))
 
         earliest = min(task_overrides)
