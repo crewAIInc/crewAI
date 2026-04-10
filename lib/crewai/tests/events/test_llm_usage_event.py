@@ -175,6 +175,27 @@ class TestEmitCallCompletedEventPassesUsage:
         assert isinstance(event, LLMCallCompletedEvent)
         assert event.usage is None
 
+    def test_is_litellm_is_passed_to_event(self, mock_emit, llm):
+        llm.is_litellm = True
+        llm._emit_call_completed_event(
+            response="hello",
+            call_type=LLMCallType.LLM_CALL,
+            messages="test prompt",
+        )
+
+        event = mock_emit.call_args[1]["event"]
+        assert event.is_litellm is True
+
+    def test_is_litellm_defaults_to_false(self, mock_emit, llm):
+        llm._emit_call_completed_event(
+            response="hello",
+            call_type=LLMCallType.LLM_CALL,
+            messages="test prompt",
+        )
+
+        event = mock_emit.call_args[1]["event"]
+        assert event.is_litellm is False
+
 class TestUsageMetricsNewFields:
     def test_add_usage_metrics_aggregates_reasoning_and_cache_creation(self):
         from crewai.types.usage_metrics import UsageMetrics

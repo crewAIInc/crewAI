@@ -479,6 +479,7 @@ class BaseLLM(BaseModel, ABC):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
+                is_litellm=self.is_litellm,
             ),
         )
 

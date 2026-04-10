@@ -58,6 +58,7 @@ class LLMCallCompletedEvent(LLMEventBase):
     response: Any
     call_type: LLMCallType
     usage: dict[str, Any] | None = None
+    is_litellm: bool = False
 
 
 class LLMCallFailedEvent(LLMEventBase):
