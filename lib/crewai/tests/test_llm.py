@@ -1001,6 +1001,8 @@ def test_usage_info_non_streaming_with_call():
         "completion_tokens": 0,
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
     }
     assert llm.stream is False
 
@@ -1025,6 +1027,8 @@ def test_usage_info_streaming_with_call():
         "completion_tokens": 0,
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
     }
     assert llm.stream is True
 
@@ -1056,6 +1060,8 @@ async def test_usage_info_non_streaming_with_acall():
         "completion_tokens": 0,
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
     }
 
     with patch.object(
@@ -1089,6 +1095,8 @@ async def test_usage_info_non_streaming_with_acall_and_stop():
         "completion_tokens": 0,
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
     }
 
     with patch.object(
@@ -1121,6 +1129,8 @@ async def test_usage_info_streaming_with_acall():
         "completion_tokens": 0,
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
     }
 
     with patch.object(

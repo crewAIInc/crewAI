@@ -1324,18 +1324,22 @@ class OpenAICompletion(BaseLLM):
         ]
 
     def _extract_responses_token_usage(self, response: Response) -> dict[str, Any]:
-        """Extract token usage from Responses API response."""
+        """Extract token usage and response metadata from Responses API response."""
         if response.usage:
-            result = {
+            result: dict[str, Any] = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
-            # Extract cached prompt tokens from input_tokens_details
             input_details = getattr(response.usage, "input_tokens_details", None)
             if input_details:
                 result["cached_prompt_tokens"] = (
                     getattr(input_details, "cached_tokens", 0) or 0
+                )
+            output_details = getattr(response.usage, "output_tokens_details", None)
+            if output_details:
+                result["reasoning_tokens"] = (
+                    getattr(output_details, "reasoning_tokens", 0) or 0
                 )
             return result
         return {"total_tokens": 0}
@@ -2307,19 +2311,23 @@ class OpenAICompletion(BaseLLM):
     def _extract_openai_token_usage(
         self, response: ChatCompletion | ChatCompletionChunk
     ) -> dict[str, Any]:
-        """Extract token usage from OpenAI ChatCompletion or ChatCompletionChunk response."""
+        """Extract token usage and response metadata from OpenAI ChatCompletion."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            result = {
+            result: dict[str, Any] = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
-            # Extract cached prompt tokens from prompt_tokens_details
             prompt_details = getattr(usage, "prompt_tokens_details", None)
             if prompt_details:
                 result["cached_prompt_tokens"] = (
                     getattr(prompt_details, "cached_tokens", 0) or 0
+                )
+            completion_details = getattr(usage, "completion_tokens_details", None)
+            if completion_details:
+                result["reasoning_tokens"] = (
+                    getattr(completion_details, "reasoning_tokens", 0) or 0
                 )
             return result
         return {"total_tokens": 0}
