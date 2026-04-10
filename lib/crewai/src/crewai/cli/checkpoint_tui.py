@@ -594,8 +594,10 @@ async def _run_checkpoint_tui_async(location: str) -> None:
                     overridden_agents.add(id(agent))
 
         earliest = min(task_overrides)
-        for subsequent in crew.tasks[earliest + 1 :]:
-            if subsequent.output and crew.tasks.index(subsequent) not in task_overrides:
+        for offset, subsequent in enumerate(
+            crew.tasks[earliest + 1 :], start=earliest + 1
+        ):
+            if subsequent.output and offset not in task_overrides:
                 subsequent.output = None
             if subsequent.agent and subsequent.agent.agent_executor:
                 subsequent.agent.agent_executor._resuming = False
