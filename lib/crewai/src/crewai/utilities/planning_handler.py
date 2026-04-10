@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from crewai.agent import Agent
 from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
+from crewai.tasks.task_output import TaskOutput
 
 
 logger = logging.getLogger(__name__)
@@ -133,6 +134,90 @@ class CrewPlanner:
         except AttributeError:
             logger.warning("Error accessing agent knowledge sources")
         return []
+
+    def replan(
+        self,
+        completed_results: list[TaskOutput],
+        remaining_tasks: list[Task],
+        deviation_reason: str,
+    ) -> PlannerTaskPydanticOutput:
+        """Generate a revised plan for remaining tasks based on completed results.
+
+        Called when the ReplanningEvaluator detects that task results deviate
+        from the original plan's assumptions. Generates new plans only for
+        the remaining (not yet executed) tasks.
+
+        Args:
+            completed_results: Outputs from tasks that have already been executed.
+            remaining_tasks: Tasks that still need to be executed.
+            deviation_reason: Explanation of why replanning was triggered.
+
+        Returns:
+            A PlannerTaskPydanticOutput with revised plans for remaining tasks.
+
+        Raises:
+            ValueError: If the replanning output cannot be obtained.
+        """
+        planning_agent = self._create_planning_agent()
+
+        completed_summary = "\n".join(
+            f"  - {output.description}: {output.raw[:300]}"
+            for output in completed_results
+        )
+        remaining_summary = self._create_remaining_tasks_summary(remaining_tasks)
+
+        replan_task = Task(
+            description=(
+                f"The original plan needs to be revised because: {deviation_reason}\n\n"
+                f"COMPLETED TASKS AND THEIR RESULTS:\n{completed_summary}\n\n"
+                f"REMAINING TASKS THAT NEED NEW PLANS:\n{remaining_summary}\n\n"
+                "Based on the actual results obtained so far and the deviation reason, "
+                "create a revised step-by-step plan for ONLY the remaining tasks. "
+                "The new plan should account for the actual data and results available, "
+                "not the original assumptions."
+            ),
+            expected_output=(
+                "Revised step by step plan for the remaining tasks, "
+                "accounting for actual results obtained so far"
+            ),
+            agent=planning_agent,
+            output_pydantic=PlannerTaskPydanticOutput,
+        )
+
+        result = replan_task.execute_sync()
+
+        if isinstance(result.pydantic, PlannerTaskPydanticOutput):
+            return result.pydantic
+
+        raise ValueError("Failed to get the Replanning output")
+
+    @staticmethod
+    def _create_remaining_tasks_summary(remaining_tasks: list[Task]) -> str:
+        """Create a summary of remaining tasks for replanning.
+
+        Args:
+            remaining_tasks: Tasks that still need to be executed.
+
+        Returns:
+            A string summarizing the remaining tasks.
+        """
+        parts = []
+        for idx, task in enumerate(remaining_tasks):
+            agent_tools = (
+                f"[{', '.join(str(tool) for tool in task.agent.tools)}]"
+                if task.agent and task.agent.tools
+                else '"agent has no tools"'
+            )
+            part = (
+                f"Task {idx + 1}:\n"
+                f'  "task_description": {task.description}\n'
+                f'  "task_expected_output": {task.expected_output}\n'
+                f'  "agent": {task.agent.role if task.agent else "None"}\n'
+                f'  "agent_goal": {task.agent.goal if task.agent else "None"}\n'
+                f'  "agent_tools": {agent_tools}'
+            )
+            parts.append(part)
+        return "\n".join(parts)
 
     def _create_tasks_summary(self) -> str:
         """Creates a summary of all tasks.
