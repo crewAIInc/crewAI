@@ -33,7 +33,14 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Planning** *(optional)*             | `planning`             | Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
 | **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process.                                                                                                                                                                                        |
 | **Knowledge Sources** _(optional)_    | `knowledge_sources`    | Knowledge sources available at the crew level, accessible to all the agents.                                                                                                                                                                                    |
-| **Stream** _(optional)_               | `stream`               | Enable streaming output to receive real-time updates during crew execution. Returns a `CrewStreamingOutput` object that can be iterated for chunks. Defaults to `False`.                                                                                    |
+| **Stream** _(optional)_                        | `stream`                      | Enable streaming output to receive real-time updates during crew execution. Returns a `CrewStreamingOutput` object that can be iterated for chunks. Defaults to `False`.                                                                                    |
+| **Chat LLM** _(optional)_                      | `chat_llm`                    | The language model used to orchestrate `crewai chat` CLI interactions with the crew. Accepts a model name string or `LLM` instance. Defaults to `None`.                                                                                                    |
+| **Before Kickoff Callbacks** _(optional)_      | `before_kickoff_callbacks`    | A list of callable functions executed **before** the crew starts. Each callback receives and can modify the inputs dict. Distinct from the `@before_kickoff` decorator. Defaults to `[]`.                                                                   |
+| **After Kickoff Callbacks** _(optional)_       | `after_kickoff_callbacks`     | A list of callable functions executed **after** the crew finishes. Each callback receives and can modify the `CrewOutput`. Distinct from the `@after_kickoff` decorator. Defaults to `[]`.                                                                  |
+| **Tracing** _(optional)_                       | `tracing`                     | Controls OpenTelemetry tracing for the crew. `True` = always enable, `False` = always disable, `None` = inherit from environment / user settings. Defaults to `None`.                                                                                      |
+| **Skills** _(optional)_                        | `skills`                      | A list of `Path` objects (skill search directories) or pre-loaded `Skill` objects applied to all agents in the crew. Defaults to `None`.                                                                                                                    |
+| **Security Config** _(optional)_               | `security_config`              | A `SecurityConfig` instance managing crew fingerprinting and identity. Defaults to `SecurityConfig()`.                                                                                                                                                      |
+| **Checkpoint** _(optional)_                    | `checkpoint`                  | Enables automatic checkpointing. Pass `True` for sensible defaults, a `CheckpointConfig` for full control, `False` to opt out, or `None` to inherit. See the [Checkpointing](#checkpointing) section below. Defaults to `None`.                             |
 
 <Tip>
 **Crew Max RPM**: The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
@@ -270,6 +277,72 @@ crew = Crew(output_log_file = file_name.json)  # Logs will be saved as file_name
 ```
 
 
+
+## Checkpointing
+
+Checkpointing lets a crew automatically save its state after key events (e.g. task completion) so that long-running or interrupted runs can be resumed exactly where they left off without re-executing completed tasks.
+
+### Quick Start
+
+Pass `checkpoint=True` to enable checkpointing with sensible defaults (saves to `.checkpoints/` after every task):
+
+```python Code
+from crewai import Crew, Process
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, write_task],
+    process=Process.sequential,
+    checkpoint=True,  # saves to .checkpoints/ after every task
+)
+
+crew.kickoff(inputs={"topic": "AI trends"})
+```
+
+### Full Control with `CheckpointConfig`
+
+Use `CheckpointConfig` for fine-grained control over location, trigger events, storage backend, and retention:
+
+```python Code
+from crewai import Crew, Process
+from crewai.state.checkpoint_config import CheckpointConfig
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, write_task],
+    process=Process.sequential,
+    checkpoint=CheckpointConfig(
+        location="./.checkpoints",       # directory for JSON files (default)
+        on_events=["task_completed"],    # trigger after each task (default)
+        max_checkpoints=5,               # keep only the 5 most recent checkpoints
+    ),
+)
+
+crew.kickoff(inputs={"topic": "AI trends"})
+```
+
+### Resuming from a Checkpoint
+
+Use `Crew.from_checkpoint()` to restore a crew from a saved checkpoint file, then call `kickoff()` to resume:
+
+```python Code
+# Resume from the most recent checkpoint
+crew = Crew.from_checkpoint(".checkpoints/latest.json")
+crew.kickoff()
+```
+
+<Note>
+When restoring from a checkpoint, `checkpoint_inputs`, `checkpoint_train`, and `checkpoint_kickoff_event_id` are automatically reconstructed — you do not need to set these manually.
+</Note>
+
+### `CheckpointConfig` Attributes
+
+| Attribute          | Type                                   | Default              | Description                                                                                   |
+| :----------------- | :------------------------------------- | :------------------- | :-------------------------------------------------------------------------------------------- |
+| `location`         | `str`                                  | `"./.checkpoints"`   | Storage destination. For `JsonProvider` this is a directory path; for `SqliteProvider` a database file path. |
+| `on_events`        | `list[str]`                            | `["task_completed"]` | Event types that trigger a checkpoint write. Use `["*"]` to checkpoint on every event.        |
+| `provider`         | `JsonProvider \| SqliteProvider`       | `JsonProvider()`     | Storage backend. Defaults to `JsonProvider` (plain JSON files).                               |
+| `max_checkpoints`  | `int \| None`                          | `None`               | Maximum checkpoints to keep. Oldest are pruned after each write. `None` keeps all.            |
 
 ## Memory Utilization
 
