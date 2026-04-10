@@ -237,6 +237,7 @@ def _list_sqlite(db_path: str) -> list[dict[str, Any]]:
                     "entities": [],
                     "source": checkpoint_id,
                 }
+            meta["db"] = db_path
             results.append(meta)
     return results
 
