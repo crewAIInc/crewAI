@@ -330,18 +330,17 @@ class CheckpointTUI(App[_TuiResult]):
             for entry in reversed(branches["main"]):
                 _add_checkpoint(tree.root, entry)
 
-        # Build fork branches — sort so parent forks are built before child forks
         fork_branches = [
             (name, list(reversed(entries)))
             for name, entries in branches.items()
             if name != "main"
         ]
-        # Process forks whose parent is already indexed first
         remaining = fork_branches
         max_passes = len(remaining) + 1
         while remaining and max_passes > 0:
             max_passes -= 1
             deferred = []
+            made_progress = False
             for branch_name, entries in remaining:
                 first_parent = entries[0].get("parent_id") if entries else None
                 if first_parent and str(first_parent) not in node_by_name:
@@ -350,14 +349,25 @@ class CheckpointTUI(App[_TuiResult]):
                 attach_to: Any = tree.root
                 if first_parent:
                     attach_to = node_by_name.get(str(first_parent), tree.root)
-                # Drop fork-initial checkpoint — it's just a lineage marker
                 branch_label = (
                     f"[bold {_SECONDARY}]{branch_name}[/]  [{_DIM}]({len(entries)})[/]"
                 )
                 branch_node = attach_to.add(branch_label, expand=False)
                 for entry in entries:
                     _add_checkpoint(branch_node, entry)
+                made_progress = True
             remaining = deferred
+            if not made_progress:
+                break
+
+        for branch_name, entries in remaining:
+            branch_label = (
+                f"[bold {_SECONDARY}]{branch_name}[/]  "
+                f"[{_DIM}]({len(entries)})[/]  [{_DIM}](orphaned)[/]"
+            )
+            branch_node = tree.root.add(branch_label, expand=False)
+            for entry in entries:
+                _add_checkpoint(branch_node, entry)
 
         count = len(self._entries)
         storage = "SQLite" if _is_sqlite(self._location) else "JSON"
