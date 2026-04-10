@@ -224,6 +224,7 @@ class CheckpointTUI(App[_TuiResult]):
         self._entries: list[dict[str, Any]] = []
         self._selected_entry: dict[str, Any] | None = None
         self._input_keys: list[str] = []
+        self._task_output_ids: list[tuple[int, str]] = []
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -541,9 +542,9 @@ async def _run_checkpoint_tui_async(location: str) -> None:
         click.echo(f"\nResuming from: {selected}\n")
         crew = Crew.from_checkpoint(config)
 
-    # Apply task output overrides before kickoff
     if task_overrides:
         click.echo("Modifications:")
+        overridden_agents: set[int] = set()
         for task_idx, new_output in task_overrides.items():
             if task_idx < len(crew.tasks) and crew.tasks[task_idx].output is not None:
                 desc = crew.tasks[task_idx].description or f"Task {task_idx + 1}"
@@ -563,18 +564,21 @@ async def _run_checkpoint_tui_async(location: str) -> None:
                         if msg.get("role") == "assistant":
                             msg["content"] = new_output
                             break
-                # Invalidate all subsequent tasks so they re-run with
-                # the modified context instead of using cached results
-                overridden_agent = crew.tasks[task_idx].agent
-                for subsequent in crew.tasks[task_idx + 1 :]:
-                    subsequent.output = None
-                    if (
-                        subsequent.agent
-                        and subsequent.agent is not overridden_agent
-                        and subsequent.agent.agent_executor
-                    ):
-                        subsequent.agent.agent_executor._resuming = False
-                        subsequent.agent.agent_executor.messages = []
+                    overridden_agents.add(id(agent))
+
+        earliest = min(task_overrides)
+        for subsequent in crew.tasks[earliest + 1 :]:
+            if subsequent.output and not task_overrides.get(
+                crew.tasks.index(subsequent)
+            ):
+                subsequent.output = None
+            if (
+                subsequent.agent
+                and id(subsequent.agent) not in overridden_agents
+                and subsequent.agent.agent_executor
+            ):
+                subsequent.agent.agent_executor._resuming = False
+                subsequent.agent.agent_executor.messages = []
         click.echo()
 
     if inputs:
