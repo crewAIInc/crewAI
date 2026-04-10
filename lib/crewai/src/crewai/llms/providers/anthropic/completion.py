@@ -494,6 +494,10 @@ class AnthropicCompletion(BaseLLM):
                     "required": [],
                 }
 
+            func_info = tool.get("function", {})
+            if func_info.get("strict"):
+                anthropic_tool["strict"] = True
+
             anthropic_tools.append(anthropic_tool)
 
         return anthropic_tools
