@@ -7,6 +7,7 @@ avoids per-event overhead when no entity uses checkpointing.
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from typing import Any
@@ -106,23 +107,21 @@ def _do_checkpoint(
     state: RuntimeState, cfg: CheckpointConfig, event: BaseEvent | None = None
 ) -> None:
     """Write a checkpoint and prune old ones if configured."""
+    _prepare_entities(state.root)
+    payload = state.model_dump(mode="json")
     if event is not None:
-        state._trigger = event.type
-    try:
-        _prepare_entities(state.root)
-        data = state.model_dump_json()
-        location = cfg.provider.checkpoint(
-            data,
-            cfg.location,
-            parent_id=state._parent_id,
-            branch=state._branch,
-        )
-        state._chain_lineage(cfg.provider, location)
+        payload["trigger"] = event.type
+    data = json.dumps(payload)
+    location = cfg.provider.checkpoint(
+        data,
+        cfg.location,
+        parent_id=state._parent_id,
+        branch=state._branch,
+    )
+    state._chain_lineage(cfg.provider, location)
 
-        if cfg.max_checkpoints is not None:
-            cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)
-    finally:
-        state._trigger = None
+    if cfg.max_checkpoints is not None:
+        cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)
 
 
 def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None:

@@ -111,7 +111,6 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     _checkpoint_id: str | None = PrivateAttr(default=None)
     _parent_id: str | None = PrivateAttr(default=None)
     _branch: str = PrivateAttr(default="main")
-    _trigger: str | None = PrivateAttr(default=None)
 
     @property
     def event_record(self) -> EventRecord:
@@ -120,16 +119,13 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
 
     @model_serializer(mode="plain")
     def _serialize(self) -> dict[str, Any]:
-        d: dict[str, Any] = {
+        return {
             "crewai_version": get_crewai_version(),
             "parent_id": self._parent_id,
             "branch": self._branch,
             "entities": [e.model_dump(mode="json") for e in self.root],
             "event_record": self._event_record.model_dump(),
         }
-        if self._trigger:
-            d["trigger"] = self._trigger
-        return d
 
     @model_validator(mode="wrap")
     @classmethod
