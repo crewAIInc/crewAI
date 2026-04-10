@@ -94,7 +94,7 @@ def _create_stream_chunk(
         chunk_type=chunk_type,
         task_index=current_task_info["index"],
         task_name=current_task_info["name"],
-        task_id=current_task_info["id"],
+        task_id=event.task_id or current_task_info["id"] or "",
         agent_role=event.agent_role or current_task_info["agent_role"],
         agent_id=event.agent_id or current_task_info["agent_id"],
         tool_call=tool_call_chunk,
