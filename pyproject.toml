@@ -30,6 +30,7 @@ dev = [
     "types-pymysql==1.1.0.20250916",
     "types-aiofiles~=25.1.0",
     "commitizen>=4.13.9",
+    "pip-audit==2.9.0",
 ]
 
 
