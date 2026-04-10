@@ -383,7 +383,9 @@ def human_feedback(
                 if not matches:
                     return method_output
 
-                lessons = "\n".join(f"- {m.record.content}" for m in matches)
+                from crewai.utilities.sanitizer import sanitize_memory_content
+
+                lessons = "\n".join(f"- {sanitize_memory_content(m.record.content)}" for m in matches)
                 llm_inst = _resolve_llm_instance()
                 prompt = _get_hitl_prompt("hitl_pre_review_user").format(
                     output=str(method_output),
