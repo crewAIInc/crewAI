@@ -54,6 +54,7 @@ crew = Crew(
 | `on_events` | `list[str]` | `["task_completed"]` | Event types that trigger a checkpoint |
 | `provider` | `BaseProvider` | `JsonProvider()` | Storage backend |
 | `max_checkpoints` | `int \| None` | `None` | Max checkpoints to keep. Oldest are pruned after each write. Pruning is handled by the provider. |
+| `restore_from` | `Path \| str \| None` | `None` | Path to a checkpoint to restore from. Used when passing config via a kickoff method's `from_checkpoint` parameter. |
 
 ### Inheritance and Opt-Out
 
@@ -79,13 +80,42 @@ crew = Crew(
 
 ## Resuming from a Checkpoint
 
+Pass a `CheckpointConfig` with `restore_from` to any kickoff method. The crew restores from that checkpoint, skips completed tasks, and resumes.
+
 ```python
-# Restore and resume
-crew = Crew.from_checkpoint("./my_checkpoints/20260407T120000_abc123.json")
-result = crew.kickoff()  # picks up from last completed task
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(agents=[...], tasks=[...])
+result = crew.kickoff(
+    from_checkpoint=CheckpointConfig(
+        restore_from="./my_checkpoints/20260407T120000_abc123.json",
+    ),
+)
 ```
 
-The restored crew skips already-completed tasks and resumes from the first incomplete one.
+Remaining `CheckpointConfig` fields apply to the new run, so checkpointing continues after the restore.
+
+You can also use the classmethod directly:
+
+```python
+config = CheckpointConfig(restore_from="./my_checkpoints/20260407T120000_abc123.json")
+crew = Crew.from_checkpoint(config)
+result = crew.kickoff()
+```
+
+## Forking from a Checkpoint
+
+`fork()` restores a checkpoint and starts a new execution branch. Useful for exploring alternative paths from the same point.
+
+```python
+from crewai import Crew, CheckpointConfig
+
+config = CheckpointConfig(restore_from="./my_checkpoints/20260407T120000_abc123.json")
+crew = Crew.fork(config, branch="experiment-a")
+result = crew.kickoff(inputs={"strategy": "aggressive"})
+```
+
+Each fork gets a unique lineage ID so checkpoints from different branches don't collide. The `branch` label is optional and auto-generated if omitted.
 
 ## Works on Crew, Flow, and Agent
 
@@ -125,7 +155,8 @@ flow = MyFlow(
 result = flow.kickoff()
 
 # Resume
-flow = MyFlow.from_checkpoint("./flow_cp/20260407T120000_abc123.json")
+config = CheckpointConfig(restore_from="./flow_cp/20260407T120000_abc123.json")
+flow = MyFlow.from_checkpoint(config)
 result = flow.kickoff()
 ```
 
@@ -231,3 +262,44 @@ async def on_llm_done_async(source, event, state):
 The `state` argument is the `RuntimeState` passed automatically by the event bus when your handler accepts 3 parameters. You can register handlers on any event type listed in the [Event Listeners](/en/concepts/event-listener) documentation.
 
 Checkpointing is best-effort: if a checkpoint write fails, the error is logged but execution continues uninterrupted.
+
+## CLI
+
+The `crewai checkpoint` command gives you a TUI for browsing, inspecting, resuming, and forking checkpoints. It auto-detects whether your checkpoints are JSON files or a SQLite database.
+
+```bash
+# Launch the TUI — auto-detects .checkpoints/ or .checkpoints.db
+crewai checkpoint
+
+# Point at a specific location
+crewai checkpoint --location ./my_checkpoints
+crewai checkpoint --location ./.checkpoints.db
+```
+
+<Frame>
+  <img src="/images/checkpointing.png" alt="Checkpoint TUI" />
+</Frame>
+
+The left panel is a tree view. Checkpoints are grouped by branch, and forks nest under the checkpoint they diverged from. Select a checkpoint to see its metadata, entity state, and task progress in the detail panel. Hit **Resume** to pick up where it left off, or **Fork** to start a new branch from that point.
+
+### Editing inputs and task outputs
+
+When a checkpoint is selected, the detail panel shows:
+
+- **Inputs** — if the original kickoff had inputs (e.g. `{topic}`), they appear as editable fields pre-filled with the original values. Change them before resuming or forking.
+- **Task outputs** — completed tasks show their output in editable text areas. Edit a task's output to change the context that downstream tasks receive. When you modify a task output and hit Fork, all subsequent tasks are invalidated and re-run with the new context.
+
+This is useful for "what if" exploration — fork from a checkpoint, tweak a task's result, and see how it changes downstream behavior.
+
+### Subcommands
+
+```bash
+# List all checkpoints
+crewai checkpoint list ./my_checkpoints
+
+# Inspect a specific checkpoint
+crewai checkpoint info ./my_checkpoints/20260407T120000_abc123.json
+
+# Inspect latest in a SQLite database
+crewai checkpoint info ./.checkpoints.db
+```

@@ -7,6 +7,7 @@ avoids per-event overhead when no entity uses checkpointing.
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from typing import Any
@@ -102,10 +103,15 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
     return None
 
 
-def _do_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
+def _do_checkpoint(
+    state: RuntimeState, cfg: CheckpointConfig, event: BaseEvent | None = None
+) -> None:
     """Write a checkpoint and prune old ones if configured."""
     _prepare_entities(state.root)
-    data = state.model_dump_json()
+    payload = state.model_dump(mode="json")
+    if event is not None:
+        payload["trigger"] = event.type
+    data = json.dumps(payload)
     location = cfg.provider.checkpoint(
         data,
         cfg.location,
@@ -134,7 +140,7 @@ def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
     if cfg is None:
         return
     try:
-        _do_checkpoint(state, cfg)
+        _do_checkpoint(state, cfg, event)
     except Exception:
         logger.warning("Auto-checkpoint failed for event %s", event.type, exc_info=True)
 

@@ -230,6 +230,8 @@ class Task(BaseModel):
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
+    checkpoint_original_description: str | None = Field(default=None, exclude=False)
+    checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
 
