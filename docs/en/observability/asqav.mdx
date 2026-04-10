@@ -1,0 +1,77 @@
+---
+title: Asqav Integration
+description: Add signed audit trails to your CrewAI agents with Asqav.
+icon: shield-check
+mode: "wide"
+---
+
+# Asqav Integration
+
+[Asqav](https://github.com/jagmarques/asqav-sdk) is an open-source Python SDK for AI agent governance. It captures cryptographically signed audit trails for every agent action using ML-DSA-65 post-quantum signatures.
+
+Use Asqav with CrewAI when you need:
+
+- **Signed audit trails**: Tamper-evident records of every task execution, tool call, and agent decision
+- **Incident traceability**: Reproduce and verify exactly what an agent did and when
+
+## Setup
+
+<Steps>
+  <Step title="Install Asqav with the CrewAI extra">
+    ```bash
+    pip install "asqav[crewai]"
+    ```
+  </Step>
+  <Step title="Set your API key">
+    Asqav signs audit records server-side with ML-DSA-65. Export your API key:
+
+    ```bash
+    export ASQAV_API_KEY=your-api-key
+    ```
+
+    For CI, store the key as a repository secret and inject it as `ASQAV_API_KEY`.
+  </Step>
+  <Step title="Attach the callback hook to your Crew">
+    `AsqavCrewHook` is a CrewAI callback that records task lifecycle events.
+
+    ```python
+    from crewai import Agent, Crew, Task, Process
+    from asqav.extras.crewai import AsqavCrewHook
+
+    hook = AsqavCrewHook(agent_name="my-crew")
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Find and summarize recent AI governance developments",
+        backstory="An analyst who tracks regulatory changes in AI policy",
+        verbose=True,
+    )
+
+    task = Task(
+        description="Summarize AI governance news from the past 30 days.",
+        expected_output="A bullet-point summary with source references.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        process=Process.sequential,
+        step_callback=hook.step_callback,
+        task_callback=hook.task_callback,
+    )
+
+    result = crew.kickoff()
+    print(result)
+    ```
+  </Step>
+</Steps>
+
+## How It Works
+
+The hook signs each task lifecycle event (`task:start`, `task:complete`, `task:fail`, `step:execute`) via the Asqav API. All signing happens server-side using ML-DSA-65 post-quantum signatures. The hook is fail-open - governance failures are logged but never interrupt your crew's execution.
+
+## Resources
+
+- [Asqav on GitHub](https://github.com/jagmarques/asqav-sdk)
+- [Asqav documentation](https://asqav.com/docs/integrations)
