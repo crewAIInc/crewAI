@@ -172,6 +172,8 @@ class BaseLLM(BaseModel, ABC):
             "completion_tokens": 0,
             "successful_requests": 0,
             "cached_prompt_tokens": 0,
+            "reasoning_tokens": 0,
+            "cache_creation_tokens": 0,
         }
     )
 
@@ -808,14 +810,24 @@ class BaseLLM(BaseModel, ABC):
         cached_tokens = (
             usage_data.get("cached_tokens")
             or usage_data.get("cached_prompt_tokens")
+            or usage_data.get("cache_read_input_tokens")
             or 0
         )
+        if not cached_tokens:
+            prompt_details = usage_data.get("prompt_tokens_details")
+            if isinstance(prompt_details, dict):
+                cached_tokens = prompt_details.get("cached_tokens", 0) or 0
+
+        reasoning_tokens = usage_data.get("reasoning_tokens", 0) or 0
+        cache_creation_tokens = usage_data.get("cache_creation_tokens", 0) or 0
 
         self._token_usage["prompt_tokens"] += prompt_tokens
         self._token_usage["completion_tokens"] += completion_tokens
         self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
         self._token_usage["successful_requests"] += 1
         self._token_usage["cached_prompt_tokens"] += cached_tokens
+        self._token_usage["reasoning_tokens"] += reasoning_tokens
+        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.

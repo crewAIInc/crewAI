@@ -1076,19 +1076,27 @@ class AzureCompletion(BaseLLM):
 
     @staticmethod
     def _extract_azure_token_usage(response: ChatCompletions) -> dict[str, Any]:
-        """Extract token usage from Azure response."""
+        """Extract token usage and response metadata from Azure response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
             cached_tokens = 0
             prompt_details = getattr(usage, "prompt_tokens_details", None)
             if prompt_details:
                 cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
-            return {
+            reasoning_tokens = 0
+            completion_details = getattr(usage, "completion_tokens_details", None)
+            if completion_details:
+                reasoning_tokens = (
+                    getattr(completion_details, "reasoning_tokens", 0) or 0
+                )
+            result: dict[str, Any] = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
                 "cached_prompt_tokens": cached_tokens,
+                "reasoning_tokens": reasoning_tokens,
             }
+            return result
         return {"total_tokens": 0}
 
     async def aclose(self) -> None:

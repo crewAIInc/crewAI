@@ -1306,17 +1306,20 @@ class GeminiCompletion(BaseLLM):
 
     @staticmethod
     def _extract_token_usage(response: GenerateContentResponse) -> dict[str, Any]:
-        """Extract token usage from Gemini response."""
+        """Extract token usage and response metadata from Gemini response."""
         if response.usage_metadata:
             usage = response.usage_metadata
             cached_tokens = getattr(usage, "cached_content_token_count", 0) or 0
-            return {
+            thinking_tokens = getattr(usage, "thoughts_token_count", 0) or 0
+            result: dict[str, Any] = {
                 "prompt_token_count": getattr(usage, "prompt_token_count", 0),
                 "candidates_token_count": getattr(usage, "candidates_token_count", 0),
                 "total_token_count": getattr(usage, "total_token_count", 0),
                 "total_tokens": getattr(usage, "total_token_count", 0),
                 "cached_prompt_tokens": cached_tokens,
+                "reasoning_tokens": thinking_tokens,
             }
+            return result
         return {"total_tokens": 0}
 
     @staticmethod
