@@ -13,7 +13,6 @@ from packaging import version
 import tomli
 
 from crewai.cli.utils import read_toml
-from crewai.cli.version import get_crewai_version
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
@@ -21,6 +20,7 @@ from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.types import LLMMessage
+from crewai.utilities.version import get_crewai_version
 
 
 MIN_REQUIRED_VERSION: Final[Literal["0.98.0"]] = "0.98.0"

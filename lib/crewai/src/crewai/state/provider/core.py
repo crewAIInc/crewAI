@@ -17,12 +17,21 @@ class BaseProvider(BaseModel, ABC):
     provider_type: str = "base"
 
     @abstractmethod
-    def checkpoint(self, data: str, location: str) -> str:
+    def checkpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Persist a snapshot synchronously.
 
         Args:
             data: The serialized string to persist.
             location: Storage destination (directory, file path, URI, etc.).
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
             A location identifier for the saved checkpoint.
@@ -30,12 +39,21 @@ class BaseProvider(BaseModel, ABC):
         ...
 
     @abstractmethod
-    async def acheckpoint(self, data: str, location: str) -> str:
+    async def acheckpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Persist a snapshot asynchronously.
 
         Args:
             data: The serialized string to persist.
             location: Storage destination (directory, file path, URI, etc.).
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
             A location identifier for the saved checkpoint.
@@ -43,12 +61,25 @@ class BaseProvider(BaseModel, ABC):
         ...
 
     @abstractmethod
-    def prune(self, location: str, max_keep: int) -> None:
-        """Remove old checkpoints, keeping at most *max_keep*.
+    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> None:
+        """Remove old checkpoints, keeping at most *max_keep* per branch.
 
         Args:
             location: The storage destination passed to ``checkpoint``.
             max_keep: Maximum number of checkpoints to retain.
+            branch: Only prune checkpoints on this branch.
+        """
+        ...
+
+    @abstractmethod
+    def extract_id(self, location: str) -> str:
+        """Extract the checkpoint ID from a location string.
+
+        Args:
+            location: The identifier returned by a previous ``checkpoint`` call.
+
+        Returns:
+            The checkpoint ID.
         """
         ...
 

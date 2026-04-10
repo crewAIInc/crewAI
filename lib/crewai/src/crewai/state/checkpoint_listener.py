@@ -106,10 +106,16 @@ def _do_checkpoint(state: RuntimeState, cfg: CheckpointConfig) -> None:
     """Write a checkpoint and prune old ones if configured."""
     _prepare_entities(state.root)
     data = state.model_dump_json()
-    cfg.provider.checkpoint(data, cfg.location)
+    location = cfg.provider.checkpoint(
+        data,
+        cfg.location,
+        parent_id=state._parent_id,
+        branch=state._branch,
+    )
+    state._chain_lineage(cfg.provider, location)
 
     if cfg.max_checkpoints is not None:
-        cfg.provider.prune(cfg.location, cfg.max_checkpoints)
+        cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)
 
 
 def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None:
