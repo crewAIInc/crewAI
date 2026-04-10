@@ -275,10 +275,10 @@ class CheckpointTUI(App[_TuiResult]):
         # Index checkpoint names to tree nodes so forks can attach
         node_by_name: dict[str, Any] = {}
 
-        def _make_label(entry: dict[str, Any]) -> str:
-            name = entry.get("name", "")
-            ts = entry.get("ts") or ""
-            trigger = entry.get("trigger") or ""
+        def _make_label(e: dict[str, Any]) -> str:
+            name = e.get("name", "")
+            ts = e.get("ts") or ""
+            trigger = e.get("trigger") or ""
             parts = [f"[bold]{_short_id(name)}[/]"]
             if ts:
                 time_part = ts.split(" ")[-1] if " " in ts else ts
@@ -298,15 +298,15 @@ class CheckpointTUI(App[_TuiResult]):
             if first_parent:
                 fork_parents.add(str(first_parent))
 
-        def _add_checkpoint(parent_node: Any, entry: dict[str, Any]) -> None:
+        def _add_checkpoint(parent_node: Any, e: dict[str, Any]) -> None:
             """Add a checkpoint node — expandable only if a fork attaches to it."""
-            name = entry.get("name", "")
+            name = e.get("name", "")
             if name in fork_parents:
                 node = parent_node.add(
-                    _make_label(entry), data=entry, expand=False, allow_expand=True
+                    _make_label(e), data=e, expand=False, allow_expand=True
                 )
             else:
-                node = parent_node.add_leaf(_make_label(entry), data=entry)
+                node = parent_node.add_leaf(_make_label(e), data=e)
             node_by_name[name] = node
 
         # Build main branch directly under root (oldest to newest)
@@ -331,11 +331,9 @@ class CheckpointTUI(App[_TuiResult]):
                 if first_parent and str(first_parent) not in node_by_name:
                     deferred.append((branch_name, entries))
                     continue
-                attach_to = (
-                    node_by_name.get(str(first_parent), tree.root)
-                    if first_parent
-                    else tree.root
-                )
+                attach_to: Any = tree.root
+                if first_parent:
+                    attach_to = node_by_name.get(str(first_parent), tree.root)
                 # Drop fork-initial checkpoint — it's just a lineage marker
                 branch_label = (
                     f"[bold {_SECONDARY}]{branch_name}[/]  [{_DIM}]({len(entries)})[/]"
@@ -401,8 +399,8 @@ class CheckpointTUI(App[_TuiResult]):
             entity_title = f"[bold {_SECONDARY}]{etype}: {ename}[/]"
             if completed is not None and total is not None:
                 entity_title += f"  [{_DIM}]{completed}/{total} tasks[/]"
-            detail_scroll.mount(Static(entity_title, classes="entity-title"))
-            detail_scroll.mount(
+            await detail_scroll.mount(Static(entity_title, classes="entity-title"))
+            await detail_scroll.mount(
                 Static(_build_entity_header(ent), classes="entity-detail")
             )
 
@@ -413,12 +411,12 @@ class CheckpointTUI(App[_TuiResult]):
                     desc = desc[:52] + "..."
                 if task.get("completed"):
                     icon = "[green]✓[/]"
-                    detail_scroll.mount(
+                    await detail_scroll.mount(
                         Static(f"  {icon}  {i + 1}. {desc}", classes="task-label")
                     )
                     output_text = task.get("output", "")
                     editor_id = f"task-output-{ent_idx}-{i}"
-                    detail_scroll.mount(
+                    await detail_scroll.mount(
                         TextArea(
                             str(output_text),
                             classes="task-output-editor",
@@ -430,7 +428,7 @@ class CheckpointTUI(App[_TuiResult]):
                     )
                 else:
                     icon = "[yellow]○[/]"
-                    detail_scroll.mount(
+                    await detail_scroll.mount(
                         Static(f"  {icon}  {i + 1}. {desc}", classes="task-label")
                     )
                 flat_task_idx += 1
@@ -449,7 +447,7 @@ class CheckpointTUI(App[_TuiResult]):
         self._input_keys = []
 
         if not inputs:
-            section.mount(Static(f"[{_DIM}]No inputs[/]", classes="no-inputs"))
+            await section.mount(Static(f"[{_DIM}]No inputs[/]", classes="no-inputs"))
             section.add_class("visible")
             return
 
@@ -460,7 +458,7 @@ class CheckpointTUI(App[_TuiResult]):
             row.compose_add_child(
                 Input(value=str(value), placeholder=key, id=f"input-{key}")
             )
-            section.mount(row)
+            await section.mount(row)
 
         section.add_class("visible")
 

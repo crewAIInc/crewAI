@@ -108,18 +108,21 @@ def _do_checkpoint(
     """Write a checkpoint and prune old ones if configured."""
     if event is not None:
         state._trigger = event.type
-    _prepare_entities(state.root)
-    data = state.model_dump_json()
-    location = cfg.provider.checkpoint(
-        data,
-        cfg.location,
-        parent_id=state._parent_id,
-        branch=state._branch,
-    )
-    state._chain_lineage(cfg.provider, location)
+    try:
+        _prepare_entities(state.root)
+        data = state.model_dump_json()
+        location = cfg.provider.checkpoint(
+            data,
+            cfg.location,
+            parent_id=state._parent_id,
+            branch=state._branch,
+        )
+        state._chain_lineage(cfg.provider, location)
 
-    if cfg.max_checkpoints is not None:
-        cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)
+        if cfg.max_checkpoints is not None:
+            cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)
+    finally:
+        state._trigger = None
 
 
 def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None:
