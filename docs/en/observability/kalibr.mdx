@@ -1,0 +1,86 @@
+---
+title: Kalibr
+description: Outcome-aware execution routing for CrewAI agents in production
+---
+
+# Kalibr — Production Reliability for CrewAI Agents
+
+[Kalibr](https://kalibr.systems) is outcome-aware execution routing for CrewAI agents.
+When your crew runs in production, Kalibr learns which model+tool configuration
+works best for each agent role and routes automatically — before failures reach users.
+
+## The Problem
+
+CrewAI agents in production fail in ways that are hard to predict:
+
+- A model starts returning lower quality outputs for a specific task type
+- Latency spikes on one provider during peak hours
+- A tool integration degrades without throwing exceptions
+
+Kalibr detects these patterns from outcome signals and routes around them proactively.
+
+## Installation
+
+```bash
+pip install kalibr crewai
+```
+
+## Setup
+
+Get your API key from [kalibr.systems/dashboard](https://kalibr.systems/dashboard):
+
+```bash
+export KALIBR_API_KEY="your-api-key"
+```
+
+## Usage with CrewAI
+
+Replace your direct LLM instantiation with KalibrLLM:
+
+```python
+from kalibr.integrations.crewai import KalibrLLM
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find key facts about a topic",
+    backstory="You are an expert researcher",
+    llm=KalibrLLM(
+        goal="research_task",
+        paths=["gpt-4o", "claude-sonnet-4-20250514", "gemini-2.0-flash"],
+    )
+)
+
+writer = Agent(
+    role="Writer",
+    goal="Write clear summaries",
+    backstory="You write concise, accurate summaries",
+    llm=KalibrLLM(
+        goal="summarize_document",
+        paths=["gpt-4o", "claude-sonnet-4-20250514"],
+    )
+)
+
+task = Task(
+    description="Research and summarize the key trends in AI routing",
+    agent=researcher
+)
+
+crew = Crew(agents=[researcher, writer], tasks=[task])
+result = crew.kickoff()
+```
+
+## How It Works
+
+1. Kalibr observes which model+path combinations produce successful outcomes for each goal type
+2. Traffic shifts toward paths that work, away from paths that degrade
+3. When a path fails hard, Kalibr routes around it immediately
+
+No manual tuning. No dashboards to check. Kalibr learns and adapts continuously.
+
+## Links
+
+- [Documentation](https://kalibr.systems/docs)
+- [API Reference](https://kalibr.systems/docs/api)
+- [Dashboard](https://kalibr.systems/dashboard)
+- [Python SDK](https://pypi.org/project/kalibr/)
