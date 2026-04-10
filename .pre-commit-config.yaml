@@ -24,6 +24,10 @@ repos:
     rev: 0.11.3
     hooks:
       - id: uv-lock
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.9.0
+    hooks:
+      - id: pip-audit
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.10.1
     hooks:
