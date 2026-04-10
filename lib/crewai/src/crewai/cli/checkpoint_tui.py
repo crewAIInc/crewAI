@@ -565,9 +565,14 @@ async def _run_checkpoint_tui_async(location: str) -> None:
                             break
                 # Invalidate all subsequent tasks so they re-run with
                 # the modified context instead of using cached results
+                overridden_agent = crew.tasks[task_idx].agent
                 for subsequent in crew.tasks[task_idx + 1 :]:
                     subsequent.output = None
-                    if subsequent.agent and subsequent.agent.agent_executor:
+                    if (
+                        subsequent.agent
+                        and subsequent.agent is not overridden_agent
+                        and subsequent.agent.agent_executor
+                    ):
                         subsequent.agent.agent_executor._resuming = False
                         subsequent.agent.agent_executor.messages = []
         click.echo()
