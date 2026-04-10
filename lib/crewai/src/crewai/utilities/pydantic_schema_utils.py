@@ -428,7 +428,7 @@ _STRICT_METADATA_KEYS: Final[tuple[str, ...]] = (
     "deprecated",
 )
 
-_ANTHROPIC_UNSUPPORTED_CONSTRAINTS: Final[tuple[str, ...]] = (
+_CLAUDE_STRICT_UNSUPPORTED: Final[tuple[str, ...]] = (
     "minimum",
     "maximum",
     "exclusiveMinimum",
@@ -515,19 +515,19 @@ def sanitize_tool_params_for_anthropic_strict(
     if not isinstance(params, dict):
         return params
     sanitized = lift_top_level_anyof(_common_strict_pipeline(params))
-    sanitized = _strip_keys_recursive(sanitized, _ANTHROPIC_UNSUPPORTED_CONSTRAINTS)
+    sanitized = _strip_keys_recursive(sanitized, _CLAUDE_STRICT_UNSUPPORTED)
     return cast(dict[str, Any], strip_unsupported_formats(sanitized))
 
 
 def sanitize_tool_params_for_bedrock_strict(
     params: dict[str, Any],
 ) -> dict[str, Any]:
-    """Sanitize a JSON schema for Bedrock Converse strict tool use."""
-    if not isinstance(params, dict):
-        return params
-    sanitized = lift_top_level_anyof(_common_strict_pipeline(params))
-    sanitized = _strip_keys_recursive(sanitized, _ANTHROPIC_UNSUPPORTED_CONSTRAINTS)
-    return cast(dict[str, Any], strip_unsupported_formats(sanitized))
+    """Sanitize a JSON schema for Bedrock Converse strict tool use.
+
+    Bedrock Converse uses the same grammar compiler as the underlying Claude
+    model, so the constraints match Anthropic's.
+    """
+    return sanitize_tool_params_for_anthropic_strict(params)
 
 
 def generate_model_description(
