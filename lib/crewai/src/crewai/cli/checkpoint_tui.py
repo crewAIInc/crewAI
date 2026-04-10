@@ -303,14 +303,12 @@ class CheckpointTUI(App[_TuiResult]):
                 parts.append(f"[{_PRIMARY}]{trigger}[/]")
             return "  ".join(parts)
 
-        # Find which checkpoints are fork parents so they get expandable nodes
         fork_parents: set[str] = set()
         for branch_name, entries in branches.items():
-            if branch_name == "main":
+            if branch_name == "main" or not entries:
                 continue
-            first_parent = (
-                entries[-1].get("parent_id") if entries else None
-            )  # reversed later; -1 is oldest
+            oldest = min(entries, key=lambda e: str(e.get("name", "")))
+            first_parent = oldest.get("parent_id")
             if first_parent:
                 fork_parents.add(str(first_parent))
 
@@ -325,13 +323,12 @@ class CheckpointTUI(App[_TuiResult]):
                 node = parent_node.add_leaf(_make_label(e), data=e)
             node_by_name[cp_id] = node
 
-        # Build main branch directly under root (oldest to newest)
         if "main" in branches:
             for entry in reversed(branches["main"]):
                 _add_checkpoint(tree.root, entry)
 
         fork_branches = [
-            (name, list(reversed(entries)))
+            (name, sorted(entries, key=lambda e: str(e.get("name", ""))))
             for name, entries in branches.items()
             if name != "main"
         ]
