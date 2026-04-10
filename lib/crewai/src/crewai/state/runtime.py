@@ -124,7 +124,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             "parent_id": self._parent_id,
             "branch": self._branch,
             "entities": [e.model_dump(mode="json") for e in self.root],
-            "event_record": self._event_record.model_dump(),
+            "event_record": self._event_record.model_dump(mode="json"),
         }
 
     @model_validator(mode="wrap")
