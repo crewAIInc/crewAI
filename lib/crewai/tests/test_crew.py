@@ -2971,6 +2971,75 @@ def test__setup_for_training(researcher, writer):
         assert agent.allow_delegation is False
 
 
+def test_crew_trained_agents_data_file_defaults(researcher, writer):
+    """Test that Crew.trained_agents_data_file defaults to 'trained_agents_data.pkl'."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher, writer], tasks=[task])
+    assert crew.trained_agents_data_file == "trained_agents_data.pkl"
+
+
+def test_crew_trained_agents_data_file_custom(researcher, writer):
+    """Test that Crew.trained_agents_data_file can be set to a custom value."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        trained_agents_data_file="my_custom_trained.pkl",
+    )
+    assert crew.trained_agents_data_file == "my_custom_trained.pkl"
+
+
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_apply_training_data_uses_crew_custom_filename(mock_handler, researcher):
+    """Test that apply_training_data propagates the crew's trained_agents_data_file."""
+    from crewai.agent.utils import apply_training_data
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        trained_agents_data_file="my_custom_trained.pkl",
+    )
+    researcher.crew = crew
+
+    mock_handler.return_value.load.return_value = {
+        researcher.role: {
+            "suggestions": ["Be concise."]
+        }
+    }
+
+    result = apply_training_data(researcher, "Do the task")
+
+    mock_handler.assert_called_with("my_custom_trained.pkl")
+    assert "Be concise." in result
+
+
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_apply_training_data_uses_default_when_no_crew(mock_handler, researcher):
+    """Test that apply_training_data falls back to the default file when agent has no crew."""
+    from crewai.agent.utils import apply_training_data
+
+    researcher.crew = None
+    mock_handler.return_value.load.return_value = {}
+
+    result = apply_training_data(researcher, "Do the task")
+
+    mock_handler.assert_called_with("trained_agents_data.pkl")
+    assert result == "Do the task"
+
+
 @pytest.mark.vcr()
 def test_replay_feature(researcher, writer):
     list_ideas = Task(
