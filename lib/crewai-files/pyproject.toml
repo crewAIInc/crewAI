@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.10, <3.14"
 dependencies = [
     "Pillow~=12.1.1",
-    "pypdf~=6.9.1",
+    "pypdf~=6.10.0",
     "python-magic>=0.4.27",
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",
