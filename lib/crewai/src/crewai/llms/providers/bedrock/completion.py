@@ -169,6 +169,7 @@ class ToolSpec(TypedDict, total=False):
     name: Required[str]
     description: Required[str]
     inputSchema: ToolInputSchema
+    strict: bool
 
 
 class ConverseToolTypeDef(TypedDict):
@@ -1964,6 +1965,10 @@ class BedrockCompletion(BaseLLM):
                 if parameters and isinstance(parameters, dict):
                     input_schema: ToolInputSchema = {"json": parameters}
                     tool_spec["inputSchema"] = input_schema
+
+                func_info = tool.get("function", {})
+                if func_info.get("strict"):
+                    tool_spec["strict"] = True
 
                 converse_tool: ConverseToolTypeDef = {"toolSpec": tool_spec}
 
