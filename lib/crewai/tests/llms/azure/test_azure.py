@@ -378,23 +378,27 @@ def test_azure_completion_with_tools():
 
 
 def test_azure_raises_error_when_endpoint_missing():
-    """Test that AzureCompletion raises ValueError when endpoint is missing"""
+    """Credentials are validated lazily: construction succeeds, first
+    client build raises the descriptive error."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
-    # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4", api_key="test-key")
         with pytest.raises(ValueError, match="Azure endpoint is required"):
-            AzureCompletion(model="gpt-4", api_key="test-key")
+            llm._get_sync_client()
 
 
 def test_azure_raises_error_when_api_key_missing():
-    """Test that AzureCompletion raises ValueError when API key is missing"""
+    """Credentials are validated lazily: construction succeeds, first
+    client build raises the descriptive error."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
-    # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4", endpoint="https://test.openai.azure.com"
+        )
         with pytest.raises(ValueError, match="Azure API key is required"):
-            AzureCompletion(model="gpt-4", endpoint="https://test.openai.azure.com")
+            llm._get_sync_client()
 
 
 def test_azure_endpoint_configuration():
