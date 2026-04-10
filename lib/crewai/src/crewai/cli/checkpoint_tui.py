@@ -47,6 +47,22 @@ def _short_id(name: str) -> str:
     return name
 
 
+def _entry_id(entry: dict[str, Any]) -> str:
+    """Normalize an entry's name into its checkpoint ID.
+
+    JSON filenames are ``{ts}_{uuid}_p-{parent}.json``; SQLite IDs
+    are already ``{ts}_{uuid}``. This strips the JSON suffix so
+    fork-parent lookups work in both providers.
+    """
+    name = str(entry.get("name", ""))
+    if name.endswith(".json"):
+        name = name[: -len(".json")]
+    idx = name.find("_p-")
+    if idx != -1:
+        name = name[:idx]
+    return name
+
+
 def _build_entity_header(ent: dict[str, Any]) -> str:
     """Build rich text header for an entity (progress bar only)."""
     lines: list[str] = []
@@ -300,14 +316,14 @@ class CheckpointTUI(App[_TuiResult]):
 
         def _add_checkpoint(parent_node: Any, e: dict[str, Any]) -> None:
             """Add a checkpoint node — expandable only if a fork attaches to it."""
-            name = e.get("name", "")
-            if name in fork_parents:
+            cp_id = _entry_id(e)
+            if cp_id in fork_parents:
                 node = parent_node.add(
                     _make_label(e), data=e, expand=False, allow_expand=True
                 )
             else:
                 node = parent_node.add_leaf(_make_label(e), data=e)
-            node_by_name[name] = node
+            node_by_name[cp_id] = node
 
         # Build main branch directly under root (oldest to newest)
         if "main" in branches:
