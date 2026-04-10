@@ -12,11 +12,15 @@ from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import (
+    generate_model_description,
+    sanitize_tool_params_for_bedrock_strict,
+)
 from crewai.utilities.types import LLMMessage
 
 
@@ -1949,8 +1953,6 @@ class BedrockCompletion(BaseLLM):
         tools: list[dict[str, Any]],
     ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         converse_tools: list[ConverseToolTypeDef] = []
 
         for tool in tools:
@@ -1962,12 +1964,19 @@ class BedrockCompletion(BaseLLM):
                     "description": description,
                 }
 
+                func_info = tool.get("function", {})
+                strict_enabled = bool(func_info.get("strict"))
+
                 if parameters and isinstance(parameters, dict):
-                    input_schema: ToolInputSchema = {"json": parameters}
+                    schema_params = (
+                        sanitize_tool_params_for_bedrock_strict(parameters)
+                        if strict_enabled
+                        else parameters
+                    )
+                    input_schema: ToolInputSchema = {"json": schema_params}
                     tool_spec["inputSchema"] = input_schema
 
-                func_info = tool.get("function", {})
-                if func_info.get("strict"):
+                if strict_enabled:
                     tool_spec["strict"] = True
 
                 converse_tool: ConverseToolTypeDef = {"toolSpec": tool_spec}
