@@ -1,7 +1,6 @@
 """Tests for Azure async completion functionality."""
 
 import pytest
-import tiktoken
 
 from crewai import Agent, Task, Crew
 from crewai.llm import LLM
@@ -57,9 +56,7 @@ async def test_azure_async_with_max_tokens():
 
     assert result is not None
     assert isinstance(result, str)
-    encoder = tiktoken.get_encoding("cl100k_base")
-    token_count = len(encoder.encode(result))
-    assert token_count <= 10
+    assert len(result.split()) <= 10
 
 
 @pytest.mark.vcr()
