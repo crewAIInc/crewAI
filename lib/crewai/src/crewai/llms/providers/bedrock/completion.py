@@ -118,7 +118,7 @@ def _preprocess_structured_data(
 
 
 try:
-    from aiobotocore.session import (
+    from aiobotocore.session import (  # type: ignore[import-untyped]
         get_session as get_aiobotocore_session,
     )
 
