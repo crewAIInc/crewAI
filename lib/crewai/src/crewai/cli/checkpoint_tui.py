@@ -224,7 +224,7 @@ class CheckpointTUI(App[_TuiResult]):
         self._entries: list[dict[str, Any]] = []
         self._selected_entry: dict[str, Any] | None = None
         self._input_keys: list[str] = []
-        self._task_output_ids: list[tuple[int, str]] = []
+        self._task_output_ids: list[tuple[int, str, str]] = []
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -392,6 +392,7 @@ class CheckpointTUI(App[_TuiResult]):
 
         # Entity details and editable task outputs — mounted flat for scrolling
         self._task_output_ids = []
+        flat_task_idx = 0
         for ent_idx, ent in enumerate(entry.get("entities", [])):
             etype = ent.get("type", "unknown")
             ename = ent.get("name", "unnamed")
@@ -424,12 +425,15 @@ class CheckpointTUI(App[_TuiResult]):
                             id=editor_id,
                         )
                     )
-                    self._task_output_ids.append((i, editor_id))
+                    self._task_output_ids.append(
+                        (flat_task_idx, editor_id, str(output_text))
+                    )
                 else:
                     icon = "[yellow]○[/]"
                     detail_scroll.mount(
                         Static(f"  {icon}  {i + 1}. {desc}", classes="task-label")
                     )
+                flat_task_idx += 1
 
         # Build input fields
         await self._build_input_fields(entry.get("inputs", {}))
@@ -475,16 +479,8 @@ class CheckpointTUI(App[_TuiResult]):
         if not self._task_output_ids or self._selected_entry is None:
             return None
         overrides: dict[int, str] = {}
-        tasks = []
-        for ent in self._selected_entry.get("entities", []):
-            tasks = ent.get("tasks", [])
-            if tasks:
-                break
-        for task_idx, editor_id in self._task_output_ids:
+        for task_idx, editor_id, original in self._task_output_ids:
             editor = self.query_one(f"#{editor_id}", TextArea)
-            original = (
-                str(tasks[task_idx].get("output", "")) if task_idx < len(tasks) else ""
-            )
             if editor.text != original:
                 overrides[task_idx] = editor.text
         return overrides or None
@@ -568,9 +564,7 @@ async def _run_checkpoint_tui_async(location: str) -> None:
 
         earliest = min(task_overrides)
         for subsequent in crew.tasks[earliest + 1 :]:
-            if subsequent.output and not task_overrides.get(
-                crew.tasks.index(subsequent)
-            ):
+            if subsequent.output and crew.tasks.index(subsequent) not in task_overrides:
                 subsequent.output = None
             if (
                 subsequent.agent
