@@ -118,6 +118,11 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.logger import Logger
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.printer import PrinterColor
+from crewai.utilities.replanning_evaluator import (
+    EvaluationCriteria,
+    ReplanDecision,
+    ReplanningEvaluator,
+)
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
@@ -188,6 +193,8 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=TaskOutputStorageHandler
     )
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    _replan_count: int = PrivateAttr(default=0)
+    _original_plan_text: str = PrivateAttr(default="")
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -271,6 +278,38 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description=(
             "Language model that will run the AgentPlanner if planning is True."
+        ),
+    )
+    replan_on_failure: bool = Field(
+        default=False,
+        description=(
+            "Enable adaptive replanning when task results deviate from the plan. "
+            "Requires planning=True. After each task, a lightweight evaluator checks "
+            "whether the result contradicts the plan's assumptions and triggers "
+            "replanning of remaining tasks if needed."
+        ),
+    )
+    max_replans: int = Field(
+        default=3,
+        description=(
+            "Maximum number of replanning attempts allowed during crew execution. "
+            "Prevents infinite replanning loops. Only used when replan_on_failure=True."
+        ),
+        ge=0,
+    )
+    replanning_evaluator: Any | None = Field(
+        default=None,
+        description=(
+            "Custom replanning evaluator instance. If not provided, a default "
+            "evaluator will be created using the planning_llm."
+        ),
+        exclude=True,
+    )
+    evaluation_criteria: EvaluationCriteria | None = Field(
+        default=None,
+        description=(
+            "Configurable criteria for the replanning evaluator. Controls quality "
+            "threshold, completeness checks, relevance checks, and custom criteria."
         ),
     )
     task_execution_output_json_files: list[str] | None = Field(
@@ -1119,15 +1158,125 @@ class Crew(FlowTrackable, BaseModel):
             else:
                 plan_map[step_plan.task_number] = step_plan.plan
 
+        # Store the original plan text for replanning evaluator
+        plan_parts = []
         for idx, task in enumerate(self.tasks):
             task_number = idx + 1
             if task_number in plan_map:
                 task.description += plan_map[task_number]
+                plan_parts.append(
+                    f"Task {task_number}: {plan_map[task_number]}"
+                )
             else:
                 self._logger.log(
                     "warning",
                     f"No plan found for Task Number {task_number}",
                 )
+        self._original_plan_text = "\n".join(plan_parts)
+        self._replan_count = 0
+
+    def _should_evaluate_for_replan(self) -> bool:
+        """Check whether adaptive replanning evaluation should run.
+
+        Returns:
+            True if replanning is enabled, planning is active, and the
+            maximum replan count has not been reached.
+        """
+        return bool(
+            self.planning
+            and self.replan_on_failure
+            and self._replan_count < self.max_replans
+        )
+
+    def _get_replanning_evaluator(self) -> ReplanningEvaluator:
+        """Get or create the replanning evaluator instance.
+
+        Returns:
+            The configured ReplanningEvaluator.
+        """
+        if self.replanning_evaluator is not None:
+            return self.replanning_evaluator
+        return ReplanningEvaluator(
+            llm=self.planning_llm,
+            criteria=self.evaluation_criteria,
+        )
+
+    def _evaluate_and_replan(
+        self,
+        completed_task: Task,
+        task_output: TaskOutput,
+        task_outputs: list[TaskOutput],
+        remaining_tasks: list[Task],
+    ) -> None:
+        """Evaluate a task result and trigger replanning if needed.
+
+        This method is called after each synchronous task completion when
+        adaptive replanning is enabled. It uses the ReplanningEvaluator to
+        assess whether the result deviates from the plan, and if so, calls
+        CrewPlanner.replan() to generate revised plans for remaining tasks.
+
+        Args:
+            completed_task: The task that just completed.
+            task_output: The output of the completed task.
+            task_outputs: All task outputs so far.
+            remaining_tasks: Tasks that have not yet been executed.
+        """
+        evaluator = self._get_replanning_evaluator()
+
+        try:
+            decision = evaluator.evaluate(
+                completed_task=completed_task,
+                task_output=task_output,
+                original_plan=self._original_plan_text,
+                remaining_tasks=remaining_tasks,
+                completed_outputs=task_outputs,
+            )
+        except Exception as e:
+            self._logger.log(
+                "warning",
+                f"Replanning evaluation failed: {e}. Continuing with original plan.",
+            )
+            return
+
+        if not decision.should_replan:
+            self._logger.log(
+                "info",
+                f"Replanning evaluator: No replan needed. Reason: {decision.reason}",
+            )
+            return
+
+        self._replan_count += 1
+        self._logger.log(
+            "info",
+            f"Replanning triggered (attempt {self._replan_count}/{self.max_replans}). "
+            f"Reason: {decision.reason}",
+        )
+
+        try:
+            planner = CrewPlanner(
+                tasks=self.tasks, planning_agent_llm=self.planning_llm
+            )
+            revised_plan = planner.replan(
+                completed_results=task_outputs,
+                remaining_tasks=remaining_tasks,
+                deviation_reason=decision.reason,
+            )
+
+            # Apply revised plans to remaining tasks
+            for step_plan in revised_plan.list_of_plans_per_task:
+                idx = step_plan.task_number - 1
+                if 0 <= idx < len(remaining_tasks):
+                    remaining_tasks[idx].description = (
+                        remaining_tasks[idx].description.split("\n\n[REVISED PLAN]")[0]
+                        + f"\n\n[REVISED PLAN] {step_plan.plan}"
+                    )
+
+            self._logger.log("info", "Replanning complete. Revised plans applied.")
+        except Exception as e:
+            self._logger.log(
+                "warning",
+                f"Replanning failed: {e}. Continuing with original plan.",
+            )
 
     def _store_execution_log(
         self,
@@ -1261,6 +1410,17 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+
+                # Adaptive replanning check
+                if self._should_evaluate_for_replan():
+                    remaining = tasks[task_index + 1:]
+                    if remaining:
+                        self._evaluate_and_replan(
+                            completed_task=task,
+                            task_output=task_output,
+                            task_outputs=task_outputs,
+                            remaining_tasks=remaining,
+                        )
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
