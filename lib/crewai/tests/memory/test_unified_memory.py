@@ -51,14 +51,13 @@ def test_memory_record_embedding_excluded_from_serialization() -> None:
     dumped = r.model_dump()
     assert "embedding" not in dumped
     assert dumped["content"] == "hello"
-
-    # model_dump_json excludes embedding
     json_str = r.model_dump_json()
-    assert "0.1" not in json_str
     assert "embedding" not in json_str
+    rehydrated = MemoryRecord.model_validate_json(json_str)
+    assert rehydrated.embedding is None
 
     # repr excludes embedding
-    assert "0.1" not in repr(r)
+    assert "embedding=" not in repr(r)
 
     # Direct attribute access still works for storage layer
     assert r.embedding is not None
