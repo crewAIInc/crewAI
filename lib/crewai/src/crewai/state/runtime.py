@@ -66,6 +66,9 @@ def _sync_checkpoint_fields(entity: object) -> None:
         entity.checkpoint_inputs = entity._inputs
         entity.checkpoint_train = entity._train
         entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
+        for task in entity.tasks:
+            task.checkpoint_original_description = task._original_description
+            task.checkpoint_original_expected_output = task._original_expected_output
 
 
 def _migrate(data: dict[str, Any]) -> dict[str, Any]:
@@ -121,7 +124,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             "parent_id": self._parent_id,
             "branch": self._branch,
             "entities": [e.model_dump(mode="json") for e in self.root],
-            "event_record": self._event_record.model_dump(),
+            "event_record": self._event_record.model_dump(mode="json"),
         }
 
     @model_validator(mode="wrap")
@@ -194,7 +197,10 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         return result
 
     def fork(self, branch: str | None = None) -> None:
-        """Mark this state as a fork for subsequent checkpoints.
+        """Create a new execution branch and write an initial checkpoint.
+
+        If this state was restored from a checkpoint, an initial checkpoint
+        is written on the new branch so the fork point is recorded.
 
         Args:
             branch: Branch label. Auto-generated from the current checkpoint
@@ -204,7 +210,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if branch:
             self._branch = branch
         elif self._checkpoint_id:
-            self._branch = f"fork/{self._checkpoint_id}"
+            self._branch = f"fork/{self._checkpoint_id}_{uuid.uuid4().hex[:6]}"
         else:
             self._branch = f"fork/{uuid.uuid4().hex[:8]}"
 
@@ -227,6 +233,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         provider = detect_provider(location)
         raw = provider.from_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
+        state._provider = provider
         checkpoint_id = provider.extract_id(location)
         state._checkpoint_id = checkpoint_id
         state._parent_id = checkpoint_id
@@ -253,6 +260,7 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         provider = detect_provider(location)
         raw = await provider.afrom_checkpoint(location)
         state = cls.model_validate_json(raw, **kwargs)
+        state._provider = provider
         checkpoint_id = provider.extract_id(location)
         state._checkpoint_id = checkpoint_id
         state._parent_id = checkpoint_id

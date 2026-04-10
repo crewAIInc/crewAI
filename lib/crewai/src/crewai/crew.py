@@ -436,6 +436,13 @@ class Crew(FlowTrackable, BaseModel):
                         if agent.agent_executor is not None and task.output is None:
                             agent.agent_executor.task = task
                         break
+        for task in self.tasks:
+            if task.checkpoint_original_description is not None:
+                task._original_description = task.checkpoint_original_description
+            if task.checkpoint_original_expected_output is not None:
+                task._original_expected_output = (
+                    task.checkpoint_original_expected_output
+                )
         if self.checkpoint_inputs is not None:
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:

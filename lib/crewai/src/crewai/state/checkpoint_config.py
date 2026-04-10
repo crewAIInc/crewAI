@@ -213,6 +213,9 @@ class CheckpointConfig(BaseModel):
     def _register_handlers(self) -> CheckpointConfig:
         from crewai.state.checkpoint_listener import _ensure_handlers_registered
 
+        if isinstance(self.provider, SqliteProvider) and not Path(self.location).suffix:
+            self.location = f"{self.location}.db"
+
         _ensure_handlers_registered()
         return self
 

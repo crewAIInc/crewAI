@@ -6,10 +6,14 @@ from datetime import datetime
 import glob
 import json
 import os
+import re
 import sqlite3
 from typing import Any
 
 import click
+
+
+_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
 
 
 _SQLITE_MAGIC = b"SQLite format 3\x00"
@@ -34,6 +38,25 @@ LIMIT 1
 """
 
 
+_DEFAULT_DIR = "./.checkpoints"
+_DEFAULT_DB = "./.checkpoints.db"
+
+
+def _detect_location(location: str) -> str:
+    """Resolve the default checkpoint location.
+
+    When the caller passes the default directory path, check whether a
+    SQLite database exists at the conventional ``.db`` path and prefer it.
+    """
+    if (
+        location == _DEFAULT_DIR
+        and not os.path.exists(_DEFAULT_DIR)
+        and os.path.exists(_DEFAULT_DB)
+    ):
+        return _DEFAULT_DB
+    return location
+
+
 def _is_sqlite(path: str) -> bool:
     """Check if a file is a SQLite database by reading its magic bytes."""
     if not os.path.isfile(path):
@@ -52,13 +75,7 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
     nodes = data.get("event_record", {}).get("nodes", {})
     event_count = len(nodes)
 
-    trigger_event = None
-    if nodes:
-        last_node = max(
-            nodes.values(),
-            key=lambda n: n.get("event", {}).get("emission_sequence") or 0,
-        )
-        trigger_event = last_node.get("event", {}).get("type")
+    trigger_event = data.get("trigger")
 
     parsed_entities: list[dict[str, Any]] = []
     for entity in entities:
@@ -76,16 +93,47 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
                 {
                     "description": t.get("description", ""),
                     "completed": t.get("output") is not None,
+                    "output": (t.get("output") or {}).get("raw", ""),
                 }
                 for t in tasks
             ]
         parsed_entities.append(info)
+
+    inputs: dict[str, Any] = {}
+    for entity in entities:
+        cp_inputs = entity.get("checkpoint_inputs")
+        if isinstance(cp_inputs, dict) and cp_inputs:
+            inputs = dict(cp_inputs)
+            break
+
+    for entity in entities:
+        for task in entity.get("tasks", []):
+            for field in (
+                "checkpoint_original_description",
+                "checkpoint_original_expected_output",
+            ):
+                text = task.get(field) or ""
+                for match in _PLACEHOLDER_RE.findall(text):
+                    if match not in inputs:
+                        inputs[match] = ""
+        for agent in entity.get("agents", []):
+            for field in ("role", "goal", "backstory"):
+                text = agent.get(field) or ""
+                for match in _PLACEHOLDER_RE.findall(text):
+                    if match not in inputs:
+                        inputs[match] = ""
+
+    branch = data.get("branch", "main")
+    parent_id = data.get("parent_id")
 
     return {
         "source": source,
         "event_count": event_count,
         "trigger": trigger_event,
         "entities": parsed_entities,
+        "branch": branch,
+        "parent_id": parent_id,
+        "inputs": inputs,
     }
 
 
@@ -189,6 +237,7 @@ def _list_sqlite(db_path: str) -> list[dict[str, Any]]:
                     "entities": [],
                     "source": checkpoint_id,
                 }
+            meta["db"] = db_path
             results.append(meta)
     return results
 
@@ -311,6 +360,10 @@ def _print_info(meta: dict[str, Any]) -> None:
     trigger = meta.get("trigger")
     if trigger:
         click.echo(f"Trigger: {trigger}")
+    click.echo(f"Branch:  {meta.get('branch', 'main')}")
+    parent_id = meta.get("parent_id")
+    if parent_id:
+        click.echo(f"Parent:  {parent_id}")
 
     for ent in meta.get("entities", []):
         eid = str(ent.get("id", ""))[:8]
