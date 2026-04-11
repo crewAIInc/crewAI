@@ -437,7 +437,7 @@ class TraceBatchManager:
                 self.batch_sequence = 0
 
         except Exception as e:
-            logger.error(f"Warning: Error during cleanup: {e}")
+            logger.warning(f"Error during cleanup: {e}")
 
     def has_events(self) -> bool:
         """Check if there are events in the buffer"""
