@@ -1391,7 +1391,6 @@ class Crew(FlowTrackable, BaseModel):
                     "Manager agent should not have tools",
                     color="bold_yellow",
                 )
-                manager.tools = []
                 raise Exception("Manager agent should not have tools")
         else:
             self.manager_llm = create_llm(self.manager_llm)
