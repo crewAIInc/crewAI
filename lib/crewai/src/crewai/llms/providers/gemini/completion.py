@@ -244,8 +244,9 @@ class GeminiCompletion(BaseLLM):
 
         if (
             hasattr(self, "client")
-            and hasattr(self._get_sync_client(), "vertexai")
-            and self._get_sync_client().vertexai
+            and self._client is not None
+            and hasattr(self._client, "vertexai")
+            and self._client.vertexai
         ):
             # Vertex AI configuration
             params.update(

@@ -1198,7 +1198,7 @@ class BedrockCompletion(BaseLLM):
             )
             self._async_client = client
             self._async_client_initialized = True
-        return self._get_async_client()
+        return self._async_client
 
     async def _ahandle_converse(
         self,
