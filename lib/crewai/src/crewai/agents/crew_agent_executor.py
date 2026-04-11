@@ -827,7 +827,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            if "arguments" in func_info:
+                func_args = func_info["arguments"]
+            elif "input" in tool_call:
+                func_args = tool_call["input"]
+            else:
+                func_args = {}
             return call_id, func_name, func_args
         return None
 
@@ -880,6 +885,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
         )
         if parse_error is not None:
             return parse_error
+        if args_dict is None:
+            args_dict = {}
 
         if original_tool is None:
             for tool in self.original_tools or []:

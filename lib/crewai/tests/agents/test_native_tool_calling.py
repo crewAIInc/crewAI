@@ -1272,3 +1272,47 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+def test_parse_bedrock_tool_call_arguments() -> None:
+    """Regression test for #4748."""
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+    executor = object.__new__(CrewAgentExecutor)
+
+    bedrock_tool_call: dict[str, object] = {
+        "toolUseId": "tooluse_abc123",
+        "name": "calculator",
+        "input": {"expression": "5 + 3"},
+    }
+
+    result = executor._parse_native_tool_call(bedrock_tool_call)
+
+    assert result is not None
+    call_id, func_name, func_args = result
+    assert call_id == "tooluse_abc123"
+    assert func_name == "calculator"
+    assert func_args == {"expression": "5 + 3"}
+
+
+def test_parse_openai_tool_call_arguments() -> None:
+    """Verify OpenAI format still works after fix."""
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+    executor = object.__new__(CrewAgentExecutor)
+
+    openai_tool_call: dict[str, object] = {
+        "id": "call_abc123",
+        "function": {
+            "name": "search",
+            "arguments": '{"query": "python"}',
+        },
+    }
+
+    result = executor._parse_native_tool_call(openai_tool_call)
+
+    assert result is not None
+    call_id, func_name, func_args = result
+    assert call_id == "call_abc123"
+    assert func_name == "search"
+    assert func_args == '{"query": "python"}'
