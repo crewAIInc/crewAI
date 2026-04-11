@@ -11,6 +11,7 @@ import inspect
 import json
 import logging
 from pathlib import Path
+import textwrap
 import threading
 from typing import (
     Annotated,
@@ -1082,6 +1083,97 @@ Follow these guidelines:
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
 
+    @staticmethod
+    def _escape_pdf_text(value: str) -> bytes:
+        escaped = (
+            value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        )
+        return escaped.encode("latin-1", errors="replace")
+
+    @classmethod
+    def _build_pdf_bytes(cls, content: str) -> bytes:
+        max_chars_per_line = 90
+        max_lines_per_page = 52
+
+        lines: list[str] = []
+        for line in content.splitlines() or [""]:
+            wrapped_lines = textwrap.wrap(
+                line,
+                width=max_chars_per_line,
+                replace_whitespace=False,
+                drop_whitespace=False,
+            )
+            lines.extend(wrapped_lines or [""])
+
+        pages = [
+            lines[index : index + max_lines_per_page]
+            for index in range(0, len(lines), max_lines_per_page)
+        ] or [[""]]
+
+        objects: dict[int, bytes] = {
+            1: b"<< /Type /Catalog /Pages 2 0 R >>",
+            3: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        }
+
+        page_object_ids: list[int] = []
+        next_object_id = 4
+
+        for page_lines in pages:
+            page_object_id = next_object_id
+            content_object_id = next_object_id + 1
+            next_object_id += 2
+            page_object_ids.append(page_object_id)
+
+            stream_parts: list[bytes] = [
+                b"BT",
+                b"/F1 11 Tf",
+                b"14 TL",
+                b"1 0 0 1 50 742 Tm",
+            ]
+            stream_parts.append(b"(" + cls._escape_pdf_text(page_lines[0]) + b") Tj")
+            for line in page_lines[1:]:
+                stream_parts.append(b"T*")
+                stream_parts.append(b"(" + cls._escape_pdf_text(line) + b") Tj")
+            stream_parts.append(b"ET")
+
+            stream = b"\n".join(stream_parts)
+            objects[page_object_id] = (
+                f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+                f"/Resources << /Font << /F1 3 0 R >> >> /Contents {content_object_id} 0 R >>"
+            ).encode("ascii")
+            objects[content_object_id] = (
+                f"<< /Length {len(stream)} >>\nstream\n".encode("ascii")
+                + stream
+                + b"\nendstream"
+            )
+
+        page_references = " ".join(f"{object_id} 0 R" for object_id in page_object_ids)
+        objects[2] = (
+            f"<< /Type /Pages /Kids [{page_references}] /Count {len(page_object_ids)} >>"
+        ).encode("ascii")
+
+        max_object_id = next_object_id - 1
+        pdf_bytes = bytearray(b"%PDF-1.4\n")
+        offsets = [0]
+
+        for object_id in range(1, max_object_id + 1):
+            offsets.append(len(pdf_bytes))
+            pdf_bytes.extend(f"{object_id} 0 obj\n".encode("ascii"))
+            pdf_bytes.extend(objects[object_id])
+            pdf_bytes.extend(b"\nendobj\n")
+
+        xref_start = len(pdf_bytes)
+        pdf_bytes.extend(f"xref\n0 {max_object_id + 1}\n".encode("ascii"))
+        pdf_bytes.extend(b"0000000000 65535 f \n")
+        for offset in offsets[1:]:
+            pdf_bytes.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+
+        pdf_bytes.extend(
+            f"trailer << /Size {max_object_id + 1} /Root 1 0 R >>\n".encode("ascii")
+        )
+        pdf_bytes.extend(f"startxref\n{xref_start}\n%%EOF\n".encode("ascii"))
+        return bytes(pdf_bytes)
+
     def _save_file(self, result: dict[str, Any] | str | Any) -> None:
         """Save task output to a file.
 
@@ -1119,13 +1211,19 @@ Follow these guidelines:
                     f"Directory {directory} does not exist and create_directory is False"
                 )
 
-            with resolved_path.open("w", encoding="utf-8") as file:
-                if isinstance(result, dict):
-                    import json
-
-                    json.dump(result, file, ensure_ascii=False, indent=2)
-                else:
-                    file.write(str(result))
+            if resolved_path.suffix.lower() == ".pdf":
+                content = (
+                    json.dumps(result, ensure_ascii=False, indent=2)
+                    if isinstance(result, dict)
+                    else str(result)
+                )
+                resolved_path.write_bytes(self._build_pdf_bytes(content))
+            else:
+                with resolved_path.open("w", encoding="utf-8") as file:
+                    if isinstance(result, dict):
+                        json.dump(result, file, ensure_ascii=False, indent=2)
+                    else:
+                        file.write(str(result))
         except (OSError, IOError) as e:
             raise RuntimeError(
                 "\n".join(
