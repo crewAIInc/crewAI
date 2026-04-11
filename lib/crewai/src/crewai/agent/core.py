@@ -170,6 +170,10 @@ class Agent(BaseAgent):
             embedder: Embedder configuration for the agent.
             apps: List of applications that the agent can access through CrewAI Platform.
             mcps: List of MCP server references for tool integration.
+            trained_file: Optional path to a custom trained-agents data file.
+                When provided, overrides the default ``trained_agents_data.pkl``
+                during inference so you can use any file produced by
+                ``crewai train -f <custom>.pkl`` without renaming it.
     """
 
     model_config = ConfigDict()
@@ -307,6 +311,14 @@ class Agent(BaseAgent):
     ] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
+    )
+    trained_file: str | None = Field(
+        default=None,
+        description=(
+            "Path to a custom trained-agents data file (e.g. 'my_custom_trained.pkl'). "
+            "When set, this overrides the default 'trained_agents_data.pkl' used during inference. "
+            "Useful for multi-experiment workflows, CI, or production runs where explicit filenames are required."
+        ),
     )
 
     @model_validator(mode="before")
@@ -1162,8 +1174,15 @@ class Agent(BaseAgent):
         return task_prompt
 
     def _use_trained_data(self, task_prompt: str) -> str:
-        """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        """Use trained data for the agent task prompt to improve output.
+
+        If ``trained_file`` is set on the agent, that file is used instead of the
+        default ``trained_agents_data.pkl``.  This allows multi-experiment workflows
+        to specify the exact file produced by ``crewai train -f <custom>.pkl`` without
+        renaming it manually.
+        """
+        trained_data_file = self.trained_file or TRAINED_AGENTS_DATA_FILE
+        if data := CrewTrainingHandler(trained_data_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
