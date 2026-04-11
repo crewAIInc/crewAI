@@ -401,6 +401,21 @@ def test_azure_raises_error_when_api_key_missing():
             llm._get_sync_client()
 
 
+@pytest.mark.asyncio
+async def test_azure_aclose_is_noop_when_uninitialized():
+    """`aclose` (and `async with`) on an uninstantiated-client LLM must be
+    a harmless no-op, not force lazy construction that then raises for
+    missing credentials."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4")
+        assert llm._async_client is None
+        await llm.aclose()
+        async with llm:
+            pass
+
+
 def test_azure_endpoint_configuration():
     """
     Test that Azure endpoint configuration works with multiple environment variable names

@@ -1132,10 +1132,13 @@ class AzureCompletion(BaseLLM):
         """Close the async client and clean up resources.
 
         This ensures proper cleanup of the underlying aiohttp session
-        to avoid unclosed connector warnings.
+        to avoid unclosed connector warnings. Accesses the cached client
+        directly rather than going through `_get_async_client` so a
+        cleanup on an uninitialized LLM is a harmless no-op rather than
+        a credential-required error.
         """
-        if hasattr(self._get_async_client(), "close"):
-            await self._get_async_client().close()
+        if self._async_client is not None and hasattr(self._async_client, "close"):
+            await self._async_client.close()
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""
