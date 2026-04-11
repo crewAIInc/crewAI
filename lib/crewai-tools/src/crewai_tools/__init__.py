@@ -153,6 +153,9 @@ from crewai_tools.tools.selenium_scraping_tool.selenium_scraping_tool import (
 from crewai_tools.tools.serpapi_tool.serpapi_google_search_tool import (
     SerpApiGoogleSearchTool,
 )
+from crewai_tools.tools.shopsavvy_product_search.shopsavvy_product_search import (
+    ShopSavvyProductSearchTool,
+)
 from crewai_tools.tools.serpapi_tool.serpapi_google_shopping_tool import (
     SerpApiGoogleShoppingTool,
 )
@@ -280,6 +283,7 @@ __all__ = [
     "SeleniumScrapingTool",
     "SerpApiGoogleSearchTool",
     "SerpApiGoogleShoppingTool",
+    "ShopSavvyProductSearchTool",
     "SerperDevTool",
     "SerperScrapeWebsiteTool",
     "SerplyJobSearchTool",
