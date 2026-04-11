@@ -185,7 +185,8 @@ class ToolSpecExtractor:
         return json_schema
 
     def save_to_json(self, output_path: str) -> None:
-        with open(output_path, "w", encoding="utf-8") as f:
+        # Use newline="\n" to ensure LF line endings on all platforms (fixes Windows CRLF issues)
+        with open(output_path, "w", encoding="utf-8", newline="\n") as f:
             json.dump({"tools": self.tools_spec}, f, indent=2, sort_keys=True)
 
 
