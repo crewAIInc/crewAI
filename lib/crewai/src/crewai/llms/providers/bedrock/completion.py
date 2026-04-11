@@ -310,10 +310,14 @@ class BedrockCompletion(BaseLLM):
         """Eagerly build the sync client when AWS credentials resolve,
         otherwise defer so ``LLM(model="bedrock/...")`` can be constructed
         at module import time even before deployment env vars are set.
+
+        Only credential/SDK errors are caught — programming errors like
+        ``TypeError`` or ``AttributeError`` propagate so real bugs aren't
+        silently swallowed.
         """
         try:
             self._client = self._build_sync_client()
-        except Exception as e:
+        except (BotoCoreError, ClientError, ValueError) as e:
             logging.debug("Deferring Bedrock client construction: %s", e)
         self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
         return self
