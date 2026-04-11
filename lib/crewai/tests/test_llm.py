@@ -1,6 +1,5 @@
 import logging
 import os
-from time import sleep
 from unittest.mock import MagicMock, patch
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
@@ -18,27 +17,54 @@ from pydantic import BaseModel
 import pytest
 
 
-# TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
-@pytest.mark.vcr()
 def test_llm_callback_replacement():
+    """Callbacks passed to different LLM instances should not interfere with each other.
+
+    Historically this was flaky because CrewAI mutated LiteLLM's global callback lists,
+    so callbacks could be removed/overwritten while a different request was still in-flight.
+    """
     llm1 = LLM(model="gpt-4o-mini", is_litellm=True)
     llm2 = LLM(model="gpt-4o-mini", is_litellm=True)
 
     calc_handler_1 = TokenCalcHandler(token_cost_process=TokenProcess())
     calc_handler_2 = TokenCalcHandler(token_cost_process=TokenProcess())
 
-    llm1.call(
-        messages=[{"role": "user", "content": "Hello, world!"}],
-        callbacks=[calc_handler_1],
-    )
-    usage_metrics_1 = calc_handler_1.token_cost_process.get_summary()
+    with patch("litellm.completion") as mock_completion:
+        # Return a minimal response object with .choices[0].message.content and .usage
+        def _mock_response(content: str):
+            mock_message = MagicMock()
+            mock_message.content = content
+            mock_choice = MagicMock()
+            mock_choice.message = mock_message
+            mock_response = MagicMock()
+            mock_response.choices = [mock_choice]
+            mock_response.usage = {
+                "prompt_tokens": 10,
+                "completion_tokens": 10,
+                "total_tokens": 20,
+            }
+            return mock_response
 
-    llm2.call(
-        messages=[{"role": "user", "content": "Hello, world from another agent!"}],
-        callbacks=[calc_handler_2],
-    )
-    sleep(5)
-    usage_metrics_2 = calc_handler_2.token_cost_process.get_summary()
+        mock_completion.side_effect = [
+            _mock_response("Hello from call 1"),
+            _mock_response("Hello from call 2"),
+        ]
+
+        llm1.call(
+            messages=[{"role": "user", "content": "Hello, world!"}],
+            callbacks=[calc_handler_1],
+        )
+        usage_metrics_1 = calc_handler_1.token_cost_process.get_summary()
+
+        llm2.call(
+            messages=[{"role": "user", "content": "Hello, world from another agent!"}],
+            callbacks=[calc_handler_2],
+        )
+        usage_metrics_2 = calc_handler_2.token_cost_process.get_summary()
+
+        # Ensure callbacks are passed per-request (no reliance on global LiteLLM callback lists)
+        assert mock_completion.call_args_list[0].kwargs["callbacks"] == [calc_handler_1]
+        assert mock_completion.call_args_list[1].kwargs["callbacks"] == [calc_handler_2]
 
     # The first handler should not have been updated
     assert usage_metrics_1.successful_requests == 1
