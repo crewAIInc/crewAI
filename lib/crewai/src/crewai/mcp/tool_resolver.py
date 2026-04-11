@@ -354,6 +354,7 @@ class MCPToolResolver:
                 ) from e
 
         try:
+            tools_list: list[dict[str, Any]] = []
             try:
                 asyncio.get_running_loop()
                 import concurrent.futures
@@ -400,6 +401,13 @@ class MCPToolResolver:
                     else:
                         filtered_tools.append(tool)
                 tools_list = filtered_tools
+
+            if not tools_list:
+                self._logger.log(
+                    "warning",
+                    f"No tools discovered from MCP server: {server_name}",
+                )
+                return cast(list[BaseTool], []), []
 
             def _client_factory() -> MCPClient:
                 transport, _ = self._create_transport(mcp_config)
