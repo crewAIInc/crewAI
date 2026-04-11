@@ -24,7 +24,7 @@ from crewai_tools import SerperDevTool
 # Define a condition function for the conditional task
 # If false, the task will be skipped, if true, then execute the task.
 def is_data_missing(output: TaskOutput) -> bool:
-    return len(output.pydantic.events) < 10  # this will skip this task
+    return len(output.pydantic.events) < 10  # True => execute ConditionalTask (data missing)
 
 # Define the agents
 data_fetcher_agent = Agent(
@@ -39,7 +39,8 @@ data_processor_agent = Agent(
     role="Data Processor",
     goal="Process fetched data",
     backstory="Backstory 2",
-    verbose=True
+    verbose=True,
+    tools=[SerperDevTool()]
 )
 
 summary_generator_agent = Agent(
