@@ -1085,7 +1085,8 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Handle response_model with InternalInstructor for LiteLLM
-        if response_model and self.is_litellm:
+        # Only use this path when no native tools are being passed.
+        if response_model and self.is_litellm and not params.get("tools"):
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1178,8 +1179,13 @@ class LLM(BaseLLM):
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
-        if (not tool_calls or not available_functions) and text_response:
+        # --- 5) If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        # --- 6) If there are no tool calls, fall back to returning the text response (if any)
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1189,11 +1195,6 @@ class LLM(BaseLLM):
                 usage=response_usage,
             )
             return text_response
-
-        # --- 6) If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # --- 7) Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
@@ -1236,7 +1237,7 @@ class LLM(BaseLLM):
         Returns:
             str: The response text
         """
-        if response_model and self.is_litellm:
+        if response_model and self.is_litellm and not params.get("tools"):
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1321,7 +1322,12 @@ class LLM(BaseLLM):
 
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        if (not tool_calls or not available_functions) and text_response:
+        # If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        if (not tool_calls) and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1331,11 +1337,6 @@ class LLM(BaseLLM):
                 usage=response_usage,
             )
             return text_response
-
-        # If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
