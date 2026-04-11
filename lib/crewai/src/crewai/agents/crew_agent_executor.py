@@ -879,6 +879,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_args, func_name, call_id, original_tool
         )
         if parse_error is not None:
+            parse_error["is_error"] = True
             return parse_error
 
         if original_tool is None:
@@ -900,6 +901,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             max_usage_reached = True
 
         from_cache = False
+        is_error = True  # "Tool not found" is the default error state
         result: str = "Tool not found"
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache:
@@ -913,6 +915,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     else cached_result
                 )
                 from_cache = True
+                is_error = False
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
         started_at = datetime.now()
@@ -967,8 +970,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
+            is_error = True
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+            is_error = True
         elif not from_cache and func_name in available_functions:
             try:
                 raw_result = available_functions[func_name](**(args_dict or {}))
@@ -991,6 +996,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 result = (
                     str(raw_result) if not isinstance(raw_result, str) else raw_result
                 )
+                is_error = False
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 if self.task:
@@ -1052,6 +1058,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "is_error": is_error,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1062,6 +1069,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        is_error = cast(bool, execution_result.get("is_error", False))
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1078,8 +1086,15 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 color="green",
             )
 
+        # result_as_answer only applies to successful tool outputs.
+        # If the tool errored, let the agent reflect on the error instead.
+        # Two checks: (1) is_error flag from exception/parse failures,
+        # (2) string-based detection for tools that return error strings
+        # without raising exceptions (e.g., "Error performing search: ...").
         if (
-            original_tool
+            not is_error
+            and not self._looks_like_tool_error(result)
+            and original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
         ):
@@ -1089,6 +1104,20 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 text=result,
             )
         return None
+
+    @staticmethod
+    def _looks_like_tool_error(result: str) -> bool:
+        """Check if a tool result string looks like an error.
+
+        Many built-in crewAI tools return error strings (e.g., 'Error
+        performing search: ...') instead of raising exceptions. This
+        heuristic catches those cases so result_as_answer doesn't treat
+        them as final agent output.
+        """
+        if not result:
+            return False
+        stripped = result.strip()
+        return stripped.startswith("Error ") or stripped.startswith("I encountered an error")
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent asynchronously with given inputs.
