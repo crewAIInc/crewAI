@@ -130,6 +130,14 @@ class GeminiCompletion(BaseLLM):
 
     def _get_sync_client(self) -> Any:
         if self._client is None:
+            # Re-read env vars so a deferred build can pick up credentials
+            # that weren't set at instantiation time.
+            if not self.api_key:
+                self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
+                    "GEMINI_API_KEY"
+                )
+            if not self.project:
+                self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
             self._client = self._initialize_client(self.use_vertexai)
         return self._client
 
