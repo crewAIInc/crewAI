@@ -204,6 +204,7 @@ class Crew(FlowTrackable, BaseModel):
     _memory: Memory | MemoryScope | MemorySlice | None = PrivateAttr(default=None)
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
+    _trained_data_file: str | None = PrivateAttr(default=None)
     _inputs: dict[str, Any] | None = PrivateAttr(default=None)
     _logging_color: PrinterColor = PrivateAttr(
         default="bold_purple",
@@ -812,6 +813,7 @@ class Crew(FlowTrackable, BaseModel):
     def _setup_for_training(self, filename: str) -> None:
         """Sets up the crew for training."""
         self._train = True
+        self._trained_data_file = filename
 
         for task in self.tasks:
             task.human_input = True
