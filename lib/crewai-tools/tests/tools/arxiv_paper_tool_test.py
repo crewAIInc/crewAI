@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import urllib.error
-import xml.etree.ElementTree as ET
+from defusedxml.ElementTree import ParseError
 
 from crewai_tools import ArxivPaperTool
 import pytest
@@ -108,7 +108,7 @@ def test_invalid_xml_response(mock_urlopen, tool):
     mock_response.status = 200
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
-    with pytest.raises(ET.ParseError):
+    with pytest.raises(ParseError):
         tool.fetch_arxiv_data("quantum", 1)
 
 
