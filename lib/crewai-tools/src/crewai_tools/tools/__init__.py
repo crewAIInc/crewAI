@@ -77,6 +77,7 @@ from crewai_tools.tools.github_search_tool.github_search_tool import GithubSearc
 from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
     HyperbrowserLoadTool,
 )
+from crewai_tools.tools.igpt_email_tool import IgptEmailAskTool, IgptEmailSearchTool
 from crewai_tools.tools.invoke_crewai_automation_tool.invoke_crewai_automation_tool import (
     InvokeCrewAIAutomationTool,
 )
@@ -229,6 +230,8 @@ __all__ = [
     "GenerateCrewaiAutomationTool",
     "GithubSearchTool",
     "HyperbrowserLoadTool",
+    "IgptEmailAskTool",
+    "IgptEmailSearchTool",
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
     "JinaScrapeWebsiteTool",
