@@ -294,3 +294,28 @@ def test_save_to_json(extractor, tmp_path):
     assert len(data["tools"]) == 1
     assert data["tools"][0]["humanized_name"] == "Test Tool"
     assert data["tools"][0]["run_params_schema"][0]["name"] == "param1"
+
+
+def test_save_to_json_uses_lf_line_endings(extractor, tmp_path):
+    """Verify save_to_json writes LF (\\n) line endings, not CRLF (\\r\\n).
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4737.
+    On Windows, open() in text mode defaults to CRLF, which causes every
+    line to appear modified in git diff when the committed file uses LF.
+    """
+    extractor.tools_spec = [
+        {
+            "name": "TestTool",
+            "humanized_name": "Test Tool",
+            "description": "A test tool",
+            "run_params_schema": [],
+        }
+    ]
+
+    file_path = tmp_path / "output.json"
+    extractor.save_to_json(str(file_path))
+
+    # Read in binary mode to inspect raw line endings
+    raw_bytes = file_path.read_bytes()
+    assert b"\r\n" not in raw_bytes, "File contains CRLF line endings; expected LF only"
+    assert b"\n" in raw_bytes, "File should contain at least one newline"
