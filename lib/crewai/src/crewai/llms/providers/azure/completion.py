@@ -155,6 +155,22 @@ class AzureCompletion(BaseLLM):
         return AsyncChatCompletionsClient(**self._make_client_kwargs())
 
     def _make_client_kwargs(self) -> dict[str, Any]:
+        # Re-read env vars so that a deferred build can pick up credentials
+        # that weren't set at instantiation time (e.g. LLM constructed at
+        # module import before deployment env vars were injected).
+        if not self.api_key:
+            self.api_key = os.getenv("AZURE_API_KEY")
+        if not self.endpoint:
+            endpoint = (
+                os.getenv("AZURE_ENDPOINT")
+                or os.getenv("AZURE_OPENAI_ENDPOINT")
+                or os.getenv("AZURE_API_BASE")
+            )
+            if endpoint:
+                self.endpoint = AzureCompletion._validate_and_fix_endpoint(
+                    endpoint, self.model
+                )
+
         if not self.api_key:
             raise ValueError(
                 "Azure API key is required. Set AZURE_API_KEY environment "

@@ -416,6 +416,32 @@ async def test_azure_aclose_is_noop_when_uninitialized():
             pass
 
 
+def test_azure_lazy_build_reads_env_vars_set_after_construction():
+    """When `LLM(model="azure/...")` is constructed before env vars are set,
+    the lazy client builder must re-read `AZURE_API_KEY` / `AZURE_ENDPOINT`
+    so the LLM actually works once credentials become available."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4")
+        assert llm.api_key is None
+        assert llm.endpoint is None
+
+    with patch.dict(
+        os.environ,
+        {
+            "AZURE_API_KEY": "late-key",
+            "AZURE_ENDPOINT": "https://test.openai.azure.com/openai/deployments/gpt-4",
+        },
+        clear=True,
+    ):
+        client = llm._get_sync_client()
+        assert client is not None
+        assert llm.api_key == "late-key"
+        assert llm.endpoint is not None
+        assert "test.openai.azure.com" in llm.endpoint
+
+
 def test_azure_endpoint_configuration():
     """
     Test that Azure endpoint configuration works with multiple environment variable names
