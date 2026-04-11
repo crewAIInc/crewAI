@@ -1,4 +1,5 @@
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
+from crewai_tools.tools.api_governor_tool.api_governor_tool import APIGovernorTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
@@ -169,6 +170,9 @@ from crewai_tools.tools.snowflake_search_tool import (
     SnowflakeSearchTool,
     SnowflakeSearchToolInput,
 )
+from crewai_tools.tools.spec_test_generator_tool.spec_test_generator_tool import (
+    SpecTestGeneratorTool,
+)
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
 from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
@@ -191,6 +195,7 @@ from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActio
 
 __all__ = [
     "AIMindTool",
+    "APIGovernorTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
     "BraveImageSearchTool",
@@ -273,6 +278,7 @@ __all__ = [
     "SnowflakeConfig",
     "SnowflakeSearchTool",
     "SnowflakeSearchToolInput",
+    "SpecTestGeneratorTool",
     "SpiderTool",
     "StagehandTool",
     "TXTSearchTool",
