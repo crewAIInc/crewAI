@@ -940,6 +940,9 @@ def test_internal_instructor_real_unsupported_provider() -> None:
     mock_llm.is_litellm = False
     mock_llm.model = "unsupported-model"
     mock_llm.provider = "unsupported"
+    mock_llm.base_url = None
+    mock_llm.api_base = None
+    mock_llm.api_key = None
 
     # This should raise a ConfigurationError from the real instructor library
     with pytest.raises(Exception) as exc_info:
@@ -952,3 +955,228 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+# =========================================================================
+# base_url forwarding tests (issue #5204)
+# =========================================================================
+
+
+def test_internal_instructor_forwards_base_url_to_openai_client() -> None:
+    """When LLM has a custom base_url, _create_instructor_client_with_base_url is called."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "my-model"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = "http://localhost:8000/v1"
+    mock_llm.api_key = "test-key"
+    mock_llm.api_base = None
+
+    mock_client = Mock()
+    mock_client.chat.completions.create.return_value = SimpleModel(name="Test", age=25)
+
+    with patch.object(
+        InternalInstructor, '_create_instructor_client_with_base_url',
+        return_value=mock_client,
+    ) as mock_with_base_url:
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        # Verify _create_instructor_client_with_base_url was called
+        mock_with_base_url.assert_called_once()
+        call_args = mock_with_base_url.call_args
+        assert call_args[0][0] == "openai"  # provider
+        assert call_args[0][1] == "my-model"  # model_string
+        assert call_args[0][2]["base_url"] == "http://localhost:8000/v1"
+        assert call_args[0][2]["api_key"] == "test-key"
+
+        result = inst.to_pydantic()
+        assert isinstance(result, SimpleModel)
+
+
+def test_internal_instructor_no_base_url_uses_from_provider() -> None:
+    """When LLM has no custom base_url, use instructor.from_provider normally."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "gpt-4o"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = None
+    mock_llm.api_base = None
+    mock_llm.api_key = None
+
+    mock_client = Mock()
+    mock_client.chat.completions.create.return_value = SimpleModel(name="Test", age=25)
+
+    with patch.object(InternalInstructor, '_create_instructor_client') as mock_create:
+        mock_create.return_value = mock_client
+
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        result = inst.to_pydantic()
+        assert isinstance(result, SimpleModel)
+        mock_create.assert_called_once()
+
+
+def test_get_llm_client_kwargs_extracts_base_url() -> None:
+    """_get_llm_client_kwargs should extract base_url and api_key from LLM."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "my-model"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = "http://localhost:8000/v1"
+    mock_llm.api_key = "sk-test"
+    mock_llm.api_base = None
+
+    mock_client = Mock()
+    with patch.object(InternalInstructor, '_create_instructor_client', return_value=mock_client):
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+    kwargs = inst._get_llm_client_kwargs()
+    assert kwargs["base_url"] == "http://localhost:8000/v1"
+    assert kwargs["api_key"] == "sk-test"
+
+
+def test_get_llm_client_kwargs_normalizes_api_base() -> None:
+    """api_base should be normalized to base_url."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "my-model"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = None
+    mock_llm.api_base = "http://ollama:11434/v1"
+    mock_llm.api_key = None
+
+    mock_client = Mock()
+    with patch.object(InternalInstructor, '_create_instructor_client', return_value=mock_client):
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+    kwargs = inst._get_llm_client_kwargs()
+    assert kwargs["base_url"] == "http://ollama:11434/v1"
+    assert "api_base" not in kwargs
+
+
+def test_get_llm_client_kwargs_string_llm_returns_empty() -> None:
+    """String LLMs have no base_url — should return empty dict."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_client = Mock()
+    with patch.object(InternalInstructor, '_create_instructor_client', return_value=mock_client):
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm="openai/gpt-4o",
+        )
+
+    kwargs = inst._get_llm_client_kwargs()
+    assert kwargs == {}
+
+
+def test_get_llm_client_kwargs_base_url_wins_over_api_base() -> None:
+    """When both base_url and api_base are set, base_url takes precedence."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "my-model"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = "http://primary:8000/v1"
+    mock_llm.api_base = "http://secondary:8000/v1"
+    mock_llm.api_key = None
+
+    mock_client = Mock()
+    with patch.object(InternalInstructor, '_create_instructor_client', return_value=mock_client):
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+    kwargs = inst._get_llm_client_kwargs()
+    assert kwargs["base_url"] == "http://primary:8000/v1"
+
+
+def test_internal_instructor_anthropic_base_url_forwarded() -> None:
+    """Anthropic provider with base_url should use instructor.from_anthropic."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "claude-3-5-sonnet"
+    mock_llm.provider = "anthropic"
+    mock_llm.base_url = "http://my-proxy:9000"
+    mock_llm.api_base = None
+    mock_llm.api_key = "sk-ant-test"
+
+    mock_client = Mock()
+    mock_client.chat.completions.create.return_value = SimpleModel(name="Test", age=25)
+
+    with patch.object(
+        InternalInstructor, '_create_instructor_client_with_base_url',
+        return_value=mock_client,
+    ) as mock_with_base_url:
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        mock_with_base_url.assert_called_once()
+        call_args = mock_with_base_url.call_args[0]
+        assert call_args[0] == "anthropic"
+        assert call_args[2]["base_url"] == "http://my-proxy:9000"
+        assert call_args[2]["api_key"] == "sk-ant-test"
+
+
+def test_internal_instructor_azure_base_url_forwarded() -> None:
+    """Azure provider with base_url should use AzureOpenAI, not OpenAI."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "gpt-4o"
+    mock_llm.provider = "azure"
+    mock_llm.base_url = "https://my-resource.openai.azure.com"
+    mock_llm.api_base = None
+    mock_llm.api_key = "azure-key"
+    mock_llm.api_version = "2024-02-15-preview"
+
+    mock_client = Mock()
+    mock_client.chat.completions.create.return_value = SimpleModel(name="Test", age=25)
+
+    with patch.object(
+        InternalInstructor, '_create_instructor_client_with_base_url',
+        return_value=mock_client,
+    ) as mock_with_base_url:
+        inst = InternalInstructor(
+            content="Test",
+            model=SimpleModel,
+            llm=mock_llm,
+        )
+
+        mock_with_base_url.assert_called_once()
+        call_args = mock_with_base_url.call_args[0]
+        assert call_args[0] == "azure"
+        assert call_args[2]["base_url"] == "https://my-resource.openai.azure.com"
