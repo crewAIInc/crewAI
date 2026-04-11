@@ -1272,3 +1272,164 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+# =============================================================================
+# Tool Call Argument Parsing Tests (Bedrock format regression — issue #5275)
+# =============================================================================
+
+
+class TestToolCallArgsParsing:
+    """Unit tests for tool call argument extraction across provider formats.
+
+    Regression tests for issue #5275: Bedrock tool call arguments were silently
+    dropped because the dict-branch default ``"{}"`` was truthy, preventing the
+    ``or`` fallback to ``tool_call["input"]``.
+    """
+
+    @pytest.fixture
+    def executor(self):
+        """Create a minimal CrewAgentExecutor for unit-testing _parse_native_tool_call."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        llm = Mock()
+        llm.supports_stop_words.return_value = True
+        llm.stop = []
+
+        task = Mock()
+        task.description = "test"
+        task.human_input = False
+        task.response_model = None
+
+        crew = Mock()
+        crew.verbose = False
+        crew._train = False
+
+        agent = Mock()
+        agent.id = "test-id"
+        agent.role = "Test"
+        agent.verbose = False
+        agent.key = "test-key"
+
+        tools_handler = Mock()
+
+        return CrewAgentExecutor(
+            llm=llm,
+            task=task,
+            crew=crew,
+            agent=agent,
+            prompt={"prompt": "test"},
+            max_iter=1,
+            tools=[],
+            tools_names="",
+            stop_words=[],
+            tools_description="",
+            tools_handler=tools_handler,
+        )
+
+    # -- CrewAgentExecutor._parse_native_tool_call tests --
+
+    def test_bedrock_dict_format_preserves_args(self, executor):
+        """Bedrock-style dict with 'name', 'toolUseId', and 'input' must
+        propagate the arguments — not silently drop them (issue #5275)."""
+        tool_call = {
+            "name": "get_travel_details",
+            "toolUseId": "abc123",
+            "input": {"city": "Paris"},
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "abc123"
+        assert func_name == "get_travel_details"
+        assert func_args == {"city": "Paris"}
+
+    def test_openai_dict_format_preserves_args(self, executor):
+        """OpenAI-style dict with 'function' wrapper must still work."""
+        tool_call = {
+            "id": "call_001",
+            "function": {
+                "name": "calculator",
+                "arguments": '{"expression": "2+2"}',
+            },
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_001"
+        assert func_name == "calculator"
+        assert func_args == '{"expression": "2+2"}'
+
+    def test_dict_without_function_or_input_returns_empty_dict(self, executor):
+        """A dict with neither 'function.arguments' nor 'input' should yield {}."""
+        tool_call = {
+            "id": "call_empty",
+            "name": "no_args_tool",
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        _, _, func_args = result
+        assert func_args == {}
+
+    def test_bedrock_dict_with_nested_args(self, executor):
+        """Bedrock-style dict with nested input arguments must be preserved."""
+        tool_call = {
+            "name": "search_tool",
+            "toolUseId": "tool_456",
+            "input": {"query": "AI news", "limit": 10, "filters": {"lang": "en"}},
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "tool_456"
+        assert func_name == "search_tool"
+        assert func_args == {"query": "AI news", "limit": 10, "filters": {"lang": "en"}}
+
+    # -- agent_utils.extract_tool_call_info tests --
+
+    def test_extract_tool_call_info_bedrock_dict(self):
+        """extract_tool_call_info must handle Bedrock dict format correctly."""
+        from crewai.utilities.agent_utils import extract_tool_call_info
+
+        tool_call = {
+            "name": "get_travel_details",
+            "toolUseId": "abc123",
+            "input": {"city": "Paris"},
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "abc123"
+        assert func_name == "get_travel_details"
+        assert func_args == {"city": "Paris"}
+
+    def test_extract_tool_call_info_openai_dict(self):
+        """extract_tool_call_info must handle OpenAI dict format."""
+        from crewai.utilities.agent_utils import extract_tool_call_info
+
+        tool_call = {
+            "id": "call_001",
+            "function": {
+                "name": "calculator",
+                "arguments": '{"expression": "2+2"}',
+            },
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_001"
+        assert func_name == "calculator"
+        assert func_args == '{"expression": "2+2"}'
+
+    def test_extract_tool_call_info_empty_dict(self):
+        """extract_tool_call_info with no args source should yield {}."""
+        from crewai.utilities.agent_utils import extract_tool_call_info
+
+        tool_call = {
+            "id": "call_empty",
+            "name": "no_args_tool",
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        _, _, func_args = result
+        assert func_args == {}
