@@ -503,3 +503,115 @@ class TestResolveExternalToolFilter:
         tools = resolver._resolve_external("https://mcp.example.com/api#nonexistent")
 
         assert len(tools) == 0
+
+
+class TestResolveNativeEmptyTools:
+    """Tests for _resolve_native when MCP server returns no tools or tools_list is unbound."""
+
+    @pytest.fixture
+    def agent(self):
+        return Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+        )
+
+    @pytest.fixture
+    def mock_logger(self):
+        logger = MagicMock()
+        logger.log = MagicMock()
+        return logger
+
+    @pytest.fixture
+    def resolver(self, agent, mock_logger):
+        return MCPToolResolver(agent=agent, logger=mock_logger)
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_returns_empty_and_logs_warning_when_server_returns_no_tools(
+        self, mock_client_class, resolver
+    ):
+        """When the MCP server returns an empty tool list, _resolve_native should
+        return empty tools and log a warning instead of raising an error."""
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=[])
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        http_config = MCPServerHTTP(
+            url="https://empty-server.example.com/api",
+            headers={"Authorization": "Bearer token"},
+        )
+
+        tools, clients = resolver._resolve_native(http_config)
+
+        assert tools == []
+        assert clients == []
+        resolver._logger.log.assert_any_call(
+            "warning",
+            "No tools discovered from MCP server: empty-server_example_com_api",
+        )
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_returns_empty_and_logs_warning_when_tool_filter_removes_all(
+        self, mock_client_class, resolver
+    ):
+        """When the tool_filter removes all tools, _resolve_native should
+        return empty tools and log a warning."""
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(
+            return_value=[
+                {"name": "search", "description": "Search tool", "inputSchema": {}},
+            ]
+        )
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        http_config = MCPServerHTTP(
+            url="https://filtered-server.example.com/api",
+            headers={"Authorization": "Bearer token"},
+            tool_filter=lambda tool: False,  # reject all tools
+        )
+
+        tools, clients = resolver._resolve_native(http_config)
+
+        assert tools == []
+        assert clients == []
+        resolver._logger.log.assert_any_call(
+            "warning",
+            "No tools discovered from MCP server: filtered-server_example_com_api",
+        )
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_no_unbound_local_error_when_runtime_error_swallowed(
+        self, mock_client_class, resolver
+    ):
+        """When asyncio.run raises a RuntimeError that doesn't match the
+        'cancel scope' / 'task' conditions, tools_list must not be unbound.
+        Previously this caused UnboundLocalError on line 412."""
+        mock_client = AsyncMock()
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        # Make list_tools raise a RuntimeError that does NOT match the conditions
+        mock_client.list_tools = AsyncMock(
+            side_effect=RuntimeError("some unrelated runtime error")
+        )
+        mock_client_class.return_value = mock_client
+
+        http_config = MCPServerHTTP(
+            url="https://broken-server.example.com/api",
+            headers={"Authorization": "Bearer token"},
+        )
+
+        tools, clients = resolver._resolve_native(http_config)
+
+        assert tools == []
+        assert clients == []
+        resolver._logger.log.assert_any_call(
+            "warning",
+            "No tools discovered from MCP server: broken-server_example_com_api",
+        )
