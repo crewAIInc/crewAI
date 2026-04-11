@@ -1189,6 +1189,43 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="MLflow AI Gateway">
+    [MLflow AI Gateway](https://mlflow.org/docs/latest/genai/governance/ai-gateway/) is a database-backed LLM proxy built into the MLflow tracking server (MLflow ≥ 3.0). It provides a unified OpenAI-compatible API across dozens of providers — OpenAI, Anthropic, Gemini, Mistral, Bedrock, Ollama, and more — with built-in secrets management, fallback/retry, traffic splitting, and budget tracking.
+
+    **1. Install MLflow and start the server:**
+    ```bash
+    pip install mlflow[genai]
+    mlflow server --host 127.0.0.1 --port 5000
+    ```
+
+    **2. Create a gateway endpoint** in the MLflow UI at [http://localhost:5000](http://localhost:5000). Navigate to **AI Gateway → Create Endpoint**, select a provider and model, and enter your provider API key (stored encrypted on the server). See the [MLflow AI Gateway documentation](https://mlflow.org/docs/latest/genai/governance/ai-gateway/endpoints/) for details.
+
+    **3. Use in your CrewAI project:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/my-chat-endpoint",  # "openai/" prefix + your MLflow endpoint name
+        base_url="http://localhost:5000/gateway/openai/v1",
+        api_key="unused",  # provider keys are managed by the MLflow server
+    )
+    ```
+
+    <Info>
+      MLflow AI Gateway features:
+      - Route to any provider without changing agent code
+      - Provider API keys stored encrypted on the server
+      - Automatic fallback to backup models on failure
+      - Per-endpoint token budget limits
+      - Built-in usage tracing via MLflow experiments
+    </Info>
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
