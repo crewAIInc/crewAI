@@ -1,0 +1,88 @@
+---
+title: Getting Started (TL;DR)
+description: What CrewAI is and how to build your first crew in under 5 minutes
+icon: bolt
+---
+
+## What is CrewAI?
+
+CrewAI is a framework for orchestrating autonomous AI agents using two complementary primitives:
+
+- **Flows** — event-driven workflows that manage state and control execution (the "backbone" of your app)
+- **Crews** — teams of role-playing agents that collaborate on complex tasks (the "intelligence" within a Flow)
+
+For any production app, start with a Flow and use Crews inside it.
+
+## When to Use Flows vs. Crews
+
+| Use Case | Architecture |
+| :--- | :--- |
+| Simple automation / scripting | Single Flow with Python tasks |
+| Complex research or content | Flow managing state → Crew performing research |
+| Application backend | Flow handling requests → Crew generating content → Flow saving to DB |
+
+**Rule of thumb:** Flow = control plane. Crew = execution unit. Use both.
+
+## Installation
+
+```bash
+pip install crewai
+# With built-in tools (web search, file read, etc.)
+pip install 'crewai[tools]'
+```
+
+Set your LLM API key:
+
+```bash
+export OPENAI_API_KEY="your-key-here"
+```
+
+## Minimal Working Crew
+
+```python
+from crewai import Agent, Task, Crew, Process
+
+# 1. Define agents with role, goal, backstory
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find the latest information on a given topic",
+    backstory="Expert at gathering and synthesizing information from multiple sources.",
+)
+
+writer = Agent(
+    role="Content Writer",
+    goal="Write clear, engaging summaries",
+    backstory="Skilled communicator who turns research into readable content.",
+)
+
+# 2. Define tasks with description and expected output
+research_task = Task(
+    description="Research the top 3 trends in AI agents for 2025.",
+    expected_output="A bullet-point list of 3 trends with one-sentence explanations.",
+    agent=researcher,
+)
+
+write_task = Task(
+    description="Write a 2-paragraph summary based on the research.",
+    expected_output="A concise 2-paragraph summary in plain English.",
+    agent=writer,
+)
+
+# 3. Assemble the crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, write_task],
+    process=Process.sequential,
+    verbose=True,
+)
+
+# 4. Run it
+result = crew.kickoff()
+print(result)
+```
+
+## Next Steps
+
+- Full tutorial: [Build Your First Crew](/en/guides/crews/first-crew)
+- In-depth quickstart: [Quickstart](/en/quickstart)
+- Understanding the architecture: [Introduction](/en/introduction)
