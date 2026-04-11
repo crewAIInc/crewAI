@@ -91,7 +91,7 @@ class SettingsCommand(BaseCommand):
                 style="bold red",
             )
             console.print("Available keys:", style="yellow")
-            for field_name in Settings.model_fields.keys():
+            for field_name in Settings.model_fields:
                 if field_name not in readonly_settings:
                     console.print(f"  - {field_name}", style="yellow")
             raise SystemExit(1)
