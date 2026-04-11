@@ -119,10 +119,12 @@ def test_create_llm_with_invalid_type() -> None:
 
 
 def test_create_llm_openai_missing_api_key() -> None:
-    """Test that create_llm raises error when OpenAI API key is missing"""
+    """Credentials are validated lazily: `create_llm` succeeds, and the
+    descriptive error only surfaces when the client is actually built."""
     with patch.dict(os.environ, {}, clear=True):
+        llm = create_llm(llm_value="gpt-4o")
         with pytest.raises((ValueError, ImportError)) as exc_info:
-            create_llm(llm_value="gpt-4o")
+            llm._get_sync_client()
 
         error_message = str(exc_info.value).lower()
         assert "openai_api_key" in error_message or "api_key" in error_message

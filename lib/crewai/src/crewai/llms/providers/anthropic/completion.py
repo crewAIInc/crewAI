@@ -193,16 +193,41 @@ class AnthropicCompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> AnthropicCompletion:
-        self._client = Anthropic(**self._get_client_params())
+        """Eagerly build clients when the API key is available, otherwise
+        defer so ``LLM(model="anthropic/...")`` can be constructed at module
+        import time even before deployment env vars are set.
+        """
+        try:
+            self._client = self._build_sync_client()
+            self._async_client = self._build_async_client()
+        except ValueError:
+            pass
+        return self
 
-        async_client_params = self._get_client_params()
+    def _build_sync_client(self) -> Any:
+        return Anthropic(**self._get_client_params())
+
+    def _build_async_client(self) -> Any:
+        # Skip the sync httpx.Client that `_get_client_params` would
+        # otherwise construct under `interceptor`; we attach an async one
+        # below and would leak the sync one if both were built.
+        async_client_params = self._get_client_params(include_http_client=False)
         if self.interceptor:
             async_transport = AsyncHTTPTransport(interceptor=self.interceptor)
-            async_http_client = httpx.AsyncClient(transport=async_transport)
-            async_client_params["http_client"] = async_http_client
+            async_client_params["http_client"] = httpx.AsyncClient(
+                transport=async_transport
+            )
+        return AsyncAnthropic(**async_client_params)
 
-        self._async_client = AsyncAnthropic(**async_client_params)
-        return self
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        if self._async_client is None:
+            self._async_client = self._build_async_client()
+        return self._async_client
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
@@ -217,8 +242,15 @@ class AnthropicCompletion(BaseLLM):
             config["timeout"] = self.timeout
         return config
 
-    def _get_client_params(self) -> dict[str, Any]:
-        """Get client parameters."""
+    def _get_client_params(self, include_http_client: bool = True) -> dict[str, Any]:
+        """Get client parameters.
+
+        Args:
+            include_http_client: When True (default) and an interceptor is
+                set, attach a sync ``httpx.Client``. The async builder
+                passes ``False`` so it can attach its own async client
+                without leaking a sync one.
+        """
 
         if self.api_key is None:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -232,7 +264,7 @@ class AnthropicCompletion(BaseLLM):
             "max_retries": self.max_retries,
         }
 
-        if self.interceptor:
+        if include_http_client and self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
             http_client = httpx.Client(transport=transport)
             client_params["http_client"] = http_client  # type: ignore[assignment]
@@ -798,11 +830,11 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = self._client.beta.messages.create(
+                response = self._get_sync_client().beta.messages.create(
                     **params, extra_body=extra_body
                 )
             else:
-                response = self._client.messages.create(**params)
+                response = self._get_sync_client().messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -950,9 +982,11 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self._client.beta.messages.stream(**stream_params, extra_body=extra_body)
+            self._get_sync_client().beta.messages.stream(
+                **stream_params, extra_body=extra_body
+            )
             if betas
-            else self._client.messages.stream(**stream_params)
+            else self._get_sync_client().messages.stream(**stream_params)
         )
         with stream_context as stream:
             response_id = None
@@ -1231,7 +1265,9 @@ class AnthropicCompletion(BaseLLM):
 
         try:
             # Send tool results back to Claude for final response
-            final_response: Message = self._client.messages.create(**follow_up_params)
+            final_response: Message = self._get_sync_client().messages.create(
+                **follow_up_params
+            )
 
             # Track token usage for follow-up call
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
@@ -1327,11 +1363,11 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = await self._async_client.beta.messages.create(
+                response = await self._get_async_client().beta.messages.create(
                     **params, extra_body=extra_body
                 )
             else:
-                response = await self._async_client.messages.create(**params)
+                response = await self._get_async_client().messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -1465,11 +1501,11 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self._async_client.beta.messages.stream(
+            self._get_async_client().beta.messages.stream(
                 **stream_params, extra_body=extra_body
             )
             if betas
-            else self._async_client.messages.stream(**stream_params)
+            else self._get_async_client().messages.stream(**stream_params)
         )
         async with stream_context as stream:
             response_id = None
@@ -1634,7 +1670,7 @@ class AnthropicCompletion(BaseLLM):
         ]
 
         try:
-            final_response: Message = await self._async_client.messages.create(
+            final_response: Message = await self._get_async_client().messages.create(
                 **follow_up_params
             )
 
@@ -1762,8 +1798,8 @@ class AnthropicCompletion(BaseLLM):
             from crewai_files.uploaders.anthropic import AnthropicFileUploader
 
             return AnthropicFileUploader(
-                client=self._client,
-                async_client=self._async_client,
+                client=self._get_sync_client(),
+                async_client=self._get_async_client(),
             )
         except ImportError:
             return None

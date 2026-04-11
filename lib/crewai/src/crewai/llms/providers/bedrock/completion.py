@@ -307,6 +307,22 @@ class BedrockCompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> BedrockCompletion:
+        """Eagerly build the sync client when AWS credentials resolve,
+        otherwise defer so ``LLM(model="bedrock/...")`` can be constructed
+        at module import time even before deployment env vars are set.
+
+        Only credential/SDK errors are caught — programming errors like
+        ``TypeError`` or ``AttributeError`` propagate so real bugs aren't
+        silently swallowed.
+        """
+        try:
+            self._client = self._build_sync_client()
+        except (BotoCoreError, ClientError, ValueError) as e:
+            logging.debug("Deferring Bedrock client construction: %s", e)
+        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
+        return self
+
+    def _build_sync_client(self) -> Any:
         config = Config(
             read_timeout=300,
             retries={"max_attempts": 3, "mode": "adaptive"},
@@ -318,9 +334,17 @@ class BedrockCompletion(BaseLLM):
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
-        self._client = session.client("bedrock-runtime", config=config)
-        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
-        return self
+        return session.client("bedrock-runtime", config=config)
+
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        """Async client is set up separately by ``_ensure_async_client``
+        using ``aiobotocore`` inside an exit stack."""
+        return self._async_client
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""
@@ -660,7 +684,7 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self._client.converse(
+            response = self._get_sync_client().converse(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -949,7 +973,7 @@ class BedrockCompletion(BaseLLM):
         usage_data: dict[str, Any] | None = None
 
         try:
-            response = self._client.converse_stream(
+            response = self._get_sync_client().converse_stream(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",

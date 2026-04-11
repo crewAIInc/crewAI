@@ -367,7 +367,7 @@ def test_deploy_push(command, runner):
     result = runner.invoke(deploy_push, ["-u", uuid])
 
     assert result.exit_code == 0
-    mock_deploy.deploy.assert_called_once_with(uuid=uuid)
+    mock_deploy.deploy.assert_called_once_with(uuid=uuid, skip_validate=False)
 
 
 @mock.patch("crewai.cli.cli.DeployCommand")
@@ -376,7 +376,7 @@ def test_deploy_push_no_uuid(command, runner):
     result = runner.invoke(deploy_push)
 
     assert result.exit_code == 0
-    mock_deploy.deploy.assert_called_once_with(uuid=None)
+    mock_deploy.deploy.assert_called_once_with(uuid=None, skip_validate=False)
 
 
 @mock.patch("crewai.cli.cli.DeployCommand")

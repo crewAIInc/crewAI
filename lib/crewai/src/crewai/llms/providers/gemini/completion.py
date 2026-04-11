@@ -118,8 +118,32 @@ class GeminiCompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_client(self) -> GeminiCompletion:
-        self._client = self._initialize_client(self.use_vertexai)
+        """Eagerly build the client when credentials resolve, otherwise defer
+        so ``LLM(model="gemini/...")`` can be constructed at module import time
+        even before deployment env vars are set.
+        """
+        try:
+            self._client = self._initialize_client(self.use_vertexai)
+        except ValueError:
+            pass
         return self
+
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            # Re-read env vars so a deferred build can pick up credentials
+            # that weren't set at instantiation time.
+            if not self.api_key:
+                self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
+                    "GEMINI_API_KEY"
+                )
+            if not self.project:
+                self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
+            self._client = self._initialize_client(self.use_vertexai)
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        """Gemini uses a single client for both sync and async calls."""
+        return self._get_sync_client()
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Gemini/Vertex-specific fields."""
@@ -228,6 +252,7 @@ class GeminiCompletion(BaseLLM):
 
         if (
             hasattr(self, "client")
+            and self._client is not None
             and hasattr(self._client, "vertexai")
             and self._client.vertexai
         ):
@@ -1112,7 +1137,7 @@ class GeminiCompletion(BaseLLM):
         try:
             # The API accepts list[Content] but mypy is overly strict about variance
             contents_for_api: Any = contents
-            response = self._client.models.generate_content(
+            response = self._get_sync_client().models.generate_content(
                 model=self.model,
                 contents=contents_for_api,
                 config=config,
@@ -1153,7 +1178,7 @@ class GeminiCompletion(BaseLLM):
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
-        for chunk in self._client.models.generate_content_stream(
+        for chunk in self._get_sync_client().models.generate_content_stream(
             model=self.model,
             contents=contents_for_api,
             config=config,
@@ -1191,7 +1216,7 @@ class GeminiCompletion(BaseLLM):
         try:
             # The API accepts list[Content] but mypy is overly strict about variance
             contents_for_api: Any = contents
-            response = await self._client.aio.models.generate_content(
+            response = await self._get_async_client().aio.models.generate_content(
                 model=self.model,
                 contents=contents_for_api,
                 config=config,
@@ -1232,7 +1257,7 @@ class GeminiCompletion(BaseLLM):
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
-        stream = await self._client.aio.models.generate_content_stream(
+        stream = await self._get_async_client().aio.models.generate_content_stream(
             model=self.model,
             contents=contents_for_api,
             config=config,
@@ -1439,6 +1464,6 @@ class GeminiCompletion(BaseLLM):
         try:
             from crewai_files.uploaders.gemini import GeminiFileUploader
 
-            return GeminiFileUploader(client=self._client)
+            return GeminiFileUploader(client=self._get_sync_client())
         except ImportError:
             return None
