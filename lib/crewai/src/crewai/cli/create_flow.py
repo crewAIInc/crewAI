@@ -28,9 +28,9 @@ def create_flow(name: str) -> None:
     (project_root / "src" / folder_name / "tools").mkdir(parents=True)
     (project_root / "tests").mkdir(exist_ok=True)
 
-    # Create .env file
+    # Create .env file with placeholder
     with open(project_root / ".env", "w") as file:
-        file.write("OPENAI_API_KEY=YOUR_API_KEY")
+        file.write("OPENAI_API_KEY=\n")
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "flow"

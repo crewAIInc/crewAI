@@ -79,7 +79,7 @@ class TestProviderRegistry:
         assert config.base_url == "http://localhost:8000/v1"
         assert config.api_key_env == "VLLM_API_KEY"
         assert config.api_key_required is False
-        assert config.default_api_key == "dummy"
+        assert config.default_api_key == "no-key-required"
 
     def test_cerebras_config(self):
         """Test Cerebras provider configuration."""
