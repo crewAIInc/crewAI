@@ -827,7 +827,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            func_args = func_info.get("arguments")
+            if func_args is None:
+                func_args = tool_call.get("input", {})
             return call_id, func_name, func_args
         return None
 
