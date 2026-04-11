@@ -393,7 +393,9 @@ def test_manager_llm_requirement_for_hierarchical_process(researcher, writer):
 @pytest.mark.vcr()
 def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
     """
-    Test that the manager agent delegates to the assigned task agent.
+    Test that when a task is assigned to a specific agent in hierarchical mode,
+    the delegation tools allow delegating to OTHER agents (not the assigned agent itself).
+    This verifies the fix for issue #4783.
     """
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -428,15 +430,15 @@ def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        # Verify the delegation tools were passed correctly
+        # Verify the delegation tools target OTHER agents, not the assigned agent itself
         assert len(tools) == 2
         assert any(
-            "Delegate a specific task to one of the following coworkers: Researcher"
+            "Delegate a specific task to one of the following coworkers: Senior Writer"
             in tool.description
             for tool in tools
         )
         assert any(
-            "Ask a specific question to one of the following coworkers: Researcher"
+            "Ask a specific question to one of the following coworkers: Senior Writer"
             in tool.description
             for tool in tools
         )
@@ -480,6 +482,7 @@ def test_manager_agent_delegates_with_varied_role_cases():
     """
     Test that the manager agent can delegate to agents regardless of case or whitespace variations in role names.
     This test verifies the fix for issue #1503 where role matching was too strict.
+    After fix for #4783, delegation targets should be the OTHER agents (not the assigned agent).
     """
     # Create agents with varied case and whitespace in roles
     researcher_spaced = Agent(
@@ -529,7 +532,8 @@ def test_manager_agent_delegates_with_varied_role_cases():
         # Verify the delegation tools were passed correctly and can handle case/whitespace variations
         assert len(tools) == 2
 
-        # Check delegation tool descriptions (should work despite case/whitespace differences)
+        # Check delegation tool descriptions - should target the OTHER agent (SENIOR WRITER),
+        # not the assigned agent (Researcher)
         delegation_tool = tools[0]
         question_tool = tools[1]
 
@@ -537,19 +541,196 @@ def test_manager_agent_delegates_with_varied_role_cases():
             "Delegate a specific task to one of the following coworkers:"
             in delegation_tool.description
         )
-        assert (
-            " Researcher " in delegation_tool.description
-            or "SENIOR WRITER" in delegation_tool.description
-        )
+        assert "SENIOR WRITER" in delegation_tool.description
 
         assert (
             "Ask a specific question to one of the following coworkers:"
             in question_tool.description
         )
-        assert (
-            " Researcher " in question_tool.description
-            or "SENIOR WRITER" in question_tool.description
-        )
+        assert "SENIOR WRITER" in question_tool.description
+
+
+def test_hierarchical_delegation_excludes_assigned_agent():
+    """
+    Test that in hierarchical mode, when a task has an assigned agent,
+    the delegation tools exclude that agent and include all other agents.
+    This is a direct unit test for the fix of issue #4783.
+    """
+    agent1 = Agent(
+        role="Agent One",
+        goal="Do task one",
+        backstory="First agent",
+        allow_delegation=False,
+    )
+    agent2 = Agent(
+        role="Agent Two",
+        goal="Do task two",
+        backstory="Second agent",
+        allow_delegation=False,
+    )
+    agent3 = Agent(
+        role="Agent Three",
+        goal="Do task three",
+        backstory="Third agent",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="A task assigned to agent1",
+        expected_output="Some output",
+        agent=agent1,
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2, agent3],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+        tasks=[task],
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task.output = mock_task_output
+
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
+        crew.kickoff()
+
+        mock_execute_sync.assert_called_once()
+
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs["tools"]
+
+        assert len(tools) == 2
+
+        # Delegation tools should mention Agent Two and Agent Three, but NOT Agent One
+        delegation_descriptions = " ".join(tool.description for tool in tools)
+        assert "Agent Two" in delegation_descriptions
+        assert "Agent Three" in delegation_descriptions
+        assert "Agent One" not in delegation_descriptions
+
+
+def test_hierarchical_delegation_with_multiple_tasks():
+    """
+    Test that each task in hierarchical mode gets delegation tools
+    targeting the correct set of other agents (excluding the assigned agent).
+    """
+    analyst = Agent(
+        role="Data Analyst",
+        goal="Analyze data",
+        backstory="Expert data analyst",
+        allow_delegation=False,
+    )
+    writer = Agent(
+        role="Report Writer",
+        goal="Write reports",
+        backstory="Expert report writer",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Analyze the data",
+        expected_output="Analysis results",
+        agent=analyst,
+    )
+    task2 = Task(
+        description="Write the report",
+        expected_output="Final report",
+        agent=writer,
+    )
+
+    crew = Crew(
+        agents=[analyst, writer],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+        tasks=[task1, task2],
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task1.output = mock_task_output
+    task2.output = mock_task_output
+
+    call_args_list = []
+
+    def capture_execute_sync(**kwargs):
+        call_args_list.append(kwargs)
+        return mock_task_output
+
+    with patch.object(
+        Task, "execute_sync", side_effect=capture_execute_sync
+    ):
+        crew.kickoff()
+
+        assert len(call_args_list) == 2
+
+        # First task (assigned to analyst): delegation should target writer only
+        tools_task1 = call_args_list[0]["tools"]
+        desc1 = " ".join(tool.description for tool in tools_task1)
+        assert "Report Writer" in desc1
+        assert "Data Analyst" not in desc1
+
+        # Second task (assigned to writer): delegation should target analyst only
+        tools_task2 = call_args_list[1]["tools"]
+        desc2 = " ".join(tool.description for tool in tools_task2)
+        assert "Data Analyst" in desc2
+        assert "Report Writer" not in desc2
+
+
+def test_hierarchical_delegation_no_assigned_agent_delegates_to_all():
+    """
+    Test that when no agent is assigned to a task in hierarchical mode,
+    the manager can delegate to ALL agents.
+    """
+    agent1 = Agent(
+        role="Agent Alpha",
+        goal="Do alpha work",
+        backstory="Alpha agent",
+        allow_delegation=False,
+    )
+    agent2 = Agent(
+        role="Agent Beta",
+        goal="Do beta work",
+        backstory="Beta agent",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="A task with no assigned agent",
+        expected_output="Some output",
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+        tasks=[task],
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task.output = mock_task_output
+
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
+        crew.kickoff()
+
+        mock_execute_sync.assert_called_once()
+
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs["tools"]
+
+        assert len(tools) == 2
+
+        # Both agents should be available for delegation
+        delegation_descriptions = " ".join(tool.description for tool in tools)
+        assert "Agent Alpha" in delegation_descriptions
+        assert "Agent Beta" in delegation_descriptions
 
 
 @pytest.mark.vcr()
