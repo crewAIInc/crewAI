@@ -25,7 +25,10 @@ class MockTool(BaseTool):
     my_parameter_bool: bool = Field(False)
     # Use default_factory like real tools do (not direct default)
     package_dependencies: list[str] = Field(
-        default_factory=lambda: ["this-is-a-required-package", "another-required-package"]
+        default_factory=lambda: [
+            "this-is-a-required-package",
+            "another-required-package",
+        ]
     )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -294,3 +297,4 @@ def test_save_to_json(extractor, tmp_path):
     assert len(data["tools"]) == 1
     assert data["tools"][0]["humanized_name"] == "Test Tool"
     assert data["tools"][0]["run_params_schema"][0]["name"] == "param1"
+    assert b"\r\n" not in file_path.read_bytes()
