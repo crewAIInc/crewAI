@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SerializationInfo, field_serializer
 
-from crewai.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent, _is_trace_context
 
 
 class LLMEventBase(BaseEvent):
@@ -48,6 +48,16 @@ class LLMCallStartedEvent(LLMEventBase):
     tools: list[dict[str, Any]] | None = None
     callbacks: list[Any] | None = None
     available_functions: dict[str, Any] | None = None
+
+    @field_serializer("callbacks")
+    @classmethod
+    def _serialize_callbacks(cls, v: Any, info: SerializationInfo) -> Any:
+        return None if _is_trace_context(info) else v
+
+    @field_serializer("available_functions")
+    @classmethod
+    def _serialize_available_functions(cls, v: Any, info: SerializationInfo) -> Any:
+        return None if _is_trace_context(info) else v
 
 
 class LLMCallCompletedEvent(LLMEventBase):

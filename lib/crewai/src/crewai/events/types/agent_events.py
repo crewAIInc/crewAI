@@ -5,11 +5,17 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, SerializationInfo, field_serializer, model_validator
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.events.base_events import BaseEvent
+from crewai.events.base_events import (
+    BaseEvent,
+    _is_trace_context,
+    _trace_agent_ref,
+    _trace_task_ref,
+    _trace_tool_names,
+)
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 
@@ -31,6 +37,21 @@ class AgentExecutionStartedEvent(BaseEvent):
         _set_agent_fingerprint(self, self.agent)
         return self
 
+    @field_serializer("agent")
+    @classmethod
+    def _serialize_agent(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_agent_ref(v) if _is_trace_context(info) else v
+
+    @field_serializer("task")
+    @classmethod
+    def _serialize_task(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_task_ref(v) if _is_trace_context(info) else v
+
+    @field_serializer("tools")
+    @classmethod
+    def _serialize_tools(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_tool_names(v) if _is_trace_context(info) else v
+
 
 class AgentExecutionCompletedEvent(BaseEvent):
     """Event emitted when an agent completes executing a task"""
@@ -47,6 +68,16 @@ class AgentExecutionCompletedEvent(BaseEvent):
         """Set fingerprint data from the agent if available."""
         _set_agent_fingerprint(self, self.agent)
         return self
+
+    @field_serializer("agent")
+    @classmethod
+    def _serialize_agent(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_agent_ref(v) if _is_trace_context(info) else v
+
+    @field_serializer("task")
+    @classmethod
+    def _serialize_task(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_task_ref(v) if _is_trace_context(info) else v
 
 
 class AgentExecutionErrorEvent(BaseEvent):
@@ -65,6 +96,16 @@ class AgentExecutionErrorEvent(BaseEvent):
         _set_agent_fingerprint(self, self.agent)
         return self
 
+    @field_serializer("agent")
+    @classmethod
+    def _serialize_agent(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_agent_ref(v) if _is_trace_context(info) else v
+
+    @field_serializer("task")
+    @classmethod
+    def _serialize_task(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_task_ref(v) if _is_trace_context(info) else v
+
 
 # New event classes for LiteAgent
 class LiteAgentExecutionStartedEvent(BaseEvent):
@@ -76,6 +117,11 @@ class LiteAgentExecutionStartedEvent(BaseEvent):
     type: Literal["lite_agent_execution_started"] = "lite_agent_execution_started"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("tools")
+    @classmethod
+    def _serialize_tools(cls, v: Any, info: SerializationInfo) -> Any:
+        return _trace_tool_names(v) if _is_trace_context(info) else v
 
 
 class LiteAgentExecutionCompletedEvent(BaseEvent):
