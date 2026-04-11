@@ -328,6 +328,97 @@ class TestInvokeStepCallback:
         executor._invoke_step_callback(answer)
 
 
+class TestParseNativeToolCall:
+    """Tests for _parse_native_tool_call covering multiple provider formats.
+
+    Regression tests for issue #4748: Bedrock tool calls with 'input' field
+    were returning empty arguments because the old code used
+    ``func_info.get("arguments", "{}")`` which always returns a truthy
+    default, preventing the ``or`` fallback to ``tool_call.get("input")``.
+    """
+
+    def test_openai_dict_format(self, executor: CrewAgentExecutor) -> None:
+        """Test OpenAI dict format with function.arguments."""
+        tool_call = {
+            "id": "call_abc123",
+            "function": {
+                "name": "search_tool",
+                "arguments": '{"query": "test"}',
+            },
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_abc123"
+        assert func_name == "search_tool"
+        assert func_args == '{"query": "test"}'
+
+    def test_bedrock_dict_format_extracts_input(self, executor: CrewAgentExecutor) -> None:
+        """Test AWS Bedrock dict format extracts 'input' field for arguments."""
+        tool_call = {
+            "toolUseId": "tooluse_xyz789",
+            "name": "search_tool",
+            "input": {"query": "AWS Bedrock features"},
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "tooluse_xyz789"
+        assert func_name == "search_tool"
+        assert func_args == {"query": "AWS Bedrock features"}
+
+    def test_bedrock_dict_format_not_empty_regression(self, executor: CrewAgentExecutor) -> None:
+        """Regression test for #4748: Bedrock args must NOT be empty.
+
+        Before the fix, ``func_info.get("arguments", "{}")`` returned the
+        truthy string ``"{}"`` which short-circuited the ``or`` operator,
+        so ``tool_call.get("input", {})`` was never evaluated.
+        """
+        tool_call = {
+            "toolUseId": "tooluse_regression",
+            "name": "search_tool",
+            "input": {"query": "important query", "limit": 5},
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        _, _, func_args = result
+        assert func_args == {"query": "important query", "limit": 5}
+        assert func_args != {}
+        assert func_args != "{}"
+
+    def test_dict_without_function_or_input_returns_empty(self, executor: CrewAgentExecutor) -> None:
+        """Test dict format with neither function.arguments nor input."""
+        tool_call = {
+            "id": "call_noop",
+            "name": "no_args_tool",
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        _, func_name, func_args = result
+        assert func_name == "no_args_tool"
+        assert func_args == {}
+
+    def test_openai_arguments_preferred_over_input(self, executor: CrewAgentExecutor) -> None:
+        """Test that function.arguments takes precedence over input."""
+        tool_call = {
+            "id": "call_both",
+            "function": {
+                "name": "dual_tool",
+                "arguments": '{"from": "openai"}',
+            },
+            "input": {"from": "bedrock"},
+        }
+        result = executor._parse_native_tool_call(tool_call)
+        assert result is not None
+        _, _, func_args = result
+        assert func_args == '{"from": "openai"}'
+
+    def test_returns_none_for_unrecognized(self, executor: CrewAgentExecutor) -> None:
+        """Test that None is returned for unrecognized tool call formats."""
+        result = executor._parse_native_tool_call(12345)
+        assert result is None
+
+
 class TestAsyncLLMResponseHelper:
     """Tests for aget_llm_response helper function."""
 

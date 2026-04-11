@@ -17,6 +17,7 @@ from crewai.utilities.agent_utils import (
     _format_messages_for_summary,
     _split_messages_into_chunks,
     convert_tools_to_openai_schema,
+    extract_tool_call_info,
     parse_tool_call_args,
     summarize_messages,
 )
@@ -1033,3 +1034,132 @@ class TestParseToolCallArgs:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
         assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+
+
+class TestExtractToolCallInfo:
+    """Tests for extract_tool_call_info covering multiple provider formats."""
+
+    def test_openai_dict_format(self) -> None:
+        """Test OpenAI dict format with function.arguments."""
+        tool_call = {
+            "id": "call_abc123",
+            "function": {
+                "name": "search_tool",
+                "arguments": '{"query": "test"}',
+            },
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_abc123"
+        assert func_name == "search_tool"
+        assert func_args == '{"query": "test"}'
+
+    def test_bedrock_dict_format_with_input(self) -> None:
+        """Test AWS Bedrock dict format uses 'input' field for arguments."""
+        tool_call = {
+            "toolUseId": "tooluse_xyz789",
+            "name": "search_tool",
+            "input": {"query": "AWS Bedrock features"},
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "tooluse_xyz789"
+        assert func_name == "search_tool"
+        assert func_args == {"query": "AWS Bedrock features"}
+
+    def test_bedrock_dict_format_does_not_return_empty_args(self) -> None:
+        """Test that Bedrock format does not silently return empty args.
+
+        This is the core regression test for issue #4748: when the dict has no
+        'function' key but does have 'input', the arguments must come from
+        'input' rather than defaulting to an empty dict/string.
+        """
+        tool_call = {
+            "toolUseId": "tooluse_abc",
+            "name": "search_tool",
+            "input": {"query": "important query", "limit": 5},
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        _, _, func_args = result
+        # Must NOT be empty — the bug was that func_args came back as "{}"
+        assert func_args == {"query": "important query", "limit": 5}
+
+    def test_dict_format_without_function_or_input_returns_empty(self) -> None:
+        """Test dict format with neither function.arguments nor input."""
+        tool_call = {
+            "id": "call_noop",
+            "name": "no_args_tool",
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_noop"
+        assert func_name == "no_args_tool"
+        assert func_args == {}
+
+    def test_openai_dict_arguments_preferred_over_input(self) -> None:
+        """Test that function.arguments takes precedence over input when both exist."""
+        tool_call = {
+            "id": "call_both",
+            "function": {
+                "name": "dual_tool",
+                "arguments": '{"from": "openai"}',
+            },
+            "input": {"from": "bedrock"},
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        _, _, func_args = result
+        assert func_args == '{"from": "openai"}'
+
+    def test_dict_format_generates_id_when_missing(self) -> None:
+        """Test that a call ID is generated when neither id nor toolUseId exist."""
+        tool_call = {
+            "name": "some_tool",
+            "input": {"key": "value"},
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, _, _ = result
+        assert call_id.startswith("call_")
+
+    def test_returns_none_for_unrecognized_format(self) -> None:
+        """Test that None is returned for unrecognized tool call formats."""
+        result = extract_tool_call_info(12345)
+        assert result is None
+
+    def test_openai_object_format(self) -> None:
+        """Test OpenAI object format with .function attribute."""
+        mock_function = MagicMock()
+        mock_function.name = "calculator"
+        mock_function.arguments = '{"expression": "2+2"}'
+
+        mock_tool_call = MagicMock()
+        mock_tool_call.function = mock_function
+        mock_tool_call.id = "call_obj_123"
+        # Ensure it doesn't have function_call attribute
+        del mock_tool_call.function_call
+
+        result = extract_tool_call_info(mock_tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_obj_123"
+        assert func_name == "calculator"
+        assert func_args == '{"expression": "2+2"}'
+
+    def test_anthropic_object_format(self) -> None:
+        """Test Anthropic ToolUseBlock format with .name and .input attributes."""
+        mock_tool_call = MagicMock(spec=["name", "input", "id"])
+        mock_tool_call.name = "search"
+        mock_tool_call.input = {"query": "hello"}
+        mock_tool_call.id = "toolu_abc"
+
+        result = extract_tool_call_info(mock_tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "toolu_abc"
+        assert func_name == "search"
+        assert func_args == {"query": "hello"}
