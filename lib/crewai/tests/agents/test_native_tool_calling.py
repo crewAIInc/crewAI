@@ -909,6 +909,102 @@ class TestBedrockNativeToolCalling:
 class TestNativeToolCallingBehavior:
     """Tests for native tool calling behavior across providers."""
 
+    def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
+        """Create a minimal CrewAgentExecutor with mocked dependencies."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.tools.base_tool import to_langchain
+
+        structured_tools = to_langchain(tools)
+        mock_agent = Mock()
+        mock_agent.key = "test_agent"
+        mock_agent.role = "tester"
+        mock_agent.verbose = False
+        mock_agent.fingerprint = None
+        mock_agent.tools_results = []
+
+        mock_task = Mock()
+        mock_task.name = "test"
+        mock_task.description = "test"
+        mock_task.id = "test-id"
+
+        executor = object.__new__(CrewAgentExecutor)
+        executor.agent = mock_agent
+        executor.task = mock_task
+        executor.crew = Mock()
+        executor.tools = structured_tools
+        executor.original_tools = tools
+        executor.tools_handler = None
+        executor._printer = Mock()
+        executor.messages = []
+
+        return executor
+
+    def test_parse_native_tool_call_bedrock_format(self) -> None:
+        """Test that _parse_native_tool_call correctly handles Bedrock Converse API format.
+
+        Bedrock returns tool calls in the format:
+        {"name": "...", "input": {...}, "toolUseId": "..."}
+
+        This is different from OpenAI's format:
+        {"function": {"name": "...", "arguments": "..."}, "id": "..."}
+
+        See: https://github.com/crewAIInc/crewAI/issues/4972
+        """
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        class DummyTool(BaseTool):
+            name: str = "dummy_tool"
+            description: str = "A dummy tool"
+
+            def _run(self) -> str:
+                return "done"
+
+        executor = self._make_executor([DummyTool()])
+
+        # Test Bedrock format (input dict, no function key)
+        bedrock_tool_call = {
+            "name": "my_tool",
+            "input": {"search_query": "test query", "limit": 10},
+            "toolUseId": "abc123"
+        }
+
+        result = executor._parse_native_tool_call(bedrock_tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "abc123"
+        assert func_name == "my_tool"
+        # Should return the input dict, not empty string "{}"
+        assert func_args == {"search_query": "test query", "limit": 10}
+
+    def test_parse_native_tool_call_openai_format(self) -> None:
+        """Test that _parse_native_tool_call still works with OpenAI format."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        class DummyTool(BaseTool):
+            name: str = "dummy_tool"
+            description: str = "A dummy tool"
+
+            def _run(self) -> str:
+                return "done"
+
+        executor = self._make_executor([DummyTool()])
+
+        # Test OpenAI format (function.arguments string)
+        openai_tool_call = {
+            "id": "call_123",
+            "function": {
+                "name": "my_tool",
+                "arguments": '{"search_query": "test query"}'
+            }
+        }
+
+        result = executor._parse_native_tool_call(openai_tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_123"
+        assert func_name == "my_tool"
+        assert func_args == '{"search_query": "test query"}'
+
     def test_supports_function_calling_check(self) -> None:
         """Test that supports_function_calling() is properly checked."""
         # OpenAI should support function calling
