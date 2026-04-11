@@ -923,6 +923,44 @@ class TestNativeToolExecution:
         assert len(tool_messages) == 1
         assert tool_messages[0]["tool_call_id"] == "call_1"
 
+    def test_parse_native_tool_call_bedrock_format(self, mock_dependencies):
+        """Bedrock Converse API returns {name, input, toolUseId} without 'function' key.
+
+        Regression test: func_info.get("arguments", "{}") returned a truthy
+        default string, short-circuiting the 'or' and silently dropping input.
+        Fix: func_info.get("arguments") or tool_call.get("input") or "{}"
+        """
+        executor = AgentExecutor(**mock_dependencies)
+
+        # Bedrock-style tool call (no "function" key, has "name" + "input")
+        bedrock_call = {
+            "name": "search_tool",
+            "input": {"search_query": "hello world"},
+            "toolUseId": "call_bedrock_123",
+        }
+        result = executor._parse_native_tool_call(bedrock_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert func_name == "search_tool"
+        assert call_id == "call_bedrock_123"
+        # The critical assertion: input dict must NOT be dropped
+        assert func_args == {"search_query": "hello world"}
+
+    def test_parse_native_tool_call_openai_dict_format(self, mock_dependencies):
+        """OpenAI-style {function: {name, arguments}} dict still works."""
+        executor = AgentExecutor(**mock_dependencies)
+
+        openai_call = {
+            "id": "call_abc",
+            "function": {"name": "my_tool", "arguments": '{"x": 1}'},
+        }
+        result = executor._parse_native_tool_call(openai_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert func_name == "my_tool"
+        assert call_id == "call_abc"
+        assert func_args == '{"x": 1}'
+
     def test_check_native_todo_completion_requires_current_todo(
         self, mock_dependencies
     ):
