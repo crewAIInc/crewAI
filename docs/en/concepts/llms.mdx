@@ -1189,6 +1189,57 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Avian">
+    CrewAI provides native integration with [Avian](https://avian.io) through the OpenAI-compatible API.
+    Avian offers access to high-performance language models with competitive pricing.
+
+    ```toml Code
+    # Required
+    AVIAN_API_KEY=<your-api-key>
+    ```
+
+    **Basic Usage:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="avian/deepseek/deepseek-v3.2",
+        temperature=0.7,
+    )
+    ```
+
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="avian/deepseek/deepseek-v3.2",
+        api_key="your-api-key",  # Or set AVIAN_API_KEY
+        temperature=0.7,
+        max_tokens=4000,
+        stream=True,
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `AVIAN_API_KEY`: Your Avian API key (required)
+    - `AVIAN_API_BASE`: Custom base URL (optional, defaults to `https://api.avian.io/v1`)
+
+    **Features:**
+    - OpenAI-compatible API (chat completions, streaming, function calling)
+    - Native SDK integration (no LiteLLM dependency required)
+    - Competitive pricing
+
+    **Supported Models:**
+
+    | Model                      | Context Window    | Max Output     | Input / Output (per 1M tokens) |
+    |----------------------------|-------------------|----------------|-------------------------------|
+    | deepseek/deepseek-v3.2     | 164K tokens       | 65K tokens     | $0.26 / $0.38                |
+    | moonshotai/kimi-k2.5       | 131K tokens       | 8K tokens      | $0.45 / $2.20                |
+    | z-ai/glm-5                 | 131K tokens       | 16K tokens     | $0.30 / $2.55                |
+    | minimax/minimax-m2.5       | 1M tokens         | 1M tokens      | $0.30 / $1.10                |
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
