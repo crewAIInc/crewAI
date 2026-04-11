@@ -419,13 +419,16 @@ async def test_azure_aclose_is_noop_when_uninitialized():
 def test_azure_lazy_build_reads_env_vars_set_after_construction():
     """When `LLM(model="azure/...")` is constructed before env vars are set,
     the lazy client builder must re-read `AZURE_API_KEY` / `AZURE_ENDPOINT`
-    so the LLM actually works once credentials become available."""
+    so the LLM actually works once credentials become available, and the
+    `is_azure_openai_endpoint` routing flag must be recomputed off the
+    newly-resolved endpoint."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {}, clear=True):
         llm = AzureCompletion(model="gpt-4")
         assert llm.api_key is None
         assert llm.endpoint is None
+        assert llm.is_azure_openai_endpoint is False
 
     with patch.dict(
         os.environ,
@@ -440,6 +443,7 @@ def test_azure_lazy_build_reads_env_vars_set_after_construction():
         assert llm.api_key == "late-key"
         assert llm.endpoint is not None
         assert "test.openai.azure.com" in llm.endpoint
+        assert llm.is_azure_openai_endpoint is True
 
 
 def test_azure_endpoint_configuration():

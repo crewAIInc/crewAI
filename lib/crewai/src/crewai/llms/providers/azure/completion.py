@@ -123,17 +123,22 @@ class AzureCompletion(BaseLLM):
             data["endpoint"] = AzureCompletion._validate_and_fix_endpoint(
                 data["endpoint"], model
             )
-            parsed = urlparse(data["endpoint"])
-            hostname = parsed.hostname or ""
-            data["is_azure_openai_endpoint"] = (
-                hostname == "openai.azure.com" or hostname.endswith(".openai.azure.com")
-            ) and "/openai/deployments/" in data["endpoint"]
-        else:
-            data["is_azure_openai_endpoint"] = False
+        data["is_azure_openai_endpoint"] = AzureCompletion._is_azure_openai_endpoint(
+            data["endpoint"]
+        )
         data["is_openai_model"] = any(
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
         )
         return data
+
+    @staticmethod
+    def _is_azure_openai_endpoint(endpoint: str | None) -> bool:
+        if not endpoint:
+            return False
+        hostname = urlparse(endpoint).hostname or ""
+        return (
+            hostname == "openai.azure.com" or hostname.endswith(".openai.azure.com")
+        ) and "/openai/deployments/" in endpoint
 
     @model_validator(mode="after")
     def _init_clients(self) -> AzureCompletion:
@@ -169,6 +174,13 @@ class AzureCompletion(BaseLLM):
             if endpoint:
                 self.endpoint = AzureCompletion._validate_and_fix_endpoint(
                     endpoint, self.model
+                )
+                # Recompute the routing flag now that the endpoint is known —
+                # _prepare_completion_params uses it to decide whether to
+                # include `model` in the request body (Azure OpenAI endpoints
+                # embed the deployment name in the URL and reject it).
+                self.is_azure_openai_endpoint = (
+                    AzureCompletion._is_azure_openai_endpoint(self.endpoint)
                 )
 
         if not self.api_key:
