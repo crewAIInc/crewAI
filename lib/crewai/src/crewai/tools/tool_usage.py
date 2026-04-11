@@ -106,6 +106,7 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
+        self._last_execution_errored: bool = False
 
         # Set the maximum parsing attempts for bigger models
         if (
@@ -124,8 +125,10 @@ class ToolUsage:
     def use(
         self, calling: ToolCalling | InstructorToolCalling, tool_string: str
     ) -> str:
+        self._last_execution_errored = False
         if isinstance(calling, ToolUsageError):
             error = calling.message
+            self._last_execution_errored = True
             if self.agent and self.agent.verbose:
                 PRINTER.print(content=f"\n\n{error}\n", color="red")
             if self.task:
@@ -136,6 +139,7 @@ class ToolUsage:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
             error = getattr(e, "message", str(e))
+            self._last_execution_errored = True
             if self.task:
                 self.task.increment_tools_errors()
             if self.agent and self.agent.verbose:
@@ -152,6 +156,7 @@ class ToolUsage:
 
             except Exception as e:
                 error = getattr(e, "message", str(e))
+                self._last_execution_errored = True
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
@@ -172,8 +177,10 @@ class ToolUsage:
         Returns:
             The result of the tool execution as a string.
         """
+        self._last_execution_errored = False
         if isinstance(calling, ToolUsageError):
             error = calling.message
+            self._last_execution_errored = True
             if self.agent and self.agent.verbose:
                 PRINTER.print(content=f"\n\n{error}\n", color="red")
             if self.task:
@@ -184,6 +191,7 @@ class ToolUsage:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
             error = getattr(e, "message", str(e))
+            self._last_execution_errored = True
             if self.task:
                 self.task.increment_tools_errors()
             if self.agent and self.agent.verbose:
@@ -201,6 +209,7 @@ class ToolUsage:
                 )
             except Exception as e:
                 error = getattr(e, "message", str(e))
+                self._last_execution_errored = True
                 if self.task:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
@@ -411,6 +420,7 @@ class ToolUsage:
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                     error_event_emitted = True
+                    self._last_execution_errored = True
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
@@ -644,6 +654,7 @@ class ToolUsage:
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                     error_event_emitted = True
+                    self._last_execution_errored = True
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)

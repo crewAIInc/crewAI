@@ -732,6 +732,246 @@ def test_tool_usage_finished_event_with_cached_result():
     assert event.type == "tool_usage_finished"
 
 
+def test_result_as_answer_not_honored_on_tool_error():
+    """Test that result_as_answer is NOT honored when a tool execution errors.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5156
+    When a tool with result_as_answer=True raises an exception, the agent
+    should be able to reflect on the error instead of treating it as the
+    final answer.
+    """
+    from crewai.tools.tool_calling import ToolCalling
+
+    class FailingResultTool(BaseTool):
+        name: str = "Failing Result Tool"
+        description: str = "A tool that always fails but has result_as_answer=True"
+        result_as_answer: bool = True
+
+        def _run(self, **kwargs) -> str:
+            raise ValueError("Something went wrong")
+
+    failing_tool = FailingResultTool().to_structured_tool()
+    assert failing_tool.result_as_answer is True
+
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+    mock_agent.i18n.tools.return_value = {"name": "Failing Result Tool"}
+    mock_agent.i18n.errors.return_value = "Error: {error}"
+    mock_agent.i18n.slice.return_value = "Available tools: {tool_names}"
+
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task"
+    mock_task.id = "test-task-id"
+
+    mock_action = MagicMock()
+    mock_action.tool = "failing_result_tool"
+    mock_action.tool_input = "{}"
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        tools=[failing_tool],
+        task=mock_task,
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=mock_action,
+    )
+
+    tool_calling = ToolCalling(tool_name="failing_result_tool", arguments={})
+    tool_usage.use(calling=tool_calling, tool_string="Action: failing_result_tool")
+
+    # After a failed execution, the error flag should be set
+    assert tool_usage._last_execution_errored is True, (
+        "Expected _last_execution_errored to be True after tool failure"
+    )
+
+
+def test_result_as_answer_honored_on_tool_success():
+    """Test that result_as_answer IS honored when a tool executes successfully."""
+    from crewai.tools.tool_calling import ToolCalling
+
+    class SuccessfulResultTool(BaseTool):
+        name: str = "Successful Result Tool"
+        description: str = "A tool that succeeds and has result_as_answer=True"
+        result_as_answer: bool = True
+
+        def _run(self, **kwargs) -> str:
+            return "This is the final answer"
+
+    successful_tool = SuccessfulResultTool().to_structured_tool()
+    assert successful_tool.result_as_answer is True
+
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+    mock_agent.i18n.tools.return_value = {"name": "Successful Result Tool"}
+    mock_agent.i18n.errors.return_value = "Error: {error}"
+    mock_agent.i18n.slice.return_value = "Available tools: {tool_names}"
+
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task"
+    mock_task.id = "test-task-id"
+
+    mock_action = MagicMock()
+    mock_action.tool = "successful_result_tool"
+    mock_action.tool_input = "{}"
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        tools=[successful_tool],
+        task=mock_task,
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=mock_action,
+    )
+
+    tool_calling = ToolCalling(tool_name="successful_result_tool", arguments={})
+    tool_usage.use(calling=tool_calling, tool_string="Action: successful_result_tool")
+
+    # After a successful execution, the error flag should NOT be set
+    assert tool_usage._last_execution_errored is False, (
+        "Expected _last_execution_errored to be False after tool success"
+    )
+
+
+def test_execute_tool_and_check_finality_not_final_on_error():
+    """Test that execute_tool_and_check_finality does NOT set result_as_answer
+    when the tool with result_as_answer=True raises an error.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5156
+    """
+    from crewai.agents.parser import AgentAction
+    from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+    class FailingFinalTool(BaseTool):
+        name: str = "Failing Final Tool"
+        description: str = "A tool that fails but has result_as_answer=True"
+        result_as_answer: bool = True
+
+        def _run(self, **kwargs) -> str:
+            raise RuntimeError("Tool execution failed")
+
+    failing_tool = FailingFinalTool().to_structured_tool()
+
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+    mock_agent.i18n.tools.return_value = {"name": "Failing Final Tool"}
+    mock_agent.i18n.errors.return_value = "Error: {error}"
+    mock_agent.i18n.slice.return_value = "Available tools: {tool_names}"
+
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task"
+    mock_task.id = "test-task-id"
+
+    from crewai.utilities.i18n import I18N
+
+    i18n = I18N()
+
+    action = AgentAction(
+        thought="I need to use this tool",
+        tool="failing_final_tool",
+        tool_input="{}",
+        text="Action: failing_final_tool\nAction Input: {}",
+    )
+
+    result = execute_tool_and_check_finality(
+        agent_action=action,
+        tools=[failing_tool],
+        i18n=i18n,
+        agent_key="test_agent_key",
+        agent_role="test_agent_role",
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        task=mock_task,
+        agent=mock_agent,
+        function_calling_llm=None,
+    )
+
+    # The result should NOT be treated as the final answer when the tool errored
+    assert result.result_as_answer is False, (
+        "result_as_answer should be False when tool execution fails, "
+        "even if the tool has result_as_answer=True"
+    )
+
+
+def test_execute_tool_and_check_finality_is_final_on_success():
+    """Test that execute_tool_and_check_finality DOES set result_as_answer
+    when the tool with result_as_answer=True succeeds.
+    """
+    from crewai.agents.parser import AgentAction
+    from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+    class SuccessfulFinalTool(BaseTool):
+        name: str = "Successful Final Tool"
+        description: str = "A tool that succeeds and has result_as_answer=True"
+        result_as_answer: bool = True
+
+        def _run(self, **kwargs) -> str:
+            return "This is the correct final answer"
+
+    success_tool = SuccessfulFinalTool().to_structured_tool()
+
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+    mock_agent.i18n.tools.return_value = {"name": "Successful Final Tool"}
+    mock_agent.i18n.errors.return_value = "Error: {error}"
+    mock_agent.i18n.slice.return_value = "Available tools: {tool_names}"
+
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task"
+    mock_task.id = "test-task-id"
+
+    from crewai.utilities.i18n import I18N
+
+    i18n = I18N()
+
+    action = AgentAction(
+        thought="I need to use this tool",
+        tool="successful_final_tool",
+        tool_input="{}",
+        text="Action: successful_final_tool\nAction Input: {}",
+    )
+
+    result = execute_tool_and_check_finality(
+        agent_action=action,
+        tools=[success_tool],
+        i18n=i18n,
+        agent_key="test_agent_key",
+        agent_role="test_agent_role",
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        task=mock_task,
+        agent=mock_agent,
+        function_calling_llm=None,
+    )
+
+    # The result SHOULD be treated as the final answer when the tool succeeds
+    assert result.result_as_answer is True, (
+        "result_as_answer should be True when tool execution succeeds "
+        "and the tool has result_as_answer=True"
+    )
+
+
 def test_tool_error_does_not_emit_finished_event():
     from crewai.tools.tool_calling import ToolCalling
 

@@ -1563,6 +1563,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                             "result": f"Error executing tool: {e}",
                             "from_cache": False,
                             "original_tool": None,
+                            "error_occurred": True,
                         }
                 execution_results = [
                     result for result in ordered_results if result is not None
@@ -1594,10 +1595,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                         color="green",
                     )
 
+                # Don't honor result_as_answer when the tool execution errored;
+                # let the agent reflect on the error instead.
+                error_occurred = execution_result.get("error_occurred", False)
                 if (
                     original_tool
                     and hasattr(original_tool, "result_as_answer")
                     and original_tool.result_as_answer
+                    and not error_occurred
                 ):
                     self.state.current_answer = AgentFinish(
                         thought="Tool result is the final answer",
@@ -1632,10 +1637,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
                     color="green",
                 )
 
+            # Don't honor result_as_answer when the tool execution errored;
+            # let the agent reflect on the error instead.
+            error_occurred = execution_result.get("error_occurred", False)
             if (
                 original_tool
                 and hasattr(original_tool, "result_as_answer")
                 and original_tool.result_as_answer
+                and not error_occurred
             ):
                 # Set the result as the final answer
                 self.state.current_answer = AgentFinish(
@@ -1892,6 +1901,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "error_occurred": error_event_emitted,
         }
 
     def _extract_tool_name(self, tool_call: Any) -> str:

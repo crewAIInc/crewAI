@@ -1565,11 +1565,13 @@ def execute_single_native_tool_call(
             color="green",
         )
 
-    # Check result_as_answer
+    # Check result_as_answer — but don't honor it when the tool errored;
+    # let the agent reflect on the error instead.
     is_result_as_answer = bool(
         original_tool
         and hasattr(original_tool, "result_as_answer")
         and original_tool.result_as_answer
+        and not error_event_emitted
     )
 
     return NativeToolCallResult(
