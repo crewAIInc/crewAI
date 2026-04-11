@@ -1028,7 +1028,7 @@ def _create_tag_and_release(
         try:
             run_command(["git", "tag", "-a", tag_name, "-m", release_notes])
         except subprocess.CalledProcessError as e:
-            console.print(f"[red]✗[/red] Created tag {tag_name}: {e}")
+            console.print(f"[red]✗[/red] Failed to create tag {tag_name}: {e}")
             sys.exit(1)
     console.print(f"[green]✓[/green] Created tag {tag_name}")
 
@@ -1036,7 +1036,7 @@ def _create_tag_and_release(
         try:
             run_command(["git", "push", "origin", tag_name])
         except subprocess.CalledProcessError as e:
-            console.print(f"[red]✗[/red] Pushed tag {tag_name}: {e}")
+            console.print(f"[red]✗[/red] Failed to push tag {tag_name}: {e}")
             sys.exit(1)
     console.print(f"[green]✓[/green] Pushed tag {tag_name}")
 
@@ -1057,7 +1057,7 @@ def _create_tag_and_release(
 
             run_command(gh_cmd)
         except subprocess.CalledProcessError as e:
-            console.print(f"[red]✗[/red] Created GitHub Release: {e}")
+            console.print(f"[red]✗[/red] Failed to create GitHub Release: {e}")
             sys.exit(1)
 
     release_type = "prerelease" if is_prerelease else "release"
@@ -1518,7 +1518,7 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
                 ]
             )
         except subprocess.CalledProcessError as e:
-            console.print(f"[red]✗[/red] Triggered PyPI publish workflow: {e}")
+            console.print(f"[red]✗[/red] Failed to trigger PyPI publish workflow: {e}")
             sys.exit(1)
     console.print("[green]✓[/green] Triggered PyPI publish workflow")
 
@@ -1752,7 +1752,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                 try:
                     run_command(["git", "checkout", "main"])
                 except subprocess.CalledProcessError as e:
-                    console.print(f"[red]✗[/red] Checked out main branch: {e}")
+                    console.print(f"[red]✗[/red] Failed to check out main branch: {e}")
                     sys.exit(1)
             console.print("[green]✓[/green] On main branch")
 
@@ -1760,7 +1760,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                 try:
                     run_command(["git", "pull"])
                 except subprocess.CalledProcessError as e:
-                    console.print(f"[red]✗[/red] Pulled latest changes: {e}")
+                    console.print(f"[red]✗[/red] Failed to pull latest changes: {e}")
                     sys.exit(1)
             console.print("[green]✓[/green] main branch up to date")
 
