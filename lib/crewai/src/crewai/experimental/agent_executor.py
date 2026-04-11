@@ -1648,28 +1648,39 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
         return "native_tool_completed"
 
+    def _resolve_original_tool(self, func_name: str) -> BaseTool | None:
+        """Resolve the original BaseTool from a sanitized function name.
+
+        Uses ``_tool_name_mapping`` (populated during native-tool setup) first,
+        then falls back to scanning ``original_tools`` by sanitized name.
+
+        Args:
+            func_name: The sanitized tool name to look up.
+
+        Returns:
+            The matching BaseTool, or None if not found.
+        """
+        mapping = getattr(self, "_tool_name_mapping", None)
+        if mapping and func_name in mapping:
+            mapped = mapping[func_name]
+            if isinstance(mapped, BaseTool):
+                return mapped
+        for tool in self.original_tools or []:
+            if sanitize_tool_name(tool.name) == func_name:
+                return tool
+        return None
+
     def _should_parallelize_native_tool_calls(self, tool_calls: list[Any]) -> bool:
         """Determine if native tool calls are safe to run in parallel."""
         if len(tool_calls) <= 1:
             return False
 
         for tool_call in tool_calls:
-            info = extract_tool_call_info(tool_call)
-            if not info:
+            func_name = self._extract_tool_name(tool_call)
+            if func_name is None:
                 continue
-            _, func_name, _ = info
 
-            mapping = getattr(self, "_tool_name_mapping", None)
-            original_tool: BaseTool | None = None
-            if mapping and func_name in mapping:
-                mapped = mapping[func_name]
-                if isinstance(mapped, BaseTool):
-                    original_tool = mapped
-            if original_tool is None:
-                for tool in self.original_tools or []:
-                    if sanitize_tool_name(tool.name) == func_name:
-                        original_tool = tool
-                        break
+            original_tool = self._resolve_original_tool(func_name)
 
             if not original_tool:
                 continue
@@ -1709,17 +1720,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         # Get agent_key for event tracking
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
 
-        original_tool: BaseTool | None = None
-        mapping = getattr(self, "_tool_name_mapping", None)
-        if mapping and func_name in mapping:
-            mapped = mapping[func_name]
-            if isinstance(mapped, BaseTool):
-                original_tool = mapped
-        if original_tool is None:
-            for tool in self.original_tools or []:
-                if sanitize_tool_name(tool.name) == func_name:
-                    original_tool = tool
-                    break
+        original_tool = self._resolve_original_tool(func_name)
 
         # Check if tool has reached max usage count
         max_usage_reached = False
@@ -1894,8 +1895,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             "original_tool": original_tool,
         }
 
-    def _extract_tool_name(self, tool_call: Any) -> str:
-        """Extract tool name from various tool call formats."""
+    def _extract_tool_name(self, tool_call: Any) -> str | None:
+        """Extract tool name from various tool call formats.
+
+        Returns:
+            The sanitized tool name, or ``None`` when the format is
+            unrecognised (avoids collisions with a tool legitimately
+            named "unknown").
+        """
         if hasattr(tool_call, "function"):
             return sanitize_tool_name(tool_call.function.name)
         if hasattr(tool_call, "function_call") and tool_call.function_call:
@@ -1904,10 +1911,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
             return sanitize_tool_name(tool_call.name)
         if isinstance(tool_call, dict):
             func_info = tool_call.get("function", {})
-            return sanitize_tool_name(
-                func_info.get("name", "") or tool_call.get("name", "unknown")
-            )
-        return "unknown"
+            name = func_info.get("name", "") or tool_call.get("name", "")
+            return sanitize_tool_name(name) if name else None
+        return None
 
     @router(execute_native_tool)
     def check_native_todo_completion(
