@@ -208,11 +208,15 @@ class AnthropicCompletion(BaseLLM):
         return Anthropic(**self._get_client_params())
 
     def _build_async_client(self) -> Any:
-        async_client_params = self._get_client_params()
+        # Skip the sync httpx.Client that `_get_client_params` would
+        # otherwise construct under `interceptor`; we attach an async one
+        # below and would leak the sync one if both were built.
+        async_client_params = self._get_client_params(include_http_client=False)
         if self.interceptor:
             async_transport = AsyncHTTPTransport(interceptor=self.interceptor)
-            async_http_client = httpx.AsyncClient(transport=async_transport)
-            async_client_params["http_client"] = async_http_client
+            async_client_params["http_client"] = httpx.AsyncClient(
+                transport=async_transport
+            )
         return AsyncAnthropic(**async_client_params)
 
     def _get_sync_client(self) -> Any:
@@ -238,8 +242,15 @@ class AnthropicCompletion(BaseLLM):
             config["timeout"] = self.timeout
         return config
 
-    def _get_client_params(self) -> dict[str, Any]:
-        """Get client parameters."""
+    def _get_client_params(self, include_http_client: bool = True) -> dict[str, Any]:
+        """Get client parameters.
+
+        Args:
+            include_http_client: When True (default) and an interceptor is
+                set, attach a sync ``httpx.Client``. The async builder
+                passes ``False`` so it can attach its own async client
+                without leaking a sync one.
+        """
 
         if self.api_key is None:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -253,7 +264,7 @@ class AnthropicCompletion(BaseLLM):
             "max_retries": self.max_retries,
         }
 
-        if self.interceptor:
+        if include_http_client and self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
             http_client = httpx.Client(transport=transport)
             client_params["http_client"] = http_client  # type: ignore[assignment]
