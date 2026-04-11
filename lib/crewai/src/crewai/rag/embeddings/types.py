@@ -17,6 +17,7 @@ from crewai.rag.embeddings.providers.ibm.types import (
 from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
 from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
 from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+from crewai.rag.embeddings.providers.oci.types import OCIProviderSpec
 from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
 from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
@@ -39,6 +40,7 @@ ProviderSpec: TypeAlias = (
     | InstructorProviderSpec
     | JinaProviderSpec
     | OllamaProviderSpec
+    | OCIProviderSpec
     | ONNXProviderSpec
     | OpenAIProviderSpec
     | OpenCLIPProviderSpec
@@ -61,6 +63,7 @@ AllowedEmbeddingProviders = Literal[
     "instructor",
     "jina",
     "ollama",
+    "oci",
     "onnx",
     "openai",
     "openclip",
