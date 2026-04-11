@@ -227,3 +227,13 @@ Join our rapidly growing community and receive real-time support:
 - [Open an Issue](https://github.com/crewAIInc/crewAI/issues)
 
 Build smarter, faster, and more powerful AI solutions—powered by CrewAI Tools.
+---
+
+## Community Tools
+
+Third-party tools built by the community:
+
+| Tool | PyPI | Description |
+|------|------|-------------|
+| [crewai-tool-agentwallet](https://github.com/agentwallet-sdk/crewai-tool-agentwallet) | [PyPI](https://pypi.org/project/crewai-tool-agentwallet/) | Non-custodial wallet — EVM transfers, x402 payments, 17-chain CCTP bridge, on-chain spend limits |
+
