@@ -2,6 +2,7 @@ import os
 import sys
 import types
 from unittest.mock import patch, MagicMock, Mock
+from urllib.parse import urlparse
 import pytest
 
 from crewai.llm import LLM
@@ -442,7 +443,7 @@ def test_azure_lazy_build_reads_env_vars_set_after_construction():
         assert client is not None
         assert llm.api_key == "late-key"
         assert llm.endpoint is not None
-        assert "test.openai.azure.com" in llm.endpoint
+        assert urlparse(llm.endpoint).hostname == "test.openai.azure.com"
         assert llm.is_azure_openai_endpoint is True
 
 
