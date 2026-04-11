@@ -1,7 +1,7 @@
 from typing import Any
-from xml.etree.ElementTree import ParseError, fromstring, parse
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
+from defusedxml.ElementTree import ParseError, fromstring, parse
 from crewai_tools.rag.loaders.utils import load_from_url
 from crewai_tools.rag.source_content import SourceContent
 
