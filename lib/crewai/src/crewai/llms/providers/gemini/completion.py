@@ -1216,7 +1216,7 @@ class GeminiCompletion(BaseLLM):
         try:
             # The API accepts list[Content] but mypy is overly strict about variance
             contents_for_api: Any = contents
-            response = await self._get_sync_client().aio.models.generate_content(
+            response = await self._get_async_client().aio.models.generate_content(
                 model=self.model,
                 contents=contents_for_api,
                 config=config,
@@ -1257,7 +1257,7 @@ class GeminiCompletion(BaseLLM):
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
-        stream = await self._get_sync_client().aio.models.generate_content_stream(
+        stream = await self._get_async_client().aio.models.generate_content_stream(
             model=self.model,
             contents=contents_for_api,
             config=config,
