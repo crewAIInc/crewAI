@@ -86,6 +86,60 @@ curl -H "Authorization: Bearer YOUR_CREW_TOKEN" https://your-crew-url.crewai.com
 
 رمز الحامل متاح في علامة تبويب Status في صفحة تفاصيل طاقمك.
 
+## رفع الملفات
+
+عندما يتضمن طاقمك أو تدفقك حقول حالة من نوع الملف (باستخدام `ImageFile` أو `PDFFile` أو `File` من `crewai-files`)، تُعرض هذه الحقول تلقائيًا كمناطق سحب وإفلات لرفع الملفات في واجهة علامة تبويب Run. يمكن للمستخدمين سحب وإفلات الملفات مباشرة، وتتولى المنصة التخزين والتسليم إلى وكلائك.
+
+### بدء تشغيل Multipart (موصى به)
+
+أرسل الملفات مباشرة مع طلب بدء التشغيل باستخدام `multipart/form-data`:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"title": "Report"}' \
+  -F 'document=@/path/to/file.pdf'
+```
+
+يتم تخزين الملفات تلقائيًا وتحويلها إلى كائنات ملفات. يتلقى الوكيل الملف مع تحسين خاص بالمزود (base64 مضمّن، أو API لرفع الملفات، أو مرجع URL حسب مزود LLM).
+
+### بدء تشغيل JSON مع عناوين URL للملفات
+
+إذا كانت لديك ملفات مستضافة بالفعل على عناوين URL، مررها عبر `input_files`:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "inputs": {"title": "Report"},
+    "input_files": {"document": "https://example.com/file.pdf"}
+  }'
+```
+
+### رفع منفصل + بدء تشغيل
+
+ارفع الملفات أولاً، ثم أشِر إليها بواسطة URL:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/file.pdf' \
+  -F 'field_name=document'
+# Returns: {"url": "https://...", "field_name": "document"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"title": "Report"}, "input_files": {"document": "https://..."}}'
+```
+
+<Note type="info">
+يعمل رفع الملفات بنفس الطريقة لكل من الطواقم والتدفقات. عرّف حقول من نوع الملف في مخطط حالتك، وستتولى واجهة المنصة وAPI الرفع تلقائيًا.
+</Note>
+
 ### التحقق من صحة الطاقم
 
 قبل تنفيذ العمليات، يمكنك التحقق من أن طاقمك يعمل بشكل صحيح:

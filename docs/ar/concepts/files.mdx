@@ -117,22 +117,34 @@ task = Task(
 
 ### مع التدفقات
 
-مرر الملفات إلى التدفقات، والتي تنتقل تلقائيًا إلى الأطقم:
+تعمل الحقول من نوع الملف (`File`، `ImageFile`، `PDFFile`) في مخطط حالة التدفق كإشارة لواجهة المنصة. عند النشر، تُعرض هذه الحقول كمناطق سحب وإفلات لرفع الملفات. يمكن أيضًا تمرير الملفات عبر `input_files` في API.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile
+from crewai_files import File, ImageFile
+from pydantic import BaseModel
 
-class AnalysisFlow(Flow):
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform UI
+    cover_image: ImageFile   # Image-specific dropzone
+    title: str = ""
+
+class AnalysisFlow(Flow[MyState]):
     @start()
     def analyze(self):
+        # Files are automatically populated in state
+        content = self.state.document.read()
         return self.analysis_crew.kickoff()
 
 flow = AnalysisFlow()
 result = flow.kickoff(
-    input_files={"image": ImageFile(source="data.png")}
+    input_files={"document": File(source="report.pdf")}
 )
 ```
+
+<Note type="info" title="تكامل منصة CrewAI">
+عند النشر على منصة CrewAI، تحصل الحقول من نوع الملف مثل `ImageFile` و `PDFFile` وغيرها في حالة التدفق تلقائيًا على واجهة رفع ملفات. يمكن للمستخدمين سحب وإفلات الملفات مباشرة في واجهة المنصة. يتم تخزين الملفات بشكل آمن وتمريرها إلى الوكلاء باستخدام تحسينات خاصة بالمزود (base64 مضمّن، أو واجهات برمجة لرفع الملفات، أو مراجع URL حسب المزود). للاطلاع على أمثلة استخدام API، راجع [مدخلات الملفات في التدفقات](/ar/concepts/flows#مدخلات-الملفات).
+</Note>
 
 ### مع الوكلاء المستقلين
 

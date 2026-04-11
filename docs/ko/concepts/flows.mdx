@@ -334,6 +334,90 @@ flow.kickoff()
 
 CrewAI Flows는 비구조적 및 구조적 상태 관리 옵션을 모두 제공함으로써, 개발자들이 다양한 애플리케이션 요구 사항에 맞춰 유연하면서도 견고한 AI 워크플로를 구축할 수 있도록 지원합니다.
 
+### 파일 입력
+
+구조화된 상태를 사용할 때, `crewai-files`의 클래스를 사용하여 파일 타입 필드를 포함할 수 있습니다. flow 상태의 파일 타입 필드는 플랫폼에 대한 신호 역할을 합니다 — Run 탭 UI에서 자동으로 파일 업로드 드롭존으로 렌더링되며, 플랫폼을 통해 파일을 업로드하거나 API에서 `input_files`를 통해 전달할 때 자동으로 채워집니다.
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai_files import File, ImageFile, PDFFile
+from pydantic import BaseModel
+
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform
+    title: str = ""
+
+class MyFlow(Flow[MyState]):
+    @start()
+    def process(self):
+        # File object is automatically populated in state
+        # when uploaded via Platform UI or passed via API
+        content = self.state.document.read()
+        print(f"Processing {self.state.title}: {len(content)} bytes")
+        return content
+```
+
+**CrewAI 플랫폼**에 배포하면 파일 타입 필드(`crewai-files`의 `File`, `ImageFile`, `PDFFile`)가 UI에서 자동으로 파일 업로드 드롭존으로 렌더링됩니다. 사용자는 파일을 드래그 앤 드롭할 수 있으며, 해당 파일은 flow의 상태에 자동으로 채워집니다.
+
+**API를 통한 파일 포함 시작:**
+
+`/kickoff` 엔드포인트는 요청 형식을 자동으로 감지합니다:
+- **JSON body** → 일반 kickoff
+- **multipart/form-data** → 파일 업로드 + kickoff
+
+API 사용자는 파일 타입 필드에 URL 문자열을 직접 전달할 수도 있습니다 — Pydantic이 자동으로 변환합니다.
+
+### API 사용법
+
+#### 옵션 1: Multipart kickoff (권장)
+
+kickoff 요청과 함께 파일을 직접 전송합니다:
+
+```bash
+# With files (multipart) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"company_name": "Einstein"}' \
+  -F 'cover_image=@/path/to/photo.jpg'
+```
+
+파일은 자동으로 저장되고 `FileInput` 객체로 변환됩니다. 에이전트는 프로바이더별 최적화(LLM 프로바이더에 따라 인라인 base64, 파일 업로드 API 또는 URL 참조)와 함께 파일을 수신합니다.
+
+#### 옵션 2: JSON kickoff (파일 없음)
+
+```bash
+# Without files (JSON) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}}'
+```
+
+#### 옵션 3: 분리된 업로드 + kickoff
+
+kickoff 요청과 별도로 파일을 업로드해야 할 때 multipart 업로드의 대안입니다. 먼저 파일을 업로드한 다음 URL로 참조합니다:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/photo.jpg' \
+  -F 'field_name=cover_image'
+# Returns: {"url": "https://...", "field_name": "cover_image"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}, "input_files": {"cover_image": "https://..."}}'
+```
+
+`/files` 엔드포인트에 대한 자세한 내용은 플랫폼 API 문서를 참조하세요.
+
+#### CrewAI 플랫폼에서
+
+플랫폼 UI를 사용할 때 파일 타입 필드는 자동으로 드래그 앤 드롭 업로드 영역으로 렌더링됩니다. API 호출이 필요 없습니다 — 파일을 드롭하고 실행을 클릭하면 됩니다.
+
 ## 플로우 지속성
 
 @persist 데코레이터는 CrewAI 플로우에서 자동 상태 지속성을 활성화하여, 플로우 상태를 재시작이나 다른 워크플로우 실행 간에도 유지할 수 있도록 합니다. 이 데코레이터는 클래스 수준이나 메서드 수준 모두에 적용할 수 있어, 상태 지속성을 관리하는 데 유연성을 제공합니다.

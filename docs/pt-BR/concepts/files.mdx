@@ -117,22 +117,34 @@ task = Task(
 
 ### Com Flows
 
-Passe arquivos para flows, que automaticamente herdam para crews:
+Campos tipados como arquivo (`File`, `ImageFile`, `PDFFile`) no esquema de estado do seu flow servem como sinal para a interface da Plataforma. Quando implantado, esses campos são renderizados como zonas de upload de arquivos. Arquivos também podem ser passados via `input_files` na API.
 
 ```python
 from crewai.flow.flow import Flow, start
-from crewai_files import ImageFile
+from crewai_files import File, ImageFile
+from pydantic import BaseModel
 
-class AnalysisFlow(Flow):
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform UI
+    cover_image: ImageFile   # Image-specific dropzone
+    title: str = ""
+
+class AnalysisFlow(Flow[MyState]):
     @start()
     def analyze(self):
+        # Files are automatically populated in state
+        content = self.state.document.read()
         return self.analysis_crew.kickoff()
 
 flow = AnalysisFlow()
 result = flow.kickoff(
-    input_files={"image": ImageFile(source="data.png")}
+    input_files={"document": File(source="report.pdf")}
 )
 ```
+
+<Note type="info" title="Integração com a Plataforma CrewAI">
+Quando implantado na Plataforma CrewAI, campos tipados como arquivo como `ImageFile`, `PDFFile` e outros no estado do seu flow recebem automaticamente uma interface de upload de arquivos. Os usuários podem arrastar e soltar arquivos diretamente na interface da Plataforma. Os arquivos são armazenados de forma segura e passados para os agentes usando otimizações específicas do provedor (base64 inline, APIs de upload de arquivo ou referências por URL dependendo do provedor). Para exemplos de uso da API, consulte [Entradas de Arquivos em Flows](/pt-BR/concepts/flows#entradas-de-arquivos).
+</Note>
 
 ### Com Agentes Standalone
 

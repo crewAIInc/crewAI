@@ -341,6 +341,90 @@ flow.kickoff()
 
 من خلال توفير خيارات إدارة الحالة غير المهيكلة والمهيكلة، تمكّن تدفقات CrewAI المطورين من بناء سير عمل ذكاء اصطناعي مرن ومتين في آن واحد، ملبيةً مجموعة واسعة من متطلبات التطبيقات.
 
+### مدخلات الملفات
+
+عند استخدام الحالة المهيكلة، يمكنك تضمين حقول من نوع الملف باستخدام فئات من `crewai-files`. تعمل الحقول من نوع الملف في حالة التدفق كإشارة للمنصة — فهي تُعرض تلقائيًا كمناطق سحب وإفلات لرفع الملفات في واجهة علامة تبويب Run ويتم تعبئتها عند رفع الملفات عبر المنصة أو تمريرها عبر `input_files` في API.
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai_files import File, ImageFile, PDFFile
+from pydantic import BaseModel
+
+class MyState(BaseModel):
+    document: File           # Renders as file dropzone in Platform
+    title: str = ""
+
+class MyFlow(Flow[MyState]):
+    @start()
+    def process(self):
+        # File object is automatically populated in state
+        # when uploaded via Platform UI or passed via API
+        content = self.state.document.read()
+        print(f"Processing {self.state.title}: {len(content)} bytes")
+        return content
+```
+
+عند النشر على **منصة CrewAI**، تُعرض الحقول من نوع الملف (`File`، `ImageFile`، `PDFFile` من `crewai-files`) تلقائيًا كمناطق سحب وإفلات لرفع الملفات في واجهة المستخدم. يمكن للمستخدمين سحب وإفلات الملفات، والتي تُملأ بعد ذلك في حالة التدفق الخاص بك.
+
+**بدء التشغيل مع الملفات عبر API:**
+
+تكتشف نقطة النهاية `/kickoff` تنسيق الطلب تلقائيًا:
+- **جسم JSON** ← بدء تشغيل عادي
+- **multipart/form-data** ← رفع ملف + بدء تشغيل
+
+يمكن لمستخدمي API أيضًا تمرير سلاسل URL مباشرة إلى الحقول من نوع الملف — يقوم Pydantic بتحويلها تلقائيًا.
+
+### استخدام API
+
+#### الخيار 1: بدء تشغيل multipart (موصى به)
+
+أرسل الملفات مباشرة مع طلب بدء التشغيل:
+
+```bash
+# With files (multipart) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"company_name": "Einstein"}' \
+  -F 'cover_image=@/path/to/photo.jpg'
+```
+
+يتم تخزين الملفات تلقائيًا وتحويلها إلى كائنات `FileInput`. يتلقى الوكيل الملف مع تحسين خاص بالمزود (base64 مضمّن، أو API لرفع الملفات، أو مرجع URL حسب مزود LLM).
+
+#### الخيار 2: بدء تشغيل JSON (بدون ملفات)
+
+```bash
+# Without files (JSON) — same endpoint
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}}'
+```
+
+#### الخيار 3: رفع منفصل + بدء تشغيل
+
+هذا بديل لرفع multipart عندما تحتاج إلى رفع الملفات بشكل منفصل عن طلب بدء التشغيل. ارفع الملفات أولاً، ثم أشِر إليها بواسطة URL:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/photo.jpg' \
+  -F 'field_name=cover_image'
+# Returns: {"url": "https://...", "field_name": "cover_image"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"company_name": "Einstein"}, "input_files": {"cover_image": "https://..."}}'
+```
+
+راجع وثائق Platform API للحصول على تفاصيل كاملة حول نقطة النهاية `/files`.
+
+#### على منصة CrewAI
+
+عند استخدام واجهة المنصة، تُعرض الحقول من نوع الملف تلقائيًا كمناطق سحب وإفلات للرفع. لا حاجة لاستدعاءات API — فقط أفلِت الملف وانقر على تشغيل.
+
 ## استمرارية التدفق
 
 يتيح مزخرف @persist الاستمرارية التلقائية للحالة في تدفقات CrewAI، مما يسمح لك بالحفاظ على حالة التدفق عبر عمليات إعادة التشغيل أو تنفيذات سير العمل المختلفة. يمكن تطبيق هذا المزخرف على مستوى الفئة أو مستوى الدالة، مما يوفر مرونة في كيفية إدارة استمرارية الحالة.
