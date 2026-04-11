@@ -483,6 +483,150 @@ def test_anthropic_message_formatting(anthropic_llm, system_message, user_messag
         anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
+def test_anthropic_merges_consecutive_assistant_messages_litellm():
+    """Test that consecutive assistant messages are merged for Anthropic models via LiteLLM.
+
+    Claude 4.6+ rejects consecutive assistant messages (treated as prefill).
+    This test ensures that _format_messages_for_provider merges them.
+    Reproduces the scenario described in issue #4798.
+    """
+    llm = LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Do something"},
+        {"role": "assistant", "content": "I will use a tool"},
+        {"role": "assistant", "content": "Observation: tool result"},
+        {"role": "assistant", "content": "Now I have the answer"},
+    ]
+
+    formatted = llm._format_messages_for_provider(messages)
+
+    # All three consecutive assistant messages should be merged into one
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "Do something"
+    assert formatted[1]["role"] == "assistant"
+    assert "I will use a tool" in formatted[1]["content"]
+    assert "Observation: tool result" in formatted[1]["content"]
+    assert "Now I have the answer" in formatted[1]["content"]
+
+
+def test_anthropic_merges_consecutive_assistant_messages_native():
+    """Test that consecutive assistant messages are merged for native Anthropic provider.
+
+    Claude 4.6+ rejects consecutive assistant messages (treated as prefill).
+    This test ensures that _format_messages_for_anthropic merges them.
+    Reproduces the scenario described in issue #4798.
+    """
+    llm = AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)
+    messages = [
+        {"role": "user", "content": "Do something"},
+        {"role": "assistant", "content": "I will use a tool"},
+        {"role": "assistant", "content": "Observation: tool result"},
+        {"role": "assistant", "content": "Now I have the answer"},
+    ]
+
+    formatted, system_msg = llm._format_messages_for_anthropic(messages)
+
+    # All three consecutive assistant messages should be merged into one
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "Do something"
+    assert formatted[1]["role"] == "assistant"
+    assert "I will use a tool" in formatted[1]["content"]
+    assert "Observation: tool result" in formatted[1]["content"]
+    assert "Now I have the answer" in formatted[1]["content"]
+    assert system_msg is None
+
+
+def test_merge_consecutive_messages_preserves_alternating():
+    """Test that already-alternating messages are not modified."""
+    llm = LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there"},
+        {"role": "user", "content": "How are you?"},
+        {"role": "assistant", "content": "Great!"},
+    ]
+
+    formatted = llm._format_messages_for_provider(messages)
+
+    assert len(formatted) == 4
+    assert formatted[0]["role"] == "user"
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[2]["role"] == "user"
+    assert formatted[3]["role"] == "assistant"
+
+
+def test_merge_consecutive_messages_skips_list_content():
+    """Test that messages with list content (e.g. tool-use blocks) are not merged."""
+    llm = LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": [{"type": "tool_use", "id": "1", "name": "test", "input": {}}]},
+        {"role": "assistant", "content": "text after tool use"},
+    ]
+
+    formatted = llm._format_messages_for_provider(messages)
+
+    # The list-content assistant message cannot be merged, so we get 3 messages
+    assert len(formatted) == 3
+    assert formatted[1]["role"] == "assistant"
+    assert isinstance(formatted[1]["content"], list)
+    assert formatted[2]["role"] == "assistant"
+    assert formatted[2]["content"] == "text after tool use"
+
+
+def test_merge_consecutive_messages_does_not_mutate_original():
+    """Test that merging does not mutate the original message list."""
+    llm = LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Response 1"},
+        {"role": "assistant", "content": "Response 2"},
+    ]
+    original_len = len(messages)
+    original_content = messages[1]["content"]
+
+    llm._format_messages_for_provider(messages)
+
+    # Original messages should not be modified
+    assert len(messages) == original_len
+    assert messages[1]["content"] == original_content
+
+
+def test_merge_consecutive_messages_non_anthropic_unchanged():
+    """Test that non-Anthropic models do not merge consecutive messages."""
+    llm = LLM(model="gpt-4", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Response 1"},
+        {"role": "assistant", "content": "Response 2"},
+    ]
+
+    formatted = llm._format_messages_for_provider(messages)
+
+    # Non-Anthropic models should not merge
+    assert len(formatted) == 3
+
+
+def test_merge_consecutive_user_messages():
+    """Test that consecutive user messages are also merged for Anthropic."""
+    llm = LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Part 1"},
+        {"role": "user", "content": "Part 2"},
+        {"role": "assistant", "content": "Response"},
+    ]
+
+    formatted = llm._format_messages_for_provider(messages)
+
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "user"
+    assert "Part 1" in formatted[0]["content"]
+    assert "Part 2" in formatted[0]["content"]
+    assert formatted[1]["role"] == "assistant"
+
+
 def test_deepseek_r1_with_open_router():
     if not os.getenv("OPEN_ROUTER_API_KEY"):
         pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")

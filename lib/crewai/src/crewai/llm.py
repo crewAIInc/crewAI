@@ -2119,6 +2119,12 @@ class LLM(BaseLLM):
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]
 
+        # Merge consecutive same-role messages to avoid Anthropic API errors.
+        # Claude 4.6+ rejects consecutive assistant messages (treated as prefill).
+        # This can happen when CrewAgentExecutor appends multiple assistant messages
+        # during tool-use iterations.
+        messages = self._merge_consecutive_messages(messages)
+
         # Anthropic requires messages to start with 'user' role
         if not messages or messages[0]["role"] == "system":
             # If first message is system or empty, add a placeholder user message

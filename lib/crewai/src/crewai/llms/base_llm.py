@@ -656,6 +656,43 @@ class BaseLLM(BaseModel, ABC):
 
             return None
 
+    @staticmethod
+    def _merge_consecutive_messages(
+        messages: list[LLMMessage],
+    ) -> list[LLMMessage]:
+        """Merge consecutive messages that share the same role.
+
+        Anthropic (Claude 4.6+) rejects requests containing consecutive
+        assistant messages, treating the trailing one as an unsupported
+        prefill. This helper collapses runs of same-role messages into a
+        single message by joining their text content with double newlines.
+
+        Messages whose content is already a list (e.g. tool-use blocks or
+        multimodal content) are left untouched — only plain-string content
+        is merged.
+
+        Args:
+            messages: The message list to process.
+
+        Returns:
+            A new list with consecutive same-role messages merged.
+        """
+        if not messages:
+            return messages
+
+        merged: list[LLMMessage] = [messages[0].copy()]  # type: ignore[union-attr]
+        for msg in messages[1:]:
+            prev = merged[-1]
+            if (
+                msg["role"] == prev["role"]
+                and isinstance(msg.get("content"), str)
+                and isinstance(prev.get("content"), str)
+            ):
+                prev["content"] = prev["content"] + "\n\n" + msg["content"]
+            else:
+                merged.append(msg.copy())  # type: ignore[union-attr]
+        return merged
+
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         """Convert messages to standard format.
 

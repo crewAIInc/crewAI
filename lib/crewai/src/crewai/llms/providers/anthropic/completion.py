@@ -748,6 +748,12 @@ class AnthropicCompletion(BaseLLM):
         if pending_tool_results:
             formatted_messages.append({"role": "user", "content": pending_tool_results})
 
+        # Merge consecutive same-role messages to avoid Anthropic API errors.
+        # Claude 4.6+ rejects consecutive assistant messages (treated as prefill).
+        # This can happen when CrewAgentExecutor appends multiple assistant
+        # messages during tool-use iterations in the ReAct loop.
+        formatted_messages = self._merge_consecutive_messages(formatted_messages)
+
         # Ensure first message is from user (Anthropic requirement)
         if not formatted_messages:
             # If no messages, add a default user message
