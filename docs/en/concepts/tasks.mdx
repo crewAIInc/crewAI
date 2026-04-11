@@ -231,6 +231,7 @@ By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` 
 | **Agent**         | `agent`         | `str`                      | The agent that executed the task.                                                                  |
 | **Output Format** | `output_format` | `OutputFormat`             | The format of the task output, with options including RAW, JSON, and Pydantic. The default is RAW. |
 | **Messages**      | `messages`      | `list[LLMMessage]`         | The messages from the last task execution.                                                         |
+| **Proof Links**   | `proof_links`   | `dict[str, str]`           | Optional receipt/proof links (for example proof, preview, and download URLs).                     |
 
 ### Task Methods and Properties
 
@@ -274,6 +275,48 @@ if task_output.json_dict:
     print(f"JSON Output: {json.dumps(task_output.json_dict, indent=2)}")
 if task_output.pydantic:
     print(f"Pydantic Output: {task_output.pydantic}")
+```
+
+### Optional Receipt/Proof Links
+
+You can attach verifiable receipt links to each `TaskOutput` through a callback.
+This is useful for wrappers such as the
+[`claw2claw-receipt-wrapper`](https://github.com/jacobtop-tcg/claw2claw-receipt-wrapper),
+where each completed task can publish auditable proof URLs.
+
+```python Code
+from crewai import Agent, Crew, Process, Task, TaskOutput
+
+def attach_proof_links(output: TaskOutput) -> None:
+    # Example integration point: call your wrapper here.
+    # receipt = mint_receipt(output.raw)
+    output.proof_links = {
+        "proof": "https://example.com/proof/tx-123",
+        "preview": "https://example.com/preview/tx-123",
+        "download": "https://example.com/download/tx-123",
+    }
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find high-signal updates",
+    backstory="You summarize updates clearly.",
+)
+
+research_task = Task(
+    description="Research the latest CrewAI updates.",
+    expected_output="A short summary.",
+    agent=researcher,
+)
+
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    process=Process.sequential,
+    task_callback=attach_proof_links,  # Runs after every task
+)
+
+result = crew.kickoff()
+print(result.tasks_output[0].proof_links["proof"])
 ```
 
 ## Markdown Output Formatting
