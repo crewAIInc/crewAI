@@ -365,7 +365,11 @@ def test_anthropic_client_params_setup():
         assert merged_params["timeout"] == 45
         assert merged_params["max_retries"] == 5
 
-        assert merged_params["default_headers"] == {"X-Custom-Header": "test-value"}
+        assert "X-Custom-Header" in merged_params["default_headers"]
+        assert merged_params["default_headers"]["X-Custom-Header"] == "test-value"
+        # User-Agent should be preserved even with custom headers
+        assert "User-Agent" in merged_params["default_headers"]
+        assert merged_params["default_headers"]["User-Agent"].startswith("crewai/")
 
 
 def test_anthropic_client_params_override_defaults():
@@ -396,7 +400,11 @@ def test_anthropic_client_params_override_defaults():
         # client_params should override the individual parameters
         assert merged_params["timeout"] == 120
         assert merged_params["max_retries"] == 10
-        assert merged_params["default_headers"] == {"X-Override": "true"}
+        assert "X-Override" in merged_params["default_headers"]
+        assert merged_params["default_headers"]["X-Override"] == "true"
+        # User-Agent should be preserved even when client_params overrides defaults
+        assert "User-Agent" in merged_params["default_headers"]
+        assert merged_params["default_headers"]["User-Agent"].startswith("crewai/")
 
 
 def test_anthropic_client_params_none():
@@ -420,7 +428,7 @@ def test_anthropic_client_params_none():
 
         merged_params = llm._get_client_params()
 
-        expected_keys = {"api_key", "base_url", "timeout", "max_retries"}
+        expected_keys = {"api_key", "base_url", "timeout", "max_retries", "default_headers"}
         assert set(merged_params.keys()) == expected_keys
 
         # Fixed assertions - all should be inside the with block and use correct values
@@ -450,6 +458,29 @@ def test_anthropic_client_params_empty_dict():
 
         assert "api_key" in merged_params
         assert merged_params["api_key"] == "test-key"
+
+
+def test_anthropic_client_params_include_user_agent():
+    """
+    Test that _get_client_params() includes a User-Agent header containing the crewai version.
+    """
+    from crewai import __version__
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(
+            model="anthropic/claude-3-5-sonnet-20241022",
+            api_key="test-key",
+        )
+
+        assert isinstance(llm, AnthropicCompletion)
+
+        params = llm._get_client_params()
+
+        assert "default_headers" in params
+        assert "User-Agent" in params["default_headers"]
+        assert params["default_headers"]["User-Agent"] == f"crewai/{__version__}"
+        assert params["default_headers"]["User-Agent"].startswith("crewai/")
 
 
 def test_anthropic_model_detection():
