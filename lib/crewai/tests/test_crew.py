@@ -165,6 +165,114 @@ def test_crew_config_conditional_requirement():
     ]
 
 
+def test_equal_priority_tasks_execute_in_stable_insertion_order(researcher):
+    """Equal-priority tasks should run in deterministic insertion order."""
+
+    def create_tasks() -> list[Task]:
+        return [
+            Task(
+                description="Task B",
+                expected_output="Output B",
+                agent=researcher,
+                priority=10,
+            ),
+            Task(
+                description="Task A",
+                expected_output="Output A",
+                agent=researcher,
+                priority=10,
+            ),
+            Task(
+                description="Task C",
+                expected_output="Output C",
+                agent=researcher,
+                priority=10,
+            ),
+        ]
+
+    observed_orders: list[list[str]] = []
+
+    for _ in range(5):
+        current_order: list[str] = []
+
+        def fake_execute_sync(self, agent=None, context=None, tools=None):
+            current_order.append(self.description)
+            return TaskOutput(
+                description=self.description,
+                raw=self.description,
+                agent="Researcher",
+            )
+
+        with patch.object(Task, "execute_sync", fake_execute_sync):
+            crew = Crew(
+                agents=[researcher],
+                tasks=create_tasks(),
+                process=Process.sequential,
+                verbose=False,
+            )
+            crew.kickoff()
+
+        observed_orders.append(current_order)
+
+    assert observed_orders == [observed_orders[0]] * len(observed_orders)
+    assert observed_orders[0] == ["Task B", "Task A", "Task C"]
+
+
+def test_higher_priority_tasks_execute_before_lower_priority_tasks(researcher):
+    """Task priority controls ordering, with stable ties."""
+    tasks = [
+        Task(
+            description="Low priority 1",
+            expected_output="Output",
+            agent=researcher,
+            priority=0,
+        ),
+        Task(
+            description="High priority 1",
+            expected_output="Output",
+            agent=researcher,
+            priority=5,
+        ),
+        Task(
+            description="High priority 2",
+            expected_output="Output",
+            agent=researcher,
+            priority=5,
+        ),
+        Task(
+            description="Low priority 2",
+            expected_output="Output",
+            agent=researcher,
+            priority=0,
+        ),
+    ]
+    execution_order: list[str] = []
+
+    def fake_execute_sync(self, agent=None, context=None, tools=None):
+        execution_order.append(self.description)
+        return TaskOutput(
+            description=self.description,
+            raw=self.description,
+            agent="Researcher",
+        )
+
+    with patch.object(Task, "execute_sync", fake_execute_sync):
+        crew = Crew(
+            agents=[researcher],
+            tasks=tasks,
+            process=Process.sequential,
+            verbose=False,
+        )
+        crew.kickoff()
+
+    assert execution_order == [
+        "High priority 1",
+        "High priority 2",
+        "Low priority 1",
+        "Low priority 2",
+    ]
+
+
 def test_async_task_cannot_include_sequential_async_tasks_in_context(
     researcher, writer
 ):
