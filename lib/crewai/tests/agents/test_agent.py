@@ -1064,6 +1064,49 @@ def test_agent_use_trained_data(crew_training_handler):
     )
 
 
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_with_custom_filename(crew_training_handler):
+    """Test that custom training filename from crew is used during inference."""
+    from crewai.crew import Crew
+    from crewai.task import Task
+
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+    # Manually link agent to crew (normally done during kickoff)
+    agent.crew = crew
+    # Simulate training setup with custom filename
+    crew._train_filename = "custom_training.pkl"
+
+    crew_training_handler.return_value.load.return_value = {
+        agent.role: {
+            "suggestions": [
+                "Use custom filename.",
+            ]
+        }
+    }
+
+    result = agent._use_trained_data(task_prompt=task_prompt)
+
+    assert "Use custom filename." in result
+    crew_training_handler.assert_has_calls(
+        [mock.call("custom_training.pkl"), mock.call().load()]
+    )
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",
