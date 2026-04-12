@@ -1341,7 +1341,6 @@ class Agent(BaseAgent):
 
         raw_tools: list[BaseTool] = self.tools or []
 
-        # Inject memory tools for standalone kickoff (crew path handles its own)
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
             from crewai.tools.memory_tools import create_memory_tools
@@ -1399,7 +1398,6 @@ class Agent(BaseAgent):
         if input_files:
             all_files.update(input_files)
 
-        # Inject memory context for standalone kickoff (recall before execution)
         if agent_memory is not None:
             try:
                 crewai_event_bus.emit(
@@ -1635,7 +1633,7 @@ class Agent(BaseAgent):
                 if isinstance(conversion_result, BaseModel):
                     formatted_result = conversion_result
             except ConverterError:
-                pass  # Keep raw output if conversion fails
+                pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
@@ -1717,7 +1715,6 @@ class Agent(BaseAgent):
         elif callable(self.guardrail):
             guardrail_callable = self.guardrail
         else:
-            # Should not happen if called from kickoff with guardrail check
             return output
 
         guardrail_result = process_guardrail(
