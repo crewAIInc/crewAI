@@ -1485,8 +1485,6 @@ class Agent(BaseAgent):
         Note:
             For explicit async usage outside of Flow, use kickoff_async() directly.
         """
-        # Magic auto-async: if inside event loop (e.g., inside a Flow),
-        # return coroutine for Flow to await
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
