@@ -286,13 +286,43 @@ def test_classify_missing_openai_key_is_warning(tmp_path: Path) -> None:
 
 
 def test_classify_azure_extra_missing_is_error(tmp_path: Path) -> None:
+    """The real message raised by the Azure provider module uses plain
+    double quotes around the install command (no backticks). Match the
+    exact string that ships in the provider source so this test actually
+    guards the regex used in production."""
     v = DeployValidator(project_root=tmp_path)
     v._classify_import_error(
         "ImportError",
-        'Azure AI Inference native provider not available, to install: `uv add "crewai[azure-ai-inference]"`',
+        'Azure AI Inference native provider not available, to install: uv add "crewai[azure-ai-inference]"',
         tb="",
     )
     assert "missing_provider_extra" in _codes(v)
+    finding = next(r for r in v.results if r.code == "missing_provider_extra")
+    assert finding.title.startswith("Azure AI Inference")
+    assert 'uv add "crewai[azure-ai-inference]"' in finding.hint
+
+
+@pytest.mark.parametrize(
+    "pkg_label, install_cmd",
+    [
+        ("Anthropic", 'uv add "crewai[anthropic]"'),
+        ("AWS Bedrock", 'uv add "crewai[bedrock]"'),
+        ("Google Gen AI", 'uv add "crewai[google-genai]"'),
+    ],
+)
+def test_classify_missing_provider_extra_matches_real_messages(
+    tmp_path: Path, pkg_label: str, install_cmd: str
+) -> None:
+    """Regression for the four provider error strings verbatim."""
+    v = DeployValidator(project_root=tmp_path)
+    v._classify_import_error(
+        "ImportError",
+        f"{pkg_label} native provider not available, to install: {install_cmd}",
+        tb="",
+    )
+    assert "missing_provider_extra" in _codes(v)
+    finding = next(r for r in v.results if r.code == "missing_provider_extra")
+    assert install_cmd in finding.hint
 
 
 def test_classify_keyerror_at_import_is_warning(tmp_path: Path) -> None:

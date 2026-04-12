@@ -550,9 +550,12 @@ class DeployValidator:
     def _classify_import_error(self, err_type: str, err_msg: str, tb: str) -> None:
         """Turn a raw import-time exception into a user-actionable finding."""
         # Must be checked before the generic "native provider" branch below:
-        # the extras-missing message contains the same phrase.
+        # the extras-missing message contains the same phrase. Providers
+        # format the install command as plain text (`to install: uv add
+        # "crewai[extra]"`); also tolerate backtick-delimited variants.
         m = re.search(
-            r"(?P<pkg>[A-Za-z0-9_ -]+?)\s+native provider not available.*?`([^`]+)`",
+            r"(?P<pkg>[A-Za-z0-9_ -]+?)\s+native provider not available"
+            r".*?to install:\s*`?(?P<cmd>uv add [\"']crewai\[[^\]]+\][\"'])`?",
             err_msg,
         )
         if m:
@@ -560,7 +563,7 @@ class DeployValidator:
                 Severity.ERROR,
                 "missing_provider_extra",
                 f"{m.group('pkg').strip()} provider extra not installed",
-                hint=f"Run: {m.group(2)}",
+                hint=f"Run: {m.group('cmd')}",
             )
             return
 
