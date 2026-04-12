@@ -9,6 +9,7 @@ Os Hooks de Chamada de Ferramenta fornecem controle fino sobre a execução de f
 ## Visão Geral
 
 Os hooks de ferramenta são executados em dois pontos críticos:
+
 - **Antes da Chamada de Ferramenta**: Modificar entradas, validar parâmetros ou bloquear execução
 - **Depois da Chamada de Ferramenta**: Transformar resultados, sanitizar saídas ou registrar detalhes de execução
 
@@ -17,6 +18,7 @@ Os hooks de ferramenta são executados em dois pontos críticos:
 ### Hooks Antes da Chamada de Ferramenta
 
 Executados antes de cada execução de ferramenta, esses hooks podem:
+
 - Inspecionar e modificar entradas de ferramenta
 - Bloquear execução de ferramenta com base em condições
 - Implementar gates de aprovação para operações perigosas
@@ -24,6 +26,7 @@ Executados antes de cada execução de ferramenta, esses hooks podem:
 - Registrar invocações de ferramenta
 
 **Assinatura:**
+
 ```python
 def before_hook(context: ToolCallHookContext) -> bool | None:
     # Retorne False para bloquear execução
@@ -34,6 +37,7 @@ def before_hook(context: ToolCallHookContext) -> bool | None:
 ### Hooks Depois da Chamada de Ferramenta
 
 Executados depois de cada execução de ferramenta, esses hooks podem:
+
 - Modificar ou sanitizar resultados de ferramenta
 - Adicionar metadados ou formatação
 - Registrar resultados de execução
@@ -41,6 +45,7 @@ Executados depois de cada execução de ferramenta, esses hooks podem:
 - Transformar formatos de saída
 
 **Assinatura:**
+
 ```python
 def after_hook(context: ToolCallHookContext) -> str | None:
     # Retorne string de resultado modificado
@@ -122,13 +127,13 @@ class MyProjCrew:
                 print("❌ Consulta de busca inválida")
                 return False
         return None
-    
+
     @after_tool_call_crew
     def log_tool_results(self, context):
         # Logging de ferramenta específico da crew
         print(f"✅ {context.tool_name} concluída")
         return None
-    
+
     @crew
     def crew(self) -> Crew:
         return Crew(
@@ -138,6 +143,234 @@ class MyProjCrew:
             verbose=True
         )
 ```
+
+## Guardrails Baseados em Provider
+
+Se você quiser autorização reutilizável antes da chamada de ferramenta sem
+escrever funções hook brutas para cada crew, o CrewAI também expõe uma camada
+opcional de `GuardrailProvider` sobre `before_tool_call`.
+
+Ela segue o mesmo padrão usado por frameworks como Deerflow:
+
+- o CrewAI define a extensão principal
+- o CrewAI envia um provider allowlist mínimo
+- providers externos se conectam pelo mesmo contrato
+
+Essa camada é opcional e aditiva:
+
+- se você não habilitar um guardrail, a execução de ferramentas do CrewAI continua igual
+- se você habilitar um, o CrewAI apenas reutiliza o fluxo existente de `before_tool_call`
+
+O contrato principal é intencionalmente pequeno e síncrono hoje:
+
+- providers recebem um `GuardrailRequest` normalizado
+- providers retornam `allow` ou `deny`
+- o CrewAI mapeia esse resultado para o fluxo existente de hook `before_tool_call`
+
+O `before_tool_call` atualmente suporta apenas semântica de permitir ou bloquear.
+Por isso, o CrewAI não adiciona `delegate`, `escalate` ou suspend/resume nativos
+nesta camada.
+
+### Interface GuardrailProvider
+
+```python
+from crewai.hooks import GuardrailDecision, GuardrailProvider, GuardrailRequest
+
+
+class MyProvider:
+    name = "my-provider"
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        if request.tool_name == "exec":
+            return GuardrailDecision(allow=False, reason="exec não é permitido")
+        return GuardrailDecision(allow=True)
+```
+
+Registre com:
+
+```python
+from crewai.hooks import enable_guardrail
+
+hook = enable_guardrail(MyProvider(), fail_closed=True)
+```
+
+`fail_closed=True` significa que falhas do provider bloqueiam a execução.
+Se você preferir fail-open durante bootstrap ou desenvolvimento:
+
+```python
+hook = enable_guardrail(MyProvider(), fail_closed=False)
+```
+
+Quando não precisar mais dele:
+
+```python
+from crewai.hooks import disable_guardrail
+
+disable_guardrail(hook)
+```
+
+### AllowlistGuardrailProvider Integrado
+
+O CrewAI envia um provider integrado mínimo para o caso mais comum: permitir ou
+negar ferramentas pelo nome.
+
+```python
+from crewai.hooks import AllowlistGuardrailProvider, enable_guardrail
+
+provider = AllowlistGuardrailProvider(
+    allowed_tools=["read_file", "web_search"],
+    denied_tools=["exec"],
+)
+
+enable_guardrail(provider, fail_closed=True)
+```
+
+Esse provider é pequeno e sem dependências. Ele funciona apenas com o CrewAI,
+sem exigir pacote de provider adicional nem serviço remoto.
+
+### Exemplo Básico Executável
+
+```python
+from crewai.hooks import AllowlistGuardrailProvider, disable_guardrail, enable_guardrail
+
+guardrail = enable_guardrail(
+    AllowlistGuardrailProvider(
+        allowed_tools=["read_file", "web_search"],
+        denied_tools=["delete_file", "exec"],
+    ),
+    fail_closed=True,
+)
+
+# ... execute sua crew aqui ...
+
+disable_guardrail(guardrail)
+```
+
+### Exemplo de Provider Customizado
+
+```python
+from crewai.hooks import GuardrailDecision, GuardrailRequest, enable_guardrail
+
+
+class RoleAwareProvider:
+    name = "role-aware"
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        if request.agent_role == "Research Agent" and request.tool_name == "delete_file":
+            return GuardrailDecision(allow=False, reason="agentes de pesquisa não podem excluir arquivos")
+        return GuardrailDecision(allow=True)
+
+
+enable_guardrail(RoleAwareProvider(), fail_closed=True)
+```
+
+### Exemplo de Provider OAP Externo
+
+O CrewAI permanece neutro aqui. Ele **não** embute Open Agent Passport (OAP)
+nem um runtime de política específico de fornecedor. Em vez disso, providers
+externos podem implementar o mesmo contrato `GuardrailProvider`.
+
+[APort Agent Guardrails](https://github.com/aporthq/aport-agent-guardrails) é
+um exemplo desse padrão. Ele envia um `OAPGuardrailProvider` externo que avalia
+chamadas de ferramenta contra o modelo de política
+[Open Agent Passport](https://github.com/aporthq/aport-spec).
+Use um provider externo como esse quando precisar de mais do que regras simples
+de allow/deny por nome de ferramenta.
+
+Instale separadamente:
+
+```bash
+uvx --from aport-agent-guardrails aport setup --framework=crewai --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+Se preferir o bootstrap via Node:
+
+```bash
+npx -y @aporthq/aport-agent-guardrails crewai --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+Para CI ou outros ambientes não interativos:
+
+```bash
+APORT_CREWAI_CONFIG_DIR=.aport/crewai \
+APORT_NONINTERACTIVE=1 \
+uvx --from aport-agent-guardrails aport setup \
+  --framework=crewai \
+  --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+A execução em runtime do CrewAI continua em Python. O comando `npx` é usado
+apenas para bootstrap inicial de passport/config.
+
+```python
+from crewai.hooks import enable_guardrail
+from aport_guardrails.providers import OAPGuardrailProvider
+
+provider = OAPGuardrailProvider(framework="crewai")
+enable_guardrail(provider, fail_closed=True)
+```
+
+Se você usar um diretório de configuração customizado:
+
+```python
+provider = OAPGuardrailProvider(
+    framework="crewai",
+    config_path=".aport/crewai/config.yaml",
+)
+enable_guardrail(provider, fail_closed=True)
+```
+
+### Modo Hospedado
+
+Se um provider externo estiver configurado para avaliação hospedada, o código
+do CrewAI não muda. Basta configurar o provider no próprio arquivo dele, por
+exemplo:
+
+```yaml
+mode: api
+agent_id: ap_xxx
+```
+
+O CrewAI continua agnóstico quanto a a avaliação acontecer localmente ou de
+forma remota.
+
+### Comportamento em Runtime
+
+Quando um provider retorna `allow`, o CrewAI continua a execução da ferramenta
+normalmente. Quando um provider retorna `deny`, o CrewAI bloqueia a chamada
+pelo caminho existente de hook `before_tool_call` e a ferramenta não é
+executada.
+
+Hoje o CrewAI mostra a mensagem padrão de bloqueio da camada de hooks, em vez
+de uma UI específica do provider.
+
+Nessa configuração:
+
+- o CrewAI fornece a extensão do hook
+- o pacote APort fornece o provider compatível com OAP
+- o formato do passport e a avaliação de política ficam fora do core do CrewAI
+
+### O que Providers OAP Externos Podem Aplicar
+
+O provider allowlist integrado responde apenas “esta ferramenta é permitida pelo
+nome?”. Um provider OAP externo pode tomar decisões mais ricas a partir da
+mesma chamada de ferramenta, avaliando a entrada da ferramenta em relação a
+capacidades, requisitos de assurance e limites definidos em um passport e em um
+policy pack.
+
+Por exemplo, um provider externo pode responder perguntas como:
+
+- este agente pode criar ou fazer merge de um pull request neste repositório, nesta branch base, dentro dos limites de revisão e tamanho?
+- este agente pode cobrar `USD 100` agora para este merchant, dentro dos limites por transação e por dia?
+- este agente pode exportar este dataset apenas se a contagem de linhas, o destino e o tratamento de PII estiverem dentro da política?
+
+O core do CrewAI ainda recebe apenas um resultado `allow` ou `deny`. O modelo
+de política mais rico permanece dentro do provider. Isso mantém o CrewAI neutro
+em relação a vendors, ao mesmo tempo em que permite que providers externos
+apliquem mais do que simples allowlists por nome de ferramenta.
 
 ## Casos de Uso Comuns
 
@@ -153,16 +386,16 @@ def safety_check(context: ToolCallHookContext) -> bool | None:
         'remove_user',
         'system_shutdown'
     ]
-    
+
     if context.tool_name in destructive_tools:
         print(f"🛑 Ferramenta destrutiva bloqueada: {context.tool_name}")
         return False
-    
+
     # Avisar em operações sensíveis
     sensitive_tools = ['send_email', 'post_to_social_media', 'charge_payment']
     if context.tool_name in sensitive_tools:
         print(f"⚠️  Executando ferramenta sensível: {context.tool_name}")
-    
+
     return None
 ```
 
@@ -178,17 +411,17 @@ def require_approval_for_actions(context: ToolCallHookContext) -> bool | None:
         'delete_file',
         'post_message'
     ]
-    
+
     if context.tool_name in approval_required:
         response = context.request_human_input(
             prompt=f"Aprovar {context.tool_name}?",
             default_message=f"Entrada: {context.tool_input}\nDigite 'sim' para aprovar:"
         )
-        
+
         if response.lower() != 'sim':
             print(f"❌ Execução de ferramenta negada: {context.tool_name}")
             return False
-    
+
     return None
 ```
 
@@ -204,17 +437,17 @@ def validate_and_sanitize_inputs(context: ToolCallHookContext) -> bool | None:
         if len(query) < 3:
             print("❌ Consulta de busca muito curta")
             return False
-        
+
         # Sanitizar consulta
         context.tool_input['query'] = query.strip().lower()
-    
+
     # Validar caminhos de arquivo
     if context.tool_name == 'read_file':
         path = context.tool_input.get('path', '')
         if '..' in path or path.startswith('/'):
             print("❌ Caminho de arquivo inválido")
             return False
-    
+
     return None
 ```
 
@@ -226,10 +459,10 @@ def sanitize_sensitive_data(context: ToolCallHookContext) -> str | None:
     """Sanitiza dados sensíveis."""
     if not context.tool_result:
         return None
-    
+
     import re
     result = context.tool_result
-    
+
     # Remover chaves de API
     result = re.sub(
         r'(api[_-]?key|token)["\']?\s*[:=]\s*["\']?[\w-]+',
@@ -237,21 +470,21 @@ def sanitize_sensitive_data(context: ToolCallHookContext) -> str | None:
         result,
         flags=re.IGNORECASE
     )
-    
+
     # Remover endereços de email
     result = re.sub(
         r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
         '[EMAIL-CENSURADO]',
         result
     )
-    
+
     # Remover números de cartão de crédito
     result = re.sub(
         r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b',
         '[CARTÃO-CENSURADO]',
         result
     )
-    
+
     return result
 ```
 
@@ -272,20 +505,20 @@ def start_timer(context: ToolCallHookContext) -> None:
 def track_tool_usage(context: ToolCallHookContext) -> None:
     start_time = context.tool_input.get('_start_time', time.time())
     duration = time.time() - start_time
-    
+
     tool_stats[context.tool_name]['count'] += 1
     tool_stats[context.tool_name]['total_time'] += duration
-    
+
     if not context.tool_result or 'error' in context.tool_result.lower():
         tool_stats[context.tool_name]['failures'] += 1
-    
+
     print(f"""
     📊 Estatísticas da Ferramenta {context.tool_name}:
     - Execuções: {tool_stats[context.tool_name]['count']}
     - Tempo Médio: {tool_stats[context.tool_name]['total_time'] / tool_stats[context.tool_name]['count']:.2f}s
     - Falhas: {tool_stats[context.tool_name]['failures']}
     """)
-    
+
     return None
 ```
 
@@ -302,18 +535,18 @@ def rate_limit_tools(context: ToolCallHookContext) -> bool | None:
     """Limita taxa de chamadas de ferramenta."""
     tool_name = context.tool_name
     now = datetime.now()
-    
+
     # Limpar entradas antigas (mais antigas que 1 minuto)
     tool_call_history[tool_name] = [
         call_time for call_time in tool_call_history[tool_name]
         if now - call_time < timedelta(minutes=1)
     ]
-    
+
     # Verificar limite de taxa (máximo 10 chamadas por minuto)
     if len(tool_call_history[tool_name]) >= 10:
         print(f"🚫 Limite de taxa excedido para {tool_name}")
         return False
-    
+
     # Registrar esta chamada
     tool_call_history[tool_name].append(now)
     return None
@@ -396,13 +629,13 @@ def conditional_blocking(context: ToolCallHookContext) -> bool | None:
         if context.tool_name in ['delete_file', 'send_email']:
             print(f"❌ Agentes júnior não podem usar {context.tool_name}")
             return False
-    
+
     # Bloquear apenas durante tarefas específicas
     if context.task and "sensível" in context.task.description.lower():
         if context.tool_name == 'web_search':
             print("❌ Busca na web bloqueada para tarefas sensíveis")
             return False
-    
+
     return None
 ```
 
@@ -417,12 +650,12 @@ def enhance_tool_inputs(context: ToolCallHookContext) -> None:
         if context.tool_name == 'web_search':
             # Adicionar restrições de domínio para pesquisadores
             context.tool_input['domains'] = ['edu', 'gov', 'org']
-    
+
     # Adicionar contexto baseado na tarefa
     if context.task and "urgente" in context.task.description.lower():
         if context.tool_name == 'send_email':
             context.tool_input['priority'] = 'high'
-    
+
     return None
 ```
 
@@ -474,20 +707,24 @@ register_after_tool_call_hook(my_after_hook)
 ## Solução de Problemas
 
 ### Hook Não Está Executando
+
 - Verifique se hook está registrado antes da execução da crew
 - Verifique se hook anterior retornou `False` (bloqueia execução e hooks subsequentes)
 - Garanta que assinatura do hook corresponda ao tipo esperado
 
 ### Modificações de Entrada Não Funcionam
+
 - Use modificações in-place: `context.tool_input['key'] = value`
 - Não substitua o dict: `context.tool_input = {}`
 
 ### Modificações de Resultado Não Funcionam
+
 - Retorne a string modificada dos hooks posteriores
 - Retornar `None` mantém o resultado original
 - Garanta que a ferramenta realmente retornou um resultado
 
 ### Ferramenta Bloqueada Inesperadamente
+
 - Verifique todos os hooks antes por condições de bloqueio
 - Verifique ordem de execução do hook
 - Adicione logging de debug para identificar qual hook está bloqueando
@@ -495,4 +732,3 @@ register_after_tool_call_hook(my_after_hook)
 ## Conclusão
 
 Os Hooks de Chamada de Ferramenta fornecem capacidades poderosas para controlar e monitorar execução de ferramentas no CrewAI. Use-os para implementar guardrails de segurança, gates de aprovação, validação de entrada, sanitização de resultado, logging e análise. Combinados com tratamento adequado de erros e segurança de tipos, os hooks permitem sistemas de agentes seguros e prontos para produção com observabilidade abrangente.
-

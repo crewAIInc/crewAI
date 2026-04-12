@@ -6,6 +6,15 @@ from crewai.hooks.decorators import (
     before_llm_call,
     before_tool_call,
 )
+from crewai.hooks.guardrails import (
+    AllowlistGuardrailProvider,
+    GuardrailDecision,
+    GuardrailProvider,
+    GuardrailRequest,
+    build_guardrail_request,
+    disable_guardrail,
+    enable_guardrail,
+)
 from crewai.hooks.llm_hooks import (
     LLMCallHookContext,
     clear_after_llm_call_hooks,
@@ -74,6 +83,11 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
 
 
 __all__ = [
+    # Guardrails
+    "AllowlistGuardrailProvider",
+    "GuardrailDecision",
+    "GuardrailProvider",
+    "GuardrailRequest",
     # Context classes
     "LLMCallHookContext",
     "ToolCallHookContext",
@@ -82,6 +96,8 @@ __all__ = [
     "after_tool_call",
     "before_llm_call",
     "before_tool_call",
+    # Guardrail helpers
+    "build_guardrail_request",
     "clear_after_llm_call_hooks",
     "clear_after_tool_call_hooks",
     "clear_all_global_hooks",
@@ -90,6 +106,9 @@ __all__ = [
     # Clear hooks
     "clear_before_llm_call_hooks",
     "clear_before_tool_call_hooks",
+    # Guardrail helpers
+    "disable_guardrail",
+    "enable_guardrail",
     "get_after_llm_call_hooks",
     "get_after_tool_call_hooks",
     # Get hooks
@@ -101,6 +120,7 @@ __all__ = [
     "register_before_llm_call_hook",
     # Tool Hook registration
     "register_before_tool_call_hook",
+    # Unregister hooks
     "unregister_after_llm_call_hook",
     "unregister_after_tool_call_hook",
     "unregister_before_llm_call_hook",
