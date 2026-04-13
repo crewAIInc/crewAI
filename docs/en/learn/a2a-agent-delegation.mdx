@@ -500,6 +500,14 @@ agent = Agent(
 )
 ```
 
+### File Inputs and Structured Output
+
+A2A supports passing files and requesting structured output in both directions.
+
+**Client side**: When delegating to a remote A2A agent, files from the task's `input_files` are sent as `FilePart`s in the outgoing message. If `response_model` is set on the `A2AClientConfig`, the Pydantic model's JSON schema is embedded in the message metadata, requesting structured output from the remote agent.
+
+**Server side**: Incoming `FilePart`s are extracted and passed to the agent's task as `input_files`. If the client included a JSON schema, the server creates a response model from it and applies it to the task. When the agent returns structured data, the response is sent back as a `DataPart` rather than plain text.
+
 ## Best Practices
 
 <CardGroup cols={2}>

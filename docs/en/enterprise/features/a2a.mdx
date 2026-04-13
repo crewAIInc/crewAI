@@ -49,6 +49,10 @@ Clients can interact with the crew as a whole or target a specific agent directl
   Per the A2A protocol, agent cards are publicly accessible to enable discovery. This includes both the crew-level card at `/.well-known/agent-card.json` and per-agent cards at `/a2a/agents/{role}/.well-known/agent-card.json`. Do not include sensitive information in agent names, descriptions, or skill definitions.
 </Warning>
 
+### File Inputs and Structured Output
+
+A2A on AMP supports passing files and requesting structured output in both directions. Clients can send files as `FilePart`s and request structured responses by embedding a JSON schema in the message. Server agents receive files as `input_files` on the task, and return structured data as `DataPart`s when a schema is provided. See [File Inputs and Structured Output](/en/learn/a2a-agent-delegation#file-inputs-and-structured-output) for details.
+
 ### What AMP Adds
 
 <CardGroup cols={2}>
