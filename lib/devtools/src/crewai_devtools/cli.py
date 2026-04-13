@@ -42,8 +42,10 @@ def _resume_hint(message: str) -> None:
     )
 
 
-def _print_release_error(e: Exception) -> None:
+def _print_release_error(e: BaseException) -> None:
     """Print a release error with stderr if available."""
+    if isinstance(e, SystemExit):
+        return
     if isinstance(e, subprocess.CalledProcessError):
         console.print(f"[red]Error running command:[/red] {e}")
         if e.stderr:
@@ -1838,6 +1840,12 @@ def release(
     if skip_enterprise:
         flags.append("--skip-enterprise")
     flag_suffix = (" " + " ".join(flags)) if flags else ""
+    enterprise_hint = (
+        ""
+        if skip_enterprise
+        else f"\n\nThen release enterprise:\n\n"
+        f"  devtools release {version} --skip-to-enterprise"
+    )
 
     check_gh_installed()
 
@@ -1872,7 +1880,7 @@ def release(
     if skip_to_enterprise:
         try:
             _release_enterprise(version, is_prerelease, dry_run)
-        except (subprocess.CalledProcessError, Exception) as e:
+        except BaseException as e:
             _print_release_error(e)
             _resume_hint(
                 f"Fix the issue, then re-run:\n\n"
@@ -1943,7 +1951,7 @@ def release(
             console.print(
                 "[dim][DRY RUN][/dim] Would push branch, create PR, and wait for merge"
             )
-    except (subprocess.CalledProcessError, Exception) as e:
+    except BaseException as e:
         _print_release_error(e)
         _resume_hint(
             f"Phase 1 failed. Fix the issue, then re-run:\n\n"
@@ -1980,14 +1988,8 @@ def release(
 
         if not dry_run:
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
-    except (subprocess.CalledProcessError, Exception) as e:
+    except BaseException as e:
         _print_release_error(e)
-        enterprise_hint = (
-            ""
-            if skip_enterprise
-            else f"\n\nThen release enterprise:\n\n"
-            f"  devtools release {version} --skip-to-enterprise"
-        )
         _resume_hint(
             "Phase 2 failed before PyPI publish. The bump PR is already merged.\n"
             "Fix the issue, then resume with:\n\n"
@@ -2001,14 +2003,8 @@ def release(
     try:
         if not dry_run:
             _trigger_pypi_publish(tag_name, wait=True)
-    except (subprocess.CalledProcessError, Exception) as e:
+    except BaseException as e:
         _print_release_error(e)
-        enterprise_hint = (
-            ""
-            if skip_enterprise
-            else f"\n\nThen release enterprise:\n\n"
-            f"  devtools release {version} --skip-to-enterprise"
-        )
         _resume_hint(
             f"Phase 2 failed at PyPI publish. Tag and GitHub release already exist.\n"
             f"Retry PyPI publish manually:\n\n"
@@ -2020,14 +2016,8 @@ def release(
     try:
         if not dry_run:
             _update_deployment_test_repo(version, is_prerelease)
-    except (subprocess.CalledProcessError, Exception) as e:
+    except BaseException as e:
         _print_release_error(e)
-        enterprise_hint = (
-            ""
-            if skip_enterprise
-            else f"\n\nThen release enterprise:\n\n"
-            f"  devtools release {version} --skip-to-enterprise"
-        )
         _resume_hint(
             f"Phase 2 failed updating deployment test repo. "
             f"Tag, release, and PyPI are done.\n"
@@ -2039,7 +2029,7 @@ def release(
     if not skip_enterprise:
         try:
             _release_enterprise(version, is_prerelease, dry_run)
-        except (subprocess.CalledProcessError, Exception) as e:
+        except BaseException as e:
             _print_release_error(e)
             _resume_hint(
                 f"Phase 3 (enterprise) failed. Phases 1 & 2 completed successfully.\n"
