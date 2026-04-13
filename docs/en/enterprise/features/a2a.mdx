@@ -1,6 +1,6 @@
 ---
 title: A2A on AMP
-description: Production-grade Agent-to-Agent communication with distributed state, multi-scheme authentication, and horizontal scaling
+description: Production-grade Agent-to-Agent communication with distributed state and multi-scheme authentication
 icon: "network-wired"
 mode: "wide"
 ---
@@ -66,7 +66,7 @@ A2A on AMP supports passing files and requesting structured output in both direc
 
 <CardGroup cols={2}>
   <Card title="Distributed State" icon="database">
-    Persistent task, context, and result storage that supports horizontal scaling
+    Persistent task, context, and result storage
   </Card>
   <Card title="Enterprise Authentication" icon="shield-halved">
     OIDC, OAuth2, mTLS, and Enterprise token validation beyond simple bearer tokens
@@ -89,7 +89,7 @@ A2A on AMP supports passing files and requesting structured output in both direc
 
 ## Distributed State Management
 
-In the open-source implementation, task and context state lives in memory on a single process. AMP replaces this with persistent, distributed stores that enable horizontal scaling.
+In the open-source implementation, task and context state lives in memory on a single process. AMP replaces this with persistent, distributed stores.
 
 ### Storage Layers
 
