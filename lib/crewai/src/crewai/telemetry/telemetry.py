@@ -52,6 +52,7 @@ from crewai.telemetry.utils import (
     add_crew_attributes,
     close_span,
 )
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -314,7 +315,7 @@ class Telemetry:
                                 "verbose?": agent.verbose,
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.prompt_file,
+                                "i18n": I18N_DEFAULT.prompt_file,
                                 "function_calling_llm": (
                                     getattr(
                                         getattr(agent, "function_calling_llm", None),
@@ -844,7 +845,7 @@ class Telemetry:
                             "verbose?": agent.verbose,
                             "max_iter": agent.max_iter,
                             "max_rpm": agent.max_rpm,
-                            "i18n": agent.i18n.prompt_file,
+                            "i18n": I18N_DEFAULT.prompt_file,
                             "llm": agent.llm.model
                             if isinstance(agent.llm, BaseLLM)
                             else str(agent.llm),

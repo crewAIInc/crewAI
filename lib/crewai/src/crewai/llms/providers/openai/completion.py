@@ -32,11 +32,15 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import (
+    generate_model_description,
+    sanitize_tool_params_for_openai_strict,
+)
 from crewai.utilities.types import LLMMessage
 
 
@@ -253,22 +257,40 @@ class OpenAICompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> OpenAICompletion:
+        """Eagerly build clients when the API key is available, otherwise
+        defer so ``LLM(model="openai/...")`` can be constructed at module
+        import time even before deployment env vars are set.
+        """
+        try:
+            self._client = self._build_sync_client()
+            self._async_client = self._build_async_client()
+        except ValueError:
+            pass
+        return self
+
+    def _build_sync_client(self) -> Any:
         client_config = self._get_client_params()
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
-            http_client = httpx.Client(transport=transport)
-            client_config["http_client"] = http_client
+            client_config["http_client"] = httpx.Client(transport=transport)
+        return OpenAI(**client_config)
 
-        self._client = OpenAI(**client_config)
-
-        async_client_config = self._get_client_params()
+    def _build_async_client(self) -> Any:
+        client_config = self._get_client_params()
         if self.interceptor:
-            async_transport = AsyncHTTPTransport(interceptor=self.interceptor)
-            async_http_client = httpx.AsyncClient(transport=async_transport)
-            async_client_config["http_client"] = async_http_client
+            transport = AsyncHTTPTransport(interceptor=self.interceptor)
+            client_config["http_client"] = httpx.AsyncClient(transport=transport)
+        return AsyncOpenAI(**client_config)
 
-        self._async_client = AsyncOpenAI(**async_client_config)
-        return self
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        if self._async_client is None:
+            self._async_client = self._build_async_client()
+        return self._async_client
 
     @property
     def last_response_id(self) -> str | None:
@@ -764,8 +786,6 @@ class OpenAICompletion(BaseLLM):
             "function": {"name": "...", "description": "...", "parameters": {...}}
         }
         """
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         responses_tools = []
 
         for tool in tools:
@@ -797,7 +817,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle non-streaming Responses API call."""
         try:
-            response: Response = self._client.responses.create(**params)
+            response: Response = self._get_sync_client().responses.create(**params)
 
             # Track response ID for auto-chaining
             if self.auto_chain and response.id:
@@ -933,7 +953,9 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle async non-streaming Responses API call."""
         try:
-            response: Response = await self._async_client.responses.create(**params)
+            response: Response = await self._get_async_client().responses.create(
+                **params
+            )
 
             # Track response ID for auto-chaining
             if self.auto_chain and response.id:
@@ -1069,7 +1091,7 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
-        stream = self._client.responses.create(**params)
+        stream = self._get_sync_client().responses.create(**params)
         response_id_stream = None
 
         for event in stream:
@@ -1197,7 +1219,7 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
-        stream = await self._async_client.responses.create(**params)
+        stream = await self._get_async_client().responses.create(**params)
         response_id_stream = None
 
         async for event in stream:
@@ -1324,18 +1346,22 @@ class OpenAICompletion(BaseLLM):
         ]
 
     def _extract_responses_token_usage(self, response: Response) -> dict[str, Any]:
-        """Extract token usage from Responses API response."""
+        """Extract token usage and response metadata from Responses API response."""
         if response.usage:
-            result = {
+            result: dict[str, Any] = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
-            # Extract cached prompt tokens from input_tokens_details
             input_details = getattr(response.usage, "input_tokens_details", None)
             if input_details:
                 result["cached_prompt_tokens"] = (
                     getattr(input_details, "cached_tokens", 0) or 0
+                )
+            output_details = getattr(response.usage, "output_tokens_details", None)
+            if output_details:
+                result["reasoning_tokens"] = (
+                    getattr(output_details, "reasoning_tokens", 0) or 0
                 )
             return result
         return {"total_tokens": 0}
@@ -1544,11 +1570,6 @@ class OpenAICompletion(BaseLLM):
         self, tools: list[dict[str, BaseTool]]
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to OpenAI function calling format."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-        from crewai.utilities.pydantic_schema_utils import (
-            force_additional_properties_false,
-        )
-
         openai_tools = []
 
         for tool in tools:
@@ -1567,8 +1588,9 @@ class OpenAICompletion(BaseLLM):
                 params_dict = (
                     parameters if isinstance(parameters, dict) else dict(parameters)
                 )
-                params_dict = force_additional_properties_false(params_dict)
-                openai_tool["function"]["parameters"] = params_dict
+                openai_tool["function"]["parameters"] = (
+                    sanitize_tool_params_for_openai_strict(params_dict)
+                )
 
             openai_tools.append(openai_tool)
         return openai_tools
@@ -1587,7 +1609,7 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = self._client.beta.chat.completions.parse(
+                parsed_response = self._get_sync_client().beta.chat.completions.parse(
                     **parse_params,
                     response_format=response_model,
                 )
@@ -1611,7 +1633,9 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            response: ChatCompletion = self._client.chat.completions.create(**params)
+            response: ChatCompletion = self._get_sync_client().chat.completions.create(
+                **params
+            )
 
             usage = self._extract_openai_token_usage(response)
 
@@ -1838,7 +1862,7 @@ class OpenAICompletion(BaseLLM):
             }
 
             stream: ChatCompletionStream[BaseModel]
-            with self._client.beta.chat.completions.stream(
+            with self._get_sync_client().beta.chat.completions.stream(
                 **parse_params, response_format=response_model
             ) as stream:
                 for chunk in stream:
@@ -1875,7 +1899,7 @@ class OpenAICompletion(BaseLLM):
             return ""
 
         completion_stream: Stream[ChatCompletionChunk] = (
-            self._client.chat.completions.create(**params)
+            self._get_sync_client().chat.completions.create(**params)
         )
 
         usage_data: dict[str, Any] | None = None
@@ -1972,9 +1996,11 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = await self._async_client.beta.chat.completions.parse(
-                    **parse_params,
-                    response_format=response_model,
+                parsed_response = (
+                    await self._get_async_client().beta.chat.completions.parse(
+                        **parse_params,
+                        response_format=response_model,
+                    )
                 )
                 math_reasoning = parsed_response.choices[0].message
 
@@ -1996,8 +2022,8 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
-            response: ChatCompletion = await self._async_client.chat.completions.create(
-                **params
+            response: ChatCompletion = (
+                await self._get_async_client().chat.completions.create(**params)
             )
 
             usage = self._extract_openai_token_usage(response)
@@ -2123,7 +2149,7 @@ class OpenAICompletion(BaseLLM):
         if response_model:
             completion_stream: AsyncIterator[
                 ChatCompletionChunk
-            ] = await self._async_client.chat.completions.create(**params)
+            ] = await self._get_async_client().chat.completions.create(**params)
 
             accumulated_content = ""
             usage_data: dict[str, Any] | None = None
@@ -2179,7 +2205,7 @@ class OpenAICompletion(BaseLLM):
 
         stream: AsyncIterator[
             ChatCompletionChunk
-        ] = await self._async_client.chat.completions.create(**params)
+        ] = await self._get_async_client().chat.completions.create(**params)
 
         usage_data = None
 
@@ -2307,19 +2333,23 @@ class OpenAICompletion(BaseLLM):
     def _extract_openai_token_usage(
         self, response: ChatCompletion | ChatCompletionChunk
     ) -> dict[str, Any]:
-        """Extract token usage from OpenAI ChatCompletion or ChatCompletionChunk response."""
+        """Extract token usage and response metadata from OpenAI ChatCompletion."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            result = {
+            result: dict[str, Any] = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
-            # Extract cached prompt tokens from prompt_tokens_details
             prompt_details = getattr(usage, "prompt_tokens_details", None)
             if prompt_details:
                 result["cached_prompt_tokens"] = (
                     getattr(prompt_details, "cached_tokens", 0) or 0
+                )
+            completion_details = getattr(usage, "completion_tokens_details", None)
+            if completion_details:
+                result["reasoning_tokens"] = (
+                    getattr(completion_details, "reasoning_tokens", 0) or 0
                 )
             return result
         return {"total_tokens": 0}
@@ -2371,8 +2401,8 @@ class OpenAICompletion(BaseLLM):
             from crewai_files.uploaders.openai import OpenAIFileUploader
 
             return OpenAIFileUploader(
-                client=self._client,
-                async_client=self._async_client,
+                client=self._get_sync_client(),
+                async_client=self._get_async_client(),
             )
         except ImportError:
             return None

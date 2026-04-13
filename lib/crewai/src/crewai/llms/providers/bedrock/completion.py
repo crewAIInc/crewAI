@@ -12,11 +12,15 @@ from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import (
+    generate_model_description,
+    sanitize_tool_params_for_bedrock_strict,
+)
 from crewai.utilities.types import LLMMessage
 
 
@@ -169,6 +173,7 @@ class ToolSpec(TypedDict, total=False):
     name: Required[str]
     description: Required[str]
     inputSchema: ToolInputSchema
+    strict: bool
 
 
 class ConverseToolTypeDef(TypedDict):
@@ -302,6 +307,22 @@ class BedrockCompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> BedrockCompletion:
+        """Eagerly build the sync client when AWS credentials resolve,
+        otherwise defer so ``LLM(model="bedrock/...")`` can be constructed
+        at module import time even before deployment env vars are set.
+
+        Only credential/SDK errors are caught — programming errors like
+        ``TypeError`` or ``AttributeError`` propagate so real bugs aren't
+        silently swallowed.
+        """
+        try:
+            self._client = self._build_sync_client()
+        except (BotoCoreError, ClientError, ValueError) as e:
+            logging.debug("Deferring Bedrock client construction: %s", e)
+        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
+        return self
+
+    def _build_sync_client(self) -> Any:
         config = Config(
             read_timeout=300,
             retries={"max_attempts": 3, "mode": "adaptive"},
@@ -313,9 +334,17 @@ class BedrockCompletion(BaseLLM):
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
-        self._client = session.client("bedrock-runtime", config=config)
-        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
-        return self
+        return session.client("bedrock-runtime", config=config)
+
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        """Async client is set up separately by ``_ensure_async_client``
+        using ``aiobotocore`` inside an exit stack."""
+        return self._async_client
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""
@@ -655,7 +684,7 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self._client.converse(
+            response = self._get_sync_client().converse(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -944,7 +973,7 @@ class BedrockCompletion(BaseLLM):
         usage_data: dict[str, Any] | None = None
 
         try:
-            response = self._client.converse_stream(
+            response = self._get_sync_client().converse_stream(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -1948,8 +1977,6 @@ class BedrockCompletion(BaseLLM):
         tools: list[dict[str, Any]],
     ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         converse_tools: list[ConverseToolTypeDef] = []
 
         for tool in tools:
@@ -1961,9 +1988,20 @@ class BedrockCompletion(BaseLLM):
                     "description": description,
                 }
 
+                func_info = tool.get("function", {})
+                strict_enabled = bool(func_info.get("strict"))
+
                 if parameters and isinstance(parameters, dict):
-                    input_schema: ToolInputSchema = {"json": parameters}
+                    schema_params = (
+                        sanitize_tool_params_for_bedrock_strict(parameters)
+                        if strict_enabled
+                        else parameters
+                    )
+                    input_schema: ToolInputSchema = {"json": schema_params}
                     tool_spec["inputSchema"] = input_schema
+
+                if strict_enabled:
+                    tool_spec["strict"] = True
 
                 converse_tool: ConverseToolTypeDef = {"toolSpec": tool_spec}
 
@@ -2025,11 +2063,18 @@ class BedrockCompletion(BaseLLM):
         input_tokens = usage.get("inputTokens", 0)
         output_tokens = usage.get("outputTokens", 0)
         total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
+        raw_cached = (
+            usage.get("cacheReadInputTokenCount")
+            or usage.get("cacheReadInputTokens")
+            or 0
+        )
+        cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
 
         self._token_usage["prompt_tokens"] += input_tokens
         self._token_usage["completion_tokens"] += output_tokens
         self._token_usage["total_tokens"] += total_tokens
         self._token_usage["successful_requests"] += 1
+        self._token_usage["cached_prompt_tokens"] += cached_tokens
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""

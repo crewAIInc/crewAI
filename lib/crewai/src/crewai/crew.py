@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from opentelemetry.trace import Span
 
     from crewai.context import ExecutionContext
-    from crewai.state.provider.core import BaseProvider
 
 try:
     from crewai_files import get_supported_content_types
@@ -104,7 +103,11 @@ from crewai.rag.types import SearchResult
 from crewai.security.fingerprint import Fingerprint
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
-from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
+from crewai.state.checkpoint_config import (
+    CheckpointConfig,
+    _coerce_checkpoint,
+    apply_checkpoint,
+)
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -134,6 +137,7 @@ from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
     create_chunk_generator,
+    register_cleanup,
     signal_end,
     signal_error,
 )
@@ -364,28 +368,21 @@ class Crew(FlowTrackable, BaseModel):
     checkpoint_kickoff_event_id: str | None = Field(default=None)
 
     @classmethod
-    def from_checkpoint(
-        cls, path: str, *, provider: BaseProvider | None = None
-    ) -> Crew:
-        """Restore a Crew from a checkpoint file, ready to resume via kickoff().
+    def from_checkpoint(cls, config: CheckpointConfig) -> Crew:
+        """Restore a Crew from a checkpoint, ready to resume via kickoff().
 
         Args:
-            path: Path to a checkpoint JSON file.
-            provider: Storage backend to read from. Defaults to JsonProvider.
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
 
         Returns:
             A Crew instance. Call kickoff() to resume from the last completed task.
         """
         from crewai.context import apply_execution_context
         from crewai.events.event_bus import crewai_event_bus
-        from crewai.state.provider.json_provider import JsonProvider
         from crewai.state.runtime import RuntimeState
 
-        state = RuntimeState.from_checkpoint(
-            path,
-            provider=provider or JsonProvider(),
-            context={"from_checkpoint": True},
-        )
+        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
         crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if isinstance(entity, cls):
@@ -393,7 +390,32 @@ class Crew(FlowTrackable, BaseModel):
                     apply_execution_context(entity.execution_context)
                 entity._restore_runtime()
                 return entity
-        raise ValueError(f"No Crew found in checkpoint: {path}")
+        raise ValueError(f"No Crew found in checkpoint: {config.restore_from}")
+
+    @classmethod
+    def fork(
+        cls,
+        config: CheckpointConfig,
+        branch: str | None = None,
+    ) -> Crew:
+        """Fork a Crew from a checkpoint, creating a new execution branch.
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set.
+            branch: Branch label for the fork. Auto-generated if not provided.
+
+        Returns:
+            A Crew instance on the new branch. Call kickoff() to run.
+        """
+        crew = cls.from_checkpoint(config)
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            raise RuntimeError(
+                "Cannot fork: no runtime state on the event bus. "
+                "Ensure from_checkpoint() succeeded before calling fork()."
+            )
+        state.fork(branch)
+        return crew
 
     def _restore_runtime(self) -> None:
         """Re-create runtime objects after restoring from a checkpoint."""
@@ -414,6 +436,13 @@ class Crew(FlowTrackable, BaseModel):
                         if agent.agent_executor is not None and task.output is None:
                             agent.agent_executor.task = task
                         break
+        for task in self.tasks:
+            if task.checkpoint_original_description is not None:
+                task._original_description = task.checkpoint_original_description
+            if task.checkpoint_original_expected_output is not None:
+                task._original_expected_output = (
+                    task.checkpoint_original_expected_output
+                )
         if self.checkpoint_inputs is not None:
             self._inputs = self.checkpoint_inputs
         if self.checkpoint_kickoff_event_id is not None:
@@ -849,16 +878,23 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Execute the crew's workflow.
 
         Args:
             inputs: Optional input dictionary for task interpolation.
             input_files: Optional dict of named file inputs for the crew.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the crew resumes from that checkpoint. Remaining
+                config fields enable checkpointing for the run.
 
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
         get_env_context()
         if self.stream:
             enable_agent_streaming(self.agents)
@@ -882,6 +918,7 @@ class Crew(FlowTrackable, BaseModel):
                     ctx.state, run_crew, ctx.output_holder
                 )
             )
+            register_cleanup(streaming_output, ctx.state)
             ctx.output_holder.append(streaming_output)
             return streaming_output
 
@@ -970,12 +1007,15 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Asynchronous kickoff method to start the crew execution.
 
         Args:
             inputs: Optional input dictionary for task interpolation.
             input_files: Optional dict of named file inputs for the crew.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the crew resumes from that checkpoint.
 
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
@@ -984,6 +1024,9 @@ class Crew(FlowTrackable, BaseModel):
         to get stream chunks. After iteration completes, access the final result
         via .result.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
         inputs = inputs or {}
 
         if self.stream:
@@ -1007,6 +1050,7 @@ class Crew(FlowTrackable, BaseModel):
                     ctx.state, run_crew, ctx.output_holder
                 )
             )
+            register_cleanup(streaming_output, ctx.state)
             ctx.output_holder.append(streaming_output)
 
             return streaming_output
@@ -1043,6 +1087,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Native async kickoff method using async task execution throughout.
 
@@ -1053,10 +1098,15 @@ class Crew(FlowTrackable, BaseModel):
         Args:
             inputs: Optional input dictionary for task interpolation.
             input_files: Optional dict of named file inputs for the crew.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the crew resumes from that checkpoint.
 
         Returns:
             CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.akickoff(inputs=inputs, input_files=input_files)  # type: ignore[no-any-return]
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext(use_async=True)
@@ -1078,6 +1128,7 @@ class Crew(FlowTrackable, BaseModel):
                     ctx.state, run_crew, ctx.output_holder
                 )
             )
+            register_cleanup(streaming_output, ctx.state)
             ctx.output_holder.append(streaming_output)
 
             return streaming_output

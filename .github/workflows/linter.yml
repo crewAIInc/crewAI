@@ -6,7 +6,24 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
+
+  lint-run:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,3 +65,23 @@ jobs:
             ~/.local/share/uv
             .venv
           key: uv-main-py3.11-${{ hashFiles('uv.lock') }}
+
+  # Summary job to provide single status for branch protection
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: [changes, lint-run]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, skipping lint"
+            exit 0
+          fi
+          if [ "${{ needs.lint-run.result }}" == "success" ]; then
+            echo "Lint passed"
+          else
+            echo "Lint failed"
+            exit 1
+          fi

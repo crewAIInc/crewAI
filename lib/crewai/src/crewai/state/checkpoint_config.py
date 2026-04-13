@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -201,10 +202,19 @@ class CheckpointConfig(BaseModel):
         description="Maximum checkpoints to keep. Oldest are pruned after "
         "each write. None means keep all.",
     )
+    restore_from: Path | str | None = Field(
+        default=None,
+        description="Path or location of a checkpoint to restore from. "
+        "When passed via a kickoff method's from_checkpoint parameter, "
+        "the crew or flow resumes from this checkpoint.",
+    )
 
     @model_validator(mode="after")
     def _register_handlers(self) -> CheckpointConfig:
         from crewai.state.checkpoint_listener import _ensure_handlers_registered
+
+        if isinstance(self.provider, SqliteProvider) and not Path(self.location).suffix:
+            self.location = f"{self.location}.db"
 
         _ensure_handlers_registered()
         return self
@@ -216,3 +226,25 @@ class CheckpointConfig(BaseModel):
     @property
     def trigger_events(self) -> set[str]:
         return set(self.on_events)
+
+
+def apply_checkpoint(instance: Any, from_checkpoint: CheckpointConfig | None) -> Any:
+    """Handle checkpoint config for a kickoff method.
+
+    If *from_checkpoint* carries a ``restore_from`` path, builds and returns a
+    restored instance (with ``restore_from`` cleared).  The caller should
+    dispatch into its own kickoff variant on that restored instance.
+
+    If *from_checkpoint* is present but has no ``restore_from``, sets
+    ``instance.checkpoint`` and returns ``None`` (proceed normally).
+
+    If *from_checkpoint* is ``None``, returns ``None`` immediately.
+    """
+    if from_checkpoint is None:
+        return None
+    if from_checkpoint.restore_from is not None:
+        restored = type(instance).from_checkpoint(from_checkpoint)
+        restored.checkpoint = from_checkpoint.model_copy(update={"restore_from": None})
+        return restored
+    instance.checkpoint = from_checkpoint
+    return None

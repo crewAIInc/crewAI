@@ -5,7 +5,7 @@ import click
 from packaging import version
 
 from crewai.cli.utils import build_env_with_all_tool_credentials, read_toml
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 
 
 class CrewType(Enum):

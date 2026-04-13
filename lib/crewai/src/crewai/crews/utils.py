@@ -431,6 +431,7 @@ async def run_for_each_async(
     from crewai.types.usage_metrics import UsageMetrics
     from crewai.utilities.streaming import (
         create_async_chunk_generator,
+        register_cleanup,
         signal_end,
         signal_error,
     )
@@ -480,6 +481,7 @@ async def run_for_each_async(
             streaming_output._set_results(result)
 
         streaming_output._set_result = set_results_wrapper  # type: ignore[method-assign]
+        register_cleanup(streaming_output, ctx.state)
         ctx.output_holder.append(streaming_output)
 
         return streaming_output

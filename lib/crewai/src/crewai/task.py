@@ -45,6 +45,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
+from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -80,7 +81,7 @@ from crewai.utilities.guardrail_types import (
     GuardrailType,
     GuardrailsType,
 )
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
 
@@ -115,7 +116,6 @@ class Task(BaseModel):
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
-    i18n: I18N = Field(default_factory=get_i18n)
     name: str | None = Field(default=None)
     prompt_context: str | None = None
     description: str = Field(description="Description of the actual task.")
@@ -231,6 +231,8 @@ class Task(BaseModel):
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
+    checkpoint_original_description: str | None = Field(default=None, exclude=False)
+    checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
 
@@ -300,12 +302,14 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def validate_required_fields(self) -> Self:
-        required_fields = ["description", "expected_output"]
-        for field in required_fields:
-            if getattr(self, field) is None:
-                raise ValueError(
-                    f"{field} must be provided either directly or through config"
-                )
+        if self.description is None:
+            raise ValueError(
+                "description must be provided either directly or through config"
+            )
+        if self.expected_output is None:
+            raise ValueError(
+                "expected_output must be provided either directly or through config"
+            )
         return self
 
     @model_validator(mode="after")
@@ -837,8 +841,8 @@ class Task(BaseModel):
         should_inject = self.allow_crewai_trigger_context
 
         if should_inject and self.agent:
-            crew = getattr(self.agent, "crew", None)
-            if crew and hasattr(crew, "_inputs") and crew._inputs:
+            crew = self.agent.crew
+            if crew and not isinstance(crew, str) and crew._inputs:
                 trigger_payload = crew._inputs.get("crewai_trigger_payload")
                 if trigger_payload is not None:
                     description += f"\n\nTrigger Payload: {trigger_payload}"
@@ -851,11 +855,12 @@ class Task(BaseModel):
                     isinstance(self.agent.llm, BaseLLM)
                     and self.agent.llm.supports_multimodal()
                 ):
-                    provider: str = str(
-                        getattr(self.agent.llm, "provider", None)
-                        or getattr(self.agent.llm, "model", "openai")
+                    provider: str = self.agent.llm.provider or self.agent.llm.model
+                    api: str | None = (
+                        self.agent.llm.api
+                        if isinstance(self.agent.llm, OpenAICompletion)
+                        else None
                     )
-                    api: str | None = getattr(self.agent.llm, "api", None)
                     supported_types = get_supported_content_types(provider, api)
 
                 def is_auto_injected(content_type: str) -> bool:
@@ -896,7 +901,7 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = self.i18n.slice("expected_output").format(
+        output = I18N_DEFAULT.slice("expected_output").format(
             expected_output=self.expected_output
         )
         tasks_slices = [description, output]
@@ -968,7 +973,7 @@ Follow these guidelines:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
 
         if inputs.get("crew_chat_messages"):
-            conversation_instruction = self.i18n.slice(
+            conversation_instruction = I18N_DEFAULT.slice(
                 "conversation_history_instruction"
             )
 
@@ -1219,7 +1224,7 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = self.i18n.errors("validation_error").format(
+            context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
@@ -1316,7 +1321,7 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = self.i18n.errors("validation_error").format(
+            context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )

@@ -81,16 +81,9 @@
             ],
             "default": null,
             "title": "Mind Name"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "AIMindTool",
         "type": "object"
       },
@@ -168,20 +161,13 @@
             "title": "Save Dir",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "use_title_as_filename": {
             "default": false,
             "title": "Use Title As Filename",
             "type": "boolean"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ArxivPaperTool",
         "type": "object"
       },
@@ -297,16 +283,9 @@
             "default": "https://api.search.brave.com/res/v1/images/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveImageSearchTool",
         "type": "object"
       },
@@ -488,16 +467,9 @@
             "default": "https://api.search.brave.com/res/v1/llm/context",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveLLMContextTool",
         "type": "object"
       },
@@ -775,16 +747,9 @@
             "default": "https://api.search.brave.com/res/v1/local/descriptions",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveLocalPOIsDescriptionTool",
         "type": "object"
       },
@@ -896,16 +861,9 @@
             "default": "https://api.search.brave.com/res/v1/local/pois",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveLocalPOIsTool",
         "type": "object"
       },
@@ -1062,16 +1020,9 @@
             "default": "https://api.search.brave.com/res/v1/news/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveNewsSearchTool",
         "type": "object"
       },
@@ -1344,16 +1295,9 @@
             "default": "https://api.search.brave.com/res/v1/web/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveSearchTool",
         "type": "object"
       },
@@ -1729,16 +1673,9 @@
             "default": "https://api.search.brave.com/res/v1/videos/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveVideoSearchTool",
         "type": "object"
       },
@@ -1999,16 +1936,9 @@
             "default": "https://api.search.brave.com/res/v1/web/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveWebSearchTool",
         "type": "object"
       },
@@ -2380,11 +2310,6 @@
             "title": "Format",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "url": {
             "anyOf": [
               {
@@ -2410,9 +2335,7 @@
             "title": "Zipcode"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrightDataDatasetTool",
         "type": "object"
       },
@@ -2590,20 +2513,13 @@
             "default": null,
             "title": "Search Type"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "zone": {
             "default": "",
             "title": "Zone",
             "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrightDataSearchTool",
         "type": "object"
       },
@@ -2774,11 +2690,6 @@
             "title": "Format",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "url": {
             "anyOf": [
               {
@@ -2797,9 +2708,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrightDataWebUnlockerTool",
         "type": "object"
       },
@@ -2972,16 +2881,9 @@
             ],
             "default": false,
             "title": "Text Content"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrowserbaseLoadTool",
         "type": "object"
       },
@@ -4026,16 +3928,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "CSVSearchTool",
         "type": "object"
       },
@@ -5085,16 +4980,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "CodeDocsSearchTool",
         "type": "object"
       },
@@ -5172,18 +5060,8 @@
           }
         },
         "description": "Wrapper for composio tools.",
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "description",
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "ComposioTool",
         "type": "object"
       },
@@ -5246,16 +5124,10 @@
           "contextual_client": {
             "default": null,
             "title": "Contextual Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAICreateAgentTool",
         "type": "object"
@@ -5348,16 +5220,10 @@
           "api_key": {
             "title": "Api Key",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAIParseTool",
         "type": "object"
@@ -5475,16 +5341,10 @@
           "contextual_client": {
             "default": null,
             "title": "Contextual Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAIQueryTool",
         "type": "object"
@@ -5575,16 +5435,10 @@
           "api_key": {
             "title": "Api Key",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAIRerankTool",
         "type": "object"
@@ -5751,11 +5605,6 @@
             "description": "Specify whether the index is scoped. Is True by default.",
             "title": "Scoped Index",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
@@ -5763,8 +5612,7 @@
           "collection_name",
           "scope_name",
           "bucket_name",
-          "index_name",
-          "tool_type"
+          "index_name"
         ],
         "title": "CouchbaseFTSVectorSearchTool",
         "type": "object"
@@ -6809,16 +6657,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DOCXSearchTool",
         "type": "object"
       },
@@ -6954,16 +6795,9 @@
             ],
             "default": "1024x1024",
             "title": "Size"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DallETool",
         "type": "object"
       },
@@ -7064,16 +6898,9 @@
             ],
             "default": null,
             "title": "Default Warehouse Id"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DatabricksQueryTool",
         "type": "object"
       },
@@ -7203,16 +7030,9 @@
             ],
             "default": null,
             "title": "Directory"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DirectoryReadTool",
         "type": "object"
       },
@@ -8256,16 +8076,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DirectorySearchTool",
         "type": "object"
       },
@@ -8409,11 +8222,6 @@
             "default": false,
             "title": "Summary"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "type": {
             "anyOf": [
               {
@@ -8427,9 +8235,7 @@
             "title": "Type"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "EXASearchTool",
         "type": "object"
       },
@@ -8536,16 +8342,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "FileCompressorTool",
         "type": "object"
       },
@@ -8647,16 +8445,9 @@
             ],
             "default": null,
             "title": "File Path"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FileReadTool",
         "type": "object"
       },
@@ -8746,16 +8537,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "FileWriterTool",
         "type": "object"
       },
@@ -8878,16 +8661,9 @@
               }
             ],
             "title": "Config"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FirecrawlCrawlWebsiteTool",
         "type": "object"
       },
@@ -8977,16 +8753,9 @@
             "additionalProperties": true,
             "title": "Config",
             "type": "object"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FirecrawlScrapeWebsiteTool",
         "type": "object"
       },
@@ -9083,16 +8852,9 @@
               }
             ],
             "title": "Config"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FirecrawlSearchTool",
         "type": "object"
       },
@@ -9187,16 +8949,9 @@
             ],
             "description": "The user's Personal Access Token to access CrewAI AMP API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
             "title": "Personal Access Token"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "GenerateCrewaiAutomationTool",
         "type": "object"
       },
@@ -10264,16 +10019,10 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "gh_token",
-          "tool_type"
+          "gh_token"
         ],
         "title": "GithubSearchTool",
         "type": "object"
@@ -10383,16 +10132,9 @@
             ],
             "default": null,
             "title": "Hyperbrowser"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "HyperbrowserLoadTool",
         "type": "object"
       },
@@ -10495,17 +10237,11 @@
             "default": 600,
             "title": "Max Polling Time",
             "type": "integer"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "crew_api_url",
-          "crew_bearer_token",
-          "tool_type"
+          "crew_bearer_token"
         ],
         "title": "InvokeCrewAIAutomationTool",
         "type": "object"
@@ -11550,16 +11286,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "JSONSearchTool",
         "type": "object"
       },
@@ -11649,11 +11378,6 @@
             "title": "Headers",
             "type": "object"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -11667,9 +11391,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "JinaScrapeWebsiteTool",
         "type": "object"
       },
@@ -11740,16 +11462,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "LinkupSearchTool",
         "type": "object"
       },
@@ -11809,18 +11523,10 @@
         "properties": {
           "llama_index_tool": {
             "title": "Llama Index Tool"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "name",
-          "description",
-          "llama_index_tool",
-          "tool_type"
+          "llama_index_tool"
         ],
         "title": "LlamaIndexTool",
         "type": "object"
@@ -12855,16 +12561,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "MDXSearchTool",
         "type": "object"
       },
@@ -12976,20 +12675,12 @@
             "description": "UUID of the Agent Handler Tool Pack to use",
             "title": "Tool Pack Id",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "name",
-          "description",
           "tool_pack_id",
           "registered_user_id",
-          "tool_name",
-          "tool_type"
+          "tool_name"
         ],
         "title": "MergeAgentHandlerTool",
         "type": "object"
@@ -13173,11 +12864,6 @@
             "title": "Text Key",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "vector_index_name": {
             "default": "vector_index",
             "description": "Name of the Atlas Search vector index",
@@ -13188,8 +12874,7 @@
         "required": [
           "database_name",
           "collection_name",
-          "connection_string",
-          "tool_type"
+          "connection_string"
         ],
         "title": "MongoDBVectorSearchTool",
         "type": "object"
@@ -13296,16 +12981,9 @@
             ],
             "default": null,
             "title": "Session Id"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "MultiOnTool",
         "type": "object"
       },
@@ -14346,16 +14024,10 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "db_uri",
-          "tool_type"
+          "db_uri"
         ],
         "title": "MySQLSearchTool",
         "type": "object"
@@ -14379,7 +14051,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -14420,7 +14092,14 @@
             "type": "object"
           }
         },
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
+          "allow_dml": {
+            "default": false,
+            "description": "When False (default) only read statements are permitted. Set to True to allow INSERT/UPDATE/DELETE/DROP and other write operations.",
+            "title": "Allow DML",
+            "type": "boolean"
+          },
           "columns": {
             "additionalProperties": {
               "anyOf": [
@@ -14451,16 +14130,10 @@
             },
             "title": "Tables",
             "type": "array"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "db_uri",
-          "tool_type"
+          "db_uri"
         ],
         "title": "NL2SQLTool",
         "type": "object"
@@ -14869,16 +14542,9 @@
         "properties": {
           "llm": {
             "$ref": "#/$defs/LLM"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "OCRTool",
         "type": "object"
       },
@@ -15075,17 +14741,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsAmazonProductScraperTool",
         "type": "object"
@@ -15310,17 +14970,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsAmazonSearchScraperTool",
         "type": "object"
@@ -15558,17 +15212,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsGoogleSearchScraperTool",
         "type": "object"
@@ -15754,17 +15402,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsUniversalScraperTool",
         "type": "object"
@@ -16822,16 +16464,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "PDFSearchTool",
         "type": "object"
       },
@@ -16913,16 +16548,9 @@
             "default": "https://api.parallel.ai/v1beta/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ParallelSearchTool",
         "type": "object"
       },
@@ -17081,16 +16709,9 @@
             },
             "title": "Evaluators",
             "type": "array"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "PatronusEvalTool",
         "type": "object"
       },
@@ -17156,17 +16777,11 @@
           "evaluator": {
             "title": "Evaluator",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "evaluator",
-          "evaluated_model_gold_answer",
-          "tool_type"
+          "evaluated_model_gold_answer"
         ],
         "title": "PatronusLocalEvaluatorTool",
         "type": "object"
@@ -17272,16 +16887,9 @@
             },
             "title": "Evaluators",
             "type": "array"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "PatronusPredefinedCriteriaEvalTool",
         "type": "object"
       },
@@ -17470,16 +17078,10 @@
             "description": "Base package path for Qdrant. Will dynamically import client and models.",
             "title": "Qdrant Package",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "qdrant_config",
-          "tool_type"
+          "qdrant_config"
         ],
         "title": "QdrantVectorSearchTool",
         "type": "object"
@@ -18549,16 +18151,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "RagTool",
         "type": "object"
       },
@@ -18654,11 +18249,6 @@
             ],
             "title": "Headers"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -18672,9 +18262,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapeElementFromWebsiteTool",
         "type": "object"
       },
@@ -18774,11 +18362,6 @@
             ],
             "title": "Headers"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -18792,9 +18375,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapeWebsiteTool",
         "type": "object"
       },
@@ -18884,11 +18465,6 @@
             "title": "Enable Logging",
             "type": "boolean"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "user_prompt": {
             "anyOf": [
               {
@@ -18914,9 +18490,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapegraphScrapeTool",
         "type": "object"
       },
@@ -19017,16 +18591,9 @@
             ],
             "default": null,
             "title": "Scrapfly"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapflyScrapeWebsiteTool",
         "type": "object"
       },
@@ -19184,11 +18751,6 @@
             "default": false,
             "title": "Return Html"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "wait_time": {
             "anyOf": [
               {
@@ -19214,9 +18776,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SeleniumScrapingTool",
         "type": "object"
       },
@@ -19306,16 +18866,9 @@
             ],
             "default": null,
             "title": "Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerpApiGoogleSearchTool",
         "type": "object"
       },
@@ -19411,16 +18964,9 @@
             ],
             "default": null,
             "title": "Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerpApiGoogleShoppingTool",
         "type": "object"
       },
@@ -19562,16 +19108,9 @@
             "default": "search",
             "title": "Search Type",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerperDevTool",
         "type": "object"
       },
@@ -19642,16 +19181,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "SerperScrapeWebsiteTool",
         "type": "object"
       },
@@ -20739,16 +20270,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyJobSearchTool",
         "type": "object"
       },
@@ -20862,16 +20386,9 @@
             "default": "https://api.serply.io/v1/news/",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyNewsSearchTool",
         "type": "object"
       },
@@ -20985,16 +20502,9 @@
             "default": "https://api.serply.io/v1/scholar/",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyScholarSearchTool",
         "type": "object"
       },
@@ -21144,16 +20654,9 @@
             "default": "https://api.serply.io/v1/search/",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyWebSearchTool",
         "type": "object"
       },
@@ -22234,16 +21737,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyWebpageToMarkdownTool",
         "type": "object"
       },
@@ -22384,16 +21880,9 @@
             ],
             "default": null,
             "title": "Connection Pool"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SingleStoreSearchTool",
         "type": "object"
       },
@@ -22604,16 +22093,10 @@
             "description": "Delay between retries in seconds",
             "title": "Retry Delay",
             "type": "number"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "SnowflakeSearchTool",
         "type": "object"
@@ -22800,11 +22283,6 @@
             "default": null,
             "title": "Spider"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -22818,9 +22296,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SpiderTool",
         "type": "object"
       },
@@ -22983,11 +22459,6 @@
             "default": "https://api.stagehand.browserbase.com/v1",
             "title": "Server Url"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "use_simplified_dom": {
             "default": true,
             "title": "Use Simplified Dom",
@@ -23004,9 +22475,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "StagehandTool",
         "type": "object"
       },
@@ -24084,11 +23553,6 @@
             "title": "Summarize",
             "type": "boolean"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "txt": {
             "anyOf": [
               {
@@ -24102,9 +23566,7 @@
             "title": "Txt"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "TXTSearchTool",
         "type": "object"
       },
@@ -24251,16 +23713,9 @@
             "description": "The timeout for the extraction request in seconds.",
             "title": "Timeout",
             "type": "integer"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "TavilyExtractorTool",
         "type": "object"
       },
@@ -24507,11 +23962,6 @@
             "title": "Timeout",
             "type": "integer"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "topic": {
             "default": "general",
             "description": "The topic to focus the search on.",
@@ -24524,9 +23974,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "TavilySearchTool",
         "type": "object"
       },
@@ -24600,16 +24048,8 @@
           }
         },
         "description": "Tool for analyzing images using vision models.\n\nArgs:\n    llm: Optional LLM instance to use\n    model: Model identifier to use if no LLM is provided",
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "VisionTool",
         "type": "object"
       },
@@ -24731,11 +24171,6 @@
             "default": null,
             "title": "Query"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "vectorizer": {
             "title": "Vectorizer"
           },
@@ -24753,8 +24188,7 @@
         "required": [
           "collection_name",
           "weaviate_cluster_url",
-          "weaviate_api_key",
-          "tool_type"
+          "weaviate_api_key"
         ],
         "title": "WeaviateVectorSearchTool",
         "type": "object"
@@ -25801,16 +25235,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "WebsiteSearchTool",
         "type": "object"
       },
@@ -26860,16 +26287,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "XMLSearchTool",
         "type": "object"
       },
@@ -27919,16 +27339,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "YoutubeChannelSearchTool",
         "type": "object"
       },
@@ -28978,16 +28391,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "YoutubeVideoSearchTool",
         "type": "object"
       },

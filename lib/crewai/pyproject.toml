@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     # Core Dependencies
     "pydantic~=2.11.9",
-    "openai>=1.83.0,<3",
+    "openai>=2.0.0,<3",
     "instructor>=1.3.3",
     # Text Processing
     "pdfplumber~=0.11.4",
@@ -40,7 +40,7 @@ dependencies = [
     "pydantic-settings~=2.10.1",
     "httpx~=0.28.1",
     "mcp~=1.26.0",
-    "uv~=0.9.13",
+    "uv~=0.11.6",
     "aiosqlite~=0.21.0",
     "pyyaml~=6.0",
     "aiofiles~=24.1.0",
@@ -55,7 +55,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.14.0",
+    "crewai-tools==1.14.2a3",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -68,14 +68,14 @@ openpyxl = [
 ]
 mem0 = ["mem0ai~=0.1.94"]
 docling = [
-    "docling~=2.75.0",
+    "docling~=2.84.0",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
 ]
 aws = [
-    "boto3~=1.40.38",
-    "aiobotocore~=2.25.2",
+    "boto3~=1.42.79",
+    "aiobotocore~=3.4.0",
 ]
 watson = [
     "ibm-watsonx-ai~=1.3.39",
@@ -87,7 +87,7 @@ litellm = [
     "litellm~=1.83.0",
 ]
 bedrock = [
-    "boto3~=1.40.45",
+    "boto3~=1.42.79",
 ]
 google-genai = [
     "google-genai~=1.65.0",

@@ -11,7 +11,7 @@ classifiers = ["Private :: Do Not Upload"]
 private = true
 dependencies = [
     "click~=8.1.7",
-    "toml~=0.10.2",
+    "tomlkit~=0.13.2",
     "openai>=1.83.0,<3",
     "python-dotenv~=1.1.1",
     "pygithub~=1.59.1",
@@ -24,6 +24,10 @@ tag = "crewai_devtools.cli:tag"
 release = "crewai_devtools.cli:release"
 docs-check = "crewai_devtools.docs_check:docs_check"
 devtools = "crewai_devtools.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--noconftest"
 
 [tool.uv]
 exclude-newer = "3 days"

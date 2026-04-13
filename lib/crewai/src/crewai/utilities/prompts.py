@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 class StandardPromptResult(BaseModel):
@@ -49,7 +49,6 @@ class Prompts(BaseModel):
         - Need to refactor so that prompt is not tightly coupled to agent.
     """
 
-    i18n: I18N = Field(default_factory=get_i18n)
     has_tools: bool = Field(
         default=False, description="Indicates if the agent has access to tools"
     )
@@ -140,13 +139,13 @@ class Prompts(BaseModel):
         if not system_template or not prompt_template:
             # If any of the required templates are missing, fall back to the default format
             prompt_parts: list[str] = [
-                self.i18n.slice(component) for component in components
+                I18N_DEFAULT.slice(component) for component in components
             ]
             prompt = "".join(prompt_parts)
         else:
             # All templates are provided, use them
             template_parts: list[str] = [
-                self.i18n.slice(component)
+                I18N_DEFAULT.slice(component)
                 for component in components
                 if component != "task"
             ]
@@ -154,7 +153,7 @@ class Prompts(BaseModel):
                 "{{ .System }}", "".join(template_parts)
             )
             prompt = prompt_template.replace(
-                "{{ .Prompt }}", "".join(self.i18n.slice("task"))
+                "{{ .Prompt }}", "".join(I18N_DEFAULT.slice("task"))
             )
             # Handle missing response_template
             if response_template:

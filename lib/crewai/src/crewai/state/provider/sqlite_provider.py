@@ -17,15 +17,20 @@ _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS checkpoints (
     id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL,
+    parent_id TEXT,
+    branch TEXT NOT NULL DEFAULT 'main',
     data JSONB NOT NULL
 )
 """
 
-_INSERT = "INSERT INTO checkpoints (id, created_at, data) VALUES (?, ?, jsonb(?))"
+_INSERT = (
+    "INSERT INTO checkpoints (id, created_at, parent_id, branch, data) "
+    "VALUES (?, ?, ?, ?, jsonb(?))"
+)
 _SELECT = "SELECT json(data) FROM checkpoints WHERE id = ?"
 _PRUNE = """
-DELETE FROM checkpoints WHERE rowid NOT IN (
-    SELECT rowid FROM checkpoints ORDER BY rowid DESC LIMIT ?
+DELETE FROM checkpoints WHERE branch = ? AND rowid NOT IN (
+    SELECT rowid FROM checkpoints WHERE branch = ? ORDER BY rowid DESC LIMIT ?
 )
 """
 
@@ -50,12 +55,21 @@ class SqliteProvider(BaseProvider):
 
     provider_type: Literal["sqlite"] = "sqlite"
 
-    def checkpoint(self, data: str, location: str) -> str:
+    def checkpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Write a checkpoint to the SQLite database.
 
         Args:
             data: The serialized JSON string to persist.
             location: Path to the SQLite database file.
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
             A location string in the format ``"db_path#checkpoint_id"``.
@@ -65,16 +79,25 @@ class SqliteProvider(BaseProvider):
         with sqlite3.connect(location) as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(_CREATE_TABLE)
-            conn.execute(_INSERT, (checkpoint_id, ts, data))
+            conn.execute(_INSERT, (checkpoint_id, ts, parent_id, branch, data))
             conn.commit()
         return f"{location}#{checkpoint_id}"
 
-    async def acheckpoint(self, data: str, location: str) -> str:
+    async def acheckpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Write a checkpoint to the SQLite database asynchronously.
 
         Args:
             data: The serialized JSON string to persist.
             location: Path to the SQLite database file.
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
             A location string in the format ``"db_path#checkpoint_id"``.
@@ -84,15 +107,19 @@ class SqliteProvider(BaseProvider):
         async with aiosqlite.connect(location) as db:
             await db.execute("PRAGMA journal_mode=WAL")
             await db.execute(_CREATE_TABLE)
-            await db.execute(_INSERT, (checkpoint_id, ts, data))
+            await db.execute(_INSERT, (checkpoint_id, ts, parent_id, branch, data))
             await db.commit()
         return f"{location}#{checkpoint_id}"
 
-    def prune(self, location: str, max_keep: int) -> None:
-        """Remove oldest checkpoint rows beyond *max_keep*."""
+    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> None:
+        """Remove oldest checkpoint rows beyond *max_keep* on a branch."""
         with sqlite3.connect(location) as conn:
-            conn.execute(_PRUNE, (max_keep,))
+            conn.execute(_PRUNE, (branch, branch, max_keep))
             conn.commit()
+
+    def extract_id(self, location: str) -> str:
+        """Extract the checkpoint ID from a ``db_path#id`` string."""
+        return location.rsplit("#", 1)[1]
 
     def from_checkpoint(self, location: str) -> str:
         """Read a checkpoint from the SQLite database.

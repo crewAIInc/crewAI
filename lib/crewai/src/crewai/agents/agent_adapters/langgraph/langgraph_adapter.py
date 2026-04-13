@@ -33,6 +33,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.import_utils import require
 
 
@@ -186,7 +187,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             task_prompt = task.prompt() if hasattr(task, "prompt") else str(task)
 
             if context:
-                task_prompt = self.i18n.slice("task_with_context").format(
+                task_prompt = I18N_DEFAULT.slice("task_with_context").format(
                     task=task_prompt, context=context
                 )
 

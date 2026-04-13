@@ -38,7 +38,7 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
     setup_native_tools,
 )
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import TodoItem
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
@@ -81,7 +81,7 @@ class StepExecutor:
         function_calling_llm: Optional separate LLM for function calling.
         request_within_rpm_limit: Optional RPM limit function.
         callbacks: Optional list of callbacks.
-        i18n: Optional i18n instance.
+
     """
 
     def __init__(
@@ -96,7 +96,6 @@ class StepExecutor:
         function_calling_llm: BaseLLM | None = None,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
-        i18n: I18N | None = None,
     ) -> None:
         self.llm = llm
         self.tools = tools
@@ -108,9 +107,7 @@ class StepExecutor:
         self.function_calling_llm = function_calling_llm
         self.request_within_rpm_limit = request_within_rpm_limit
         self.callbacks = callbacks or []
-        self._i18n: I18N = i18n or get_i18n()
 
-        # Native tool support — set up once
         self._use_native_tools = check_native_tool_support(
             self.llm, self.original_tools
         )
@@ -122,10 +119,6 @@ class StepExecutor:
                 self._available_functions,
                 _,
             ) = setup_native_tools(self.original_tools)
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     def execute(
         self,
@@ -192,10 +185,6 @@ class StepExecutor:
                 execution_time=elapsed,
             )
 
-    # ------------------------------------------------------------------
-    # Internal: Message building
-    # ------------------------------------------------------------------
-
     def _build_isolated_messages(
         self, todo: TodoItem, context: StepExecutionContext
     ) -> list[LLMMessage]:
@@ -221,14 +210,14 @@ class StepExecutor:
         tools_section = ""
         if self.tools and not self._use_native_tools:
             tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
-            tools_section = self._i18n.retrieve(
+            tools_section = I18N_DEFAULT.retrieve(
                 "planning", "step_executor_tools_section"
             ).format(tool_names=tool_names)
         elif self.tools:
             tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
             tools_section = f"\n\nAvailable tools: {tool_names}"
 
-        return self._i18n.retrieve("planning", "step_executor_system_prompt").format(
+        return I18N_DEFAULT.retrieve("planning", "step_executor_system_prompt").format(
             role=role,
             backstory=backstory,
             goal=goal,
@@ -239,15 +228,11 @@ class StepExecutor:
         """Build the user prompt for this specific step."""
         parts: list[str] = []
 
-        # Include overall task context so the executor knows the full goal and
-        # required output format/location — critical for knowing WHAT to produce.
-        # We extract only the task body (not tool instructions or verification
-        # sections) to avoid duplicating directives already in the system prompt.
         if context.task_description:
             task_section = extract_task_section(context.task_description)
             if task_section:
                 parts.append(
-                    self._i18n.retrieve(
+                    I18N_DEFAULT.retrieve(
                         "planning", "step_executor_task_context"
                     ).format(
                         task_context=task_section,
@@ -255,37 +240,34 @@ class StepExecutor:
                 )
 
         parts.append(
-            self._i18n.retrieve("planning", "step_executor_user_prompt").format(
+            I18N_DEFAULT.retrieve("planning", "step_executor_user_prompt").format(
                 step_description=todo.description,
             )
         )
 
         if todo.tool_to_use:
             parts.append(
-                self._i18n.retrieve("planning", "step_executor_suggested_tool").format(
+                I18N_DEFAULT.retrieve(
+                    "planning", "step_executor_suggested_tool"
+                ).format(
                     tool_to_use=todo.tool_to_use,
                 )
             )
 
-        # Include dependency results (final results only, no traces)
         if context.dependency_results:
             parts.append(
-                self._i18n.retrieve("planning", "step_executor_context_header")
+                I18N_DEFAULT.retrieve("planning", "step_executor_context_header")
             )
             for step_num, result in sorted(context.dependency_results.items()):
                 parts.append(
-                    self._i18n.retrieve(
+                    I18N_DEFAULT.retrieve(
                         "planning", "step_executor_context_entry"
                     ).format(step_number=step_num, result=result)
                 )
 
-        parts.append(self._i18n.retrieve("planning", "step_executor_complete_step"))
+        parts.append(I18N_DEFAULT.retrieve("planning", "step_executor_complete_step"))
 
         return "\n".join(parts)
-
-    # ------------------------------------------------------------------
-    # Internal: Multi-turn execution loop
-    # ------------------------------------------------------------------
 
     def _execute_text_parsed(
         self,
@@ -306,7 +288,6 @@ class StepExecutor:
         last_tool_result = ""
 
         for _ in range(max_step_iterations):
-            # Check step timeout
             if step_timeout and start_time:
                 elapsed = time.monotonic() - start_time
                 if elapsed >= step_timeout:
@@ -331,17 +312,12 @@ class StepExecutor:
                 tool_calls_made.append(formatted.tool)
                 tool_result = self._execute_text_tool_with_events(formatted)
                 last_tool_result = tool_result
-                # Append the assistant's reasoning + action, then the observation.
-                # _build_observation_message handles vision sentinels so the LLM
-                # receives an image content block instead of raw base64 text.
                 messages.append({"role": "assistant", "content": answer_str})
                 messages.append(self._build_observation_message(tool_result))
                 continue
 
-            # Raw text response with no Final Answer marker — treat as done
             return answer_str
 
-        # Max iterations reached — return the last tool result we accumulated
         return last_tool_result
 
     def _execute_text_tool_with_events(self, formatted: AgentAction) -> str:
@@ -375,7 +351,6 @@ class StepExecutor:
                 agent_action=formatted,
                 fingerprint_context=fingerprint_context,
                 tools=self.tools,
-                i18n=self._i18n,
                 agent_key=self.agent.key if self.agent else None,
                 agent_role=self.agent.role if self.agent else None,
                 tools_handler=self.tools_handler,
@@ -429,10 +404,6 @@ class StepExecutor:
             except json.JSONDecodeError:
                 return {"input": stripped_input}
         return {"input": str(tool_input)}
-
-    # ------------------------------------------------------------------
-    # Internal: Vision support
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _parse_vision_sentinel(raw: str) -> tuple[str, str] | None:
@@ -518,7 +489,6 @@ class StepExecutor:
         accumulated_results: list[str] = []
 
         for _ in range(max_step_iterations):
-            # Check step timeout
             if step_timeout and start_time:
                 elapsed = time.monotonic() - start_time
                 if elapsed >= step_timeout:
@@ -542,19 +512,14 @@ class StepExecutor:
                 return answer.model_dump_json()
 
             if isinstance(answer, list) and answer and is_tool_call_list(answer):
-                # _execute_native_tool_calls appends assistant + tool messages
-                # to `messages` as a side-effect, so the next LLM call will
-                # see the full conversation history including tool outputs.
                 result = self._execute_native_tool_calls(
                     answer, messages, tool_calls_made
                 )
                 accumulated_results.append(result)
                 continue
 
-            # Text answer → LLM decided the step is done
             return str(answer)
 
-        # Max iterations reached — return everything we accumulated
         return "\n".join(filter(None, accumulated_results))
 
     def _execute_native_tool_calls(
@@ -600,9 +565,6 @@ class StepExecutor:
                     parsed = self._parse_vision_sentinel(raw_content)
                     if parsed:
                         media_type, b64_data = parsed
-                        # Replace the sentinel with a standard image_url content block.
-                        # Each provider's _format_messages handles conversion to
-                        # its native format (e.g. Anthropic image blocks).
                         modified: LLMMessage = cast(
                             LLMMessage, dict(call_result.tool_message)
                         )

@@ -6,8 +6,25 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
+
   type-checker-matrix:
     name: type-checker (${{ matrix.python-version }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -57,14 +74,18 @@ jobs:
   type-checker:
     name: type-checker
     runs-on: ubuntu-latest
-    needs: type-checker-matrix
+    needs: [changes, type-checker-matrix]
     if: always()
     steps:
-      - name: Check matrix results
+      - name: Check results
         run: |
-          if [ "${{ needs.type-checker-matrix.result }}" == "success" ] || [ "${{ needs.type-checker-matrix.result }}" == "skipped" ]; then
-            echo "✅ All type checks passed"
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, skipping type checks"
+            exit 0
+          fi
+          if [ "${{ needs.type-checker-matrix.result }}" == "success" ]; then
+            echo "All type checks passed"
           else
-            echo "❌ Type checks failed"
+            echo "Type checks failed"
             exit 1
           fi

@@ -63,25 +63,21 @@ class A2AExtension(Protocol):
     Example:
         class MyExtension:
             def inject_tools(self, agent: Agent) -> None:
-                # Add custom tools to the agent
                 pass
 
             def extract_state_from_history(
                 self, conversation_history: Sequence[Message]
             ) -> ConversationState | None:
-                # Extract state from conversation
                 return None
 
             def augment_prompt(
                 self, base_prompt: str, conversation_state: ConversationState | None
             ) -> str:
-                # Add custom instructions
                 return base_prompt
 
             def process_response(
                 self, agent_response: Any, conversation_state: ConversationState | None
             ) -> Any:
-                # Modify response if needed
                 return agent_response
     """
 
