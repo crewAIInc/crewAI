@@ -1,7 +1,7 @@
 import logging
 import os
 from time import sleep
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.events.event_types import (
@@ -652,6 +652,76 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
+
+
+def test_non_streaming_prefers_tool_calls_when_text_also_present():
+    llm = LLM(model="openai/gpt-4o-mini", stream=False, is_litellm=True)
+    tool_calls = [
+        {
+            "id": "call_1",
+            "type": "function",
+            "function": {"name": "search", "arguments": '{"query":"weather"}'},
+        }
+    ]
+
+    with patch("litellm.completion") as mocked_completion:
+        mock_message = MagicMock()
+        mock_message.content = "I can help with that."
+        mock_message.tool_calls = tool_calls
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 5,
+            "completion_tokens": 5,
+            "total_tokens": 10,
+        }
+        mocked_completion.return_value = mock_response
+
+        result = llm.call(
+            [{"role": "user", "content": "Use tool"}],
+            available_functions=None,
+        )
+
+    assert result == tool_calls
+
+
+@pytest.mark.asyncio
+async def test_async_non_streaming_prefers_tool_calls_when_text_also_present():
+    llm = LLM(model="openai/gpt-4o-mini", stream=False, is_litellm=True)
+    tool_calls = [
+        {
+            "id": "call_1",
+            "type": "function",
+            "function": {"name": "search", "arguments": '{"query":"weather"}'},
+        }
+    ]
+
+    mock_message = MagicMock()
+    mock_message.content = "I can help with that."
+    mock_message.tool_calls = tool_calls
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = {
+        "prompt_tokens": 5,
+        "completion_tokens": 5,
+        "total_tokens": 10,
+    }
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=mock_response)):
+        result = await llm.acall(
+            [{"role": "user", "content": "Use tool"}],
+            available_functions=None,
+        )
+
+    assert result == tool_calls
 
 
 @pytest.mark.vcr()
