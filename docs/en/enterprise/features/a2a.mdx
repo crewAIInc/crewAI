@@ -20,13 +20,16 @@ Add `A2AServerConfig` to any agent in your crew and deploy to AMP. The platform 
 ```python
 from crewai import Agent, Crew, Task
 from crewai.a2a import A2AServerConfig
+from crewai.a2a.auth import EnterpriseTokenAuth
 
 agent = Agent(
     role="Data Analyst",
     goal="Analyze datasets and provide insights",
     backstory="Expert data scientist with statistical analysis skills",
     llm="gpt-4o",
-    a2a=A2AServerConfig()
+    a2a=A2AServerConfig(
+        auth=EnterpriseTokenAuth()
+    )
 )
 
 task = Task(
@@ -43,7 +46,9 @@ After [deploying to AMP](/en/enterprise/guides/deploy-to-amp), the platform regi
 - **Crew-level**: an aggregate agent card at `/.well-known/agent-card.json` where each agent with `A2AServerConfig` is listed as a skill, with a JSON-RPC endpoint at `/a2a`
 - **Per-agent**: isolated agent cards and JSON-RPC endpoints mounted at `/a2a/agents/{role}/`, each with its own tenancy
 
-Clients can interact with the crew as a whole or target a specific agent directly. See [A2A Agent Delegation](/en/learn/a2a-agent-delegation#server-configuration-options) for the full list of `A2AServerConfig` options.
+Clients can interact with the crew as a whole or target a specific agent directly. To route a request to a specific agent through the crew-level endpoint, include `"target_agent"` in the message metadata with the agent's slugified role name (e.g., `"data-analyst"` for an agent with role `"Data Analyst"`). If no `target_agent` is provided, the request is handled by the first agent in the crew.
+
+See [A2A Agent Delegation](/en/learn/a2a-agent-delegation#server-configuration-options) for the full list of `A2AServerConfig` options.
 
 <Warning>
   Per the A2A protocol, agent cards are publicly accessible to enable discovery. This includes both the crew-level card at `/.well-known/agent-card.json` and per-agent cards at `/a2a/agents/{role}/.well-known/agent-card.json`. Do not include sensitive information in agent names, descriptions, or skill definitions.
