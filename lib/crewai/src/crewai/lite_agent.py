@@ -16,7 +16,6 @@ from typing import (
     get_origin,
 )
 import uuid
-import warnings
 
 from pydantic import (
     UUID4,
@@ -280,18 +279,6 @@ class LiteAgent(FlowTrackable, BaseModel):
         PrivateAttr(default_factory=get_after_llm_call_hooks)
     )
     _memory: Any = PrivateAttr(default=None)
-
-    @model_validator(mode="after")
-    def emit_deprecation_warning(self) -> Self:
-        """Emit deprecation warning for LiteAgent usage."""
-        warnings.warn(
-            "LiteAgent is deprecated and will be removed in a future version. "
-            "Use Agent().kickoff(messages) instead, which provides the same "
-            "functionality with additional features like memory and knowledge support.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self
 
     @model_validator(mode="after")
     def setup_llm(self) -> Self:
