@@ -1832,6 +1832,13 @@ def release(
         skip_enterprise: Skip the enterprise release phase.
         skip_to_enterprise: Skip phases 1 & 2, run only the enterprise release phase.
     """
+    flags: list[str] = []
+    if no_edit:
+        flags.append("--no-edit")
+    if skip_enterprise:
+        flags.append("--skip-enterprise")
+    flag_suffix = (" " + " ".join(flags)) if flags else ""
+
     check_gh_installed()
 
     if skip_enterprise and skip_to_enterprise:
@@ -1940,7 +1947,7 @@ def release(
         _print_release_error(e)
         _resume_hint(
             f"Phase 1 failed. Fix the issue, then re-run:\n\n"
-            f"  devtools release {version}"
+            f"  devtools release {version}{flag_suffix}"
         )
         sys.exit(1)
 
@@ -1975,10 +1982,19 @@ def release(
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
     except (subprocess.CalledProcessError, Exception) as e:
         _print_release_error(e)
+        enterprise_hint = (
+            ""
+            if skip_enterprise
+            else f"\n\nThen release enterprise:\n\n"
+            f"  devtools release {version} --skip-to-enterprise"
+        )
         _resume_hint(
             "Phase 2 failed before PyPI publish. The bump PR is already merged.\n"
             "Fix the issue, then resume with:\n\n"
             "  devtools tag"
+            f"\n\nAfter tagging, publish to PyPI and update deployment test:\n\n"
+            f"  gh workflow run publish.yml -f release_tag={version}"
+            f"{enterprise_hint}"
         )
         sys.exit(1)
 
