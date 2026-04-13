@@ -852,11 +852,15 @@ class Task(BaseModel):
             if files:
                 supported_types: list[str] = []
                 if (
-                    isinstance(self.agent.llm, OpenAICompletion)
+                    isinstance(self.agent.llm, BaseLLM)
                     and self.agent.llm.supports_multimodal()
                 ):
                     provider: str = self.agent.llm.provider or self.agent.llm.model
-                    api: str | None = self.agent.llm.api
+                    api: str | None = (
+                        self.agent.llm.api
+                        if isinstance(self.agent.llm, OpenAICompletion)
+                        else None
+                    )
                     supported_types = get_supported_content_types(provider, api)
 
                 def is_auto_injected(content_type: str) -> bool:
