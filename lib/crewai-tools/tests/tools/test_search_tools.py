@@ -231,36 +231,75 @@ def test_youtube_video_search_tool(mock_adapter):
 
 def test_youtube_channel_search_tool(mock_adapter):
     mock_adapter.query.return_value = "channel description"
-
-    youtube_channel_handle = "@crewai"
     search_query = "what is the channel about?"
-    tool = YoutubeChannelSearchTool(
-        youtube_channel_handle=youtube_channel_handle, adapter=mock_adapter
-    )
-    result = tool._run(search_query=search_query)
-    assert "channel description" in result
-    mock_adapter.add.assert_called_once_with(
-        youtube_channel_handle, data_type=DataType.YOUTUBE_CHANNEL
-    )
-    mock_adapter.query.assert_called_once_with(
-        search_query, similarity_threshold=0.6, limit=5
-    )
 
-    mock_adapter.query.reset_mock()
-    mock_adapter.add.reset_mock()
+    test_cases = [
+        ("@crewai", "https://www.youtube.com/@crewai"),
+        ("crewai", "https://www.youtube.com/@crewai"),
+        ("https://www.youtube.com/@crewai", "https://www.youtube.com/@crewai"),
+        ("https://www.youtube.com/channel/UCxxxxxx", "https://www.youtube.com/channel/UCxxxxxx")
+    ]
 
-    tool = YoutubeChannelSearchTool(adapter=mock_adapter)
-    result = tool._run(
-        youtube_channel_handle=youtube_channel_handle, search_query=search_query
-    )
-    assert "channel description" in result
+    for handle_input, expected_url in test_cases:
+        mock_adapter.query.reset_mock()
+        mock_adapter.add.reset_mock()
 
-    mock_adapter.add.assert_called_once_with(
-        youtube_channel_handle, data_type=DataType.YOUTUBE_CHANNEL
-    )
-    mock_adapter.query.assert_called_once_with(
-        search_query, similarity_threshold=0.6, limit=5
-    )
+        tool = YoutubeChannelSearchTool(
+            youtube_channel_handle=handle_input, adapter=mock_adapter
+        )
+        result = tool._run(search_query=search_query)
+        assert "channel description" in result
+        mock_adapter.add.assert_called_once_with(
+            expected_url, data_type=DataType.YOUTUBE_CHANNEL
+        )
+        mock_adapter.query.assert_called_once_with(
+            search_query, similarity_threshold=0.6, limit=5
+        )
+
+        mock_adapter.query.reset_mock()
+        mock_adapter.add.reset_mock()
+
+        tool = YoutubeChannelSearchTool(adapter=mock_adapter)
+        result = tool._run(
+            youtube_channel_handle=handle_input, search_query=search_query
+        )
+        assert "channel description" in result
+
+        mock_adapter.add.assert_called_once_with(
+            expected_url, data_type=DataType.YOUTUBE_CHANNEL
+        )
+        mock_adapter.query.assert_called_once_with(
+            search_query, similarity_threshold=0.6, limit=5
+        )
+
+def test_youtube_channel_loader_normalizes_shorthand():
+    from crewai_tools.rag.loaders.youtube_channel_loader import YoutubeChannelLoader
+    from crewai_tools.rag.source_content import SourceContent
+    import sys
+    from unittest.mock import MagicMock
+
+    loader = YoutubeChannelLoader()
+    
+    # Mock pytube globally so the local import in load() succeeds
+    mock_pytube = MagicMock()
+    mock_channel = MagicMock()
+    mock_channel.side_effect = Exception("Stop early")
+    mock_pytube.Channel = mock_channel
+    sys.modules['pytube'] = mock_pytube
+    
+    try:
+        for shorthand in ["@crewai", "crewai"]:
+            try:
+                loader.load(SourceContent(source=shorthand))
+            except ValueError as e:
+                # It will raise "Unable to load YouTube channel ...: Stop early"
+                # but should NOT raise "Invalid YouTube channel URL"
+                assert "Invalid YouTube channel URL" not in str(e)
+            
+            mock_channel.assert_called_with("https://www.youtube.com/@crewai")
+            mock_channel.reset_mock()
+    finally:
+        del sys.modules['pytube']
 
 
 def test_code_docs_search_tool(mock_adapter):
