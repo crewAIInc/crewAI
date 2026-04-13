@@ -874,23 +874,23 @@ class LLM(BaseLLM):
                     choices = None
                     if isinstance(last_chunk, dict) and "choices" in last_chunk:
                         choices = last_chunk["choices"]
-                    elif isinstance(last_chunk, ModelResponse):
+                    elif isinstance(last_chunk, ModelResponseStream):
                         choices = last_chunk.choices
 
                     if choices and len(choices) > 0:
                         choice = choices[0]
 
-                        message = None
-                        if isinstance(choice, dict) and "message" in choice:
-                            message = choice["message"]
-                        elif isinstance(choice, Choices):
-                            message = choice.message
+                        delta = None
+                        if isinstance(choice, dict) and "delta" in choice:
+                            delta = choice["delta"]
+                        elif isinstance(choice, LiteLLMStreamingChoices):
+                            delta = choice.delta
 
-                        if message:
-                            if isinstance(message, dict) and "tool_calls" in message:
-                                tool_calls = message["tool_calls"]
-                            elif isinstance(message, Message):
-                                tool_calls = message.tool_calls
+                        if delta:
+                            if isinstance(delta, dict) and "tool_calls" in delta:
+                                tool_calls = delta["tool_calls"]
+                            elif isinstance(delta, LiteLLMDelta):
+                                tool_calls = delta.tool_calls
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
 
