@@ -1,6 +1,8 @@
 import io
+import logging
 import os
 import shutil
+from typing import Any
 import zipfile
 
 import click
@@ -12,6 +14,7 @@ from rich.text import Text
 from crewai.cli.command import BaseCommand
 
 
+logger = logging.getLogger(__name__)
 console = Console()
 
 GITHUB_ORG = "crewAIInc"
@@ -130,7 +133,7 @@ class TemplateCommand(BaseCommand):
             telemetry.set_tracer()
             telemetry.template_installed_span(repo_name.removeprefix(TEMPLATE_PREFIX))
         except Exception:
-            pass
+            logger.debug("Failed to record template install telemetry")
 
         console.print(
             f"\n [green]\u2713[/green]  Installed template [bold white]{folder_name}[/bold white]"
@@ -150,13 +153,17 @@ class TemplateCommand(BaseCommand):
         )
         console.print(panel)
 
-    def _fetch_templates(self) -> list[dict]:
+    def _fetch_templates(self) -> list[dict[str, Any]]:
         """Fetch all template repos from the GitHub org."""
-        templates: list[dict] = []
+        templates: list[dict[str, Any]] = []
         page = 1
         while True:
             url = f"{GITHUB_API_BASE}/orgs/{GITHUB_ORG}/repos"
-            params = {"per_page": 100, "page": page, "type": "public"}
+            params: dict[str, str | int] = {
+                "per_page": 100,
+                "page": page,
+                "type": "public",
+            }
             try:
                 response = httpx.get(url, params=params, timeout=15)
                 response.raise_for_status()
@@ -168,9 +175,11 @@ class TemplateCommand(BaseCommand):
             if not repos:
                 break
 
-            for repo in repos:
-                if repo["name"].startswith(TEMPLATE_PREFIX) and not repo.get("private"):
-                    templates.append(repo)
+            templates.extend(
+                repo
+                for repo in repos
+                if repo["name"].startswith(TEMPLATE_PREFIX) and not repo.get("private")
+            )
 
             page += 1
 
