@@ -13,7 +13,8 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-10T16:00:00Z"
+exclude-newer = "2026-04-10T12:25:00.712108Z"
+exclude-newer-span = "P3D"
 
 [manifest]
 members = [
@@ -27,9 +28,11 @@ overrides = [
     { name = "langchain-core", specifier = ">=1.2.28,<2" },
     { name = "onnxruntime", marker = "python_full_version < '3.11'", specifier = "<1.24" },
     { name = "pillow", specifier = ">=12.1.1" },
+    { name = "pypdf", specifier = ">=6.10.0,<7" },
     { name = "rich", specifier = ">=13.7.1" },
     { name = "transformers", marker = "python_full_version >= '3.10'", specifier = ">=5.4.0" },
     { name = "urllib3", specifier = ">=2.6.3" },
+    { name = "uv", specifier = ">=0.11.6,<1" },
 ]
 
 [manifest.dependency-groups]
