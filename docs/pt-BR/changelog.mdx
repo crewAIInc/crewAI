@@ -4,6 +4,36 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="13 abr 2026">
+  ## v1.14.2a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar CLI de validação de deploy
+  - Melhorar a ergonomia de inicialização do LLM
+
+  ### Correções de Bugs
+  - Substituir pypdf e uv por versões corrigidas para CVE-2026-40260 e GHSA-pjjw-68hj-v9mw
+  - Atualizar requests para >=2.33.0 devido à vulnerabilidade de arquivo temporário CVE
+  - Preservar os argumentos de chamada da ferramenta Bedrock removendo o padrão truthy
+  - Sanitizar esquemas de ferramentas para modo estrito
+  - Remover flakiness do teste de serialização de embedding MemoryRecord
+
+  ### Documentação
+  - Limpar a linguagem do A2A empresarial
+  - Adicionar documentação de recursos do A2A empresarial
+  - Atualizar documentação do A2A OSS
+  - Atualizar changelog e versão para v1.14.2a2
+
+  ## Contribuidores
+
+  @Yanhu007, @greysonlalonde
+
+</Update>
+
 <Update label="10 abr 2026">
   ## v1.14.2a2
 

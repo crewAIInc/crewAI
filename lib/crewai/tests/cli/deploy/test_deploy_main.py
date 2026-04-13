@@ -125,7 +125,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_response.json.return_value = {"uuid": "test-uuid"}
         self.mock_client.deploy_by_uuid.return_value = mock_response
 
-        self.deploy_command.deploy(uuid="test-uuid")
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
 
         self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
@@ -137,7 +137,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_response.json.return_value = {"uuid": "test-uuid"}
         self.mock_client.deploy_by_name.return_value = mock_response
 
-        self.deploy_command.deploy()
+        self.deploy_command.deploy(skip_validate=True)
 
         self.mock_client.deploy_by_name.assert_called_once_with("test_project")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
@@ -156,7 +156,7 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.create_crew.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            self.deploy_command.create_crew()
+            self.deploy_command.create_crew(skip_validate=True)
             self.assertIn("Deployment created successfully!", fake_out.getvalue())
             self.assertIn("new-uuid", fake_out.getvalue())
 

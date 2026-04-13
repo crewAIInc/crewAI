@@ -64,6 +64,23 @@ def test_gemini_completion_module_is_imported():
     assert hasattr(completion_mod, 'GeminiCompletion')
 
 
+def test_gemini_lazy_build_reads_env_vars_set_after_construction():
+    """When `LLM(model="gemini/...")` is constructed before env vars are set,
+    the lazy client builder must re-read `GOOGLE_API_KEY` / `GEMINI_API_KEY`
+    so the LLM works once credentials become available."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = GeminiCompletion(model="gemini-1.5-pro")
+        assert llm.api_key is None
+        assert llm._client is None
+
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "late-key"}, clear=True):
+        client = llm._get_sync_client()
+        assert client is not None
+        assert llm.api_key == "late-key"
+
+
 def test_native_gemini_raises_error_when_initialization_fails():
     """
     Test that LLM raises ImportError when native Gemini completion fails.
