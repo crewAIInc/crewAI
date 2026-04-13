@@ -44,6 +44,8 @@ def _resume_hint(message: str) -> None:
 
 def _print_release_error(e: BaseException) -> None:
     """Print a release error with stderr if available."""
+    if isinstance(e, KeyboardInterrupt):
+        raise
     if isinstance(e, SystemExit):
         return
     if isinstance(e, subprocess.CalledProcessError):
@@ -1244,13 +1246,11 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
             try:
                 run_command(lock_cmd, cwd=repo_dir)
                 break
-            except subprocess.CalledProcessError as lock_err:
+            except subprocess.CalledProcessError:
                 if attempt == max_retries:
                     console.print(
                         f"[red]Error:[/red] uv lock failed after {max_retries} attempts"
                     )
-                    if lock_err.stderr:
-                        console.print(lock_err.stderr)
                     raise
                 console.print(
                     f"[yellow]uv lock failed (attempt {attempt}/{max_retries}),"
@@ -1404,13 +1404,11 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
             try:
                 run_command(sync_cmd, cwd=repo_dir)
                 break
-            except subprocess.CalledProcessError as sync_err:
+            except subprocess.CalledProcessError:
                 if attempt == max_retries:
                     console.print(
                         f"[red]Error:[/red] uv sync failed after {max_retries} attempts"
                     )
-                    if sync_err.stderr:
-                        console.print(sync_err.stderr)
                     raise
                 console.print(
                     f"[yellow]uv sync failed (attempt {attempt}/{max_retries}),"
