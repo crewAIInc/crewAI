@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -80,7 +80,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_converts_single_tool(self) -> None:
         """Test converting a single tool to OpenAI schema."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert len(schemas) == 1
         assert len(functions) == 1
@@ -95,7 +95,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_converts_multiple_tools(self) -> None:
         """Test converting multiple tools to OpenAI schema."""
         tools = [CalculatorTool(), SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert len(schemas) == 2
         assert len(functions) == 2
@@ -113,7 +113,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_functions_dict_contains_callables(self) -> None:
         """Test that the functions dict maps names to callable run methods."""
         tools = [CalculatorTool(), SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert "calculator" in functions
         assert "web_search" in functions
@@ -123,14 +123,14 @@ class TestConvertToolsToOpenaiSchema:
     def test_function_can_be_called(self) -> None:
         """Test that the returned function can be called."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         result = functions["calculator"](expression="2 + 2")
         assert result == "4"
 
     def test_empty_tools_list(self) -> None:
         """Test with an empty tools list."""
-        schemas, functions = convert_tools_to_openai_schema([])
+        schemas, functions, _ = convert_tools_to_openai_schema([])
 
         assert schemas == []
         assert functions == {}
@@ -138,7 +138,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_schema_has_required_fields(self) -> None:
         """Test that the schema includes required fields information."""
         tools = [SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         schema = schemas[0]
         params = schema["function"]["parameters"]
@@ -158,7 +158,7 @@ class TestConvertToolsToOpenaiSchema:
                 return "done"
 
         tools = [MinimalTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         assert len(schemas) == 1
         schema = schemas[0]
@@ -169,7 +169,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_schema_structure_matches_openai_format(self) -> None:
         """Test that the schema structure matches OpenAI's expected format."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         schema = schemas[0]
 
@@ -194,7 +194,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_removes_redundant_schema_fields(self) -> None:
         """Test that redundant title and description are removed from parameters."""
         tools = [CalculatorTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         # Title should be removed as it's redundant with function name
@@ -203,7 +203,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_preserves_field_descriptions(self) -> None:
         """Test that field descriptions are preserved in the schema."""
         tools = [SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         query_prop = params["properties"]["query"]
@@ -215,7 +215,7 @@ class TestConvertToolsToOpenaiSchema:
     def test_preserves_default_values(self) -> None:
         """Test that default values are preserved in the schema."""
         tools = [SearchTool()]
-        schemas, functions = convert_tools_to_openai_schema(tools)
+        schemas, functions, _ = convert_tools_to_openai_schema(tools)
 
         params = schemas[0]["function"]["parameters"]
         max_results_prop = params["properties"]["max_results"]
@@ -225,15 +225,78 @@ class TestConvertToolsToOpenaiSchema:
         assert max_results_prop["default"] == 10
 
 
-def _make_mock_i18n() -> MagicMock:
-    """Create a mock i18n with the new structured prompt keys."""
-    mock_i18n = MagicMock()
-    mock_i18n.slice.side_effect = lambda key: {
-        "summarizer_system_message": "You are a precise assistant that creates structured summaries.",
-        "summarize_instruction": "Summarize the conversation:\n{conversation}",
-        "summary": "<summary>\n{merged_summary}\n</summary>\nContinue the task.",
-    }.get(key, "")
-    return mock_i18n
+class MCPStyleInput(BaseModel):
+    """Input schema mimicking an MCP tool with optional fields."""
+
+    query: str = Field(description="Search query")
+    filter_type: Optional[Literal["internal", "user"]] = Field(
+        default=None, description="Filter type"
+    )
+    page_id: Optional[str] = Field(
+        default=None, description="Page UUID"
+    )
+
+
+class MCPStyleTool(BaseTool):
+    """A tool mimicking MCP tool schemas with optional fields."""
+
+    name: str = "mcp_search"
+    description: str = "Search with optional filters"
+    args_schema: type[BaseModel] = MCPStyleInput
+
+    def _run(self, **kwargs: Any) -> str:
+        return "result"
+
+
+class TestOptionalFieldsPreserveNull:
+    """Tests that optional tool fields preserve null in the schema."""
+
+    def test_optional_string_allows_null(self) -> None:
+        """Optional[str] fields should include null in the schema so the LLM
+        can send null instead of being forced to guess a value."""
+        tools = [MCPStyleTool()]
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        page_id_prop = params["properties"]["page_id"]
+
+        assert "anyOf" in page_id_prop
+        type_options = [opt.get("type") for opt in page_id_prop["anyOf"]]
+        assert "string" in type_options
+        assert "null" in type_options
+
+    def test_optional_literal_allows_null(self) -> None:
+        """Optional[Literal[...]] fields should include null."""
+        tools = [MCPStyleTool()]
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        filter_prop = params["properties"]["filter_type"]
+
+        assert "anyOf" in filter_prop
+        has_null = any(opt.get("type") == "null" for opt in filter_prop["anyOf"])
+        assert has_null
+
+    def test_required_field_stays_non_null(self) -> None:
+        """Required fields without Optional should NOT have null."""
+        tools = [MCPStyleTool()]
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        query_prop = params["properties"]["query"]
+
+        assert query_prop.get("type") == "string"
+        assert "anyOf" not in query_prop
+
+    def test_all_fields_in_required_for_strict_mode(self) -> None:
+        """All fields (including optional) must be in required for strict mode."""
+        tools = [MCPStyleTool()]
+        schemas, _, _ = convert_tools_to_openai_schema(tools)
+
+        params = schemas[0]["function"]["parameters"]
+        assert "query" in params["required"]
+        assert "filter_type" in params["required"]
+        assert "page_id" in params["required"]
 
 
 class TestSummarizeMessages:
@@ -257,7 +320,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # System message preserved + summary message = 2
@@ -288,7 +351,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 1
@@ -314,7 +377,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 1
@@ -337,7 +400,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert id(messages) == original_list_id
@@ -359,7 +422,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 2
@@ -383,7 +446,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # Check what was passed to llm.call
@@ -409,7 +472,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert "The extracted summary content." in messages[0]["content"]
@@ -433,7 +496,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # Verify the conversation text sent to LLM contains tool labels
@@ -455,7 +518,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # No LLM call should have been made
@@ -660,7 +723,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # acall should have been awaited once per chunk
@@ -684,7 +747,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         mock_llm.call.assert_called_once()
@@ -715,7 +778,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # The final summary message should have A, B, C in order
@@ -743,7 +806,7 @@ class TestParallelSummarization:
                 chunks=[chunk_a, chunk_b],
                 llm=mock_llm,
                 callbacks=[],
-                i18n=_make_mock_i18n(),
+    
             )
         )
 
@@ -770,7 +833,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert mock_llm.acall.await_count == 2
@@ -867,10 +930,8 @@ class TestParallelSummarizationVCR:
     def test_parallel_summarize_openai(self) -> None:
         """Test that parallel summarization with gpt-4o-mini produces a valid summary."""
         from crewai.llm import LLM
-        from crewai.utilities.i18n import I18N
 
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
         messages = _build_long_conversation()
 
         original_system = messages[0]["content"]
@@ -886,7 +947,6 @@ class TestParallelSummarizationVCR:
                 messages=messages,
                 llm=llm,
                 callbacks=[],
-                i18n=i18n,
             )
 
         # System message preserved
@@ -902,10 +962,8 @@ class TestParallelSummarizationVCR:
     def test_parallel_summarize_preserves_files(self) -> None:
         """Test that file references survive parallel summarization."""
         from crewai.llm import LLM
-        from crewai.utilities.i18n import I18N
 
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
         messages = _build_long_conversation()
 
         mock_file = MagicMock()
@@ -916,7 +974,6 @@ class TestParallelSummarizationVCR:
                 messages=messages,
                 llm=llm,
                 callbacks=[],
-                i18n=i18n,
             )
 
         summary_msg = messages[-1]

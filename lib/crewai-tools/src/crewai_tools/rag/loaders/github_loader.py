@@ -1,5 +1,7 @@
 """GitHub repository content loader."""
 
+from typing import Any
+
 from github import Github, GithubException
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
@@ -9,7 +11,7 @@ from crewai_tools.rag.source_content import SourceContent
 class GithubLoader(BaseLoader):
     """Loader for GitHub repository content."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         """Load content from a GitHub repository.
 
         Args:

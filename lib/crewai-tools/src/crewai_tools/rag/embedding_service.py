@@ -9,6 +9,7 @@ import logging
 import os
 from typing import Any
 
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from pydantic import BaseModel, Field
 
 
@@ -81,7 +82,7 @@ class EmbeddingService:
             **kwargs,
         )
 
-        self._embedding_function = None
+        self._embedding_function: EmbeddingFunction[Any] | None = None
         self._initialize_embedding_function()
 
     @staticmethod
@@ -107,7 +108,7 @@ class EmbeddingService:
             return os.getenv(env_key)
         return None
 
-    def _initialize_embedding_function(self):
+    def _initialize_embedding_function(self) -> None:
         """Initialize the embedding function using CrewAI's factory."""
         try:
             from crewai.rag.embeddings.factory import build_embedder
@@ -264,7 +265,7 @@ class EmbeddingService:
         try:
             # Use ChromaDB's embedding function interface
             embeddings = self._embedding_function([text])  # type: ignore
-            return embeddings[0] if embeddings else []
+            return list(embeddings[0]) if embeddings else []
 
         except Exception as e:
             logger.error(f"Error generating embedding for text: {e}")
@@ -294,12 +295,12 @@ class EmbeddingService:
 
         try:
             # Process in batches to avoid API limits
-            all_embeddings = []
+            all_embeddings: list[list[float]] = []
 
             for i in range(0, len(valid_texts), self.config.batch_size):
                 batch = valid_texts[i : i + self.config.batch_size]
                 batch_embeddings = self._embedding_function(batch)  # type: ignore
-                all_embeddings.extend(batch_embeddings)
+                all_embeddings.extend(list(e) for e in batch_embeddings)
 
             return all_embeddings
 

@@ -3,12 +3,15 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from pydantic import BaseModel, ConfigDict
+
 
 if TYPE_CHECKING:
     from crewai.rag.types import SearchResult
 
 
-class BaseKnowledgeStorage(ABC):
+class BaseKnowledgeStorage(BaseModel, ABC):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     """Abstract base class for knowledge storage implementations."""
 
     @abstractmethod

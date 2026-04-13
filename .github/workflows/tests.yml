@@ -6,8 +6,25 @@ permissions:
   contents: read
 
 jobs:
-  tests:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
+
+  tests-matrix:
     name: tests (${{ matrix.python-version }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -36,7 +53,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.4"
+          version: "0.11.3"
           python-version: ${{ matrix.python-version }}
           enable-cache: false
 
@@ -98,3 +115,23 @@ jobs:
             ~/.local/share/uv
             .venv
           key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+
+  # Summary job to provide single status for branch protection
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    needs: [changes, tests-matrix]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, skipping tests"
+            exit 0
+          fi
+          if [ "${{ needs.tests-matrix.result }}" == "success" ]; then
+            echo "All tests passed"
+          else
+            echo "Tests failed"
+            exit 1
+          fi

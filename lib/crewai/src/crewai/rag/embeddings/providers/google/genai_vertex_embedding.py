@@ -85,7 +85,7 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
                 - output_dimensionality: Optional output embedding dimension (new SDK only)
         """
         # Handle deprecated 'region' parameter (only if it has a value)
-        region_value = kwargs.pop("region", None)  # type: ignore[typeddict-item]
+        region_value = kwargs.pop("region", None)  # type: ignore[typeddict-item,unused-ignore]
         if region_value is not None:
             warnings.warn(
                 "The 'region' parameter is deprecated, use 'location' instead. "
@@ -94,7 +94,7 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
                 stacklevel=2,
             )
             if "location" not in kwargs or kwargs.get("location") is None:
-                kwargs["location"] = region_value  # type: ignore[typeddict-unknown-key]
+                kwargs["location"] = region_value  # type: ignore[typeddict-unknown-key,unused-ignore]
 
         self._config = kwargs
         self._model_name = str(kwargs.get("model_name", "textembedding-gecko"))
@@ -123,8 +123,10 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
         )
 
         try:
-            import vertexai
-            from vertexai.language_models import TextEmbeddingModel
+            import vertexai  # type: ignore[import-not-found]
+            from vertexai.language_models import (  # type: ignore[import-not-found]
+                TextEmbeddingModel,
+            )
         except ImportError as e:
             raise ImportError(
                 "vertexai is required for legacy embedding models (textembedding-gecko*). "

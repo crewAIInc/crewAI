@@ -2,6 +2,7 @@ import os
 import sys
 import types
 from unittest.mock import patch, MagicMock, Mock
+from urllib.parse import urlparse
 import pytest
 
 from crewai.llm import LLM
@@ -66,7 +67,7 @@ def test_azure_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Azure client responses
-    with patch.object(completion.client, 'complete') as mock_complete:
+    with patch.object(completion._client, 'complete') as mock_complete:
         # Mock tool call in response with proper type
         mock_tool_call = MagicMock(spec=ChatCompletionsToolCall)
         mock_tool_call.function.name = "get_weather"
@@ -378,23 +379,72 @@ def test_azure_completion_with_tools():
 
 
 def test_azure_raises_error_when_endpoint_missing():
-    """Test that AzureCompletion raises ValueError when endpoint is missing"""
+    """Credentials are validated lazily: construction succeeds, first
+    client build raises the descriptive error."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
-    # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4", api_key="test-key")
         with pytest.raises(ValueError, match="Azure endpoint is required"):
-            AzureCompletion(model="gpt-4", api_key="test-key")
+            llm._get_sync_client()
 
 
 def test_azure_raises_error_when_api_key_missing():
-    """Test that AzureCompletion raises ValueError when API key is missing"""
+    """Credentials are validated lazily: construction succeeds, first
+    client build raises the descriptive error."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
-    # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4", endpoint="https://test.openai.azure.com"
+        )
         with pytest.raises(ValueError, match="Azure API key is required"):
-            AzureCompletion(model="gpt-4", endpoint="https://test.openai.azure.com")
+            llm._get_sync_client()
+
+
+@pytest.mark.asyncio
+async def test_azure_aclose_is_noop_when_uninitialized():
+    """`aclose` (and `async with`) on an uninstantiated-client LLM must be
+    a harmless no-op, not force lazy construction that then raises for
+    missing credentials."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4")
+        assert llm._async_client is None
+        await llm.aclose()
+        async with llm:
+            pass
+
+
+def test_azure_lazy_build_reads_env_vars_set_after_construction():
+    """When `LLM(model="azure/...")` is constructed before env vars are set,
+    the lazy client builder must re-read `AZURE_API_KEY` / `AZURE_ENDPOINT`
+    so the LLM actually works once credentials become available, and the
+    `is_azure_openai_endpoint` routing flag must be recomputed off the
+    newly-resolved endpoint."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4")
+        assert llm.api_key is None
+        assert llm.endpoint is None
+        assert llm.is_azure_openai_endpoint is False
+
+    with patch.dict(
+        os.environ,
+        {
+            "AZURE_API_KEY": "late-key",
+            "AZURE_ENDPOINT": "https://test.openai.azure.com/openai/deployments/gpt-4",
+        },
+        clear=True,
+    ):
+        client = llm._get_sync_client()
+        assert client is not None
+        assert llm.api_key == "late-key"
+        assert llm.endpoint is not None
+        assert urlparse(llm.endpoint).hostname == "test.openai.azure.com"
+        assert llm.is_azure_openai_endpoint is True
 
 
 def test_azure_endpoint_configuration():
@@ -698,7 +748,7 @@ def test_azure_environment_variable_endpoint():
     }):
         llm = LLM(model="azure/gpt-4")
 
-        assert llm.client is not None
+        assert llm._client is not None
         assert llm.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
 
 
@@ -709,7 +759,7 @@ def test_azure_token_usage_tracking():
     llm = LLM(model="azure/gpt-4")
 
     # Mock the Azure response with usage information
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_message = MagicMock()
         mock_message.content = "test response"
         mock_message.tool_calls = None
@@ -747,7 +797,7 @@ def test_azure_http_error_handling():
     llm = LLM(model="azure/gpt-4")
 
     # Mock an HTTP error
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_complete.side_effect = HttpResponseError(message="Rate limit exceeded", response=MagicMock(status_code=429))
 
         with pytest.raises(HttpResponseError):
@@ -966,7 +1016,7 @@ def test_azure_improved_error_messages():
 
     llm = LLM(model="azure/gpt-4")
 
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         error_401 = HttpResponseError(message="Unauthorized")
         error_401.status_code = 401
         mock_complete.side_effect = error_401
@@ -1327,7 +1377,7 @@ def test_azure_stop_words_not_applied_to_structured_output():
     # Without the fix, this would be truncated at "Observation:" breaking the JSON
     json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
 
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_message = MagicMock()
         mock_message.content = json_response
         mock_message.tool_calls = None
@@ -1376,7 +1426,7 @@ def test_azure_stop_words_still_applied_to_regular_responses():
     # Response that contains a stop word - should be truncated
     response_with_stop_word = "I need to search for more information.\n\nAction: search\nObservation: Found results"
 
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_message = MagicMock()
         mock_message.content = response_with_stop_word
         mock_message.tool_calls = None
@@ -1403,3 +1453,44 @@ def test_azure_stop_words_still_applied_to_regular_responses():
         assert "Observation:" not in result
         assert "Found results" not in result
         assert "I need to search for more information" in result
+
+
+def test_azure_reasoning_tokens_and_cached_tokens():
+    """Test that reasoning_tokens and cached_tokens are extracted from Azure responses."""
+    llm = LLM(model="azure/gpt-4")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=100,
+        completion_tokens=200,
+        total_tokens=300,
+    )
+    mock_response.usage.prompt_tokens_details = MagicMock(cached_tokens=40)
+    mock_response.usage.completion_tokens_details = MagicMock(reasoning_tokens=60)
+
+    usage = llm._extract_azure_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 100
+    assert usage["completion_tokens"] == 200
+    assert usage["total_tokens"] == 300
+    assert usage["cached_prompt_tokens"] == 40
+    assert usage["reasoning_tokens"] == 60
+
+
+def test_azure_no_detail_fields():
+    """Test Azure extraction without detail fields."""
+    llm = LLM(model="azure/gpt-4")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=50,
+        completion_tokens=30,
+        total_tokens=80,
+    )
+    mock_response.usage.prompt_tokens_details = None
+    mock_response.usage.completion_tokens_details = None
+
+    usage = llm._extract_azure_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 50
+    assert usage["completion_tokens"] == 30
+    assert usage["cached_prompt_tokens"] == 0
+    assert usage["reasoning_tokens"] == 0

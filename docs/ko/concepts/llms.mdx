@@ -105,6 +105,15 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
   </Tab>
 </Tabs>
 
+<Info>
+  CrewAI는 OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock에 대해 네이티브 SDK 통합을 제공합니다 — 제공자별 extras(예: `uv add "crewai[openai]"`) 외에 추가 설치가 필요하지 않습니다.
+
+  그 외 모든 제공자는 **LiteLLM**을 통해 지원됩니다. 이를 사용하려면 프로젝트에 의존성으로 추가하세요:
+  ```bash
+  uv add 'crewai[litellm]'
+  ```
+</Info>
+
 ## 공급자 구성 예시
 
 CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양한 LLM 공급자를 지원합니다.
@@ -214,6 +223,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | 텍스트, 이미지     | 텍스트           |
     | `meta_llama/Llama-3.3-70B-Instruct`               | 128k | 4028       | 텍스트            | 텍스트           |
     | `meta_llama/Llama-3.3-8B-Instruct`                | 128k | 4028       | 텍스트            | 텍스트           |
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Anthropic">
@@ -354,6 +368,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     | gemini-1.5-flash                 | 1M 토큰         | 밸런스 잡힌 멀티모달 모델, 대부분의 작업에 적합                         |
     | gemini-1.5-flash-8B              | 1M 토큰         | 가장 빠르고, 비용 효율적, 고빈도 작업에 적합                            |
     | gemini-1.5-pro                   | 2M 토큰         | 최고의 성능, 논리적 추론, 코딩, 창의적 협업 등 다양한 추론 작업에 적합   |
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Azure">
@@ -439,6 +458,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         model="sagemaker/<my-endpoint>"
     )
     ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Mistral">
@@ -453,6 +477,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         model="mistral/mistral-large-latest",
         temperature=0.7
     )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
     ```
   </Accordion>
 
@@ -540,6 +569,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     | rakuten/rakutenai-7b-instruct                                          | 1,024 토큰     | 언어 이해, 추론, 텍스트 생성이 탁월한 최첨단 LLM                         |
     | rakuten/rakutenai-7b-chat                                              | 1,024 토큰     | 언어 이해, 추론, 텍스트 생성이 탁월한 최첨단 LLM                         |
     | baichuan-inc/baichuan2-13b-chat                                        | 4,096 토큰     | 중국어 및 영어 대화, 코딩, 수학, 지시 따르기, 퀴즈 풀이 지원             |
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
@@ -580,6 +614,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
 
         # ...
     ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Groq">
@@ -601,6 +640,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     | Llama 3.1 70B/8B| 131,072 토큰      | 고성능, 대용량 문맥 작업         |
     | Llama 3.2 Series| 8,192 토큰        | 범용 작업                        |
     | Mixtral 8x7B    | 32,768 토큰       | 성능과 문맥의 균형               |
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="IBM watsonx.ai">
@@ -623,6 +667,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         base_url="https://api.watsonx.ai/v1"
     )
     ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Ollama (Local LLMs)">
@@ -635,6 +684,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         model="ollama/llama3:70b",
         base_url="http://localhost:11434"
     )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
     ```
   </Accordion>
 
@@ -651,6 +705,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         temperature=0.7
     )
     ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Perplexity AI">
@@ -666,6 +725,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         base_url="https://api.perplexity.ai/"
     )
     ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Hugging Face">
@@ -679,6 +743,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     llm = LLM(
         model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
     )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
     ```
   </Accordion>
 
@@ -703,6 +772,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     | Llama 3.2 Series| 8,192 토큰         | 범용, 멀티모달 작업                  |
     | Llama 3.3 70B   | 최대 131,072 토큰   | 고성능, 높은 출력 품질               |
     | Qwen2 familly   | 8,192 토큰         | 고성능, 높은 출력 품질               |
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Cerebras">
@@ -728,6 +802,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
       - 속도와 품질의 우수한 밸런스
       - 긴 컨텍스트 윈도우 지원
     </Info>
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Open Router">
@@ -750,6 +829,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
       - openrouter/deepseek/deepseek-r1
       - openrouter/deepseek/deepseek-chat
     </Info>
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 
   <Accordion title="Nebius AI Studio">
@@ -772,6 +856,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
       - 경쟁력 있는 가격
       - 속도와 품질의 우수한 밸런스
     </Info>
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
   </Accordion>
 </AccordionGroup>
 

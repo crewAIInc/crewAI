@@ -100,7 +100,13 @@ class I18N(BaseModel):
     def retrieve(
         self,
         kind: Literal[
-            "slices", "errors", "tools", "reasoning", "hierarchical_manager_agent", "memory"
+            "slices",
+            "errors",
+            "tools",
+            "reasoning",
+            "planning",
+            "hierarchical_manager_agent",
+            "memory",
         ],
         key: str,
     ) -> str:
@@ -136,3 +142,6 @@ def get_i18n(prompt_file: str | None = None) -> I18N:
         Cached I18N instance.
     """
     return I18N(prompt_file=prompt_file)
+
+
+I18N_DEFAULT: I18N = get_i18n()

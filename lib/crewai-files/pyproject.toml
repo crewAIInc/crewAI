@@ -8,14 +8,17 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "Pillow~=10.4.0",
-    "pypdf~=4.0.0",
+    "Pillow~=12.1.1",
+    "pypdf~=6.10.0",
     "python-magic>=0.4.27",
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",
-    "tinytag~=1.10.0",
+    "tinytag~=2.2.1",
     "av~=13.0.0",
 ]
+
+[tool.uv]
+exclude-newer = "3 days"
 
 [build-system]
 requires = ["hatchling"]

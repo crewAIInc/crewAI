@@ -5,18 +5,22 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import (
+    generate_model_description,
+    sanitize_tool_params_for_bedrock_strict,
+)
 from crewai.utilities.types import LLMMessage
 
 
@@ -33,7 +37,7 @@ if TYPE_CHECKING:
         ToolTypeDef,
     )
 
-    from crewai.llms.hooks.base import BaseInterceptor
+from crewai.llms.hooks.base import BaseInterceptor
 
 
 try:
@@ -169,6 +173,7 @@ class ToolSpec(TypedDict, total=False):
     name: Required[str]
     description: Required[str]
     inputSchema: ToolInputSchema
+    strict: bool
 
 
 class ConverseToolTypeDef(TypedDict):
@@ -228,147 +233,133 @@ class BedrockCompletion(BaseLLM):
     - Model-specific conversation format handling (e.g., Cohere requirements)
     """
 
-    def __init__(
-        self,
-        model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
-        aws_session_token: str | None = None,
-        region_name: str | None = None,
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-        top_p: float | None = None,
-        top_k: int | None = None,
-        stop_sequences: Sequence[str] | None = None,
-        stream: bool = False,
-        guardrail_config: dict[str, Any] | None = None,
-        additional_model_request_fields: dict[str, Any] | None = None,
-        additional_model_response_field_paths: list[str] | None = None,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        response_format: type[BaseModel] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize AWS Bedrock completion client.
+    llm_type: Literal["bedrock"] = "bedrock"
+    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_session_token: str | None = None
+    region_name: str | None = None
+    max_tokens: int | None = None
+    top_p: float | None = None
+    top_k: int | None = None
+    stream: bool = False
+    guardrail_config: dict[str, Any] | None = None
+    additional_model_request_fields: dict[str, Any] | None = None
+    additional_model_response_field_paths: list[str] | None = None
+    interceptor: BaseInterceptor[Any, Any] | None = None
+    response_format: type[BaseModel] | None = None
+    is_claude_model: bool = False
+    supports_tools: bool = True
+    supports_streaming: bool = True
+    model_id: str = ""
 
-        Args:
-            model: The Bedrock model ID to use
-            aws_access_key_id: AWS access key (defaults to environment variable)
-            aws_secret_access_key: AWS secret key (defaults to environment variable)
-            aws_session_token: AWS session token for temporary credentials
-            region_name: AWS region name
-            temperature: Sampling temperature for response generation
-            max_tokens: Maximum tokens to generate
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter (Claude models only)
-            stop_sequences: List of sequences that stop generation
-            stream: Whether to use streaming responses
-            guardrail_config: Guardrail configuration for content filtering
-            additional_model_request_fields: Model-specific request parameters
-            additional_model_response_field_paths: Custom response field paths
-            interceptor: HTTP interceptor (not yet supported for Bedrock).
-            response_format: Pydantic model for structured output. Used as default when
-                           response_model is not passed to call()/acall() methods.
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    _client: Any = PrivateAttr(default=None)
+    _async_exit_stack: Any = PrivateAttr(default=None)
+    _async_client_initialized: bool = PrivateAttr(default=False)
+    _async_client: Any = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_bedrock_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        if data.get("interceptor") is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for AWS Bedrock provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        # Extract provider from kwargs to avoid duplicate argument
-        kwargs.pop("provider", None)
+        # Force provider to bedrock
+        data.pop("provider", None)
+        data["provider"] = "bedrock"
 
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            stop=stop_sequences or [],
-            provider="bedrock",
-            **kwargs,
+        # Normalize stop_sequences from stop kwarg
+        popped = data.pop("stop_sequences", None)
+        seqs = popped if popped is not None else (data.get("stop") or [])
+        if isinstance(seqs, str):
+            seqs = [seqs]
+        elif isinstance(seqs, Sequence) and not isinstance(seqs, list):
+            seqs = list(seqs)
+        data["stop"] = seqs
+
+        # Resolve env vars
+        data["aws_access_key_id"] = data.get("aws_access_key_id") or os.getenv(
+            "AWS_ACCESS_KEY_ID"
         )
-
-        # Configure client with timeouts and retries following AWS best practices
-        config = Config(
-            read_timeout=300,
-            retries={
-                "max_attempts": 3,
-                "mode": "adaptive",
-            },
-            tcp_keepalive=True,
+        data["aws_secret_access_key"] = data.get("aws_secret_access_key") or os.getenv(
+            "AWS_SECRET_ACCESS_KEY"
         )
-
-        self.region_name = (
-            region_name
+        data["aws_session_token"] = data.get("aws_session_token") or os.getenv(
+            "AWS_SESSION_TOKEN"
+        )
+        data["region_name"] = (
+            data.get("region_name")
             or os.getenv("AWS_DEFAULT_REGION")
             or os.getenv("AWS_REGION_NAME")
             or "us-east-1"
         )
 
-        self.aws_access_key_id = aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
-        self.aws_secret_access_key = aws_secret_access_key or os.getenv(
-            "AWS_SECRET_ACCESS_KEY"
-        )
-        self.aws_session_token = aws_session_token or os.getenv("AWS_SESSION_TOKEN")
+        model = data.get("model", "anthropic.claude-3-5-sonnet-20241022-v2:0")
+        data["is_claude_model"] = "claude" in model.lower()
+        data["model_id"] = model
+        return data
 
-        # Initialize Bedrock client with proper configuration
+    @model_validator(mode="after")
+    def _init_clients(self) -> BedrockCompletion:
+        """Eagerly build the sync client when AWS credentials resolve,
+        otherwise defer so ``LLM(model="bedrock/...")`` can be constructed
+        at module import time even before deployment env vars are set.
+
+        Only credential/SDK errors are caught — programming errors like
+        ``TypeError`` or ``AttributeError`` propagate so real bugs aren't
+        silently swallowed.
+        """
+        try:
+            self._client = self._build_sync_client()
+        except (BotoCoreError, ClientError, ValueError) as e:
+            logging.debug("Deferring Bedrock client construction: %s", e)
+        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
+        return self
+
+    def _build_sync_client(self) -> Any:
+        config = Config(
+            read_timeout=300,
+            retries={"max_attempts": 3, "mode": "adaptive"},
+            tcp_keepalive=True,
+        )
         session = Session(
             aws_access_key_id=self.aws_access_key_id,
             aws_secret_access_key=self.aws_secret_access_key,
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
+        return session.client("bedrock-runtime", config=config)
 
-        self.client = session.client("bedrock-runtime", config=config)
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
 
-        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
-        self._async_client_initialized = False
+    def _get_async_client(self) -> Any:
+        """Async client is set up separately by ``_ensure_async_client``
+        using ``aiobotocore`` inside an exit stack."""
+        return self._async_client
 
-        # Store completion parameters
-        self.max_tokens = max_tokens
-        self.top_p = top_p
-        self.top_k = top_k
-        self.stream = stream
-        self.stop_sequences = stop_sequences
-        self.response_format = response_format
-
-        # Store advanced features (optional)
-        self.guardrail_config = guardrail_config
-        self.additional_model_request_fields = additional_model_request_fields
-        self.additional_model_response_field_paths = (
-            additional_model_response_field_paths
-        )
-
-        # Model-specific settings
-        self.is_claude_model = "claude" in model.lower()
-        self.supports_tools = True  # Converse API supports tools for most models
-        self.supports_streaming = True
-
-        # Handle inference profiles for newer models
-        self.model_id = model
-
-    @property
-    def stop(self) -> list[str]:
-        """Get stop sequences sent to the API."""
-        return [] if self.stop_sequences is None else list(self.stop_sequences)
-
-    @stop.setter
-    def stop(self, value: Sequence[str] | str | None) -> None:
-        """Set stop sequences.
-
-        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-        are properly sent to the Bedrock API.
-
-        Args:
-            value: Stop sequences as a Sequence, single string, or None
-        """
-        if value is None:
-            self.stop_sequences = []
-        elif isinstance(value, str):
-            self.stop_sequences = [value]
-        elif isinstance(value, Sequence):
-            self.stop_sequences = list(value)
-        else:
-            self.stop_sequences = []
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Bedrock-specific fields."""
+        config = super().to_config_dict()
+        if self.region_name and self.region_name != "us-east-1":
+            config["region_name"] = self.region_name
+        if self.max_tokens is not None:
+            config["max_tokens"] = self.max_tokens
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.top_k is not None:
+            config["top_k"] = self.top_k
+        if self.guardrail_config:
+            config["guardrail_config"] = self.guardrail_config
+        return config
 
     def call(
         self,
@@ -693,7 +684,7 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self.client.converse(
+            response = self._get_sync_client().converse(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -703,8 +694,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             # Track token usage according to AWS response format
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -744,6 +736,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -766,6 +759,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -845,6 +839,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return self._invoke_after_llm_call_hooks(
@@ -975,15 +970,16 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
-            response = self.client.converse_stream(
+            response = self._get_sync_client().converse_stream(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
                     cast(object, messages),
                 ),
-                **body,  # type: ignore[arg-type]
+                **body,
             )
 
             stream = response.get("stream")
@@ -1084,6 +1080,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1151,6 +1148,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                             if "trace" in metadata:
@@ -1180,6 +1178,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return full_response
@@ -1291,8 +1290,9 @@ class BedrockCompletion(BaseLLM):
                 **body,
             )
 
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -1331,6 +1331,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -1353,6 +1354,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -1427,6 +1429,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return text_content
@@ -1547,6 +1550,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
             async_client = await self._ensure_async_client()
@@ -1658,6 +1662,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1730,6 +1735,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                         if "trace" in metadata:
@@ -1759,6 +1765,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1781,6 +1788,7 @@ class BedrockCompletion(BaseLLM):
 
         converse_messages: list[LLMMessage] = []
         system_message: str | None = None
+        pending_tool_results: list[dict[str, Any]] = []
 
         for message in formatted_messages:
             role = message.get("role")
@@ -1794,56 +1802,62 @@ class BedrockCompletion(BaseLLM):
                     system_message += f"\n\n{content}"
                 else:
                     system_message = cast(str, content)
-            elif role == "assistant" and tool_calls:
-                # Convert OpenAI-style tool_calls to Bedrock toolUse format
-                bedrock_content = []
-                for tc in tool_calls:
-                    func = tc.get("function", {})
-                    tool_use_block = {
-                        "toolUse": {
-                            "toolUseId": tc.get("id", f"call_{id(tc)}"),
-                            "name": func.get("name", ""),
-                            "input": func.get("arguments", {})
-                            if isinstance(func.get("arguments"), dict)
-                            else json.loads(func.get("arguments", "{}") or "{}"),
-                        }
-                    }
-                    bedrock_content.append(tool_use_block)
-                converse_messages.append(
-                    {"role": "assistant", "content": bedrock_content}
-                )
             elif role == "tool":
                 if not tool_call_id:
                     raise ValueError("Tool message missing required tool_call_id")
-                converse_messages.append(
+                pending_tool_results.append(
                     {
-                        "role": "user",
-                        "content": [
-                            {
-                                "toolResult": {
-                                    "toolUseId": tool_call_id,
-                                    "content": [
-                                        {"text": str(content) if content else ""}
-                                    ],
-                                }
-                            }
-                        ],
+                        "toolResult": {
+                            "toolUseId": tool_call_id,
+                            "content": [{"text": str(content) if content else ""}],
+                        }
                     }
                 )
             else:
-                # Convert to Converse API format with proper content structure
-                if isinstance(content, list):
-                    # Already formatted as multimodal content blocks
-                    converse_messages.append({"role": role, "content": content})
-                else:
-                    # String content - wrap in text block
-                    text_content = content if content else ""
+                if pending_tool_results:
                     converse_messages.append(
-                        {"role": role, "content": [{"text": text_content}]}
+                        {"role": "user", "content": pending_tool_results}
                     )
+                    pending_tool_results = []
+
+                if role == "assistant" and tool_calls:
+                    # Convert OpenAI-style tool_calls to Bedrock toolUse format
+                    bedrock_content = []
+                    for tc in tool_calls:
+                        func = tc.get("function", {})
+                        tool_use_block = {
+                            "toolUse": {
+                                "toolUseId": tc.get("id", f"call_{id(tc)}"),
+                                "name": func.get("name", ""),
+                                "input": func.get("arguments", {})
+                                if isinstance(func.get("arguments"), dict)
+                                else json.loads(func.get("arguments", "{}") or "{}"),
+                            }
+                        }
+                        bedrock_content.append(tool_use_block)
+                    converse_messages.append(
+                        {"role": "assistant", "content": bedrock_content}
+                    )
+                else:
+                    # Convert to Converse API format with proper content structure
+                    if isinstance(content, list):
+                        # Already formatted as multimodal content blocks
+                        converse_messages.append({"role": role, "content": content})
+                    else:
+                        # String content - wrap in text block
+                        text_content = content if content else ""
+                        converse_messages.append(
+                            {"role": role, "content": [{"text": text_content}]}
+                        )
+
+        if pending_tool_results:
+            converse_messages.append({"role": "user", "content": pending_tool_results})
 
         # CRITICAL: Handle model-specific conversation requirements
-        # Cohere and some other models require conversation to end with user message
+        # Cohere and some other models require conversation to end with user message.
+        # Anthropic models on Bedrock also reject assistant messages in the final
+        # position when tools are present ("pre-filling the assistant response is
+        # not supported").
         if converse_messages:
             last_message = converse_messages[-1]
             if last_message["role"] == "assistant":
@@ -1868,6 +1882,22 @@ class BedrockCompletion(BaseLLM):
                         {
                             "role": "user",
                             "content": [{"text": "Continue your response."}],
+                        }
+                    )
+                # Anthropic (Claude) models reject assistant-last messages when
+                # tools are in the request. Append a user message so the
+                # Converse API accepts the payload.
+                elif (
+                    "anthropic" in self.model.lower() or "claude" in self.model.lower()
+                ):
+                    converse_messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "text": "Please continue and provide your final answer."
+                                }
+                            ],
                         }
                     )
 
@@ -1947,8 +1977,6 @@ class BedrockCompletion(BaseLLM):
         tools: list[dict[str, Any]],
     ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         converse_tools: list[ConverseToolTypeDef] = []
 
         for tool in tools:
@@ -1960,9 +1988,20 @@ class BedrockCompletion(BaseLLM):
                     "description": description,
                 }
 
+                func_info = tool.get("function", {})
+                strict_enabled = bool(func_info.get("strict"))
+
                 if parameters and isinstance(parameters, dict):
-                    input_schema: ToolInputSchema = {"json": parameters}
+                    schema_params = (
+                        sanitize_tool_params_for_bedrock_strict(parameters)
+                        if strict_enabled
+                        else parameters
+                    )
+                    input_schema: ToolInputSchema = {"json": schema_params}
                     tool_spec["inputSchema"] = input_schema
+
+                if strict_enabled:
+                    tool_spec["strict"] = True
 
                 converse_tool: ConverseToolTypeDef = {"toolSpec": tool_spec}
 
@@ -2024,11 +2063,18 @@ class BedrockCompletion(BaseLLM):
         input_tokens = usage.get("inputTokens", 0)
         output_tokens = usage.get("outputTokens", 0)
         total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
+        raw_cached = (
+            usage.get("cacheReadInputTokenCount")
+            or usage.get("cacheReadInputTokens")
+            or 0
+        )
+        cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
 
         self._token_usage["prompt_tokens"] += input_tokens
         self._token_usage["completion_tokens"] += output_tokens
         self._token_usage["total_tokens"] += total_tokens
         self._token_usage["successful_requests"] += 1
+        self._token_usage["cached_prompt_tokens"] += cached_tokens
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -2079,12 +2125,18 @@ class BedrockCompletion(BaseLLM):
         model_lower = self.model.lower()
         vision_models = (
             "anthropic.claude-3",
+            "anthropic.claude-sonnet-4",
+            "anthropic.claude-opus-4",
+            "anthropic.claude-haiku-4",
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
             "us.amazon.nova-lite",
             "us.amazon.nova-pro",
             "us.amazon.nova-premier",
+            "us.anthropic.claude-sonnet-4",
+            "us.anthropic.claude-opus-4",
+            "us.anthropic.claude-haiku-4",
         )
         return any(model_lower.startswith(m) for m in vision_models)
 

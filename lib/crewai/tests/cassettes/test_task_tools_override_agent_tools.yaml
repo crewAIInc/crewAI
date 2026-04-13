@@ -1,247 +1,123 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and is now working on doing research and
-      analysis for a new customer.\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agents\nYou ONLY have access to the
-      following tools, and should NEVER make up tools that are not listed here:\n\nTool
-      Name: Another Test Tool\nTool Arguments: {''query'': {''description'': ''Query
-      to process'', ''type'': ''str''}}\nTool Description: Another test tool\n\nUse
-      the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Another Test Tool], just the name, exactly
-      as it''s written.\nAction Input: the input to the action, just a simple python
-      dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
-      the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
-      I now know the final answer\nFinal Answer: the final answer to the original
-      input question"}, {"role": "user", "content": "\nCurrent Task: Write a test
-      task\n\nThis is the expect criteria for your final answer: Test output\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"],
-      "stream": false}'
+    body: '{"messages":[{"role":"system","content":"You are Researcher. You''re an
+      expert researcher, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and is now working on doing research and analysis for
+      a new customer.\nYour personal goal is: Make the best research and analysis
+      on content about AI and AI agents"},{"role":"user","content":"\nCurrent Task:
+      Write a test task\n\nThis is the expected criteria for your final answer: Test
+      output\nyou MUST return the actual complete content as the final answer, not
+      a summary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"another_test_tool","description":"Another
+      test tool","strict":true,"parameters":{"properties":{"query":{"description":"Query
+      to process","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '1525'
+      - '892'
       content-type:
       - application/json
-      cookie:
-      - _cfuvid=eQzzWvIXDS8Me1OIBdCG5F1qFyVfAo3sumvYRE7J41E-1734965710778-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.52.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.52.1
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.7
+      - 3.13.12
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-AmjYyKbTn42DzaLVOjDvJpLubTjSq\",\n  \"object\"\
-        : \"chat.completion\",\n  \"created\": 1736178252,\n  \"model\": \"gpt-4o-2024-08-06\"\
-        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
-        \      \"role\": \"assistant\",\n        \"content\": \"Action: Another Test\
-        \ Tool\\nAction Input: {\\\"query\\\": \\\"AI and AI agents\\\"}\",\n    \
-        \    \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
-        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 295,\n   \
-        \ \"completion_tokens\": 18,\n    \"total_tokens\": 313,\n    \"prompt_tokens_details\"\
-        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
-        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
-        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
-        : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_5f20662549\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-DJVYArMj7gxUpliUsjoQOzDxaw0Ta\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1773541882,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Test Task: \\n\\nWrite a program in
+        your preferred programming language that accomplishes the following:\\n\\n1.
+        Accepts a list of integers as input.\\n2. Filters the list to include only
+        prime numbers.\\n3. Sorts the filtered prime numbers in ascending order.\\n4.
+        Outputs the sorted list of prime numbers.\\n\\nRequirements:\\n- Provide the
+        complete source code.\\n- Include comments explaining the logic.\\n- Ensure
+        the code handles invalid inputs gracefully.\\n- Test the program with at least
+        three different input sets and show the outputs.\\n\\nExample:\\n\\nInput:
+        [12, 7, 5, 18, 11, 3, 20]\\nOutput: [3, 5, 7, 11]\\n\\nPlease provide the
+        full code along with sample input and output for verification.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        147,\n    \"completion_tokens\": 157,\n    \"total_tokens\": 304,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e76a310957\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
-      CF-RAY:
-      - 8fdcd3fc9a56bf66-ATL
+      CF-Ray:
+      - 9dc819faed93433f-EWR
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Mon, 06 Jan 2025 15:44:12 GMT
+      - Sun, 15 Mar 2026 02:31:26 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=X1fuDKrQrN8tU.uxjB0murgJXWXcPtlNLnD7xUrAKTs-1736178252-1.0.1.1-AME9VZZVtEpqX9.BEN_Kj9pI9uK3sIJc2LdbuPsP3wULKxF4Il6r8ghX0to2wpcYsGWbJXSqWP.dQz4vGf_Gbw;
-        path=/; expires=Mon, 06-Jan-25 16:14:12 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=mv42xOepGYaNopc5ovT9Ajamw5rJrze8tlWTik8lfrk-1736178252935-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '632'
+      - '3681'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '29999644'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_9276753b2200fc95c74fc43c9d7d84a6
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and is now working on doing research and
-      analysis for a new customer.\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agents\nYou ONLY have access to the
-      following tools, and should NEVER make up tools that are not listed here:\n\nTool
-      Name: Another Test Tool\nTool Arguments: {''query'': {''description'': ''Query
-      to process'', ''type'': ''str''}}\nTool Description: Another test tool\n\nUse
-      the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Another Test Tool], just the name, exactly
-      as it''s written.\nAction Input: the input to the action, just a simple python
-      dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
-      the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
-      I now know the final answer\nFinal Answer: the final answer to the original
-      input question"}, {"role": "user", "content": "\nCurrent Task: Write a test
-      task\n\nThis is the expect criteria for your final answer: Test output\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Action: Another Test Tool\nAction Input: {\"query\": \"AI and AI agents\"}\nObservation:
-      Another processed: AI and AI agents"}], "model": "gpt-4o", "stop": ["\nObservation:"],
-      "stream": false}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1687'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=mv42xOepGYaNopc5ovT9Ajamw5rJrze8tlWTik8lfrk-1736178252935-0.0.1.1-604800000;
-        __cf_bm=X1fuDKrQrN8tU.uxjB0murgJXWXcPtlNLnD7xUrAKTs-1736178252-1.0.1.1-AME9VZZVtEpqX9.BEN_Kj9pI9uK3sIJc2LdbuPsP3wULKxF4Il6r8ghX0to2wpcYsGWbJXSqWP.dQz4vGf_Gbw
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.52.1
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.52.1
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-AmjYzChV9s4D4qOJJvTvBAt3kRh7n\",\n  \"object\"\
-        : \"chat.completion\",\n  \"created\": 1736178253,\n  \"model\": \"gpt-4o-2024-08-06\"\
-        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
-        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now know\
-        \ the final answer\\nFinal Answer: Another processed: AI and AI agents\",\n\
-        \        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
-        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
-        : 326,\n    \"completion_tokens\": 19,\n    \"total_tokens\": 345,\n    \"\
-        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
-        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
-        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
-        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
-        : \"fp_5f20662549\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8fdcd4011938bf66-ATL
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 06 Jan 2025 15:44:15 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '2488'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999613'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_5e3a1a90ef91ff4f12d5b84e396beccc
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

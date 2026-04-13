@@ -21,13 +21,13 @@ class MySQLSearchTool(RagTool):
     args_schema: type[BaseModel] = MySQLSearchToolSchema
     db_uri: str = Field(..., description="Mandatory database URI")
 
-    def __init__(self, table_name: str, **kwargs):
+    def __init__(self, table_name: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.add(table_name, data_type=DataType.MYSQL, metadata={"db_uri": self.db_uri})
         self.description = f"A tool that can be used to semantic search a query the {table_name} database table's content."
         self._generate_description()
 
-    def add(
+    def add(  # type: ignore[override]
         self,
         table_name: str,
         **kwargs: Any,

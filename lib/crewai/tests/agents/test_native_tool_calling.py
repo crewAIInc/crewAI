@@ -1158,16 +1158,12 @@ class TestNativeToolCallingJsonParseError:
         mock_task.description = "test"
         mock_task.id = "test-id"
 
-        executor = object.__new__(CrewAgentExecutor)
+        executor = CrewAgentExecutor(
+            tools=structured_tools,
+            original_tools=tools,
+        )
         executor.agent = mock_agent
         executor.task = mock_task
-        executor.crew = Mock()
-        executor.tools = structured_tools
-        executor.original_tools = tools
-        executor.tools_handler = None
-        executor._printer = Mock()
-        executor.messages = []
-
         return executor
 
     def test_malformed_json_returns_parse_error(self) -> None:
@@ -1184,7 +1180,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         malformed_json = '{"code": "print("hello")"}'
 
@@ -1212,7 +1208,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         valid_json = '{"code": "print(1)"}'
 
@@ -1239,7 +1235,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         result = executor._execute_single_native_tool_call(
             call_id="call_789",
@@ -1265,7 +1261,7 @@ class TestNativeToolCallingJsonParseError:
         executor = self._make_executor([tool])
 
         from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-        _, available_functions = convert_tools_to_openai_schema([tool])
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
 
         result = executor._execute_single_native_tool_call(
             call_id="call_schema",

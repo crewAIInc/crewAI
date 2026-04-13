@@ -23,6 +23,15 @@ from crewai_tools.tools.rag.rag_tool import Adapter
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def allow_tmp_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Allow absolute paths outside CWD (e.g. /tmp/) for these search-tool tests.
+
+    Path validation is tested separately in test_rag_tool_path_validation.py.
+    """
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+
+
 @pytest.fixture
 def mock_adapter():
     mock_adapter = MagicMock(spec=Adapter)

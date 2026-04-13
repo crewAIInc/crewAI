@@ -207,10 +207,10 @@ def test_convert_with_instructions_failure(
     mock_create_converter.return_value = mock_converter
 
     result = "Some text to convert"
-    with patch("crewai.utilities.converter.Printer") as mock_printer:
+    with patch("crewai.utilities.converter.PRINTER") as mock_printer:
         output = convert_with_instructions(result, SimpleModel, False, mock_agent)
         assert output == result
-        mock_printer.return_value.print.assert_called_once()
+        mock_printer.print.assert_called_once()
 
 
 # Tests for get_conversion_instructions

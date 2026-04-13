@@ -63,6 +63,7 @@ from crewai.events.types.logging_events import (
     AgentLogsStartedEvent,
 )
 from crewai.events.types.mcp_events import (
+    MCPConfigFetchFailedEvent,
     MCPConnectionCompletedEvent,
     MCPConnectionFailedEvent,
     MCPConnectionStartedEvent,
@@ -86,6 +87,14 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
     ReasoningEvent,
+)
+from crewai.events.types.skill_events import (
+    SkillActivatedEvent,
+    SkillDiscoveryCompletedEvent,
+    SkillDiscoveryStartedEvent,
+    SkillEvent,
+    SkillLoadFailedEvent,
+    SkillLoadedEvent,
 )
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -165,6 +174,7 @@ __all__ = [
     "LiteAgentExecutionCompletedEvent",
     "LiteAgentExecutionErrorEvent",
     "LiteAgentExecutionStartedEvent",
+    "MCPConfigFetchFailedEvent",
     "MCPConnectionCompletedEvent",
     "MCPConnectionFailedEvent",
     "MCPConnectionStartedEvent",
@@ -184,6 +194,12 @@ __all__ = [
     "MethodExecutionFinishedEvent",
     "MethodExecutionStartedEvent",
     "ReasoningEvent",
+    "SkillActivatedEvent",
+    "SkillDiscoveryCompletedEvent",
+    "SkillDiscoveryStartedEvent",
+    "SkillEvent",
+    "SkillLoadFailedEvent",
+    "SkillLoadedEvent",
     "TaskCompletedEvent",
     "TaskEvaluationEvent",
     "TaskFailedEvent",

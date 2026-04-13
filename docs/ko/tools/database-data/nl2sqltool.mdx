@@ -11,7 +11,75 @@ mode: "wide"
 
 이를 통해 에이전트가 데이터베이스에 접근하여 목표에 따라 정보를 가져오고, 해당 정보를 사용해 응답, 보고서 또는 기타 출력물을 생성하는 다양한 워크플로우가 가능해집니다. 또한 에이전트가 자신의 목표에 맞춰 데이터베이스를 업데이트할 수 있는 기능도 제공합니다.
 
-**주의**: 에이전트가 Read-Replica에 접근할 수 있거나, 에이전트가 데이터베이스에 insert/update 쿼리를 실행해도 괜찮은지 반드시 확인하십시오.
+**주의**: 도구는 기본적으로 읽기 전용(SELECT/SHOW/DESCRIBE/EXPLAIN만 허용)으로 동작합니다. 쓰기 작업을 수행하려면 `allow_dml=True` 매개변수 또는 `CREWAI_NL2SQL_ALLOW_DML=true` 환경 변수가 필요합니다. 쓰기 접근이 활성화된 경우, 가능하면 권한이 제한된 데이터베이스 사용자나 읽기 복제본을 사용하십시오.
+
+## 읽기 전용 모드 및 DML 구성
+
+`NL2SQLTool`은 기본적으로 **읽기 전용 모드**로 동작합니다. 추가 구성 없이 허용되는 구문 유형은 다음과 같습니다:
+
+- `SELECT`
+- `SHOW`
+- `DESCRIBE`
+- `EXPLAIN`
+
+DML을 명시적으로 활성화하지 않으면 쓰기 작업(`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE` 등)을 실행하려고 할 때 오류가 발생합니다.
+
+읽기 전용 모드에서는 세미콜론이 포함된 다중 구문 쿼리(예: `SELECT 1; DROP TABLE users`)도 인젝션 공격을 방지하기 위해 차단됩니다.
+
+### 쓰기 작업 활성화
+
+DML(데이터 조작 언어)을 활성화하는 방법은 두 가지입니다:
+
+**옵션 1 — 생성자 매개변수:**
+
+```python
+from crewai_tools import NL2SQLTool
+
+nl2sql = NL2SQLTool(
+    db_uri="postgresql://example@localhost:5432/test_db",
+    allow_dml=True,
+)
+```
+
+**옵션 2 — 환경 변수:**
+
+```bash
+CREWAI_NL2SQL_ALLOW_DML=true
+```
+
+```python
+from crewai_tools import NL2SQLTool
+
+# 환경 변수를 통해 DML 활성화
+nl2sql = NL2SQLTool(db_uri="postgresql://example@localhost:5432/test_db")
+```
+
+### 사용 예시
+
+**읽기 전용(기본값) — 분석 및 보고 워크로드에 안전:**
+
+```python
+from crewai_tools import NL2SQLTool
+
+# SELECT/SHOW/DESCRIBE/EXPLAIN만 허용
+nl2sql = NL2SQLTool(db_uri="postgresql://example@localhost:5432/test_db")
+```
+
+**DML 활성화 — 쓰기 워크로드에 필요:**
+
+```python
+from crewai_tools import NL2SQLTool
+
+# INSERT, UPDATE, DELETE, DROP 등이 허용됨
+nl2sql = NL2SQLTool(
+    db_uri="postgresql://example@localhost:5432/test_db",
+    allow_dml=True,
+)
+```
+
+<Warning>
+DML을 활성화하면 에이전트가 데이터를 수정하거나 삭제할 수 있습니다. 사용 사례에서 명시적으로 쓰기 접근이 필요한 경우에만 활성화하고, 데이터베이스 자격 증명이 최소 필요 권한으로 제한되어 있는지 확인하십시오.
+</Warning>
 
 ## 요구 사항
 

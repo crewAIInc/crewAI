@@ -1,4 +1,5 @@
 import subprocess
+from typing import Any
 
 import click
 
@@ -6,7 +7,7 @@ from crewai.cli.utils import get_crews, get_flows
 from crewai.flow import Flow
 
 
-def _reset_flow_memory(flow: Flow) -> None:
+def _reset_flow_memory(flow: Flow[Any]) -> None:
     """Reset memory for a single flow instance.
 
     Handles Memory, MemoryScope (both have .reset()), and MemorySlice
@@ -95,9 +96,7 @@ def reset_memories_command(
                 continue
             if memory:
                 _reset_flow_memory(flow)
-                click.echo(
-                    f"[Flow ({flow_name})] Memory has been reset."
-                )
+                click.echo(f"[Flow ({flow_name})] Memory has been reset.")
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while resetting the memories: {e}", err=True)

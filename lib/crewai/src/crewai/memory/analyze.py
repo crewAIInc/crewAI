@@ -9,7 +9,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
-from crewai.utilities.i18n import get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 _logger = logging.getLogger(__name__)
@@ -149,7 +149,7 @@ def _get_prompt(key: str) -> str:
     Returns:
         The prompt string.
     """
-    return get_i18n().memory(key)
+    return I18N_DEFAULT.memory(key)
 
 
 def extract_memories_from_content(content: str, llm: Any) -> list[str]:
@@ -308,7 +308,9 @@ def analyze_for_save(
         return MemoryAnalysis.model_validate(response)
     except Exception as e:
         _logger.warning(
-            "Memory save analysis failed, using defaults: %s", e, exc_info=False,
+            "Memory save analysis failed, using defaults: %s",
+            e,
+            exc_info=False,
         )
         return _SAVE_DEFAULTS
 
@@ -366,6 +368,8 @@ def analyze_for_consolidation(
         return ConsolidationPlan.model_validate(response)
     except Exception as e:
         _logger.warning(
-            "Consolidation analysis failed, defaulting to insert: %s", e, exc_info=False,
+            "Consolidation analysis failed, defaulting to insert: %s",
+            e,
+            exc_info=False,
         )
         return _CONSOLIDATION_DEFAULT

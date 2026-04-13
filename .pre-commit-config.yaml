@@ -21,9 +21,17 @@ repos:
         types: [python]
         exclude: ^(lib/crewai/src/crewai/cli/templates/|lib/crewai/tests/|lib/crewai-tools/tests/|lib/crewai-files/tests/)
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.3
+    rev: 0.11.3
     hooks:
       - id: uv-lock
+  - repo: local
+    hooks:
+      - id: pip-audit
+        name: pip-audit
+        entry: bash -c 'source .venv/bin/activate && uv run pip-audit --skip-editable --ignore-vuln CVE-2025-69872 --ignore-vuln CVE-2026-25645 --ignore-vuln CVE-2026-27448 --ignore-vuln CVE-2026-27459 --ignore-vuln PYSEC-2023-235' --
+        language: system
+        pass_filenames: false
+        stages: [pre-push, manual]
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.10.1
     hooks:

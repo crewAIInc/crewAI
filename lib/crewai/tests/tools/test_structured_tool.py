@@ -38,6 +38,44 @@ def test_initialization(basic_function, schema_class):
     assert tool.args_schema == schema_class
 
 
+def test_cache_function_passed_through(basic_function, schema_class):
+    """Test that cache_function is stored on CrewStructuredTool."""
+
+    def no_cache(_args: dict, _result: str) -> bool:
+        return False
+
+    tool = CrewStructuredTool(
+        name="test_tool",
+        description="Test tool description",
+        func=basic_function,
+        args_schema=schema_class,
+        cache_function=no_cache,
+    )
+
+    assert tool.cache_function is no_cache
+
+
+def test_base_tool_passes_cache_function_to_structured_tool():
+    """Test that BaseTool.to_structured_tool propagates cache_function."""
+    from crewai.tools import BaseTool
+
+    def no_cache(_args: dict, _result: str) -> bool:
+        return False
+
+    class MyCacheTool(BaseTool):
+        name: str = "cache_test"
+        description: str = "tool for testing cache passthrough"
+
+        def _run(self, query: str = "") -> str:
+            return "result"
+
+    my_tool = MyCacheTool()
+    my_tool.cache_function = no_cache  # type: ignore[assignment]
+    structured = my_tool.to_structured_tool()
+
+    assert structured.cache_function is no_cache
+
+
 def test_from_function(basic_function):
     """Test creating tool from function"""
     tool = CrewStructuredTool.from_function(

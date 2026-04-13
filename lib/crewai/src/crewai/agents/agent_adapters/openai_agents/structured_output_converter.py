@@ -8,7 +8,7 @@ import json
 from typing import Any
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
-from crewai.utilities.i18n import get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 class OpenAIConverterAdapter(BaseConverterAdapter):
@@ -59,10 +59,8 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         if not self._output_format:
             return base_prompt
 
-        output_schema: str = (
-            get_i18n()
-            .slice("formatted_task_instructions")
-            .format(output_format=json.dumps(self._schema, indent=2))
+        output_schema: str = I18N_DEFAULT.slice("formatted_task_instructions").format(
+            output_format=json.dumps(self._schema, indent=2)
         )
 
         return f"{base_prompt}\n\n{output_schema}"

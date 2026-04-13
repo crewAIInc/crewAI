@@ -6,7 +6,7 @@ import httpx
 
 from crewai.cli.config import Settings
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 
 
 class PlusAPI:
@@ -22,14 +22,15 @@ class PlusAPI:
     EPHEMERAL_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
     INTEGRATIONS_RESOURCE = "/crewai_plus/api/v1/integrations"
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key
         self.headers = {
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "User-Agent": f"CrewAI-CLI/{get_crewai_version()}",
             "X-Crewai-Version": get_crewai_version(),
         }
+        if api_key:
+            self.headers["Authorization"] = f"Bearer {api_key}"
         settings = Settings()
         if settings.org_uuid:
             self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
@@ -48,8 +49,13 @@ class PlusAPI:
         with httpx.Client(trust_env=False, verify=verify) as client:
             return client.request(method, url, headers=self.headers, **kwargs)
 
-    def login_to_tool_repository(self) -> httpx.Response:
-        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login")
+    def login_to_tool_repository(
+        self, user_identifier: str | None = None
+    ) -> httpx.Response:
+        payload = {}
+        if user_identifier:
+            payload["user_identifier"] = user_identifier
+        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
 
     def get_tool(self, handle: str) -> httpx.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
@@ -67,6 +73,7 @@ class PlusAPI:
         description: str | None,
         encoded_file: str,
         available_exports: list[dict[str, Any]] | None = None,
+        tools_metadata: list[dict[str, Any]] | None = None,
     ) -> httpx.Response:
         params = {
             "handle": handle,
@@ -75,6 +82,9 @@ class PlusAPI:
             "file": encoded_file,
             "description": description,
             "available_exports": available_exports,
+            "tools_metadata": {"package": handle, "tools": tools_metadata}
+            if tools_metadata is not None
+            else None,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
@@ -187,6 +197,25 @@ class PlusAPI:
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
             json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )
+
+    def mark_ephemeral_trace_batch_as_failed(
+        self, trace_batch_id: str, error_message: str
+    ) -> httpx.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}",
+            json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )
+
+    def get_mcp_configs(self, slugs: list[str]) -> httpx.Response:
+        """Get MCP server configurations for the given slugs."""
+        return self._make_request(
+            "GET",
+            f"{self.INTEGRATIONS_RESOURCE}/mcp_configs",
+            params={"slugs": ",".join(slugs)},
             timeout=30,
         )
 

@@ -63,6 +63,9 @@ class A2AErrorCode(IntEnum):
     INVALID_AGENT_RESPONSE = -32006
     """The agent produced an invalid response."""
 
+    AUTHENTICATED_EXTENDED_CARD_NOT_CONFIGURED = -32007
+    """Authenticated extended card feature is not configured."""
+
     # CrewAI Custom Extensions (-32768 to -32100)
     UNSUPPORTED_VERSION = -32009
     """The requested A2A protocol version is not supported."""
@@ -108,6 +111,7 @@ ERROR_MESSAGES: dict[int, str] = {
     A2AErrorCode.UNSUPPORTED_OPERATION: "This operation is not supported",
     A2AErrorCode.CONTENT_TYPE_NOT_SUPPORTED: "Incompatible content types",
     A2AErrorCode.INVALID_AGENT_RESPONSE: "Invalid agent response",
+    A2AErrorCode.AUTHENTICATED_EXTENDED_CARD_NOT_CONFIGURED: "Authenticated Extended Card is not configured",
     A2AErrorCode.UNSUPPORTED_VERSION: "Unsupported A2A version",
     A2AErrorCode.UNSUPPORTED_EXTENSION: "Client does not support required extensions",
     A2AErrorCode.AUTHENTICATION_REQUIRED: "Authentication required",
@@ -282,6 +286,15 @@ class InvalidAgentResponseError(A2AError):
     """The agent produced an invalid response."""
 
     code: int = field(default=A2AErrorCode.INVALID_AGENT_RESPONSE, init=False)
+
+
+@dataclass
+class AuthenticatedExtendedCardNotConfiguredError(A2AError):
+    """Authenticated extended card is not configured."""
+
+    code: int = field(
+        default=A2AErrorCode.AUTHENTICATED_EXTENDED_CARD_NOT_CONFIGURED, init=False
+    )
 
 
 @dataclass

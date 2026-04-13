@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, NamedTuple, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, NamedTuple, Protocol
 
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
+from typing_extensions import TypedDict
 
 
 class CommonParams(NamedTuple):

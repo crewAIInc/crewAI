@@ -6,68 +6,65 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
+from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, AgentFinish
+from crewai.agents.tools_handler import ToolsHandler
+from crewai.llms.base_llm import BaseLLM
+from crewai.task import Task
 from crewai.tools.tool_types import ToolResult
 
 
 @pytest.fixture
 def mock_llm() -> MagicMock:
     """Create a mock LLM for testing."""
-    llm = MagicMock()
+    llm = MagicMock(spec=BaseLLM)
     llm.supports_stop_words.return_value = True
     llm.stop = []
     return llm
 
 
 @pytest.fixture
-def mock_agent() -> MagicMock:
-    """Create a mock agent for testing."""
-    agent = MagicMock()
-    agent.role = "Test Agent"
-    agent.key = "test_agent_key"
-    agent.verbose = False
-    agent.id = "test_agent_id"
-    return agent
+def test_agent(mock_llm: MagicMock) -> Agent:
+    """Create a real Agent for testing."""
+    return Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        verbose=False,
+    )
 
 
 @pytest.fixture
-def mock_task() -> MagicMock:
-    """Create a mock task for testing."""
-    task = MagicMock()
-    task.description = "Test task description"
-    return task
-
-
-@pytest.fixture
-def mock_crew() -> MagicMock:
-    """Create a mock crew for testing."""
-    crew = MagicMock()
-    crew.verbose = False
-    crew._train = False
-    return crew
+def test_task(test_agent: Agent) -> Task:
+    """Create a real Task for testing."""
+    return Task(
+        description="Test task description",
+        expected_output="Test output",
+        agent=test_agent,
+    )
 
 
 @pytest.fixture
 def mock_tools_handler() -> MagicMock:
     """Create a mock tools handler."""
-    return MagicMock()
+    return MagicMock(spec=ToolsHandler)
 
 
 @pytest.fixture
 def executor(
     mock_llm: MagicMock,
-    mock_agent: MagicMock,
-    mock_task: MagicMock,
-    mock_crew: MagicMock,
+    test_agent: Agent,
+    test_task: Task,
     mock_tools_handler: MagicMock,
 ) -> CrewAgentExecutor:
     """Create a CrewAgentExecutor instance for testing."""
     return CrewAgentExecutor(
         llm=mock_llm,
-        task=mock_task,
-        crew=mock_crew,
-        agent=mock_agent,
+        task=test_task,
+        crew=None,
+        agent=test_agent,
         prompt={"prompt": "Test prompt {input} {tool_names} {tools}"},
         max_iter=5,
         tools=[],
@@ -229,8 +226,8 @@ class TestAsyncAgentExecutor:
 
     @pytest.mark.asyncio
     async def test_concurrent_ainvoke_calls(
-        self, mock_llm: MagicMock, mock_agent: MagicMock, mock_task: MagicMock,
-        mock_crew: MagicMock, mock_tools_handler: MagicMock
+        self, mock_llm: MagicMock, test_agent: Agent, test_task: Task,
+        mock_tools_handler: MagicMock,
     ) -> None:
         """Test that multiple ainvoke calls can run concurrently."""
         max_concurrent = 0
@@ -242,9 +239,9 @@ class TestAsyncAgentExecutor:
 
             executor = CrewAgentExecutor(
                 llm=mock_llm,
-                task=mock_task,
-                crew=mock_crew,
-                agent=mock_agent,
+                task=test_task,
+                crew=None,
+                agent=test_agent,
                 prompt={"prompt": "Test {input} {tool_names} {tools}"},
                 max_iter=5,
                 tools=[],

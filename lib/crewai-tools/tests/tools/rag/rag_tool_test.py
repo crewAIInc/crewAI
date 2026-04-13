@@ -3,8 +3,19 @@ from tempfile import TemporaryDirectory
 from typing import cast
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
 from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
 from crewai_tools.tools.rag.rag_tool import RagTool
+
+
+@pytest.fixture(autouse=True)
+def allow_tmp_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Allow absolute paths outside CWD (e.g. /tmp/) for these RagTool tests.
+
+    Path validation is tested separately in test_rag_tool_path_validation.py.
+    """
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
 
 
 @patch("crewai_tools.adapters.crewai_rag_adapter.get_rag_client")

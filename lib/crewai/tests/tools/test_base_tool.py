@@ -268,6 +268,13 @@ class TestBaseToolRunValidation:
         result = t.run(code="console.log('hi')", language="javascript")
         assert result == "Executed javascript: console.log('hi')"
 
+    def test_run_with_no_args_raises_validation_error(self) -> None:
+        """Calling run() with no arguments should raise a clear ValueError,
+        not a cryptic TypeError about missing positional arguments (GH-4611)."""
+        t = CodeExecutorTool()
+        with pytest.raises(ValueError, match="validation failed"):
+            t.run()
+
     def test_run_with_missing_required_kwarg_raises(self) -> None:
         """Missing required kwargs should raise ValueError from schema validation."""
         t = CodeExecutorTool()
@@ -377,6 +384,13 @@ class TestBaseToolArunValidation:
         t = AsyncCodeExecutorTool()
         result = await t.arun(code="print('hello')")
         assert result == "Async executed python: print('hello')"
+
+    @pytest.mark.asyncio
+    async def test_arun_with_no_args_raises_validation_error(self) -> None:
+        """Calling arun() with no arguments should raise a clear ValueError (GH-4611)."""
+        t = AsyncCodeExecutorTool()
+        with pytest.raises(ValueError, match="validation failed"):
+            await t.arun()
 
     @pytest.mark.asyncio
     async def test_arun_with_missing_required_kwarg_raises(self) -> None:

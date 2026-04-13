@@ -125,13 +125,19 @@ class MemoryTUI(App[None]):
             from crewai.memory.storage.lancedb_storage import LanceDBStorage
             from crewai.memory.unified_memory import Memory
 
-            storage = LanceDBStorage(path=storage_path) if storage_path else LanceDBStorage()
+            storage = (
+                LanceDBStorage(path=storage_path) if storage_path else LanceDBStorage()
+            )
             embedder = None
             if embedder_config is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
                 embedder = build_embedder(embedder_config)
-            self._memory = Memory(storage=storage, embedder=embedder) if embedder else Memory(storage=storage)
+            self._memory = (
+                Memory(storage=storage, embedder=embedder)
+                if embedder
+                else Memory(storage=storage)
+            )
         except Exception as e:
             self._init_error = str(e)
 
@@ -167,13 +173,13 @@ class MemoryTUI(App[None]):
         info = self._memory.info("/")
         tree.root.label = f"/ ({info.record_count} records)"
         tree.root.data = "/"
-        self._add_children(tree.root, "/", depth=0, max_depth=3)
+        self._add_scope_children(tree.root, "/", depth=0, max_depth=3)
         tree.root.expand()
         return tree
 
-    def _add_children(
+    def _add_scope_children(
         self,
-        parent_node: Tree.Node[str],
+        parent_node: Any,
         path: str,
         depth: int,
         max_depth: int,
@@ -185,7 +191,7 @@ class MemoryTUI(App[None]):
             child_info = self._memory.info(child)
             label = f"{child} ({child_info.record_count})"
             node = parent_node.add(label, data=child)
-            self._add_children(node, child, depth + 1, max_depth)
+            self._add_scope_children(node, child, depth + 1, max_depth)
 
     # -- Populating the OptionList -------------------------------------------
 
@@ -200,11 +206,7 @@ class MemoryTUI(App[None]):
                 if len(record.content) > 80
                 else record.content
             )
-            label = (
-                f"{date_str}  "
-                f"[bold]{record.importance:.1f}[/]  "
-                f"{preview}"
-            )
+            label = f"{date_str}  [bold]{record.importance:.1f}[/]  {preview}"
             option_list.add_option(label)
 
     def _populate_recall_list(self) -> None:
@@ -220,9 +222,7 @@ class MemoryTUI(App[None]):
                 else m.record.content
             )
             label = (
-                f"[bold]\\[{m.score:.2f}][/]  "
-                f"{preview}  "
-                f"[dim]scope={m.record.scope}[/]"
+                f"[bold]\\[{m.score:.2f}][/]  {preview}  [dim]scope={m.record.scope}[/]"
             )
             option_list.add_option(label)
 
@@ -251,8 +251,7 @@ class MemoryTUI(App[None]):
         lines.append(f"[dim]Scope:[/]          [bold]{record.scope}[/]")
         lines.append(f"[dim]Importance:[/]      [bold]{record.importance:.2f}[/]")
         lines.append(
-            f"[dim]Created:[/]        "
-            f"{record.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+            f"[dim]Created:[/]        {record.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
         )
         lines.append(
             f"[dim]Last accessed:[/]  "
@@ -290,13 +289,20 @@ class MemoryTUI(App[None]):
         if self._memory is None:
             panel.update(self._init_error or "No memory loaded.")
             return
+        display_limit = 1000
         info = self._memory.info(path)
         self._last_scope_info = info
-        self._entries = self._memory.list_records(scope=path, limit=200)
+        self._entries = self._memory.list_records(scope=path, limit=display_limit)
         panel.update(_format_scope_info(info))
         panel.border_title = "Detail"
         entry_list = self.query_one("#entry-list", OptionList)
-        entry_list.border_title = f"Entries ({len(self._entries)})"
+        capped = info.record_count > display_limit
+        count_label = (
+            f"Entries (showing {display_limit} of {info.record_count} — display limit)"
+            if capped
+            else f"Entries ({len(self._entries)})"
+        )
+        entry_list.border_title = count_label
         self._populate_entry_list()
 
     def on_option_list_option_highlighted(
@@ -355,17 +361,11 @@ class MemoryTUI(App[None]):
         panel = self.query_one("#info-panel", Static)
         panel.loading = True
         try:
-            scope = (
-                self._selected_scope
-                if self._selected_scope != "/"
-                else None
-            )
+            scope = self._selected_scope if self._selected_scope != "/" else None
             loop = asyncio.get_event_loop()
             matches = await loop.run_in_executor(
                 None,
-                lambda: self._memory.recall(
-                    query, scope=scope, limit=10, depth="deep"
-                ),
+                lambda: self._memory.recall(query, scope=scope, limit=10, depth="deep"),
             )
             self._recall_matches = matches or []
             self._view_mode = "recall"
@@ -376,6 +376,11 @@ class MemoryTUI(App[None]):
                 return
 
             info_lines: list[str] = []
+            info_lines.append(
+                "[dim italic]Searched the full dataset"
+                + (f" within [bold]{scope}[/]" if scope else "")
+                + " using the recall flow (semantic + recency + importance).[/]\n"
+            )
             if not self._custom_embedder:
                 info_lines.append(
                     "[dim italic]Note: Using default OpenAI embedder. "

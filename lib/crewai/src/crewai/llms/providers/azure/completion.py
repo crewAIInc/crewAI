@@ -3,21 +3,19 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import Any, Literal, TypedDict
+from urllib.parse import urlparse
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
-
-
-if TYPE_CHECKING:
-    from crewai.llms.hooks.base import BaseInterceptor
 
 
 try:
@@ -76,109 +74,163 @@ class AzureCompletion(BaseLLM):
     offering native function calling, streaming support, and proper Azure authentication.
     """
 
-    def __init__(
-        self,
-        model: str,
-        api_key: str | None = None,
-        endpoint: str | None = None,
-        api_version: str | None = None,
-        timeout: float | None = None,
-        max_retries: int = 2,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        frequency_penalty: float | None = None,
-        presence_penalty: float | None = None,
-        max_tokens: int | None = None,
-        stop: list[str] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        response_format: type[BaseModel] | None = None,
-        **kwargs: Any,
-    ):
-        """Initialize Azure AI Inference chat completion client.
+    llm_type: Literal["azure"] = "azure"
+    endpoint: str | None = None
+    api_version: str | None = None
+    timeout: float | None = None
+    max_retries: int = 2
+    top_p: float | None = None
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    max_tokens: int | None = None
+    stream: bool = False
+    interceptor: BaseInterceptor[Any, Any] | None = None
+    response_format: type[BaseModel] | None = None
+    is_openai_model: bool = False
+    is_azure_openai_endpoint: bool = False
 
-        Args:
-            model: Azure deployment name or model name
-            api_key: Azure API key (defaults to AZURE_API_KEY env var)
-            endpoint: Azure endpoint URL (defaults to AZURE_ENDPOINT env var)
-            api_version: Azure API version (defaults to AZURE_API_VERSION env var)
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retries
-            temperature: Sampling temperature (0-2)
-            top_p: Nucleus sampling parameter
-            frequency_penalty: Frequency penalty (-2 to 2)
-            presence_penalty: Presence penalty (-2 to 2)
-            max_tokens: Maximum tokens in response
-            stop: Stop sequences
-            stream: Enable streaming responses
-            interceptor: HTTP interceptor (not yet supported for Azure).
-            response_format: Pydantic model for structured output. Used as default when
-                           response_model is not passed to call()/acall() methods.
-                           Only works with OpenAI models deployed on Azure.
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    _client: Any = PrivateAttr(default=None)
+    _async_client: Any = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_azure_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        if data.get("interceptor") is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for Azure AI Inference provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        super().__init__(
-            model=model, temperature=temperature, stop=stop or [], **kwargs
-        )
-
-        self.api_key = api_key or os.getenv("AZURE_API_KEY")
-        self.endpoint = (
-            endpoint
+        # Resolve env vars
+        data["api_key"] = data.get("api_key") or os.getenv("AZURE_API_KEY")
+        data["endpoint"] = (
+            data.get("endpoint")
             or os.getenv("AZURE_ENDPOINT")
             or os.getenv("AZURE_OPENAI_ENDPOINT")
             or os.getenv("AZURE_API_BASE")
         )
-        self.api_version = api_version or os.getenv("AZURE_API_VERSION") or "2024-06-01"
-        self.timeout = timeout
-        self.max_retries = max_retries
+        data["api_version"] = (
+            data.get("api_version") or os.getenv("AZURE_API_VERSION") or "2024-06-01"
+        )
+
+        # Credentials and endpoint are validated lazily in `_init_clients`
+        # so the LLM can be constructed before deployment env vars are set.
+        model = data.get("model", "")
+        if data["endpoint"]:
+            data["endpoint"] = AzureCompletion._validate_and_fix_endpoint(
+                data["endpoint"], model
+            )
+        data["is_azure_openai_endpoint"] = AzureCompletion._is_azure_openai_endpoint(
+            data["endpoint"]
+        )
+        data["is_openai_model"] = any(
+            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
+        )
+        return data
+
+    @staticmethod
+    def _is_azure_openai_endpoint(endpoint: str | None) -> bool:
+        if not endpoint:
+            return False
+        hostname = urlparse(endpoint).hostname or ""
+        return (
+            hostname == "openai.azure.com" or hostname.endswith(".openai.azure.com")
+        ) and "/openai/deployments/" in endpoint
+
+    @model_validator(mode="after")
+    def _init_clients(self) -> AzureCompletion:
+        """Eagerly build clients when credentials are available, otherwise
+        defer so ``LLM(model="azure/...")`` can be constructed at module
+        import time even before deployment env vars are set.
+        """
+        try:
+            self._client = self._build_sync_client()
+            self._async_client = self._build_async_client()
+        except ValueError:
+            pass
+        return self
+
+    def _build_sync_client(self) -> Any:
+        return ChatCompletionsClient(**self._make_client_kwargs())
+
+    def _build_async_client(self) -> Any:
+        return AsyncChatCompletionsClient(**self._make_client_kwargs())
+
+    def _make_client_kwargs(self) -> dict[str, Any]:
+        # Re-read env vars so that a deferred build can pick up credentials
+        # that weren't set at instantiation time (e.g. LLM constructed at
+        # module import before deployment env vars were injected).
+        if not self.api_key:
+            self.api_key = os.getenv("AZURE_API_KEY")
+        if not self.endpoint:
+            endpoint = (
+                os.getenv("AZURE_ENDPOINT")
+                or os.getenv("AZURE_OPENAI_ENDPOINT")
+                or os.getenv("AZURE_API_BASE")
+            )
+            if endpoint:
+                self.endpoint = AzureCompletion._validate_and_fix_endpoint(
+                    endpoint, self.model
+                )
+                # Recompute the routing flag now that the endpoint is known —
+                # _prepare_completion_params uses it to decide whether to
+                # include `model` in the request body (Azure OpenAI endpoints
+                # embed the deployment name in the URL and reject it).
+                self.is_azure_openai_endpoint = (
+                    AzureCompletion._is_azure_openai_endpoint(self.endpoint)
+                )
 
         if not self.api_key:
             raise ValueError(
-                "Azure API key is required. Set AZURE_API_KEY environment variable or pass api_key parameter."
+                "Azure API key is required. Set AZURE_API_KEY environment "
+                "variable or pass api_key parameter."
             )
         if not self.endpoint:
             raise ValueError(
-                "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
+                "Azure endpoint is required. Set AZURE_ENDPOINT environment "
+                "variable or pass endpoint parameter."
             )
-
-        # Validate and potentially fix Azure OpenAI endpoint URL
-        self.endpoint = self._validate_and_fix_endpoint(self.endpoint, model)
-
-        # Build client kwargs
-        client_kwargs = {
+        client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
             "credential": AzureKeyCredential(self.api_key),
         }
-
-        # Add api_version if specified (primarily for Azure OpenAI endpoints)
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
+        return client_kwargs
 
-        self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
 
-        self.async_client = AsyncChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
+    def _get_async_client(self) -> Any:
+        if self._async_client is None:
+            self._async_client = self._build_async_client()
+        return self._async_client
 
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-        self.max_tokens = max_tokens
-        self.stream = stream
-        self.response_format = response_format
-
-        self.is_openai_model = any(
-            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
-        )
-
-        self.is_azure_openai_endpoint = (
-            "openai.azure.com" in self.endpoint
-            and "/openai/deployments/" in self.endpoint
-        )
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Azure-specific fields."""
+        config = super().to_config_dict()
+        if self.endpoint:
+            config["endpoint"] = self.endpoint
+        if self.api_version and self.api_version != "2024-06-01":
+            config["api_version"] = self.api_version
+        if self.timeout is not None:
+            config["timeout"] = self.timeout
+        if self.max_retries != 2:
+            config["max_retries"] = self.max_retries
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.frequency_penalty is not None:
+            config["frequency_penalty"] = self.frequency_penalty
+        if self.presence_penalty is not None:
+            config["presence_penalty"] = self.presence_penalty
+        if self.max_tokens is not None:
+            config["max_tokens"] = self.max_tokens
+        return config
 
     @staticmethod
     def _validate_and_fix_endpoint(endpoint: str, model: str) -> str:
@@ -194,7 +246,11 @@ class AzureCompletion(BaseLLM):
         Returns:
             Validated and potentially corrected endpoint URL
         """
-        if "openai.azure.com" in endpoint and "/openai/deployments/" not in endpoint:
+        ep_host = urlparse(endpoint).hostname or ""
+        is_azure_openai = ep_host == "openai.azure.com" or ep_host.endswith(
+            ".openai.azure.com"
+        )
+        if is_azure_openai and "/openai/deployments/" not in endpoint:
             endpoint = endpoint.rstrip("/")
 
             if not endpoint.endswith("/openai/deployments"):
@@ -571,6 +627,7 @@ class AzureCompletion(BaseLLM):
         params: AzureCompletionParams,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
@@ -596,6 +653,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
 
             return structured_data
@@ -645,6 +703,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage,
             )
             return list(message.tool_calls)
 
@@ -682,6 +741,7 @@ class AzureCompletion(BaseLLM):
                 params=params,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage,
             )
 
         content = self._apply_stop_words(content)
@@ -693,6 +753,7 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -709,8 +770,7 @@ class AzureCompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         try:
-            # Cast params to Any to avoid type checking issues with TypedDict unpacking
-            response: ChatCompletions = self.client.complete(**params)  # type: ignore[assignment,arg-type]
+            response: ChatCompletions = self._get_sync_client().complete(**params)
             return self._process_completion_response(
                 response=response,
                 params=params,
@@ -796,7 +856,7 @@ class AzureCompletion(BaseLLM):
         self,
         full_response: str,
         tool_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, Any] | None,
         params: AzureCompletionParams,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -808,7 +868,7 @@ class AzureCompletion(BaseLLM):
         Args:
             full_response: The complete streamed response content
             tool_calls: Dictionary of tool calls accumulated during streaming
-            usage_data: Token usage data from the stream
+            usage_data: Token usage data from the stream, or None if unavailable
             params: Completion parameters containing messages
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
@@ -818,7 +878,8 @@ class AzureCompletion(BaseLLM):
         Returns:
             Final response content after processing, or structured output
         """
-        self._track_token_usage_internal(usage_data)
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         # Handle structured output validation
         if response_model and self.is_openai_model:
@@ -828,6 +889,7 @@ class AzureCompletion(BaseLLM):
                 params=params,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage_data,
             )
 
         # If there are tool_calls but no available_functions, return them
@@ -850,6 +912,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_data,
             )
             return formatted_tool_calls
 
@@ -886,6 +949,7 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=usage_data,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -904,8 +968,8 @@ class AzureCompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        usage_data = {"total_tokens": 0}
-        for update in self.client.complete(**params):  # type: ignore[arg-type]
+        usage_data: dict[str, Any] | None = None
+        for update in self._get_sync_client().complete(**params):
             if isinstance(update, StreamingChatCompletionsUpdate):
                 if update.usage:
                     usage = update.usage
@@ -945,8 +1009,9 @@ class AzureCompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming chat completion asynchronously."""
         try:
-            # Cast params to Any to avoid type checking issues with TypedDict unpacking
-            response: ChatCompletions = await self.async_client.complete(**params)  # type: ignore[assignment,arg-type]
+            response: ChatCompletions = await self._get_async_client().complete(
+                **params
+            )
             return self._process_completion_response(
                 response=response,
                 params=params,
@@ -970,10 +1035,10 @@ class AzureCompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, Any] | None = None
 
-        stream = await self.async_client.complete(**params)  # type: ignore[arg-type]
-        async for update in stream:  # type: ignore[union-attr]
+        stream = await self._get_async_client().complete(**params)
+        async for update in stream:
             if isinstance(update, StreamingChatCompletionsUpdate):
                 if hasattr(update, "usage") and update.usage:
                     usage = update.usage
@@ -1068,29 +1133,40 @@ class AzureCompletion(BaseLLM):
 
     @staticmethod
     def _extract_azure_token_usage(response: ChatCompletions) -> dict[str, Any]:
-        """Extract token usage from Azure response."""
+        """Extract token usage and response metadata from Azure response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
             cached_tokens = 0
             prompt_details = getattr(usage, "prompt_tokens_details", None)
             if prompt_details:
                 cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
-            return {
+            reasoning_tokens = 0
+            completion_details = getattr(usage, "completion_tokens_details", None)
+            if completion_details:
+                reasoning_tokens = (
+                    getattr(completion_details, "reasoning_tokens", 0) or 0
+                )
+            result: dict[str, Any] = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
                 "cached_prompt_tokens": cached_tokens,
+                "reasoning_tokens": reasoning_tokens,
             }
+            return result
         return {"total_tokens": 0}
 
     async def aclose(self) -> None:
         """Close the async client and clean up resources.
 
         This ensures proper cleanup of the underlying aiohttp session
-        to avoid unclosed connector warnings.
+        to avoid unclosed connector warnings. Accesses the cached client
+        directly rather than going through `_get_async_client` so a
+        cleanup on an uninitialized LLM is a harmless no-op rather than
+        a credential-required error.
         """
-        if hasattr(self.async_client, "close"):
-            await self.async_client.close()
+        if self._async_client is not None and hasattr(self._async_client, "close"):
+            await self._async_client.close()
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""

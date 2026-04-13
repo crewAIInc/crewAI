@@ -39,11 +39,12 @@ class S3ReaderTool(BaseTool):
 
             # Read file content from S3
             response = s3.get_object(Bucket=bucket_name, Key=object_key)
-            return response["Body"].read().decode("utf-8")
+            result: str = response["Body"].read().decode("utf-8")
+            return result
 
         except ClientError as e:
             return f"Error reading file from S3: {e!s}"
 
-    def _parse_s3_path(self, file_path: str) -> tuple:
+    def _parse_s3_path(self, file_path: str) -> tuple[str, str]:
         parts = file_path.replace("s3://", "").split("/", 1)
         return parts[0], parts[1]

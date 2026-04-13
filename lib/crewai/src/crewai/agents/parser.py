@@ -19,10 +19,7 @@ from crewai.agents.constants import (
     MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
     UNABLE_TO_REPAIR_JSON_RESULTS,
 )
-from crewai.utilities.i18n import get_i18n
-
-
-_I18N = get_i18n()
+from crewai.utilities.i18n import I18N_DEFAULT as _I18N
 
 
 @dataclass

@@ -42,15 +42,15 @@ class BrowserbaseLoadTool(BaseTool):
         text_content: bool | None = False,
         session_id: str | None = None,
         proxy: bool | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         if not self.api_key:
             raise EnvironmentError(
                 "BROWSERBASE_API_KEY environment variable is required for initialization"
             )
         try:
-            from browserbase import Browserbase  # type: ignore
+            from browserbase import Browserbase
         except ImportError:
             import click
 
@@ -60,7 +60,7 @@ class BrowserbaseLoadTool(BaseTool):
                 import subprocess
 
                 subprocess.run(["uv", "add", "browserbase"], check=True)  # noqa: S607
-                from browserbase import Browserbase  # type: ignore
+                from browserbase import Browserbase
             else:
                 raise ImportError(
                     "`browserbase` package not found, please run `uv add browserbase`"
@@ -71,7 +71,7 @@ class BrowserbaseLoadTool(BaseTool):
         self.session_id = session_id
         self.proxy = proxy
 
-    def _run(self, url: str):
+    def _run(self, url: str) -> Any:
         return self.browserbase.load_url(  # type: ignore[union-attr]
             url, self.text_content, self.session_id, self.proxy
         )

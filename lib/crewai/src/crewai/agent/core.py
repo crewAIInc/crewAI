@@ -1,31 +1,40 @@
+"""Core agent implementation for the CrewAI framework."""
+
 from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
-import shutil
-import subprocess
+import concurrent.futures
+import contextvars
+from datetime import datetime
+import json
+from pathlib import Path
 import time
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
-    Final,
     Literal,
+    NoReturn,
     cast,
 )
-from urllib.parse import urlparse
+import warnings
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
-    InstanceOf,
     PrivateAttr,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self
 
+from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
+    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
@@ -37,11 +46,18 @@ from crewai.agent.utils import (
     save_last_messages,
     validate_max_execution_time,
 )
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import (
+    BaseAgent,
+    _serialize_llm_ref,
+    _validate_llm_ref,
+)
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
@@ -56,24 +72,20 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.events.types.skill_events import SkillActivatedEvent
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
-from crewai.mcp import (
-    MCPClient,
-    MCPServerConfig,
-    MCPServerHTTP,
-    MCPServerSSE,
-    MCPServerStdio,
-)
-from crewai.mcp.transports.http import HTTPTransport
-from crewai.mcp.transports.sse import SSETransport
-from crewai.mcp.transports.stdio import StdioTransport
+from crewai.mcp import MCPServerConfig
+from crewai.mcp.tool_resolver import MCPToolResolver
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -83,8 +95,10 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail
-from crewai.utilities.guardrail_types import GuardrailType
+from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -101,7 +115,6 @@ except ImportError:
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
-    from crewai_tools import CodeInterpreterTool
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
@@ -111,17 +124,25 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-# MCP Connection timeout constants (in seconds)
-MCP_CONNECTION_TIMEOUT: Final[int] = 10
-MCP_TOOL_EXECUTION_TIMEOUT: Final[int] = 30
-MCP_DISCOVERY_TIMEOUT: Final[int] = 15
-MCP_MAX_RETRIES: Final[int] = 3
-
 _passthrough_exceptions: tuple[type[Exception], ...] = ()
 
-# Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
-_mcp_schema_cache: dict[str, Any] = {}
-_cache_ttl: Final[int] = 300  # 5 minutes
+_EXECUTOR_CLASS_MAP: dict[str, type] = {
+    "CrewAgentExecutor": CrewAgentExecutor,
+    "AgentExecutor": AgentExecutor,
+}
+
+
+def _validate_executor_class(value: Any) -> Any:
+    if isinstance(value, str):
+        cls = _EXECUTOR_CLASS_MAP.get(value)
+        if cls is None:
+            raise ValueError(f"Unknown executor class: {value}")
+        return cls
+    return value
+
+
+def _serialize_executor_class(value: Any) -> str:
+    return value.__name__ if isinstance(value, type) else str(value)
 
 
 class Agent(BaseAgent):
@@ -154,13 +175,13 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
-    _mcp_clients: list[Any] = PrivateAttr(default_factory=list)
+    _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    step_callback: Any | None = Field(
+    step_callback: SerializableCallable | None = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
@@ -168,12 +189,16 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | Any = Field(
-        description="Language model that will run the agent.", default=None
-    )
-    function_calling_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
+    llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
+    function_calling_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
     system_template: str | None = Field(
         default=None, description="System format for the agent."
     )
@@ -184,7 +209,9 @@ class Agent(BaseAgent):
         default=None, description="Response format for the agent."
     )
     allow_code_execution: bool | None = Field(
-        default=False, description="Enable code execution for the agent."
+        default=False,
+        deprecated=True,
+        description="Deprecated. CodeInterpreterTool is no longer available. Use dedicated sandbox services instead.",
     )
     respect_context_window: bool = Field(
         default=True,
@@ -209,15 +236,26 @@ class Agent(BaseAgent):
     )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
-        description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
+        deprecated=True,
+        description="Deprecated. CodeInterpreterTool is no longer available. Use dedicated sandbox services instead.",
     )
-    reasoning: bool = Field(
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+    )
+    planning: bool = Field(
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
     )
+    reasoning: bool = Field(
+        default=False,
+        description="[DEPRECATED: Use planning_config instead] Whether the agent should reflect and create a plan before executing a task.",
+        deprecated=True,
+    )
     max_reasoning_attempts: int | None = Field(
         default=None,
-        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        description="[DEPRECATED: Use planning_config.max_attempts instead] Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        deprecated=True,
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -259,19 +297,29 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
+    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
+        default=None, description="An instance of the CrewAgentExecutor class."
+    )
+    executor_class: Annotated[
+        type[CrewAgentExecutor] | type[AgentExecutor],
+        BeforeValidator(_validate_executor_class),
+        PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
+    ] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
 
     @model_validator(mode="before")
-    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
+    @classmethod
+    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
+        """Merge repository agent config with provided values before validation."""
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
 
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
+        """Initialize LLM, executor, code tools, and skills after model creation."""
         self.llm = create_llm(self.llm)
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
@@ -282,16 +330,41 @@ class Agent(BaseAgent):
             self._setup_agent_executor()
 
         if self.allow_code_execution:
-            self._validate_docker_installation()
+            warnings.warn(
+                "allow_code_execution is deprecated and will be removed in v2.0. "
+                "CodeInterpreterTool is no longer available. "
+                "Use dedicated sandbox services like E2B or Modal.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        self.set_skills()
+
+        if self.reasoning and self.planning_config is None:
+            warnings.warn(
+                "The 'reasoning' parameter is deprecated. Use 'planning_config=PlanningConfig()' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.planning_config = PlanningConfig(
+                max_attempts=self.max_reasoning_attempts,
+            )
 
         return self
 
+    @property
+    def planning_enabled(self) -> bool:
+        """Check if planning is enabled for this agent."""
+        return self.planning_config is not None or self.planning
+
     def _setup_agent_executor(self) -> None:
+        """Initialize the agent executor with a default cache handler."""
         if not self.cache_handler:
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
+        """Initialize knowledge sources with the agent or crew embedder config."""
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -308,6 +381,74 @@ class Agent(BaseAgent):
                     self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
+
+    def set_skills(
+        self,
+        resolved_crew_skills: list[SkillModel] | None = None,
+    ) -> None:
+        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+
+        Path entries trigger discovery and activation. Pre-loaded Skill objects
+        below INSTRUCTIONS level are activated. Crew-level skills are merged in
+        with event emission so observability is consistent regardless of origin.
+
+        Args:
+            resolved_crew_skills: Pre-resolved crew skills (already discovered
+                and activated). When provided, avoids redundant discovery per agent.
+        """
+        from crewai.crew import Crew
+
+        if resolved_crew_skills is None:
+            crew_skills: list[Path | SkillModel] | None = (
+                self.crew.skills
+                if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
+                else None
+            )
+        else:
+            crew_skills = list(resolved_crew_skills)
+
+        if not self.skills and not crew_skills:
+            return
+
+        needs_work = self.skills and any(
+            isinstance(s, Path)
+            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
+            for s in self.skills
+        )
+        if not needs_work and not crew_skills:
+            return
+
+        seen: set[str] = set()
+        resolved: list[Path | SkillModel] = []
+        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+
+        if crew_skills:
+            items.extend(crew_skills)
+
+        for item in items:
+            if isinstance(item, Path):
+                discovered = discover_skills(item, source=self)
+                for skill in discovered:
+                    if skill.name not in seen:
+                        seen.add(skill.name)
+                        resolved.append(activate_skill(skill, source=self))
+            elif isinstance(item, SkillModel):
+                if item.name not in seen:
+                    seen.add(item.name)
+                    activated = activate_skill(item, source=self)
+                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                        crewai_event_bus.emit(
+                            self,
+                            event=SkillActivatedEvent(
+                                from_agent=self,
+                                skill_name=item.name,
+                                skill_path=item.path,
+                                disclosure_level=item.disclosure_level,
+                            ),
+                        )
+                    resolved.append(activated)
+
+        self.skills = resolved if resolved else None
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
@@ -329,9 +470,238 @@ class Agent(BaseAgent):
         return (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
-            and self.llm.supports_function_calling()
+            and self.llm.supports_function_calling()  # type: ignore[union-attr]
             and len(tools) > 0
         )
+
+    def _prepare_task_execution(
+        self,
+        task: Task,
+        context: str | None,
+    ) -> str:
+        """Prepare common setup for task execution shared by sync and async paths.
+
+        Handles reasoning, date injection, prompt building, and memory retrieval.
+
+        Args:
+            task: Task to execute.
+            context: Context to execute the task in.
+
+        Returns:
+            The task prompt after memory retrieval, ready for knowledge lookup.
+        """
+        get_env_context()
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(self, task)
+
+        self._inject_date_to_task(task)
+
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = None
+
+        task_prompt = task.prompt()
+        task_prompt = build_task_prompt_with_schema(task, task_prompt)
+        task_prompt = format_task_with_context(task_prompt, context)
+        return self._retrieve_memory_context(task, task_prompt)
+
+    def _finalize_task_prompt(
+        self,
+        task_prompt: str,
+        tools: list[BaseTool] | None,
+        task: Task,
+    ) -> str:
+        """Apply skill context, tool preparation, and training data to the task prompt.
+
+        Args:
+            task_prompt: The task prompt after memory and knowledge retrieval.
+            tools: Tools to use for the task.
+            task: Task to execute.
+
+        Returns:
+            The fully prepared task prompt.
+        """
+        task_prompt = append_skill_context(self, task_prompt)
+        prepare_tools(self, tools, task)
+
+        return apply_training_data(self, task_prompt)
+
+    def _retrieve_memory_context(self, task: Task, task_prompt: str) -> str:
+        """Retrieve memory context and append it to the task prompt.
+
+        Args:
+            task: The task being executed.
+            task_prompt: The current task prompt.
+
+        Returns:
+            The task prompt, potentially augmented with memory context.
+        """
+        if not self._is_any_available_memory():
+            return task_prompt
+
+        crewai_event_bus.emit(
+            self,
+            event=MemoryRetrievalStartedEvent(
+                task_id=str(task.id) if task else None,
+                source_type="agent",
+                from_agent=self,
+                from_task=task,
+            ),
+        )
+
+        start_time = time.time()
+        memory = ""
+
+        try:
+            unified_memory = getattr(self, "memory", None) or (
+                getattr(self.crew, "_memory", None) if self.crew else None
+            )
+            if unified_memory is not None:
+                query = task.description
+                matches = unified_memory.recall(query, limit=5)
+                if matches:
+                    memory = "Relevant memories:\n" + "\n".join(
+                        m.format() for m in matches
+                    )
+            if memory.strip() != "":
+                task_prompt += I18N_DEFAULT.slice("memory").format(memory=memory)
+
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalCompletedEvent(
+                    task_id=str(task.id) if task else None,
+                    memory_content=memory,
+                    retrieval_time_ms=(time.time() - start_time) * 1000,
+                    source_type="agent",
+                    from_agent=self,
+                    from_task=task,
+                ),
+            )
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalFailedEvent(
+                    task_id=str(task.id) if task else None,
+                    source_type="agent",
+                    from_agent=self,
+                    from_task=task,
+                    error=str(e),
+                ),
+            )
+
+        return task_prompt
+
+    def _finalize_task_execution(self, task: Task, result: Any) -> Any:
+        """Finalize task execution with RPM cleanup, tool processing, and event emission.
+
+        Args:
+            task: The task that was executed.
+            result: The raw execution result.
+
+        Returns:
+            The processed result.
+        """
+        if self.max_rpm and self._rpm_controller:
+            self._rpm_controller.stop_rpm_counter()
+
+        result = process_tool_results(self, result)
+
+        output_for_event = result
+        if (
+            AgentResponseProtocol is not None
+            and isinstance(result, BaseModel)
+            and isinstance(result, AgentResponseProtocol)
+        ):
+            output_for_event = str(result.message)
+        elif not isinstance(result, str):
+            output_for_event = str(result)
+
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionCompletedEvent(
+                agent=self, task=task, output=output_for_event
+            ),
+        )
+
+        save_last_messages(self)
+        self._cleanup_mcp_clients()
+
+        return result
+
+    def _check_execution_error(self, e: Exception, task: Task) -> None:
+        """Check if an execution error should be re-raised immediately.
+
+        Args:
+            e: The exception that occurred.
+            task: The task being executed.
+
+        Raises:
+            Exception: If the error is from litellm, a passthrough, or retries are exhausted.
+        """
+        if e.__class__.__module__.startswith("litellm"):
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+        if isinstance(e, _passthrough_exceptions):
+            raise
+        self._times_executed += 1
+        if self._times_executed > self.max_retry_limit:
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+
+    def _handle_execution_error(
+        self,
+        e: Exception,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+    ) -> Any:
+        """Handle execution errors with retry logic (sync path).
+
+        Args:
+            e: The exception that occurred.
+            task: The task being executed.
+            context: Task context.
+            tools: Task tools.
+
+        Returns:
+            Result from retried execution.
+        """
+        self._check_execution_error(e, task)
+        return self.execute_task(task, context, tools)
+
+    async def _handle_execution_error_async(
+        self,
+        e: Exception,
+        task: Task,
+        context: str | None,
+        tools: list[BaseTool] | None,
+    ) -> Any:
+        """Handle execution errors with retry logic (async path).
+
+        Args:
+            e: The exception that occurred.
+            task: The task being executed.
+            context: Task context.
+            tools: Task tools.
+
+        Returns:
+            Result from retried execution.
+        """
+        self._check_execution_error(e, task)
+        return await self.aexecute_task(task, context, tools)
 
     def execute_task(
         self,
@@ -354,66 +724,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
-        self._inject_date_to_task(task)
-
-        if self.tools_handler:
-            self.tools_handler.last_used_tool = None
-
-        task_prompt = task.prompt()
-        task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
-        task_prompt = format_task_with_context(task_prompt, context, self.i18n)
-
-        if self._is_any_available_memory():
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalStartedEvent(
-                    task_id=str(task.id) if task else None,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
-
-            start_time = time.time()
-            memory = ""
-
-            try:
-                unified_memory = getattr(self, "memory", None) or (
-                    getattr(self.crew, "_memory", None) if self.crew else None
-                )
-                if unified_memory is not None:
-                    query = task.description
-                    matches = unified_memory.recall(query, limit=10)
-                    if matches:
-                        memory = "Relevant memories:\n" + "\n".join(
-                            f"- {m.record.content}" for m in matches
-                        )
-                if memory.strip() != "":
-                    task_prompt += self.i18n.slice("memory").format(memory=memory)
-
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalCompletedEvent(
-                        task_id=str(task.id) if task else None,
-                        memory_content=memory,
-                        retrieval_time_ms=(time.time() - start_time) * 1000,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                    ),
-                )
-            except Exception as e:
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalFailedEvent(
-                        task_id=str(task.id) if task else None,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                        error=str(e),
-                    ),
-                )
+        task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = handle_knowledge_retrieval(
@@ -422,17 +733,12 @@ class Agent(BaseAgent):
             task_prompt,
             knowledge_config,
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
-            self.crew.query_knowledge if self.crew else lambda *a, **k: None,
+            self.crew.query_knowledge
+            if self.crew and not isinstance(self.crew, str)
+            else lambda *a, **k: None,
         )
 
-        prepare_tools(self, tools, task)
-        task_prompt = apply_training_data(self, task_prompt)
-
-        from crewai.events.types.agent_events import (
-            AgentExecutionCompletedEvent,
-            AgentExecutionErrorEvent,
-            AgentExecutionStartedEvent,
-        )
+        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
             crewai_event_bus.emit(
@@ -464,57 +770,9 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            if e.__class__.__module__.startswith("litellm"):
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            if isinstance(e, _passthrough_exceptions):
-                raise
-            self._times_executed += 1
-            if self._times_executed > self.max_retry_limit:
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            result = self.execute_task(task, context, tools)
+            result = self._handle_execution_error(e, task, context, tools)
 
-        if self.max_rpm and self._rpm_controller:
-            self._rpm_controller.stop_rpm_counter()
-
-        result = process_tool_results(self, result)
-
-        output_for_event = result
-        if (
-            AgentResponseProtocol is not None
-            and isinstance(result, BaseModel)
-            and isinstance(result, AgentResponseProtocol)
-        ):
-            output_for_event = str(result.message)
-        elif not isinstance(result, str):
-            output_for_event = str(result)
-
-        crewai_event_bus.emit(
-            self,
-            event=AgentExecutionCompletedEvent(
-                agent=self, task=task, output=output_for_event
-            ),
-        )
-
-        save_last_messages(self)
-        self._cleanup_mcp_clients()
-
-        return result
+        return self._finalize_task_execution(task, result)
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
@@ -531,11 +789,13 @@ class Agent(BaseAgent):
             TimeoutError: If execution exceeds the timeout.
             RuntimeError: If execution fails for other reasons.
         """
-        import concurrent.futures
-
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(
-                self._execute_without_timeout, task_prompt=task_prompt, task=task
+                ctx.run,
+                self._execute_without_timeout,
+                task_prompt=task_prompt,
+                task=task,
             )
 
             try:
@@ -562,14 +822,18 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        return self.agent_executor.invoke(
-            {
-                "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
-                "ask_for_human_input": task.human_input,
-            }
-        )["output"]
+        result = cast(
+            dict[str, Any],
+            self.agent_executor.invoke(
+                {
+                    "input": task_prompt,
+                    "tool_names": self.agent_executor.tools_names,
+                    "tools": self.agent_executor.tools_description,
+                    "ask_for_human_input": task.human_input,
+                }
+            ),
+        )
+        return result["output"]
 
     async def aexecute_task(
         self,
@@ -592,80 +856,14 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
-        self._inject_date_to_task(task)
-
-        if self.tools_handler:
-            self.tools_handler.last_used_tool = None
-
-        task_prompt = task.prompt()
-        task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
-        task_prompt = format_task_with_context(task_prompt, context, self.i18n)
-
-        if self._is_any_available_memory():
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalStartedEvent(
-                    task_id=str(task.id) if task else None,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
-
-            start_time = time.time()
-            memory = ""
-
-            try:
-                unified_memory = getattr(self, "memory", None) or (
-                    getattr(self.crew, "_memory", None) if self.crew else None
-                )
-                if unified_memory is not None:
-                    query = task.description
-                    matches = unified_memory.recall(query, limit=10)
-                    if matches:
-                        memory = "Relevant memories:\n" + "\n".join(
-                            f"- {m.record.content}" for m in matches
-                        )
-                if memory.strip() != "":
-                    task_prompt += self.i18n.slice("memory").format(memory=memory)
-
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalCompletedEvent(
-                        task_id=str(task.id) if task else None,
-                        memory_content=memory,
-                        retrieval_time_ms=(time.time() - start_time) * 1000,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                    ),
-                )
-            except Exception as e:
-                crewai_event_bus.emit(
-                    self,
-                    event=MemoryRetrievalFailedEvent(
-                        task_id=str(task.id) if task else None,
-                        source_type="agent",
-                        from_agent=self,
-                        from_task=task,
-                        error=str(e),
-                    ),
-                )
+        task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = await ahandle_knowledge_retrieval(
             self, task, task_prompt, knowledge_config
         )
 
-        prepare_tools(self, tools, task)
-        task_prompt = apply_training_data(self, task_prompt)
-
-        from crewai.events.types.agent_events import (
-            AgentExecutionCompletedEvent,
-            AgentExecutionErrorEvent,
-            AgentExecutionStartedEvent,
-        )
+        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
 
         try:
             crewai_event_bus.emit(
@@ -697,57 +895,9 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            if e.__class__.__module__.startswith("litellm"):
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            if isinstance(e, _passthrough_exceptions):
-                raise
-            self._times_executed += 1
-            if self._times_executed > self.max_retry_limit:
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            result = await self.aexecute_task(task, context, tools)
+            result = await self._handle_execution_error_async(e, task, context, tools)
 
-        if self.max_rpm and self._rpm_controller:
-            self._rpm_controller.stop_rpm_counter()
-
-        result = process_tool_results(self, result)
-
-        output_for_event = result
-        if (
-            AgentResponseProtocol is not None
-            and isinstance(result, BaseModel)
-            and isinstance(result, AgentResponseProtocol)
-        ):
-            output_for_event = str(result.message)
-        elif not isinstance(result, str):
-            output_for_event = str(result)
-
-        crewai_event_bus.emit(
-            self,
-            event=AgentExecutionCompletedEvent(
-                agent=self, task=task, output=output_for_event
-            ),
-        )
-
-        save_last_messages(self)
-        self._cleanup_mcp_clients()
-
-        return result
+        return self._finalize_task_execution(task, result)
 
     async def _aexecute_with_timeout(
         self, task_prompt: str, task: Task, timeout: int
@@ -800,6 +950,43 @@ class Agent(BaseAgent):
         )
         return result["output"]
 
+    def _build_execution_prompt(
+        self, raw_tools: list[BaseTool]
+    ) -> tuple[
+        SystemPromptResult | StandardPromptResult, list[str], Callable[[], bool] | None
+    ]:
+        """Build the execution prompt, stop words, and RPM limit function.
+
+        Args:
+            raw_tools: The raw tools available to the agent.
+
+        Returns:
+            A tuple of (prompt, stop_words, rpm_limit_fn).
+        """
+        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
+
+        prompt = Prompts(
+            agent=self,
+            has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
+            use_system_prompt=self.use_system_prompt,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
+            response_template=self.response_template,
+        ).task_execution()
+
+        stop_words = [I18N_DEFAULT.slice("observation")]
+        if self.response_template:
+            stop_words.append(
+                self.response_template.split("{{ .Response }}")[1].strip()
+            )
+
+        rpm_limit_fn = (
+            self._rpm_controller.check_or_wait if self._rpm_controller else None
+        )
+
+        return prompt, stop_words, rpm_limit_fn
+
     def create_agent_executor(
         self, tools: list[BaseTool] | None = None, task: Task | None = None
     ) -> None:
@@ -811,44 +998,25 @@ class Agent(BaseAgent):
         raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
-        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
-
-        prompt = Prompts(
-            agent=self,
-            has_tools=len(raw_tools) > 0,
-            use_native_tool_calling=use_native_tool_calling,
-            i18n=self.i18n,
-            use_system_prompt=self.use_system_prompt,
-            system_template=self.system_template,
-            prompt_template=self.prompt_template,
-            response_template=self.response_template,
-        ).task_execution()
-
-        stop_words = [self.i18n.slice("observation")]
-
-        if self.response_template:
-            stop_words.append(
-                self.response_template.split("{{ .Response }}")[1].strip()
-            )
-
-        rpm_limit_fn = (
-            self._rpm_controller.check_or_wait if self._rpm_controller else None
-        )
+        prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
 
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
-                tools=parsed_tools,  # type: ignore[arg-type]
+                tools=parsed_tools,
                 raw_tools=raw_tools,
                 prompt=prompt,
                 stop_words=stop_words,
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before creating agent executor."
+                )
             self.agent_executor = self.executor_class(
-                llm=cast(BaseLLM, self.llm),
-                task=task,  # type: ignore[arg-type]
-                i18n=self.i18n,
+                llm=self.llm,
+                task=task,
                 agent=self,
                 crew=self.crew,
                 tools=parsed_tools,
@@ -874,7 +1042,7 @@ class Agent(BaseAgent):
     def _update_executor_parameters(
         self,
         task: Task | None,
-        tools: list[BaseTool],
+        tools: list[CrewStructuredTool],
         raw_tools: list[BaseTool],
         prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
@@ -890,11 +1058,18 @@ class Agent(BaseAgent):
             stop_words: Stop words list.
             rpm_limit_fn: RPM limit callback function.
         """
-        self.agent_executor.task = task
+        if self.agent_executor is None:
+            raise RuntimeError("Agent executor is not initialized.")
+
+        if task is not None:
+            self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        self.agent_executor.stop = stop_words
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.stop_words = stop_words
+        else:
+            self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -906,7 +1081,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
-        if self.agent_executor.llm:
+        if isinstance(self.agent_executor.llm, BaseLLM):
             existing_stop = getattr(self.agent_executor.llm, "stop", [])
             self.agent_executor.llm.stop = list(
                 set(
@@ -916,7 +1091,7 @@ class Agent(BaseAgent):
                 )
             )
 
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
@@ -934,570 +1109,40 @@ class Agent(BaseAgent):
     def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Convert MCP server references/configs to CrewAI tools.
 
-        Supports both string references (backwards compatible) and structured
-        configuration objects (MCPServerStdio, MCPServerHTTP, MCPServerSSE).
-
-        Args:
-            mcps: List of MCP server references (strings) or configurations.
-
-        Returns:
-            List of BaseTool instances from MCP servers.
+        Delegates to :class:`~crewai.mcp.tool_resolver.MCPToolResolver`.
         """
-        all_tools = []
-        clients = []
-
-        for mcp_config in mcps:
-            if isinstance(mcp_config, str):
-                tools = self._get_mcp_tools_from_string(mcp_config)
-            else:
-                tools, client = self._get_native_mcp_tools(mcp_config)
-                if client:
-                    clients.append(client)
-
-            all_tools.extend(tools)
-
-        # Store clients for cleanup
-        self._mcp_clients.extend(clients)
-        return all_tools
+        self._cleanup_mcp_clients()
+        self._mcp_resolver = MCPToolResolver(agent=self, logger=self._logger)
+        return self._mcp_resolver.resolve(mcps)
 
     def _cleanup_mcp_clients(self) -> None:
         """Cleanup MCP client connections after task execution."""
-        if not self._mcp_clients:
-            return
-
-        async def _disconnect_all() -> None:
-            for client in self._mcp_clients:
-                if client and hasattr(client, "connected") and client.connected:
-                    await client.disconnect()
-
-        try:
-            asyncio.run(_disconnect_all())
-        except Exception as e:
-            self._logger.log("error", f"Error during MCP client cleanup: {e}")
-        finally:
-            self._mcp_clients.clear()
-
-    def _get_mcp_tools_from_string(self, mcp_ref: str) -> list[BaseTool]:
-        """Get tools from legacy string-based MCP references.
-
-        This method maintains backwards compatibility with string-based
-        MCP references (https://... and crewai-amp:...).
-
-        Args:
-            mcp_ref: String reference to MCP server.
-
-        Returns:
-            List of BaseTool instances.
-        """
-        if mcp_ref.startswith("crewai-amp:"):
-            return self._get_amp_mcp_tools(mcp_ref)
-        if mcp_ref.startswith("https://"):
-            return self._get_external_mcp_tools(mcp_ref)
-        return []
-
-    def _get_external_mcp_tools(self, mcp_ref: str) -> list[BaseTool]:
-        """Get tools from external HTTPS MCP server with graceful error handling."""
-        from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
-
-        # Parse server URL and optional tool name
-        if "#" in mcp_ref:
-            server_url, specific_tool = mcp_ref.split("#", 1)
-        else:
-            server_url, specific_tool = mcp_ref, None
-
-        server_params = {"url": server_url}
-        server_name = self._extract_server_name(server_url)
-
-        try:
-            # Get tool schemas with timeout and error handling
-            tool_schemas = self._get_mcp_tool_schemas(server_params)
-
-            if not tool_schemas:
-                self._logger.log(
-                    "warning", f"No tools discovered from MCP server: {server_url}"
-                )
-                return []
-
-            tools = []
-            for tool_name, schema in tool_schemas.items():
-                # Skip if specific tool requested and this isn't it
-                if specific_tool and tool_name != specific_tool:
-                    continue
-
-                try:
-                    wrapper = MCPToolWrapper(
-                        mcp_server_params=server_params,
-                        tool_name=tool_name,
-                        tool_schema=schema,
-                        server_name=server_name,
-                    )
-                    tools.append(wrapper)
-                except Exception as e:
-                    self._logger.log(
-                        "warning",
-                        f"Failed to create MCP tool wrapper for {tool_name}: {e}",
-                    )
-                    continue
-
-            if specific_tool and not tools:
-                self._logger.log(
-                    "warning",
-                    f"Specific tool '{specific_tool}' not found on MCP server: {server_url}",
-                )
-
-            return cast(list[BaseTool], tools)
-
-        except Exception as e:
-            self._logger.log(
-                "warning", f"Failed to connect to MCP server {server_url}: {e}"
-            )
-            return []
-
-    def _get_native_mcp_tools(
-        self, mcp_config: MCPServerConfig
-    ) -> tuple[list[BaseTool], Any | None]:
-        """Get tools from MCP server using structured configuration.
-
-        This method creates an MCP client based on the configuration type,
-        connects to the server, discovers tools, applies filtering, and
-        returns wrapped tools along with the client instance for cleanup.
-
-        Args:
-            mcp_config: MCP server configuration (MCPServerStdio, MCPServerHTTP, or MCPServerSSE).
-
-        Returns:
-            Tuple of (list of BaseTool instances, MCPClient instance for cleanup).
-        """
-        from crewai.tools.base_tool import BaseTool
-        from crewai.tools.mcp_native_tool import MCPNativeTool
-
-        transport: StdioTransport | HTTPTransport | SSETransport
-        if isinstance(mcp_config, MCPServerStdio):
-            transport = StdioTransport(
-                command=mcp_config.command,
-                args=mcp_config.args,
-                env=mcp_config.env,
-            )
-            server_name = f"{mcp_config.command}_{'_'.join(mcp_config.args)}"
-        elif isinstance(mcp_config, MCPServerHTTP):
-            transport = HTTPTransport(
-                url=mcp_config.url,
-                headers=mcp_config.headers,
-                streamable=mcp_config.streamable,
-            )
-            server_name = self._extract_server_name(mcp_config.url)
-        elif isinstance(mcp_config, MCPServerSSE):
-            transport = SSETransport(
-                url=mcp_config.url,
-                headers=mcp_config.headers,
-            )
-            server_name = self._extract_server_name(mcp_config.url)
-        else:
-            raise ValueError(f"Unsupported MCP server config type: {type(mcp_config)}")
-
-        client = MCPClient(
-            transport=transport,
-            cache_tools_list=mcp_config.cache_tools_list,
-        )
-
-        async def _setup_client_and_list_tools() -> list[dict[str, Any]]:
-            """Async helper to connect and list tools in same event loop."""
-
-            try:
-                if not client.connected:
-                    await client.connect()
-
-                tools_list = await client.list_tools()
-
-                try:
-                    await client.disconnect()
-                    # Small delay to allow background tasks to finish cleanup
-                    # This helps prevent "cancel scope in different task" errors
-                    # when asyncio.run() closes the event loop
-                    await asyncio.sleep(0.1)
-                except Exception as e:
-                    self._logger.log("error", f"Error during disconnect: {e}")
-
-                return tools_list
-            except Exception as e:
-                if client.connected:
-                    await client.disconnect()
-                    await asyncio.sleep(0.1)
-                raise RuntimeError(
-                    f"Error during setup client and list tools: {e}"
-                ) from e
-
-        try:
-            try:
-                asyncio.get_running_loop()
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run, _setup_client_and_list_tools()
-                    )
-                    tools_list = future.result()
-            except RuntimeError:
-                try:
-                    tools_list = asyncio.run(_setup_client_and_list_tools())
-                except RuntimeError as e:
-                    error_msg = str(e).lower()
-                    if "cancel scope" in error_msg or "task" in error_msg:
-                        raise ConnectionError(
-                            "MCP connection failed due to event loop cleanup issues. "
-                            "This may be due to authentication errors or server unavailability."
-                        ) from e
-                except asyncio.CancelledError as e:
-                    raise ConnectionError(
-                        "MCP connection was cancelled. This may indicate an authentication "
-                        "error or server unavailability."
-                    ) from e
-
-            if mcp_config.tool_filter:
-                filtered_tools = []
-                for tool in tools_list:
-                    if callable(mcp_config.tool_filter):
-                        try:
-                            from crewai.mcp.filters import ToolFilterContext
-
-                            context = ToolFilterContext(
-                                agent=self,
-                                server_name=server_name,
-                                run_context=None,
-                            )
-                            if mcp_config.tool_filter(context, tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                        except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                    else:
-                        # Not callable - include tool
-                        filtered_tools.append(tool)
-                tools_list = filtered_tools
-
-            tools = []
-            for tool_def in tools_list:
-                tool_name = tool_def.get("name", "")
-                if not tool_name:
-                    continue
-
-                # Convert inputSchema to Pydantic model if present
-                args_schema = None
-                if tool_def.get("inputSchema"):
-                    args_schema = self._json_schema_to_pydantic(
-                        tool_name, tool_def["inputSchema"]
-                    )
-
-                tool_schema = {
-                    "description": tool_def.get("description", ""),
-                    "args_schema": args_schema,
-                }
-
-                try:
-                    native_tool = MCPNativeTool(
-                        mcp_client=client,
-                        tool_name=tool_name,
-                        tool_schema=tool_schema,
-                        server_name=server_name,
-                    )
-                    tools.append(native_tool)
-                except Exception as e:
-                    self._logger.log("error", f"Failed to create native MCP tool: {e}")
-                    continue
-
-            return cast(list[BaseTool], tools), client
-        except Exception as e:
-            if client.connected:
-                asyncio.run(client.disconnect())
-
-            raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
-
-    def _get_amp_mcp_tools(self, amp_ref: str) -> list[BaseTool]:
-        """Get tools from CrewAI AMP MCP marketplace."""
-        # Parse: "crewai-amp:mcp-name" or "crewai-amp:mcp-name#tool_name"
-        amp_part = amp_ref.replace("crewai-amp:", "")
-        if "#" in amp_part:
-            mcp_name, specific_tool = amp_part.split("#", 1)
-        else:
-            mcp_name, specific_tool = amp_part, None
-
-        # Call AMP API to get MCP server URLs
-        mcp_servers = self._fetch_amp_mcp_servers(mcp_name)
-
-        tools = []
-        for server_config in mcp_servers:
-            server_ref = server_config["url"]
-            if specific_tool:
-                server_ref += f"#{specific_tool}"
-            server_tools = self._get_external_mcp_tools(server_ref)
-            tools.extend(server_tools)
-
-        return tools
-
-    @staticmethod
-    def _extract_server_name(server_url: str) -> str:
-        """Extract clean server name from URL for tool prefixing."""
-
-        parsed = urlparse(server_url)
-        domain = parsed.netloc.replace(".", "_")
-        path = parsed.path.replace("/", "_").strip("_")
-        return f"{domain}_{path}" if path else domain
-
-    def _get_mcp_tool_schemas(
-        self, server_params: dict[str, Any]
-    ) -> dict[str, dict[str, Any]]:
-        """Get tool schemas from MCP server for wrapper creation with caching."""
-        server_url = server_params["url"]
-
-        # Check cache first
-        cache_key = server_url
-        current_time = time.time()
-
-        if cache_key in _mcp_schema_cache:
-            cached_data, cache_time = _mcp_schema_cache[cache_key]
-            if current_time - cache_time < _cache_ttl:
-                self._logger.log(
-                    "debug", f"Using cached MCP tool schemas for {server_url}"
-                )
-                return cached_data  # type: ignore[no-any-return]
-
-        try:
-            schemas = asyncio.run(self._get_mcp_tool_schemas_async(server_params))
-
-            # Cache successful results
-            _mcp_schema_cache[cache_key] = (schemas, current_time)
-
-            return schemas
-        except Exception as e:
-            # Log warning but don't raise - this allows graceful degradation
-            self._logger.log(
-                "warning", f"Failed to get MCP tool schemas from {server_url}: {e}"
-            )
-            return {}
-
-    async def _get_mcp_tool_schemas_async(
-        self, server_params: dict[str, Any]
-    ) -> dict[str, dict[str, Any]]:
-        """Async implementation of MCP tool schema retrieval with timeouts and retries."""
-        server_url = server_params["url"]
-        return await self._retry_mcp_discovery(
-            self._discover_mcp_tools_with_timeout, server_url
-        )
-
-    async def _retry_mcp_discovery(
-        self, operation_func: Any, server_url: str
-    ) -> dict[str, dict[str, Any]]:
-        """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
-        last_error = None
-
-        for attempt in range(MCP_MAX_RETRIES):
-            # Execute single attempt outside try-except loop structure
-            result, error, should_retry = await self._attempt_mcp_discovery(
-                operation_func, server_url
-            )
-
-            # Success case - return immediately
-            if result is not None:
-                return result
-
-            # Non-retryable error - raise immediately
-            if not should_retry:
-                raise RuntimeError(error)
-
-            # Retryable error - continue with backoff
-            last_error = error
-            if attempt < MCP_MAX_RETRIES - 1:
-                wait_time = 2**attempt  # Exponential backoff
-                await asyncio.sleep(wait_time)
-
-        raise RuntimeError(
-            f"Failed to discover MCP tools after {MCP_MAX_RETRIES} attempts: {last_error}"
-        )
-
-    @staticmethod
-    async def _attempt_mcp_discovery(
-        operation_func: Any, server_url: str
-    ) -> tuple[dict[str, dict[str, Any]] | None, str, bool]:
-        """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
-        try:
-            result = await operation_func(server_url)
-            return result, "", False
-
-        except ImportError:
-            return (
-                None,
-                "MCP library not available. Please install with: pip install mcp",
-                False,
-            )
-
-        except asyncio.TimeoutError:
-            return (
-                None,
-                f"MCP discovery timed out after {MCP_DISCOVERY_TIMEOUT} seconds",
-                True,
-            )
-
-        except Exception as e:
-            error_str = str(e).lower()
-
-            # Classify errors as retryable or non-retryable
-            if "authentication" in error_str or "unauthorized" in error_str:
-                return None, f"Authentication failed for MCP server: {e!s}", False
-            if "connection" in error_str or "network" in error_str:
-                return None, f"Network connection failed: {e!s}", True
-            if "json" in error_str or "parsing" in error_str:
-                return None, f"Server response parsing error: {e!s}", True
-            return None, f"MCP discovery error: {e!s}", False
-
-    async def _discover_mcp_tools_with_timeout(
-        self, server_url: str
-    ) -> dict[str, dict[str, Any]]:
-        """Discover MCP tools with timeout wrapper."""
-        return await asyncio.wait_for(
-            self._discover_mcp_tools(server_url), timeout=MCP_DISCOVERY_TIMEOUT
-        )
-
-    async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict[str, Any]]:
-        """Discover tools from MCP server with proper timeout handling."""
-        from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
-
-        async with streamablehttp_client(server_url) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                # Initialize the connection with timeout
-                await asyncio.wait_for(
-                    session.initialize(), timeout=MCP_CONNECTION_TIMEOUT
-                )
-
-                # List available tools with timeout
-                tools_result = await asyncio.wait_for(
-                    session.list_tools(),
-                    timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
-                )
-
-                schemas = {}
-                for tool in tools_result.tools:
-                    args_schema = None
-                    if hasattr(tool, "inputSchema") and tool.inputSchema:
-                        args_schema = self._json_schema_to_pydantic(
-                            sanitize_tool_name(tool.name), tool.inputSchema
-                        )
-
-                    schemas[sanitize_tool_name(tool.name)] = {
-                        "description": getattr(tool, "description", ""),
-                        "args_schema": args_schema,
-                    }
-                return schemas
-
-    def _json_schema_to_pydantic(
-        self, tool_name: str, json_schema: dict[str, Any]
-    ) -> type:
-        """Convert JSON Schema to Pydantic model for tool arguments.
-
-        Args:
-            tool_name: Name of the tool (used for model naming)
-            json_schema: JSON Schema dict with 'properties', 'required', etc.
-
-        Returns:
-            Pydantic BaseModel class
-        """
-        from pydantic import Field, create_model
-
-        properties = json_schema.get("properties", {})
-        required_fields = json_schema.get("required", [])
-
-        field_definitions: dict[str, Any] = {}
-
-        for field_name, field_schema in properties.items():
-            field_type = self._json_type_to_python(field_schema)
-            field_description = field_schema.get("description", "")
-
-            is_required = field_name in required_fields
-
-            if is_required:
-                field_definitions[field_name] = (
-                    field_type,
-                    Field(..., description=field_description),
-                )
-            else:
-                field_definitions[field_name] = (
-                    field_type | None,
-                    Field(default=None, description=field_description),
-                )
-
-        model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
-        return create_model(model_name, **field_definitions)  # type: ignore[no-any-return]
-
-    def _json_type_to_python(self, field_schema: dict[str, Any]) -> type:
-        """Convert JSON Schema type to Python type.
-
-        Args:
-            field_schema: JSON Schema field definition
-
-        Returns:
-            Python type
-        """
-
-        json_type = field_schema.get("type")
-
-        if "anyOf" in field_schema:
-            types: list[type] = []
-            for option in field_schema["anyOf"]:
-                if "const" in option:
-                    types.append(str)
-                else:
-                    types.append(self._json_type_to_python(option))
-            unique_types = list(set(types))
-            if len(unique_types) > 1:
-                result: Any = unique_types[0]
-                for t in unique_types[1:]:
-                    result = result | t
-                return result  # type: ignore[no-any-return]
-            return unique_types[0]
-
-        type_mapping: dict[str | None, type] = {
-            "string": str,
-            "number": float,
-            "integer": int,
-            "boolean": bool,
-            "array": list,
-            "object": dict,
-        }
-
-        return type_mapping.get(json_type, Any)
-
-    @staticmethod
-    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict[str, Any]]:
-        """Fetch MCP server configurations from CrewAI AMP API."""
-        # TODO: Implement AMP API call to "integrations/mcps" endpoint
-        # Should return list of server configs with URLs
-        return []
+        if self._mcp_resolver is not None:
+            self._mcp_resolver.cleanup()
+            self._mcp_resolver = None
 
     @staticmethod
     def get_multimodal_tools() -> Sequence[BaseTool]:
+        """Return tools for multimodal agent capabilities."""
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self) -> list[CodeInterpreterTool]:
-        try:
-            from crewai_tools import (
-                CodeInterpreterTool,
-            )
-
-            # Set the unsafe_mode based on the code_execution_mode attribute
-            unsafe_mode = self.code_execution_mode == "unsafe"
-            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
-        except ModuleNotFoundError:
-            self._logger.log(
-                "info", "Coding tools not available. Install crewai_tools. "
-            )
-            return []
+    def get_code_execution_tools(self) -> list[Any]:
+        """Deprecated: CodeInterpreterTool is no longer available."""
+        warnings.warn(
+            "CodeInterpreterTool is no longer available. "
+            "Use dedicated sandbox services like E2B or Modal.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return []
 
     @staticmethod
     def get_output_converter(
         llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
     ) -> Converter:
+        """Create a Converter instance for transforming LLM output to a structured model."""
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _training_handler(self, task_prompt: str) -> str:
@@ -1547,8 +1192,6 @@ class Agent(BaseAgent):
     def _inject_date_to_task(self, task: Task) -> None:
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
-            from datetime import datetime
-
             try:
                 valid_format_codes = [
                     "%Y",
@@ -1573,28 +1216,14 @@ class Agent(BaseAgent):
                 self._logger.log("warning", f"Failed to inject date: {e!s}")
 
     def _validate_docker_installation(self) -> None:
-        """Check if Docker is installed and running."""
-        docker_path = shutil.which("docker")
-        if not docker_path:
-            raise RuntimeError(
-                f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}"
-            )
-
-        try:
-            subprocess.run(  # noqa: S603
-                [docker_path, "info"],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
-            ) from e
-        except subprocess.TimeoutExpired as e:
-            raise RuntimeError(
-                f"Docker command timed out. Please check your Docker installation for agent: {self.role}"
-            ) from e
+        """Deprecated: No-op. CodeInterpreterTool is no longer available."""
+        warnings.warn(
+            "CodeInterpreterTool is no longer available. "
+            "Use dedicated sandbox services like E2B or Modal.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return
 
     def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
@@ -1610,6 +1239,7 @@ class Agent(BaseAgent):
         return self.security_config.fingerprint
 
     def set_fingerprint(self, fingerprint: Fingerprint) -> None:
+        """Set the agent's security fingerprint."""
         self.security_config.fingerprint = fingerprint
 
     @property
@@ -1631,10 +1261,10 @@ class Agent(BaseAgent):
                 from_agent=self,
             ),
         )
-        query = self.i18n.slice("knowledge_search_query").format(
+        query = I18N_DEFAULT.slice("knowledge_search_query").format(
             task_prompt=task_prompt
         )
-        rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
+        rewriter_prompt = I18N_DEFAULT.slice("knowledge_search_query_system_prompt")
         if not isinstance(self.llm, BaseLLM):
             self._logger.log(
                 "warning",
@@ -1651,15 +1281,11 @@ class Agent(BaseAgent):
             return None
 
         try:
-            rewritten_query = self.llm.call(
-                [
-                    {
-                        "role": "system",
-                        "content": rewriter_prompt,
-                    },
-                    {"role": "user", "content": query},
-                ]
-            )
+            messages: list[LLMMessage] = [
+                {"role": "system", "content": rewriter_prompt},
+                {"role": "user", "content": query},
+            ]
+            rewritten_query = self.llm.call(messages)
             crewai_event_bus.emit(
                 self,
                 event=KnowledgeQueryCompletedEvent(
@@ -1700,17 +1326,19 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
-        # Process platform apps and MCP tools
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
-            if platform_tools and self.tools is not None:
+            if platform_tools:
+                if self.tools is None:
+                    self.tools = []
                 self.tools.extend(platform_tools)
         if self.mcps:
             mcps = self.get_mcp_tools(self.mcps)
-            if mcps and self.tools is not None:
+            if mcps:
+                if self.tools is None:
+                    self.tools = []
                 self.tools.extend(mcps)
 
-        # Prepare tools
         raw_tools: list[BaseTool] = self.tools or []
 
         # Inject memory tools for standalone kickoff (crew path handles its own)
@@ -1727,7 +1355,6 @@ class Agent(BaseAgent):
 
         parsed_tools = parse_tools(raw_tools)
 
-        # Build agent_info for backward-compatible event emission
         agent_info = {
             "id": self.id,
             "role": self.role,
@@ -1737,35 +1364,9 @@ class Agent(BaseAgent):
             "verbose": self.verbose,
         }
 
-        # Build prompt for standalone execution
-        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
-        prompt = Prompts(
-            agent=self,
-            has_tools=len(raw_tools) > 0,
-            use_native_tool_calling=use_native_tool_calling,
-            i18n=self.i18n,
-            use_system_prompt=self.use_system_prompt,
-            system_template=self.system_template,
-            prompt_template=self.prompt_template,
-            response_template=self.response_template,
-        ).task_execution()
+        prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
 
-        # Prepare stop words
-        stop_words = [self.i18n.slice("observation")]
-        if self.response_template:
-            stop_words.append(
-                self.response_template.split("{{ .Response }}")[1].strip()
-            )
-
-        # Get RPM limit function
-        rpm_limit_fn = (
-            self._rpm_controller.check_or_wait if self._rpm_controller else None
-        )
-
-        # Create the executor for standalone mode (no crew, no task)
         executor = AgentExecutor(
-            task=None,
-            crew=None,
             llm=cast(BaseLLM, self.llm),
             agent=self,
             prompt=prompt,
@@ -1782,7 +1383,6 @@ class Agent(BaseAgent):
             request_within_rpm_limit=rpm_limit_fn,
             callbacks=[TokenCalcHandler(self._token_process)],
             response_model=response_format,
-            i18n=self.i18n,
         )
 
         all_files: dict[str, Any] = {}
@@ -1811,14 +1411,14 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=10)
+                matches = agent_memory.recall(formatted_messages, limit=20)
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(
-                        f"- {m.record.content}" for m in matches
+                        m.format() for m in matches
                     )
                 if memory_block:
-                    formatted_messages += "\n\n" + self.i18n.slice("memory").format(
+                    formatted_messages += "\n\n" + I18N_DEFAULT.slice("memory").format(
                         memory=memory_block
                     )
                 crewai_event_bus.emit(
@@ -1842,7 +1442,8 @@ class Agent(BaseAgent):
                     ),
                 )
 
-        # Build the input dict for the executor
+        formatted_messages = append_skill_context(self, formatted_messages)
+
         inputs: dict[str, Any] = {
             "input": formatted_messages,
             "tool_names": get_tool_names(parsed_tools),
@@ -1904,36 +1505,65 @@ class Agent(BaseAgent):
             )
 
             output = self._execute_and_build_output(executor, inputs, response_format)
-            if self.guardrail is not None:
-                output = self._process_kickoff_guardrail(
-                    output=output,
-                    executor=executor,
-                    inputs=inputs,
-                    response_format=response_format,
-                )
-
-            # Save to memory after execution (passive save)
-            self._save_kickoff_to_memory(messages, output.raw)
-
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionCompletedEvent(
-                    agent_info=agent_info,
-                    output=output.raw,
-                ),
+            return self._finalize_kickoff(
+                output, executor, inputs, response_format, messages, agent_info
             )
-
-            return output
 
         except Exception as e:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionErrorEvent(
-                    agent_info=agent_info,
-                    error=str(e),
-                ),
+            self._emit_kickoff_error(agent_info, e)
+
+    def _finalize_kickoff(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None,
+        messages: str | list[LLMMessage],
+        agent_info: dict[str, Any],
+    ) -> LiteAgentOutput:
+        """Apply guardrails, save to memory, and emit completion event.
+
+        Args:
+            output: The execution output.
+            executor: The agent executor.
+            inputs: The execution inputs.
+            response_format: Optional response format.
+            messages: The original messages.
+            agent_info: Agent metadata for events.
+
+        Returns:
+            The finalized output.
+        """
+        if self.guardrail is not None:
+            output = self._process_kickoff_guardrail(
+                output=output,
+                executor=executor,
+                inputs=inputs,
+                response_format=response_format,
             )
-            raise
+
+        self._save_kickoff_to_memory(messages, output.raw)
+
+        crewai_event_bus.emit(
+            self,
+            event=LiteAgentExecutionCompletedEvent(
+                agent_info=agent_info,
+                output=output.raw,
+            ),
+        )
+
+        return output
+
+    def _emit_kickoff_error(self, agent_info: dict[str, Any], e: Exception) -> NoReturn:
+        """Emit a kickoff error event and re-raise."""
+        crewai_event_bus.emit(
+            self,
+            event=LiteAgentExecutionErrorEvent(
+                agent_info=agent_info,
+                error=str(e),
+            ),
+        )
+        raise e
 
     def _save_kickoff_to_memory(
         self, messages: str | list[LLMMessage], output_text: str
@@ -1961,29 +1591,26 @@ class Agent(BaseAgent):
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
-    def _execute_and_build_output(
+    def _build_output_from_result(
         self,
+        result: dict[str, Any],
         executor: AgentExecutor,
-        inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent and build the output object.
+        """Build a LiteAgentOutput from an executor result dict.
+
+        Shared logic used by both sync and async execution paths.
 
         Args:
+            result: The result dictionary from executor.invoke / invoke_async.
             executor: The executor instance.
-            inputs: Input dictionary for execution.
             response_format: Optional response format.
 
         Returns:
             LiteAgentOutput with raw output, formatted result, and metrics.
         """
-        import json
-
-        # Execute the agent (this is called from sync path, so invoke returns dict)
-        result = cast(dict[str, Any], executor.invoke(inputs))
         output = result.get("output", "")
 
-        # Handle response format conversion
         formatted_result: BaseModel | None = None
         raw_output: str
 
@@ -1995,12 +1622,12 @@ class Agent(BaseAgent):
             try:
                 model_schema = generate_model_description(response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
+                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
                     output_format=schema
                 )
 
                 converter = Converter(
-                    llm=self.llm,
+                    llm=cast(BaseLLM, self.llm),
                     text=raw_output,
                     model=response_format,
                     instructions=instructions,
@@ -2014,7 +1641,6 @@ class Agent(BaseAgent):
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
-        # Get token usage metrics
         if isinstance(self.llm, BaseLLM):
             usage_metrics = self.llm.get_token_usage_summary()
         else:
@@ -2028,13 +1654,29 @@ class Agent(BaseAgent):
             else str(raw_output)
         )
 
+        todo_results = LiteAgentOutput.from_todo_items(executor.state.todos.items)
+
         return LiteAgentOutput(
             raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
+            messages=list(executor.state.messages),
+            plan=executor.state.plan,
+            todos=todo_results,
+            replan_count=executor.state.replan_count,
+            last_replan_reason=executor.state.last_replan_reason,
         )
+
+    def _execute_and_build_output(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent synchronously and build the output object."""
+        result = cast(dict[str, Any], executor.invoke(inputs))
+        return self._build_output_from_result(result, executor, response_format)
 
     async def _execute_and_build_output_async(
         self,
@@ -2042,77 +1684,9 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
-        """Execute the agent asynchronously and build the output object.
-
-        This is the async version of _execute_and_build_output that uses
-        invoke_async() for native async execution within event loops.
-
-        Args:
-            executor: The executor instance.
-            inputs: Input dictionary for execution.
-            response_format: Optional response format.
-
-        Returns:
-            LiteAgentOutput with raw output, formatted result, and metrics.
-        """
-        import json
-
-        # Execute the agent asynchronously
+        """Execute the agent asynchronously and build the output object."""
         result = await executor.invoke_async(inputs)
-        output = result.get("output", "")
-
-        # Handle response format conversion
-        formatted_result: BaseModel | None = None
-        raw_output: str
-
-        if isinstance(output, BaseModel):
-            formatted_result = output
-            raw_output = output.model_dump_json()
-        elif response_format:
-            raw_output = str(output) if not isinstance(output, str) else output
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
-
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
-
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
-        else:
-            raw_output = str(output) if not isinstance(output, str) else output
-
-        # Get token usage metrics
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
-
-        raw_str = (
-            raw_output
-            if isinstance(raw_output, str)
-            else raw_output.model_dump_json()
-            if isinstance(raw_output, BaseModel)
-            else str(raw_output)
-        )
-
-        return LiteAgentOutput(
-            raw=raw_str,
-            pydantic=formatted_result,
-            agent_role=self.role,
-            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
-        )
+        return self._build_output_from_result(result, executor, response_format)
 
     def _process_kickoff_guardrail(
         self,
@@ -2134,9 +1708,6 @@ class Agent(BaseAgent):
         Returns:
             Validated/updated output.
         """
-        from crewai.utilities.guardrail_types import GuardrailCallable
-
-        # Ensure guardrail is callable
         guardrail_callable: GuardrailCallable
         if isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
@@ -2166,16 +1737,13 @@ class Agent(BaseAgent):
                     f"Last error: {guardrail_result.error}"
                 )
 
-            # Add feedback and re-execute
             executor._append_message_to_state(
                 guardrail_result.error or "Guardrail validation failed",
                 role="user",
             )
 
-            # Re-execute and build new output
             output = self._execute_and_build_output(executor, inputs, response_format)
 
-            # Recursively retry guardrail
             return self._process_kickoff_guardrail(
                 output=output,
                 executor=executor,
@@ -2184,7 +1752,6 @@ class Agent(BaseAgent):
                 retry_count=retry_count + 1,
             )
 
-        # Apply guardrail result if available
         if guardrail_result.result is not None:
             if isinstance(guardrail_result.result, str):
                 output.raw = guardrail_result.result
@@ -2234,37 +1801,12 @@ class Agent(BaseAgent):
             output = await self._execute_and_build_output_async(
                 executor, inputs, response_format
             )
-
-            if self.guardrail is not None:
-                output = self._process_kickoff_guardrail(
-                    output=output,
-                    executor=executor,
-                    inputs=inputs,
-                    response_format=response_format,
-                )
-
-            # Save to memory after async execution (passive save)
-            self._save_kickoff_to_memory(messages, output.raw)
-
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionCompletedEvent(
-                    agent_info=agent_info,
-                    output=output.raw,
-                ),
+            return self._finalize_kickoff(
+                output, executor, inputs, response_format, messages, agent_info
             )
-
-            return output
 
         except Exception as e:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionErrorEvent(
-                    agent_info=agent_info,
-                    error=str(e),
-                ),
-            )
-            raise
+            self._emit_kickoff_error(agent_info, e)
 
     async def akickoff(
         self,
@@ -2283,22 +1825,3 @@ class Agent(BaseAgent):
             LiteAgentOutput: The result of the agent execution.
         """
         return await self.kickoff_async(messages, response_format, input_files)
-
-
-# Rebuild Agent model to resolve A2A type forward references
-try:
-    from crewai.a2a.config import (
-        A2AClientConfig as _A2AClientConfig,
-        A2AConfig as _A2AConfig,
-        A2AServerConfig as _A2AServerConfig,
-    )
-
-    Agent.model_rebuild(
-        _types_namespace={
-            "A2AConfig": _A2AConfig,
-            "A2AClientConfig": _A2AClientConfig,
-            "A2AServerConfig": _A2AServerConfig,
-        }
-    )
-except ImportError:
-    pass
