@@ -19,7 +19,7 @@ from collections.abc import Callable
 from copy import deepcopy
 import datetime
 import logging
-from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, TypedDict, Union, cast
 import uuid
 
 import jsonref  # type: ignore[import-untyped]
@@ -415,6 +415,119 @@ def strip_null_from_types(schema: dict[str, Any]) -> dict[str, Any]:
                         strip_null_from_types(item)
 
     return schema
+
+
+_STRICT_METADATA_KEYS: Final[tuple[str, ...]] = (
+    "title",
+    "default",
+    "examples",
+    "example",
+    "$comment",
+    "readOnly",
+    "writeOnly",
+    "deprecated",
+)
+
+_CLAUDE_STRICT_UNSUPPORTED: Final[tuple[str, ...]] = (
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "multipleOf",
+    "minLength",
+    "maxLength",
+    "pattern",
+    "minItems",
+    "maxItems",
+    "uniqueItems",
+    "minContains",
+    "maxContains",
+    "minProperties",
+    "maxProperties",
+    "patternProperties",
+    "propertyNames",
+    "dependentRequired",
+    "dependentSchemas",
+)
+
+
+def _strip_keys_recursive(d: Any, keys: tuple[str, ...]) -> Any:
+    """Recursively delete a fixed set of keys from a schema."""
+    if isinstance(d, dict):
+        for key in keys:
+            d.pop(key, None)
+        for v in d.values():
+            _strip_keys_recursive(v, keys)
+    elif isinstance(d, list):
+        for i in d:
+            _strip_keys_recursive(i, keys)
+    return d
+
+
+def lift_top_level_anyof(schema: dict[str, Any]) -> dict[str, Any]:
+    """Unwrap a top-level anyOf/oneOf/allOf wrapping a single object variant.
+
+    Anthropic's strict ``input_schema`` rejects top-level union keywords. When
+    exactly one variant is an object schema, lift it so the root is a plain
+    object; otherwise leave the schema alone.
+    """
+    for key in ("anyOf", "oneOf", "allOf"):
+        variants = schema.get(key)
+        if not isinstance(variants, list):
+            continue
+        object_variants = [
+            v for v in variants if isinstance(v, dict) and v.get("type") == "object"
+        ]
+        if len(object_variants) == 1:
+            lifted = deepcopy(object_variants[0])
+            schema.pop(key)
+            schema.update(lifted)
+            break
+    return schema
+
+
+def _common_strict_pipeline(params: dict[str, Any]) -> dict[str, Any]:
+    """Shared strict sanitization: inline refs, close objects, require all properties."""
+    sanitized = resolve_refs(deepcopy(params))
+    sanitized.pop("$defs", None)
+    sanitized = convert_oneof_to_anyof(sanitized)
+    sanitized = ensure_type_in_schemas(sanitized)
+    sanitized = force_additional_properties_false(sanitized)
+    sanitized = ensure_all_properties_required(sanitized)
+    return cast(dict[str, Any], _strip_keys_recursive(sanitized, _STRICT_METADATA_KEYS))
+
+
+def sanitize_tool_params_for_openai_strict(
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    """Sanitize a JSON schema for OpenAI strict function calling."""
+    if not isinstance(params, dict):
+        return params
+    return cast(
+        dict[str, Any], strip_unsupported_formats(_common_strict_pipeline(params))
+    )
+
+
+def sanitize_tool_params_for_anthropic_strict(
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    """Sanitize a JSON schema for Anthropic strict tool use."""
+    if not isinstance(params, dict):
+        return params
+    sanitized = lift_top_level_anyof(_common_strict_pipeline(params))
+    sanitized = _strip_keys_recursive(sanitized, _CLAUDE_STRICT_UNSUPPORTED)
+    return cast(dict[str, Any], strip_unsupported_formats(sanitized))
+
+
+def sanitize_tool_params_for_bedrock_strict(
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    """Sanitize a JSON schema for Bedrock Converse strict tool use.
+
+    Bedrock Converse uses the same grammar compiler as the underlying Claude
+    model, so the constraints match Anthropic's.
+    """
+    return sanitize_tool_params_for_anthropic_strict(params)
 
 
 def generate_model_description(

@@ -392,10 +392,15 @@ def deploy() -> None:
 
 @deploy.command(name="create")
 @click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
-def deploy_create(yes: bool) -> None:
+@click.option(
+    "--skip-validate",
+    is_flag=True,
+    help="Skip the pre-deploy validation checks.",
+)
+def deploy_create(yes: bool, skip_validate: bool) -> None:
     """Create a Crew deployment."""
     deploy_cmd = DeployCommand()
-    deploy_cmd.create_crew(yes)
+    deploy_cmd.create_crew(yes, skip_validate=skip_validate)
 
 
 @deploy.command(name="list")
@@ -407,10 +412,28 @@ def deploy_list() -> None:
 
 @deploy.command(name="push")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_push(uuid: str | None) -> None:
+@click.option(
+    "--skip-validate",
+    is_flag=True,
+    help="Skip the pre-deploy validation checks.",
+)
+def deploy_push(uuid: str | None, skip_validate: bool) -> None:
     """Deploy the Crew."""
     deploy_cmd = DeployCommand()
-    deploy_cmd.deploy(uuid=uuid)
+    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate)
+
+
+@deploy.command(name="validate")
+def deploy_validate() -> None:
+    """Validate the current project against common deployment failures.
+
+    Runs the same pre-deploy checks that `crewai deploy create` and
+    `crewai deploy push` run automatically, without contacting the platform.
+    Exits non-zero if any blocking issues are found.
+    """
+    from crewai.cli.deploy.validate import run_validate_command
+
+    run_validate_command()
 
 
 @deploy.command(name="status")

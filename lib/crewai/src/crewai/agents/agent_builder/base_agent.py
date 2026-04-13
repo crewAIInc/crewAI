@@ -383,7 +383,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             if isinstance(tool, BaseTool):
                 processed_tools.append(tool)
             elif all(hasattr(tool, attr) for attr in required_attrs):
-                # Tool has the required attributes, create a Tool instance
                 processed_tools.append(Tool.from_langchain(tool))
             else:
                 raise ValueError(
@@ -448,14 +447,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self) -> Self:
-        # Validate required fields
         for field in ["role", "goal", "backstory"]:
             if getattr(self, field) is None:
                 raise ValueError(
                     f"{field} must be provided either directly or through config"
                 )
 
-        # Set private attributes
         self._logger = Logger(verbose=self.verbose)
         if self.max_rpm and not self._rpm_controller:
             self._rpm_controller = RPMController(
@@ -464,7 +461,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if not self._token_process:
             self._token_process = TokenProcess()
 
-        # Initialize security_config if not provided
         if self.security_config is None:
             self.security_config = SecurityConfig()
 
@@ -566,14 +562,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "actions",
         }
 
-        # Copy llm
         existing_llm = shallow_copy(self.llm)
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
-        # Properly copy knowledge sources if they exist
         existing_knowledge_sources = None
         if self.knowledge_sources:
-            # Create a shared storage instance for all knowledge sources
             shared_storage = (
                 self.knowledge_sources[0].storage if self.knowledge_sources else None
             )
@@ -585,7 +578,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
                     if hasattr(source, "model_copy")
                     else shallow_copy(source)
                 )
-                # Ensure all copied sources use the same storage instance
                 copied_source.storage = shared_storage
                 existing_knowledge_sources.append(copied_source)
 

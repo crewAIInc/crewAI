@@ -41,7 +41,6 @@ class PlanningConfig(BaseModel):
         from crewai import Agent
         from crewai.agent.planning_config import PlanningConfig
 
-        # Simple usage — fast, linear execution (default)
         agent = Agent(
             role="Researcher",
             goal="Research topics",
@@ -49,7 +48,6 @@ class PlanningConfig(BaseModel):
             planning_config=PlanningConfig(),
         )
 
-        # Balanced — replan only when steps fail
         agent = Agent(
             role="Researcher",
             goal="Research topics",
@@ -59,7 +57,6 @@ class PlanningConfig(BaseModel):
             ),
         )
 
-        # Full adaptive planning with refinement and replanning
         agent = Agent(
             role="Researcher",
             goal="Research topics",
@@ -69,7 +66,7 @@ class PlanningConfig(BaseModel):
                 max_attempts=3,
                 max_steps=10,
                 plan_prompt="Create a focused plan for: {description}",
-                llm="gpt-4o-mini",  # Use cheaper model for planning
+                llm="gpt-4o-mini",
             ),
         )
         ```

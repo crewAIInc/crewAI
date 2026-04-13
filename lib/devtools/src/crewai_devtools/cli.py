@@ -29,6 +29,33 @@ load_dotenv()
 console = Console()
 
 
+def _resume_hint(message: str) -> None:
+    """Print a boxed resume hint after a failure."""
+    console.print()
+    console.print(
+        Panel(
+            message,
+            title="[bold yellow]How to resume[/bold yellow]",
+            border_style="yellow",
+            padding=(1, 2),
+        )
+    )
+
+
+def _print_release_error(e: BaseException) -> None:
+    """Print a release error with stderr if available."""
+    if isinstance(e, KeyboardInterrupt):
+        raise
+    if isinstance(e, SystemExit):
+        return
+    if isinstance(e, subprocess.CalledProcessError):
+        console.print(f"[red]Error running command:[/red] {e}")
+        if e.stderr:
+            console.print(e.stderr)
+    else:
+        console.print(f"[red]Error:[/red] {e}")
+
+
 def run_command(cmd: list[str], cwd: Path | None = None) -> str:
     """Run a shell command and return output.
 
@@ -264,11 +291,9 @@ def add_docs_version(docs_json_path: Path, version: str) -> bool:
         if not versions:
             continue
 
-        # Skip if this version already exists for this language
         if any(v.get("version") == version_label for v in versions):
             continue
 
-        # Find the current default and copy its tabs
         default_version = next(
             (v for v in versions if v.get("default")),
             versions[0],
@@ -280,10 +305,7 @@ def add_docs_version(docs_json_path: Path, version: str) -> bool:
             "tabs": default_version.get("tabs", []),
         }
 
-        # Remove default flag from old default
         default_version.pop("default", None)
-
-        # Insert new version at the beginning
         versions.insert(0, new_version)
         updated = True
 
@@ -477,7 +499,7 @@ def _is_crewai_dep(spec: str) -> bool:
     """Return True if *spec* is a ``crewai`` or ``crewai[...]`` dependency."""
     if not spec.startswith("crewai"):
         return False
-    rest = spec[6:]  # after "crewai"
+    rest = spec[6:]
     return len(rest) > 0 and rest[0] in ("[", "=", ">", "<", "~", "!")
 
 
@@ -499,7 +521,6 @@ def _pin_crewai_deps(content: str, version: str) -> str:
         deps = doc.get("project", {}).get(key)
         if deps is None:
             continue
-        # optional-dependencies is a table of lists; dependencies is a list
         dep_lists = deps.values() if isinstance(deps, Mapping) else [deps]
         for dep_list in dep_lists:
             for i, dep in enumerate(dep_list):
@@ -638,7 +659,6 @@ def get_github_contributors(commit_range: str) -> list[str]:
         List of GitHub usernames sorted alphabetically.
     """
     try:
-        # Get GitHub token from gh CLI
         try:
             gh_token = run_command(["gh", "auth", "token"])
         except subprocess.CalledProcessError:
@@ -678,11 +698,6 @@ def get_github_contributors(commit_range: str) -> list[str]:
             f"[yellow]Warning:[/yellow] Could not fetch GitHub contributors: {e}"
         )
         return []
-
-
-# ---------------------------------------------------------------------------
-# Shared workflow helpers
-# ---------------------------------------------------------------------------
 
 
 def _poll_pr_until_merged(
@@ -764,7 +779,6 @@ def _update_all_versions(
             "[yellow]Warning:[/yellow] No __version__ attributes found to update"
         )
 
-    # Update CLI template pyproject.toml files
     templates_dir = lib_dir / "crewai" / "src" / "crewai" / "cli" / "templates"
     if templates_dir.exists():
         if dry_run:
@@ -1163,13 +1177,11 @@ def _repin_crewai_install(run_value: str, version: str) -> str:
     while marker in remainder:
         before, _, after = remainder.partition(marker)
         result.append(before)
-        # after looks like: a2a]==1.14.0" ...
         bracket_end = after.index("]")
         extras = after[:bracket_end]
         rest = after[bracket_end + 1 :]
         if rest.startswith("=="):
-            # Find end of version — next quote or whitespace
-            ver_start = 2  # len("==")
+            ver_start = 2
             ver_end = ver_start
             while ver_end < len(rest) and rest[ver_end] not in ('"', "'", " ", "\n"):
                 ver_end += 1
@@ -1331,7 +1343,6 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         run_command(["gh", "repo", "clone", enterprise_repo, str(repo_dir)])
         console.print(f"[green]✓[/green] Cloned {enterprise_repo}")
 
-        # --- bump versions ---
         for rel_dir in _ENTERPRISE_VERSION_DIRS:
             pkg_dir = repo_dir / rel_dir
             if not pkg_dir.exists():
@@ -1361,14 +1372,12 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
                         f"{pyproject.relative_to(repo_dir)}"
                     )
 
-        # --- update crewai[tools] pin ---
         enterprise_pyproject = repo_dir / enterprise_dep_path
         if _update_enterprise_crewai_dep(enterprise_pyproject, version):
             console.print(
                 f"[green]✓[/green] Updated crewai[tools] dep in {enterprise_dep_path}"
             )
 
-        # --- update crewai pins in CI workflows ---
         for wf in _update_enterprise_workflows(repo_dir, version):
             console.print(
                 f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
@@ -1408,7 +1417,6 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
                 time.sleep(_PYPI_POLL_INTERVAL)
         console.print("[green]✓[/green] Workspace synced")
 
-        # --- branch, commit, push, PR ---
         branch_name = f"feat/bump-version-{version}"
         run_command(["git", "checkout", "-b", branch_name], cwd=repo_dir)
         run_command(["git", "add", "."], cwd=repo_dir)
@@ -1442,7 +1450,6 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
 
         _poll_pr_until_merged(branch_name, "enterprise bump PR", repo=enterprise_repo)
 
-        # --- tag and release ---
         run_command(["git", "checkout", "main"], cwd=repo_dir)
         run_command(["git", "pull"], cwd=repo_dir)
 
@@ -1484,7 +1491,6 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
         tag_name: The release tag to publish.
         wait: Block until the workflow run completes.
     """
-    # Capture the latest run ID before triggering so we can detect the new one
     prev_run_id = ""
     if wait:
         try:
@@ -1557,11 +1563,6 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
             console.print(f"[red]✗[/red] PyPI publish workflow failed: {e}")
             sys.exit(1)
         console.print("[green]✓[/green] PyPI publish workflow completed")
-
-
-# ---------------------------------------------------------------------------
-# CLI commands
-# ---------------------------------------------------------------------------
 
 
 @click.group()
@@ -1831,62 +1832,80 @@ def release(
         skip_enterprise: Skip the enterprise release phase.
         skip_to_enterprise: Skip phases 1 & 2, run only the enterprise release phase.
     """
-    try:
-        check_gh_installed()
+    flags: list[str] = []
+    if no_edit:
+        flags.append("--no-edit")
+    if skip_enterprise:
+        flags.append("--skip-enterprise")
+    flag_suffix = (" " + " ".join(flags)) if flags else ""
+    enterprise_hint = (
+        ""
+        if skip_enterprise
+        else f"\n\nThen release enterprise:\n\n"
+        f"  devtools release {version} --skip-to-enterprise"
+    )
 
-        if skip_enterprise and skip_to_enterprise:
+    check_gh_installed()
+
+    if skip_enterprise and skip_to_enterprise:
+        console.print(
+            "[red]Error:[/red] Cannot use both --skip-enterprise "
+            "and --skip-to-enterprise"
+        )
+        sys.exit(1)
+
+    if not skip_enterprise or skip_to_enterprise:
+        missing: list[str] = []
+        if not _ENTERPRISE_REPO:
+            missing.append("ENTERPRISE_REPO")
+        if not _ENTERPRISE_VERSION_DIRS:
+            missing.append("ENTERPRISE_VERSION_DIRS")
+        if not _ENTERPRISE_CREWAI_DEP_PATH:
+            missing.append("ENTERPRISE_CREWAI_DEP_PATH")
+        if missing:
             console.print(
-                "[red]Error:[/red] Cannot use both --skip-enterprise "
-                "and --skip-to-enterprise"
+                f"[red]Error:[/red] Missing required environment variable(s): "
+                f"{', '.join(missing)}\n"
+                f"Set them or pass --skip-enterprise to skip the enterprise release."
             )
             sys.exit(1)
 
-        if not skip_enterprise or skip_to_enterprise:
-            missing: list[str] = []
-            if not _ENTERPRISE_REPO:
-                missing.append("ENTERPRISE_REPO")
-            if not _ENTERPRISE_VERSION_DIRS:
-                missing.append("ENTERPRISE_VERSION_DIRS")
-            if not _ENTERPRISE_CREWAI_DEP_PATH:
-                missing.append("ENTERPRISE_CREWAI_DEP_PATH")
-            if missing:
-                console.print(
-                    f"[red]Error:[/red] Missing required environment variable(s): "
-                    f"{', '.join(missing)}\n"
-                    f"Set them or pass --skip-enterprise to skip the enterprise release."
-                )
-                sys.exit(1)
+    cwd = Path.cwd()
+    lib_dir = cwd / "lib"
 
-        cwd = Path.cwd()
-        lib_dir = cwd / "lib"
+    is_prerelease = _is_prerelease(version)
 
-        is_prerelease = _is_prerelease(version)
-
-        if skip_to_enterprise:
+    if skip_to_enterprise:
+        try:
             _release_enterprise(version, is_prerelease, dry_run)
-            console.print(
-                f"\n[green]✓[/green] Enterprise release [bold]{version}[/bold] complete!"
+        except BaseException as e:
+            _print_release_error(e)
+            _resume_hint(
+                f"Fix the issue, then re-run:\n\n"
+                f"  devtools release {version} --skip-to-enterprise"
             )
-            return
-
-        if not dry_run:
-            console.print("Checking git status...")
-            check_git_clean()
-            console.print("[green]✓[/green] Working directory is clean")
-        else:
-            console.print("[dim][DRY RUN][/dim] Would check git status")
-
-        packages = get_packages(lib_dir)
-
-        console.print(f"\nFound {len(packages)} package(s) to update:")
-        for pkg in packages:
-            console.print(f"  - {pkg.name}")
-
-        # --- Phase 1: Bump versions ---
+            sys.exit(1)
         console.print(
-            f"\n[bold cyan]Phase 1: Bumping versions to {version}[/bold cyan]"
+            f"\n[green]✓[/green] Enterprise release [bold]{version}[/bold] complete!"
         )
+        return
 
+    if not dry_run:
+        console.print("Checking git status...")
+        check_git_clean()
+        console.print("[green]✓[/green] Working directory is clean")
+    else:
+        console.print("[dim][DRY RUN][/dim] Would check git status")
+
+    packages = get_packages(lib_dir)
+
+    console.print(f"\nFound {len(packages)} package(s) to update:")
+    for pkg in packages:
+        console.print(f"  - {pkg.name}")
+
+    console.print(f"\n[bold cyan]Phase 1: Bumping versions to {version}[/bold cyan]")
+
+    try:
         _update_all_versions(cwd, lib_dir, version, packages, dry_run)
 
         branch_name = f"feat/bump-version-{version}"
@@ -1930,12 +1949,17 @@ def release(
             console.print(
                 "[dim][DRY RUN][/dim] Would push branch, create PR, and wait for merge"
             )
-
-        # --- Phase 2: Tag and release ---
-        console.print(
-            f"\n[bold cyan]Phase 2: Tagging and releasing {version}[/bold cyan]"
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            f"Phase 1 failed. Fix the issue, then re-run:\n\n"
+            f"  devtools release {version}{flag_suffix}"
         )
+        sys.exit(1)
 
+    console.print(f"\n[bold cyan]Phase 2: Tagging and releasing {version}[/bold cyan]")
+
+    try:
         tag_name = version
 
         if not dry_run:
@@ -1962,22 +1986,57 @@ def release(
 
         if not dry_run:
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            "Phase 2 failed before PyPI publish. The bump PR is already merged.\n"
+            "Fix the issue, then resume with:\n\n"
+            "  devtools tag"
+            f"\n\nAfter tagging, publish to PyPI and update deployment test:\n\n"
+            f"  gh workflow run publish.yml -f release_tag={version}"
+            f"{enterprise_hint}"
+        )
+        sys.exit(1)
+
+    try:
+        if not dry_run:
             _trigger_pypi_publish(tag_name, wait=True)
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            f"Phase 2 failed at PyPI publish. Tag and GitHub release already exist.\n"
+            f"Retry PyPI publish manually:\n\n"
+            f"  gh workflow run publish.yml -f release_tag={version}"
+            f"{enterprise_hint}"
+        )
+        sys.exit(1)
+
+    try:
+        if not dry_run:
             _update_deployment_test_repo(version, is_prerelease)
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            f"Phase 2 failed updating deployment test repo. "
+            f"Tag, release, and PyPI are done.\n"
+            f"Fix the issue and update {_DEPLOYMENT_TEST_REPO} manually."
+            f"{enterprise_hint}"
+        )
+        sys.exit(1)
 
-        if not skip_enterprise:
+    if not skip_enterprise:
+        try:
             _release_enterprise(version, is_prerelease, dry_run)
+        except BaseException as e:
+            _print_release_error(e)
+            _resume_hint(
+                f"Phase 3 (enterprise) failed. Phases 1 & 2 completed successfully.\n"
+                f"Fix the issue, then resume:\n\n"
+                f"  devtools release {version} --skip-to-enterprise"
+            )
+            sys.exit(1)
 
-        console.print(f"\n[green]✓[/green] Release [bold]{version}[/bold] complete!")
-
-    except subprocess.CalledProcessError as e:
-        console.print(f"[red]Error running command:[/red] {e}")
-        if e.stderr:
-            console.print(e.stderr)
-        sys.exit(1)
-    except Exception as e:
-        console.print(f"[red]Error:[/red] {e}")
-        sys.exit(1)
+    console.print(f"\n[green]✓[/green] Release [bold]{version}[/bold] complete!")
 
 
 cli.add_command(bump)

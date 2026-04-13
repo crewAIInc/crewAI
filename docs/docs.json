@@ -392,7 +392,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -865,7 +866,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -1338,7 +1340,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -1811,7 +1814,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -2283,7 +2287,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -2754,7 +2759,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -3225,7 +3231,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -3698,7 +3705,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -4169,7 +4177,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {
@@ -4643,7 +4652,8 @@
                       "en/enterprise/features/marketplace",
                       "en/enterprise/features/agent-repositories",
                       "en/enterprise/features/tools-and-integrations",
-                      "en/enterprise/features/pii-trace-redactions"
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
                     ]
                   },
                   {

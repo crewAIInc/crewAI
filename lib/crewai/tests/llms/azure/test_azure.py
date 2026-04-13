@@ -2,6 +2,7 @@ import os
 import sys
 import types
 from unittest.mock import patch, MagicMock, Mock
+from urllib.parse import urlparse
 import pytest
 
 from crewai.llm import LLM
@@ -378,23 +379,72 @@ def test_azure_completion_with_tools():
 
 
 def test_azure_raises_error_when_endpoint_missing():
-    """Test that AzureCompletion raises ValueError when endpoint is missing"""
+    """Credentials are validated lazily: construction succeeds, first
+    client build raises the descriptive error."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
-    # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4", api_key="test-key")
         with pytest.raises(ValueError, match="Azure endpoint is required"):
-            AzureCompletion(model="gpt-4", api_key="test-key")
+            llm._get_sync_client()
 
 
 def test_azure_raises_error_when_api_key_missing():
-    """Test that AzureCompletion raises ValueError when API key is missing"""
+    """Credentials are validated lazily: construction succeeds, first
+    client build raises the descriptive error."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
-    # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4", endpoint="https://test.openai.azure.com"
+        )
         with pytest.raises(ValueError, match="Azure API key is required"):
-            AzureCompletion(model="gpt-4", endpoint="https://test.openai.azure.com")
+            llm._get_sync_client()
+
+
+@pytest.mark.asyncio
+async def test_azure_aclose_is_noop_when_uninitialized():
+    """`aclose` (and `async with`) on an uninstantiated-client LLM must be
+    a harmless no-op, not force lazy construction that then raises for
+    missing credentials."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4")
+        assert llm._async_client is None
+        await llm.aclose()
+        async with llm:
+            pass
+
+
+def test_azure_lazy_build_reads_env_vars_set_after_construction():
+    """When `LLM(model="azure/...")` is constructed before env vars are set,
+    the lazy client builder must re-read `AZURE_API_KEY` / `AZURE_ENDPOINT`
+    so the LLM actually works once credentials become available, and the
+    `is_azure_openai_endpoint` routing flag must be recomputed off the
+    newly-resolved endpoint."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(model="gpt-4")
+        assert llm.api_key is None
+        assert llm.endpoint is None
+        assert llm.is_azure_openai_endpoint is False
+
+    with patch.dict(
+        os.environ,
+        {
+            "AZURE_API_KEY": "late-key",
+            "AZURE_ENDPOINT": "https://test.openai.azure.com/openai/deployments/gpt-4",
+        },
+        clear=True,
+    ):
+        client = llm._get_sync_client()
+        assert client is not None
+        assert llm.api_key == "late-key"
+        assert llm.endpoint is not None
+        assert urlparse(llm.endpoint).hostname == "test.openai.azure.com"
+        assert llm.is_azure_openai_endpoint is True
 
 
 def test_azure_endpoint_configuration():
