@@ -26,7 +26,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import Self
+from typing_extensions import Self, deprecated
 
 
 if TYPE_CHECKING:
@@ -173,9 +173,12 @@ def _kickoff_with_a2a_support(
     )
 
 
+@deprecated(
+    "LiteAgent is deprecated and will be removed in v2.0.0.",
+    category=FutureWarning,
+)
 class LiteAgent(FlowTrackable, BaseModel):
-    """
-    A lightweight agent that can process messages and use tools.
+    """A lightweight agent that can process messages and use tools.
 
     .. deprecated::
         LiteAgent is deprecated and will be removed in a future version.
