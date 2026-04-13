@@ -98,7 +98,6 @@ class A2AErrorCode(IntEnum):
     """The specified artifact was not found."""
 
 
-# Error code to default message mapping
 ERROR_MESSAGES: dict[int, str] = {
     A2AErrorCode.JSON_PARSE_ERROR: "Parse error",
     A2AErrorCode.INVALID_REQUEST: "Invalid Request",
