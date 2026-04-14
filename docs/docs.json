@@ -248,7 +248,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -722,7 +723,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -1196,7 +1198,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -1670,7 +1673,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -2143,7 +2147,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -2615,7 +2620,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -3087,7 +3093,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -3559,7 +3566,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -4033,7 +4041,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
@@ -4506,7 +4515,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/superlinkedtool"
                         ]
                       },
                       {
