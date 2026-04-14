@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "pytube~=15.0.0",
+    "pytubefix>=8.4.0",
     "requests>=2.33.0,<3",
     "crewai==1.14.2a3",
     "tiktoken~=0.8.0",
