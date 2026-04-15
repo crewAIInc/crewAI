@@ -1134,19 +1134,19 @@ def _json_schema_to_pydantic_type(
 
     all_of_schemas = json_schema.get("allOf")
     if all_of_schemas:
-        if in_progress is not None:
-            return _build_model_from_schema(
-                json_schema,
-                root_schema,
-                model_name=name_,
-                enrich_descriptions=enrich_descriptions,
-                in_progress=in_progress,
-            )
         if len(all_of_schemas) == 1:
             return _json_schema_to_pydantic_type(
                 all_of_schemas[0],
                 root_schema,
                 name_=name_,
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+            )
+        if in_progress is not None:
+            return _build_model_from_schema(
+                json_schema,
+                root_schema,
+                model_name=name_,
                 enrich_descriptions=enrich_descriptions,
                 in_progress=in_progress,
             )
