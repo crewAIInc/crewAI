@@ -421,7 +421,7 @@ class MCPToolResolver:
                         args_schema = self._json_schema_to_pydantic(
                             tool_name, tool_def["inputSchema"]
                         )
-                    except (RecursionError, Exception) as e:
+                    except Exception as e:
                         self._logger.log(
                             "warning",
                             f"Failed to build args schema for MCP tool "
