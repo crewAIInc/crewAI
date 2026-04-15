@@ -873,13 +873,16 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
     the model being built for that schema, so a cyclic ``$ref`` graph
     degrades to a ``ForwardRef`` back-edge instead of blowing the stack.
     """
+    original_id = id(json_schema)
     if "allOf" in json_schema:
         json_schema = _merge_all_of_schemas(json_schema["allOf"], effective_root)
 
     effective_name = model_name or json_schema.get("title") or "DynamicModel"
 
     schema_id = id(json_schema)
-    in_progress[schema_id] = effective_name
+    in_progress[original_id] = effective_name
+    if schema_id != original_id:
+        in_progress[schema_id] = effective_name
 
     field_definitions = {
         name: _json_schema_to_pydantic_field(
@@ -904,7 +907,9 @@ def _build_model_from_schema(  # type: ignore[no-any-unimported]
         __cls_kwargs__=__cls_kwargs__,
         **field_definitions,
     )
-    in_progress[schema_id] = model
+    in_progress[original_id] = model
+    if schema_id != original_id:
+        in_progress[schema_id] = model
     return model
 
 
@@ -1086,6 +1091,13 @@ def _json_schema_to_pydantic_type(
     Returns:
         A Python type corresponding to the JSON schema.
     """
+    if in_progress is not None:
+        cached = in_progress.get(id(json_schema))
+        if isinstance(cached, str):
+            return ForwardRef(cached)
+        if cached is not None:
+            return cached
+
     ref = json_schema.get("$ref")
     if ref:
         ref_schema = _resolve_ref(ref, root_schema)
@@ -1122,6 +1134,14 @@ def _json_schema_to_pydantic_type(
 
     all_of_schemas = json_schema.get("allOf")
     if all_of_schemas:
+        if in_progress is not None:
+            return _build_model_from_schema(
+                json_schema,
+                root_schema,
+                model_name=name_,
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+            )
         if len(all_of_schemas) == 1:
             return _json_schema_to_pydantic_type(
                 all_of_schemas[0],
@@ -1165,11 +1185,6 @@ def _json_schema_to_pydantic_type(
         properties = json_schema.get("properties")
         if properties:
             if in_progress is not None:
-                cached = in_progress.get(id(json_schema))
-                if isinstance(cached, str):
-                    return ForwardRef(cached)
-                if cached is not None:
-                    return cached
                 return _build_model_from_schema(
                     json_schema,
                     root_schema,
