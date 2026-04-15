@@ -110,25 +110,25 @@ def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
     """
     defs = schema.get("$defs", {})
     schema_copy = deepcopy(schema)
-    seen: set[int] = set()
+    expanding: set[str] = set()
 
     def _resolve(node: Any) -> Any:
         if isinstance(node, dict):
-            if id(node) in seen:
-                return node
-            seen.add(id(node))
             ref = node.get("$ref")
             if isinstance(ref, str) and ref.startswith("#/$defs/"):
                 def_name = ref.replace("#/$defs/", "")
-                if def_name in defs:
+                if def_name not in defs:
+                    raise KeyError(f"Definition '{def_name}' not found in $defs.")
+                if def_name in expanding:
+                    return {}
+                expanding.add(def_name)
+                try:
                     return _resolve(deepcopy(defs[def_name]))
-                raise KeyError(f"Definition '{def_name}' not found in $defs.")
+                finally:
+                    expanding.discard(def_name)
             return {k: _resolve(v) for k, v in node.items()}
 
         if isinstance(node, list):
-            if id(node) in seen:
-                return node
-            seen.add(id(node))
             return [_resolve(i) for i in node]
 
         return node
