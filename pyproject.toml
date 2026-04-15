@@ -172,6 +172,7 @@ exclude-newer = "1 day"
 # cryptography 46.0.6 has CVE-2026-39892; force 46.0.7+.
 # pypdf <6.10.1 has CVE-2026-40260 and GHSA-jj6c-8h6c-hppx; force 6.10.1+.
 # uv <0.11.6 has GHSA-pjjw-68hj-v9mw; force 0.11.6+.
+# python-multipart <0.0.26 has GHSA-mj87-hwqh-73pj; force 0.0.26+.
 override-dependencies = [
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
@@ -182,6 +183,7 @@ override-dependencies = [
     "cryptography>=46.0.7",
     "pypdf>=6.10.1,<7",
     "uv>=0.11.6,<1",
+    "python-multipart>=0.0.26,<1",
 ]
 
 [tool.uv.workspace]
