@@ -46,12 +46,18 @@ class _FakeFlow:
         raise RuntimeError(f"Flow.fork:{config.restore_from}")
 
 
+class _ConcreteFakeFlow(_FakeFlow):
+    pass
+
+
 @pytest.fixture(autouse=True)
 def _reset_fake_calls() -> None:
     _FakeCrew.resume_calls = 0
     _FakeCrew.fork_calls = 0
     _FakeFlow.resume_calls = 0
     _FakeFlow.fork_calls = 0
+    _ConcreteFakeFlow.resume_calls = 0
+    _ConcreteFakeFlow.fork_calls = 0
 
 
 def _install_fake_runtime_modules(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -65,6 +71,10 @@ def _install_fake_runtime_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "crewai.crew", crew_mod)
     monkeypatch.setitem(sys.modules, "crewai.flow.flow", flow_mod)
     monkeypatch.setitem(sys.modules, "crewai.state.checkpoint_config", config_mod)
+
+    utils_mod = ModuleType("crewai.cli.utils")
+    utils_mod.get_flows = lambda: []
+    monkeypatch.setitem(sys.modules, "crewai.cli.utils", utils_mod)
 
 
 @pytest.mark.asyncio
@@ -80,13 +90,17 @@ async def test_run_checkpoint_tui_async_uses_flow_restore_path(
     monkeypatch.setattr(
         checkpoint_tui,
         "_load_selected_checkpoint_entry",
-        lambda location: {"entities": [{"type": "flow"}]},
+        lambda location: {"entities": [{"type": "flow", "name": "MyFlow"}]},
     )
+    monkeypatch.setattr(checkpoint_tui, "_resolve_flow_runner", lambda location: _ConcreteFakeFlow)
 
-    with pytest.raises(RuntimeError, match="Flow.from_checkpoint:/tmp/fake-flow.json"):
+    with pytest.raises(
+        RuntimeError,
+        match="Flow.from_checkpoint:/tmp/fake-flow.json",
+    ):
         await checkpoint_tui._run_checkpoint_tui_async("/tmp/unused")
 
-    assert _FakeFlow.resume_calls == 1
+    assert _ConcreteFakeFlow.resume_calls == 1
     assert _FakeCrew.resume_calls == 0
 
 
@@ -103,13 +117,14 @@ async def test_run_checkpoint_tui_async_uses_flow_fork_path(
     monkeypatch.setattr(
         checkpoint_tui,
         "_load_selected_checkpoint_entry",
-        lambda location: {"entities": [{"type": "flow"}]},
+        lambda location: {"entities": [{"type": "flow", "name": "MyFlow"}]},
     )
+    monkeypatch.setattr(checkpoint_tui, "_resolve_flow_runner", lambda location: _ConcreteFakeFlow)
 
     with pytest.raises(RuntimeError, match="Flow.fork:/tmp/fake-flow.json"):
         await checkpoint_tui._run_checkpoint_tui_async("/tmp/unused")
 
-    assert _FakeFlow.fork_calls == 1
+    assert _ConcreteFakeFlow.fork_calls == 1
     assert _FakeCrew.fork_calls == 0
 
 
@@ -127,3 +142,24 @@ def test_selected_runner_type_detects_flow_entry(
     )
 
     assert checkpoint_tui._selected_runner_type(str(Path("/tmp/fake-flow.json"))) == "flow"
+
+
+def test_resolve_flow_runner_prefers_matching_concrete_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    utils_mod = ModuleType("crewai.cli.utils")
+
+    class MyFlow(_ConcreteFakeFlow):
+        name = "MyFlow"
+
+    utils_mod.get_flows = lambda: [MyFlow()]
+    monkeypatch.setitem(sys.modules, "crewai.cli.utils", utils_mod)
+    monkeypatch.setattr(
+        checkpoint_tui,
+        "_load_selected_checkpoint_entry",
+        lambda location: {"entities": [{"type": "flow", "name": "MyFlow"}]},
+    )
+
+    runner = checkpoint_tui._resolve_flow_runner("/tmp/fake-flow.json")
+
+    assert runner is MyFlow

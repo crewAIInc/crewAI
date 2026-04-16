@@ -71,6 +71,37 @@ def _selected_runner_type(location: str) -> str:
     return "crew"
 
 
+def _resolve_flow_runner(location: str) -> type[Any]:
+    """Resolve the concrete Flow class for a selected checkpoint when possible."""
+    from crewai.flow.flow import Flow
+
+    entry = _load_selected_checkpoint_entry(location)
+    if entry is None:
+        return Flow
+
+    flow_names = [
+        str(entity.get("name", "")).strip()
+        for entity in entry.get("entities", [])
+        if str(entity.get("type", "")).lower() == "flow"
+    ]
+    if not flow_names:
+        return Flow
+
+    try:
+        from crewai.cli.utils import get_flows
+
+        for flow in get_flows():
+            flow_name = str(
+                getattr(flow, "name", "") or flow.__class__.__name__
+            ).strip()
+            if flow_name in flow_names or flow.__class__.__name__ in flow_names:
+                return flow.__class__
+    except Exception:
+        return Flow
+
+    return Flow
+
+
 def _short_id(name: str) -> str:
     """Shorten a checkpoint name for tree display."""
     if len(name) > 30:
@@ -584,14 +615,14 @@ async def _run_checkpoint_tui_async(location: str) -> None:
     runner_type = _selected_runner_type(selected)
 
     if runner_type == "flow":
-        from crewai.flow.flow import Flow
+        flow_runner = _resolve_flow_runner(selected)
 
         if action == "fork":
             click.echo(f"\nForking from: {selected}\n")
-            crew = Flow.fork(config)
+            crew = flow_runner.fork(config)
         else:
             click.echo(f"\nResuming from: {selected}\n")
-            crew = Flow.from_checkpoint(config)
+            crew = flow_runner.from_checkpoint(config)
     else:
         from crewai.crew import Crew
 
