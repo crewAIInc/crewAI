@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -78,15 +78,25 @@ def _build_entity_header(ent: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-# Return type: (location, action, inputs, task_output_overrides)
-_TuiResult = tuple[str, str, dict[str, Any] | None, dict[int, str] | None] | None
+# Return type: (location, action, inputs, task_output_overrides, entity_type)
+_TuiResult = (
+    tuple[
+        str,
+        str,
+        dict[str, Any] | None,
+        dict[int, str] | None,
+        Literal["crew", "flow"],
+    ]
+    | None
+)
 
 
 class CheckpointTUI(App[_TuiResult]):
     """TUI to browse and inspect checkpoints.
 
-    Returns ``(location, action, inputs)`` where action is ``"resume"`` or
-    ``"fork"`` and inputs is a parsed dict or ``None``,
+    Returns ``(location, action, inputs, task_overrides, entity_type)``
+    where action is ``"resume"`` or ``"fork"``, inputs is a parsed dict
+    or ``None``, and entity_type is ``"crew"`` or ``"flow"``;
     or ``None`` if the user quit without selecting.
     """
 
@@ -506,6 +516,13 @@ class CheckpointTUI(App[_TuiResult]):
                 overrides[task_idx] = editor.text
         return overrides or None
 
+    def _detect_entity_type(self, entry: dict[str, Any]) -> Literal["crew", "flow"]:
+        """Infer the top-level entity type from checkpoint entities."""
+        for ent in entry.get("entities", []):
+            if ent.get("type") == "flow":
+                return "flow"
+        return "crew"
+
     def _resolve_location(self, entry: dict[str, Any]) -> str:
         """Get the restore location string for a checkpoint entry."""
         if "path" in entry:
@@ -526,10 +543,11 @@ class CheckpointTUI(App[_TuiResult]):
         inputs = self._collect_inputs()
         overrides = self._collect_task_overrides()
         loc = self._resolve_location(self._selected_entry)
+        etype = self._detect_entity_type(self._selected_entry)
         if event.button.id == "btn-resume":
-            self.exit((loc, "resume", inputs, overrides))
+            self.exit((loc, "resume", inputs, overrides, etype))
         elif event.button.id == "btn-fork":
-            self.exit((loc, "fork", inputs, overrides))
+            self.exit((loc, "fork", inputs, overrides, etype))
 
     def action_refresh(self) -> None:
         self._refresh_tree()
@@ -545,12 +563,33 @@ async def _run_checkpoint_tui_async(location: str) -> None:
     if selection is None:
         return
 
-    selected, action, inputs, task_overrides = selection
+    selected, action, inputs, task_overrides, entity_type = selection
 
-    from crewai.crew import Crew
     from crewai.state.checkpoint_config import CheckpointConfig
 
     config = CheckpointConfig(restore_from=selected)
+
+    if entity_type == "flow":
+        from crewai.flow.flow import Flow
+
+        if action == "fork":
+            click.echo(f"\nForking flow from: {selected}\n")
+            entity = Flow.fork(config)
+        else:
+            click.echo(f"\nResuming flow from: {selected}\n")
+            entity = Flow.from_checkpoint(config)
+
+        if inputs:
+            click.echo("Inputs:")
+            for k, v in inputs.items():
+                click.echo(f"  {k}: {v}")
+            click.echo()
+
+        result = await entity.kickoff_async(inputs=inputs)
+        click.echo(f"\nResult: {getattr(result, 'raw', result)}")
+        return
+
+    from crewai.crew import Crew
 
     if action == "fork":
         click.echo(f"\nForking from: {selected}\n")
