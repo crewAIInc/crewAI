@@ -1051,7 +1051,7 @@ def test_lite_agent_verbose_false_suppresses_printer_output():
         successful_requests=1,
     )
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         agent = LiteAgent(
             role="Test Agent",
             goal="Test goal",

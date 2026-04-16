@@ -120,6 +120,12 @@ def _do_checkpoint(
     )
     state._chain_lineage(cfg.provider, location)
 
+    checkpoint_id: str = cfg.provider.extract_id(location)
+    msg: str = (
+        f"Checkpoint saved. Resume with: crewai checkpoint resume {checkpoint_id}"
+    )
+    logger.info(msg)
+
     if cfg.max_checkpoints is not None:
         cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)
 

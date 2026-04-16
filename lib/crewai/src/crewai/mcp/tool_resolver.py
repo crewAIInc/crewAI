@@ -417,9 +417,18 @@ class MCPToolResolver:
 
                 args_schema = None
                 if tool_def.get("inputSchema"):
-                    args_schema = self._json_schema_to_pydantic(
-                        tool_name, tool_def["inputSchema"]
-                    )
+                    try:
+                        args_schema = self._json_schema_to_pydantic(
+                            tool_name, tool_def["inputSchema"]
+                        )
+                    except Exception as e:
+                        self._logger.log(
+                            "warning",
+                            f"Failed to build args schema for MCP tool "
+                            f"'{tool_name}': {e}. Registering tool without a "
+                            "typed schema.",
+                        )
+                        args_schema = None
 
                 tool_schema = {
                     "description": tool_def.get("description", ""),

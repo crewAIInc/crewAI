@@ -1058,3 +1058,20 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+
+    def template_installed_span(self, template_name: str) -> None:
+        """Records when a template is downloaded and installed.
+
+        Args:
+            template_name: Name of the template that was installed
+                (without the template_ prefix).
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Template Installed")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "template_name", template_name)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)

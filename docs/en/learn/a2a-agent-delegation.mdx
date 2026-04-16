@@ -7,6 +7,10 @@ mode: "wide"
 
 ## A2A Agent Delegation
 
+<Info>
+  Deploying A2A agents to production? See [A2A on AMP](/en/enterprise/features/a2a) for distributed state, enterprise authentication, gRPC transport, and horizontal scaling.
+</Info>
+
 CrewAI treats [A2A protocol](https://a2a-protocol.org/latest/) as a first-class delegation primitive, enabling agents to delegate tasks, request information, and collaborate with remote agents, as well as act as A2A-compliant server agents.
 In client mode, agents autonomously choose between local execution and remote delegation based on task requirements.
 
@@ -96,24 +100,28 @@ The `A2AClientConfig` class accepts the following parameters:
   Update mechanism for receiving task status. Options: `StreamingConfig`, `PollingConfig`, or `PushNotificationConfig`.
 </ParamField>
 
-<ParamField path="transport_protocol" type="Literal['JSONRPC', 'GRPC', 'HTTP+JSON']" default="JSONRPC">
-  Transport protocol for A2A communication. Options: `JSONRPC` (default), `GRPC`, or `HTTP+JSON`.
-</ParamField>
-
 <ParamField path="accepted_output_modes" type="list[str]" default='["application/json"]'>
   Media types the client can accept in responses.
 </ParamField>
 
-<ParamField path="supported_transports" type="list[str]" default='["JSONRPC"]'>
-  Ordered list of transport protocols the client supports.
-</ParamField>
-
-<ParamField path="use_client_preference" type="bool" default="False">
-  Whether to prioritize client transport preferences over server.
-</ParamField>
-
 <ParamField path="extensions" type="list[str]" default="[]">
-  Extension URIs the client supports.
+  A2A protocol extension URIs the client supports.
+</ParamField>
+
+<ParamField path="client_extensions" type="list[A2AExtension]" default="[]">
+  Client-side processing hooks for tool injection, prompt augmentation, and response modification.
+</ParamField>
+
+<ParamField path="transport" type="ClientTransportConfig" default="ClientTransportConfig()">
+  Transport configuration including preferred transport, supported transports for negotiation, and protocol-specific settings (gRPC message sizes, keepalive, etc.).
+</ParamField>
+
+<ParamField path="transport_protocol" type="Literal['JSONRPC', 'GRPC', 'HTTP+JSON']" default="None">
+  **Deprecated**: Use `transport=ClientTransportConfig(preferred=...)` instead.
+</ParamField>
+
+<ParamField path="supported_transports" type="list[str]" default="None">
+  **Deprecated**: Use `transport=ClientTransportConfig(supported=...)` instead.
 </ParamField>
 
 ## Authentication
@@ -405,11 +413,7 @@ agent = Agent(
   Preferred endpoint URL. If set, overrides the URL passed to `to_agent_card()`.
 </ParamField>
 
-<ParamField path="preferred_transport" type="Literal['JSONRPC', 'GRPC', 'HTTP+JSON']" default="JSONRPC">
-  Transport protocol for the preferred endpoint.
-</ParamField>
-
-<ParamField path="protocol_version" type="str" default="0.3">
+<ParamField path="protocol_version" type="str" default="0.3.0">
   A2A protocol version this agent supports.
 </ParamField>
 
@@ -441,8 +445,36 @@ agent = Agent(
   Whether agent provides extended card to authenticated users.
 </ParamField>
 
-<ParamField path="signatures" type="list[AgentCardSignature]" default="[]">
-  JSON Web Signatures for the AgentCard.
+<ParamField path="extended_skills" type="list[AgentSkill]" default="[]">
+  Additional skills visible only to authenticated users in the extended agent card.
+</ParamField>
+
+<ParamField path="signing_config" type="AgentCardSigningConfig" default="None">
+  Configuration for signing the AgentCard with JWS. Supports RS256, ES256, PS256, and related algorithms.
+</ParamField>
+
+<ParamField path="server_extensions" type="list[ServerExtension]" default="[]">
+  Server-side A2A protocol extensions with `on_request`/`on_response` hooks that modify agent behavior.
+</ParamField>
+
+<ParamField path="push_notifications" type="ServerPushNotificationConfig" default="None">
+  Configuration for outgoing push notifications, including HMAC-SHA256 signing secret.
+</ParamField>
+
+<ParamField path="transport" type="ServerTransportConfig" default="ServerTransportConfig()">
+  Transport configuration including preferred transport, gRPC server settings, JSON-RPC paths, and HTTP+JSON settings.
+</ParamField>
+
+<ParamField path="auth" type="ServerAuthScheme" default="None">
+  Authentication scheme for incoming A2A requests. Defaults to `SimpleTokenAuth` using the `AUTH_TOKEN` environment variable.
+</ParamField>
+
+<ParamField path="preferred_transport" type="Literal['JSONRPC', 'GRPC', 'HTTP+JSON']" default="None">
+  **Deprecated**: Use `transport=ServerTransportConfig(preferred=...)` instead.
+</ParamField>
+
+<ParamField path="signatures" type="list[AgentCardSignature]" default="None">
+  **Deprecated**: Use `signing_config=AgentCardSigningConfig(...)` instead.
 </ParamField>
 
 ### Combined Client and Server
@@ -467,6 +499,14 @@ agent = Agent(
     ]
 )
 ```
+
+### File Inputs and Structured Output
+
+A2A supports passing files and requesting structured output in both directions.
+
+**Client side**: When delegating to a remote A2A agent, files from the task's `input_files` are sent as `FilePart`s in the outgoing message. If `response_model` is set on the `A2AClientConfig`, the Pydantic model's JSON schema is embedded in the message metadata, requesting structured output from the remote agent.
+
+**Server side**: Incoming `FilePart`s are extracted and passed to the agent's task as `input_files`. If the client included a JSON schema, the server creates a response model from it and applies it to the task. When the agent returns structured data, the response is sent back as a `DataPart` rather than plain text.
 
 ## Best Practices
 

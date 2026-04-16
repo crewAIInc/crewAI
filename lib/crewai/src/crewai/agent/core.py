@@ -84,6 +84,7 @@ from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
+from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -1341,7 +1342,6 @@ class Agent(BaseAgent):
 
         raw_tools: list[BaseTool] = self.tools or []
 
-        # Inject memory tools for standalone kickoff (crew path handles its own)
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
             from crewai.tools.memory_tools import create_memory_tools
@@ -1399,7 +1399,6 @@ class Agent(BaseAgent):
         if input_files:
             all_files.update(input_files)
 
-        # Inject memory context for standalone kickoff (recall before execution)
         if agent_memory is not None:
             try:
                 crewai_event_bus.emit(
@@ -1459,6 +1458,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
         """Execute the agent with the given messages using the AgentExecutor.
 
@@ -1477,6 +1477,9 @@ class Agent(BaseAgent):
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the agent resumes from that checkpoint. Remaining
+                config fields enable checkpointing for the run.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
@@ -1485,8 +1488,14 @@ class Agent(BaseAgent):
         Note:
             For explicit async usage outside of Flow, use kickoff_async() directly.
         """
-        # Magic auto-async: if inside event loop (e.g., inside a Flow),
-        # return coroutine for Flow to await
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(  # type: ignore[no-any-return]
+                messages=messages,
+                response_format=response_format,
+                input_files=input_files,
+            )
+
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
@@ -1637,7 +1646,7 @@ class Agent(BaseAgent):
                 if isinstance(conversion_result, BaseModel):
                     formatted_result = conversion_result
             except ConverterError:
-                pass  # Keep raw output if conversion fails
+                pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
@@ -1719,7 +1728,6 @@ class Agent(BaseAgent):
         elif callable(self.guardrail):
             guardrail_callable = self.guardrail
         else:
-            # Should not happen if called from kickoff with guardrail check
             return output
 
         guardrail_result = process_guardrail(
@@ -1765,6 +1773,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously with the given messages.
 
@@ -1780,10 +1789,20 @@ class Agent(BaseAgent):
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the agent resumes from that checkpoint.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(  # type: ignore[no-any-return]
+                messages=messages,
+                response_format=response_format,
+                input_files=input_files,
+            )
+
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
             messages, response_format, input_files
         )
@@ -1813,6 +1832,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> LiteAgentOutput:
         """Async version of kickoff. Alias for kickoff_async.
 
@@ -1820,8 +1840,12 @@ class Agent(BaseAgent):
             messages: Either a string query or a list of message dictionaries.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the agent resumes from that checkpoint.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        return await self.kickoff_async(messages, response_format, input_files)
+        return await self.kickoff_async(
+            messages, response_format, input_files, from_checkpoint
+        )

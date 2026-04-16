@@ -18,6 +18,7 @@ from crewai.cli.install_crew import install_crew
 from crewai.cli.kickoff_flow import kickoff_flow
 from crewai.cli.organization.main import OrganizationCommand
 from crewai.cli.plot_flow import plot_flow
+from crewai.cli.remote_template.main import TemplateCommand
 from crewai.cli.replay_from_task import replay_task_command
 from crewai.cli.reset_memories_command import reset_memories_command
 from crewai.cli.run_crew import run_crew
@@ -392,10 +393,15 @@ def deploy() -> None:
 
 @deploy.command(name="create")
 @click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
-def deploy_create(yes: bool) -> None:
+@click.option(
+    "--skip-validate",
+    is_flag=True,
+    help="Skip the pre-deploy validation checks.",
+)
+def deploy_create(yes: bool, skip_validate: bool) -> None:
     """Create a Crew deployment."""
     deploy_cmd = DeployCommand()
-    deploy_cmd.create_crew(yes)
+    deploy_cmd.create_crew(yes, skip_validate=skip_validate)
 
 
 @deploy.command(name="list")
@@ -407,10 +413,28 @@ def deploy_list() -> None:
 
 @deploy.command(name="push")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_push(uuid: str | None) -> None:
+@click.option(
+    "--skip-validate",
+    is_flag=True,
+    help="Skip the pre-deploy validation checks.",
+)
+def deploy_push(uuid: str | None, skip_validate: bool) -> None:
     """Deploy the Crew."""
     deploy_cmd = DeployCommand()
-    deploy_cmd.deploy(uuid=uuid)
+    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate)
+
+
+@deploy.command(name="validate")
+def deploy_validate() -> None:
+    """Validate the current project against common deployment failures.
+
+    Runs the same pre-deploy checks that `crewai deploy create` and
+    `crewai deploy push` run automatically, without contacting the platform.
+    Exits non-zero if any blocking issues are found.
+    """
+    from crewai.cli.deploy.validate import run_validate_command
+
+    run_validate_command()
 
 
 @deploy.command(name="status")
@@ -471,6 +495,33 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
+
+
+@crewai.group()
+def template() -> None:
+    """Browse and install project templates."""
+
+
+@template.command(name="list")
+def template_list() -> None:
+    """List available templates and select one to install."""
+    template_cmd = TemplateCommand()
+    template_cmd.list_templates()
+
+
+@template.command(name="add")
+@click.argument("name")
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Directory name for the template (defaults to template name)",
+)
+def template_add(name: str, output_dir: str | None) -> None:
+    """Add a template to the current directory."""
+    template_cmd = TemplateCommand()
+    template_cmd.add_template(name, output_dir)
 
 
 @crewai.group()
@@ -820,6 +871,49 @@ def checkpoint_info(path: str) -> None:
     from crewai.cli.checkpoint_cli import _detect_location, info_checkpoint
 
     info_checkpoint(_detect_location(path))
+
+
+@checkpoint.command("resume")
+@click.argument("checkpoint_id", required=False, default=None)
+@click.pass_context
+def checkpoint_resume(ctx: click.Context, checkpoint_id: str | None) -> None:
+    """Resume from a checkpoint. Defaults to the most recent."""
+    from crewai.cli.checkpoint_cli import resume_checkpoint
+
+    resume_checkpoint(ctx.obj["location"], checkpoint_id)
+
+
+@checkpoint.command("diff")
+@click.argument("id1")
+@click.argument("id2")
+@click.pass_context
+def checkpoint_diff(ctx: click.Context, id1: str, id2: str) -> None:
+    """Compare two checkpoints side-by-side."""
+    from crewai.cli.checkpoint_cli import diff_checkpoints
+
+    diff_checkpoints(ctx.obj["location"], id1, id2)
+
+
+@checkpoint.command("prune")
+@click.option(
+    "--keep", type=int, default=None, help="Keep the N most recent checkpoints."
+)
+@click.option(
+    "--older-than",
+    default=None,
+    help="Remove checkpoints older than duration (e.g. 7d, 24h, 30m).",
+)
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be pruned without deleting."
+)
+@click.pass_context
+def checkpoint_prune(
+    ctx: click.Context, keep: int | None, older_than: str | None, dry_run: bool
+) -> None:
+    """Remove old checkpoints."""
+    from crewai.cli.checkpoint_cli import prune_checkpoints
+
+    prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
 
 
 if __name__ == "__main__":

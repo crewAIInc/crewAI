@@ -94,11 +94,8 @@ def parse(text: str) -> AgentAction | AgentFinish:
 
     if includes_answer:
         final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
-        # Check whether the final answer ends with triple backticks.
         if final_answer.endswith("```"):
-            # Count occurrences of triple backticks in the final answer.
             count = final_answer.count("```")
-            # If count is odd then it's an unmatched trailing set; remove it.
             if count % 2 != 0:
                 final_answer = final_answer[:-3].rstrip()
         return AgentFinish(thought=thought, output=final_answer, text=text)
@@ -146,7 +143,6 @@ def _extract_thought(text: str) -> str:
     if thought_index == -1:
         return ""
     thought = text[:thought_index].strip()
-    # Remove any triple backticks from the thought string
     return thought.replace("```", "").strip()
 
 
@@ -171,17 +167,8 @@ def _safe_repair_json(tool_input: str) -> str:
     Returns:
         The repaired JSON string or original if repair fails.
     """
-    # Skip repair if the input starts and ends with square brackets
-    # Explanation: The JSON parser has issues handling inputs that are enclosed in square brackets ('[]').
-    # These are typically valid JSON arrays or strings that do not require repair. Attempting to repair such inputs
-    # might lead to unintended alterations, such as wrapping the entire input in additional layers or modifying
-    # the structure in a way that changes its meaning. By skipping the repair for inputs that start and end with
-    # square brackets, we preserve the integrity of these valid JSON structures and avoid unnecessary modifications.
     if tool_input.startswith("[") and tool_input.endswith("]"):
         return tool_input
-
-    # Before repair, handle common LLM issues:
-    # 1. Replace """ with " to avoid JSON parser errors
 
     tool_input = tool_input.replace('"""', '"')
 

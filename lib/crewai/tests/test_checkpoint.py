@@ -523,6 +523,31 @@ class TestKickoffFromCheckpoint:
         assert isinstance(crew.checkpoint, CheckpointConfig)
         assert crew.checkpoint.on_events == ["task_completed"]
 
+    def test_agent_kickoff_delegates_to_from_checkpoint(self) -> None:
+        mock_restored = MagicMock(spec=Agent)
+        mock_restored.kickoff.return_value = "agent_result"
+
+        cfg = CheckpointConfig(restore_from="/path/to/agent_cp.json")
+        with patch.object(Agent, "from_checkpoint", return_value=mock_restored):
+            agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+            result = agent.kickoff(messages="hello", from_checkpoint=cfg)
+
+        mock_restored.kickoff.assert_called_once_with(
+            messages="hello", response_format=None, input_files=None
+        )
+        assert mock_restored.checkpoint.restore_from is None
+        assert result == "agent_result"
+
+    def test_agent_kickoff_config_only_sets_checkpoint(self) -> None:
+        cfg = CheckpointConfig(on_events=["lite_agent_execution_completed"])
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        assert agent.checkpoint is None
+        with patch.object(Agent, "_prepare_kickoff", side_effect=RuntimeError("stop")):
+            with pytest.raises(RuntimeError, match="stop"):
+                agent.kickoff(messages="hello", from_checkpoint=cfg)
+        assert isinstance(agent.checkpoint, CheckpointConfig)
+        assert agent.checkpoint.on_events == ["lite_agent_execution_completed"]
+
     def test_flow_kickoff_delegates_to_from_checkpoint(self) -> None:
         mock_restored = MagicMock(spec=Flow)
         mock_restored.kickoff.return_value = "flow_result"
