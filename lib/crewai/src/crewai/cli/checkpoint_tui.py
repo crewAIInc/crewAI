@@ -553,6 +553,54 @@ class CheckpointTUI(App[_TuiResult]):
         self._refresh_tree()
 
 
+def _apply_task_overrides(crew: Any, task_overrides: dict[int, str]) -> None:
+    """Apply task output overrides to a restored Crew and print modifications."""
+    import click
+
+    click.echo("Modifications:")
+    overridden_agents: set[int] = set()
+    for task_idx, new_output in task_overrides.items():
+        if task_idx < len(crew.tasks) and crew.tasks[task_idx].output is not None:
+            desc = crew.tasks[task_idx].description or f"Task {task_idx + 1}"
+            if len(desc) > 60:
+                desc = desc[:57] + "..."
+            crew.tasks[task_idx].output.raw = new_output
+            preview = new_output.replace("\n", " ")
+            if len(preview) > 80:
+                preview = preview[:77] + "..."
+            click.echo(f"  Task {task_idx + 1}: {desc}")
+            click.echo(f"    -> {preview}")
+            agent = crew.tasks[task_idx].agent
+            if agent and agent.agent_executor:
+                nth = sum(1 for t in crew.tasks[:task_idx] if t.agent is agent)
+                messages = agent.agent_executor.messages
+                system_positions = [
+                    i for i, m in enumerate(messages) if m.get("role") == "system"
+                ]
+                if nth < len(system_positions):
+                    seg_start = system_positions[nth]
+                    seg_end = (
+                        system_positions[nth + 1]
+                        if nth + 1 < len(system_positions)
+                        else len(messages)
+                    )
+                    for j in range(seg_end - 1, seg_start, -1):
+                        if messages[j].get("role") == "assistant":
+                            messages[j]["content"] = new_output
+                            break
+                overridden_agents.add(id(agent))
+
+    earliest = min(task_overrides)
+    for offset, subsequent in enumerate(crew.tasks[earliest + 1 :], start=earliest + 1):
+        if subsequent.output and offset not in task_overrides:
+            subsequent.output = None
+        if subsequent.agent and subsequent.agent.agent_executor:
+            subsequent.agent.agent_executor._resuming = False
+            if id(subsequent.agent) not in overridden_agents:
+                subsequent.agent.agent_executor.messages = []
+    click.echo()
+
+
 async def _run_checkpoint_tui_async(location: str) -> None:
     """Async implementation of the checkpoint TUI flow."""
     import click
@@ -570,14 +618,25 @@ async def _run_checkpoint_tui_async(location: str) -> None:
     config = CheckpointConfig(restore_from=selected)
 
     if entity_type == "flow":
+        from crewai.events.event_bus import crewai_event_bus
         from crewai.flow.flow import Flow
 
         if action == "fork":
             click.echo(f"\nForking flow from: {selected}\n")
-            entity = Flow.fork(config)
+            flow = Flow.fork(config)
         else:
             click.echo(f"\nResuming flow from: {selected}\n")
-            entity = Flow.from_checkpoint(config)
+            flow = Flow.from_checkpoint(config)
+
+        if task_overrides:
+            from crewai.crew import Crew as CrewCls
+
+            state = crewai_event_bus._runtime_state
+            if state is not None:
+                for entity in state.root:
+                    if isinstance(entity, CrewCls) and entity.tasks:
+                        _apply_task_overrides(entity, task_overrides)
+                        break
 
         if inputs:
             click.echo("Inputs:")
@@ -585,7 +644,7 @@ async def _run_checkpoint_tui_async(location: str) -> None:
                 click.echo(f"  {k}: {v}")
             click.echo()
 
-        result = await entity.kickoff_async(inputs=inputs)
+        result = await flow.kickoff_async(inputs=inputs)
         click.echo(f"\nResult: {getattr(result, 'raw', result)}")
         return
 
@@ -599,50 +658,7 @@ async def _run_checkpoint_tui_async(location: str) -> None:
         crew = Crew.from_checkpoint(config)
 
     if task_overrides:
-        click.echo("Modifications:")
-        overridden_agents: set[int] = set()
-        for task_idx, new_output in task_overrides.items():
-            if task_idx < len(crew.tasks) and crew.tasks[task_idx].output is not None:
-                desc = crew.tasks[task_idx].description or f"Task {task_idx + 1}"
-                if len(desc) > 60:
-                    desc = desc[:57] + "..."
-                crew.tasks[task_idx].output.raw = new_output  # type: ignore[union-attr]
-                preview = new_output.replace("\n", " ")
-                if len(preview) > 80:
-                    preview = preview[:77] + "..."
-                click.echo(f"  Task {task_idx + 1}: {desc}")
-                click.echo(f"    -> {preview}")
-                agent = crew.tasks[task_idx].agent
-                if agent and agent.agent_executor:
-                    nth = sum(1 for t in crew.tasks[:task_idx] if t.agent is agent)
-                    messages = agent.agent_executor.messages
-                    system_positions = [
-                        i for i, m in enumerate(messages) if m.get("role") == "system"
-                    ]
-                    if nth < len(system_positions):
-                        seg_start = system_positions[nth]
-                        seg_end = (
-                            system_positions[nth + 1]
-                            if nth + 1 < len(system_positions)
-                            else len(messages)
-                        )
-                        for j in range(seg_end - 1, seg_start, -1):
-                            if messages[j].get("role") == "assistant":
-                                messages[j]["content"] = new_output
-                                break
-                    overridden_agents.add(id(agent))
-
-        earliest = min(task_overrides)
-        for offset, subsequent in enumerate(
-            crew.tasks[earliest + 1 :], start=earliest + 1
-        ):
-            if subsequent.output and offset not in task_overrides:
-                subsequent.output = None
-            if subsequent.agent and subsequent.agent.agent_executor:
-                subsequent.agent.agent_executor._resuming = False
-                if id(subsequent.agent) not in overridden_agents:
-                    subsequent.agent.agent_executor.messages = []
-        click.echo()
+        _apply_task_overrides(crew, task_overrides)
 
     if inputs:
         click.echo("Inputs:")
