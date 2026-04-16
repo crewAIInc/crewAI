@@ -2138,7 +2138,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         try:
             # Reset flow state for fresh execution unless restoring from persistence
-            is_restoring = inputs and "id" in inputs and self.persistence is not None
+            is_restoring = (
+                inputs and "id" in inputs and self.persistence is not None
+            ) or self.checkpoint_completed_methods is not None
             if not is_restoring:
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
