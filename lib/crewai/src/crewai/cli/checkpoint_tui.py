@@ -20,6 +20,8 @@ from textual.widgets import (
 
 from crewai.cli.checkpoint_cli import (
     _format_size,
+    _info_json_file,
+    _info_sqlite_id,
     _is_sqlite,
     _list_json,
     _list_sqlite,
@@ -38,6 +40,35 @@ def _load_entries(location: str) -> list[dict[str, Any]]:
     if _is_sqlite(location):
         return _list_sqlite(location)
     return _list_json(location)
+
+
+def _load_selected_checkpoint_entry(location: str) -> dict[str, Any] | None:
+    """Load metadata for a selected checkpoint location string."""
+    if "#" in location:
+        db_path, checkpoint_id = location.split("#", 1)
+        if _is_sqlite(db_path):
+            return _info_sqlite_id(db_path, checkpoint_id)
+    if location.endswith(".json"):
+        try:
+            return _info_json_file(location)
+        except OSError:
+            return None
+    return None
+
+
+def _selected_runner_type(location: str) -> str:
+    """Infer which runtime entity should restore from a checkpoint selection."""
+    entry = _load_selected_checkpoint_entry(location)
+    if entry is None:
+        return "crew"
+    entity_types = {
+        str(entity.get("type", "")).lower()
+        for entity in entry.get("entities", [])
+        if entity.get("type")
+    }
+    if entity_types == {"flow"}:
+        return "flow"
+    return "crew"
 
 
 def _short_id(name: str) -> str:
@@ -547,17 +578,29 @@ async def _run_checkpoint_tui_async(location: str) -> None:
 
     selected, action, inputs, task_overrides = selection
 
-    from crewai.crew import Crew
     from crewai.state.checkpoint_config import CheckpointConfig
 
     config = CheckpointConfig(restore_from=selected)
+    runner_type = _selected_runner_type(selected)
 
-    if action == "fork":
-        click.echo(f"\nForking from: {selected}\n")
-        crew = Crew.fork(config)
+    if runner_type == "flow":
+        from crewai.flow.flow import Flow
+
+        if action == "fork":
+            click.echo(f"\nForking from: {selected}\n")
+            crew = Flow.fork(config)
+        else:
+            click.echo(f"\nResuming from: {selected}\n")
+            crew = Flow.from_checkpoint(config)
     else:
-        click.echo(f"\nResuming from: {selected}\n")
-        crew = Crew.from_checkpoint(config)
+        from crewai.crew import Crew
+
+        if action == "fork":
+            click.echo(f"\nForking from: {selected}\n")
+            crew = Crew.fork(config)
+        else:
+            click.echo(f"\nResuming from: {selected}\n")
+            crew = Crew.from_checkpoint(config)
 
     if task_overrides:
         click.echo("Modifications:")
