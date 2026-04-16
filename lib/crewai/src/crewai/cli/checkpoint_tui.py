@@ -633,10 +633,19 @@ async def _run_checkpoint_tui_async(location: str) -> None:
 
             state = crewai_event_bus._runtime_state
             if state is not None:
+                flat_offset = 0
                 for entity in state.root:
-                    if isinstance(entity, CrewCls) and entity.tasks:
-                        _apply_task_overrides(entity, task_overrides)
-                        break
+                    if not isinstance(entity, CrewCls) or not entity.tasks:
+                        continue
+                    n = len(entity.tasks)
+                    local = {
+                        idx - flat_offset: out
+                        for idx, out in task_overrides.items()
+                        if flat_offset <= idx < flat_offset + n
+                    }
+                    if local:
+                        _apply_task_overrides(entity, local)
+                    flat_offset += n
 
         if inputs:
             click.echo("Inputs:")
