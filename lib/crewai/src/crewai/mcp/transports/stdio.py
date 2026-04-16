@@ -1,7 +1,6 @@
 """Stdio transport for MCP servers running as local processes."""
 
 import asyncio
-import os
 import subprocess
 from typing import Any
 
@@ -71,15 +70,15 @@ class StdioTransport(BaseTransport):
 
         try:
             from mcp import StdioServerParameters
-            from mcp.client.stdio import stdio_client
+            from mcp.client.stdio import get_default_environment, stdio_client
 
-            process_env = os.environ.copy()
+            process_env = get_default_environment()
             process_env.update(self.env)
 
             server_params = StdioServerParameters(
                 command=self.command,
                 args=self.args,
-                env=process_env if process_env else None,
+                env=process_env,
             )
             self._transport_context = stdio_client(server_params)
 
