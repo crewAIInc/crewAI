@@ -144,6 +144,23 @@ def test_selected_runner_type_detects_flow_entry(
     assert checkpoint_tui._selected_runner_type(str(Path("/tmp/fake-flow.json"))) == "flow"
 
 
+def test_selected_runner_type_prefers_flow_for_mixed_flow_and_crew_entries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        checkpoint_tui,
+        "_load_selected_checkpoint_entry",
+        lambda location: {
+            "entities": [
+                {"type": "flow", "name": "MyFlow"},
+                {"type": "crew", "name": "NestedCrew"},
+            ]
+        },
+    )
+
+    assert checkpoint_tui._selected_runner_type(str(Path("/tmp/fake-flow.json"))) == "flow"
+
+
 def test_resolve_flow_runner_prefers_matching_concrete_flow(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -158,6 +175,32 @@ def test_resolve_flow_runner_prefers_matching_concrete_flow(
         checkpoint_tui,
         "_load_selected_checkpoint_entry",
         lambda location: {"entities": [{"type": "flow", "name": "MyFlow"}]},
+    )
+
+    runner = checkpoint_tui._resolve_flow_runner("/tmp/fake-flow.json")
+
+    assert runner is MyFlow
+
+
+def test_resolve_flow_runner_ignores_null_flow_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    utils_mod = ModuleType("crewai.cli.utils")
+
+    class MyFlow(_ConcreteFakeFlow):
+        pass
+
+    utils_mod.get_flows = lambda: [MyFlow()]
+    monkeypatch.setitem(sys.modules, "crewai.cli.utils", utils_mod)
+    monkeypatch.setattr(
+        checkpoint_tui,
+        "_load_selected_checkpoint_entry",
+        lambda location: {
+            "entities": [
+                {"type": "flow", "name": None},
+                {"type": "flow", "name": "MyFlow"},
+            ]
+        },
     )
 
     runner = checkpoint_tui._resolve_flow_runner("/tmp/fake-flow.json")

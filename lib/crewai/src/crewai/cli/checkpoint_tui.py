@@ -66,7 +66,7 @@ def _selected_runner_type(location: str) -> str:
         for entity in entry.get("entities", [])
         if entity.get("type")
     }
-    if entity_types == {"flow"}:
+    if "flow" in entity_types:
         return "flow"
     return "crew"
 
@@ -79,11 +79,15 @@ def _resolve_flow_runner(location: str) -> type[Any]:
     if entry is None:
         return Flow
 
-    flow_names = [
-        str(entity.get("name", "")).strip()
-        for entity in entry.get("entities", [])
-        if str(entity.get("type", "")).lower() == "flow"
-    ]
+    flow_names = []
+    for entity in entry.get("entities", []):
+        if str(entity.get("type", "")).lower() != "flow":
+            continue
+        raw_name = entity.get("name")
+        if isinstance(raw_name, str):
+            cleaned_name = raw_name.strip()
+            if cleaned_name:
+                flow_names.append(cleaned_name)
     if not flow_names:
         return Flow
 
