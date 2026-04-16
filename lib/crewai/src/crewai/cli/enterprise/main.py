@@ -1,13 +1,13 @@
+import json
 from typing import Any, cast
 
-import requests
-from requests.exceptions import JSONDecodeError, RequestException
+import httpx
 from rich.console import Console
 
 from crewai.cli.authentication.main import Oauth2Settings, ProviderFactory
 from crewai.cli.command import BaseCommand
 from crewai.cli.settings.main import SettingsCommand
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 
 
 console = Console()
@@ -27,7 +27,7 @@ class EnterpriseConfigureCommand(BaseCommand):
             self._update_oauth_settings(enterprise_url, oauth_config)
 
             console.print(
-                f"✅ Successfully configured CrewAI AOP with OAuth2 settings from {enterprise_url}",
+                f"✅ Successfully configured CrewAI AMP with OAuth2 settings from {enterprise_url}",
                 style="bold green",
             )
 
@@ -47,12 +47,12 @@ class EnterpriseConfigureCommand(BaseCommand):
                 "User-Agent": f"CrewAI-CLI/{get_crewai_version()}",
                 "X-Crewai-Version": get_crewai_version(),
             }
-            response = requests.get(oauth_endpoint, timeout=30, headers=headers)
+            response = httpx.get(oauth_endpoint, timeout=30, headers=headers)
             response.raise_for_status()
 
             try:
                 oauth_config = response.json()
-            except JSONDecodeError as e:
+            except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON response from {oauth_endpoint}") from e
 
             self._validate_oauth_config(oauth_config)
@@ -62,7 +62,7 @@ class EnterpriseConfigureCommand(BaseCommand):
             )
             return cast(dict[str, Any], oauth_config)
 
-        except RequestException as e:
+        except httpx.HTTPError as e:
             raise ValueError(f"Failed to connect to enterprise URL: {e!s}") from e
         except Exception as e:
             raise ValueError(f"Error fetching OAuth2 configuration: {e!s}") from e

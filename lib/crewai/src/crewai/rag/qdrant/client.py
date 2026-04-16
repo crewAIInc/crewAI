@@ -311,8 +311,7 @@ class QdrantClient(BaseClient):
             points = []
             for doc in batch_docs:
                 if _is_async_embedding_function(self.embedding_function):
-                    async_fn = cast(AsyncEmbeddingFunction, self.embedding_function)
-                    embedding = await async_fn(doc["content"])
+                    embedding = await self.embedding_function(doc["content"])
                 else:
                     sync_fn = cast(EmbeddingFunction, self.embedding_function)
                     embedding = sync_fn(doc["content"])
@@ -412,8 +411,7 @@ class QdrantClient(BaseClient):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
         if _is_async_embedding_function(self.embedding_function):
-            async_fn = cast(AsyncEmbeddingFunction, self.embedding_function)
-            query_embedding = await async_fn(query)
+            query_embedding = await self.embedding_function(query)
         else:
             sync_fn = cast(EmbeddingFunction, self.embedding_function)
             query_embedding = sync_fn(query)

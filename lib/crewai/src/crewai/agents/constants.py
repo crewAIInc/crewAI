@@ -4,8 +4,6 @@ import re
 from typing import Final
 
 
-# crewai.agents.parser constants
-
 FINAL_ANSWER_ACTION: Final[str] = "Final Answer:"
 MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE: Final[str] = (
     "I did it wrong. Invalid Format: I missed the 'Action:' after 'Thought:'. I will do right next, and don't use a tool I have already used.\n"

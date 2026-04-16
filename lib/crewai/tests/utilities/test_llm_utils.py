@@ -81,7 +81,7 @@ def test_create_llm_from_env_with_unaccepted_attributes() -> None:
             "OPENAI_API_KEY": "fake-key",
             "AWS_ACCESS_KEY_ID": "fake-access-key",
             "AWS_SECRET_ACCESS_KEY": "fake-secret-key",
-            "AWS_REGION_NAME": "us-west-2",
+            "AWS_DEFAULT_REGION": "us-west-2",
         },
     ):
         llm = create_llm(llm_value=None)
@@ -89,7 +89,7 @@ def test_create_llm_from_env_with_unaccepted_attributes() -> None:
         assert llm.model == "gpt-3.5-turbo"
         assert not hasattr(llm, "AWS_ACCESS_KEY_ID")
         assert not hasattr(llm, "AWS_SECRET_ACCESS_KEY")
-        assert not hasattr(llm, "AWS_REGION_NAME")
+        assert not hasattr(llm, "AWS_DEFAULT_REGION")
 
 
 def test_create_llm_with_partial_attributes() -> None:
@@ -119,10 +119,12 @@ def test_create_llm_with_invalid_type() -> None:
 
 
 def test_create_llm_openai_missing_api_key() -> None:
-    """Test that create_llm raises error when OpenAI API key is missing"""
+    """Credentials are validated lazily: `create_llm` succeeds, and the
+    descriptive error only surfaces when the client is actually built."""
     with patch.dict(os.environ, {}, clear=True):
+        llm = create_llm(llm_value="gpt-4o")
         with pytest.raises((ValueError, ImportError)) as exc_info:
-            create_llm(llm_value="gpt-4o")
+            llm._get_sync_client()
 
         error_message = str(exc_info.value).lower()
         assert "openai_api_key" in error_message or "api_key" in error_message

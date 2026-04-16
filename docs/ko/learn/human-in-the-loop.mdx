@@ -5,9 +5,22 @@ icon: "user-check"
 mode: "wide"
 ---
 
-휴먼 인 더 루프(HITL, Human-in-the-Loop)는 인공지능과 인간의 전문 지식을 결합하여 의사결정을 강화하고 작업 결과를 향상시키는 강력한 접근 방식입니다. 이 가이드에서는 CrewAI 내에서 HITL을 구현하는 방법을 안내합니다.
+휴먼 인 더 루프(HITL, Human-in-the-Loop)는 인공지능과 인간의 전문 지식을 결합하여 의사결정을 강화하고 작업 결과를 향상시키는 강력한 접근 방식입니다. CrewAI는 필요에 따라 HITL을 구현하는 여러 가지 방법을 제공합니다.
 
-## HITL 워크플로우 설정
+## HITL 접근 방식 선택
+
+CrewAI는 human-in-the-loop 워크플로우를 구현하기 위한 두 가지 주요 접근 방식을 제공합니다:
+
+| 접근 방식 | 적합한 용도 | 통합 | 버전 |
+|----------|----------|-------------|---------|
+| **Flow 기반** (`@human_feedback` 데코레이터) | 로컬 개발, 콘솔 기반 검토, 동기식 워크플로우 | [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows) | **1.8.0+** |
+| **Webhook 기반** (Enterprise) | 프로덕션 배포, 비동기 워크플로우, 외부 통합 (Slack, Teams 등) | 이 가이드 | - |
+
+<Tip>
+Flow를 구축하면서 피드백을 기반으로 라우팅하는 인간 검토 단계를 추가하려면 `@human_feedback` 데코레이터에 대한 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows) 가이드를 참조하세요.
+</Tip>
+
+## Webhook 기반 HITL 워크플로우 설정
 
 <Steps>
     <Step title="작업 구성">
@@ -99,3 +112,9 @@ HITL 워크플로우는 다음과 같은 경우에 특히 유용합니다:
 - 민감하거나 고위험 작업
 - 인간의 판단이 필요한 창의적 과제
 - 컴플라이언스 및 규제 검토
+
+## Enterprise 기능
+
+<Card title="Flow HITL 관리 플랫폼" icon="users-gear" href="/ko/enterprise/features/flow-hitl-management">
+  CrewAI Enterprise는 플랫폼 내 검토, 응답자 할당, 권한, 에스컬레이션 정책, SLA 관리, 동적 라우팅 및 전체 분석을 갖춘 Flow용 포괄적인 HITL 관리 시스템을 제공합니다. [자세히 알아보기 →](/ko/enterprise/features/flow-hitl-management)
+</Card>

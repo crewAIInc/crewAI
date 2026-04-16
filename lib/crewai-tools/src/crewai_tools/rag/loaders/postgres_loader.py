@@ -1,5 +1,6 @@
 """PostgreSQL database loader."""
 
+from typing import Any
 from urllib.parse import urlparse
 
 from psycopg2 import Error, connect
@@ -12,7 +13,7 @@ from crewai_tools.rag.source_content import SourceContent
 class PostgresLoader(BaseLoader):
     """Loader for PostgreSQL database content."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         """Load content from a PostgreSQL database table.
 
         Args:

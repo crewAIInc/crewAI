@@ -4,10 +4,11 @@ from io import StringIO
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-import requests
+import json
+
+import httpx
 from crewai.cli.deploy.main import DeployCommand
 from crewai.cli.utils import parse_toml
-from requests.exceptions import JSONDecodeError
 
 
 class TestDeployCommand(unittest.TestCase):
@@ -37,18 +38,18 @@ class TestDeployCommand(unittest.TestCase):
             DeployCommand()
 
     def test_validate_response_successful_response(self):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.json.return_value = {"message": "Success"}
         mock_response.status_code = 200
-        mock_response.ok = True
+        mock_response.is_success = True
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command._validate_response(mock_response)
             assert fake_out.getvalue() == ""
 
     def test_validate_response_json_decode_error(self):
-        mock_response = Mock(spec=requests.Response)
-        mock_response.json.side_effect = JSONDecodeError("Decode error", "", 0)
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.json.side_effect = json.JSONDecodeError("Decode error", "", 0)
         mock_response.status_code = 500
         mock_response.content = b"Invalid JSON"
 
@@ -64,13 +65,13 @@ class TestDeployCommand(unittest.TestCase):
             assert "Response:\nInvalid JSON" in output
 
     def test_validate_response_422_error(self):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.json.return_value = {
             "field1": ["Error message 1"],
             "field2": ["Error message 2"],
         }
         mock_response.status_code = 422
-        mock_response.ok = False
+        mock_response.is_success = False
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             with pytest.raises(SystemExit):
@@ -84,10 +85,10 @@ class TestDeployCommand(unittest.TestCase):
             assert "Field2 Error message 2" in output
 
     def test_validate_response_other_error(self):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.json.return_value = {"error": "Something went wrong"}
         mock_response.status_code = 500
-        mock_response.ok = False
+        mock_response.is_success = False
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             with pytest.raises(SystemExit):
@@ -124,7 +125,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_response.json.return_value = {"uuid": "test-uuid"}
         self.mock_client.deploy_by_uuid.return_value = mock_response
 
-        self.deploy_command.deploy(uuid="test-uuid")
+        self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
 
         self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
@@ -136,7 +137,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_response.json.return_value = {"uuid": "test-uuid"}
         self.mock_client.deploy_by_name.return_value = mock_response
 
-        self.deploy_command.deploy()
+        self.deploy_command.deploy(skip_validate=True)
 
         self.mock_client.deploy_by_name.assert_called_once_with("test_project")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
@@ -155,7 +156,7 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.create_crew.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            self.deploy_command.create_crew()
+            self.deploy_command.create_crew(skip_validate=True)
             self.assertIn("Deployment created successfully!", fake_out.getvalue())
             self.assertIn("new-uuid", fake_out.getvalue())
 

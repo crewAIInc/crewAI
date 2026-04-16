@@ -13,7 +13,7 @@ mode: "wide"
 
 Google Sheets 통합을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 되어 있는 [CrewAI AOP](https://app.crewai.com) 계정
+- 활성 구독이 되어 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - Google Sheets에 액세스할 수 있는 Google 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정 연결
 - 데이터 작업을 위한 올바른 열 헤더가 있는 스프레드시트
@@ -22,7 +22,7 @@ Google Sheets 통합을 사용하기 전에 다음을 확인하세요:
 
 ### 1. Google 계정 연결하기
 
-1. [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합 섹션에서 **Google Sheets**를 찾습니다.
 3. **Connect**를 클릭하고 OAuth 흐름을 완료합니다.
 4. 스프레드시트 접근에 필요한 권한을 허용합니다.
@@ -37,7 +37,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -59,6 +60,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `spreadsheetId` (string, 필수): 스프레드시트 - Connect Portal Workflow Settings를 사용하여 사용자가 스프레드시트를 선택할 수 있도록 합니다. 선택한 스프레드시트의 첫 번째 워크시트를 기본값으로 사용합니다.
     - `limit` (string, 선택): 행 제한 - 반환할 최대 행 수를 제한합니다.
+
   </Accordion>
 
   <Accordion title="google_sheets/append_values">
@@ -76,6 +78,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "columnName4": "columnValue4"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_sheets/update_values">
@@ -112,6 +115,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "columnName4": "newValue4"
       }
       ```
+
   </Accordion>
 </AccordionGroup>
 
@@ -273,38 +277,49 @@ crew.kickoff()
 ### 일반적인 문제
 
 **권한 오류**
+
 - Google 계정이 대상 스프레드시트에 대해 편집 권한이 있는지 확인하세요
 - OAuth 연결에 Google Sheets API에 필요한 scope가 포함되어 있는지 검증하세요
 - 스프레드시트가 인증된 계정과 공유되어 있는지 확인하세요
 
 **스프레드시트 구조 문제**
+
 - 행을 생성하거나 업데이트하기 전에 워크시트에 올바른 열 헤더가 있는지 확인하세요
 - `additionalFields`의 열 이름이 실제 열 헤더와 일치하는지 검증하세요
 - 지정된 워크시트가 스프레드시트에 존재하는지 확인하세요
 
 **데이터 유형 및 형식 문제**
+
 - 데이터 값이 각 열에 대해 예상되는 형식과 일치하는지 확인하세요
 - 날짜 열에는 올바른 날짜 형식(ISO 형식 권장)을 사용하세요
 - 숫자 열에 입력되는 값이 적절한 형식인지 검증하세요
 
 **필터 수식 문제**
+
 - 필터 수식이 부정 정규형(disjunctive normal form)의 올바른 JSON 구조를 따르는지 확인하세요
 - 실제 열 헤더와 일치하는 유효한 필드명을 사용하세요
 - 복잡한 다중 조건 쿼리를 작성하기 전에 간단한 필터로 테스트하세요
 - 연산자 유형이 열의 데이터 유형과 일치하는지 검증하세요
 
 **행 제한 및 성능**
+
 - `GOOGLE_SHEETS_GET_ROW`를 사용할 때 행 제한에 유의하세요
 - 대용량 데이터셋의 경우 페이지네이션을 고려하세요
 - 처리되는 데이터의 양을 줄이기 위해 구체적인 필터를 사용하세요
 
 **업데이트 작업**
+
 - 필터 조건이 업데이트하려는 행을 정확하게 식별하는지 확인하세요
 - 대규모 업데이트 전에 작은 데이터셋으로 필터 조건을 테스트하세요
 - 모든 필수 필드가 업데이트 작업에 포함되어 있는지 검증하세요
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Google Sheets 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 저희 지원팀으로 문의해 주세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Google Sheets 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 저희
+  지원팀으로 문의해 주세요.
 </Card>

@@ -8,6 +8,29 @@ This enables multiple workflows like having an Agent to access the database fetc
 
 **Attention**: Make sure that the Agent has access to a Read-Replica or that is okay for the Agent to run insert/update queries on the database.
 
+## Security Model
+
+`NL2SQLTool` is an execution-capable tool. It runs model-generated SQL directly against the configured database connection.
+
+Risk depends on deployment choices:
+
+- Which credentials are used in `db_uri`
+- Whether untrusted input can influence prompts
+- Whether tool-call guardrails are enforced before execution
+
+If untrusted input can reach this tool, treat the integration as high risk.
+
+## Hardening Recommendations
+
+Use all of the following in production:
+
+- Use a read-only database user whenever possible
+- Prefer a read replica for analytics/retrieval workloads
+- Grant least privilege (no superuser/admin roles, no file/system-level capabilities)
+- Apply database-side resource limits (statement timeout, lock timeout, cost/row limits)
+- Add `before_tool_call` hooks to enforce allowed query patterns
+- Enable query logging and alerting for destructive statements
+
 ## Requirements
 
 - SqlAlchemy

@@ -1,0 +1,108 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Create a simple
+      plan to say hello. Use the create_reasoning_plan tool."}],"model":"claude-3-5-haiku-20241022","stream":false,"tool_choice":{"type":"tool","name":"create_reasoning_plan"},"tools":[{"name":"create_reasoning_plan","description":"Create
+      a structured reasoning plan for completing a task","input_schema":{"type":"object","properties":{"plan":{"type":"string","description":"High-level
+      plan description"},"steps":{"type":"array","items":{"type":"object"},"description":"List
+      of steps to execute"},"ready":{"type":"boolean","description":"Whether the plan
+      is ready to execute"}},"required":["plan","steps","ready"]}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '684'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.73.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01HLuGgGRFseMdhTYAhkKtfz","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01GQAUFHffGzMd3ufA6YRMZF","name":"create_reasoning_plan","input":{"plan":"Say
+        hello in a friendly and straightforward manner","steps":[{"description":"Take
+        a deep breath","action":"Pause and relax"},{"description":"Smile","action":"Prepare
+        a warm facial expression"},{"description":"Greet the person","action":"Say
+        ''Hello!''"},{"description":"Wait for response","action":"Listen and be ready
+        to continue conversation"}],"ready":true}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":513,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":162,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 03 Feb 2026 23:26:38 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-02-03T23:26:35Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '2994'
+    status:
+      code: 200
+      message: OK
+version: 1

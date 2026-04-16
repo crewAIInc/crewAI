@@ -1,0 +1,86 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Describe the file(s)
+      you see. Be brief, one sentence max.\n\nInput files (content already loaded
+      in conversation):\n  - \"readme\" (review_guidelines.txt)\n\nThis is the expected
+      criteria for your final answer: A brief description of the file.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}, {"inlineData": {"data": "UmV2aWV3IEd1aWRlbGluZXMKCjEuIEJlIGNsZWFyIGFuZCBjb25jaXNlOiBXcml0ZSBmZWVkYmFjayB0aGF0IGlzIGVhc3kgdG8gdW5kZXJzdGFuZC4KMi4gRm9jdXMgb24gYmVoYXZpb3IgYW5kIG91dGNvbWVzOiBEZXNjcmliZSB3aGF0IGhhcHBlbmVkIGFuZCB3aHkgaXQgbWF0dGVycy4KMy4gQmUgc3BlY2lmaWM6IFByb3ZpZGUgZXhhbXBsZXMgdG8gc3VwcG9ydCB5b3VyIHBvaW50cy4KNC4gQmFsYW5jZSBwb3NpdGl2ZXMgYW5kIGltcHJvdmVtZW50czogSGlnaGxpZ2h0IHN0cmVuZ3RocyBhbmQgYXJlYXMgdG8gZ3Jvdy4KNS4gQmUgcmVzcGVjdGZ1bCBhbmQgY29uc3RydWN0aXZlOiBBc3N1bWUgcG9zaXRpdmUgaW50ZW50IGFuZCBvZmZlciBzb2x1dGlvbnMuCjYuIFVzZSBvYmplY3RpdmUgY3JpdGVyaWE6IFJlZmVyZW5jZSBnb2FscywgbWV0cmljcywgb3IgZXhwZWN0YXRpb25zIHdoZXJlIHBvc3NpYmxlLgo3LiBTdWdnZXN0IG5leHQgc3RlcHM6IFJlY29tbWVuZCBhY3Rpb25hYmxlIHdheXMgdG8gaW1wcm92ZS4KOC4gUHJvb2ZyZWFkOiBDaGVjayB0b25lLCBncmFtbWFyLCBhbmQgY2xhcml0eSBiZWZvcmUgc3VibWl0dGluZy4K",
+      "mimeType": "text/plain"}}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are File Analyst. Expert at analyzing various file types.\nYour
+      personal goal is: Analyze and describe files accurately\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}], "role": "user"}, "generationConfig":
+      {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1923'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.12.10
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Thought:The file \\\"readme\\\" (review_guidelines.txt)
+        contains guidelines for providing effective feedback.\\nFinal Answer:Review
+        Guidelines\\n\\n1. Be clear and concise: Write feedback that is easy to understand.\\n2.
+        Focus on behavior and outcomes: Describe what happened and why it matters.\\n3.
+        Be specific: Provide examples to support your points.\\n4. Balance positives
+        and improvements: Highlight strengths and areas to grow.\\n5. Be respectful
+        and constructive: Assume positive intent and offer solutions.\\n6. Use objective
+        criteria: Reference goals, metrics, or expectations where possible.\\n7. Suggest
+        next steps: Recommend actionable ways to improve.\\n8. Proofread: Check tone,
+        grammar, and clarity before submitting.\\n\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        -0.010346503447223184\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        322,\n    \"candidatesTokenCount\": 151,\n    \"totalTokenCount\": 473,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 322\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 151\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
+        \"7slzab-SIrzFjMcP7faewA4\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 23 Jan 2026 19:20:15 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1210
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

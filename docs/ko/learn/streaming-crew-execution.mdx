@@ -325,6 +325,34 @@ asyncio.run(interactive_research())
 - **사용자 경험**: 점진적인 결과를 표시하여 체감 지연 시간 감소
 - **라이브 대시보드**: crew 실행 상태를 표시하는 모니터링 인터페이스 구축
 
+## 취소 및 리소스 정리
+
+`CrewStreamingOutput`은 소비자가 연결을 끊을 때 진행 중인 작업을 즉시 중단하는 정상적인 취소를 지원합니다.
+
+### 비동기 컨텍스트 매니저
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+
+async with streaming:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+```
+
+### 명시적 취소
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+try:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+finally:
+    await streaming.aclose()  # 비동기
+    # streaming.close()       # 동기 버전
+```
+
+취소 후 `streaming.is_cancelled`와 `streaming.is_completed`는 모두 `True`입니다. `aclose()`와 `close()` 모두 멱등성을 가집니다.
+
 ## 중요 사항
 
 - 스트리밍은 crew의 모든 에이전트에 대해 자동으로 LLM 스트리밍을 활성화합니다

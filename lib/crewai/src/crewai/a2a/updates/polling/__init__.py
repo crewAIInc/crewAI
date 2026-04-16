@@ -1,0 +1,1 @@
+"""Polling update mechanism module."""

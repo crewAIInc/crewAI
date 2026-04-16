@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.tools.rag.rag_tool import RagTool
@@ -25,7 +27,7 @@ class XMLSearchTool(RagTool):
     )
     args_schema: type[BaseModel] = XMLSearchToolSchema
 
-    def __init__(self, xml: str | None = None, **kwargs):
+    def __init__(self, xml: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if xml is not None:
             self.add(xml)

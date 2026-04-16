@@ -39,7 +39,7 @@ class GuardrailResult(BaseModel):
 
     @field_validator("result", "error")
     @classmethod
-    def validate_result_error_exclusivity(cls, v: Any, info) -> Any:
+    def validate_result_error_exclusivity(cls, v: Any, info: Any) -> Any:
         """Ensure that result and error are mutually exclusive based on success.
 
         Args:
@@ -118,15 +118,13 @@ def process_guardrail(
         LLMGuardrailStartedEvent,
     )
 
-    crewai_event_bus.emit(
-        event_source,
-        LLMGuardrailStartedEvent(
-            guardrail=guardrail,
-            retry_count=retry_count,
-            from_agent=from_agent,
-            from_task=from_task,
-        ),
+    started_event = LLMGuardrailStartedEvent(
+        guardrail=guardrail,
+        retry_count=retry_count,
+        from_agent=from_agent,
+        from_task=from_task,
     )
+    crewai_event_bus.emit(event_source, started_event)
 
     result = guardrail(output)
     guardrail_result = GuardrailResult.from_tuple(result)
@@ -138,6 +136,8 @@ def process_guardrail(
             result=guardrail_result.result,
             error=guardrail_result.error,
             retry_count=retry_count,
+            guardrail_type=started_event.guardrail_type,
+            guardrail_name=started_event.guardrail_name,
             from_agent=from_agent,
             from_task=from_task,
         ),

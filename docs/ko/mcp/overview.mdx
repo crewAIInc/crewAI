@@ -1,6 +1,6 @@
 ---
-title: 'CrewAI에서 MCP 서버를 도구로 활용하기'
-description: '`crewai-tools` 라이브러리를 사용하여 MCP 서버를 CrewAI agent에 도구로 통합하는 방법을 알아봅니다.'
+title: "CrewAI에서 MCP 서버를 도구로 활용하기"
+description: "`crewai-tools` 라이브러리를 사용하여 MCP 서버를 CrewAI agent에 도구로 통합하는 방법을 알아봅니다."
 icon: plug
 mode: "wide"
 ---
@@ -25,8 +25,8 @@ agent = Agent(
     mcps=[
         "https://mcp.exa.ai/mcp?api_key=your_key",           # 외부 MCP 서버
         "https://api.weather.com/mcp#get_forecast",          # 서버의 특정 도구
-        "crewai-amp:financial-data",                         # CrewAI AOP 마켓플레이스
-        "crewai-amp:research-tools#pubmed_search"            # 특정 AMP 도구
+        "snowflake",                                         # 카탈로그에서 연결된 MCP
+        "stripe#list_invoices"                               # 연결된 MCP의 특정 도구
     ]
 )
 # MCP 도구들이 이제 자동으로 에이전트에서 사용 가능합니다!
@@ -43,6 +43,7 @@ agent = Agent(
 - **Streamable HTTP**: 원격 서버용 (유연하며 잠재적으로 양방향 통신이 가능, 주로 SSE를 활용한 서버-클라이언트 스트림 제공, HTTP 기반)
 
 ## 비디오 튜토리얼
+
 CrewAI와 MCP 통합에 대한 종합적인 안내를 위해 이 비디오 튜토리얼을 시청하세요:
 
 <iframe
@@ -120,6 +121,7 @@ with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
     )
     # ... 나머지 crew 설정 ...
 ```
+
 이 일반적인 패턴은 도구를 통합하는 방법을 보여줍니다. 각 transport에 맞춘 구체적인 예시는 아래의 상세 가이드를 참고하세요.
 
 ## 필터링 도구
@@ -206,6 +208,7 @@ class CrewWithMCP:
 - `mcp_server_params`를 지정하지 않으면 `get_mcp_tools()`는 빈 리스트를 반환하여 MCP 설정 여부와 상관없이 동일한 코드 경로를 사용할 수 있습니다.
 
 따라서 여러 에이전트에서 `get_mcp_tools()`를 호출하거나 환경에 따라 MCP 사용을 토글하더라도 안전하게 동작합니다.
+
 </Tip>
 
 ### 연결 타임아웃 구성
@@ -266,21 +269,13 @@ class CrewWithCustomTimeout:
 ## MCP 통합 탐색
 
 <CardGroup cols={2}>
-  <Card
-    title="Stdio 전송"
-    icon="server"
-    href="/ko/mcp/stdio"
-    color="#3B82F6"
-  >
-    표준 입력/출력을 통해 로컬 MCP 서버에 연결합니다. 스크립트와 로컬 실행 파일에 이상적입니다.
+  <Card title="Stdio 전송" icon="server" href="/ko/mcp/stdio" color="#3B82F6">
+    표준 입력/출력을 통해 로컬 MCP 서버에 연결합니다. 스크립트와 로컬 실행
+    파일에 이상적입니다.
   </Card>
-  <Card
-    title="SSE 전송"
-    icon="wifi"
-    href="/ko/mcp/sse"
-    color="#10B981"
-  >
-    실시간 데이터 스트리밍을 위해 Server-Sent Events를 사용하여 원격 MCP 서버와 통합합니다.
+  <Card title="SSE 전송" icon="wifi" href="/ko/mcp/sse" color="#10B981">
+    실시간 데이터 스트리밍을 위해 Server-Sent Events를 사용하여 원격 MCP 서버와
+    통합합니다.
   </Card>
   <Card
     title="스트림 가능한 HTTP 전송"
@@ -288,7 +283,8 @@ class CrewWithCustomTimeout:
     href="/ko/mcp/streamable-http"
     color="#F59E0B"
   >
-    유연한 스트림 가능한 HTTP를 활용하여 원격 MCP 서버와 안정적으로 통신할 수 있습니다.
+    유연한 스트림 가능한 HTTP를 활용하여 원격 MCP 서버와 안정적으로 통신할 수
+    있습니다.
   </Card>
   <Card
     title="다중 서버 연결"
@@ -304,27 +300,30 @@ class CrewWithCustomTimeout:
     href="/ko/mcp/security"
     color="#EF4444"
   >
-    에이전트를 안전하게 보호하기 위한 MCP 통합의 중요한 보안 모범 사례를 검토하세요.
+    에이전트를 안전하게 보호하기 위한 MCP 통합의 중요한 보안 모범 사례를
+    검토하세요.
   </Card>
 </CardGroup>
 
 CrewAI와의 MCP 통합에 대한 전체 데모와 예제를 보려면 이 저장소를 확인하세요! 👇
 
 <Card
-title="GitHub 저장소"
-icon="github"
-href="https://github.com/tonykipkemboi/crewai-mcp-demo"
-target="_blank"
+  title="GitHub 저장소"
+  icon="github"
+  href="https://github.com/tonykipkemboi/crewai-mcp-demo"
+  target="_blank"
 >
-CrewAI MCP 데모
+  CrewAI MCP 데모
 </Card>
 
 ## MCP와 함께 안전하게 사용하기
+
 <Warning>
-항상 MCP 서버를 사용하기 전에 해당 서버를 신뢰할 수 있는지 확인하세요.
+  항상 MCP 서버를 사용하기 전에 해당 서버를 신뢰할 수 있는지 확인하세요.
 </Warning>
 
 #### 보안 경고: DNS 리바인딩 공격
+
 SSE 전송은 적절하게 보안되지 않은 경우 DNS 리바인딩 공격에 취약할 수 있습니다.
 이를 방지하려면 다음을 수행하세요:
 
@@ -337,5 +336,6 @@ SSE 전송은 적절하게 보안되지 않은 경우 DNS 리바인딩 공격에
 자세한 내용은 [Anthropic의 MCP 전송 보안 문서](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations)를 참고하세요.
 
 ### 제한 사항
-*   **지원되는 프리미티브**: 현재 `MCPServerAdapter`는 주로 MCP `tools`를 어댑팅하는 기능을 지원합니다. 다른 MCP 프리미티브(예: `prompts` 또는 `resources`)는 현재 이 어댑터를 통해 CrewAI 컴포넌트로 직접 통합되어 있지 않습니다.
-*   **출력 처리**: 어댑터는 일반적으로 MCP tool의 주요 텍스트 출력(예: `.content[0].text`)을 처리합니다. 복잡하거나 멀티모달 출력의 경우 이 패턴에 맞지 않으면 별도의 커스텀 처리가 필요할 수 있습니다.
+
+- **지원되는 프리미티브**: 현재 `MCPServerAdapter`는 주로 MCP `tools`를 어댑팅하는 기능을 지원합니다. 다른 MCP 프리미티브(예: `prompts` 또는 `resources`)는 현재 이 어댑터를 통해 CrewAI 컴포넌트로 직접 통합되어 있지 않습니다.
+- **출력 처리**: 어댑터는 일반적으로 MCP tool의 주요 텍스트 출력(예: `.content[0].text`)을 처리합니다. 복잡하거나 멀티모달 출력의 경우 이 패턴에 맞지 않으면 별도의 커스텀 처리가 필요할 수 있습니다.

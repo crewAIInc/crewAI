@@ -1,0 +1,371 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the temperature
+      in San Francisco?"}],"model":"claude-3-5-haiku-latest","tools":[{"name":"get_current_temperature","description":"Get
+      the current temperature in a city.","input_schema":{"type":"object","properties":{"city":{"type":"string","description":"The
+      name of the city to get the temperature for."}},"required":["city"]}}],"stream":true}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '408'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-stream-helper:
+      - messages
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: 'event: message_start
+
+        data: {"type":"message_start","message":{"model":"claude-3-5-haiku-20241022","id":"msg_01JCJXSfyzkcecJUydp157cS","type":"message","role":"assistant","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":351,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":1,"service_tier":"standard"}}        }
+
+
+        event: content_block_start
+
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}    }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"I"}      }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"''ll"}         }
+
+
+        event: ping
+
+        data: {"type": "ping"}
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        help"}         }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        you find out"}        }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        the current temperature in San"}        }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        Francisco. I"} }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"''ll"}             }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        use the get"}             }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"_current_temperature
+        function"}               }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        to"}           }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        retrieve"}            }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        this"}         }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"
+        information."}           }
+
+
+        event: content_block_stop
+
+        data: {"type":"content_block_stop","index":0}
+
+
+        event: content_block_start
+
+        data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_01Lfr3kUnHMZApePPRWMv1uS","name":"get_current_temperature","input":{}}        }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":""}   }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"c"}          }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ity\":"}      }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"
+        \"San Franci"}     }
+
+
+        event: content_block_delta
+
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"sco\"}"}             }
+
+
+        event: content_block_stop
+
+        data: {"type":"content_block_stop","index":1             }
+
+
+        event: message_delta
+
+        data: {"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null},"usage":{"input_tokens":351,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":85}}
+
+
+        event: message_stop
+
+        data: {"type":"message_stop"      }
+
+
+        '
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Cache-Control:
+      - no-cache
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 05 Jan 2026 16:04:31 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-01-05T16:04:30Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '690'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"What
+      is the temperature in San Francisco?\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"I'll
+      help you find out the current temperature in San Francisco. I'll use the get_current_temperature
+      function to retrieve this information.\"},{\"type\":\"tool_use\",\"id\":\"toolu_01Lfr3kUnHMZApePPRWMv1uS\",\"name\":\"get_current_temperature\",\"input\":{\"city\":\"San
+      Francisco\"}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_01Lfr3kUnHMZApePPRWMv1uS\",\"content\":\"The
+      temperature in San Francisco is 72\xB0F\"}]}],\"model\":\"claude-3-5-haiku-latest\",\"stream\":true,\"tools\":[{\"name\":\"get_current_temperature\",\"description\":\"Get
+      the current temperature in a city.\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"description\":\"The
+      name of the city to get the temperature for.\"}},\"required\":[\"city\"]}}]}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '883'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"model\":\"claude-3-5-haiku-20241022\",\"id\":\"msg_01XbRN6xwSPSLv6pWtB15EZs\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":457,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":0},\"output_tokens\":2,\"service_tier\":\"standard\"}}
+        \        }\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}
+        }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"The\"}
+        \     }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        current\"}              }\n\nevent: ping\ndata: {\"type\": \"ping\"}\n\nevent:
+        content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        temperature in San Francisco is\"}            }\n\nevent: content_block_delta\ndata:
+        {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        72\xB0F.\"}              }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        It\"}         }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        sounds\"}              }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        like a\"}  }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        pleasant\"} }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        day!\"}    }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        Is\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        there anything else I can\"}          }\n\nevent: content_block_delta\ndata:
+        {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        help\"}          }\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"
+        you with?\"}            }\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0
+        \ }\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"input_tokens\":457,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":33}
+        \  }\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"   }\n\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Cache-Control:
+      - no-cache
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Mon, 05 Jan 2026 16:04:33 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-01-05T16:04:32Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '532'
+    status:
+      code: 200
+      message: OK
+version: 1

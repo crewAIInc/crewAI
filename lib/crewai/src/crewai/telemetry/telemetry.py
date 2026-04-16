@@ -41,6 +41,7 @@ from crewai.events.types.system_events import (
     SigTStpEvent,
     SigTermEvent,
 )
+from crewai.llms.base_llm import BaseLLM
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
@@ -51,7 +52,9 @@ from crewai.telemetry.utils import (
     add_crew_attributes,
     close_span,
 )
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 logger = logging.getLogger(__name__)
@@ -171,6 +174,12 @@ class Telemetry:
         atexit.register(self._shutdown)
 
         self._original_handlers: dict[int, Any] = {}
+
+        if threading.current_thread() is not threading.main_thread():
+            logger.debug(
+                "Skipping signal handler registration: not running in main thread"
+            )
+            return
 
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
@@ -306,7 +315,7 @@ class Telemetry:
                                 "verbose?": agent.verbose,
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.prompt_file,
+                                "i18n": I18N_DEFAULT.prompt_file,
                                 "function_calling_llm": (
                                     getattr(
                                         getattr(agent, "function_calling_llm", None),
@@ -316,14 +325,17 @@ class Telemetry:
                                     if getattr(agent, "function_calling_llm", None)
                                     else ""
                                 ),
-                                "llm": agent.llm.model,
+                                "llm": agent.llm.model
+                                if isinstance(agent.llm, BaseLLM)
+                                else str(agent.llm),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "allow_code_execution?": getattr(
                                     agent, "allow_code_execution", False
                                 ),
                                 "max_retry_limit": getattr(agent, "max_retry_limit", 3),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in agent.tools or []
                                 ],
                                 # Add agent fingerprint data if sharing crew details
                                 "fingerprint": (
@@ -372,7 +384,8 @@ class Telemetry:
                                     else None
                                 ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in task.tools or []
                                 ],
                                 # Add task fingerprint data if sharing crew details
                                 "fingerprint": (
@@ -418,14 +431,17 @@ class Telemetry:
                                     if getattr(agent, "function_calling_llm", None)
                                     else ""
                                 ),
-                                "llm": agent.llm.model,
+                                "llm": agent.llm.model
+                                if isinstance(agent.llm, BaseLLM)
+                                else str(agent.llm),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "allow_code_execution?": getattr(
                                     agent, "allow_code_execution", False
                                 ),
                                 "max_retry_limit": getattr(agent, "max_retry_limit", 3),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -447,7 +463,8 @@ class Telemetry:
                                 ),
                                 "agent_key": task.agent.key if task.agent else None,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks
@@ -828,11 +845,14 @@ class Telemetry:
                             "verbose?": agent.verbose,
                             "max_iter": agent.max_iter,
                             "max_rpm": agent.max_rpm,
-                            "i18n": agent.i18n.prompt_file,
-                            "llm": agent.llm.model,
+                            "i18n": I18N_DEFAULT.prompt_file,
+                            "llm": agent.llm.model
+                            if isinstance(agent.llm, BaseLLM)
+                            else str(agent.llm),
                             "delegation_enabled?": agent.allow_delegation,
                             "tools_names": [
-                                tool.name.casefold() for tool in agent.tools or []
+                                sanitize_tool_name(tool.name)
+                                for tool in agent.tools or []
                             ],
                         }
                         for agent in crew.agents
@@ -858,7 +878,8 @@ class Telemetry:
                                 else None
                             ),
                             "tools_names": [
-                                tool.name.casefold() for tool in task.tools or []
+                                sanitize_tool_name(tool.name)
+                                for tool in task.tools or []
                             ],
                         }
                         for task in crew.tasks
@@ -896,7 +917,7 @@ class Telemetry:
                         {
                             "id": str(task.id),
                             "description": task.description,
-                            "output": task.output.raw_output,
+                            "output": task.output.raw if task.output else "",
                         }
                         for task in crew.tasks
                     ]
@@ -915,6 +936,9 @@ class Telemetry:
             key: The attribute key.
             value: The attribute value.
         """
+
+        if span is None:
+            return
 
         def _operation() -> None:
             return span.set_attribute(key, value)
@@ -966,6 +990,71 @@ class Telemetry:
             span = tracer.start_span("Flow Execution")
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def env_context_span(self, tool: str) -> None:
+        """Records the coding tool environment context."""
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Environment Context")
+            self._add_attribute(
+                span,
+                "crewai_version",
+                version("crewai"),
+            )
+            self._add_attribute(span, "tool", tool)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def human_feedback_span(
+        self,
+        event_type: str,
+        has_routing: bool,
+        num_outcomes: int = 0,
+        feedback_provided: bool | None = None,
+        outcome: str | None = None,
+    ) -> None:
+        """Records human feedback feature usage.
+
+        Args:
+            event_type: Type of event - "requested" or "received".
+            has_routing: Whether emit options were configured for routing.
+            num_outcomes: Number of possible outcomes if routing is used.
+            feedback_provided: Whether user provided feedback or skipped (None if requested).
+            outcome: The collapsed outcome string if routing was used.
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Human Feedback")
+            self._add_attribute(span, "event_type", event_type)
+            self._add_attribute(span, "has_routing", has_routing)
+            self._add_attribute(span, "num_outcomes", num_outcomes)
+            if feedback_provided is not None:
+                self._add_attribute(span, "feedback_provided", feedback_provided)
+            if outcome is not None:
+                self._add_attribute(span, "outcome", outcome)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def feature_usage_span(self, feature: str) -> None:
+        """Records that a feature was used. One span = one count.
+
+        Args:
+            feature: Feature identifier, e.g. "planning:creation",
+                     "mcp:connection", "a2a:delegation".
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Feature Usage")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "feature", feature)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

@@ -22,11 +22,11 @@ class SerpApiBaseTool(BaseTool):
 
     client: Any | None = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
         try:
-            from serpapi import Client  # type: ignore
+            from serpapi import Client
         except ImportError:
             import click
 
@@ -48,7 +48,9 @@ class SerpApiBaseTool(BaseTool):
             )
         self.client = Client(api_key=api_key)
 
-    def _omit_fields(self, data: dict | list, omit_patterns: list[str]) -> None:
+    def _omit_fields(
+        self, data: dict[str, Any] | list[Any], omit_patterns: list[str]
+    ) -> None:
         if isinstance(data, dict):
             for field in list(data.keys()):
                 if any(re.compile(p).match(field) for p in omit_patterns):

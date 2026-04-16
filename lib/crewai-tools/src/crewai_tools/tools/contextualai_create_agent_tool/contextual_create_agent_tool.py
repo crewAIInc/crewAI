@@ -3,6 +3,8 @@ from typing import Any
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_file_path
+
 
 class ContextualAICreateAgentSchema(BaseModel):
     """Schema for contextual create agent tool."""
@@ -28,7 +30,7 @@ class ContextualAICreateAgentTool(BaseTool):
         default_factory=lambda: ["contextual-client"]
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         try:
             from contextual import ContextualAI
@@ -47,6 +49,7 @@ class ContextualAICreateAgentTool(BaseTool):
         document_paths: list[str],
     ) -> str:
         """Create a complete RAG pipeline with documents."""
+        resolved_paths = [validate_file_path(doc_path) for doc_path in document_paths]
         try:
             import os
 
@@ -56,7 +59,7 @@ class ContextualAICreateAgentTool(BaseTool):
 
             # Upload documents
             document_ids = []
-            for doc_path in document_paths:
+            for doc_path in resolved_paths:
                 if not os.path.exists(doc_path):
                     raise FileNotFoundError(f"Document not found: {doc_path}")
 

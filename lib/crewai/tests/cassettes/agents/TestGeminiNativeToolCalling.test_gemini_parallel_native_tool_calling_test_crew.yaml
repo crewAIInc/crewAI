@@ -1,0 +1,192 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: This is a tool-calling
+      compliance test. In your next assistant turn, emit exactly 3 tool calls in the
+      same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary.\n\nThis is the expected criteria for your final answer: A
+      one sentence summary of both tool outputs\nyou MUST return the actual complete
+      content as the final answer, not a summary."}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are Parallel Tool Agent. You follow tool instructions
+      precisely.\nYour personal goal is: Use both tools exactly as instructed"}],
+      "role": "user"}, "tools": [{"functionDeclarations": [{"description": "Local
+      search tool #1 for concurrency testing.", "name": "parallel_local_search_one",
+      "parameters_json_schema": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}, {"description": "Local search tool #2 for concurrency
+      testing.", "name": "parallel_local_search_two", "parameters_json_schema": {"properties":
+      {"query": {"description": "Search query", "title": "Query", "type": "string"}},
+      "required": ["query"], "type": "object", "additionalProperties": false}}, {"description":
+      "Local search tool #3 for concurrency testing.", "name": "parallel_local_search_three",
+      "parameters_json_schema": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1964'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"parallel_local_search_one\",\n
+        \             \"args\": {\n                \"query\": \"latest OpenAI model
+        release notes\"\n              }\n            },\n            \"thoughtSignature\":
+        \"CuMEAb4+9vu1V1iOC9o/a8+jQqow8F4RTrjlnjnDCwsisMHLLJ+Wj3pZxbFDeIjCJe9pa6+14InyYHh/ezgHrv+xPGIJtX9pJQatDCBAfCmcZ3fDipVIMAHLcl0Q660EVuZ+vRgvNhPSau+uSN9u303wJsaKvdzOQnfww2LfLtJMNtOhSHfkfhfw2bkBOtMa5/FuLqKSr6m94dSdE7HShR6+jLMLbiSXkBLWsRp0jGl85Wvd0hoA7dUyq+uIuyOBr5Myo9uMrLbxfnrRRbPMorOpYTCmHK0HE8mEBRjzh1hNwcBcfRL0VcgA2UnBIurStIeVbq51BJQ1UOq6r1wVi50Wdh1GjIQ/iN9C15T1Ql3adjom5QbmY+XY08RJOiNyVplh1YQ0qlWCVHEpueEfdzcIB+BUauVrLNqBcBr5g6ekO5QZCAdt7PLerQU8jhKjDQy367jCKQyaHir0GmAISS8RlZ8tkLKNZlZhd11D76ui6X8ep9yznViBbqH0AS1R2hMm+ielMVFjhidglTMjqB0X+yk1K2eZXkc+R/xsXRPlnlZWRygnV+IbU8RAnZWtneM464Wccmc1scfF45GKiji5bLYO7Zx+ZF8mSLcQaC8M3z121D6VbFonhaIdkJ3Wb7nI2vEyxFjdinVk3/P0zL8nu3nHeqQviTrQIoHMsZk0yPyqu9NWxg3wGJL5pbcaQh87ROQuTsInkuzzEr0QMzjw9W5iquhMh4/Wy/OKXAgf3maQB9Jb4HoHZlc0io+KYqewFSVx2BvqXbqJbIrTkTo6XRTbK7dkwlCbMmE1wKIwjrrzZQI=\"\n
+        \         },\n          {\n            \"functionCall\": {\n              \"name\":
+        \"parallel_local_search_two\",\n              \"args\": {\n                \"query\":
+        \"latest Anthropic model release notes\"\n              }\n            }\n
+        \         },\n          {\n            \"functionCall\": {\n              \"name\":
+        \"parallel_local_search_three\",\n              \"args\": {\n                \"query\":
+        \"latest Gemini model release notes\"\n              }\n            }\n          }\n
+        \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        327,\n    \"candidatesTokenCount\": 70,\n    \"totalTokenCount\": 536,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 327\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 139\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"ZVKWabziF7bcjMcP3r2SuAg\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 18 Feb 2026 23:59:34 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1262
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: This is a tool-calling
+      compliance test. In your next assistant turn, emit exactly 3 tool calls in the
+      same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary.\n\nThis is the expected criteria for your final answer: A
+      one sentence summary of both tool outputs\nyou MUST return the actual complete
+      content as the final answer, not a summary."}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"query": "latest OpenAI model release notes"}, "name": "parallel_local_search_one"}},
+      {"functionCall": {"args": {"query": "latest Anthropic model release notes"},
+      "name": "parallel_local_search_two"}}, {"functionCall": {"args": {"query": "latest
+      Gemini model release notes"}, "name": "parallel_local_search_three"}}], "role":
+      "model"}, {"parts": [{"functionResponse": {"name": "parallel_local_search_one",
+      "response": {"result": "[one] latest OpenAI model release notes"}}}], "role":
+      "user"}, {"parts": [{"functionResponse": {"name": "parallel_local_search_two",
+      "response": {"result": "[two] latest Anthropic model release notes"}}}], "role":
+      "user"}, {"parts": [{"functionResponse": {"name": "parallel_local_search_three",
+      "response": {"result": "[three] latest Gemini model release notes"}}}], "role":
+      "user"}, {"parts": [{"text": "Analyze the tool result. If requirements are met,
+      provide the Final Answer. Otherwise, call the next tool. Deliver only the answer
+      without meta-commentary."}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are Parallel Tool Agent. You follow tool instructions precisely.\nYour
+      personal goal is: Use both tools exactly as instructed"}], "role": "user"},
+      "tools": [{"functionDeclarations": [{"description": "Local search tool #1 for
+      concurrency testing.", "name": "parallel_local_search_one", "parameters_json_schema":
+      {"properties": {"query": {"description": "Search query", "title": "Query", "type":
+      "string"}}, "required": ["query"], "type": "object", "additionalProperties":
+      false}}, {"description": "Local search tool #2 for concurrency testing.", "name":
+      "parallel_local_search_two", "parameters_json_schema": {"properties": {"query":
+      {"description": "Search query", "title": "Query", "type": "string"}}, "required":
+      ["query"], "type": "object", "additionalProperties": false}}, {"description":
+      "Local search tool #3 for concurrency testing.", "name": "parallel_local_search_three",
+      "parameters_json_schema": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3014'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The search results indicate the latest
+        model release notes for OpenAI, Anthropic, and Gemini are: [one] latest OpenAI
+        model release notes[two] latest Anthropic model release notes[three] latest
+        Gemini model release notes.\",\n            \"thoughtSignature\": \"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\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        504,\n    \"candidatesTokenCount\": 45,\n    \"totalTokenCount\": 973,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 504\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 424\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"Z1KWaYbTKZvnjMcP7piEoAg\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 18 Feb 2026 23:59:37 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2283
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

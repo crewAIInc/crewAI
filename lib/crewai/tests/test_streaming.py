@@ -207,16 +207,17 @@ class TestCrewKickoffStreaming:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="Hello ",
+                        call_id="test-call-id",
                     ),
                 )
                 crewai_event_bus.emit(
@@ -224,6 +225,7 @@ class TestCrewKickoffStreaming:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="World!",
+                        call_id="test-call-id",
                     ),
                 )
                 return mock_output
@@ -274,16 +276,17 @@ class TestCrewKickoffStreaming:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="",
+                        call_id="test-call-id",
                         tool_call=ToolCall(
                             id="call-123",
                             function=FunctionCall(
@@ -329,10 +332,10 @@ class TestCrewKickoffStreamingAsync:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 return mock_output
 
@@ -356,12 +359,15 @@ class TestCrewKickoffStreamingAsync:
         mock_output = MagicMock()
         mock_output.raw = "Test output"
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(
+            self: Any, inputs: Any = None, input_files: Any = None, **kwargs: Any
+        ) -> Any:
             crewai_event_bus.emit(
                 crew,
                 LLMStreamChunkEvent(
                     type="llm_stream_chunk",
                     chunk="Async ",
+                    call_id="test-call-id",
                 ),
             )
             crewai_event_bus.emit(
@@ -369,6 +375,7 @@ class TestCrewKickoffStreamingAsync:
                 LLMStreamChunkEvent(
                     type="llm_stream_chunk",
                     chunk="Stream!",
+                    call_id="test-call-id",
                 ),
             )
             return mock_output
@@ -439,16 +446,17 @@ class TestFlowKickoffStreaming:
         original_kickoff = Flow.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     flow,
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="Flow ",
+                        call_id="test-call-id",
                     ),
                 )
                 crewai_event_bus.emit(
@@ -456,6 +464,7 @@ class TestFlowKickoffStreaming:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="output!",
+                        call_id="test-call-id",
                     ),
                 )
                 return "done"
@@ -484,10 +493,10 @@ class TestFlowKickoffStreaming:
         original_kickoff = Flow.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 return "flow result"
 
@@ -532,10 +541,10 @@ class TestFlowKickoffStreamingAsync:
         original_kickoff = Flow.kickoff_async
         call_count = [0]
 
-        async def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        async def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return await original_kickoff(self, inputs)
+                return await original_kickoff(self, inputs, **kwargs)
             else:
                 await asyncio.sleep(0.01)
                 crewai_event_bus.emit(
@@ -543,6 +552,7 @@ class TestFlowKickoffStreamingAsync:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="Async flow ",
+                        call_id="test-call-id",
                     ),
                 )
                 await asyncio.sleep(0.01)
@@ -551,6 +561,7 @@ class TestFlowKickoffStreamingAsync:
                     LLMStreamChunkEvent(
                         type="llm_stream_chunk",
                         chunk="stream!",
+                        call_id="test-call-id",
                     ),
                 )
                 await asyncio.sleep(0.01)
@@ -583,10 +594,10 @@ class TestFlowKickoffStreamingAsync:
         original_kickoff = Flow.kickoff_async
         call_count = [0]
 
-        async def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        async def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return await original_kickoff(self, inputs)
+                return await original_kickoff(self, inputs, **kwargs)
             else:
                 return "async flow result"
 
@@ -615,10 +626,10 @@ class TestStreamingEdgeCases:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 raise ValueError("Test error")
 
@@ -673,10 +684,10 @@ class TestStreamingEdgeCases:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
@@ -684,6 +695,7 @@ class TestStreamingEdgeCases:
                         type="llm_stream_chunk",
                         chunk="Task 1",
                         task_name="First task",
+                        call_id="test-call-id",
                     ),
                 )
                 return mock_output
@@ -695,6 +707,158 @@ class TestStreamingEdgeCases:
 
         assert len(chunks) >= 1
         assert streaming.is_completed
+
+
+class TestStreamingCancellation:
+    """Tests for streaming cancellation and resource cleanup."""
+
+    @pytest.mark.asyncio
+    async def test_aclose_cancels_async_streaming(self) -> None:
+        """Test that aclose() stops iteration and marks as cancelled."""
+        chunks_yielded: list[str] = []
+
+        async def slow_gen() -> AsyncIterator[StreamChunk]:
+            for i in range(100):
+                await asyncio.sleep(0.01)
+                chunks_yielded.append(f"chunk-{i}")
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(async_iterator=slow_gen())
+        collected: list[StreamChunk] = []
+
+        async for chunk in streaming:
+            collected.append(chunk)
+            if len(collected) >= 3:
+                break
+
+        await streaming.aclose()
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(collected) == 3
+
+    @pytest.mark.asyncio
+    async def test_aclose_idempotent(self) -> None:
+        """Test that calling aclose() multiple times is safe."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+        async for _ in streaming:
+            pass
+
+        await streaming.aclose()
+        await streaming.aclose()
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    @pytest.mark.asyncio
+    async def test_async_context_manager(self) -> None:
+        """Test using streaming output as async context manager."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="hello")
+            yield StreamChunk(content="world")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+        collected: list[StreamChunk] = []
+
+        async with streaming:
+            async for chunk in streaming:
+                collected.append(chunk)
+
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(collected) == 2
+
+    @pytest.mark.asyncio
+    async def test_async_context_manager_early_exit(self) -> None:
+        """Test context manager cleans up on early exit."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            for i in range(100):
+                await asyncio.sleep(0.01)
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+
+        async with streaming:
+            async for chunk in streaming:
+                if chunk.content == "chunk-2":
+                    break
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_close_cancels_sync_streaming(self) -> None:
+        """Test that close() stops sync streaming and marks as cancelled."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            for i in range(100):
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(sync_iterator=gen())
+        collected: list[StreamChunk] = []
+
+        for chunk in streaming:
+            collected.append(chunk)
+            if len(collected) >= 3:
+                break
+
+        streaming.close()
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_close_idempotent(self) -> None:
+        """Test that calling close() multiple times is safe."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(sync_iterator=gen())
+        list(streaming)
+
+        streaming.close()
+        streaming.close()
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    @pytest.mark.asyncio
+    async def test_flow_aclose(self) -> None:
+        """Test that FlowStreamingOutput aclose() is no-op after normal completion."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(async_iterator=gen())
+        async for _ in streaming:
+            pass
+
+        await streaming.aclose()
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    @pytest.mark.asyncio
+    async def test_flow_async_context_manager(self) -> None:
+        """Test FlowStreamingOutput as async context manager with full consumption."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(async_iterator=gen())
+
+        async with streaming:
+            async for _ in streaming:
+                pass
+
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_flow_close(self) -> None:
+        """Test that FlowStreamingOutput close() is no-op after normal completion."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(sync_iterator=gen())
+        list(streaming)
+
+        streaming.close()
+        assert not streaming.is_cancelled
 
 
 class TestStreamingImports:

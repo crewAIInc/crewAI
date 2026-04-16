@@ -42,7 +42,7 @@ class AIMindTool(BaseTool):
         ]
     )
 
-    def __init__(self, api_key: str | None = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("MINDS_API_KEY")
         if not self.api_key:
@@ -51,8 +51,10 @@ class AIMindTool(BaseTool):
             )
 
         try:
-            from minds.client import Client  # type: ignore
-            from minds.datasources import DatabaseConfig  # type: ignore
+            from minds.client import Client  # type: ignore[import-not-found]
+            from minds.datasources import (  # type: ignore[import-not-found]
+                DatabaseConfig,
+            )
         except ImportError as e:
             raise ImportError(
                 "`minds_sdk` package not found, please run `pip install minds-sdk`"
@@ -81,7 +83,7 @@ class AIMindTool(BaseTool):
 
         self.mind_name = mind.name
 
-    def _run(self, query: str):
+    def _run(self, query: str) -> str | None:
         # Run the query on the AI-Mind.
         # The Minds API is OpenAI compatible and therefore, the OpenAI client can be used.
         openai_client = OpenAI(

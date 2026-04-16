@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from crewai.tools import BaseTool, EnvVar
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 class MergeAgentHandlerToolError(Exception):
     """Base exception for Merge Agent Handler tool errors."""
-
 
 
 class MergeAgentHandlerTool(BaseTool):
@@ -109,7 +108,7 @@ class MergeAgentHandlerTool(BaseTool):
                 )
                 raise MergeAgentHandlerToolError(f"API Error: {error_msg}")
 
-            return result
+            return cast(dict[str, Any], result)
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to call Agent Handler API: {e!s}")
@@ -174,7 +173,7 @@ class MergeAgentHandlerTool(BaseTool):
             >>> tool = MergeAgentHandlerTool.from_tool_name(
             ...     tool_name="linear__create_issue",
             ...     tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
-            ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+            ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
             ... )
         """
         # Create an empty args schema model (proper BaseModel subclass)
@@ -210,15 +209,18 @@ class MergeAgentHandlerTool(BaseTool):
                     if "parameters" in tool_schema:
                         try:
                             params = tool_schema["parameters"]
-                            if params.get("type") == "object" and "properties" in params:
+                            if (
+                                params.get("type") == "object"
+                                and "properties" in params
+                            ):
                                 # Build field definitions for Pydantic
                                 fields = {}
                                 properties = params["properties"]
                                 required = params.get("required", [])
 
                                 for field_name, field_schema in properties.items():
-                                    field_type = Any  # Default type
-                                    field_default = ...  # Required by default
+                                    field_type: Any = Any
+                                    field_default: Any = ...
 
                                     # Map JSON schema types to Python types
                                     json_type = field_schema.get("type", "string")
@@ -254,7 +256,7 @@ class MergeAgentHandlerTool(BaseTool):
 
                                 # Create the Pydantic model
                                 if fields:
-                                    args_schema = create_model(
+                                    args_schema = create_model(  # type: ignore[call-overload]
                                         f"{tool_name.replace('__', '_').title()}Args",
                                         **fields,
                                     )
@@ -298,7 +300,7 @@ class MergeAgentHandlerTool(BaseTool):
             >>> tools = MergeAgentHandlerTool.from_tool_pack(
             ...     tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
             ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
-            ...     tool_names=["linear__create_issue", "linear__get_issues"]
+            ...     tool_names=["linear__create_issue", "linear__get_issues"],
             ... )
         """
         # Create a temporary instance to fetch the tool list

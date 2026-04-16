@@ -1,0 +1,368 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a helpful assistant that
+      uses tools. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. "},{"role":"user","content":"What is the weather in Tokyo?"}],"model":"gpt-4.1","tool_choice":"auto","tools":[{"type":"function","function":{"name":"get_weather","description":"Get
+      the current weather for a location","strict":true,"parameters":{"type":"object","properties":{"location":{"type":"string","description":"The
+      city name"}},"required":["location"],"additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '6158'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7mVx3s1dI2SICWePwHVeWCDct2QG\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770747157,\n  \"model\": \"gpt-4.1-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_x9KzZUT3UYazEUJiRmE0PvaU\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"get_weather\",\n
+        \             \"arguments\": \"{\\\"location\\\":\\\"Tokyo\\\"}\"\n            }\n
+        \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1187,\n    \"completion_tokens\":
+        14,\n    \"total_tokens\": 1201,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        1152,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_8b22347a3e\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 10 Feb 2026 18:12:37 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '645'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a helpful assistant that
+      uses tools. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. "},{"role":"user","content":"What is the weather in Paris?"}],"model":"gpt-4.1","tool_choice":"auto","tools":[{"type":"function","function":{"name":"get_weather","description":"Get
+      the current weather for a location","strict":true,"parameters":{"type":"object","properties":{"location":{"type":"string","description":"The
+      city name"}},"required":["location"],"additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '6158'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7mVynM0Soyt3osUFrlF7tEyrj7jP\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770747158,\n  \"model\": \"gpt-4.1-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_k8rYmsdMcCWSRKqVDFItmJ8v\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"get_weather\",\n
+        \             \"arguments\": \"{\\\"location\\\":\\\"Paris\\\"}\"\n            }\n
+        \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1187,\n    \"completion_tokens\":
+        14,\n    \"total_tokens\": 1201,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        1152,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_8b22347a3e\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 10 Feb 2026 18:12:38 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '749'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

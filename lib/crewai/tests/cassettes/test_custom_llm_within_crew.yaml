@@ -46,9 +46,10 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
-      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
-      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\"\
+        ,\n    \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\"\
+        ,\n    \"code\": \"missing_required_parameter\"\n  }\n}"
     headers:
       CF-RAY:
       - 91b54660799a15b4-SJC
@@ -98,8 +99,9 @@ interactions:
       - 0s
       x-request-id:
       - req_042a4e8f9432f6fde7a02037bb6caafa
-    http_version: HTTP/1.1
-    status_code: 400
+    status:
+      code: 400
+      message: Error
 - request:
     body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
       {"role": "user", "content": [{"role": "system", "content": "You are Say Hi.
@@ -147,9 +149,10 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
-      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
-      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\"\
+        ,\n    \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\"\
+        ,\n    \"code\": \"missing_required_parameter\"\n  }\n}"
     headers:
       CF-RAY:
       - 91b54664bb1acef1-SJC
@@ -199,8 +202,9 @@ interactions:
       - 0s
       x-request-id:
       - req_7a1d027da1ef4468e861e570c72e98fb
-    http_version: HTTP/1.1
-    status_code: 400
+    status:
+      code: 400
+      message: Error
 - request:
     body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
       {"role": "user", "content": [{"role": "system", "content": "You are Say Hi.
@@ -248,9 +252,10 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
-      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
-      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\"\
+        ,\n    \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\"\
+        ,\n    \"code\": \"missing_required_parameter\"\n  }\n}"
     headers:
       CF-RAY:
       - 91b54666183beb22-SJC
@@ -300,6 +305,7 @@ interactions:
       - 0s
       x-request-id:
       - req_3c335b308b82cc2214783a4bf2fc0fd4
-    http_version: HTTP/1.1
-    status_code: 400
+    status:
+      code: 400
+      message: Error
 version: 1

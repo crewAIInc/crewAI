@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from hashlib import md5
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from crewai import Agent, Crew
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.experimental.evaluation import AgentEvaluator, create_default_evaluator
-from crewai.experimental.evaluation.evaluation_display import (
+from crewai.experimental.evaluation.base_evaluator import (
     AgentAggregatedEvaluationResult,
 )
 from crewai.experimental.evaluation.experiment.result import (
@@ -15,6 +16,11 @@ from crewai.experimental.evaluation.experiment.result import (
 from crewai.experimental.evaluation.experiment.result_display import (
     ExperimentResultsDisplay,
 )
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+    from crewai.crew import Crew
 
 
 class ExperimentRunner:

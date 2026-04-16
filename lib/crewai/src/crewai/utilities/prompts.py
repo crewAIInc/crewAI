@@ -2,27 +2,44 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
-class StandardPromptResult(TypedDict):
+class StandardPromptResult(BaseModel):
     """Result with only prompt field for standard mode."""
 
-    prompt: Annotated[str, "The generated prompt string"]
+    prompt: str = Field(default="")
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __contains__(self, key: str) -> bool:
+        return hasattr(self, key) and getattr(self, key) is not None
 
 
 class SystemPromptResult(StandardPromptResult):
     """Result with system, user, and prompt fields for system prompt mode."""
 
-    system: Annotated[str, "The system prompt component"]
-    user: Annotated[str, "The user prompt component"]
+    system: str = Field(default="")
+    user: str = Field(default="")
 
 
-COMPONENTS = Literal["role_playing", "tools", "no_tools", "task"]
+COMPONENTS = Literal[
+    "role_playing",
+    "tools",
+    "no_tools",
+    "native_tools",
+    "task",
+    "native_task",
+    "task_no_tools",
+]
 
 
 class Prompts(BaseModel):
@@ -32,9 +49,12 @@ class Prompts(BaseModel):
         - Need to refactor so that prompt is not tightly coupled to agent.
     """
 
-    i18n: I18N = Field(default_factory=get_i18n)
     has_tools: bool = Field(
         default=False, description="Indicates if the agent has access to tools"
+    )
+    use_native_tool_calling: bool = Field(
+        default=False,
+        description="Whether to use native function calling instead of ReAct format",
     )
     system_template: str | None = Field(
         default=None, description="Custom system prompt template"
@@ -58,12 +78,25 @@ class Prompts(BaseModel):
             A dictionary containing the constructed prompt(s).
         """
         slices: list[COMPONENTS] = ["role_playing"]
+        # When using native tool calling with tools, use native_tools instructions
+        # When using ReAct pattern with tools, use tools instructions
+        # When no tools are available, use no_tools instructions
         if self.has_tools:
-            slices.append("tools")
+            if not self.use_native_tool_calling:
+                slices.append("tools")
         else:
             slices.append("no_tools")
         system: str = self._build_prompt(slices)
-        slices.append("task")
+
+        # Determine which task slice to use:
+        task_slice: COMPONENTS
+        if self.use_native_tool_calling:
+            task_slice = "native_task"
+        elif self.has_tools:
+            task_slice = "task"
+        else:
+            task_slice = "task_no_tools"
+        slices.append(task_slice)
 
         if (
             not self.system_template
@@ -72,7 +105,7 @@ class Prompts(BaseModel):
         ):
             return SystemPromptResult(
                 system=system,
-                user=self._build_prompt(["task"]),
+                user=self._build_prompt([task_slice]),
                 prompt=self._build_prompt(slices),
             )
         return StandardPromptResult(
@@ -106,13 +139,13 @@ class Prompts(BaseModel):
         if not system_template or not prompt_template:
             # If any of the required templates are missing, fall back to the default format
             prompt_parts: list[str] = [
-                self.i18n.slice(component) for component in components
+                I18N_DEFAULT.slice(component) for component in components
             ]
             prompt = "".join(prompt_parts)
         else:
             # All templates are provided, use them
             template_parts: list[str] = [
-                self.i18n.slice(component)
+                I18N_DEFAULT.slice(component)
                 for component in components
                 if component != "task"
             ]
@@ -120,7 +153,7 @@ class Prompts(BaseModel):
                 "{{ .System }}", "".join(template_parts)
             )
             prompt = prompt_template.replace(
-                "{{ .Prompt }}", "".join(self.i18n.slice("task"))
+                "{{ .Prompt }}", "".join(I18N_DEFAULT.slice("task"))
             )
             # Handle missing response_template
             if response_template:

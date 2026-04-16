@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 try:
-    from singlestoredb import connect
+    from singlestoredb import connect  # type: ignore[attr-defined]
     from sqlalchemy.pool import QueuePool
 
     SINGLSTORE_AVAILABLE = True
@@ -117,7 +117,7 @@ class SingleStoreSearchTool(BaseTool):
         ]
     )
 
-    connection_args: dict = Field(default_factory=dict)
+    connection_args: dict[str, Any] = Field(default_factory=dict)
     connection_pool: Any | None = None
 
     def __init__(
@@ -169,8 +169,8 @@ class SingleStoreSearchTool(BaseTool):
         pool_size: int | None = 5,
         max_overflow: int | None = 10,
         timeout: float | None = 30,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the SingleStore search tool.
 
         Args:
@@ -274,7 +274,7 @@ class SingleStoreSearchTool(BaseTool):
 
         # Initialize connection pool for efficient connection management
         self.connection_pool = QueuePool(
-            creator=self._create_connection,  # type: ignore[arg-type]
+            creator=self._create_connection,
             pool_size=pool_size or 5,
             max_overflow=max_overflow or 10,
             timeout=timeout or 30.0,

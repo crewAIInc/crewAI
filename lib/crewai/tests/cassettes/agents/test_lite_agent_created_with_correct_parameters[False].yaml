@@ -57,19 +57,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIMCbxAr4MO0Ku8tDYBgJ30LGXi\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222714,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need more information
-      to understand what specific query to search for.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"Test query\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 242,\n    \"completion_tokens\":
-      31,\n    \"total_tokens\": 273,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BKUIMCbxAr4MO0Ku8tDYBgJ30LGXi\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1744222714,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+        \ more information to understand what specific query to search for.\\nAction:\
+        \ search_web\\nAction Input: {\\\"query\\\":\\\"Test query\\\"}\",\n     \
+        \   \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\"\
+        : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n\
+        \    \"prompt_tokens\": 242,\n    \"completion_tokens\": 31,\n    \"total_tokens\"\
+        : 273,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n  \
+        \    \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n \
+        \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01f9bd96cf41-SJC
@@ -113,8 +115,9 @@ interactions:
       - 0s
       x-request-id:
       - req_99e3ad4ee98371cc1c55a2f5c6ae3962
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
       personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
@@ -176,18 +179,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUINDYiGwrVyJU7wUoXCw3hft7yF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222715,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: This is a simulated search result for demonstration purposes.\\n```\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      295,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 321,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BKUINDYiGwrVyJU7wUoXCw3hft7yF\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1744222715,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now\
+        \ know the final answer\\nFinal Answer: This is a simulated search result\
+        \ for demonstration purposes.\\n```\",\n        \"refusal\": null,\n     \
+        \   \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 295,\n   \
+        \ \"completion_tokens\": 26,\n    \"total_tokens\": 321,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc02003c9ecf41-SJC
@@ -231,8 +237,9 @@ interactions:
       - 0s
       x-request-id:
       - req_dd9052c40d5d61ecc5eb141f49df3abe
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
       personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
@@ -293,19 +300,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIN3xeM6JBgLjV5HQA8MTI2Uuem\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222715,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to clarify what
-      specific information or topic the test query is targeting.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"What is the purpose of a test query in data retrieval?\\\"}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      288,\n    \"completion_tokens\": 43,\n    \"total_tokens\": 331,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BKUIN3xeM6JBgLjV5HQA8MTI2Uuem\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1744222715,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+        \ to clarify what specific information or topic the test query is targeting.\\\
+        nAction: search_web\\nAction Input: {\\\"query\\\":\\\"What is the purpose\
+        \ of a test query in data retrieval?\\\"}\",\n        \"refusal\": null,\n\
+        \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 288,\n    \"completion_tokens\": 43,\n    \"total_tokens\": 331,\n    \"\
+        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc0204d91ccf41-SJC
@@ -349,8 +359,9 @@ interactions:
       - 0s
       x-request-id:
       - req_e792e993009ddfe84cfbb503560d88cf
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
       personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
@@ -416,20 +427,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIOqyLDCIZv6YIz1hlaW479SIzg\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222716,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: {\\n  \\\"test_field\\\": \\\"A test query is utilized to evaluate the
-      functionality, performance, and accuracy of data retrieval systems, ensuring
-      they return expected results.\\\"\\n}\\n```\",\n        \"refusal\": null,\n
-      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 362,\n    \"completion_tokens\":
-      49,\n    \"total_tokens\": 411,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BKUIOqyLDCIZv6YIz1hlaW479SIzg\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1744222716,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now\
+        \ know the final answer\\nFinal Answer: {\\n  \\\"test_field\\\": \\\"A test\
+        \ query is utilized to evaluate the functionality, performance, and accuracy\
+        \ of data retrieval systems, ensuring they return expected results.\\\"\\\
+        n}\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n   \
+        \   },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n   \
+        \ }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 362,\n    \"completion_tokens\"\
+        : 49,\n    \"total_tokens\": 411,\n    \"prompt_tokens_details\": {\n    \
+        \  \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc020a3defcf41-SJC
@@ -473,8 +487,9 @@ interactions:
       - 0s
       x-request-id:
       - req_3b6c80fd3066b9e0054d0d2280bc4c98
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"trace_id": "08371613-b242-4871-bffa-1d93f96f6ba9", "execution_type":
       "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,

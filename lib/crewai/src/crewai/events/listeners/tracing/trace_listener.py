@@ -7,8 +7,8 @@ import uuid
 from typing_extensions import Self
 
 from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
@@ -16,7 +16,36 @@ from crewai.events.listeners.tracing.first_time_trace_handler import (
 from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
+    is_tracing_enabled_in_context,
     safe_serialize_to_dict,
+    should_auto_collect_first_time_traces,
+    should_enable_tracing,
+)
+from crewai.events.types.a2a_events import (
+    A2AAgentCardFetchedEvent,
+    A2AArtifactReceivedEvent,
+    A2AAuthenticationFailedEvent,
+    A2AConnectionErrorEvent,
+    A2AConversationCompletedEvent,
+    A2AConversationStartedEvent,
+    A2ADelegationCompletedEvent,
+    A2ADelegationStartedEvent,
+    A2AMessageSentEvent,
+    A2AParallelDelegationCompletedEvent,
+    A2AParallelDelegationStartedEvent,
+    A2APollingStartedEvent,
+    A2APollingStatusEvent,
+    A2APushNotificationReceivedEvent,
+    A2APushNotificationRegisteredEvent,
+    A2APushNotificationSentEvent,
+    A2APushNotificationTimeoutEvent,
+    A2AResponseReceivedEvent,
+    A2AServerTaskCanceledEvent,
+    A2AServerTaskCompletedEvent,
+    A2AServerTaskFailedEvent,
+    A2AServerTaskStartedEvent,
+    A2AStreamingChunkEvent,
+    A2AStreamingStartedEvent,
 )
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
@@ -30,6 +59,12 @@ from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
+)
+from crewai.events.types.env_events import (
+    CCEnvEvent,
+    CodexEnvEvent,
+    CursorEnvEvent,
+    DefaultEnvEvent,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -66,6 +101,14 @@ from crewai.events.types.memory_events import (
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
 )
+from crewai.events.types.observation_events import (
+    GoalAchievedEarlyEvent,
+    PlanRefinementEvent,
+    PlanReplanTriggeredEvent,
+    StepObservationCompletedEvent,
+    StepObservationFailedEvent,
+    StepObservationStartedEvent,
+)
 from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
@@ -83,6 +126,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.utilities.version import get_crewai_version
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -157,12 +201,44 @@ class TraceCollectionListener(BaseEventListener):
         if self._listeners_setup:
             return
 
+        # Skip registration entirely if tracing is disabled and not first-time user
+        # This avoids overhead of 50+ handler registrations when tracing won't be used
+        # Also check is_tracing_enabled_in_context() so per-run overrides (Crew(tracing=True)) still work
+        if (
+            not should_enable_tracing()
+            and not is_tracing_enabled_in_context()
+            and not should_auto_collect_first_time_traces()
+        ):
+            self._listeners_setup = True
+            return
+
+        self._register_env_event_handlers(crewai_event_bus)
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
         self._register_action_event_handlers(crewai_event_bus)
+        self._register_a2a_event_handlers(crewai_event_bus)
         self._register_system_event_handlers(crewai_event_bus)
 
         self._listeners_setup = True
+
+    def _register_env_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
+        """Register handlers for environment context events."""
+
+        @event_bus.on(CCEnvEvent)
+        def on_cc_env(source: Any, event: CCEnvEvent) -> None:
+            self._handle_action_event("cc_env", source, event)
+
+        @event_bus.on(CodexEnvEvent)
+        def on_codex_env(source: Any, event: CodexEnvEvent) -> None:
+            self._handle_action_event("codex_env", source, event)
+
+        @event_bus.on(CursorEnvEvent)
+        def on_cursor_env(source: Any, event: CursorEnvEvent) -> None:
+            self._handle_action_event("cursor_env", source, event)
+
+        @event_bus.on(DefaultEnvEvent)
+        def on_default_env(source: Any, event: DefaultEnvEvent) -> None:
+            self._handle_action_event("default_env", source, event)
 
     def _register_flow_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for flow events."""
@@ -173,8 +249,11 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
-            if not self.batch_manager.is_batch_initialized():
-                self._initialize_flow_batch(source, event)
+            # Always call _initialize_flow_batch to claim ownership.
+            # If batch was already initialized by a concurrent action event
+            # (race condition), initialize_batch() returns early but
+            # batch_owner_type is still correctly set to "flow".
+            self._initialize_flow_batch(source, event)
             self._handle_trace_event("flow_started", source, event)
 
         @event_bus.on(MethodExecutionStartedEvent)
@@ -204,7 +283,12 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
-            if not self.batch_manager.is_batch_initialized():
+            if self.batch_manager.batch_owner_type != "flow":
+                # Always call _initialize_crew_batch to claim ownership.
+                # If batch was already initialized by a concurrent action event
+                # (race condition with DefaultEnvEvent), initialize_batch() returns
+                # early but batch_owner_type is still correctly set to "crew".
+                # Skip only when a parent flow already owns the batch.
                 self._initialize_crew_batch(source, event)
             self._handle_trace_event("crew_kickoff_started", source, event)
 
@@ -319,21 +403,12 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: MemoryQueryCompletedEvent
         ) -> None:
             self._handle_action_event("memory_query_completed", source, event)
-            if self.formatter and self.memory_retrieval_in_progress:
-                self.formatter.handle_memory_query_completed(
-                    self.formatter.current_agent_branch,
-                    event.source_type or "memory",
-                    event.query_time_ms,
-                    self.formatter.current_crew_tree,
-                )
 
         @event_bus.on(MemoryQueryFailedEvent)
         def on_memory_query_failed(source: Any, event: MemoryQueryFailedEvent) -> None:
             self._handle_action_event("memory_query_failed", source, event)
             if self.formatter and self.memory_retrieval_in_progress:
                 self.formatter.handle_memory_query_failed(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
                     event.error,
                     event.source_type or "memory",
                 )
@@ -347,10 +422,7 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.memory_save_in_progress = True
 
-                self.formatter.handle_memory_save_started(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
-                )
+                self.formatter.handle_memory_save_started()
 
         @event_bus.on(MemorySaveCompletedEvent)
         def on_memory_save_completed(
@@ -364,8 +436,6 @@ class TraceCollectionListener(BaseEventListener):
                 self.memory_save_in_progress = False
 
                 self.formatter.handle_memory_save_completed(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
                     event.save_time_ms,
                     event.source_type or "memory",
                 )
@@ -375,10 +445,8 @@ class TraceCollectionListener(BaseEventListener):
             self._handle_action_event("memory_save_failed", source, event)
             if self.formatter and self.memory_save_in_progress:
                 self.formatter.handle_memory_save_failed(
-                    self.formatter.current_agent_branch,
                     event.error,
                     event.source_type or "memory",
-                    self.formatter.current_crew_tree,
                 )
 
         @event_bus.on(MemoryRetrievalStartedEvent)
@@ -391,10 +459,7 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.memory_retrieval_in_progress = True
 
-                self.formatter.handle_memory_retrieval_started(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
-                )
+                self.formatter.handle_memory_retrieval_started()
 
         @event_bus.on(MemoryRetrievalCompletedEvent)
         def on_memory_retrieval_completed(
@@ -406,8 +471,6 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.memory_retrieval_in_progress = False
                 self.formatter.handle_memory_retrieval_completed(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
                     event.memory_content,
                     event.retrieval_time_ms,
                 )
@@ -429,6 +492,39 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: AgentReasoningFailedEvent
         ) -> None:
             self._handle_action_event("agent_reasoning_failed", source, event)
+
+        # Observation events (Plan-and-Execute)
+        @event_bus.on(StepObservationStartedEvent)
+        def on_step_observation_started(
+            source: Any, event: StepObservationStartedEvent
+        ) -> None:
+            self._handle_action_event("step_observation_started", source, event)
+
+        @event_bus.on(StepObservationCompletedEvent)
+        def on_step_observation_completed(
+            source: Any, event: StepObservationCompletedEvent
+        ) -> None:
+            self._handle_action_event("step_observation_completed", source, event)
+
+        @event_bus.on(StepObservationFailedEvent)
+        def on_step_observation_failed(
+            source: Any, event: StepObservationFailedEvent
+        ) -> None:
+            self._handle_action_event("step_observation_failed", source, event)
+
+        @event_bus.on(PlanRefinementEvent)
+        def on_plan_refinement(source: Any, event: PlanRefinementEvent) -> None:
+            self._handle_action_event("plan_refinement", source, event)
+
+        @event_bus.on(PlanReplanTriggeredEvent)
+        def on_plan_replan_triggered(
+            source: Any, event: PlanReplanTriggeredEvent
+        ) -> None:
+            self._handle_action_event("plan_replan_triggered", source, event)
+
+        @event_bus.on(GoalAchievedEarlyEvent)
+        def on_goal_achieved_early(source: Any, event: GoalAchievedEarlyEvent) -> None:
+            self._handle_action_event("goal_achieved_early", source, event)
 
         @event_bus.on(KnowledgeRetrievalStartedEvent)
         def on_knowledge_retrieval_started(
@@ -460,6 +556,147 @@ class TraceCollectionListener(BaseEventListener):
         ) -> None:
             self._handle_action_event("knowledge_query_failed", source, event)
 
+    def _register_a2a_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
+        """Register handlers for A2A (Agent-to-Agent) events."""
+
+        @event_bus.on(A2ADelegationStartedEvent)
+        def on_a2a_delegation_started(
+            source: Any, event: A2ADelegationStartedEvent
+        ) -> None:
+            self._handle_action_event("a2a_delegation_started", source, event)
+
+        @event_bus.on(A2ADelegationCompletedEvent)
+        def on_a2a_delegation_completed(
+            source: Any, event: A2ADelegationCompletedEvent
+        ) -> None:
+            self._handle_action_event("a2a_delegation_completed", source, event)
+
+        @event_bus.on(A2AConversationStartedEvent)
+        def on_a2a_conversation_started(
+            source: Any, event: A2AConversationStartedEvent
+        ) -> None:
+            self._handle_action_event("a2a_conversation_started", source, event)
+
+        @event_bus.on(A2AMessageSentEvent)
+        def on_a2a_message_sent(source: Any, event: A2AMessageSentEvent) -> None:
+            self._handle_action_event("a2a_message_sent", source, event)
+
+        @event_bus.on(A2AResponseReceivedEvent)
+        def on_a2a_response_received(
+            source: Any, event: A2AResponseReceivedEvent
+        ) -> None:
+            self._handle_action_event("a2a_response_received", source, event)
+
+        @event_bus.on(A2AConversationCompletedEvent)
+        def on_a2a_conversation_completed(
+            source: Any, event: A2AConversationCompletedEvent
+        ) -> None:
+            self._handle_action_event("a2a_conversation_completed", source, event)
+
+        @event_bus.on(A2APollingStartedEvent)
+        def on_a2a_polling_started(source: Any, event: A2APollingStartedEvent) -> None:
+            self._handle_action_event("a2a_polling_started", source, event)
+
+        @event_bus.on(A2APollingStatusEvent)
+        def on_a2a_polling_status(source: Any, event: A2APollingStatusEvent) -> None:
+            self._handle_action_event("a2a_polling_status", source, event)
+
+        @event_bus.on(A2APushNotificationRegisteredEvent)
+        def on_a2a_push_notification_registered(
+            source: Any, event: A2APushNotificationRegisteredEvent
+        ) -> None:
+            self._handle_action_event("a2a_push_notification_registered", source, event)
+
+        @event_bus.on(A2APushNotificationReceivedEvent)
+        def on_a2a_push_notification_received(
+            source: Any, event: A2APushNotificationReceivedEvent
+        ) -> None:
+            self._handle_action_event("a2a_push_notification_received", source, event)
+
+        @event_bus.on(A2APushNotificationSentEvent)
+        def on_a2a_push_notification_sent(
+            source: Any, event: A2APushNotificationSentEvent
+        ) -> None:
+            self._handle_action_event("a2a_push_notification_sent", source, event)
+
+        @event_bus.on(A2APushNotificationTimeoutEvent)
+        def on_a2a_push_notification_timeout(
+            source: Any, event: A2APushNotificationTimeoutEvent
+        ) -> None:
+            self._handle_action_event("a2a_push_notification_timeout", source, event)
+
+        @event_bus.on(A2AStreamingStartedEvent)
+        def on_a2a_streaming_started(
+            source: Any, event: A2AStreamingStartedEvent
+        ) -> None:
+            self._handle_action_event("a2a_streaming_started", source, event)
+
+        @event_bus.on(A2AStreamingChunkEvent)
+        def on_a2a_streaming_chunk(source: Any, event: A2AStreamingChunkEvent) -> None:
+            self._handle_action_event("a2a_streaming_chunk", source, event)
+
+        @event_bus.on(A2AAgentCardFetchedEvent)
+        def on_a2a_agent_card_fetched(
+            source: Any, event: A2AAgentCardFetchedEvent
+        ) -> None:
+            self._handle_action_event("a2a_agent_card_fetched", source, event)
+
+        @event_bus.on(A2AAuthenticationFailedEvent)
+        def on_a2a_authentication_failed(
+            source: Any, event: A2AAuthenticationFailedEvent
+        ) -> None:
+            self._handle_action_event("a2a_authentication_failed", source, event)
+
+        @event_bus.on(A2AArtifactReceivedEvent)
+        def on_a2a_artifact_received(
+            source: Any, event: A2AArtifactReceivedEvent
+        ) -> None:
+            self._handle_action_event("a2a_artifact_received", source, event)
+
+        @event_bus.on(A2AConnectionErrorEvent)
+        def on_a2a_connection_error(
+            source: Any, event: A2AConnectionErrorEvent
+        ) -> None:
+            self._handle_action_event("a2a_connection_error", source, event)
+
+        @event_bus.on(A2AServerTaskStartedEvent)
+        def on_a2a_server_task_started(
+            source: Any, event: A2AServerTaskStartedEvent
+        ) -> None:
+            self._handle_action_event("a2a_server_task_started", source, event)
+
+        @event_bus.on(A2AServerTaskCompletedEvent)
+        def on_a2a_server_task_completed(
+            source: Any, event: A2AServerTaskCompletedEvent
+        ) -> None:
+            self._handle_action_event("a2a_server_task_completed", source, event)
+
+        @event_bus.on(A2AServerTaskCanceledEvent)
+        def on_a2a_server_task_canceled(
+            source: Any, event: A2AServerTaskCanceledEvent
+        ) -> None:
+            self._handle_action_event("a2a_server_task_canceled", source, event)
+
+        @event_bus.on(A2AServerTaskFailedEvent)
+        def on_a2a_server_task_failed(
+            source: Any, event: A2AServerTaskFailedEvent
+        ) -> None:
+            self._handle_action_event("a2a_server_task_failed", source, event)
+
+        @event_bus.on(A2AParallelDelegationStartedEvent)
+        def on_a2a_parallel_delegation_started(
+            source: Any, event: A2AParallelDelegationStartedEvent
+        ) -> None:
+            self._handle_action_event("a2a_parallel_delegation_started", source, event)
+
+        @event_bus.on(A2AParallelDelegationCompletedEvent)
+        def on_a2a_parallel_delegation_completed(
+            source: Any, event: A2AParallelDelegationCompletedEvent
+        ) -> None:
+            self._handle_action_event(
+                "a2a_parallel_delegation_completed", source, event
+            )
+
     def _register_system_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for system signal events (SIGTERM, SIGINT, etc.)."""
 
@@ -469,7 +706,7 @@ class TraceCollectionListener(BaseEventListener):
             if self.batch_manager.is_batch_initialized():
                 self.batch_manager.finalize_batch()
 
-    def _initialize_crew_batch(self, source: Any, event: Any) -> None:
+    def _initialize_crew_batch(self, source: Any, event: BaseEvent) -> None:
         """Initialize trace batch.
 
         Args:
@@ -479,7 +716,7 @@ class TraceCollectionListener(BaseEventListener):
         user_context = self._get_user_context()
         execution_metadata = {
             "crew_name": getattr(event, "crew_name", "Unknown Crew"),
-            "execution_start": event.timestamp if hasattr(event, "timestamp") else None,
+            "execution_start": event.timestamp,
             "crewai_version": get_crewai_version(),
         }
 
@@ -488,7 +725,7 @@ class TraceCollectionListener(BaseEventListener):
 
         self._initialize_batch(user_context, execution_metadata)
 
-    def _initialize_flow_batch(self, source: Any, event: Any) -> None:
+    def _initialize_flow_batch(self, source: Any, event: BaseEvent) -> None:
         """Initialize trace batch for Flow execution.
 
         Args:
@@ -498,7 +735,7 @@ class TraceCollectionListener(BaseEventListener):
         user_context = self._get_user_context()
         execution_metadata = {
             "flow_name": getattr(event, "flow_name", "Unknown Flow"),
-            "execution_start": event.timestamp if hasattr(event, "timestamp") else None,
+            "execution_start": event.timestamp,
             "crewai_version": get_crewai_version(),
             "execution_type": "flow",
         }
@@ -557,7 +794,7 @@ class TraceCollectionListener(BaseEventListener):
                 "crew_name": getattr(source, "name", "Unknown Crew"),
                 "crewai_version": get_crewai_version(),
             }
-            self.batch_manager.initialize_batch(user_context, execution_metadata)
+            self._initialize_batch(user_context, execution_metadata)
 
         self.batch_manager.begin_event_processing()
         try:
@@ -567,18 +804,18 @@ class TraceCollectionListener(BaseEventListener):
             self.batch_manager.end_event_processing()
 
     def _create_trace_event(
-        self, event_type: str, source: Any, event: Any
+        self, event_type: str, source: Any, event: BaseEvent
     ) -> TraceEvent:
-        """Create a trace event"""
-        if hasattr(event, "timestamp") and event.timestamp:
-            trace_event = TraceEvent(
-                type=event_type,
-                timestamp=event.timestamp.isoformat(),
-            )
-        else:
-            trace_event = TraceEvent(
-                type=event_type,
-            )
+        """Create a trace event with ordering information."""
+        trace_event = TraceEvent(
+            type=event_type,
+            timestamp=event.timestamp.isoformat() if event.timestamp else "",
+            event_id=event.event_id,
+            emission_sequence=event.emission_sequence,
+            parent_event_id=event.parent_event_id,
+            previous_event_id=event.previous_event_id,
+            triggered_by_event_id=event.triggered_by_event_id,
+        )
 
         trace_event.event_data = self._build_event_data(event_type, event, source)
 
@@ -591,10 +828,15 @@ class TraceCollectionListener(BaseEventListener):
         if event_type not in self.complex_events:
             return safe_serialize_to_dict(event)
         if event_type == "task_started":
+            task_name = event.task.name or event.task.description
+            task_display_name = (
+                task_name[:80] + "..." if len(task_name) > 80 else task_name
+            )
             return {
                 "task_description": event.task.description,
                 "expected_output": event.task.expected_output,
-                "task_name": event.task.name or event.task.description,
+                "task_name": task_name,
+                "task_display_name": task_display_name,
                 "context": event.context,
                 "agent_role": source.agent.role,
                 "task_id": str(event.task.id),
@@ -626,10 +868,8 @@ class TraceCollectionListener(BaseEventListener):
             }
         if event_type == "llm_call_started":
             event_data = safe_serialize_to_dict(event)
-            event_data["task_name"] = (
-                event.task_name or event.task_description
-                if hasattr(event, "task_name") and event.task_name
-                else None
+            event_data["task_name"] = event.task_name or getattr(
+                event, "task_description", None
             )
             return event_data
         if event_type == "llm_call_completed":
@@ -646,7 +886,13 @@ class TraceCollectionListener(BaseEventListener):
         from rich.console import Console
         from rich.panel import Panel
 
-        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            should_suppress_tracing_messages,
+        )
+
+        if should_suppress_tracing_messages():
+            return
 
         console = Console()
 

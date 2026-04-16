@@ -1,17 +1,16 @@
 """HTTP and Streamable HTTP transport for MCP servers."""
 
 import asyncio
+import sys
 from typing import Any
 
 from typing_extensions import Self
 
 
-# BaseExceptionGroup is available in Python 3.11+
-try:
+if sys.version_info >= (3, 11):
     from builtins import BaseExceptionGroup
-except ImportError:
-    # Fallback for Python < 3.11 (shouldn't happen in practice)
-    BaseExceptionGroup = Exception
+else:
+    from exceptiongroup import BaseExceptionGroup
 
 from crewai.mcp.transports.base import BaseTransport, TransportType
 

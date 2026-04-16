@@ -28,13 +28,13 @@ import asyncio
 from collections.abc import Callable
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:
@@ -56,12 +56,10 @@ LOG_MESSAGES: Final[dict[str, str]] = {
 class PersistenceDecorator:
     """Class to handle flow state persistence with consistent logging."""
 
-    _printer: ClassVar[Printer] = Printer()
-
     @classmethod
     def persist_state(
         cls,
-        flow_instance: Flow,
+        flow_instance: Flow[Any],
         method_name: str,
         persistence_instance: FlowPersistence,
         verbose: bool = False,
@@ -90,7 +88,13 @@ class PersistenceDecorator:
             flow_uuid: str | None = None
             if isinstance(state, dict):
                 flow_uuid = state.get("id")
-            elif isinstance(state, BaseModel):
+            elif hasattr(state, "_unwrap"):
+                unwrapped = state._unwrap()
+                if isinstance(unwrapped, dict):
+                    flow_uuid = unwrapped.get("id")
+                else:
+                    flow_uuid = getattr(unwrapped, "id", None)
+            elif isinstance(state, BaseModel) or hasattr(state, "id"):
                 flow_uuid = getattr(state, "id", None)
 
             if not flow_uuid:
@@ -98,35 +102,41 @@ class PersistenceDecorator:
 
             # Log state saving only if verbose is True
             if verbose:
-                cls._printer.print(
+                PRINTER.print(
                     LOG_MESSAGES["save_state"].format(flow_uuid), color="cyan"
                 )
                 logger.info(LOG_MESSAGES["save_state"].format(flow_uuid))
 
             try:
+                state_data = state._unwrap() if hasattr(state, "_unwrap") else state
                 persistence_instance.save_state(
                     flow_uuid=flow_uuid,
                     method_name=method_name,
-                    state_data=state,
+                    state_data=state_data,
                 )
             except Exception as e:
                 error_msg = LOG_MESSAGES["save_error"].format(method_name, str(e))
-                cls._printer.print(error_msg, color="red")
+                if verbose:
+                    PRINTER.print(error_msg, color="red")
                 logger.error(error_msg)
                 raise RuntimeError(f"State persistence failed: {e!s}") from e
         except AttributeError as e:
             error_msg = LOG_MESSAGES["state_missing"]
-            cls._printer.print(error_msg, color="red")
+            if verbose:
+                PRINTER.print(error_msg, color="red")
             logger.error(error_msg)
             raise ValueError(error_msg) from e
         except (TypeError, ValueError) as e:
             error_msg = LOG_MESSAGES["id_missing"]
-            cls._printer.print(error_msg, color="red")
+            if verbose:
+                PRINTER.print(error_msg, color="red")
             logger.error(error_msg)
             raise ValueError(error_msg) from e
 
 
-def persist(persistence: FlowPersistence | None = None, verbose: bool = False):
+def persist(
+    persistence: FlowPersistence | None = None, verbose: bool = False
+) -> Callable[[type | Callable[..., T]], type | Callable[..., T]]:
     """Decorator to persist flow state.
 
     This decorator can be applied at either the class level or method level.
@@ -189,8 +199,8 @@ def persist(persistence: FlowPersistence | None = None, verbose: bool = False):
                 if asyncio.iscoroutinefunction(method):
                     # Create a closure to capture the current name and method
                     def create_async_wrapper(
-                        method_name: str, original_method: Callable
-                    ):
+                        method_name: str, original_method: Callable[..., Any]
+                    ) -> Callable[..., Any]:
                         @functools.wraps(original_method)
                         async def method_wrapper(
                             self: Any, *args: Any, **kwargs: Any
@@ -221,8 +231,8 @@ def persist(persistence: FlowPersistence | None = None, verbose: bool = False):
                 else:
                     # Create a closure to capture the current name and method
                     def create_sync_wrapper(
-                        method_name: str, original_method: Callable
-                    ):
+                        method_name: str, original_method: Callable[..., Any]
+                    ) -> Callable[..., Any]:
                         @functools.wraps(original_method)
                         def method_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
                             result = original_method(self, *args, **kwargs)
@@ -268,7 +278,7 @@ def persist(persistence: FlowPersistence | None = None, verbose: bool = False):
                 PersistenceDecorator.persist_state(
                     flow_instance, method.__name__, actual_persistence, verbose
                 )
-                return result
+                return cast(T, result)
 
             for attr in [
                 "__is_start_method__",
