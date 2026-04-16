@@ -50,6 +50,7 @@ class StreamingState(NamedTuple):
     async_queue: asyncio.Queue[StreamChunk | None | Exception] | None
     loop: asyncio.AbstractEventLoop | None
     handler: Callable[[Any, BaseEvent], None]
+    stream_id: str | None = None
 
 
 def _extract_tool_call_info(
@@ -208,7 +209,6 @@ def create_streaming_state(
         loop = asyncio.get_event_loop()
 
     stream_id = str(uuid.uuid4())
-    _current_stream_ids.set((*_current_stream_ids.get(), stream_id))
 
     handler = _create_stream_handler(
         current_task_info, sync_queue, async_queue, loop, stream_id=stream_id
@@ -222,6 +222,7 @@ def create_streaming_state(
         async_queue=async_queue,
         loop=loop,
         handler=handler,
+        stream_id=stream_id,
     )
 
 
@@ -269,7 +270,12 @@ def create_chunk_generator(
     Yields:
         StreamChunk objects as they arrive.
     """
-    ctx = contextvars.copy_context()
+    if state.stream_id is not None:
+        token = _current_stream_ids.set((*_current_stream_ids.get(), state.stream_id))
+        ctx = contextvars.copy_context()
+        _current_stream_ids.reset(token)
+    else:
+        ctx = contextvars.copy_context()
     thread = threading.Thread(target=ctx.run, args=(run_func,), daemon=True)
     thread.start()
 
@@ -309,7 +315,12 @@ async def create_async_chunk_generator(
             "Async queue not initialized. Use create_streaming_state(use_async=True)."
         )
 
-    task = asyncio.create_task(run_coro())
+    if state.stream_id is not None:
+        token = _current_stream_ids.set((*_current_stream_ids.get(), state.stream_id))
+        task = asyncio.create_task(run_coro())
+        _current_stream_ids.reset(token)
+    else:
+        task = asyncio.create_task(run_coro())
 
     try:
         while True:

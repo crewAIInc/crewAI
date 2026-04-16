@@ -885,13 +885,19 @@ class TestConcurrentStreamIsolation:
     """Regression tests for concurrent streaming isolation (issue #5376)."""
 
     def test_concurrent_streams_do_not_cross_contaminate(self) -> None:
-        """Two concurrent streaming runs must each receive only their own chunks."""
+        """Two concurrent streaming runs must each receive only their own chunks.
+
+        Mirrors the real production path: create_streaming_state in the caller,
+        then temporarily push the stream_id into the ContextVar, copy_context,
+        and reset — exactly as create_chunk_generator does.
+        """
         import contextvars
-        import queue
         import threading
 
         from crewai.utilities.streaming import (
             TaskInfo,
+            _current_stream_ids,
+            _unregister_handler,
             create_streaming_state,
         )
 
@@ -910,46 +916,31 @@ class TestConcurrentStreamIsolation:
             "agent_id": "b",
         }
 
-        ctx_a = contextvars.copy_context()
-        ctx_b = contextvars.copy_context()
+        state_a = create_streaming_state(task_info_a, [])
+        state_b = create_streaming_state(task_info_b, [])
 
-        state_holder_a: list[Any] = []
-        state_holder_b: list[Any] = []
+        def make_emitter_ctx(state: Any) -> contextvars.Context:
+            token = _current_stream_ids.set(
+                (*_current_stream_ids.get(), state.stream_id)
+            )
+            ctx = contextvars.copy_context()
+            _current_stream_ids.reset(token)
+            return ctx
 
-        def setup_a() -> None:
-            s = create_streaming_state(task_info_a, [])
-            state_holder_a.append(s)
+        ctx_a = make_emitter_ctx(state_a)
+        ctx_b = make_emitter_ctx(state_b)
 
-        def setup_b() -> None:
-            s = create_streaming_state(task_info_b, [])
-            state_holder_b.append(s)
-
-        ctx_a.run(setup_a)
-        ctx_b.run(setup_b)
-
-        state_a = state_holder_a[0]
-        state_b = state_holder_b[0]
-
-        def emit_chunks_a() -> None:
-            for text in ["A1", "A2", "A3"]:
+        def emit_chunks(prefix: str, call_id: str) -> None:
+            for text in [f"{prefix}1", f"{prefix}2", f"{prefix}3"]:
                 crewai_event_bus.emit(
                     None,
                     event=LLMStreamChunkEvent(
-                        chunk=text, call_id="call-a", response_id="r-a"
+                        chunk=text, call_id=call_id, response_id="r"
                     ),
                 )
 
-        def emit_chunks_b() -> None:
-            for text in ["B1", "B2", "B3"]:
-                crewai_event_bus.emit(
-                    None,
-                    event=LLMStreamChunkEvent(
-                        chunk=text, call_id="call-b", response_id="r-b"
-                    ),
-                )
-
-        t_a = threading.Thread(target=ctx_a.run, args=(emit_chunks_a,))
-        t_b = threading.Thread(target=ctx_b.run, args=(emit_chunks_b,))
+        t_a = threading.Thread(target=ctx_a.run, args=(lambda: emit_chunks("A", "ca"),))
+        t_b = threading.Thread(target=ctx_b.run, args=(lambda: emit_chunks("B", "cb"),))
         t_a.start()
         t_b.start()
         t_a.join()
@@ -973,8 +964,6 @@ class TestConcurrentStreamIsolation:
         assert set(chunks_b) == {"B1", "B2", "B3"}, (
             f"Stream B received unexpected chunks: {chunks_b}"
         )
-
-        from crewai.utilities.streaming import _unregister_handler
 
         _unregister_handler(state_a.handler)
         _unregister_handler(state_b.handler)
