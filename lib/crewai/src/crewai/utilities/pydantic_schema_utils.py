@@ -813,9 +813,14 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         >>> person.name
         'John'
     """
-    json_schema = dict(jsonref.replace_refs(json_schema, proxies=False))
-
-    effective_root = root_schema or json_schema
+    effective_root = deepcopy(root_schema or json_schema)
+    try:
+        json_schema = dict(jsonref.replace_refs(json_schema, proxies=False))
+        effective_root = json_schema if root_schema is None else effective_root
+    except jsonref.JsonRefError:
+        json_schema = deepcopy(json_schema)
+        if "$ref" in json_schema:
+            json_schema = _resolve_ref(json_schema["$ref"], effective_root)
 
     json_schema = force_additional_properties_false(json_schema)
     effective_root = force_additional_properties_false(effective_root)

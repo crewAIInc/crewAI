@@ -882,3 +882,32 @@ class TestEndToEndMCPSchema:
         )
         assert obj.filters.date_from == datetime.date(2025, 1, 1)
         assert obj.filters.categories == ["news", "tech"]
+
+
+class TestRecursiveSchemaModelCreation:
+    def test_recursive_ref_schema_builds_and_validates(self) -> None:
+        schema = {
+            "$defs": {
+                "Node": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "children": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/Node"},
+                        },
+                    },
+                    "required": ["name"],
+                }
+            },
+            "$ref": "#/$defs/Node",
+        }
+
+        Model = create_model_from_schema(schema, model_name="NodeModel")
+
+        root = Model(name="root")
+        branch = Model(name="branch", children=[{"name": "leaf"}])
+
+        assert root.name == "root"
+        assert branch.children is not None
+        assert branch.children[0].name == "leaf"
