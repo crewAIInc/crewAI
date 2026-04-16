@@ -177,6 +177,27 @@ def test_handle_partial_json_with_invalid_partial(mock_agent: Mock) -> None:
         assert output == "Converted result"
 
 
+def test_handle_partial_json_with_graphql_schema_does_not_raise(mock_agent: Mock) -> None:
+    # GraphQL schemas contain curly braces that match _JSON_PATTERN but are not JSON.
+    # The function must not raise ValidationError; it should fall through to
+    # convert_with_instructions instead.
+    graphql_schema = """
+    type Query {
+        user(id: ID!): User
+    }
+    type User {
+        id: ID!
+        name: String
+        age: Int
+    }
+    """
+    with patch("crewai.utilities.converter.convert_with_instructions") as mock_convert:
+        mock_convert.return_value = "Converted result"
+        output = handle_partial_json(graphql_schema, SimpleModel, False, mock_agent)
+        assert output == "Converted result"
+        mock_convert.assert_called_once()
+
+
 # Tests for convert_with_instructions
 @patch("crewai.utilities.converter.create_converter")
 @patch("crewai.utilities.converter.get_conversion_instructions")

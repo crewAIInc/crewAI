@@ -256,6 +256,21 @@ def handle_partial_json(
     """
     match = _JSON_PATTERN.search(result)
     if match:
+        # Guard against false-positive matches: verify the captured substring is
+        # valid JSON before attempting Pydantic validation. Curly-brace content
+        # like GraphQL schemas matches the pattern but is not JSON, and passing
+        # non-JSON to model_validate_json raises a ValidationError that would
+        # incorrectly surface as a conversion failure rather than a no-match.
+        try:
+            json.loads(match.group())
+        except json.JSONDecodeError:
+            return convert_with_instructions(
+                result=result,
+                model=model,
+                is_json_output=is_json_output,
+                agent=agent,
+                converter_cls=converter_cls,
+            )
         try:
             exported_result = model.model_validate_json(match.group())
             if is_json_output:
