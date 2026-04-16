@@ -18,6 +18,7 @@ from crewai.cli.install_crew import install_crew
 from crewai.cli.kickoff_flow import kickoff_flow
 from crewai.cli.organization.main import OrganizationCommand
 from crewai.cli.plot_flow import plot_flow
+from crewai.cli.remote_template.main import TemplateCommand
 from crewai.cli.replay_from_task import replay_task_command
 from crewai.cli.reset_memories_command import reset_memories_command
 from crewai.cli.run_crew import run_crew
@@ -494,6 +495,33 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
+
+
+@crewai.group()
+def template() -> None:
+    """Browse and install project templates."""
+
+
+@template.command(name="list")
+def template_list() -> None:
+    """List available templates and select one to install."""
+    template_cmd = TemplateCommand()
+    template_cmd.list_templates()
+
+
+@template.command(name="add")
+@click.argument("name")
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Directory name for the template (defaults to template name)",
+)
+def template_add(name: str, output_dir: str | None) -> None:
+    """Add a template to the current directory."""
+    template_cmd = TemplateCommand()
+    template_cmd.add_template(name, output_dir)
 
 
 @crewai.group()
