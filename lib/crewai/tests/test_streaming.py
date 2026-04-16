@@ -892,7 +892,6 @@ class TestConcurrentStreamIsolation:
 
         from crewai.utilities.streaming import (
             TaskInfo,
-            _current_stream_id,
             create_streaming_state,
         )
 

@@ -26,8 +26,8 @@ from crewai.utilities.string_utils import sanitize_tool_name
 
 logger = logging.getLogger(__name__)
 
-_current_stream_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "_current_stream_id", default=None
+_current_stream_ids: contextvars.ContextVar[tuple[str, ...]] = contextvars.ContextVar(
+    "_current_stream_ids", default=()
 )
 
 
@@ -130,7 +130,7 @@ def _create_stream_handler(
         if not isinstance(event, LLMStreamChunkEvent):
             return
 
-        if stream_id is not None and _current_stream_id.get() != stream_id:
+        if stream_id is not None and stream_id not in _current_stream_ids.get():
             return
 
         chunk = _create_stream_chunk(event, current_task_info)
@@ -208,7 +208,7 @@ def create_streaming_state(
         loop = asyncio.get_event_loop()
 
     stream_id = str(uuid.uuid4())
-    _current_stream_id.set(stream_id)
+    _current_stream_ids.set((*_current_stream_ids.get(), stream_id))
 
     handler = _create_stream_handler(
         current_task_info, sync_queue, async_queue, loop, stream_id=stream_id
