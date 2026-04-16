@@ -8,6 +8,7 @@ import sqlite3
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
