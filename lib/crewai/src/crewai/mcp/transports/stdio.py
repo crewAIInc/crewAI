@@ -1,12 +1,23 @@
 """Stdio transport for MCP servers running as local processes."""
 
 import asyncio
+from collections.abc import Callable
 import subprocess
 from typing import Any
 
 from typing_extensions import Self
 
 from crewai.mcp.transports.base import BaseTransport, TransportType
+
+
+_env_filter_hook: Callable[[dict[str, str]], dict[str, str]] | None = None
+"""Optional hook to post-process the environment passed to stdio MCP servers.
+
+Extensions (e.g., enterprise policy) can set this to enforce org-wide rules such
+as stripping credentials from `env` before the subprocess is spawned. The hook
+receives the merged env (SDK defaults + user-supplied `env=`) and returns the
+filtered env. Set to None to disable.
+"""
 
 
 class StdioTransport(BaseTransport):
@@ -74,6 +85,9 @@ class StdioTransport(BaseTransport):
 
             process_env = get_default_environment()
             process_env.update(self.env)
+
+            if _env_filter_hook is not None:
+                process_env = _env_filter_hook(process_env)
 
             server_params = StdioServerParameters(
                 command=self.command,

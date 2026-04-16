@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import crewai.mcp.transports.stdio as stdio_transport_module
 from crewai.mcp.transports.stdio import StdioTransport
 
 
@@ -79,3 +80,45 @@ async def test_user_env_overrides_default_environment():
         await transport.connect()
 
     assert captured["env"]["PATH"] == "/custom/bin"
+
+
+@pytest.mark.asyncio
+async def test_env_filter_hook_runs_after_merge():
+    """An extension-supplied env_filter_hook must be applied to the final env."""
+    transport = StdioTransport(
+        command="python",
+        args=["server.py"],
+        env={"OPENAI_API_KEY": "sk-test", "AWS_SECRET_ACCESS_KEY": "should-strip"},
+    )
+
+    captured: dict[str, dict[str, str] | None] = {}
+
+    fake_ctx = MagicMock()
+    fake_ctx.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+    fake_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    def fake_stdio_client(server_params):
+        captured["env"] = server_params.env
+        return fake_ctx
+
+    def drop_aws(env):
+        return {k: v for k, v in env.items() if not k.startswith("AWS_")}
+
+    original_hook = stdio_transport_module._env_filter_hook
+    stdio_transport_module._env_filter_hook = drop_aws
+    try:
+        with (
+            patch("mcp.client.stdio.stdio_client", side_effect=fake_stdio_client),
+            patch(
+                "mcp.client.stdio.get_default_environment",
+                return_value={"PATH": "/usr/bin"},
+            ),
+        ):
+            await transport.connect()
+    finally:
+        stdio_transport_module._env_filter_hook = original_hook
+
+    env = captured["env"]
+    assert "AWS_SECRET_ACCESS_KEY" not in env
+    assert env.get("OPENAI_API_KEY") == "sk-test"
+    assert env.get("PATH") == "/usr/bin"
