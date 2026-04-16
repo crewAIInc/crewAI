@@ -50,6 +50,13 @@ DELETE FROM checkpoints WHERE rowid NOT IN (
 
 _COUNT_CHECKPOINTS = "SELECT COUNT(*) FROM checkpoints"
 
+_SELECT_LIKE = """
+SELECT id, created_at, json(data)
+FROM checkpoints
+WHERE id LIKE ?
+ORDER BY rowid DESC
+"""
+
 
 _DEFAULT_DIR = "./.checkpoints"
 _DEFAULT_DB = "./.checkpoints.db"
@@ -275,6 +282,8 @@ def _info_sqlite_latest(db_path: str) -> dict[str, Any] | None:
 def _info_sqlite_id(db_path: str, checkpoint_id: str) -> dict[str, Any] | None:
     with sqlite3.connect(db_path) as conn:
         row = conn.execute(_SELECT_ONE, (checkpoint_id,)).fetchone()
+        if not row:
+            row = conn.execute(_SELECT_LIKE, (f"%{checkpoint_id}%",)).fetchone()
     if not row:
         return None
     cid, created_at, raw = row
@@ -399,12 +408,6 @@ def _print_info(meta: dict[str, Any]) -> None:
                 click.echo(f"    {i + 1}. [{status}] {desc}")
 
 
-def _extract_checkpoint_id(filename: str) -> str:
-    stem: str = filename.removesuffix(".json")
-    idx: int = stem.find("_p-")
-    return stem[:idx] if idx != -1 else stem
-
-
 def _resolve_checkpoint(
     location: str, checkpoint_id: str | None
 ) -> dict[str, Any] | None:
@@ -414,12 +417,13 @@ def _resolve_checkpoint(
         return _info_sqlite_latest(location)
     if os.path.isdir(location):
         if checkpoint_id:
+            from crewai.state.provider.json_provider import JsonProvider
+
+            _json_provider: JsonProvider = JsonProvider()
             pattern: str = os.path.join(location, "**", "*.json")
             all_files: list[str] = glob.glob(pattern, recursive=True)
             matches: list[str] = [
-                f
-                for f in all_files
-                if checkpoint_id in _extract_checkpoint_id(os.path.basename(f))
+                f for f in all_files if checkpoint_id in _json_provider.extract_id(f)
             ]
             matches.sort(key=os.path.getmtime, reverse=True)
             if matches:

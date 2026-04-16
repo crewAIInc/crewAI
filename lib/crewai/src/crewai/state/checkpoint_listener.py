@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 import threading
 from typing import Any
 
@@ -126,7 +125,6 @@ def _do_checkpoint(
         f"Checkpoint saved. Resume with: crewai checkpoint resume {checkpoint_id}"
     )
     logger.info(msg)
-    sys.stderr.write(msg + "\n")
 
     if cfg.max_checkpoints is not None:
         cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)

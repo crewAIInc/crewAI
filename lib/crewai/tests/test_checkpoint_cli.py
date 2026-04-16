@@ -185,6 +185,15 @@ class TestResolveCheckpoint:
             assert meta is not None
             assert "aaaa1111" in meta["name"]
 
+    def test_sqlite_partial_id(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            db_path = os.path.join(d, "test.db")
+            _create_sqlite_checkpoint(db_path, "20260101T000000_aaaa1111")
+            _create_sqlite_checkpoint(db_path, "20260102T000000_bbbb2222")
+            meta = _resolve_checkpoint(db_path, "aaaa1111")
+            assert meta is not None
+            assert "aaaa1111" in meta["name"]
+
     def test_nonexistent(self) -> None:
         assert _resolve_checkpoint("/nonexistent/path", None) is None
 
@@ -380,16 +389,14 @@ class TestDiscoverabilityMessage:
         cfg.provider.checkpoint.return_value = "/tmp/cp/main/20260101T000000_test1234_p-none.json"
         cfg.provider.extract_id.return_value = "20260101T000000_test1234"
 
-        with patch("crewai.state.checkpoint_listener._prepare_entities"):
-            with patch("sys.stderr") as mock_stderr:
-                _do_checkpoint(state, cfg)
+        with (
+            patch("crewai.state.checkpoint_listener._prepare_entities"),
+            patch("crewai.state.checkpoint_listener.logger") as mock_logger,
+        ):
+            _do_checkpoint(state, cfg)
 
         cfg.provider.extract_id.assert_called_once()
-        mock_stderr.write.assert_called()
-        written = "".join(
-            call.args[0]
-            for call in mock_stderr.write.call_args_list
-            if call.args
-        )
-        assert "crewai checkpoint resume" in written
-        assert "20260101T000000_test1234" in written
+        mock_logger.info.assert_called_once()
+        logged: str = mock_logger.info.call_args[0][0]
+        assert "crewai checkpoint resume" in logged
+        assert "20260101T000000_test1234" in logged
