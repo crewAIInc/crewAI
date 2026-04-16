@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 import threading
 from typing import Any
 
@@ -119,6 +120,13 @@ def _do_checkpoint(
         branch=state._branch,
     )
     state._chain_lineage(cfg.provider, location)
+
+    checkpoint_id: str = cfg.provider.extract_id(location)
+    msg: str = (
+        f"Checkpoint saved. Resume with: crewai checkpoint resume {checkpoint_id}"
+    )
+    logger.info(msg)
+    sys.stderr.write(msg + "\n")
 
     if cfg.max_checkpoints is not None:
         cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)

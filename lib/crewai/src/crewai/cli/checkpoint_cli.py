@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import glob
 import json
 import os
@@ -36,6 +36,19 @@ FROM checkpoints
 ORDER BY rowid DESC
 LIMIT 1
 """
+
+_DELETE_OLDER_THAN = """
+DELETE FROM checkpoints
+WHERE created_at < ?
+"""
+
+_DELETE_KEEP_N = """
+DELETE FROM checkpoints WHERE rowid NOT IN (
+    SELECT rowid FROM checkpoints ORDER BY rowid DESC LIMIT ?
+)
+"""
+
+_COUNT_CHECKPOINTS = "SELECT COUNT(*) FROM checkpoints"
 
 
 _DEFAULT_DIR = "./.checkpoints"
@@ -384,3 +397,292 @@ def _print_info(meta: dict[str, Any]) -> None:
                 if len(desc) > 70:
                     desc = desc[:67] + "..."
                 click.echo(f"    {i + 1}. [{status}] {desc}")
+
+
+def _extract_checkpoint_id(filename: str) -> str:
+    stem: str = filename.removesuffix(".json")
+    idx: int = stem.find("_p-")
+    return stem[:idx] if idx != -1 else stem
+
+
+def _resolve_checkpoint(
+    location: str, checkpoint_id: str | None
+) -> dict[str, Any] | None:
+    if _is_sqlite(location):
+        if checkpoint_id:
+            return _info_sqlite_id(location, checkpoint_id)
+        return _info_sqlite_latest(location)
+    if os.path.isdir(location):
+        if checkpoint_id:
+            pattern: str = os.path.join(location, "**", "*.json")
+            all_files: list[str] = glob.glob(pattern, recursive=True)
+            matches: list[str] = [
+                f
+                for f in all_files
+                if checkpoint_id in _extract_checkpoint_id(os.path.basename(f))
+            ]
+            matches.sort(key=os.path.getmtime, reverse=True)
+            if matches:
+                return _info_json_file(matches[0])
+            return None
+        return _info_json_latest(location)
+    if os.path.isfile(location):
+        return _info_json_file(location)
+    return None
+
+
+def _entity_type_from_meta(meta: dict[str, Any]) -> str:
+    for ent in meta.get("entities", []):
+        if ent.get("type") == "flow":
+            return "flow"
+    return "crew"
+
+
+def resume_checkpoint(location: str, checkpoint_id: str | None) -> None:
+    import asyncio
+
+    meta: dict[str, Any] | None = _resolve_checkpoint(location, checkpoint_id)
+    if meta is None:
+        if checkpoint_id:
+            click.echo(f"Checkpoint not found: {checkpoint_id}")
+        else:
+            click.echo(f"No checkpoints found in {location}")
+        return
+
+    restore_path: str = meta.get("path") or meta.get("source", "")
+    if meta.get("db"):
+        restore_path = f"{meta['db']}#{meta['name']}"
+
+    click.echo(f"Resuming from: {meta.get('name', restore_path)}")
+    _print_info(meta)
+    click.echo()
+
+    from crewai.state.checkpoint_config import CheckpointConfig
+
+    config: CheckpointConfig = CheckpointConfig(restore_from=restore_path)
+    entity_type: str = _entity_type_from_meta(meta)
+    inputs: dict[str, Any] | None = meta.get("inputs") or None
+
+    if entity_type == "flow":
+        from crewai.flow.flow import Flow
+
+        flow = Flow.from_checkpoint(config)
+        result = asyncio.run(flow.kickoff_async(inputs=inputs))
+    else:
+        from crewai.crew import Crew
+
+        crew = Crew.from_checkpoint(config)
+        result = asyncio.run(crew.akickoff(inputs=inputs))
+
+    click.echo(f"\nResult: {getattr(result, 'raw', result)}")
+
+
+def _task_list_from_meta(meta: dict[str, Any]) -> list[dict[str, Any]]:
+    tasks: list[dict[str, Any]] = []
+    for ent in meta.get("entities", []):
+        tasks.extend(
+            {
+                "entity": ent.get("name", "unnamed"),
+                "description": t.get("description", ""),
+                "completed": t.get("completed", False),
+                "output": t.get("output", ""),
+            }
+            for t in ent.get("tasks", [])
+        )
+    return tasks
+
+
+def diff_checkpoints(location: str, id1: str, id2: str) -> None:
+    meta1: dict[str, Any] | None = _resolve_checkpoint(location, id1)
+    meta2: dict[str, Any] | None = _resolve_checkpoint(location, id2)
+
+    if meta1 is None:
+        click.echo(f"Checkpoint not found: {id1}")
+        return
+    if meta2 is None:
+        click.echo(f"Checkpoint not found: {id2}")
+        return
+
+    name1: str = meta1.get("name", id1)
+    name2: str = meta2.get("name", id2)
+
+    click.echo(f"--- {name1}")
+    click.echo(f"+++ {name2}")
+    click.echo()
+
+    fields: list[tuple[str, str]] = [
+        ("Time", "ts"),
+        ("Branch", "branch"),
+        ("Trigger", "trigger"),
+        ("Events", "event_count"),
+    ]
+    for label, key in fields:
+        v1: str = str(meta1.get(key, ""))
+        v2: str = str(meta2.get(key, ""))
+        if v1 != v2:
+            click.echo(f"  {label}:")
+            click.echo(f"    - {v1}")
+            click.echo(f"    + {v2}")
+
+    inputs1: dict[str, Any] = meta1.get("inputs", {})
+    inputs2: dict[str, Any] = meta2.get("inputs", {})
+    all_keys: list[str] = sorted(set(list(inputs1.keys()) + list(inputs2.keys())))
+    changed_inputs: list[tuple[str, Any, Any]] = [
+        (k, inputs1.get(k, ""), inputs2.get(k, ""))
+        for k in all_keys
+        if inputs1.get(k) != inputs2.get(k)
+    ]
+    if changed_inputs:
+        click.echo("\n  Inputs:")
+        for key, v1, v2 in changed_inputs:
+            click.echo(f"    {key}:")
+            click.echo(f"      - {v1}")
+            click.echo(f"      + {v2}")
+
+    tasks1: list[dict[str, Any]] = _task_list_from_meta(meta1)
+    tasks2: list[dict[str, Any]] = _task_list_from_meta(meta2)
+
+    max_tasks: int = max(len(tasks1), len(tasks2))
+    if max_tasks == 0:
+        return
+
+    click.echo("\n  Tasks:")
+    for i in range(max_tasks):
+        t1: dict[str, Any] | None = tasks1[i] if i < len(tasks1) else None
+        t2: dict[str, Any] | None = tasks2[i] if i < len(tasks2) else None
+
+        if t1 is None:
+            desc: str = t2["description"][:60] if t2 else ""
+            click.echo(f"    + {i + 1}. [new] {desc}")
+            continue
+        if t2 is None:
+            desc = t1["description"][:60]
+            click.echo(f"    - {i + 1}. [removed] {desc}")
+            continue
+
+        desc = str(t1["description"][:60])
+        s1: str = "done" if t1["completed"] else "pending"
+        s2: str = "done" if t2["completed"] else "pending"
+
+        if s1 != s2:
+            click.echo(f"    {i + 1}. {desc}")
+            click.echo(f"      status: {s1} -> {s2}")
+
+        out1: str = (t1.get("output") or "").strip()
+        out2: str = (t2.get("output") or "").strip()
+        if out1 != out2:
+            if s1 == s2:
+                click.echo(f"    {i + 1}. {desc}")
+            preview1: str = (
+                out1[:80] + ("..." if len(out1) > 80 else "") if out1 else "(empty)"
+            )
+            preview2: str = (
+                out2[:80] + ("..." if len(out2) > 80 else "") if out2 else "(empty)"
+            )
+            click.echo("      output:")
+            click.echo(f"        - {preview1}")
+            click.echo(f"        + {preview2}")
+
+
+def _parse_duration(value: str) -> timedelta:
+    match: re.Match[str] | None = re.match(r"^(\d+)([dhm])$", value.strip())
+    if not match:
+        raise click.BadParameter(
+            f"Invalid duration: {value!r}. Use format like '7d', '24h', or '30m'."
+        )
+    amount: int = int(match.group(1))
+    unit: str = match.group(2)
+    if unit == "d":
+        return timedelta(days=amount)
+    if unit == "h":
+        return timedelta(hours=amount)
+    return timedelta(minutes=amount)
+
+
+def _prune_json(location: str, keep: int | None, older_than: timedelta | None) -> int:
+    pattern: str = os.path.join(location, "**", "*.json")
+    files: list[str] = sorted(
+        glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
+    )
+    if not files:
+        return 0
+
+    to_delete: set[str] = set()
+
+    if keep is not None and len(files) > keep:
+        to_delete.update(files[keep:])
+
+    if older_than is not None:
+        cutoff: datetime = datetime.now(timezone.utc) - older_than
+        for path in files:
+            mtime: datetime = datetime.fromtimestamp(
+                os.path.getmtime(path), tz=timezone.utc
+            )
+            if mtime < cutoff:
+                to_delete.add(path)
+
+    deleted: int = 0
+    for path in to_delete:
+        try:
+            os.remove(path)
+            deleted += 1
+        except OSError:  # noqa: PERF203
+            pass
+
+    for dirpath, dirnames, filenames in os.walk(location, topdown=False):
+        if dirpath != location and not filenames and not dirnames:
+            try:
+                os.rmdir(dirpath)
+            except OSError:
+                pass
+
+    return deleted
+
+
+def _prune_sqlite(db_path: str, keep: int | None, older_than: timedelta | None) -> int:
+    deleted: int = 0
+    with sqlite3.connect(db_path) as conn:
+        if older_than is not None:
+            cutoff: str = (datetime.now(timezone.utc) - older_than).strftime(
+                "%Y%m%dT%H%M%S"
+            )
+            cursor: sqlite3.Cursor = conn.execute(_DELETE_OLDER_THAN, (cutoff,))
+            deleted += cursor.rowcount
+
+        if keep is not None:
+            cursor = conn.execute(_DELETE_KEEP_N, (keep,))
+            deleted += cursor.rowcount
+
+        conn.commit()
+    return deleted
+
+
+def prune_checkpoints(
+    location: str, keep: int | None, older_than: str | None, dry_run: bool = False
+) -> None:
+    if keep is None and older_than is None:
+        click.echo("Specify --keep N and/or --older-than DURATION (e.g. 7d, 24h)")
+        return
+
+    duration: timedelta | None = _parse_duration(older_than) if older_than else None
+
+    deleted: int
+    if _is_sqlite(location):
+        if dry_run:
+            with sqlite3.connect(location) as conn:
+                total: int = conn.execute(_COUNT_CHECKPOINTS).fetchone()[0]
+            click.echo(f"Would prune from {total} checkpoint(s) in {location}")
+            return
+        deleted = _prune_sqlite(location, keep, duration)
+    elif os.path.isdir(location):
+        if dry_run:
+            files: list[str] = glob.glob(
+                os.path.join(location, "**", "*.json"), recursive=True
+            )
+            click.echo(f"Would prune from {len(files)} checkpoint(s) in {location}")
+            return
+        deleted = _prune_json(location, keep, duration)
+    else:
+        click.echo(f"Not a directory or SQLite database: {location}")
+        return
+    click.echo(f"Pruned {deleted} checkpoint(s) from {location}")

@@ -873,5 +873,48 @@ def checkpoint_info(path: str) -> None:
     info_checkpoint(_detect_location(path))
 
 
+@checkpoint.command("resume")
+@click.argument("checkpoint_id", required=False, default=None)
+@click.pass_context
+def checkpoint_resume(ctx: click.Context, checkpoint_id: str | None) -> None:
+    """Resume from a checkpoint. Defaults to the most recent."""
+    from crewai.cli.checkpoint_cli import resume_checkpoint
+
+    resume_checkpoint(ctx.obj["location"], checkpoint_id)
+
+
+@checkpoint.command("diff")
+@click.argument("id1")
+@click.argument("id2")
+@click.pass_context
+def checkpoint_diff(ctx: click.Context, id1: str, id2: str) -> None:
+    """Compare two checkpoints side-by-side."""
+    from crewai.cli.checkpoint_cli import diff_checkpoints
+
+    diff_checkpoints(ctx.obj["location"], id1, id2)
+
+
+@checkpoint.command("prune")
+@click.option(
+    "--keep", type=int, default=None, help="Keep the N most recent checkpoints."
+)
+@click.option(
+    "--older-than",
+    default=None,
+    help="Remove checkpoints older than duration (e.g. 7d, 24h, 30m).",
+)
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be pruned without deleting."
+)
+@click.pass_context
+def checkpoint_prune(
+    ctx: click.Context, keep: int | None, older_than: str | None, dry_run: bool
+) -> None:
+    """Remove old checkpoints."""
+    from crewai.cli.checkpoint_cli import prune_checkpoints
+
+    prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
+
+
 if __name__ == "__main__":
     crewai()
