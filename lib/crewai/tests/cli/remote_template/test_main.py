@@ -80,7 +80,9 @@ class TestTemplateCommand:
     @pytest.fixture
     def cmd(self):
         with patch.object(TemplateCommand, "__init__", return_value=None):
-            return TemplateCommand()
+            instance = TemplateCommand()
+            instance._telemetry = MagicMock()
+            return instance
 
     @patch("crewai.cli.remote_template.main.httpx.get")
     def test_fetch_templates_filters_by_prefix(self, mock_get, cmd):
@@ -245,10 +247,10 @@ class TestTemplateCommand:
         cmd.add_template("deep_research")
         # Should return without downloading
 
-    @patch.object(TemplateCommand, "add_template")
+    @patch.object(TemplateCommand, "_install_repo")
     @patch("crewai.cli.remote_template.main.click.prompt", return_value="2")
     @patch("crewai.cli.remote_template.main.httpx.get")
-    def test_list_templates_selects_and_installs(self, mock_get, mock_prompt, mock_add, cmd):
+    def test_list_templates_selects_and_installs(self, mock_get, mock_prompt, mock_install, cmd):
         mock_response = MagicMock()
         mock_response.json.return_value = SAMPLE_REPOS
         mock_response.raise_for_status = MagicMock()
@@ -261,12 +263,12 @@ class TestTemplateCommand:
             cmd.list_templates()
 
         # Templates are sorted by name; index 1 (choice "2") = template_deep_research
-        mock_add.assert_called_once_with("deep_research")
+        mock_install.assert_called_once_with("template_deep_research")
 
-    @patch.object(TemplateCommand, "add_template")
+    @patch.object(TemplateCommand, "_install_repo")
     @patch("crewai.cli.remote_template.main.click.prompt", return_value="q")
     @patch("crewai.cli.remote_template.main.httpx.get")
-    def test_list_templates_quit(self, mock_get, mock_prompt, mock_add, cmd):
+    def test_list_templates_quit(self, mock_get, mock_prompt, mock_install, cmd):
         mock_response = MagicMock()
         mock_response.json.return_value = SAMPLE_REPOS
         mock_response.raise_for_status = MagicMock()
@@ -278,4 +280,4 @@ class TestTemplateCommand:
         with patch("crewai.cli.remote_template.main.console"):
             cmd.list_templates()
 
-        mock_add.assert_not_called()
+        mock_install.assert_not_called()

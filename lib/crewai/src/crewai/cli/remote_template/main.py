@@ -82,7 +82,7 @@ class TemplateCommand(BaseCommand):
                 if 0 <= selected_index < len(templates):
                     break
             except ValueError:
-                pass
+                continue
 
             click.secho(
                 f"Please enter a number between 1 and {len(templates)}, or 'q' to quit.",
@@ -91,8 +91,7 @@ class TemplateCommand(BaseCommand):
 
         selected = templates[selected_index]
         repo_name = selected["name"]
-        template_name = repo_name.removeprefix(TEMPLATE_PREFIX)
-        self.add_template(template_name)
+        self._install_repo(repo_name)
 
     def add_template(self, name: str, output_dir: str | None = None) -> None:
         """Download a template and copy it into the current working directory.
@@ -107,6 +106,15 @@ class TemplateCommand(BaseCommand):
             click.echo("Run 'crewai template list' to see available templates.")
             raise SystemExit(1)
 
+        self._install_repo(repo_name, output_dir)
+
+    def _install_repo(self, repo_name: str, output_dir: str | None = None) -> None:
+        """Download and extract a template repo into the current directory.
+
+        Args:
+            repo_name: Full GitHub repo name (e.g. template_deep_research).
+            output_dir: Optional directory name. Defaults to the template name.
+        """
         folder_name = output_dir or repo_name.removeprefix(TEMPLATE_PREFIX)
         dest = os.path.join(os.getcwd(), folder_name)
 
@@ -126,14 +134,7 @@ class TemplateCommand(BaseCommand):
         zip_bytes = self._download_zip(repo_name)
         self._extract_zip(zip_bytes, dest)
 
-        try:
-            from crewai.telemetry import Telemetry
-
-            telemetry = Telemetry()
-            telemetry.set_tracer()
-            telemetry.template_installed_span(repo_name.removeprefix(TEMPLATE_PREFIX))
-        except Exception:
-            logger.debug("Failed to record template install telemetry")
+        self._telemetry.template_installed_span(repo_name.removeprefix(TEMPLATE_PREFIX))
 
         console.print(
             f"\n [green]\u2713[/green]  Installed template [bold white]{folder_name}[/bold white]"
@@ -238,7 +239,11 @@ class TemplateCommand(BaseCommand):
                 if not relative_path:
                     continue
 
-                target = os.path.join(dest, relative_path)
+                target = os.path.realpath(os.path.join(dest, relative_path))
+                if not target.startswith(
+                    os.path.realpath(dest) + os.sep
+                ) and target != os.path.realpath(dest):
+                    continue
 
                 if member.endswith("/"):
                     os.makedirs(target, exist_ok=True)
