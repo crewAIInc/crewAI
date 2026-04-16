@@ -2,7 +2,7 @@
 
 ## Description
 
-The `TavilyResearchTool` provides an interface to Tavily Research through the Tavily Python SDK. It creates research tasks from an `input` prompt and can optionally stream Server-Sent Events (SSE) when `stream=True`.
+The `TavilyResearchTool` provides an interface to Tavily Research through the Tavily Python SDK. It creates research tasks from an `input` prompt. When `stream=True`, the tool waits for the full research to complete and returns the report as a string. When `stream=False` (default), it returns immediately with a pending status and `request_id` that can be polled with `TavilyGetResearchTool`.
 
 ## Installation
 
@@ -51,16 +51,24 @@ research_task = Task(
 crew = Crew(
     agents=[researcher],
     tasks=[research_task],
-    verbose=2,
+    verbose=True,
 )
 
 result = crew.kickoff()
 print(result)
 
-# Direct tool usage: create a structured research task
+# Direct tool usage: stream=True waits for completion and returns the full report
+result = tavily_research_tool.run(
+    input="Research the latest developments in AI infrastructure startups.",
+    model="mini",
+    stream=True,
+)
+print(result)
+
+# Direct tool usage: structured output with output_schema
 structured_result = tavily_research_tool.run(
     input="Research the latest developments in AI infrastructure startups.",
-    model="pro",
+    model="mini",
     output_schema={
         "properties": {
             "summary": {
@@ -99,17 +107,24 @@ structured_result = tavily_research_tool.run(
         "required": ["summary", "key_trends", "companies"],
     },
     citation_format="apa",
+    stream=True,
 )
 print(structured_result)
 
-# Direct tool usage: stream research updates
-stream = tavily_research_tool.run(
+# Direct tool usage: non-streaming returns immediately with a request_id
+# Use TavilyGetResearchTool to poll for results
+import json
+from crewai_tools import TavilyGetResearchTool
+
+pending = json.loads(tavily_research_tool.run(
     input="Research the latest developments in AI infrastructure startups.",
     model="mini",
-    stream=True,
-)
-for chunk in stream:
-    print(chunk.decode("utf-8", errors="replace"), end="")
+))
+print(pending)  # {"status": "pending", "request_id": "...", ...}
+
+get_research_tool = TavilyGetResearchTool()
+result = get_research_tool.run(request_id=pending["request_id"])
+print(result)  # Poll until status is "completed"
 ```
 
 ## Arguments
@@ -119,14 +134,12 @@ The `TavilyResearchTool` accepts the following arguments during initialization o
 - `input` (str): The research task or question to investigate.
 - `model` (Literal["mini", "pro", "auto"], optional): The Tavily research model to use. Defaults to `"auto"`.
 - `output_schema` (dict[str, Any], optional): A JSON Schema used to structure the research output. Tavily expects top-level `properties` and optional `required` keys, and each property should include a `description`.
-- `stream` (bool, optional): Whether to return Tavily's streaming SSE chunk generator. Defaults to `False`.
+- `stream` (bool, optional): When `True`, waits for the research to complete and returns the full report as a string. When `False`, returns immediately with a pending status and `request_id`. Defaults to `False`.
 - `citation_format` (Literal["numbered", "mla", "apa", "chicago"], optional): Citation format for the report. Defaults to `"numbered"`.
 
 ## Response Format
 
-The tool returns:
+The tool always returns a string:
 
-- A JSON string when creating a non-streaming research task
-- A byte generator of SSE chunks when `stream=True`
-
-Refer to the Tavily Research API documentation for the full response structure and streaming event format.
+- When `stream=False`: A JSON string with `status`, `request_id`, and other metadata. Use `TavilyGetResearchTool` to poll for the completed results.
+- When `stream=True`: The full research report as a string, returned once research is complete.
