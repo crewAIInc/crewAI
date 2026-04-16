@@ -77,12 +77,9 @@ class TemplateCommand(BaseCommand):
             if choice.lower() == "q":
                 return
 
-            try:
+            if choice.isdigit() and 1 <= int(choice) <= len(templates):
                 selected_index = int(choice) - 1
-                if 0 <= selected_index < len(templates):
-                    break
-            except ValueError:
-                continue
+                break
 
             click.secho(
                 f"Please enter a number between 1 and {len(templates)}, or 'q' to quit.",
