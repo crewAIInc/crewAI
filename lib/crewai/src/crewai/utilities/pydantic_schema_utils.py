@@ -120,7 +120,11 @@ def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
                 if def_name not in defs:
                     raise KeyError(f"Definition '{def_name}' not found in $defs.")
                 if def_name in expanding:
-                    return {}
+                    def_schema = defs[def_name]
+                    stub: dict[str, Any] = {"type": def_schema.get("type", "object")}
+                    if "description" in def_schema:
+                        stub["description"] = def_schema["description"]
+                    return stub
                 expanding.add(def_name)
                 try:
                     return _resolve(deepcopy(defs[def_name]))
@@ -759,6 +763,25 @@ def build_rich_field_description(prop_schema: dict[str, Any]) -> str:
     return ". ".join(parts) if parts else ""
 
 
+def _inline_top_level_ref(schema: dict[str, Any]) -> dict[str, Any]:
+    """Resolve only the top-level ``$ref``, preserving ``$defs`` for lazy inner resolution.
+
+    Used as a fallback when ``jsonref.replace_refs`` fails on circular schemas.
+    Inner ``$ref`` pointers are left intact so that :func:`_resolve_ref` can
+    resolve them during model construction, with cycle detection via ``in_progress``.
+    """
+    schema = deepcopy(schema)
+    ref = schema.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        def_name = ref[len("#/$defs/") :]
+        defs = schema.get("$defs", {})
+        if def_name in defs:
+            resolved: dict[str, Any] = deepcopy(defs[def_name])
+            resolved.setdefault("$defs", defs)
+            return resolved
+    return schema
+
+
 def create_model_from_schema(  # type: ignore[no-any-unimported]
     json_schema: dict[str, Any],
     *,
@@ -813,7 +836,10 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         >>> person.name
         'John'
     """
-    json_schema = dict(jsonref.replace_refs(json_schema, proxies=False))
+    try:
+        json_schema = dict(jsonref.replace_refs(json_schema, proxies=False))
+    except (jsonref.JsonRefError, RecursionError):
+        json_schema = _inline_top_level_ref(json_schema)
 
     effective_root = root_schema or json_schema
 
