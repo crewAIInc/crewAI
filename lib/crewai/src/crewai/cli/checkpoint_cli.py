@@ -68,6 +68,19 @@ def _is_sqlite(path: str) -> bool:
         return False
 
 
+def _iter_json_checkpoint_paths(location: str) -> list[str]:
+    """Return JSON checkpoint files under *location*, including branch subdirs.
+
+    JSON checkpoints are stored directly under ``location`` for older layouts and
+    under ``location/<branch>/`` for fork-aware layouts. Returning both keeps the
+    CLI backward-compatible across providers and checkpoint versions.
+    """
+    pattern = os.path.join(location, "**", "*.json")
+    return sorted(
+        glob.glob(pattern, recursive=True), key=os.path.getmtime, reverse=True
+    )
+
+
 def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
     """Parse checkpoint JSON into metadata dict."""
     data = json.loads(raw)
@@ -173,9 +186,8 @@ def _entity_summary(entities: list[dict[str, Any]]) -> str:
 
 
 def _list_json(location: str) -> list[dict[str, Any]]:
-    pattern = os.path.join(location, "*.json")
     results = []
-    for path in sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True):
+    for path in _iter_json_checkpoint_paths(location):
         name = os.path.basename(path)
         try:
             with open(path) as f:
@@ -192,8 +204,7 @@ def _list_json(location: str) -> list[dict[str, Any]]:
 
 
 def _info_json_latest(location: str) -> dict[str, Any] | None:
-    pattern = os.path.join(location, "*.json")
-    files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+    files = _iter_json_checkpoint_paths(location)
     if not files:
         return None
     path = files[0]
