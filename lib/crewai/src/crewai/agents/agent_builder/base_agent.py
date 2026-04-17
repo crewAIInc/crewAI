@@ -28,6 +28,9 @@ from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.events.base_events import set_emission_counter
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_context import restore_event_scope, set_last_event_id
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -351,7 +354,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             An Agent instance. Call kickoff() to resume execution.
         """
         from crewai.context import apply_execution_context
-        from crewai.events.event_bus import crewai_event_bus
         from crewai.state.runtime import RuntimeState
 
         state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
@@ -377,8 +379,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         Returns:
             An Agent instance on the new branch. Call kickoff() to run.
         """
-        from crewai.events.event_bus import crewai_event_bus
-
         agent = cls.from_checkpoint(config)
         state = crewai_event_bus._runtime_state
         if state is None:
@@ -405,12 +405,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         Args:
             state: The RuntimeState containing the event record.
         """
-        from crewai.events.base_events import set_emission_counter
-        from crewai.events.event_context import (
-            restore_event_scope,
-            set_last_event_id,
-        )
-
         stack: list[tuple[str, str]] = []
         kickoff_id = self._kickoff_event_id
         if kickoff_id:
