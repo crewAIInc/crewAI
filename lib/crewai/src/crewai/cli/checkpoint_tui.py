@@ -381,7 +381,7 @@ class CheckpointTUI(App[_TuiResult]):
                 parts.append(f"[{_PRIMARY}]{trigger}[/]")
             if total_t:
                 display_c = total_c
-                if trigger and "started" in trigger and total_c < total_t:
+                if trigger == "task_started" and total_c < total_t:
                     display_c = total_c + 1
                 color = _SUCCESS if total_c == total_t else _DIM
                 parts.append(f"[{color}]{display_c}/{total_t}[/]")
