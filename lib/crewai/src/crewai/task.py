@@ -1241,12 +1241,15 @@ Follow these guidelines:
                 tools=tools,
             )
 
+            # Coerce result to string for TaskOutput.raw (agent may return
+            # a BaseModel when output_pydantic is set).
+            raw = result.model_dump_json() if isinstance(result, BaseModel) else result
             pydantic_output, json_output = self._export_output(result)
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=str(raw),
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
@@ -1337,12 +1340,15 @@ Follow these guidelines:
                 tools=tools,
             )
 
+            # Coerce result to string for TaskOutput.raw (agent may return
+            # a BaseModel when output_pydantic is set).
+            raw = result.model_dump_json() if isinstance(result, BaseModel) else result
             pydantic_output, json_output = self._export_output(result)
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=str(raw),
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
