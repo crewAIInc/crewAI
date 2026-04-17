@@ -162,30 +162,36 @@ info = "Commits must follow Conventional Commits 1.0.0."
 
 
 [tool.uv]
-exclude-newer = "1 day"
+# Pinned to include the security patch releases (authlib 1.6.11,
+# langchain-text-splitters 1.1.2) uploaded on 2026-04-16.
+exclude-newer = "2026-04-17"
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
 # fastembed 0.7.x and docling 2.63 cap pillow<12; the removed APIs don't affect them.
-# langchain-core <1.2.28 has GHSA-926x-3r5x-gfhw (incomplete f-string validation).
+# langchain-core <1.2.31 has GHSA-926x-3r5x-gfhw and is required by langchain-text-splitters 1.1.2+.
+# langchain-text-splitters <1.1.2 has GHSA-fv5p-p927-qmxr (SSRF bypass in split_text_from_url).
 # transformers 4.57.6 has CVE-2026-1839; force 5.4+ (docling 2.84 allows huggingface-hub>=1).
 # cryptography 46.0.6 has CVE-2026-39892; force 46.0.7+.
-# pypdf <6.10.1 has CVE-2026-40260 and GHSA-jj6c-8h6c-hppx; force 6.10.1+.
+# pypdf <6.10.2 has GHSA-4pxv-j86v-mhcw, GHSA-7gw9-cf7v-778f, GHSA-x284-j5p8-9c5p; force 6.10.2+.
 # uv <0.11.6 has GHSA-pjjw-68hj-v9mw; force 0.11.6+.
 # python-multipart <0.0.26 has GHSA-mj87-hwqh-73pj; force 0.0.26+.
 # langsmith <0.7.31 has GHSA-rr7j-v2q5-chgv (streaming token redaction bypass); force 0.7.31+.
+# authlib <1.6.11 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage).
 override-dependencies = [
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
     "pillow>=12.1.1",
-    "langchain-core>=1.2.28,<2",
+    "langchain-core>=1.2.31,<2",
+    "langchain-text-splitters>=1.1.2,<2",
     "urllib3>=2.6.3",
     "transformers>=5.4.0; python_version >= '3.10'",
     "cryptography>=46.0.7",
-    "pypdf>=6.10.1,<7",
+    "pypdf>=6.10.2,<7",
     "uv>=0.11.6,<1",
     "python-multipart>=0.0.26,<1",
     "langsmith>=0.7.31,<0.8",
+    "authlib>=1.6.11",
 ]
 
 [tool.uv.workspace]
