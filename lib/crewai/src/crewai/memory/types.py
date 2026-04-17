@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 from datetime import datetime
+import logging
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+
+_logger = logging.getLogger(__name__)
 
 # When searching the vector store, we ask for more results than the caller
 # requested so that post-search steps (composite scoring, deduplication,
@@ -57,6 +61,23 @@ class MemoryRecord(BaseModel):
         repr=False,
         description="Vector embedding for semantic search. Excluded from serialization to save tokens.",
     )
+
+    @field_validator("embedding", mode="before")
+    @classmethod
+    def validate_embedding(cls, v: Any) -> list[float] | None:
+        """Ensure embedding is always list[float] or None, never bytes."""
+        if v is None:
+            return None
+        if isinstance(v, bytes):
+            # Convert bytes to list[float] if needed
+            import numpy as np
+
+            if len(v) == 0:
+                return None
+            arr = np.frombuffer(v, dtype=np.float32)
+            return [float(x) for x in arr]
+        return [float(x) for x in v]
+
     source: str | None = Field(
         default=None,
         description=(
@@ -304,7 +325,11 @@ def embed_text(embedder: Any, text: str) -> list[float]:
     """
     if not text or not text.strip():
         return []
+
+    # Just call the embedder directly - the blocking issue needs to be fixed
+    # at a higher level (making Memory.recall() async)
     result = embedder([text])
+
     if not result:
         return []
     first = result[0]
@@ -313,6 +338,11 @@ def embed_text(embedder: Any, text: str) -> list[float]:
     if isinstance(first, list):
         return [float(x) for x in first]
     return list(first)
+
+
+# Reusable thread pool for running embedder calls from sync context
+# when an async event loop is already running.
+_EMBED_POOL = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
 
 def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
@@ -328,6 +358,8 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     Returns:
         List of embeddings, one per input text. Empty texts produce empty lists.
     """
+    import asyncio
+
     if not texts:
         return []
     # Filter out empty texts, remembering their positions
@@ -337,7 +369,23 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     if not valid:
         return [[] for _ in texts]
 
-    result = embedder([t for _, t in valid])
+    # Check if we're in an async context
+    result: Any
+    try:
+        asyncio.get_running_loop()
+        # We're in an async context, but this is a sync function
+        # Run embedder in thread pool to avoid blocking the event loop
+        try:
+            result = _EMBED_POOL.submit(embedder, [t for _, t in valid]).result(
+                timeout=30
+            )
+        except concurrent.futures.TimeoutError:
+            _logger.warning("Embedder timed out after 30s, returning empty embeddings")
+            return [[] for _ in texts]
+    except RuntimeError:
+        # Not in async context, run directly
+        result = embedder([t for _, t in valid])
+
     embeddings: list[list[float]] = [[] for _ in texts]
     for (orig_idx, _), emb in zip(valid, result, strict=False):
         if hasattr(emb, "tolist"):

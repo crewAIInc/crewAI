@@ -196,6 +196,8 @@ override-dependencies = [
     "python-multipart>=0.0.26,<1",
     "langsmith>=0.7.31,<0.8",
     "authlib>=1.6.11",
+    # scrapegraph-py 2.x removed Client class; pin until upstream fixes type ignores
+    "scrapegraph-py>=1.46.0,<2",
 ]
 
 [tool.uv.workspace]

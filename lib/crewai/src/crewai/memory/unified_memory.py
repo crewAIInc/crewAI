@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 from datetime import datetime
+import logging
 import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -34,6 +35,9 @@ from crewai.memory.types import (
 from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+
+
+_logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -211,6 +215,17 @@ class Memory(BaseModel):
                 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
                 self._storage = LanceDBStorage()
+            elif self.storage == "valkey":
+                from crewai.memory.storage.valkey_storage import ValkeyStorage
+                from crewai.utilities.cache_config import parse_cache_url
+
+                conn = parse_cache_url() or {}
+                self._storage = ValkeyStorage(
+                    host=conn.get("host", "localhost"),
+                    port=conn.get("port", 6379),
+                    db=conn.get("db", 0),
+                    password=conn.get("password"),
+                )
             else:
                 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
@@ -316,16 +331,60 @@ class Memory(BaseModel):
         except Exception:  # noqa: S110
             pass  # swallow everything during shutdown
 
-    def drain_writes(self) -> None:
+    def drain_writes(self, timeout_per_save: float = 60.0) -> None:
         """Block until all pending background saves have completed.
 
         Called automatically by ``recall()`` and should be called by the
         crew at shutdown to ensure no saves are lost.
+
+        Args:
+            timeout_per_save: Maximum seconds to wait per save operation.
+                             Default 60s. If a save times out, logs warning
+                             but continues to avoid blocking crew completion.
         """
         with self._pending_lock:
             pending = list(self._pending_saves)
-        for future in pending:
-            future.result()  # blocks until done; re-raises exceptions
+
+        if pending:
+            _logger.debug(
+                "[DRAIN_WRITES] Waiting for %d pending saves...", len(pending)
+            )
+
+        failed_saves = 0
+        for i, future in enumerate(pending):
+            try:
+                _logger.debug(
+                    "[DRAIN_WRITES] Waiting for save %d/%d...", i + 1, len(pending)
+                )
+                future.result(timeout=timeout_per_save)
+                _logger.debug(
+                    "[DRAIN_WRITES] Save %d/%d completed", i + 1, len(pending)
+                )
+            except TimeoutError:  # noqa: PERF203
+                failed_saves += 1
+                _logger.warning(
+                    "[DRAIN_WRITES] Save %d/%d timed out after %ss. "
+                    "This save will be abandoned. Consider increasing timeout or checking "
+                    "LLM/embedder performance.",
+                    i + 1,
+                    len(pending),
+                    timeout_per_save,
+                )
+                # Don't raise - just log and continue to avoid blocking crew completion
+            except Exception as e:
+                failed_saves += 1
+                _logger.error(
+                    "[DRAIN_WRITES] Save %d/%d failed: %s", i + 1, len(pending), e
+                )
+                # Don't raise - just log and continue
+
+        if failed_saves > 0:
+            _logger.warning(
+                "[DRAIN_WRITES] %d/%d saves failed or timed out. "
+                "Some memories may not have been persisted.",
+                failed_saves,
+                len(pending),
+            )
 
     def close(self) -> None:
         """Drain pending saves, flush storage, and shut down the background thread pool."""
