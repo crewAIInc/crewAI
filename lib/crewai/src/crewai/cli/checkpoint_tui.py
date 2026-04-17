@@ -123,7 +123,7 @@ _TuiResult = (
         str,
         dict[str, Any] | None,
         dict[int, str] | None,
-        Literal["crew", "flow"],
+        Literal["crew", "flow", "agent"],
     ]
     | None
 )
@@ -682,10 +682,14 @@ class CheckpointTUI(App[_TuiResult]):
                 overrides[task_idx] = editor.text
         return overrides or None
 
-    def _detect_entity_type(self, entry: dict[str, Any]) -> Literal["crew", "flow"]:
+    def _detect_entity_type(
+        self, entry: dict[str, Any]
+    ) -> Literal["crew", "flow", "agent"]:
         for ent in entry.get("entities", []):
             if ent.get("type") == "flow":
                 return "flow"
+            if ent.get("type") == "agent":
+                return "agent"
         return "crew"
 
     def _resolve_location(self, entry: dict[str, Any]) -> str:
@@ -826,6 +830,21 @@ async def _run_checkpoint_tui_async(location: str) -> None:
             click.echo()
 
         result = await flow.kickoff_async(inputs=inputs)
+        click.echo(f"\nResult: {getattr(result, 'raw', result)}")
+        return
+
+    if entity_type == "agent":
+        from crewai.agent import Agent
+
+        if action == "fork":
+            click.echo(f"\nForking agent from: {selected}\n")
+            agent = Agent.fork(config)
+        else:
+            click.echo(f"\nResuming agent from: {selected}\n")
+            agent = Agent.from_checkpoint(config)
+
+        click.echo()
+        result = await agent.akickoff(messages="Resume execution.")
         click.echo(f"\nResult: {getattr(result, 'raw', result)}")
         return
 

@@ -562,3 +562,75 @@ class TestKickoffFromCheckpoint:
         )
         assert mock_restored.checkpoint.restore_from is None
         assert result == "flow_result"
+
+
+# ---------- Agent checkpoint/fork ----------
+
+
+class TestAgentCheckpoint:
+    def _make_agent_state(self) -> RuntimeState:
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        return RuntimeState(root=[agent])
+
+    def test_agent_from_checkpoint_sets_runtime_state(self) -> None:
+        state = self._make_agent_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            crewai_event_bus._runtime_state = None
+            Agent.from_checkpoint(cfg)
+            assert crewai_event_bus._runtime_state is not None
+
+    def test_agent_fork_sets_branch(self) -> None:
+        state = self._make_agent_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            Agent.fork(cfg, branch="agent-experiment")
+            rt = crewai_event_bus._runtime_state
+            assert rt is not None
+            assert rt._branch == "agent-experiment"
+
+    def test_agent_fork_auto_branch(self) -> None:
+        state = self._make_agent_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            Agent.fork(cfg)
+            rt = crewai_event_bus._runtime_state
+            assert rt is not None
+            assert rt._branch.startswith("fork/")
+
+    def test_sync_checkpoint_fields_agent(self) -> None:
+        from crewai.state.runtime import _sync_checkpoint_fields
+
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        agent._kickoff_event_id = "evt-123"
+        _sync_checkpoint_fields(agent)
+        assert agent.checkpoint_kickoff_event_id == "evt-123"
+
+    def test_agent_restore_kickoff_event_id(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        agent._kickoff_event_id = "evt-456"
+        state = RuntimeState(root=[agent])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            from crewai.state.runtime import _prepare_entities
+
+            _prepare_entities(state.root)
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Agent.from_checkpoint(cfg)
+            assert restored._kickoff_event_id == "evt-456"

@@ -1504,14 +1504,16 @@ class Agent(BaseAgent):
         )
 
         try:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionStartedEvent(
+            if self.checkpoint_kickoff_event_id is not None:
+                self._kickoff_event_id = self.checkpoint_kickoff_event_id
+            else:
+                started_event = LiteAgentExecutionStartedEvent(
                     agent_info=agent_info,
                     tools=parsed_tools,
                     messages=messages,
-                ),
-            )
+                )
+                crewai_event_bus.emit(self, event=started_event)
+                self._kickoff_event_id = started_event.event_id
 
             output = self._execute_and_build_output(executor, inputs, response_format)
             return self._finalize_kickoff(
@@ -1808,14 +1810,16 @@ class Agent(BaseAgent):
         )
 
         try:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionStartedEvent(
+            if self.checkpoint_kickoff_event_id is not None:
+                self._kickoff_event_id = self.checkpoint_kickoff_event_id
+            else:
+                started_event = LiteAgentExecutionStartedEvent(
                     agent_info=agent_info,
                     tools=parsed_tools,
                     messages=messages,
-                ),
-            )
+                )
+                crewai_event_bus.emit(self, event=started_event)
+                self._kickoff_event_id = started_event.event_id
 
             output = await self._execute_and_build_output_async(
                 executor, inputs, response_format

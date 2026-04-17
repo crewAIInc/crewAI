@@ -44,9 +44,12 @@ def _sync_checkpoint_fields(entity: object) -> None:
         entity: The entity whose private runtime attributes will be
             copied into its public checkpoint fields.
     """
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
     from crewai.flow.flow import Flow
 
+    if isinstance(entity, BaseAgent):
+        entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
     if isinstance(entity, Flow):
         entity.checkpoint_completed_methods = (
             set(entity._completed_methods) if entity._completed_methods else None

@@ -472,6 +472,8 @@ def _entity_type_from_meta(meta: dict[str, Any]) -> str:
     for ent in meta.get("entities", []):
         if ent.get("type") == "flow":
             return "flow"
+        if ent.get("type") == "agent":
+            return "agent"
     return "crew"
 
 
@@ -505,6 +507,11 @@ def resume_checkpoint(location: str, checkpoint_id: str | None) -> None:
 
         flow = Flow.from_checkpoint(config)
         result = asyncio.run(flow.kickoff_async(inputs=inputs))
+    elif entity_type == "agent":
+        from crewai.agent import Agent
+
+        agent = Agent.from_checkpoint(config)
+        result = asyncio.run(agent.akickoff(messages="Resume execution."))
     else:
         from crewai.crew import Crew
 
