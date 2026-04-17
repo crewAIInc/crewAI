@@ -436,7 +436,6 @@ class Crew(FlowTrackable, BaseModel):
                 and str(task.id) in started_task_ids
             ):
                 resuming_task_agent_roles.add(task.agent.role)
-                break
 
         for agent in self.agents:
             agent.crew = self
