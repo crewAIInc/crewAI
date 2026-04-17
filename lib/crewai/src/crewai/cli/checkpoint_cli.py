@@ -106,17 +106,50 @@ def _parse_checkpoint_json(raw: str, source: str) -> dict[str, Any]:
             "name": entity.get("name"),
             "id": entity.get("id"),
         }
+
+        raw_agents = entity.get("agents", [])
+        agents_by_id: dict[str, dict[str, Any]] = {}
+        parsed_agents: list[dict[str, Any]] = []
+        for ag in raw_agents:
+            agent_info: dict[str, Any] = {
+                "id": ag.get("id", ""),
+                "role": ag.get("role", ""),
+                "goal": ag.get("goal", ""),
+            }
+            parsed_agents.append(agent_info)
+            if ag.get("id"):
+                agents_by_id[str(ag["id"])] = agent_info
+        if parsed_agents:
+            info["agents"] = parsed_agents
+
         if tasks:
             info["tasks_completed"] = completed
             info["tasks_total"] = len(tasks)
-            info["tasks"] = [
-                {
+            parsed_tasks: list[dict[str, Any]] = []
+            for t in tasks:
+                task_info: dict[str, Any] = {
                     "description": t.get("description", ""),
                     "completed": t.get("output") is not None,
                     "output": (t.get("output") or {}).get("raw", ""),
                 }
-                for t in tasks
-            ]
+                task_agent = t.get("agent")
+                if isinstance(task_agent, dict):
+                    task_info["agent_role"] = task_agent.get("role", "")
+                    task_info["agent_id"] = task_agent.get("id", "")
+                elif isinstance(task_agent, str) and task_agent in agents_by_id:
+                    task_info["agent_role"] = agents_by_id[task_agent].get("role", "")
+                    task_info["agent_id"] = task_agent
+                parsed_tasks.append(task_info)
+            info["tasks"] = parsed_tasks
+
+        if entity.get("entity_type") == "flow":
+            completed_methods = entity.get("checkpoint_completed_methods")
+            if completed_methods:
+                info["completed_methods"] = sorted(completed_methods)
+            state = entity.get("checkpoint_state")
+            if isinstance(state, dict):
+                info["flow_state"] = state
+
         parsed_entities.append(info)
 
     inputs: dict[str, Any] = {}
