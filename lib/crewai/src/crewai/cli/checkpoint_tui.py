@@ -67,14 +67,16 @@ def _human_ts(ts: str) -> str:
         return ts
     now = datetime.now()
     delta = now.date() - dt.date()
-    time_str = dt.strftime("%-I:%M%p").lower()
+    hour = dt.hour % 12 or 12
+    ampm = "am" if dt.hour < 12 else "pm"
+    time_str = f"{hour}:{dt.minute:02d}{ampm}"
     if delta.days == 0:
         return time_str
     if delta.days == 1:
         return f"yest {time_str}"
     if delta.days < 7:
         return f"{dt.strftime('%a').lower()} {time_str}"
-    return dt.strftime("%b %-d")
+    return f"{dt.strftime('%b')} {dt.day}"
 
 
 def _short_id(name: str) -> str:
@@ -113,16 +115,6 @@ def _entity_icon(etype: str) -> str:
     icon = _ENTITY_ICONS.get(etype, _ENTITY_ICONS["unknown"])
     color = _ENTITY_COLORS.get(etype, _DIM)
     return f"[{color}]{icon}[/]"
-
-
-def _build_entity_header(ent: dict[str, Any]) -> str:
-    lines: list[str] = []
-    tasks = ent.get("tasks")
-    if isinstance(tasks, list):
-        completed = ent.get("tasks_completed", 0)
-        total = ent.get("tasks_total", 0)
-        lines.append(f"  {_build_progress_bar(completed, total)}")
-    return "\n".join(lines)
 
 
 _TuiResult = (
