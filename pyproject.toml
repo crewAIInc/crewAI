@@ -12,7 +12,7 @@ dev = [
     "mypy==1.19.1",
     "pre-commit==4.5.1",
     "bandit==1.9.2",
-    "pytest==8.4.2",
+    "pytest==9.0.3",
     "pytest-asyncio==1.3.0",
     "pytest-subprocess==1.5.3",
     "vcrpy==7.0.0", # pinned, less versions break pytest-recording
@@ -20,7 +20,7 @@ dev = [
     "pytest-randomly==4.0.1",
     "pytest-timeout==2.4.0",
     "pytest-xdist==3.8.0",
-    "pytest-split==0.10.0",
+    "pytest-split==0.11.0",
     "types-requests~=2.31.0.6",
     "types-pyyaml==6.0.*",
     "types-regex==2026.1.15.*",
@@ -162,7 +162,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 
 
 [tool.uv]
-exclude-newer = "2026-04-10"  # pinned for CVE-2026-39892; restore to "3 days" after 2026-04-11
+exclude-newer = "1 day"
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
@@ -170,6 +170,10 @@ exclude-newer = "2026-04-10"  # pinned for CVE-2026-39892; restore to "3 days" a
 # langchain-core <1.2.28 has GHSA-926x-3r5x-gfhw (incomplete f-string validation).
 # transformers 4.57.6 has CVE-2026-1839; force 5.4+ (docling 2.84 allows huggingface-hub>=1).
 # cryptography 46.0.6 has CVE-2026-39892; force 46.0.7+.
+# pypdf <6.10.1 has CVE-2026-40260 and GHSA-jj6c-8h6c-hppx; force 6.10.1+.
+# uv <0.11.6 has GHSA-pjjw-68hj-v9mw; force 0.11.6+.
+# python-multipart <0.0.26 has GHSA-mj87-hwqh-73pj; force 0.0.26+.
+# langsmith <0.7.31 has GHSA-rr7j-v2q5-chgv (streaming token redaction bypass); force 0.7.31+.
 override-dependencies = [
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
@@ -178,6 +182,10 @@ override-dependencies = [
     "urllib3>=2.6.3",
     "transformers>=5.4.0; python_version >= '3.10'",
     "cryptography>=46.0.7",
+    "pypdf>=6.10.1,<7",
+    "uv>=0.11.6,<1",
+    "python-multipart>=0.0.26,<1",
+    "langsmith>=0.7.31,<0.8",
 ]
 
 [tool.uv.workspace]

@@ -39,7 +39,6 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
         agent: The agent performing the task.
         task: The task to execute.
     """
-    # Check if planning is enabled using the planning_enabled property
     if not getattr(agent, "planning_enabled", False):
         return
 
