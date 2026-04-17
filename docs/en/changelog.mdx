@@ -4,6 +4,45 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 17, 2026">
+  ## v1.14.2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2)
+
+  ## What's Changed
+
+  ### Features
+  - Add checkpoint resume, diff, and prune commands with improved discoverability.
+  - Add `from_checkpoint` parameter to `Agent.kickoff` and related methods.
+  - Add template management commands for project templates.
+  - Add resume hints to devtools release on failure.
+  - Add deploy validation CLI and enhance LLM initialization ergonomics.
+  - Add checkpoint forking with lineage tracking.
+  - Enrich LLM token tracking with reasoning tokens and cache creation tokens.
+
+  ### Bug Fixes
+  - Fix prompt on stale branch conflicts in devtools release.
+  - Patch vulnerabilities in `authlib`, `langchain-text-splitters`, and `pypdf`.
+  - Scope streaming handlers to prevent cross-run chunk contamination.
+  - Dispatch Flow checkpoints through Flow APIs in TUI.
+  - Use recursive glob for JSON checkpoint discovery.
+  - Handle cyclic JSON schemas in MCP tool resolution.
+  - Preserve Bedrock tool call arguments by removing truthy default.
+  - Emit flow_finished event after HITL resume.
+  - Fix various vulnerabilities by updating dependencies, including `requests`, `cryptography`, and `pytest`.
+  - Fix to stop forwarding strict mode to Bedrock Converse API.
+
+  ### Documentation
+  - Document missing parameters and add Checkpointing section.
+  - Update changelog and version for v1.14.2 and previous release candidates.
+  - Add enterprise A2A feature documentation and update OSS A2A docs.
+
+  ## Contributors
+
+  @Yanhu007, @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide
+
+</Update>
+
 <Update label="Apr 16, 2026">
   ## v1.14.2rc1
 

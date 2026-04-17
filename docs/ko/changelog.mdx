@@ -4,6 +4,45 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 4월 17일">
+  ## v1.14.2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 체크포인트 재개, 차이(diff), 및 가지치기(prune) 명령을 추가하여 가시성을 개선했습니다.
+  - `Agent.kickoff` 및 관련 메서드에 `from_checkpoint` 매개변수를 추가했습니다.
+  - 프로젝트 템플릿을 위한 템플릿 관리 명령을 추가했습니다.
+  - 실패 시 개발 도구 릴리스에 재개 힌트를 추가했습니다.
+  - 배포 검증 CLI를 추가하고 LLM 초기화의 사용 편의성을 향상시켰습니다.
+  - 계보 추적이 가능한 체크포인트 포킹을 추가했습니다.
+  - 추론 토큰 및 캐시 생성 토큰으로 LLM 토큰 추적을 풍부하게 했습니다.
+
+  ### 버그 수정
+  - 개발 도구 릴리스에서 오래된 브랜치 충돌에 대한 프롬프트를 수정했습니다.
+  - `authlib`, `langchain-text-splitters`, 및 `pypdf`의 취약점을 패치했습니다.
+  - 스트리밍 핸들러의 범위를 설정하여 교차 실행 청크 오염을 방지했습니다.
+  - TUI에서 Flow API를 통해 Flow 체크포인트를 전송했습니다.
+  - JSON 체크포인트 발견을 위해 재귀적 글로브를 사용했습니다.
+  - MCP 도구 해상도에서 순환 JSON 스키마를 처리했습니다.
+  - 진리값이 있는 기본값을 제거하여 Bedrock 도구 호출 인수를 보존했습니다.
+  - HITL 재개 후 flow_finished 이벤트를 발생시켰습니다.
+  - `requests`, `cryptography`, 및 `pytest`를 포함한 종속성을 업데이트하여 다양한 취약점을 수정했습니다.
+  - Bedrock Converse API에 엄격 모드를 전달하지 않도록 수정했습니다.
+
+  ### 문서
+  - 누락된 매개변수를 문서화하고 체크포인팅 섹션을 추가했습니다.
+  - v1.14.2 및 이전 릴리스 후보에 대한 변경 로그 및 버전을 업데이트했습니다.
+  - 기업 A2A 기능 문서를 추가하고 OSS A2A 문서를 업데이트했습니다.
+
+  ## 기여자
+
+  @Yanhu007, @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide
+
+</Update>
+
 <Update label="2026년 4월 16일">
   ## v1.14.2rc1
 

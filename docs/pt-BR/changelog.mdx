@@ -4,6 +4,45 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="17 abr 2026">
+  ## v1.14.2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar comandos de retomar, diferenciar e podar checkpoints com melhor descobribilidade.
+  - Adicionar o parâmetro `from_checkpoint` ao `Agent.kickoff` e métodos relacionados.
+  - Adicionar comandos de gerenciamento de templates para templates de projeto.
+  - Adicionar dicas de retomar na liberação de devtools em caso de falha.
+  - Adicionar CLI de validação de implantação e melhorar a ergonomia da inicialização do LLM.
+  - Adicionar bifurcação de checkpoints com rastreamento de linhagem.
+  - Enriquecer o rastreamento de tokens do LLM com tokens de raciocínio e tokens de criação de cache.
+
+  ### Correções de Bugs
+  - Corrigir prompt em conflitos de branch obsoletos na liberação de devtools.
+  - Corrigir vulnerabilidades em `authlib`, `langchain-text-splitters` e `pypdf`.
+  - Restringir manipuladores de streaming para evitar contaminação de chunks entre execuções.
+  - Despachar checkpoints de Flow através das APIs de Flow na TUI.
+  - Usar glob recursivo para descoberta de checkpoints JSON.
+  - Lidar com esquemas JSON cíclicos na resolução de ferramentas MCP.
+  - Preservar os argumentos de chamada da ferramenta Bedrock removendo o padrão truthy.
+  - Emitir evento flow_finished após retomar HITL.
+  - Corrigir várias vulnerabilidades atualizando dependências, incluindo `requests`, `cryptography` e `pytest`.
+  - Corrigir para parar de encaminhar o modo estrito para a API Bedrock Converse.
+
+  ### Documentação
+  - Documentar parâmetros ausentes e adicionar seção de Checkpointing.
+  - Atualizar changelog e versão para v1.14.2 e candidatos a liberação anteriores.
+  - Adicionar documentação da funcionalidade A2A empresarial e atualizar a documentação A2A OSS.
+
+  ## Contribuidores
+
+  @Yanhu007, @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide
+
+</Update>
+
 <Update label="16 abr 2026">
   ## v1.14.2rc1
 
