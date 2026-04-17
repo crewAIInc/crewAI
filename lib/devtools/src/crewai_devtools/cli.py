@@ -247,6 +247,14 @@ def create_or_reset_branch(branch: str, cwd: Path | None = None) -> None:
             remote_exists = False
 
         if local_exists:
+            current = run_command(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=cwd
+            ).strip()
+            if current == branch:
+                console.print(
+                    f"[yellow]![/yellow] Currently on {branch}, switching to main before delete"
+                )
+                run_command(["git", "checkout", "main"], cwd=cwd)
             console.print(f"[yellow]![/yellow] Deleting local branch {branch}")
             run_command(["git", "branch", "-D", branch], cwd=cwd)
 
@@ -2019,9 +2027,8 @@ def release(
             create_or_reset_branch(branch_name)
             console.print("[green]✓[/green] Branch created")
 
-        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
+            _update_all_versions(cwd, lib_dir, version, packages, dry_run)
 
-        if not dry_run:
             console.print("\nCommitting changes...")
             run_command(["git", "add", "."])
             run_command(["git", "commit", "-m", f"feat: bump versions to {version}"])
@@ -2051,6 +2058,7 @@ def release(
             _poll_pr_until_merged(branch_name, "bump PR")
         else:
             console.print(f"[dim][DRY RUN][/dim] Would create branch: {branch_name}")
+            _update_all_versions(cwd, lib_dir, version, packages, dry_run)
             console.print(
                 f"[dim][DRY RUN][/dim] Would commit: feat: bump versions to {version}"
             )
