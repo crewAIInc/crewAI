@@ -1506,6 +1506,7 @@ class Agent(BaseAgent):
         try:
             if self.checkpoint_kickoff_event_id is not None:
                 self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                self.checkpoint_kickoff_event_id = None
             else:
                 started_event = LiteAgentExecutionStartedEvent(
                     agent_info=agent_info,
@@ -1812,6 +1813,7 @@ class Agent(BaseAgent):
         try:
             if self.checkpoint_kickoff_event_id is not None:
                 self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                self.checkpoint_kickoff_event_id = None
             else:
                 started_event = LiteAgentExecutionStartedEvent(
                     agent_info=agent_info,
