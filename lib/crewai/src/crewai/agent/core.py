@@ -29,7 +29,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic.functional_serializers import PlainSerializer
-from typing_extensions import Self
+from typing_extensions import Self, TypeIs
 
 from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
@@ -131,6 +131,13 @@ _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
     "AgentExecutor": AgentExecutor,
 }
+
+
+def _is_resuming_agent_executor(
+    executor: CrewAgentExecutor | AgentExecutor | None,
+) -> TypeIs[AgentExecutor]:
+    """Type guard: True when the executor is resuming from a checkpoint."""
+    return isinstance(executor, AgentExecutor) and executor._resuming
 
 
 def _validate_executor_class(value: Any) -> Any:
@@ -1366,24 +1373,33 @@ class Agent(BaseAgent):
 
         prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
 
-        executor = AgentExecutor(
-            llm=cast(BaseLLM, self.llm),
-            agent=self,
-            prompt=prompt,
-            max_iter=self.max_iter,
-            tools=parsed_tools,
-            tools_names=get_tool_names(parsed_tools),
-            stop_words=stop_words,
-            tools_description=render_text_description_and_args(parsed_tools),
-            tools_handler=self.tools_handler,
-            original_tools=raw_tools,
-            step_callback=self.step_callback,
-            function_calling_llm=self.function_calling_llm,
-            respect_context_window=self.respect_context_window,
-            request_within_rpm_limit=rpm_limit_fn,
-            callbacks=[TokenCalcHandler(self._token_process)],
-            response_model=response_format,
-        )
+        if _is_resuming_agent_executor(self.agent_executor):
+            executor = self.agent_executor
+            executor.tools = parsed_tools
+            executor.tools_names = get_tool_names(parsed_tools)
+            executor.tools_description = render_text_description_and_args(parsed_tools)
+            executor.original_tools = raw_tools
+            executor.prompt = prompt
+            executor.response_model = response_format
+        else:
+            executor = AgentExecutor(
+                llm=cast(BaseLLM, self.llm),
+                agent=self,
+                prompt=prompt,
+                max_iter=self.max_iter,
+                tools=parsed_tools,
+                tools_names=get_tool_names(parsed_tools),
+                stop_words=stop_words,
+                tools_description=render_text_description_and_args(parsed_tools),
+                tools_handler=self.tools_handler,
+                original_tools=raw_tools,
+                step_callback=self.step_callback,
+                function_calling_llm=self.function_calling_llm,
+                respect_context_window=self.respect_context_window,
+                request_within_rpm_limit=rpm_limit_fn,
+                callbacks=[TokenCalcHandler(self._token_process)],
+                response_model=response_format,
+            )
 
         all_files: dict[str, Any] = {}
         if isinstance(messages, str):
