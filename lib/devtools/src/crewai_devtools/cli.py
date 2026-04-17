@@ -154,6 +154,109 @@ def check_git_clean() -> None:
         sys.exit(1)
 
 
+def _branch_exists_local(branch: str, cwd: Path | None = None) -> bool:
+    try:
+        subprocess.run(  # noqa: S603
+            ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],  # noqa: S607
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def _branch_exists_remote(branch: str, cwd: Path | None = None) -> bool:
+    try:
+        output = run_command(["git", "ls-remote", "--heads", "origin", branch], cwd=cwd)
+        return bool(output.strip())
+    except subprocess.CalledProcessError:
+        return False
+
+
+def _open_pr_url_for_branch(branch: str, cwd: Path | None = None) -> str | None:
+    """Return URL of open PR for branch, or None if no open PR exists."""
+    try:
+        url = run_command(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                branch,
+                "--state",
+                "open",
+                "--json",
+                "url",
+                "--jq",
+                ".[0].url // empty",
+            ],
+            cwd=cwd,
+        )
+        return url or None
+    except subprocess.CalledProcessError:
+        return None
+
+
+def create_or_reset_branch(branch: str, cwd: Path | None = None) -> None:
+    """Create ``branch`` from current HEAD, resetting any stale copy.
+
+    If the branch exists locally or on origin, prompts the user to
+    choose between resetting it or aborting. If an open PR exists on
+    the branch, the prompt surfaces the PR URL and includes a
+    close-and-reset option so in-flight work isn't silently clobbered.
+
+    Raises:
+        SystemExit: If the user declines to reset.
+    """
+    local_exists = _branch_exists_local(branch, cwd=cwd)
+    remote_exists = _branch_exists_remote(branch, cwd=cwd)
+    open_pr = _open_pr_url_for_branch(branch, cwd=cwd) if remote_exists else None
+
+    if local_exists or remote_exists:
+        if open_pr:
+            console.print(
+                f"\n[yellow]![/yellow] Branch [bold]{branch}[/bold] already has an open PR: {open_pr}"
+            )
+            prompt = "Close the PR, reset the branch, and continue?"
+        else:
+            where = []
+            if local_exists:
+                where.append("local")
+            if remote_exists:
+                where.append("remote")
+            console.print(
+                f"\n[yellow]![/yellow] Branch [bold]{branch}[/bold] already exists ({', '.join(where)}) with no open PR"
+            )
+            prompt = "Delete it and recreate?"
+
+        if not Confirm.ask(prompt, default=False):
+            console.print("[red]Aborted.[/red]")
+            sys.exit(1)
+
+        if open_pr:
+            console.print(f"Closing PR {open_pr}...")
+            run_command(
+                ["gh", "pr", "close", branch, "--delete-branch"],
+                cwd=cwd,
+            )
+            # `gh pr close --delete-branch` removes the remote branch
+            # and, when checked out, the local branch too.
+            local_exists = _branch_exists_local(branch, cwd=cwd)
+            remote_exists = False
+
+        if local_exists:
+            console.print(f"[yellow]![/yellow] Deleting local branch {branch}")
+            run_command(["git", "branch", "-D", branch], cwd=cwd)
+
+        if remote_exists:
+            console.print(f"[yellow]![/yellow] Deleting remote branch {branch}")
+            run_command(["git", "push", "origin", "--delete", branch], cwd=cwd)
+
+    run_command(["git", "checkout", "-b", branch], cwd=cwd)
+
+
 def update_version_in_file(file_path: Path, new_version: str) -> bool:
     """Update __version__ attribute in a Python file.
 
@@ -980,7 +1083,7 @@ def _update_docs_and_create_pr(
 
         if docs_files_staged:
             docs_branch = f"docs/changelog-v{version}"
-            run_command(["git", "checkout", "-b", docs_branch])
+            create_or_reset_branch(docs_branch)
             for f in docs_files_staged:
                 run_command(["git", "add", f])
             run_command(
@@ -1418,7 +1521,7 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         console.print("[green]✓[/green] Workspace synced")
 
         branch_name = f"feat/bump-version-{version}"
-        run_command(["git", "checkout", "-b", branch_name], cwd=repo_dir)
+        create_or_reset_branch(branch_name, cwd=repo_dir)
         run_command(["git", "add", "."], cwd=repo_dir)
         run_command(
             ["git", "commit", "-m", f"feat: bump versions to {version}"],
@@ -1616,17 +1719,19 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
         for pkg in packages:
             console.print(f"  - {pkg.name}")
 
-        console.print(f"\nUpdating version to {version}...")
-        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
-
         if no_commit:
+            console.print(f"\nUpdating version to {version}...")
+            _update_all_versions(cwd, lib_dir, version, packages, dry_run)
             console.print("\nSkipping git operations (--no-commit flag set)")
         else:
             branch_name = f"feat/bump-version-{version}"
             if not dry_run:
                 console.print(f"\nCreating branch {branch_name}...")
-                run_command(["git", "checkout", "-b", branch_name])
+                create_or_reset_branch(branch_name)
                 console.print("[green]✓[/green] Branch created")
+
+                console.print(f"\nUpdating version to {version}...")
+                _update_all_versions(cwd, lib_dir, version, packages, dry_run)
 
                 console.print("\nCommitting changes...")
                 run_command(["git", "add", "."])
@@ -1643,6 +1748,8 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
                 console.print(
                     f"[dim][DRY RUN][/dim] Would create branch: {branch_name}"
                 )
+                console.print(f"\nUpdating version to {version}...")
+                _update_all_versions(cwd, lib_dir, version, packages, dry_run)
                 console.print(
                     f"[dim][DRY RUN][/dim] Would commit: feat: bump versions to {version}"
                 )
@@ -1906,14 +2013,15 @@ def release(
     console.print(f"\n[bold cyan]Phase 1: Bumping versions to {version}[/bold cyan]")
 
     try:
-        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
-
         branch_name = f"feat/bump-version-{version}"
         if not dry_run:
             console.print(f"\nCreating branch {branch_name}...")
-            run_command(["git", "checkout", "-b", branch_name])
+            create_or_reset_branch(branch_name)
             console.print("[green]✓[/green] Branch created")
 
+        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
+
+        if not dry_run:
             console.print("\nCommitting changes...")
             run_command(["git", "add", "."])
             run_command(["git", "commit", "-m", f"feat: bump versions to {version}"])
