@@ -1,0 +1,151 @@
+---
+title: Haldir Integration
+description: How to govern CrewAI agents with Haldir — scoped sessions, encrypted secrets, hash-chained audit, and policy enforcement.
+icon: shield-check
+mode: "wide"
+---
+
+## Introduction
+
+[Haldir](https://haldir.xyz/) adds a governance layer to CrewAI agents:
+
+- **Scoped sessions** with per-crew spend caps and TTL (Gate)
+- **Encrypted secrets** that never enter the model context (Vault)
+- **Hash-chained tamper-evident audit trail** for every tool call (Watch)
+- **Policy enforcement** at the tool boundary with instant mid-run revocation (Proxy)
+
+The [`crewai-haldir`](https://pypi.org/project/crewai-haldir/) package wraps any CrewAI tool so every call is scope-checked, cost-tracked, and logged before the result is returned to the agent.
+
+### Installation & Setup
+
+<Steps>
+<Step title="Install the required packages">
+```bash
+pip install -U crewai crewai-haldir
+```
+</Step>
+
+<Step title="Get a Haldir API key" icon="lock">
+Grab a free API key at [haldir.xyz/quickstart](https://haldir.xyz/quickstart) — one click, no signup.
+
+```bash
+export HALDIR_API_KEY="hld_..."
+```
+</Step>
+
+<Step title="Configure your crew with Haldir">
+Create a scoped Haldir session and wrap your tools:
+
+```python
+import os
+from crewai import Agent, Crew, Task
+from crewai_tools import SerperDevTool
+from crewai_haldir import create_session, GovernedTool
+
+# Create a Haldir session with scoped permissions + $10 spend cap
+client, session_id = create_session(
+    api_key=os.environ["HALDIR_API_KEY"],
+    agent_id="research-crew",
+    scopes=["read", "search", "spend"],
+    spend_limit=10.0,
+)
+
+# Wrap CrewAI tools with Haldir enforcement
+search = GovernedTool.wrap(
+    SerperDevTool(),
+    client=client,
+    session_id=session_id,
+    required_scope="search",
+    cost_usd=0.01,
+)
+
+# Use the governed tool in your agents as normal
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Find and summarize recent security news",
+    backstory="A skeptical researcher who only trusts primary sources.",
+    tools=[search],
+    verbose=True,
+)
+
+task = Task(
+    description="Find three recent AI agent security incidents with sources.",
+    expected_output="A bulleted list: URL, date, one-line summary.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+crew.kickoff()
+```
+
+Every tool invocation is now scope-checked, cost-tracked, and logged to Haldir's hash-chained audit trail — with zero changes to your agent or task logic.
+</Step>
+</Steps>
+
+## Production Features
+
+### 1. Tamper-evident Audit Trail
+
+Every governed tool call is recorded to Watch with a cryptographic hash chain, giving you a compliance-grade log of what your crew actually did in production.
+
+```python
+trail = client.get_audit_trail(agent_id="research-crew")
+for entry in trail["entries"]:
+    print(f"{entry['timestamp']}  {entry['tool']}  ${entry.get('cost_usd', 0):.4f}")
+```
+
+### 2. Per-session Spend Caps
+
+When the crew's cumulative spend hits the cap you set at `create_session()`, further tool calls raise `HaldirPermissionError` automatically — no runaway costs from a misbehaving agent.
+
+### 3. Mid-run Revocation
+
+Any process with the Haldir API key can revoke the session. The next tool call fails loudly, halting the crew immediately.
+
+```python
+client.revoke_session(session_id)  # next tool call → HaldirPermissionError
+```
+
+This gives you a kill switch over any running crew, which is essential when agents interact with real-world systems.
+
+### 4. Secrets Without Leaking to the LLM
+
+Use `HaldirSecrets` to retrieve credentials at tool-call time. The raw value is wrapped in `SecretStr` so it won't appear in logs, tracebacks, or LLM prompts.
+
+```python
+from crewai_haldir import HaldirSecrets
+
+# Store once, out-of-band (not from the crew):
+# client.store_secret("serper_api_key", "sk_xxx", scope_required="search")
+
+secrets = HaldirSecrets(client, session_id)
+serper_key = secrets.get("serper_api_key")
+
+os.environ["SERPER_API_KEY"] = serper_key.get_secret_value()
+```
+
+If the session doesn't have the required scope, `secrets.get()` raises `HaldirPermissionError`.
+
+### 5. Variable Per-Call Cost
+
+For tools whose cost depends on the output (LLM inference, paid APIs), pass `cost_fn`:
+
+```python
+def scraper_cost(result):
+    return len(str(result)) / 1000 * 0.005   # charge per 1k chars
+
+scraper = GovernedTool.wrap(
+    WebScraperTool(),
+    client=client,
+    session_id=session_id,
+    required_scope="read",
+    cost_fn=scraper_cost,
+)
+```
+
+## Further Reading
+
+- [`crewai-haldir` on PyPI](https://pypi.org/project/crewai-haldir/)
+- [Source on GitHub](https://github.com/ExposureGuard/haldir/tree/main/integrations/crewai-haldir)
+- [Haldir docs](https://haldir.xyz/docs)
+- [How Haldir Works](https://github.com/ExposureGuard/haldir/blob/main/HOW_IT_WORKS.md)
