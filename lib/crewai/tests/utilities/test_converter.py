@@ -493,13 +493,16 @@ class TestInternalInstructorBaseUrl:
         inst.agent = None
 
         fake_anthropic = MagicMock()
+        mock_from_anthropic = Mock()
         with patch.dict("sys.modules", {"anthropic": fake_anthropic}), \
-             patch("instructor.from_anthropic", Mock(), create=True):
-            inst._create_instructor_client()
+             patch("instructor.from_anthropic", mock_from_anthropic, create=True):
+            client = inst._create_instructor_client()
 
         fake_anthropic.Anthropic.assert_called_once_with(
             base_url="https://my-anthropic-proxy.example.com", api_key="sk-ant-test"
         )
+        mock_from_anthropic.assert_called_once_with(fake_anthropic.Anthropic.return_value)
+        assert client is mock_from_anthropic.return_value
 
     def test_anthropic_api_base_normalised_to_base_url(self) -> None:
         """api_base should be used as base_url when base_url is absent."""
@@ -566,13 +569,15 @@ class TestInternalInstructorBaseUrl:
         inst.content = "test"
         inst.model = SimpleModel
         inst.agent = None
-        inst._create_instructor_client()
+        client = inst._create_instructor_client()
 
         mock_azure_cls.assert_called_once_with(
             azure_endpoint="https://my-resource.openai.azure.com",
             api_key="azure-key",
             api_version="2024-02-01",
         )
+        mock_from_openai.assert_called_once_with(mock_azure_cls.return_value)
+        assert client is mock_from_openai.return_value
 
     @patch("instructor.from_provider")
     def test_azure_without_base_url_uses_from_provider(
@@ -621,6 +626,58 @@ class TestInternalInstructorBaseUrl:
         inst._create_instructor_client()
 
         mock_from_provider.assert_called_once_with("openai/gpt-4o")
+
+    @patch("openai.OpenAI")
+    @patch("instructor.from_openai")
+    def test_base_url_wins_over_api_base(
+        self, mock_from_openai: Mock, mock_openai_cls: Mock
+    ) -> None:
+        """When both base_url and api_base are set, base_url takes precedence."""
+        llm = _make_llm(
+            "openai",
+            model="gpt-4o",
+            base_url="http://primary:8000/v1",
+            api_base="http://secondary:8000/v1",
+        )
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._create_instructor_client()
+
+        mock_openai_cls.assert_called_once_with(base_url="http://primary:8000/v1")
+
+    @patch("instructor.from_provider")
+    def test_string_llm_strips_provider_prefix(
+        self, mock_from_provider: Mock
+    ) -> None:
+        """String LLMs like 'anthropic/claude-3-5-sonnet' should not produce a double prefix."""
+        inst = object.__new__(InternalInstructor)
+        inst.llm = "anthropic/claude-3-5-sonnet"
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._create_instructor_client()
+
+        mock_from_provider.assert_called_once_with("anthropic/claude-3-5-sonnet")
+
+    def test_provider_routing_is_case_insensitive(self) -> None:
+        """Provider names with non-standard casing should still route correctly."""
+        llm = _make_llm("Anthropic", base_url="https://proxy.example.com")
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+
+        fake_anthropic = MagicMock()
+        mock_from_anthropic = Mock()
+        with patch.dict("sys.modules", {"anthropic": fake_anthropic}), \
+             patch("instructor.from_anthropic", mock_from_anthropic, create=True):
+            inst._create_instructor_client()
+
+        fake_anthropic.Anthropic.assert_called_once_with(base_url="https://proxy.example.com")
 
 
 # Tests for error handling

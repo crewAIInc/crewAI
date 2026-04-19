@@ -117,8 +117,12 @@ class InternalInstructor(Generic[T]):
             base_url = getattr(self.llm, "api_base", None)
         api_key: str | None = getattr(self.llm, "api_key", None)
 
+        # Casefold for case-insensitive matching (e.g. "Anthropic" == "anthropic").
+        # from_provider still receives the original casing preserved by the LLM.
+        provider_lower = provider.casefold() if provider else "openai"
+
         if base_url:
-            if provider == "anthropic":
+            if provider_lower == "anthropic":
                 from anthropic import Anthropic
 
                 client_kwargs: dict[str, Any] = {"base_url": base_url}
@@ -126,7 +130,7 @@ class InternalInstructor(Generic[T]):
                     client_kwargs["api_key"] = api_key
                 return instructor.from_anthropic(Anthropic(**client_kwargs))
 
-            if provider in ("azure", "azure_openai"):
+            if provider_lower in ("azure", "azure_openai"):
                 from openai import AzureOpenAI
 
                 client_kwargs = {"azure_endpoint": base_url}
