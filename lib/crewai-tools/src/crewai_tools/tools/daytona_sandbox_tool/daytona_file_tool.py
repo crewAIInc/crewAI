@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import base64
-import posixpath
 from builtins import type as type_
+import logging
+import posixpath
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
 from crewai_tools.tools.daytona_sandbox_tool.daytona_base_tool import DaytonaBaseTool
+
+
+logger = logging.getLogger(__name__)
 
 
 FileAction = Literal["read", "write", "list", "delete", "mkdir", "info"]
@@ -45,7 +49,7 @@ class DaytonaFileToolSchema(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_action_args(self) -> "DaytonaFileToolSchema":
+    def _validate_action_args(self) -> DaytonaFileToolSchema:
         if self.action == "write" and self.content is None:
             raise ValueError("action='write' requires 'content'.")
         return self
@@ -136,7 +140,12 @@ class DaytonaFileTool(DaytonaBaseTool):
         try:
             sandbox.fs.create_folder(parent, "0755")
         except Exception:
-            pass
+            logger.debug(
+                "Best-effort parent-directory create failed for %s; "
+                "assuming it already exists and proceeding with the write.",
+                parent,
+                exc_info=True,
+            )
 
     def _list(self, sandbox: Any, path: str) -> dict[str, Any]:
         entries = sandbox.fs.list_files(path)

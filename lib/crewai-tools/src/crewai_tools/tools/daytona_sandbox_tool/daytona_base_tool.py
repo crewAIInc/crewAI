@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import atexit
+import logging
 import os
 import threading
 from typing import Any, ClassVar
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import ConfigDict, Field, PrivateAttr
+
+
+logger = logging.getLogger(__name__)
 
 
 class DaytonaBaseTool(BaseTool):
@@ -171,7 +175,11 @@ class DaytonaBaseTool(BaseTool):
         try:
             sandbox.delete(timeout=self.sandbox_timeout)
         except Exception:
-            pass
+            logger.debug(
+                "Best-effort sandbox cleanup failed after ephemeral use; "
+                "the sandbox may need manual deletion.",
+                exc_info=True,
+            )
 
     def close(self) -> None:
         """Delete the cached persistent sandbox if one exists."""
@@ -183,4 +191,8 @@ class DaytonaBaseTool(BaseTool):
         try:
             sandbox.delete(timeout=self.sandbox_timeout)
         except Exception:
-            pass
+            logger.debug(
+                "Best-effort persistent sandbox cleanup failed at close(); "
+                "the sandbox may need manual deletion.",
+                exc_info=True,
+            )

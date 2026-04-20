@@ -67,8 +67,13 @@ class DaytonaPythonTool(DaytonaBaseTool):
             return None
         try:
             from daytona import CodeRunParams  # type: ignore[import-not-found]
-        except ImportError:
-            return None
+        except ImportError as exc:
+            raise ImportError(
+                "Could not import daytona.CodeRunParams while building "
+                "argv/env for sandbox.process.code_run. This usually means the "
+                "installed 'daytona' SDK is too old or incompatible. Upgrade "
+                "with: pip install -U 'crewai-tools[daytona]'"
+            ) from exc
         kwargs: dict[str, Any] = {}
         if argv is not None:
             kwargs["argv"] = argv
