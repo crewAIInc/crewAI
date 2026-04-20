@@ -32,6 +32,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
@@ -84,6 +85,22 @@ from crewai.utilities.guardrail_types import (
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
+
+
+def _serialize_model_class(v: type[BaseModel] | None) -> dict[str, Any] | None:
+    """Serialize a Pydantic model class reference to its JSON schema."""
+    return v.model_json_schema() if v else None
+
+
+def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
+    """Hydrate a model class reference from checkpoint data."""
+    if v is None or isinstance(v, type):
+        return v
+    if isinstance(v, dict):
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        return create_model_from_schema(v)
+    return None
 
 
 class Task(BaseModel):
@@ -141,15 +158,33 @@ class Task(BaseModel):
         description="Whether the task should be executed asynchronously or not.",
         default=False,
     )
-    output_json: type[BaseModel] | None = Field(
+    output_json: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model to be used to create a JSON output.",
         default=None,
     )
-    output_pydantic: type[BaseModel] | None = Field(
+    output_pydantic: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model to be used to create a Pydantic output.",
         default=None,
     )
-    response_model: type[BaseModel] | None = Field(
+    response_model: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model for structured LLM outputs using native provider features.",
         default=None,
     )
@@ -189,7 +224,13 @@ class Task(BaseModel):
         description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
-    converter_cls: type[Converter] | None = Field(
+    converter_cls: Annotated[
+        type[Converter] | None,
+        BeforeValidator(lambda v: v if v is None or isinstance(v, type) else None),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A converter class used to export structured output",
         default=None,
     )
