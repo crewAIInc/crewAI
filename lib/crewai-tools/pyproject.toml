@@ -139,6 +139,9 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+daytona = [
+    "daytona~=0.140.0",
+]
 
 
 [tool.uv]
