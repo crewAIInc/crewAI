@@ -159,5 +159,14 @@ class DaytonaFileTool(DaytonaBaseTool):
 
     @staticmethod
     def _file_info_to_dict(info: Any) -> dict[str, Any]:
-        fields = ("name", "size", "mode", "is_dir", "modified", "owner", "group")
+        fields = (
+            "name",
+            "size",
+            "mode",
+            "permissions",
+            "is_dir",
+            "mod_time",
+            "owner",
+            "group",
+        )
         return {field: getattr(info, field, None) for field in fields}
