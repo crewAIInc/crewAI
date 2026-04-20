@@ -301,7 +301,17 @@ def handle_max_iterations_exceeded(
             )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    formatted = format_answer(answer=answer)
+    try:
+        formatted = format_answer(answer=answer)
+    except OutputParserError:
+        # No more iterations left to retry in — wrap the raw (malformed)
+        # response in an AgentFinish so the agent terminates gracefully
+        # rather than surfacing the parser error to the user.
+        return AgentFinish(
+            thought="Failed to parse LLM response",
+            output=answer,
+            text=answer,
+        )
 
     # If format_answer returned an AgentAction, convert it to AgentFinish
     if isinstance(formatted, AgentFinish):
@@ -333,14 +343,29 @@ def format_message_for_llm(
 def format_answer(answer: str) -> AgentAction | AgentFinish:
     """Format a response from the LLM into an AgentAction or AgentFinish.
 
+    ``OutputParserError`` is deliberately *not* caught here — the ReAct
+    invocation loop catches it upstream to feed a corrective message back
+    to the model and retry the step. Swallowing it into an ``AgentFinish``
+    would silently terminate the run with the raw malformed text (see
+    #3771 / #4113).
+
+    Other unexpected exceptions are still converted to an ``AgentFinish``
+    so an internal parser bug cannot crash the whole agent loop.
+
     Args:
         answer: The raw response from the LLM
 
     Returns:
         Either an AgentAction or AgentFinish
+
+    Raises:
+        OutputParserError: If the response is structurally malformed
+            (e.g., missing ``Action:``/``Action Input:`` markers).
     """
     try:
         return parse(answer)
+    except OutputParserError:
+        raise
     except Exception:
         return AgentFinish(
             thought="Failed to parse LLM response",

@@ -1033,3 +1033,120 @@ class TestParseToolCallArgs:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
         assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+
+
+class TestFormatAnswerReRaisesParserError:
+    """Regression tests for issue #4113 / #3771.
+
+    `format_answer` used to swallow ``OutputParserError`` from a malformed
+    ReAct response and return an ``AgentFinish`` wrapping the raw text.
+    That hid the parse failure from ``_invoke_loop_react``'s retry handler
+    (which specifically catches ``OutputParserError`` to feed the agent a
+    corrective message) so the agent silently exited with garbage output
+    instead of retrying.
+
+    After the fix:
+      * ``format_answer`` re-raises ``OutputParserError`` so the loop can
+        catch it and run its error-recovery path.
+      * Non-parser exceptions still fall back to an ``AgentFinish`` so we
+        don't crash the loop on unexpected errors.
+      * ``handle_max_iterations_exceeded`` tolerates a final response that
+        still fails to parse (since there is no next iteration to retry in).
+    """
+
+    _MALFORMED_ANSWER = (
+        "Thought\n"
+        "The user wants to verify something.\n"
+        "Action\n"
+        "Video Analysis Tool\n"
+        "Action Input:\n"
+        '{"query": "Is there something?"}'
+    )
+
+    def test_format_answer_reraises_output_parser_error(self) -> None:
+        from crewai.agents.parser import OutputParserError
+        from crewai.utilities.agent_utils import format_answer
+
+        with pytest.raises(OutputParserError):
+            format_answer(self._MALFORMED_ANSWER)
+
+    def test_format_answer_returns_finish_for_non_parser_errors(self) -> None:
+        """Unexpected exceptions from ``parse`` still fall back to AgentFinish.
+
+        We don't want genuine programmer bugs (non-parser exceptions) to kill
+        the agent loop — only ``OutputParserError`` should propagate for
+        retry.
+        """
+        from crewai.agents.parser import AgentFinish
+        from crewai.utilities import agent_utils
+
+        def _boom(_: str) -> Any:
+            raise RuntimeError("unexpected internal failure")
+
+        with patch.object(agent_utils, "parse", _boom):
+            result = agent_utils.format_answer("anything")
+
+        assert isinstance(result, AgentFinish)
+        assert result.thought == "Failed to parse LLM response"
+        assert result.output == "anything"
+
+    def test_format_answer_still_returns_finish_for_final_answer(self) -> None:
+        from crewai.agents.parser import AgentFinish
+        from crewai.utilities.agent_utils import format_answer
+
+        result = format_answer(
+            "Thought: I know this.\nFinal Answer: The temperature is 100 degrees"
+        )
+        assert isinstance(result, AgentFinish)
+        assert "100 degrees" in result.output
+
+    def test_process_llm_response_propagates_parser_error_with_stop_words(
+        self,
+    ) -> None:
+        """With stop-words enabled, a malformed response must raise.
+
+        The ReAct loop (``_invoke_loop_react``) relies on this to trigger the
+        ``except OutputParserError`` branch that feeds a corrective prompt
+        back to the LLM instead of terminating with a garbage final answer.
+        """
+        from crewai.agents.parser import OutputParserError
+        from crewai.utilities.agent_utils import process_llm_response
+
+        with pytest.raises(OutputParserError):
+            process_llm_response(self._MALFORMED_ANSWER, use_stop_words=True)
+
+    def test_process_llm_response_propagates_parser_error_without_stop_words(
+        self,
+    ) -> None:
+        from crewai.agents.parser import OutputParserError
+        from crewai.utilities.agent_utils import process_llm_response
+
+        with pytest.raises(OutputParserError):
+            process_llm_response(self._MALFORMED_ANSWER, use_stop_words=False)
+
+    def test_handle_max_iterations_exceeded_tolerates_malformed_final_answer(
+        self,
+    ) -> None:
+        """On max-iter, a final forced call that still returns malformed text
+        must NOT crash — we wrap the raw answer in an ``AgentFinish`` so the
+        run can terminate gracefully with whatever the model produced.
+        """
+        from crewai.agents.parser import AgentFinish
+        from crewai.utilities.agent_utils import handle_max_iterations_exceeded
+
+        mock_llm = MagicMock()
+        mock_llm.call.return_value = self._MALFORMED_ANSWER
+        mock_printer = MagicMock()
+
+        result = handle_max_iterations_exceeded(
+            formatted_answer=None,
+            printer=mock_printer,
+            messages=[],
+            llm=mock_llm,
+            callbacks=[],
+            verbose=False,
+        )
+
+        assert isinstance(result, AgentFinish)
+        assert result.output == self._MALFORMED_ANSWER
+        assert result.text == self._MALFORMED_ANSWER

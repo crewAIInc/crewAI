@@ -869,6 +869,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                         callbacks=self._callbacks,
                         verbose=self.verbose,
                     )
+                    # `handle_max_iterations_exceeded` returns an `AgentFinish`, so
+                    # break out rather than continuing into another LLM call (which
+                    # would just increment past the limit and loop again).
+                    break
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
