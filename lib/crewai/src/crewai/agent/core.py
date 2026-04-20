@@ -1381,6 +1381,15 @@ class Agent(BaseAgent):
             executor.original_tools = raw_tools
             executor.prompt = prompt
             executor.response_model = response_format
+            executor.stop_words = stop_words
+            executor.tools_handler = self.tools_handler
+            executor.step_callback = self.step_callback
+            executor.function_calling_llm = cast(
+                BaseLLM | None, self.function_calling_llm
+            )
+            executor.respect_context_window = self.respect_context_window
+            executor.request_within_rpm_limit = rpm_limit_fn
+            executor.callbacks = [TokenCalcHandler(self._token_process)]
         else:
             executor = AgentExecutor(
                 llm=cast(BaseLLM, self.llm),
