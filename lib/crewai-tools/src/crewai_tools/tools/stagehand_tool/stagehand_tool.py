@@ -172,6 +172,7 @@ class StagehandTool(BaseTool):
     self_heal: bool = True
     wait_for_captcha_solves: bool = True
     verbose: int = 1
+    browserbase_session_create_params: dict[str, Any] | None = None
 
     # Token management settings
     max_retries_on_token_limit: int = 3
@@ -196,12 +197,14 @@ class StagehandTool(BaseTool):
         self_heal: bool | None = None,
         wait_for_captcha_solves: bool | None = None,
         verbose: int | None = None,
+        browserbase_session_create_params: dict[str, Any] | None = None,
         _testing: bool = False,
         **kwargs: Any,
     ) -> None:
         # Set testing flag early so that other init logic can rely on it
         self._testing = _testing
         super().__init__(**kwargs)
+        self._testing = _testing
 
         # Set up logger
         import logging
@@ -228,6 +231,8 @@ class StagehandTool(BaseTool):
             self.wait_for_captcha_solves = wait_for_captcha_solves
         if verbose is not None:
             self.verbose = verbose
+        if browserbase_session_create_params is not None:
+            self.browserbase_session_create_params = browserbase_session_create_params
 
         self._session_id = session_id
 
@@ -354,10 +359,17 @@ class StagehandTool(BaseTool):
                 waitForCaptchaSolves=self.wait_for_captcha_solves,
                 verbose=self.verbose,
                 browserbaseSessionID=session_id or self._session_id,
+                browserbaseSessionCreateParams=self.browserbase_session_create_params,
             )
 
             # Initialize Stagehand with config
-            self._stagehand = Stagehand(config=config)  # type: ignore[call-arg]
+            self._stagehand = Stagehand(  # type: ignore[call-arg]
+                config=config,
+                server_url=self.server_url
+                if self.server_url
+                else "https://api.stagehand.browserbase.com/v1",
+                model_api_key=model_api_key,
+            )
 
             # Initialize the Stagehand instance
             await self._stagehand.init()

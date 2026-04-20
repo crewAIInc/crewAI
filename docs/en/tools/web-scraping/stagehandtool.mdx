@@ -218,6 +218,23 @@ stagehand_tool = StagehandTool(
 )
 ```
 
+To enable Browserbase session options such as verified browsers, proxies, or region selection, pass them through `browserbase_session_create_params`:
+
+```python
+stagehand_tool = StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",
+    browserbase_session_create_params={
+        "proxies": True,
+        "region": "us-west-2",
+        "browser_settings": {
+            "verified": True,
+        },
+    },
+)
+```
+
 ## Best Practices
 
 1. **Be Specific**: Provide detailed instructions for better results

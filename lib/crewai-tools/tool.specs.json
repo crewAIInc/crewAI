@@ -23027,6 +23027,19 @@
             "default": null,
             "title": "Api Key"
           },
+          "browserbase_session_create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Browserbase Session Create Params"
+          },
           "dom_settle_timeout_ms": {
             "default": 3000,
             "title": "Dom Settle Timeout Ms",

@@ -238,6 +238,23 @@ stagehand_tool = StagehandTool(
 )
 ```
 
+If you need Browserbase session-level features like verified browsers, proxies, or regional routing, pass them through `browserbase_session_create_params`:
+
+```python
+stagehand_tool = StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",
+    browserbase_session_create_params={
+        "proxies": True,
+        "region": "us-west-2",
+        "browser_settings": {
+            "verified": True,
+        },
+    },
+)
+```
+
 ## Tips for Effective Use
 
 1. **Be specific in instructions**: The more specific your instructions, the better the results. For example, instead of "click the button," use "click the 'Submit' button at the bottom of the contact form."
