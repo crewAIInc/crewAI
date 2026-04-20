@@ -59,6 +59,7 @@ class InternalInstructor(Generic[T]):
         self.model = model
         self.llm = llm or (agent.function_calling_llm or agent.llm if agent else None)
         self._litellm_api_base: str | None = None
+        self._instructor_model_name: str = ""
 
         with suppress_warnings():
             import instructor  # type: ignore[import-untyped]
@@ -76,8 +77,14 @@ class InternalInstructor(Generic[T]):
                 )
                 if _base:
                     self._litellm_api_base = str(_base)
+                # Litellm uses the provider-prefixed model string for routing.
+                if isinstance(self.llm, str):
+                    self._instructor_model_name = self.llm
+                elif hasattr(self.llm, "model"):
+                    self._instructor_model_name = str(self.llm.model)
             else:
                 self._client = self._create_instructor_client()
+                # _instructor_model_name is set inside _create_instructor_client()
 
     def _create_instructor_client(self) -> Any:
         """Create instructor client configured for the LLM provider.
@@ -107,9 +114,13 @@ class InternalInstructor(Generic[T]):
             model_string = self.llm.partition("/")[2] or self.llm
         elif self.llm is not None and hasattr(self.llm, "model"):
             # Strip provider prefix to avoid double-prefix in from_provider()
+            # and to send bare model ids to direct Anthropic/OpenAI SDK clients.
             model_string = self.llm.model.partition("/")[2] or self.llm.model
         else:
             raise ValueError("LLM must be a string or have a model attribute")
+
+        # Cache for to_pydantic so the bare model id reaches direct SDK clients.
+        self._instructor_model_name = model_string
 
         if isinstance(self.llm, str):
             provider = self._extract_provider()
@@ -123,7 +134,7 @@ class InternalInstructor(Generic[T]):
         base_url: str | None = getattr(self.llm, "base_url", None) or None
         if base_url is None:
             base_url = getattr(self.llm, "api_base", None) or None
-        api_key: str | None = getattr(self.llm, "api_key", None)
+        api_key: str | None = getattr(self.llm, "api_key", None) or None
 
         # Casefold for case-insensitive matching (e.g. "Anthropic" == "anthropic").
         # from_provider still receives the original casing preserved by the LLM.
@@ -208,15 +219,13 @@ class InternalInstructor(Generic[T]):
                 "LLM must be provided and have a model attribute or be a string"
             )
 
-        if isinstance(self.llm, str):
-            model_name = self.llm
-        else:
-            model_name = self.llm.model
-
         extra: dict[str, Any] = {}
         if self._litellm_api_base:
             extra["api_base"] = self._litellm_api_base
 
         return self._client.chat.completions.create(  # type: ignore[no-any-return]
-            model=model_name, response_model=self.model, messages=messages, **extra
+            model=self._instructor_model_name,
+            response_model=self.model,
+            messages=messages,
+            **extra,
         )

@@ -760,6 +760,7 @@ class TestInternalInstructorBaseUrl:
         inst.model = SimpleModel
         inst.agent = None
         inst._litellm_api_base = "http://custom:8080/v1"
+        inst._instructor_model_name = "gpt-4o"
         mock_client = MagicMock()
         inst._client = mock_client
 
@@ -767,6 +768,24 @@ class TestInternalInstructorBaseUrl:
 
         call_kwargs = mock_client.chat.completions.create.call_args[1]
         assert call_kwargs.get("api_base") == "http://custom:8080/v1"
+
+    def test_to_pydantic_sends_stripped_model_name(self) -> None:
+        """to_pydantic must send the bare model id, not a provider-prefixed string."""
+        inst = object.__new__(InternalInstructor)
+        inst.llm = _make_llm("anthropic", model="anthropic/claude-3-5-sonnet-20241022")
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._litellm_api_base = None
+        inst._instructor_model_name = "claude-3-5-sonnet-20241022"  # stripped by _create_instructor_client
+        mock_client = MagicMock()
+        inst._client = mock_client
+
+        inst.to_pydantic()
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert call_kwargs["model"] == "claude-3-5-sonnet-20241022"
+        assert "anthropic/" not in call_kwargs["model"]
 
 
 # Tests for error handling
