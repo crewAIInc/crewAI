@@ -1589,7 +1589,7 @@ requires-dist = [
     { name = "crewai", editable = "lib/crewai" },
     { name = "cryptography", marker = "extra == 'snowflake'", specifier = ">=43.0.3" },
     { name = "databricks-sdk", marker = "extra == 'databricks-sdk'", specifier = ">=0.46.0" },
-    { name = "daytona", marker = "extra == 'daytona'", specifier = ">=0.140.0" },
+    { name = "daytona", marker = "extra == 'daytona'", specifier = "~=0.140.0" },
     { name = "exa-py", marker = "extra == 'exa-py'", specifier = ">=1.8.7" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
     { name = "gitpython", marker = "extra == 'github'", specifier = ">=3.1.41,<4" },
