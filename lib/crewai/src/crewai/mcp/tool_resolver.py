@@ -353,6 +353,7 @@ class MCPToolResolver:
                     f"Error during setup client and list tools: {e}"
                 ) from e
 
+        tools_list: list[dict[str, Any]] = []
         try:
             try:
                 asyncio.get_running_loop()
@@ -400,6 +401,13 @@ class MCPToolResolver:
                     else:
                         filtered_tools.append(tool)
                 tools_list = filtered_tools
+
+            if not tools_list:
+                self._logger.log(
+                    "warning",
+                    f"No tools discovered from MCP server: {server_name}. "
+                    "Verify the server is running and tool_filter is not too restrictive.",
+                )
 
             def _client_factory() -> MCPClient:
                 transport, _ = self._create_transport(mcp_config)
