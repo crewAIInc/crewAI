@@ -106,7 +106,7 @@ class DaytonaBaseTool(BaseTool):
         if cls._sdk_cache:
             return cls._sdk_cache
         try:
-            from daytona import (  # type: ignore[import-not-found]
+            from daytona import (
                 CreateSandboxFromSnapshotParams,
                 Daytona,
                 DaytonaConfig,

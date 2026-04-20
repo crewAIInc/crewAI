@@ -66,7 +66,7 @@ class DaytonaPythonTool(DaytonaBaseTool):
         if argv is None and env is None:
             return None
         try:
-            from daytona import CodeRunParams  # type: ignore[import-not-found]
+            from daytona import CodeRunParams
         except ImportError as exc:
             raise ImportError(
                 "Could not import daytona.CodeRunParams while building "
