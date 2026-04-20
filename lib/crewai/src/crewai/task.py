@@ -1241,12 +1241,26 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            else:
+                raw = result
+                pydantic_output, json_output = self._export_output(result)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
@@ -1337,12 +1351,26 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            else:
+                raw = result
+                pydantic_output, json_output = self._export_output(result)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
