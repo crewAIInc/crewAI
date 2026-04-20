@@ -1,0 +1,106 @@
+---
+title: AgentSeal Integration
+description: Verifiable audit trails for your CrewAI agents
+icon: shield-check
+mode: "wide"
+---
+
+# Introduction
+
+AgentSeal is a logging and audit trail API for AI agents. Every action is recorded with a verifiable history that can't be silently modified. Built for compliance and production use.
+
+It captures task completions and agent steps, recording what happened, why, and who authorized it.
+
+## Why use AgentSeal?
+
+CrewAI agents make decisions, use tools, and complete tasks autonomously. When something goes wrong or a client asks what happened, you need a clear record.
+
+AgentSeal lets you:
+
+- Record every task completion and agent step
+- Verify that no records have been modified after the fact
+- Query your audit trail by agent, action type, or time range
+- Meet compliance requirements (EU AI Act, SOC 2)
+
+## Quick Setup with CrewAI
+
+<Steps>
+  <Step title="Sign Up & Get API Key">
+    Visit [agentseal.io](https://agentseal.io), create an account, and copy your API key.
+  </Step>
+  <Step title="Install the SDK">
+    ```bash
+    pip install agentseal-sdk
+    ```
+  </Step>
+  <Step title="Add AgentSeal to Your Crew">
+    ```python
+    from crewai import Agent, Task, Crew
+    from agentseal import Seal
+    from agentseal.integrations.crewai import AgentSealCrewHook
+
+    # Initialize AgentSeal
+    seal = Seal(api_key="your-agentseal-api-key")
+    hook = AgentSealCrewHook(seal=seal, agent="my-crew")
+
+    # Create your agents and tasks as usual
+    researcher = Agent(
+        role="Researcher",
+        goal="Find relevant information",
+        backstory="You are a research assistant.",
+    )
+
+    task = Task(
+        description="Research the latest AI regulations",
+        expected_output="A summary of current AI regulations",
+        agent=researcher,
+    )
+
+    # Pass AgentSeal callbacks to the Crew
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        **hook.callbacks(),
+    )
+
+    result = crew.kickoff()
+    ```
+
+    Every task completion and agent step is now recorded automatically.
+  </Step>
+</Steps>
+
+## What Gets Recorded
+
+| Event | Action Type | Details |
+|-------|------------|---------|
+| Task completion | `task:complete` | Task description, output |
+| Agent step (tool use) | `step:<tool_name>` | Tool name, output |
+| Agent step (reasoning) | `step:thought` | Reasoning output |
+
+## Verifying Your Audit Trail
+
+You can verify that no records have been modified at any time:
+
+```python
+result = seal.verify()
+# {"valid": True, "entries_verified": 42}
+```
+
+## Configuration
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `seal` | `Seal` | required | AgentSeal client instance |
+| `agent` | `str` | `"crewai"` | Agent identifier for grouping entries |
+
+## Error Handling
+
+AgentSeal never interrupts your crew's execution. If the AgentSeal API is unreachable or returns an error, a warning is printed to stderr and the crew continues normally.
+
+## Links
+
+- [Website](https://agentseal.io)
+- [Documentation](https://agentseal.io/docs)
+- [GitHub (SDK)](https://github.com/JoeyBrar/agentseal-sdk)
+- [PyPI](https://pypi.org/project/agentseal-sdk/)

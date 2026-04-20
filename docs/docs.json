@@ -318,6 +318,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -1266,6 +1267,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -1740,6 +1742,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -2214,6 +2217,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -2687,6 +2691,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -3159,6 +3164,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -3631,6 +3637,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -4103,6 +4110,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -4577,6 +4585,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -5050,6 +5059,7 @@
                     "pages": [
                       "en/observability/tracing",
                       "en/observability/overview",
+                      "en/observability/agentseal",
                       "en/observability/arize-phoenix",
                       "en/observability/braintrust",
                       "en/observability/datadog",
@@ -5543,6 +5553,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -6459,6 +6470,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -6917,6 +6929,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -7375,6 +7388,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -7832,6 +7846,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -8289,6 +8304,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -8746,6 +8762,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -9202,6 +9219,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -9658,6 +9676,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -10115,6 +10134,7 @@
                     "pages": [
                       "pt-BR/observability/tracing",
                       "pt-BR/observability/overview",
+                      "pt-BR/observability/agentseal",
                       "pt-BR/observability/arize-phoenix",
                       "pt-BR/observability/braintrust",
                       "pt-BR/observability/datadog",
@@ -10615,6 +10635,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -11555,6 +11576,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -12025,6 +12047,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -12495,6 +12518,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -12964,6 +12988,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -13433,6 +13458,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -13902,6 +13928,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -14370,6 +14397,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -14838,6 +14866,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -15307,6 +15336,7 @@
                     "pages": [
                       "ko/observability/tracing",
                       "ko/observability/overview",
+                      "ko/observability/agentseal",
                       "ko/observability/arize-phoenix",
                       "ko/observability/braintrust",
                       "ko/observability/datadog",
@@ -15807,6 +15837,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -16747,6 +16778,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -17217,6 +17249,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -17687,6 +17720,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -18156,6 +18190,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -18625,6 +18660,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -19094,6 +19130,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -19562,6 +19599,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -20030,6 +20068,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
@@ -20499,6 +20538,7 @@
                     "pages": [
                       "ar/observability/tracing",
                       "ar/observability/overview",
+                      "ar/observability/agentseal",
                       "ar/observability/arize-phoenix",
                       "ar/observability/braintrust",
                       "ar/observability/datadog",
