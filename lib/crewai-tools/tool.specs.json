@@ -6977,6 +6977,634 @@
       }
     },
     {
+      "description": "Execute a shell command inside a Daytona sandbox and return the exit code and combined output. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside a Daytona sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaExecTool",
+        "type": "object"
+      },
+      "name": "DaytonaExecTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the sandbox.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the sandbox work dir.",
+            "title": "Cwd"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Env"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "DaytonaExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside a Daytona sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, or fetch file metadata. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Files",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside a Daytona sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With the\n    default ephemeral mode, files disappear when this tool call finishes.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaFileTool",
+        "type": "object"
+      },
+      "name": "DaytonaFileTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata).",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write': treat content as base64 and upload raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "mode": {
+            "default": "0755",
+            "description": "For action='mkdir': octal permission string (default 0755).",
+            "title": "Mode",
+            "type": "string"
+          },
+          "path": {
+            "description": "Absolute path inside the sandbox.",
+            "title": "Path",
+            "type": "string"
+          },
+          "recursive": {
+            "default": false,
+            "description": "For action='delete': remove directories recursively.",
+            "title": "Recursive",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "path"
+        ],
+        "title": "DaytonaFileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a block of Python code inside a Daytona sandbox and return the exit code, captured stdout, and any produced artifacts. Use this for data processing, quick scripts, or analysis that should run in an isolated environment.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run Python source inside a Daytona sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaPythonTool",
+        "type": "object"
+      },
+      "name": "DaytonaPythonTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "argv": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional argv passed to the script (forwarded as params.argv).",
+            "title": "Argv"
+          },
+          "code": {
+            "description": "Python source to execute inside the sandbox.",
+            "title": "Code",
+            "type": "string"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables for the run (forwarded as params.env).",
+            "title": "Env"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the code to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "DaytonaPythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to recursively list a directory's content.",
       "env_vars": [],
       "humanized_name": "List files in directory",
