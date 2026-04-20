@@ -431,6 +431,7 @@ def test_converter_with_nested_model() -> None:
 # ---------------------------------------------------------------------------
 
 from crewai.utilities.internal_instructor import InternalInstructor  # noqa: E402
+import instructor  # noqa: E402 — ensure cached before sys.modules patches in tests below
 
 
 def _make_llm(
@@ -440,6 +441,7 @@ def _make_llm(
     api_base: str | None = None,
     api_key: str | None = None,
     api_version: str | None = None,
+    azure_deployment: str | None = None,
     is_litellm: bool = False,
 ) -> Mock:
     llm = Mock()
@@ -449,6 +451,7 @@ def _make_llm(
     llm.api_base = api_base
     llm.api_key = api_key
     llm.api_version = api_version
+    llm.azure_deployment = azure_deployment
     llm.is_litellm = is_litellm
     return llm
 
@@ -678,6 +681,92 @@ class TestInternalInstructorBaseUrl:
             inst._create_instructor_client()
 
         fake_anthropic.Anthropic.assert_called_once_with(base_url="https://proxy.example.com")
+
+    def test_anthropic_import_error_has_friendly_message(self) -> None:
+        """Missing anthropic package raises ImportError with pip install hint."""
+        llm = _make_llm("anthropic", base_url="https://proxy.example.com")
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+
+        with patch.dict("sys.modules", {"anthropic": None}):
+            with pytest.raises(ImportError, match="pip install anthropic"):
+                inst._create_instructor_client()
+
+    @patch("openai.AzureOpenAI")
+    @patch("instructor.from_openai")
+    def test_azure_with_deployment(
+        self, mock_from_openai: Mock, mock_azure_cls: Mock
+    ) -> None:
+        """azure_deployment is forwarded to AzureOpenAI when set on the LLM."""
+        llm = _make_llm(
+            "azure",
+            model="gpt-4o",
+            base_url="https://my-resource.openai.azure.com",
+            azure_deployment="my-gpt4o-deployment",
+        )
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._create_instructor_client()
+
+        mock_azure_cls.assert_called_once_with(
+            azure_endpoint="https://my-resource.openai.azure.com",
+            azure_deployment="my-gpt4o-deployment",
+        )
+        mock_from_openai.assert_called_once_with(mock_azure_cls.return_value)
+
+    @patch("instructor.from_provider")
+    def test_object_llm_strips_model_prefix(
+        self, mock_from_provider: Mock
+    ) -> None:
+        """An LLM object whose .model contains 'provider/model' must not double-prefix."""
+        llm = _make_llm("anthropic", model="anthropic/claude-3-5-sonnet-20241022")
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._create_instructor_client()
+
+        mock_from_provider.assert_called_once_with(
+            "anthropic/claude-3-5-sonnet-20241022"
+        )
+
+    @patch("instructor.from_provider")
+    def test_empty_string_base_url_treated_as_absent(
+        self, mock_from_provider: Mock
+    ) -> None:
+        """Empty string base_url must not trigger the custom-client path."""
+        llm = _make_llm("openai", model="gpt-4o", base_url="")
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._create_instructor_client()
+
+        mock_from_provider.assert_called_once_with("openai/gpt-4o")
+
+    def test_litellm_api_base_forwarded_in_to_pydantic(self) -> None:
+        """When _litellm_api_base is set, to_pydantic passes it as api_base kwarg."""
+        inst = object.__new__(InternalInstructor)
+        inst.llm = _make_llm("openai", model="gpt-4o")
+        inst.content = "test content"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._litellm_api_base = "http://custom:8080/v1"
+        mock_client = MagicMock()
+        inst._client = mock_client
+
+        inst.to_pydantic()
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert call_kwargs.get("api_base") == "http://custom:8080/v1"
 
 
 # Tests for error handling

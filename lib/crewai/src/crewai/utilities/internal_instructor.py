@@ -58,6 +58,7 @@ class InternalInstructor(Generic[T]):
         self.agent = agent
         self.model = model
         self.llm = llm or (agent.function_calling_llm or agent.llm if agent else None)
+        self._litellm_api_base: str | None = None
 
         with suppress_warnings():
             import instructor  # type: ignore[import-untyped]
@@ -70,6 +71,11 @@ class InternalInstructor(Generic[T]):
                 from litellm import completion
 
                 self._client = instructor.from_litellm(completion)
+                _base = getattr(self.llm, "base_url", None) or getattr(
+                    self.llm, "api_base", None
+                )
+                if _base:
+                    self._litellm_api_base = str(_base)
             else:
                 self._client = self._create_instructor_client()
 
@@ -100,7 +106,8 @@ class InternalInstructor(Generic[T]):
             # Strip provider prefix so "anthropic/claude-3-5-sonnet" → "claude-3-5-sonnet"
             model_string = self.llm.partition("/")[2] or self.llm
         elif self.llm is not None and hasattr(self.llm, "model"):
-            model_string = self.llm.model
+            # Strip provider prefix to avoid double-prefix in from_provider()
+            model_string = self.llm.model.partition("/")[2] or self.llm.model
         else:
             raise ValueError("LLM must be a string or have a model attribute")
 
@@ -112,9 +119,10 @@ class InternalInstructor(Generic[T]):
             provider = "openai"
 
         # Normalise api_base → base_url; base_url takes precedence when both are set.
-        base_url: str | None = getattr(self.llm, "base_url", None)
+        # Empty strings are treated the same as absent (normalised to None).
+        base_url: str | None = getattr(self.llm, "base_url", None) or None
         if base_url is None:
-            base_url = getattr(self.llm, "api_base", None)
+            base_url = getattr(self.llm, "api_base", None) or None
         api_key: str | None = getattr(self.llm, "api_key", None)
 
         # Casefold for case-insensitive matching (e.g. "Anthropic" == "anthropic").
@@ -123,7 +131,13 @@ class InternalInstructor(Generic[T]):
 
         if base_url:
             if provider_lower == "anthropic":
-                from anthropic import Anthropic
+                try:
+                    from anthropic import Anthropic
+                except ImportError as exc:
+                    raise ImportError(
+                        "The 'anthropic' package is required for Anthropic provider support. "
+                        "Install it with: pip install anthropic"
+                    ) from exc
 
                 client_kwargs: dict[str, Any] = {"base_url": base_url}
                 if api_key is not None:
@@ -139,6 +153,9 @@ class InternalInstructor(Generic[T]):
                 api_version: str | None = getattr(self.llm, "api_version", None)
                 if api_version is not None:
                     client_kwargs["api_version"] = api_version
+                azure_deployment: str | None = getattr(self.llm, "azure_deployment", None)
+                if azure_deployment is not None:
+                    client_kwargs["azure_deployment"] = azure_deployment
                 return instructor.from_openai(AzureOpenAI(**client_kwargs))
 
             # OpenAI and all other OpenAI-compatible providers (vLLM, Ollama, Groq, …)
@@ -196,6 +213,10 @@ class InternalInstructor(Generic[T]):
         else:
             model_name = self.llm.model
 
+        extra: dict[str, Any] = {}
+        if self._litellm_api_base:
+            extra["api_base"] = self._litellm_api_base
+
         return self._client.chat.completions.create(  # type: ignore[no-any-return]
-            model=model_name, response_model=self.model, messages=messages
+            model=model_name, response_model=self.model, messages=messages, **extra
         )
