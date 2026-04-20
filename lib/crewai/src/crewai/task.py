@@ -226,6 +226,7 @@ class Task(BaseModel):
     )
     converter_cls: Annotated[
         type[Converter] | None,
+        BeforeValidator(lambda v: v if v is None or isinstance(v, type) else None),
         PlainSerializer(
             _serialize_model_class, return_type=dict | None, when_used="json"
         ),
