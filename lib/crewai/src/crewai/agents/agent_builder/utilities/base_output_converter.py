@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -54,3 +55,33 @@ class OutputConverter(BaseModel, ABC):
         Returns:
             Dictionary containing structured JSON data.
         """
+
+    async def ato_pydantic(self, current_attempt: int = 1) -> BaseModel:
+        """Async convert text to a Pydantic model instance.
+
+        Default implementation offloads the sync version to a thread pool
+        so that custom subclasses work without modification.  Native async
+        subclasses should override this method.
+
+        Args:
+            current_attempt: Current attempt number for retry logic.
+
+        Returns:
+            Pydantic model instance with structured data.
+        """
+        return await asyncio.to_thread(self.to_pydantic, current_attempt)
+
+    async def ato_json(self, current_attempt: int = 1) -> dict[str, Any]:
+        """Async convert text to a JSON dictionary.
+
+        Default implementation offloads the sync version to a thread pool
+        so that custom subclasses work without modification.  Native async
+        subclasses should override this method.
+
+        Args:
+            current_attempt: Current attempt number for retry logic.
+
+        Returns:
+            Dictionary containing structured JSON data.
+        """
+        return await asyncio.to_thread(self.to_json, current_attempt)

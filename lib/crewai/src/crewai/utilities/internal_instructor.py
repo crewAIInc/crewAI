@@ -58,6 +58,7 @@ class InternalInstructor(Generic[T]):
         self.agent = agent
         self.model = model
         self.llm = llm or (agent.function_calling_llm or agent.llm if agent else None)
+        self._async_client: Any = None
 
         with suppress_warnings():
             import instructor
@@ -73,17 +74,15 @@ class InternalInstructor(Generic[T]):
             else:
                 self._client = self._create_instructor_client()
 
-    def _create_instructor_client(self) -> Any:
-        """Create instructor client using the modern from_provider pattern.
+    def _build_provider_model_string(self) -> str:
+        """Build a ``provider/model`` string for instructor.
 
         Returns:
-            Instructor client configured for the LLM provider
+            A string like ``"openai/gpt-4o"``
 
         Raises:
-            ValueError: If the provider is not supported
+            ValueError: If the LLM has no model attribute
         """
-        import instructor
-
         if isinstance(self.llm, str):
             model_string = self.llm
         elif self.llm is not None and hasattr(self.llm, "model"):
@@ -96,9 +95,19 @@ class InternalInstructor(Generic[T]):
         elif self.llm is not None and hasattr(self.llm, "provider"):
             provider = self.llm.provider
         else:
-            provider = "openai"  # Default fallback
+            provider = "openai"
 
-        return instructor.from_provider(f"{provider}/{model_string}")
+        return f"{provider}/{model_string}"
+
+    def _create_instructor_client(self) -> Any:
+        """Create instructor client using the modern from_provider pattern.
+
+        Returns:
+            Instructor client configured for the LLM provider
+        """
+        import instructor
+
+        return instructor.from_provider(self._build_provider_model_string())
 
     def _extract_provider(self) -> str:
         """Extract provider from LLM model name.
@@ -147,4 +156,78 @@ class InternalInstructor(Generic[T]):
 
         return self._client.chat.completions.create(  # type: ignore[no-any-return]
             model=model_name, response_model=self.model, messages=messages
+        )
+
+    async def ato_json(self) -> str:
+        """Async convert the structured output to JSON format.
+
+        Returns:
+            JSON string representation of the structured output
+        """
+        pydantic_model = await self.ato_pydantic()
+        return pydantic_model.model_dump_json(indent=2)
+
+    async def ato_pydantic(self) -> T:
+        """Async generate structured output using the specified Pydantic model.
+
+        Uses an async instructor client so the event loop is never blocked.
+
+        Returns:
+            Instance of the specified Pydantic model with structured data
+
+        Raises:
+            ValueError: If LLM is not provided or invalid
+        """
+        messages: list[LLMMessage] = [{"role": "user", "content": self.content}]
+
+        if not _is_valid_llm(self.llm):
+            raise ValueError(
+                "LLM must be provided and have a model attribute or be a string"
+            )
+
+        if isinstance(self.llm, str):
+            model_name = self.llm
+        else:
+            model_name = self.llm.model
+
+        async_client = self._get_async_client()
+        return await async_client.chat.completions.create(  # type: ignore[no-any-return]
+            model=model_name, response_model=self.model, messages=messages
+        )
+
+    def _get_async_client(self) -> Any:
+        """Create or return a cached async instructor client.
+
+        Returns:
+            Async instructor client configured for the LLM provider
+        """
+        if self._async_client is not None:
+            return self._async_client
+
+        with suppress_warnings():
+            import instructor
+
+            if (
+                self.llm is not None
+                and hasattr(self.llm, "is_litellm")
+                and self.llm.is_litellm
+            ):
+                from litellm import acompletion
+
+                self._async_client = instructor.from_litellm(acompletion)
+            else:
+                self._async_client = self._create_async_instructor_client()
+
+        return self._async_client
+
+    def _create_async_instructor_client(self) -> Any:
+        """Create an async instructor client using the from_provider pattern.
+
+        Returns:
+            Async instructor client configured for the LLM provider
+        """
+        import instructor
+
+        return instructor.from_provider(
+            self._build_provider_model_string(), async_mode="async"
         )
