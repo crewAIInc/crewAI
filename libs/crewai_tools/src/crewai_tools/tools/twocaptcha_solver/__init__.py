@@ -1,0 +1,1 @@
+from .twocaptcha_solver import TwoCaptchaSolverTool
