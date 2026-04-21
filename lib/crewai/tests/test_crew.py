@@ -8,7 +8,7 @@ from concurrent.futures import Future
 from hashlib import md5
 import re
 import sys
-from typing import Any
+from typing import Any, cast
 from unittest.mock import ANY, MagicMock, call, patch
 
 from crewai.agent import Agent
@@ -4792,7 +4792,8 @@ def test_crew_kickoff_started_emits_display_name(
         def _capture(_source: Any, event: CrewKickoffStartedEvent) -> None:
             captured.append(event.crew_name)
 
-        prepare_kickoff(ResearchAutomation().crew(), inputs=None)
+        automation_cls = cast(type[Any], ResearchAutomation)
+        prepare_kickoff(cast(Any, automation_cls()).crew(), inputs=None)
 
     assert captured == [expected]
 
