@@ -281,10 +281,10 @@ stagehand_tool = StagehandTool(
 
 - [Stagehand Documentation](https://docs.stagehand.dev/reference/introduction) - Complete reference for the Stagehand framework
 - [Browserbase](https://www.browserbase.com) - Browser automation platform
-- [Join Slack Community](https://stagehand.dev/slack) - Get help and connect with other users of Stagehand
+- [Join Discord Community](https://stagehand.dev/discord) - Get help and connect with other users of Stagehand
 
 ## Contact
 
 For more information about Stagehand, visit [the Stagehand documentation](https://docs.stagehand.dev/).
 
-For questions about the CrewAI integration, join our [Slack](https://stagehand.dev/slack) or open an issue in this repository.
+For questions about the CrewAI integration, join our [Discord](https://stagehand.dev/discord) or open an issue in this repository.
