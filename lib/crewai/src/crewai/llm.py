@@ -2183,6 +2183,16 @@ class LLM(BaseLLM):
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]
 
+        # Anthropic rejects requests where an assistant message ends with
+        # trailing whitespace (400 BadRequestError). Strip it proactively.
+        sanitized = []
+        for msg in messages:
+            if msg["role"] == "assistant" and isinstance(msg.get("content"), str):
+                sanitized.append({**msg, "content": msg["content"].rstrip()})
+            else:
+                sanitized.append(msg)
+        messages = sanitized
+
         # Anthropic requires messages to start with 'user' role
         if not messages or messages[0]["role"] == "system":
             # If first message is system or empty, add a placeholder user message
