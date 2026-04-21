@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
 
-_JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"(\{.*?\})", re.DOTALL)
 _I18N = I18N_DEFAULT
 
 
@@ -264,7 +264,11 @@ def handle_partial_json(
         except json.JSONDecodeError:
             pass
         except ValidationError:
-            raise
+            # The regex match may be a false positive (e.g. GraphQL schemas,
+            # template strings) that happens to contain curly braces.
+            # Fall through to convert_with_instructions so the LLM can
+            # reformat the output correctly instead of crashing.
+            pass
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
