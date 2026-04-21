@@ -81,8 +81,11 @@ class TraceBatchManager:
         """Initialize a new trace batch (thread-safe)"""
         with self._batch_ready_cv:
             if self.current_batch is not None:
+                # Lazy init (e.g. DefaultEnvEvent) may have created the batch without
+                # execution_type; merge metadata from a later flow/crew initializer.
+                self.current_batch.execution_metadata.update(execution_metadata)
                 logger.debug(
-                    "Batch already initialized, skipping duplicate initialization"
+                    "Batch already initialized, merged execution metadata and skipped duplicate initialization"
                 )
                 return self.current_batch
 
