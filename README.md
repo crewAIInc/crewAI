@@ -109,7 +109,17 @@ Using an AI coding agent? Teach it CrewAI best practices in one command:
 **Claude Code:**
 ```shell
 /plugin marketplace add crewAIInc/skills
+/plugin install crewai-skills@crewai-plugins
+/reload-plugins
 ```
+Four skills that activate automatically when you ask relevant CrewAI questions:
+
+| Skill | When it runs |
+|-------|--------------|
+| `getting-started` | Scaffolding new projects, choosing between `LLM.call()` / `Agent` / `Crew` / `Flow`, wiring `crew.py` / `main.py` |
+| `design-agent` | Configuring agents — role, goal, backstory, tools, LLMs, memory, guardrails |
+| `design-task` | Writing task descriptions, dependencies, structured output (`output_pydantic`, `output_json`), human review |
+| `ask-docs` | Querying the live [CrewAI docs MCP server](https://docs.crewai.com/mcp) for up-to-date API details |
 
 **Cursor, Codex, Windsurf, and others ([skills.sh](https://skills.sh/crewaiinc/skills)):**
 ```shell

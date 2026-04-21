@@ -1,15 +1,15 @@
 ---
-title: "Build with AI"
-description: "Everything AI coding agents need to build, deploy, and scale with CrewAI — skills, machine-readable docs, deployment, and enterprise features."
+title: "AI와 함께 빌드하기"
+description: "CrewAI로 빌드·배포·확장하는 데 필요한 모든 것 — 스킬, 기계가 읽을 수 있는 문서, 배포, 엔터프라이즈 기능을 AI 코딩 에이전트용으로 정리했습니다."
 icon: robot
 mode: "wide"
 ---
 
-# Build with AI
+# AI와 함께 빌드하기
 
-CrewAI is AI-native. This page brings together everything an AI coding agent needs to build with CrewAI — whether you're Claude Code, Codex, Cursor, Gemini CLI, or any other assistant helping a developer ship crews and flows.
+CrewAI는 AI 네이티브입니다. 이 페이지는 Claude Code, Codex, Cursor, Gemini CLI 등 개발자가 crew와 flow를 배포하도록 돕는 코딩 에이전트가 CrewAI로 빌드할 때 필요한 내용을 한곳에 모았습니다.
 
-### Supported Coding Agents
+### 지원 코딩 에이전트
 
 <CardGroup cols={5}>
   <Card title="Claude Code" icon="message-bot" color="#D97706" />
@@ -20,128 +20,139 @@ CrewAI is AI-native. This page brings together everything an AI coding agent nee
 </CardGroup>
 
 <Note>
-  This page is designed to be consumed by both humans and AI assistants. If you're a coding agent, start with **Skills** to get CrewAI context, then use **llms.txt** for full docs access.
+  이 페이지는 사람과 AI 어시스턴트 모두를 위해 작성되었습니다. 코딩 에이전트라면 CrewAI 맥락은 **Skills**부터, 전체 문서 접근은 **llms.txt**를 사용하세요.
 </Note>
 
 ---
 
-## 1. Skills — Teach Your Agent CrewAI
+## 1. Skills — 에이전트에게 CrewAI 가르치기
 
-**Skills** are instruction packs that give coding agents deep CrewAI knowledge — how to scaffold Flows, configure Crews, use tools, and follow framework conventions.
+**Skills**는 코딩 에이전트에게 Flow 스캐폴딩, Crew 구성, 도구 사용, 프레임워크 관례 등 CrewAI에 대한 깊은 지식을 담은 지침 묶음입니다.
 
 <Tabs>
-  <Tab title="Claude Code (Plugin Marketplace)">
+  <Tab title="Claude Code (플러그인 마켓플레이스)">
     <img src="https://cdn.simpleicons.org/anthropic/D97706" alt="Anthropic" width="28" style={{display: "inline", verticalAlign: "middle", marginRight: "8px"}} />
-    CrewAI skills are available in the **Claude Code plugin marketplace** — the same distribution channel used by top AI-native companies:
-    ```
+    CrewAI 스킬은 **Claude Code 플러그인 마켓플레이스**에서 제공됩니다. AI 네이티브 기업들이 쓰는 것과 같은 배포 채널입니다.
+    ```shell
     /plugin marketplace add crewAIInc/skills
+    /plugin install crewai-skills@crewai-plugins
+    /reload-plugins
     ```
+
+    CrewAI와 관련된 질문을 하면 다음 네 가지 스킬이 자동으로 활성화됩니다.
+
+    | 스킬 | 실행 시점 |
+    |------|-------------|
+    | `getting-started` | 새 프로젝트 스캐폴딩, `LLM.call()` / `Agent` / `Crew` / `Flow` 선택, `crew.py` / `main.py` 연결 |
+    | `design-agent` | 에이전트 구성 — 역할, 목표, 배경 이야기, 도구, LLM, 메모리, 가드레일 |
+    | `design-task` | 태스크 설명, 의존성, 구조화된 출력(`output_pydantic`, `output_json`), 사람 검토 |
+    | `ask-docs` | 최신 API 정보를 위해 [CrewAI 문서 MCP 서버](https://docs.crewai.com/mcp) 조회 |
   </Tab>
-  <Tab title="npx (Any Agent)">
-    Works with Claude Code, Codex, Cursor, Gemini CLI, or any coding agent:
+  <Tab title="npx (모든 에이전트)">
+    Claude Code, Codex, Cursor, Gemini CLI 등 모든 코딩 에이전트에서 사용할 수 있습니다.
     ```shell
     npx skills add crewaiinc/skills
     ```
-    Pulls from the [skills.sh registry](https://skills.sh/crewaiinc/skills).
+    [skills.sh 레지스트리](https://skills.sh/crewaiinc/skills)에서 가져옵니다.
   </Tab>
 </Tabs>
 
 <Steps>
-  <Step title="Install the official skill pack">
-    Use either method above — the Claude Code plugin marketplace or `npx skills add`. Both install the official [crewAIInc/skills](https://github.com/crewAIInc/skills) pack.
+  <Step title="공식 스킬 팩 설치">
+    위 방법 중 하나를 사용하세요 — Claude Code 플러그인 마켓플레이스 또는 `npx skills add`. 둘 다 공식 [crewAIInc/skills](https://github.com/crewAIInc/skills) 팩을 설치합니다.
   </Step>
-  <Step title="Your agent gets instant CrewAI expertise">
-    The skill pack teaches your agent:
-    - **Flows** — stateful apps, steps, and crew kickoffs
-    - **Crews & Agents** — YAML-first patterns, roles, tasks, delegation
-    - **Tools & Integrations** — search, APIs, MCP servers, and common CrewAI tools
-    - **Project layout** — CLI scaffolds and repo conventions
-    - **Up-to-date patterns** — tracks current CrewAI docs and best practices
+  <Step title="에이전트가 즉시 CrewAI 전문성을 갖춤">
+    스킬 팩이 에이전트에게 알려 주는 내용:
+    - **Flow** — 상태ful 앱, 단계, crew 킥오프
+    - **Crew 및 에이전트** — YAML 우선 패턴, 역할, 태스크, 위임
+    - **도구 및 통합** — 검색, API, MCP 서버, 일반적인 CrewAI 도구
+    - **프로젝트 레이아웃** — CLI 스캐폴드와 저장소 관례
+    - **최신 패턴** — 현재 CrewAI 문서와 모범 사례 반영
   </Step>
-  <Step title="Start building">
-    Your agent can now scaffold and build CrewAI projects without you re-explaining the framework each session.
+  <Step title="빌드 시작">
+    매 세션마다 프레임워크를 다시 설명하지 않아도 에이전트가 CrewAI 프로젝트를 스캐폴딩하고 빌드할 수 있습니다.
   </Step>
 </Steps>
 
 <CardGroup cols={2}>
-  <Card title="Skills concept" icon="bolt" href="/en/concepts/skills">
-    How skills work in CrewAI agents — injection, activation, and patterns.
+  <Card title="Skills 개념" icon="bolt" href="/ko/concepts/skills">
+    CrewAI 에이전트에서 스킬이 동작하는 방식 — 주입, 활성화, 패턴.
   </Card>
-  <Card title="Skills landing page" icon="wand-magic-sparkles" href="/en/skills">
-    Overview of the crewAIInc/skills pack and what it includes.
+  <Card title="Skills 랜딩 페이지" icon="wand-magic-sparkles" href="/ko/skills">
+    crewAIInc/skills 팩 개요와 포함 내용.
   </Card>
-  <Card title="AGENTS.md & coding tools" icon="terminal" href="/en/guides/coding-tools/agents-md">
-    Set up AGENTS.md for Claude Code, Codex, Cursor, and Gemini CLI.
+  <Card title="AGENTS.md 및 코딩 도구" icon="terminal" href="/ko/guides/coding-tools/agents-md">
+    Claude Code, Codex, Cursor, Gemini CLI용 AGENTS.md 설정.
   </Card>
-  <Card title="Skills registry (skills.sh)" icon="globe" href="https://skills.sh/crewaiinc/skills">
-    Official listing — skills, install stats, and audits.
+  <Card title="Skills 레지스트리 (skills.sh)" icon="globe" href="https://skills.sh/crewaiinc/skills">
+    공식 목록 — 스킬, 설치 통계, 감사 정보.
   </Card>
 </CardGroup>
 
 ---
 
-## 2. llms.txt — Machine-Readable Docs
+## 2. llms.txt — 기계가 읽을 수 있는 문서
 
-CrewAI publishes an `llms.txt` file that gives AI assistants direct access to the full documentation in a machine-readable format.
+CrewAI는 AI 어시스턴트가 전체 문서에 기계가 읽을 수 있는 형태로 바로 접근할 수 있도록 `llms.txt` 파일을 제공합니다.
 
 ```
 https://docs.crewai.com/llms.txt
 ```
 
 <Tabs>
-  <Tab title="What is llms.txt?">
-    [`llms.txt`](https://llmstxt.org/) is an emerging standard for making documentation consumable by large language models. Instead of scraping HTML, your agent can fetch a single structured text file with all the content it needs.
+  <Tab title="llms.txt란?">
+    [`llms.txt`](https://llmstxt.org/)는 문서를 대규모 언어 모델이 소비하기 쉽게 만드는 새로운 표준입니다. HTML을 스크래핑하는 대신, 필요한 내용이 담긴 하나의 구조화된 텍스트 파일을 가져올 수 있습니다.
 
-    CrewAI's `llms.txt` is **already live** — your agent can use it right now.
+    CrewAI의 `llms.txt`는 **이미 제공 중**이며, 에이전트가 바로 사용할 수 있습니다.
   </Tab>
-  <Tab title="How to use it">
-    Point your coding agent at the URL when it needs CrewAI reference docs:
+  <Tab title="사용 방법">
+    CrewAI 참고 문서가 필요할 때 코딩 에이전트에 URL을 알려 주세요.
 
     ```
     Fetch https://docs.crewai.com/llms.txt for CrewAI documentation.
     ```
 
-    Many coding agents (Claude Code, Cursor, etc.) can fetch URLs directly. The file contains structured documentation covering all CrewAI concepts, APIs, and guides.
+    Claude Code, Cursor 등 많은 코딩 에이전트가 URL을 직접 가져올 수 있습니다. 파일에는 CrewAI 개념, API, 가이드를 아우르는 구조화된 문서가 포함되어 있습니다.
   </Tab>
-  <Tab title="Why it matters">
-    - **No scraping required** — clean, structured content in one request
-    - **Always up-to-date** — served directly from docs.crewai.com
-    - **Optimized for LLMs** — formatted for context windows, not browsers
-    - **Complements skills** — skills teach patterns, llms.txt provides reference
+  <Tab title="왜 중요한가">
+    - **스크래핑 불필요** — 한 번의 요청으로 깔끔한 구조화 콘텐츠
+    - **항상 최신** — docs.crewai.com에서 직접 제공
+    - **LLM에 최적화** — 브라우저가 아니라 컨텍스트 윈도우에 맞게 포맷
+    - **스킬과 상호 보완** — 스킬은 패턴을, llms.txt는 참조를 제공
   </Tab>
 </Tabs>
 
 ---
 
-## 3. Deploy to Enterprise
+## 3. 엔터프라이즈에 배포
 
-Go from a local crew to production on **CrewAI AMP** (Agent Management Platform) in minutes.
+로컬 crew를 몇 분 안에 **CrewAI AMP**(Agent Management Platform) 프로덕션으로 가져가세요.
 
 <Steps>
-  <Step title="Build locally">
-    Scaffold and test your crew or flow:
+  <Step title="로컬에서 빌드">
+    crew 또는 flow를 스캐폴딩하고 테스트합니다.
     ```bash
     crewai create crew my_crew
     cd my_crew
     crewai run
     ```
   </Step>
-  <Step title="Prepare for deployment">
-    Ensure your project structure is ready:
+  <Step title="배포 준비">
+    프로젝트 구조가 준비되었는지 확인합니다.
     ```bash
     crewai deploy --prepare
     ```
-    See the [preparation guide](/en/enterprise/guides/prepare-for-deployment) for details on project structure and requirements.
+    구조와 요구 사항은 [준비 가이드](/ko/enterprise/guides/prepare-for-deployment)를 참고하세요.
   </Step>
-  <Step title="Deploy to AMP">
-    Push to the CrewAI AMP platform:
+  <Step title="AMP에 배포">
+    CrewAI AMP 플랫폼으로 푸시합니다.
     ```bash
     crewai deploy
     ```
-    You can also deploy via [GitHub integration](/en/enterprise/guides/deploy-to-amp) or [Crew Studio](/en/enterprise/guides/enable-crew-studio).
+    [GitHub 연동](/ko/enterprise/guides/deploy-to-amp) 또는 [Crew Studio](/ko/enterprise/guides/enable-crew-studio)로도 배포할 수 있습니다.
   </Step>
-  <Step title="Access via API">
-    Your deployed crew gets a REST API endpoint. Integrate it into any application:
+  <Step title="API로 접근">
+    배포된 crew는 REST API 엔드포인트를 받습니다. 모든 애플리케이션에 통합할 수 있습니다.
     ```bash
     curl -X POST https://app.crewai.com/api/v1/crews/<crew-id>/kickoff \
       -H "Authorization: Bearer $CREWAI_API_KEY" \
@@ -152,55 +163,55 @@ Go from a local crew to production on **CrewAI AMP** (Agent Management Platform)
 </Steps>
 
 <CardGroup cols={2}>
-  <Card title="Deploy to AMP" icon="rocket" href="/en/enterprise/guides/deploy-to-amp">
-    Full deployment guide — CLI, GitHub, and Crew Studio methods.
+  <Card title="AMP에 배포" icon="rocket" href="/ko/enterprise/guides/deploy-to-amp">
+    전체 배포 가이드 — CLI, GitHub, Crew Studio 방법.
   </Card>
-  <Card title="AMP introduction" icon="globe" href="/en/enterprise/introduction">
-    Platform overview — what AMP provides for production crews.
+  <Card title="AMP 소개" icon="globe" href="/ko/enterprise/introduction">
+    플랫폼 개요 — 프로덕션 crew에 AMP가 제공하는 것.
   </Card>
 </CardGroup>
 
 ---
 
-## 4. Enterprise Features
+## 4. 엔터프라이즈 기능
 
-CrewAI AMP is built for production teams. Here's what you get beyond deployment.
+CrewAI AMP는 프로덕션 팀을 위해 만들어졌습니다. 배포 외에 제공되는 것은 다음과 같습니다.
 
 <CardGroup cols={2}>
-  <Card title="Observability" icon="chart-line">
-    Detailed execution traces, logs, and performance metrics for every crew run. Monitor agent decisions, tool calls, and task completion in real time.
+  <Card title="관측 가능성" icon="chart-line">
+    모든 crew 실행에 대한 상세 실행 추적, 로그, 성능 지표. 에이전트 결정, 도구 호출, 태스크 완료를 실시간으로 모니터링합니다.
   </Card>
   <Card title="Crew Studio" icon="paintbrush">
-    No-code/low-code interface to create, customize, and deploy crews visually — then export to code or deploy directly.
+    시각적으로 crew를 만들고, 맞춤 설정하고, 배포하는 노코드/로코드 인터페이스 — 코드로 보내거나 바로 배포할 수 있습니다.
   </Card>
-  <Card title="Webhook Streaming" icon="webhook">
-    Stream real-time events from crew executions to your systems. Integrate with Slack, Zapier, or any webhook consumer.
+  <Card title="웹훅 스트리밍" icon="webhook">
+    crew 실행에서 실시간 이벤트를 시스템으로 스트리밍합니다. Slack, Zapier 등 웹훅 소비자와 연동할 수 있습니다.
   </Card>
-  <Card title="Team Management" icon="users">
-    SSO, RBAC, and organization-level controls. Manage who can create, deploy, and access crews across your team.
+  <Card title="팀 관리" icon="users">
+    SSO, RBAC, 조직 단위 제어. 팀 전체에서 crew 생성·배포·접근 권한을 관리합니다.
   </Card>
-  <Card title="Tool Repository" icon="toolbox">
-    Publish and share custom tools across your organization. Install community tools from the registry.
+  <Card title="도구 저장소" icon="toolbox">
+    조직 전체에 맞춤 도구를 게시하고 공유합니다. 레지스트리에서 커뮤니티 도구를 설치합니다.
   </Card>
-  <Card title="Factory (Self-Hosted)" icon="server">
-    Run CrewAI AMP on your own infrastructure. Full platform capabilities with data residency and compliance controls.
+  <Card title="Factory(셀프 호스팅)" icon="server">
+    자체 인프라에서 CrewAI AMP를 실행합니다. 데이터 상주와 규정 준수 제어와 함께 플랫폼 전체 기능을 사용할 수 있습니다.
   </Card>
 </CardGroup>
 
 <AccordionGroup>
-  <Accordion title="Who is AMP for?">
-    AMP is for teams that need to move AI agent workflows from prototypes to production — with observability, access controls, and scalable infrastructure. Whether you're a startup or enterprise, AMP handles the operational complexity so you can focus on building agents.
+  <Accordion title="AMP는 누구를 위한 것인가요?">
+    AI 에이전트 워크플로를 프로토타입에서 프로덕션으로 옮겨야 하는 팀을 위한 제품입니다. 관측 가능성, 접근 제어, 확장 가능한 인프라를 제공합니다. 스타트업이든 대기업이든 운영 복잡도는 AMP가 맡고, 에이전트 구축에 집중할 수 있습니다.
   </Accordion>
-  <Accordion title="What deployment options are available?">
-    - **Cloud (app.crewai.com)** — managed by CrewAI, fastest path to production
-    - **Factory (self-hosted)** — run on your own infrastructure for full data control
-    - **Hybrid** — mix cloud and self-hosted based on sensitivity requirements
+  <Accordion title="배포 옵션은 무엇이 있나요?">
+    - **클라우드 (app.crewai.com)** — CrewAI가 관리, 프로덕션까지 가장 빠른 경로
+    - **Factory(셀프 호스팅)** — 데이터 통제를 위해 자체 인프라에서 실행
+    - **하이브리드** — 민감도에 따라 클라우드와 셀프 호스팅을 혼합
   </Accordion>
-  <Accordion title="How does pricing work?">
-    Sign up at [app.crewai.com](https://app.crewai.com) to see current plans. Enterprise and Factory pricing is available on request.
+  <Accordion title="가격은 어떻게 되나요?">
+    [app.crewai.com](https://app.crewai.com)에 가입하면 현재 요금제를 확인할 수 있습니다. 엔터프라이즈 및 Factory 가격은 문의 시 안내합니다.
   </Accordion>
 </AccordionGroup>
 
-<Card title="Explore CrewAI AMP →" icon="arrow-right" href="https://app.crewai.com">
-  Sign up and deploy your first crew to production.
+<Card title="CrewAI AMP 살펴보기 →" icon="arrow-right" href="https://app.crewai.com">
+  가입하고 첫 crew를 프로덕션에 배포해 보세요.
 </Card>

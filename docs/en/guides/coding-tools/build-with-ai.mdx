@@ -33,9 +33,20 @@ CrewAI is AI-native. This page brings together everything an AI coding agent nee
   <Tab title="Claude Code (Plugin Marketplace)">
     <img src="https://cdn.simpleicons.org/anthropic/D97706" alt="Anthropic" width="28" style={{display: "inline", verticalAlign: "middle", marginRight: "8px"}} />
     CrewAI skills are available in the **Claude Code plugin marketplace** — the same distribution channel used by top AI-native companies:
-    ```
+    ```shell
     /plugin marketplace add crewAIInc/skills
+    /plugin install crewai-skills@crewai-plugins
+    /reload-plugins
     ```
+
+    Four skills activate automatically when you ask relevant CrewAI questions:
+
+    | Skill | When it runs |
+    |-------|--------------|
+    | `getting-started` | Scaffolding new projects, choosing between `LLM.call()` / `Agent` / `Crew` / `Flow`, wiring `crew.py` / `main.py` |
+    | `design-agent` | Configuring agents — role, goal, backstory, tools, LLMs, memory, guardrails |
+    | `design-task` | Writing task descriptions, dependencies, structured output (`output_pydantic`, `output_json`), human review |
+    | `ask-docs` | Querying the live [CrewAI docs MCP server](https://docs.crewai.com/mcp) for up-to-date API details |
   </Tab>
   <Tab title="npx (Any Agent)">
     Works with Claude Code, Codex, Cursor, Gemini CLI, or any coding agent:
