@@ -24,7 +24,7 @@ dependencies = [
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
-    "python-dotenv~=1.1.1",
+    "python-dotenv>=1.2.2,<2",
     "pyjwt>=2.9.0,<3",
     # TUI
     "textual>=7.5.0",
