@@ -2075,6 +2075,9 @@ class BedrockCompletion(BaseLLM):
 
         # Context window sizes for common Bedrock models
         context_windows = {
+            "anthropic.claude-sonnet-4": 200000,
+            "anthropic.claude-opus-4": 200000,
+            "anthropic.claude-haiku-4": 200000,
             "anthropic.claude-3-5-sonnet": 200000,
             "anthropic.claude-3-5-haiku": 200000,
             "anthropic.claude-3-opus": 200000,

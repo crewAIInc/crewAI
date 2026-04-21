@@ -1,10 +1,9 @@
-import contextvars
-import threading
-from typing import Any
-import urllib.request
+import importlib
+import sys
+from typing import TYPE_CHECKING, Annotated, Any
 import warnings
 
-from pydantic import PydanticUserError
+from pydantic import Field, PydanticUserError
 
 from crewai.agent.core import Agent
 from crewai.agent.planning_config import PlanningConfig
@@ -20,7 +19,10 @@ from crewai.state.checkpoint_config import CheckpointConfig  # noqa: F401
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry.telemetry import Telemetry
+
+
+if TYPE_CHECKING:
+    from crewai.memory.unified_memory import Memory
 
 
 def _suppress_pydantic_deprecation_warnings() -> None:
@@ -47,37 +49,6 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 _suppress_pydantic_deprecation_warnings()
 
 __version__ = "1.14.3a1"
-_telemetry_submitted = False
-
-
-def _track_install() -> None:
-    """Track package installation/first-use via Scarf analytics."""
-    global _telemetry_submitted
-
-    if _telemetry_submitted or Telemetry._is_telemetry_disabled():
-        return
-
-    try:
-        pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
-
-        req = urllib.request.Request(pixel_url)  # noqa: S310
-        req.add_header("User-Agent", f"CrewAI-Python/{__version__}")
-
-        with urllib.request.urlopen(req, timeout=2):  # noqa: S310
-            _telemetry_submitted = True
-    except Exception:  # noqa: S110
-        pass
-
-
-def _track_install_async() -> None:
-    """Track installation in background thread to avoid blocking imports."""
-    if not Telemetry._is_telemetry_disabled():
-        ctx = contextvars.copy_context()
-        thread = threading.Thread(target=ctx.run, args=(_track_install,), daemon=True)
-        thread.start()
-
-
-_track_install_async()
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
@@ -88,8 +59,6 @@ def __getattr__(name: str) -> Any:
     """Lazily import heavy modules (e.g. Memory → lancedb) on first access."""
     if name in _LAZY_IMPORTS:
         module_path, attr = _LAZY_IMPORTS[name]
-        import importlib
-
         mod = importlib.import_module(module_path)
         val = getattr(mod, attr)
         globals()[name] = val
@@ -147,8 +116,6 @@ try:
     except ImportError:
         pass
 
-    import sys
-
     _full_namespace = {
         **_base_namespace,
         "ToolsHandler": _ToolsHandler,
@@ -190,10 +157,6 @@ try:
     Crew.model_rebuild(force=True, _types_namespace=_full_namespace)
     Flow.model_rebuild(force=True, _types_namespace=_full_namespace)
     _AgentExecutor.model_rebuild(force=True, _types_namespace=_full_namespace)
-
-    from typing import Annotated
-
-    from pydantic import Field
 
     from crewai.state.runtime import RuntimeState
 

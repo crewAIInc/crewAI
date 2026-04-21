@@ -13,7 +13,7 @@ dependencies = [
     "click~=8.1.7",
     "tomlkit~=0.13.2",
     "openai>=1.83.0,<3",
-    "python-dotenv~=1.1.1",
+    "python-dotenv>=1.2.2,<2",
     "pygithub~=1.59.1",
     "rich>=13.9.4",
 ]

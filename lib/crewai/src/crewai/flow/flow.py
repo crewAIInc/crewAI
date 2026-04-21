@@ -1503,6 +1503,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 except Exception:
                     logger.warning("FlowStartedEvent handler failed", exc_info=True)
 
+        get_env_context()
+
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
@@ -2004,7 +2006,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
-        get_env_context()
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2205,6 +2206,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self._log_flow_event(
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
                 )
+
+            # After FlowStarted (when not suppressed): env events must not pre-empt
+            # trace batch init with implicit "crew" execution_type.
+            get_env_context()
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
