@@ -1,0 +1,217 @@
+---
+title: "Construa com IA"
+description: "Tudo o que agentes de codificação com IA precisam para criar, implantar e escalar com CrewAI — skills, documentação legível por máquina, implantação e recursos enterprise."
+icon: robot
+mode: "wide"
+---
+
+# Construa com IA
+
+O CrewAI é nativo de IA. Esta página reúne o que um agente de codificação com IA precisa para construir com CrewAI — seja Claude Code, Codex, Cursor, Gemini CLI ou qualquer outro assistente que ajude um desenvolvedor a entregar crews e flows.
+
+### Agentes de codificação compatíveis
+
+<CardGroup cols={5}>
+  <Card title="Claude Code" icon="message-bot" color="#D97706" />
+  <Card title="Cursor" icon="arrow-pointer" color="#3B82F6" />
+  <Card title="Codex" icon="terminal" color="#10B981" />
+  <Card title="Windsurf" icon="wind" color="#06B6D4" />
+  <Card title="Gemini CLI" icon="sparkles" color="#8B5CF6" />
+</CardGroup>
+
+<Note>
+  Esta página serve para humanos e para assistentes de IA. Se você é um agente de codificação, comece por **Skills** para obter contexto do CrewAI e depois use **llms.txt** para acesso completo à documentação.
+</Note>
+
+---
+
+## 1. Skills — ensine CrewAI ao seu agente
+
+**Skills** são pacotes de instruções que dão aos agentes de codificação conhecimento profundo do CrewAI — como estruturar Flows, configurar Crews, usar ferramentas e seguir convenções do framework.
+
+<Tabs>
+  <Tab title="Claude Code (Plugin Marketplace)">
+    <img src="https://cdn.simpleicons.org/anthropic/D97706" alt="Anthropic" width="28" style={{display: "inline", verticalAlign: "middle", marginRight: "8px"}} />
+    As skills do CrewAI estão no **plugin marketplace do Claude Code** — o mesmo canal usado por empresas líderes em IA:
+    ```shell
+    /plugin marketplace add crewAIInc/skills
+    /plugin install crewai-skills@crewai-plugins
+    /reload-plugins
+    ```
+
+    Quatro skills são ativadas automaticamente quando você faz perguntas relevantes sobre CrewAI:
+
+    | Skill | Quando é usada |
+    |-------|----------------|
+    | `getting-started` | Novos projetos, escolha entre `LLM.call()` / `Agent` / `Crew` / `Flow`, arquivos `crew.py` / `main.py` |
+    | `design-agent` | Configurar agentes — papel, objetivo, história, ferramentas, LLMs, memória, guardrails |
+    | `design-task` | Descrever tarefas, dependências, saída estruturada (`output_pydantic`, `output_json`), revisão humana |
+    | `ask-docs` | Consultar o [servidor MCP da documentação CrewAI](https://docs.crewai.com/mcp) em tempo real para detalhes de API |
+  </Tab>
+  <Tab title="npx (qualquer agente)">
+    Funciona com Claude Code, Codex, Cursor, Gemini CLI ou qualquer agente de codificação:
+    ```shell
+    npx skills add crewaiinc/skills
+    ```
+    Obtido do [registro skills.sh](https://skills.sh/crewaiinc/skills).
+  </Tab>
+</Tabs>
+
+<Steps>
+  <Step title="Instale o pacote oficial de skills">
+    Use um dos métodos acima — o plugin marketplace do Claude Code ou `npx skills add`. Ambos instalam o pacote oficial [crewAIInc/skills](https://github.com/crewAIInc/skills).
+  </Step>
+  <Step title="Seu agente ganha expertise imediata em CrewAI">
+    O pacote ensina ao seu agente:
+    - **Flows** — apps com estado, passos e disparo de crews
+    - **Crews e agentes** — padrões YAML-first, papéis, tarefas, delegação
+    - **Ferramentas e integrações** — busca, APIs, servidores MCP e ferramentas comuns do CrewAI
+    - **Estrutura do projeto** — scaffolds da CLI e convenções de repositório
+    - **Padrões atualizados** — alinhado à documentação e às melhores práticas atuais do CrewAI
+  </Step>
+  <Step title="Comece a construir">
+    Seu agente pode estruturar e construir projetos CrewAI sem você precisar reexplicar o framework a cada sessão.
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Conceito de skills" icon="bolt" href="/pt-BR/concepts/skills">
+    Como skills funcionam em agentes CrewAI — injeção, ativação e padrões.
+  </Card>
+  <Card title="Página de skills" icon="wand-magic-sparkles" href="/pt-BR/skills">
+    Visão geral do pacote crewAIInc/skills e do que ele inclui.
+  </Card>
+  <Card title="AGENTS.md e ferramentas" icon="terminal" href="/pt-BR/guides/coding-tools/agents-md">
+    Configure o AGENTS.md para Claude Code, Codex, Cursor e Gemini CLI.
+  </Card>
+  <Card title="Registro skills.sh" icon="globe" href="https://skills.sh/crewaiinc/skills">
+    Listagem oficial — skills, estatísticas de instalação e auditorias.
+  </Card>
+</CardGroup>
+
+---
+
+## 2. llms.txt — documentação legível por máquina
+
+O CrewAI publica um arquivo `llms.txt` que dá aos assistentes de IA acesso direto à documentação completa em formato legível por máquinas.
+
+```
+https://docs.crewai.com/llms.txt
+```
+
+<Tabs>
+  <Tab title="O que é llms.txt?">
+    [`llms.txt`](https://llmstxt.org/) é um padrão emergente para tornar a documentação consumível por grandes modelos de linguagem. Em vez de fazer scraping de HTML, seu agente pode buscar um único arquivo de texto estruturado com o conteúdo necessário.
+
+    O `llms.txt` do CrewAI **já está no ar** — seu agente pode usar agora.
+  </Tab>
+  <Tab title="Como usar">
+    Indique ao agente de codificação a URL quando precisar da referência do CrewAI:
+
+    ```
+    Fetch https://docs.crewai.com/llms.txt for CrewAI documentation.
+    ```
+
+    Muitos agentes (Claude Code, Cursor etc.) conseguem buscar URLs diretamente. O arquivo contém documentação estruturada sobre conceitos, APIs e guias do CrewAI.
+  </Tab>
+  <Tab title="Por que importa">
+    - **Sem scraping** — conteúdo limpo e estruturado em uma requisição
+    - **Sempre atualizado** — servido diretamente de docs.crewai.com
+    - **Otimizado para LLMs** — formatado para janelas de contexto, não para navegadores
+    - **Complementa as skills** — skills ensinam padrões; llms.txt fornece referência
+  </Tab>
+</Tabs>
+
+---
+
+## 3. Implantação enterprise
+
+Do crew local à produção no **CrewAI AMP** (Agent Management Platform) em minutos.
+
+<Steps>
+  <Step title="Construa localmente">
+    Estruture e teste seu crew ou flow:
+    ```bash
+    crewai create crew my_crew
+    cd my_crew
+    crewai run
+    ```
+  </Step>
+  <Step title="Prepare a implantação">
+    Garanta que a estrutura do projeto está pronta:
+    ```bash
+    crewai deploy --prepare
+    ```
+    Veja o [guia de preparação](/pt-BR/enterprise/guides/prepare-for-deployment) para detalhes de estrutura e requisitos.
+  </Step>
+  <Step title="Implante no AMP">
+    Envie para a plataforma CrewAI AMP:
+    ```bash
+    crewai deploy
+    ```
+    Também é possível implantar pela [integração com GitHub](/pt-BR/enterprise/guides/deploy-to-amp) ou pelo [Crew Studio](/pt-BR/enterprise/guides/enable-crew-studio).
+  </Step>
+  <Step title="Acesso via API">
+    O crew implantado recebe um endpoint REST. Integre em qualquer aplicação:
+    ```bash
+    curl -X POST https://app.crewai.com/api/v1/crews/<crew-id>/kickoff \
+      -H "Authorization: Bearer $CREWAI_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"inputs": {"topic": "AI agents"}}'
+    ```
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Implantar no AMP" icon="rocket" href="/pt-BR/enterprise/guides/deploy-to-amp">
+    Guia completo de implantação — CLI, GitHub e Crew Studio.
+  </Card>
+  <Card title="Introdução ao AMP" icon="globe" href="/pt-BR/enterprise/introduction">
+    Visão da plataforma — o que o AMP oferece para crews em produção.
+  </Card>
+</CardGroup>
+
+---
+
+## 4. Recursos enterprise
+
+O CrewAI AMP foi feito para equipes em produção. Além da implantação, você obtém:
+
+<CardGroup cols={2}>
+  <Card title="Observabilidade" icon="chart-line">
+    Traces de execução, logs e métricas de desempenho para cada execução de crew. Monitore decisões de agentes, chamadas de ferramentas e conclusão de tarefas em tempo real.
+  </Card>
+  <Card title="Crew Studio" icon="paintbrush">
+    Interface no-code/low-code para criar, personalizar e implantar crews visualmente — exporte para código ou implante direto.
+  </Card>
+  <Card title="Webhook streaming" icon="webhook">
+    Transmita eventos em tempo real das execuções para seus sistemas. Integre com Slack, Zapier ou qualquer consumidor de webhook.
+  </Card>
+  <Card title="Gestão de equipe" icon="users">
+    SSO, RBAC e controles em nível de organização. Gerencie quem pode criar, implantar e acessar crews.
+  </Card>
+  <Card title="Repositório de ferramentas" icon="toolbox">
+    Publique e compartilhe ferramentas customizadas na organização. Instale ferramentas da comunidade a partir do registro.
+  </Card>
+  <Card title="Factory (self-hosted)" icon="server">
+    Execute o CrewAI AMP na sua infraestrutura. Capacidades completas da plataforma com residência de dados e controles de conformidade.
+  </Card>
+</CardGroup>
+
+<AccordionGroup>
+  <Accordion title="Para quem é o AMP?">
+    Para equipes que precisam levar fluxos de agentes de IA do protótipo à produção — com observabilidade, controles de acesso e infraestrutura escalável. De startups a grandes empresas, o AMP cuida da complexidade operacional para você focar nos agentes.
+  </Accordion>
+  <Accordion title="Quais opções de implantação existem?">
+    - **Nuvem (app.crewai.com)** — gerenciada pela CrewAI, caminho mais rápido para produção
+    - **Factory (self-hosted)** — na sua infraestrutura para controle total dos dados
+    - **Híbrido** — combine nuvem e self-hosted conforme a sensibilidade dos dados
+  </Accordion>
+  <Accordion title="Como funciona o preço?">
+    Cadastre-se em [app.crewai.com](https://app.crewai.com) para ver os planos atuais. Preços enterprise e Factory sob consulta.
+  </Accordion>
+</AccordionGroup>
+
+<Card title="Conheça o CrewAI AMP →" icon="arrow-right" href="https://app.crewai.com">
+  Cadastre-se e leve seu primeiro crew à produção.
+</Card>
