@@ -112,7 +112,7 @@ github = [
 ]
 rag = [
     "python-docx>=1.1.0",
-    "lxml>=5.3.0,<5.4.0",  # Pin to avoid etree import issues in 5.4.0
+    "lxml>=6.1.0,<7",  # 6.1.0+ required for GHSA-vfmq-68hx-4jfw (XXE in iterparse)
 ]
 xml = [
     "unstructured[local-inference, all-docs]>=0.17.2"
