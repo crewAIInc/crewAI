@@ -394,15 +394,17 @@ class Agent(BaseAgent):
         self,
         resolved_crew_skills: list[SkillModel] | None = None,
     ) -> None:
-        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+        """Resolve skill paths while preserving explicit disclosure levels.
 
-        Path entries trigger discovery and activation. Pre-loaded Skill objects
-        below INSTRUCTIONS level are activated. Crew-level skills are merged in
-        with event emission so observability is consistent regardless of origin.
+        Path entries trigger discovery and activation because directory-based
+        skills opt into eager loading. Pre-loaded Skill objects keep their
+        current disclosure level so callers can attach METADATA-only skills and
+        progressively activate them later. Crew-level skills are merged in with
+        event emission so observability is consistent regardless of origin.
 
         Args:
-            resolved_crew_skills: Pre-resolved crew skills (already discovered
-                and activated). When provided, avoids redundant discovery per agent.
+            resolved_crew_skills: Pre-resolved crew skills. When provided,
+                avoids redundant discovery per agent.
         """
         from crewai.crew import Crew
 
@@ -443,8 +445,7 @@ class Agent(BaseAgent):
             elif isinstance(item, SkillModel):
                 if item.name not in seen:
                     seen.add(item.name)
-                    activated = activate_skill(item, source=self)
-                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                    if item.disclosure_level >= INSTRUCTIONS:
                         crewai_event_bus.emit(
                             self,
                             event=SkillActivatedEvent(
@@ -454,7 +455,7 @@ class Agent(BaseAgent):
                                 disclosure_level=item.disclosure_level,
                             ),
                         )
-                    resolved.append(activated)
+                    resolved.append(item)
 
         self.skills = resolved if resolved else None
 
