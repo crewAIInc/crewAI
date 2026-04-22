@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-22T16:00:00Z"
+exclude-newer = "2026-04-23T07:00:00Z"
 
 [manifest]
 members = [
@@ -698,6 +698,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0c/a8/a26608ff39e3a5866c6c79eda10133490205cbddd45074190becece3ff2a/botocore_stubs-1.42.41.tar.gz", hash = "sha256:dbeac2f744df6b814ce83ec3f3777b299a015cbea57a2efc41c33b8c38265825", size = 42411, upload-time = "2026-02-03T20:46:14.479Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/32/76/cab7af7f16c0b09347f2ebe7ffda7101132f786acb767666dce43055faab/botocore_stubs-1.42.41-py3-none-any.whl", hash = "sha256:9423110fb0e391834bd2ed44ae5f879d8cb370a444703d966d30842ce2bcb5f0", size = 66759, upload-time = "2026-02-03T20:46:13.02Z" },
+]
+
+[[package]]
+name = "bracex"
+version = "2.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/9a/fec38644694abfaaeca2798b58e276a8e61de49e2e37494ace423395febc/bracex-2.6.tar.gz", hash = "sha256:98f1347cd77e22ee8d967a30ad4e310b233f7754dbf31ff3fceb76145ba47dc7", size = 26642, upload-time = "2025-06-22T19:12:31.254Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/2a/9186535ce58db529927f6cf5990a849aa9e052eea3e2cfefe20b9e1802da/bracex-2.6-py3-none-any.whl", hash = "sha256:0b0049264e7340b3ec782b5cb99beb325f36c3782a32e36e876452fd49a09952", size = 11508, upload-time = "2025-06-22T19:12:29.781Z" },
 ]
 
 [[package]]
@@ -1489,6 +1498,10 @@ databricks-sdk = [
 daytona = [
     { name = "daytona" },
 ]
+e2b = [
+    { name = "e2b" },
+    { name = "e2b-code-interpreter" },
+]
 exa-py = [
     { name = "exa-py" },
 ]
@@ -1590,6 +1603,8 @@ requires-dist = [
     { name = "cryptography", marker = "extra == 'snowflake'", specifier = ">=43.0.3" },
     { name = "databricks-sdk", marker = "extra == 'databricks-sdk'", specifier = ">=0.46.0" },
     { name = "daytona", marker = "extra == 'daytona'", specifier = "~=0.140.0" },
+    { name = "e2b", marker = "extra == 'e2b'", specifier = "~=2.20.0" },
+    { name = "e2b-code-interpreter", marker = "extra == 'e2b'", specifier = "~=2.6.0" },
     { name = "exa-py", marker = "extra == 'exa-py'", specifier = ">=1.8.7" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
     { name = "gitpython", marker = "extra == 'github'", specifier = ">=3.1.41,<4" },
@@ -1632,7 +1647,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -1976,6 +1991,15 @@ wheels = [
 ]
 
 [[package]]
+name = "dockerfile-parse"
+version = "2.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/df/929ee0b5d2c8bd8d713c45e71b94ab57c7e11e322130724d54f469b2cd48/dockerfile-parse-2.0.1.tar.gz", hash = "sha256:3184ccdc513221983e503ac00e1aa504a2aa8f84e5de673c46b0b6eee99ec7bc", size = 24556, upload-time = "2023-07-18T13:36:07.897Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7a/6c/79cd5bc1b880d8c1a9a5550aa8dacd57353fa3bb2457227e1fb47383eb49/dockerfile_parse-2.0.1-py2.py3-none-any.whl", hash = "sha256:bdffd126d2eb26acf1066acb54cb2e336682e1d72b974a40894fac76a4df17f6", size = 14845, upload-time = "2023-07-18T13:36:06.052Z" },
+]
+
+[[package]]
 name = "docling"
 version = "2.84.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2123,6 +2147,41 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9d/a4/e44218c2b394e31a6dd0d6b095c4e1f32d0be54c2a4b250032d717647bab/durationpy-0.10.tar.gz", hash = "sha256:1fa6893409a6e739c9c72334fc65cca1f355dbdd93405d30f726deb5bde42fba", size = 3335, upload-time = "2025-05-17T13:52:37.26Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/0d/9feae160378a3553fa9a339b0e9c1a048e147a4127210e286ef18b730f03/durationpy-0.10-py3-none-any.whl", hash = "sha256:3b41e1b601234296b4fb368338fdcd3e13e0b4fb5b67345948f4f2bf9868b286", size = 3922, upload-time = "2025-05-17T13:52:36.463Z" },
+]
+
+[[package]]
+name = "e2b"
+version = "2.20.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "dockerfile-parse" },
+    { name = "httpcore" },
+    { name = "httpx" },
+    { name = "packaging" },
+    { name = "protobuf" },
+    { name = "python-dateutil" },
+    { name = "rich" },
+    { name = "typing-extensions" },
+    { name = "wcmatch" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8c/87/e9b3bd252a4fe2b3fd6967ff985c7a5a15a31b2d5b8c37e50afb18797b17/e2b-2.20.0.tar.gz", hash = "sha256:52b3a00ac7015bbdce84913b2a57664d2def33d5a4069e34fa2354de31759173", size = 156575, upload-time = "2026-04-02T19:20:32.375Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/ce/e402e2ecebe40ed9af20cddb862386f2ce20336e35c0dea257812129020e/e2b-2.20.0-py3-none-any.whl", hash = "sha256:66f6edcf6b742ca180f3aadcff7966fda86d68430fa6b2becdfa0fcc72224988", size = 296483, upload-time = "2026-04-02T19:20:30.573Z" },
+]
+
+[[package]]
+name = "e2b-code-interpreter"
+version = "2.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "e2b" },
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/dd/f90b56d1597abfcdabdc018ac184fa714066be93d24b97edc2bf0671d483/e2b_code_interpreter-2.6.0.tar.gz", hash = "sha256:67e66531e5cf65c9df6e82aa0bdb1e73223a1ab205f10d47c027eb2ea09b73f9", size = 10683, upload-time = "2026-03-23T17:01:07.327Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/79/f70d50604584df66064892f3fca7ab57b10ad40c826fd003be53a4cd5fa5/e2b_code_interpreter-2.6.0-py3-none-any.whl", hash = "sha256:a15f1d155566aef98cf2ccc0f8d9b07d15e07582d6cc8a128bc97de371bd617c", size = 13715, upload-time = "2026-03-23T17:01:06.111Z" },
 ]
 
 [[package]]
@@ -9405,6 +9464,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/bd/95/615e72cd27b85b61eec764a5ca51bd94d40b5adea5ff47567d9ebc4d275a/watchfiles-1.1.1-pp311-pypy311_pp73-macosx_11_0_arm64.whl", hash = "sha256:89eef07eee5e9d1fda06e38822ad167a044153457e6fd997f8a858ab7564a336", size = 396117, upload-time = "2025-10-14T15:06:11.28Z" },
     { url = "https://files.pythonhosted.org/packages/c9/81/e7fe958ce8a7fb5c73cc9fb07f5aeaf755e6aa72498c57d760af760c91f8/watchfiles-1.1.1-pp311-pypy311_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ce19e06cbda693e9e7686358af9cd6f5d61312ab8b00488bc36f5aabbaf77e24", size = 450493, upload-time = "2025-10-14T15:06:12.321Z" },
     { url = "https://files.pythonhosted.org/packages/6e/d4/ed38dd3b1767193de971e694aa544356e63353c33a85d948166b5ff58b9e/watchfiles-1.1.1-pp311-pypy311_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3e6f39af2eab0118338902798b5aa6664f46ff66bc0280de76fca67a7f262a49", size = 457546, upload-time = "2025-10-14T15:06:13.372Z" },
+]
+
+[[package]]
+name = "wcmatch"
+version = "10.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bracex" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/79/3e/c0bdc27cf06f4e47680bd5803a07cb3dfd17de84cde92dd217dcb9e05253/wcmatch-10.1.tar.gz", hash = "sha256:f11f94208c8c8484a16f4f48638a85d771d9513f4ab3f37595978801cb9465af", size = 117421, upload-time = "2025-06-22T19:14:02.49Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/d8/0d1d2e9d3fabcf5d6840362adcf05f8cf3cd06a73358140c3a97189238ae/wcmatch-10.1-py3-none-any.whl", hash = "sha256:5848ace7dbb0476e5e55ab63c6bbd529745089343427caa5537f230cc01beb8a", size = 39854, upload-time = "2025-06-22T19:14:00.978Z" },
 ]
 
 [[package]]

@@ -143,6 +143,11 @@ daytona = [
     "daytona~=0.140.0",
 ]
 
+e2b = [
+    "e2b~=2.20.0",
+    "e2b-code-interpreter~=2.6.0",
+]
+
 
 [tool.uv]
 exclude-newer = "3 days"
