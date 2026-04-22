@@ -59,7 +59,7 @@ class E2BPythonTool(E2BBaseTool):
         if cached is not None:
             return cached
         try:
-            from e2b_code_interpreter import Sandbox  # type: ignore[import-not-found]
+            from e2b_code_interpreter import Sandbox  # type: ignore[import-untyped]
         except ImportError as exc:
             raise ImportError(
                 "The 'e2b_code_interpreter' package is required for the E2B "

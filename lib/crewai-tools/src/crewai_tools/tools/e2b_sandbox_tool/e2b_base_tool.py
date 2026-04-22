@@ -115,7 +115,7 @@ class E2BBaseTool(BaseTool):
         if cached is not None:
             return cached
         try:
-            from e2b import Sandbox  # type: ignore[import-not-found]
+            from e2b import Sandbox  # type: ignore[import-untyped]
         except ImportError as exc:
             raise ImportError(
                 "The 'e2b' package is required for E2B sandbox tools. "
@@ -130,14 +130,14 @@ class E2BBaseTool(BaseTool):
             kwargs["api_key"] = self.api_key.get_secret_value()
         if self.domain:
             kwargs["domain"] = self.domain
+        if self.sandbox_timeout is not None:
+            kwargs["timeout"] = self.sandbox_timeout
         return kwargs
 
     def _create_kwargs(self) -> dict[str, Any]:
         kwargs: dict[str, Any] = self._connect_kwargs()
         if self.template is not None:
             kwargs["template"] = self.template
-        if self.sandbox_timeout is not None:
-            kwargs["timeout"] = self.sandbox_timeout
         if self.envs is not None:
             kwargs["envs"] = self.envs
         if self.metadata is not None:
