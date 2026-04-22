@@ -78,8 +78,7 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
-from crewai.mcp import MCPServerConfig
-from crewai.mcp.tool_resolver import MCPToolResolver
+from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
@@ -119,6 +118,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
@@ -1120,6 +1120,8 @@ class Agent(BaseAgent):
         Delegates to :class:`~crewai.mcp.tool_resolver.MCPToolResolver`.
         """
         self._cleanup_mcp_clients()
+        from crewai.mcp.tool_resolver import MCPToolResolver
+
         self._mcp_resolver = MCPToolResolver(agent=self, logger=self._logger)
         return self._mcp_resolver.resolve(mcps)
 

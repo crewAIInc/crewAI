@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.14.3a1",
+    "crewai==1.14.3a2",
     "tiktoken~=0.8.0",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
@@ -112,7 +112,7 @@ github = [
 ]
 rag = [
     "python-docx>=1.1.0",
-    "lxml>=5.3.0,<5.4.0",  # Pin to avoid etree import issues in 5.4.0
+    "lxml>=6.1.0,<7",  # 6.1.0+ required for GHSA-vfmq-68hx-4jfw (XXE in iterparse)
 ]
 xml = [
     "unstructured[local-inference, all-docs]>=0.17.2"
@@ -141,6 +141,11 @@ contextual = [
 ]
 daytona = [
     "daytona~=0.140.0",
+]
+
+e2b = [
+    "e2b~=2.20.0",
+    "e2b-code-interpreter~=2.6.0",
 ]
 
 

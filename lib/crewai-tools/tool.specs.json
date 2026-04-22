@@ -8735,6 +8735,668 @@
       }
     },
     {
+      "description": "Execute a shell command inside an E2B sandbox and return the exit code, stdout, and stderr. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside an E2B sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BExecTool",
+        "type": "object"
+      },
+      "name": "E2BExecTool",
+      "package_dependencies": [
+        "e2b"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the sandbox.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the sandbox home dir.",
+            "title": "Cwd"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Envs"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "E2BExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside an E2B sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, fetch file metadata, or check whether a path exists. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Files",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside an E2B sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With\n    the default ephemeral mode, files disappear when this tool call\n    finishes.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BFileTool",
+        "type": "object"
+      },
+      "name": "E2BFileTool",
+      "package_dependencies": [
+        "e2b"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata), 'exists' (returns a boolean for whether the path exists).",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info",
+              "exists"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write'/'append': treat content as base64 and upload raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "depth": {
+            "default": 1,
+            "description": "For action='list': how many levels deep to recurse (default 1).",
+            "title": "Depth",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Absolute path inside the sandbox.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "path"
+        ],
+        "title": "E2BFileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a block of Python code inside an E2B code interpreter sandbox and return captured stdout, stderr, the final expression value, and any rich results (charts, dataframes). Use this for data processing, quick scripts, or analysis that should run in an isolated environment.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run Python code inside an E2B code interpreter sandbox.\n\nUses `e2b_code_interpreter`, which runs cells in a persistent Jupyter-style\nkernel so state (imports, variables) carries across calls when\n`persistent=True`.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BPythonTool",
+        "type": "object"
+      },
+      "name": "E2BPythonTool",
+      "package_dependencies": [
+        "e2b_code_interpreter"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "code": {
+            "description": "Python source to execute inside the sandbox.",
+            "title": "Code",
+            "type": "string"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables for the run.",
+            "title": "Envs"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override the execution language (e.g. 'python', 'r', 'javascript'). Defaults to Python when omitted.",
+            "title": "Language"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the code to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "E2BPythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Search the internet using Exa",
       "env_vars": [
         {
