@@ -118,6 +118,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
