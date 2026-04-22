@@ -201,6 +201,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if self._resuming:
             self._resuming = False
         else:
+            # Reset execution state so that sequential tasks on the same
+            # executor instance start with a clean slate (fixes #4389).
+            self.messages = []
+            self.iterations = 0
             self._setup_messages(inputs)
             self._inject_multimodal_files(inputs)
 
@@ -1071,6 +1075,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if self._resuming:
             self._resuming = False
         else:
+            # Reset execution state so that sequential tasks on the same
+            # executor instance start with a clean slate (fixes #4389).
+            self.messages = []
+            self.iterations = 0
             self._setup_messages(inputs)
             await self._ainject_multimodal_files(inputs)
 
