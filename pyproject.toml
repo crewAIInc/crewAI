@@ -164,7 +164,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 # Pinned to include the security patch releases (authlib 1.6.11,
 # langchain-text-splitters 1.1.2) uploaded on 2026-04-16.
-exclude-newer = "2026-04-17"
+exclude-newer = "2026-04-22"
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
