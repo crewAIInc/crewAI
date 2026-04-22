@@ -390,16 +390,26 @@ def test_azure_raises_error_when_endpoint_missing():
 
 
 def test_azure_raises_error_when_api_key_missing():
-    """Credentials are validated lazily: construction succeeds, first
-    client build raises the descriptive error."""
+    """When no API key AND azure-identity is not installed, credentials
+    are validated lazily: construction succeeds, first client build raises.
+    With azure-identity installed, DefaultAzureCredential is used instead."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {}, clear=True):
         llm = AzureCompletion(
             model="gpt-4", endpoint="https://test.openai.azure.com"
         )
-        with pytest.raises(ValueError, match="Azure API key is required"):
-            llm._get_sync_client()
+        # With azure-identity installed, DefaultAzureCredential is used as
+        # fallback instead of raising. Only raises when azure-identity is
+        # not available.
+        try:
+            import azure.identity  # noqa: F401
+            # azure-identity is installed — DefaultAzureCredential will be used
+            client = llm._get_sync_client()
+            assert client is not None
+        except ImportError:
+            with pytest.raises(ValueError, match="Azure API key is required"):
+                llm._get_sync_client()
 
 
 @pytest.mark.asyncio

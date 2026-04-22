@@ -35,6 +35,7 @@ try:
     )
     from azure.core.credentials import (
         AzureKeyCredential,
+        TokenCredential,
     )
     from azure.core.exceptions import (
         HttpResponseError,
@@ -88,6 +89,8 @@ class AzureCompletion(BaseLLM):
     response_format: type[BaseModel] | None = None
     is_openai_model: bool = False
     is_azure_openai_endpoint: bool = False
+    azure_tenant_id: str | None = None
+    azure_client_id: str | None = None
 
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)
@@ -114,6 +117,12 @@ class AzureCompletion(BaseLLM):
         )
         data["api_version"] = (
             data.get("api_version") or os.getenv("AZURE_API_VERSION") or "2024-06-01"
+        )
+        data["azure_tenant_id"] = data.get("azure_tenant_id") or os.getenv(
+            "AZURE_TENANT_ID"
+        )
+        data["azure_client_id"] = data.get("azure_client_id") or os.getenv(
+            "AZURE_CLIENT_ID"
         )
 
         # Credentials and endpoint are validated lazily in `_init_clients`
@@ -149,7 +158,10 @@ class AzureCompletion(BaseLLM):
         try:
             self._client = self._build_sync_client()
             self._async_client = self._build_async_client()
-        except ValueError:
+        except (ValueError, ImportError):
+            # Deferred initialization: client build is retried in
+            # _ensure_clients() before the first API call, so it is
+            # safe to suppress here when env vars are not yet set.
             pass
         return self
 
@@ -183,23 +195,95 @@ class AzureCompletion(BaseLLM):
                     AzureCompletion._is_azure_openai_endpoint(self.endpoint)
                 )
 
-        if not self.api_key:
-            raise ValueError(
-                "Azure API key is required. Set AZURE_API_KEY environment "
-                "variable or pass api_key parameter."
-            )
+        # Re-read identity env vars for deferred builds
+        if not self.azure_tenant_id:
+            self.azure_tenant_id = os.getenv("AZURE_TENANT_ID")
+        if not self.azure_client_id:
+            self.azure_client_id = os.getenv("AZURE_CLIENT_ID")
+
         if not self.endpoint:
             raise ValueError(
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment "
                 "variable or pass endpoint parameter."
             )
+
+        credential = self._resolve_credential()
+
         client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
-            "credential": AzureKeyCredential(self.api_key),
+            "credential": credential,
         }
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
         return client_kwargs
+
+    def _resolve_credential(self) -> AzureKeyCredential | TokenCredential:
+        """Resolve the Azure credential using a priority chain.
+
+        Token-based credentials are checked first because the platform's
+        workload-identity manager sets env vars at runtime to enable
+        keyless auth.  When those vars are present they intentionally
+        take precedence over any static ``api_key`` so that enterprises
+        can enforce SP / Managed Identity policies.
+
+        Priority:
+        1. OIDC federation (WorkloadIdentityCredential) — auto-discovered
+           from AZURE_FEDERATED_TOKEN_FILE + AZURE_TENANT_ID + AZURE_CLIENT_ID
+        2. Client secret (ClientSecretCredential) — explicit SP credentials
+        3. Default chain (DefaultAzureCredential) — Managed Identity et al.
+        4. API key fallback (AzureKeyCredential) — existing path
+        """
+        federated_token_file = os.getenv("AZURE_FEDERATED_TOKEN_FILE")
+        client_secret = os.getenv("AZURE_CLIENT_SECRET")
+
+        # Path 1: OIDC Workload Identity Federation
+        if federated_token_file and self.azure_tenant_id and self.azure_client_id:
+            try:
+                from azure.identity import WorkloadIdentityCredential
+
+                return WorkloadIdentityCredential(
+                    tenant_id=self.azure_tenant_id,
+                    client_id=self.azure_client_id,
+                    token_file_path=federated_token_file,
+                )
+            except ImportError:
+                raise ImportError(
+                    "azure-identity is required for workload identity federation. "
+                    'Install with: uv add "crewai[azure-ai-inference]"'
+                ) from None
+
+        # Path 2: Client Secret (Service Principal)
+        if client_secret and self.azure_tenant_id and self.azure_client_id:
+            try:
+                from azure.identity import ClientSecretCredential
+
+                return ClientSecretCredential(
+                    tenant_id=self.azure_tenant_id,
+                    client_id=self.azure_client_id,
+                    client_secret=client_secret,
+                )
+            except ImportError:
+                raise ImportError(
+                    "azure-identity is required for service principal authentication. "
+                    'Install with: uv add "crewai[azure-ai-inference]"'
+                ) from None
+
+        # Path 3: DefaultAzureCredential (Managed Identity, Azure CLI, etc.)
+        # Only attempt if azure-identity is installed and no API key is available
+        if not self.api_key:
+            try:
+                from azure.identity import DefaultAzureCredential
+
+                return DefaultAzureCredential()
+            except ImportError:
+                raise ValueError(
+                    "Azure API key is required when azure-identity is not installed. "
+                    "Set AZURE_API_KEY environment variable, pass api_key parameter, "
+                    'or install azure-identity: uv add "crewai[azure-ai-inference]"'
+                ) from None
+
+        # Path 4: API Key (existing path)
+        return AzureKeyCredential(self.api_key)
 
     def _get_sync_client(self) -> Any:
         if self._client is None:

@@ -94,6 +94,7 @@ google-genai = [
 ]
 azure-ai-inference = [
     "azure-ai-inference~=1.0.0b9",
+    "azure-identity>=1.17.0,<2",
 ]
 anthropic = [
     "anthropic~=0.73.0",
