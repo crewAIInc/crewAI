@@ -8794,7 +8794,9 @@
           "api_key": {
             "anyOf": [
               {
-                "type": "string"
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
               },
               {
                 "type": "null"
@@ -9013,7 +9015,9 @@
           "api_key": {
             "anyOf": [
               {
-                "type": "string"
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
               },
               {
                 "type": "null"
@@ -9231,7 +9235,9 @@
           "api_key": {
             "anyOf": [
               {
-                "type": "string"
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
               },
               {
                 "type": "null"

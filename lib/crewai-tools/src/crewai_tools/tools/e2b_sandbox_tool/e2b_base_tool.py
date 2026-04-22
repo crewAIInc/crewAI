@@ -7,7 +7,7 @@ import threading
 from typing import Any, ClassVar
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import ConfigDict, Field, PrivateAttr
+from pydantic import ConfigDict, Field, PrivateAttr, SecretStr
 
 
 logger = logging.getLogger(__name__)
@@ -31,10 +31,13 @@ class E2BBaseTool(BaseTool):
 
     package_dependencies: list[str] = Field(default_factory=lambda: ["e2b"])
 
-    api_key: str | None = Field(
-        default_factory=lambda: os.getenv("E2B_API_KEY"),
+    api_key: SecretStr | None = Field(
+        default_factory=lambda: (
+            SecretStr(val) if (val := os.getenv("E2B_API_KEY")) else None
+        ),
         description="E2B API key. Falls back to E2B_API_KEY env var.",
         json_schema_extra={"required": False},
+        repr=False,
     )
     domain: str | None = Field(
         default_factory=lambda: os.getenv("E2B_DOMAIN"),
@@ -123,8 +126,8 @@ class E2BBaseTool(BaseTool):
 
     def _connect_kwargs(self) -> dict[str, Any]:
         kwargs: dict[str, Any] = {}
-        if self.api_key:
-            kwargs["api_key"] = self.api_key
+        if self.api_key is not None:
+            kwargs["api_key"] = self.api_key.get_secret_value()
         if self.domain:
             kwargs["domain"] = self.domain
         return kwargs
