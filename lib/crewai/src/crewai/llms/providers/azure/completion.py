@@ -183,11 +183,6 @@ class AzureCompletion(BaseLLM):
                     AzureCompletion._is_azure_openai_endpoint(self.endpoint)
                 )
 
-        if not self.api_key:
-            raise ValueError(
-                "Azure API key is required. Set AZURE_API_KEY environment "
-                "variable or pass api_key parameter."
-            )
         if not self.endpoint:
             raise ValueError(
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment "
@@ -195,11 +190,38 @@ class AzureCompletion(BaseLLM):
             )
         client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
-            "credential": AzureKeyCredential(self.api_key),
+            "credential": self._resolve_credential(),
         }
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
         return client_kwargs
+
+    def _resolve_credential(self) -> Any:
+        """Return an Azure credential, preferring the API key when set.
+
+        Without an API key, fall back to ``DefaultAzureCredential`` from
+        ``azure-identity``. That chain auto-detects the standard keyless
+        paths the customer's environment may provide — OIDC Workload
+        Identity Federation (``AZURE_FEDERATED_TOKEN_FILE`` +
+        ``AZURE_TENANT_ID`` + ``AZURE_CLIENT_ID``), Managed Identity on
+        AKS/Azure VMs, environment-configured service principals, and
+        developer tools like the Azure CLI. Installing ``azure-identity``
+        is what enables these paths; without it we raise the existing
+        API-key error.
+        """
+        if self.api_key:
+            return AzureKeyCredential(self.api_key)
+
+        try:
+            from azure.identity import DefaultAzureCredential
+        except ImportError:
+            raise ValueError(
+                "Azure API key is required when azure-identity is not "
+                "installed. Set AZURE_API_KEY, or install azure-identity "
+                'for keyless auth: uv add "crewai[azure-ai-inference]"'
+            ) from None
+
+        return DefaultAzureCredential()
 
     def _get_sync_client(self) -> Any:
         if self._client is None:

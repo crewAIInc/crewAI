@@ -55,7 +55,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.14.3a1",
+    "crewai-tools==1.14.3a2",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -94,6 +94,7 @@ google-genai = [
 ]
 azure-ai-inference = [
     "azure-ai-inference~=1.0.0b9",
+    "azure-identity>=1.17.0,<2",
 ]
 anthropic = [
     "anthropic~=0.73.0",
