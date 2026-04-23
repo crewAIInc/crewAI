@@ -926,8 +926,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     entity_type: Literal["flow"] = "flow"
 
-    initial_state: Annotated[
-        Any,
+    initial_state: Annotated[  # type: ignore[type-arg]
+        type[BaseModel] | type[dict] | dict[str, Any] | BaseModel | None,
         PlainSerializer(_serialize_initial_state, return_type=Any, when_used="json"),
     ] = Field(default=None)
     name: str | None = Field(default=None)
