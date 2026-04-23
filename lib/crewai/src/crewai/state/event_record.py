@@ -197,6 +197,21 @@ class EventRecord(BaseModel):
                 node for node in self.nodes.values() if not node.neighbors("parent")
             ]
 
+    def all_nodes(self) -> list[EventNode]:
+        """Return a snapshot of every node under the read lock.
+
+        Returns:
+            A list copy of the current nodes, safe to iterate without holding
+            the lock.
+        """
+        with self._lock.r_locked():
+            return list(self.nodes.values())
+
+    def clear(self) -> None:
+        """Remove all nodes from the record under the write lock."""
+        with self._lock.w_locked():
+            self.nodes.clear()
+
     def __len__(self) -> int:
         with self._lock.r_locked():
             return len(self.nodes)

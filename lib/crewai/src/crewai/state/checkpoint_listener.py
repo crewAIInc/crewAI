@@ -16,7 +16,7 @@ from typing import Any
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.events.base_events import BaseEvent
-from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
+from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus, is_replaying
 from crewai.events.types.checkpoint_events import (
     CheckpointBaseEvent,
     CheckpointCompletedEvent,
@@ -228,6 +228,8 @@ def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None
 
 def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
     """Sync handler registered on every event class."""
+    if is_replaying():
+        return
     if isinstance(
         event,
         (CheckpointBaseEvent, CheckpointForkBaseEvent, CheckpointRestoreBaseEvent),

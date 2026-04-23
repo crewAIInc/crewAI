@@ -64,6 +64,22 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+_replaying: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "crewai_event_replaying", default=False
+)
+
+
+def is_replaying() -> bool:
+    """Return True if the current context is dispatching a replayed event.
+
+    Listeners with side effects (checkpoint writes, external API calls that
+    should not be repeated) should early-return when this is true. Listeners
+    whose purpose is reconstructing timeline state (trace batch, console
+    formatter) should ignore the flag and process replayed events normally.
+    """
+    return _replaying.get()
+
+
 class CrewAIEventsBus:
     """Singleton event bus for handling events in CrewAI.
 
@@ -260,6 +276,11 @@ class CrewAIEventsBus:
         with self._instance_lock:
             self._runtime_state = state
             self._registered_entity_ids = {id(e) for e in state.root}
+
+    @property
+    def runtime_state(self) -> RuntimeState | None:
+        """The RuntimeState currently attached to the bus, if any."""
+        return self._runtime_state
 
     def register_entity(self, entity: Any) -> None:
         """Add an entity to the RuntimeState, creating it if needed.
@@ -567,6 +588,87 @@ class CrewAIEventsBus:
             )
 
         return None
+
+    async def _acall_handlers_replaying(
+        self,
+        source: Any,
+        event: BaseEvent,
+        handlers: AsyncHandlerSet,
+    ) -> None:
+        """Call async handlers with the replaying flag set on the loop thread."""
+        token = _replaying.set(True)
+        try:
+            await self._acall_handlers(source, event, handlers)
+        finally:
+            _replaying.reset(token)
+
+    async def _emit_with_dependencies_replaying(
+        self, source: Any, event: BaseEvent
+    ) -> None:
+        """Dependency-aware dispatch with the replaying flag set."""
+        token = _replaying.set(True)
+        try:
+            await self._emit_with_dependencies(source, event)
+        finally:
+            _replaying.reset(token)
+
+    def replay(self, source: Any, event: BaseEvent) -> Future[None] | None:
+        """Dispatch a previously-recorded event without mutating its fields.
+
+        Unlike :meth:`emit`, this does not run ``_prepare_event`` (so stored
+        event ids and ``emission_sequence`` are preserved) and does not
+        re-record the event. Listeners can call :func:`is_replaying` to
+        opt out of side-effectful processing.
+
+        Args:
+            source: The emitting object.
+            event: The previously-recorded event to dispatch.
+
+        Returns:
+            Future that completes when handlers finish, or None if no handlers.
+        """
+        event_type = type(event)
+
+        with self._rwlock.r_locked():
+            if self._shutting_down:
+                return None
+            has_dependencies = event_type in self._handler_dependencies
+            sync_handlers = self._sync_handlers.get(event_type, frozenset())
+            async_handlers = self._async_handlers.get(event_type, frozenset())
+
+        if not sync_handlers and not async_handlers:
+            return None
+
+        self._ensure_executor_initialized()
+        self._has_pending_events = True
+
+        token = _replaying.set(True)
+        try:
+            if has_dependencies:
+                return self._track_future(
+                    asyncio.run_coroutine_threadsafe(
+                        self._emit_with_dependencies_replaying(source, event),
+                        self._loop,
+                    )
+                )
+
+            if sync_handlers:
+                ctx = contextvars.copy_context()
+                sync_future = self._sync_executor.submit(
+                    ctx.run, self._call_handlers, source, event, sync_handlers
+                )
+                self._track_future(sync_future)
+                if not async_handlers:
+                    return sync_future
+
+            return self._track_future(
+                asyncio.run_coroutine_threadsafe(
+                    self._acall_handlers_replaying(source, event, async_handlers),
+                    self._loop,
+                )
+            )
+        finally:
+            _replaying.reset(token)
 
     def flush(self, timeout: float | None = 30.0) -> bool:
         """Block until all pending event handlers complete.
