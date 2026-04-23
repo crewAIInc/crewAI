@@ -63,12 +63,26 @@ def _resolve(value: CheckpointConfig | bool | None) -> CheckpointConfig | None |
     if isinstance(value, CheckpointConfig):
         _ensure_handlers_registered()
         return value
-    if value is True:
+    if value:
         _ensure_handlers_registered()
         return CheckpointConfig()
     if value is False:
         return _SENTINEL
-    return None  # None = inherit
+    return None
+
+
+def _resolve_from_agent(agent: BaseAgent) -> CheckpointConfig | None:
+    """Resolve a checkpoint config starting from an agent, walking to its crew."""
+    result = _resolve(agent.checkpoint)
+    if isinstance(result, CheckpointConfig):
+        return result
+    if result is _SENTINEL:
+        return None
+    crew = agent.crew
+    if isinstance(crew, Crew):
+        crew_result = _resolve(crew.checkpoint)
+        return crew_result if isinstance(crew_result, CheckpointConfig) else None
+    return None
 
 
 def _find_checkpoint(source: Any) -> CheckpointConfig | None:
@@ -87,28 +101,11 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
         result = _resolve(source.checkpoint)
         return result if isinstance(result, CheckpointConfig) else None
     if isinstance(source, BaseAgent):
-        result = _resolve(source.checkpoint)
-        if isinstance(result, CheckpointConfig):
-            return result
-        if result is _SENTINEL:
-            return None
-        crew = source.crew
-        if isinstance(crew, Crew):
-            result = _resolve(crew.checkpoint)
-            return result if isinstance(result, CheckpointConfig) else None
-        return None
+        return _resolve_from_agent(source)
     if isinstance(source, Task):
         agent = source.agent
         if isinstance(agent, BaseAgent):
-            result = _resolve(agent.checkpoint)
-            if isinstance(result, CheckpointConfig):
-                return result
-            if result is _SENTINEL:
-                return None
-            crew = agent.crew
-            if isinstance(crew, Crew):
-                result = _resolve(crew.checkpoint)
-                return result if isinstance(result, CheckpointConfig) else None
+            return _resolve_from_agent(agent)
         return None
     return None
 
@@ -255,7 +252,8 @@ def _register_all_handlers(event_bus: CrewAIEventsBus) -> None:
     seen: set[type] = set()
 
     def _collect(cls: type[BaseEvent]) -> None:
-        for sub in cls.__subclasses__():
+        subclasses: list[type[BaseEvent]] = cls.__subclasses__()
+        for sub in subclasses:
             if sub not in seen:
                 seen.add(sub)
                 type_field = sub.model_fields.get("type")
