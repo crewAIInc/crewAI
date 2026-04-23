@@ -29,7 +29,6 @@ from crewai.events.types.checkpoint_events import (
     CheckpointCompletedEvent,
     CheckpointFailedEvent,
     CheckpointForkCompletedEvent,
-    CheckpointForkFailedEvent,
     CheckpointForkStartedEvent,
     CheckpointRestoreCompletedEvent,
     CheckpointRestoreFailedEvent,
@@ -317,29 +316,13 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
                 parent_checkpoint_id=parent_checkpoint_id,
             ),
         )
-
-        start: float = time.perf_counter()
-        try:
-            self._branch = new_branch
-        except Exception as exc:
-            crewai_event_bus.emit(
-                self,
-                CheckpointForkFailedEvent(
-                    branch=new_branch,
-                    parent_branch=parent_branch,
-                    parent_checkpoint_id=parent_checkpoint_id,
-                    error=str(exc),
-                ),
-            )
-            raise
-
+        self._branch = new_branch
         crewai_event_bus.emit(
             self,
             CheckpointForkCompletedEvent(
                 branch=new_branch,
                 parent_branch=parent_branch,
                 parent_checkpoint_id=parent_checkpoint_id,
-                duration_ms=(time.perf_counter() - start) * 1000.0,
             ),
         )
 

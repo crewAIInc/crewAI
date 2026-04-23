@@ -64,14 +64,6 @@ class CheckpointForkCompletedEvent(CheckpointForkBaseEvent):
     """Event emitted after a fork has established the new branch."""
 
     type: Literal["checkpoint_fork_completed"] = "checkpoint_fork_completed"
-    duration_ms: float
-
-
-class CheckpointForkFailedEvent(CheckpointForkBaseEvent):
-    """Event emitted when a fork fails to establish the new branch."""
-
-    type: Literal["checkpoint_fork_failed"] = "checkpoint_fork_failed"
-    error: str
 
 
 class CheckpointRestoreBaseEvent(BaseEvent):

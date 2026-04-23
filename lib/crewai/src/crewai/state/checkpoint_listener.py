@@ -211,7 +211,7 @@ def _do_checkpoint(
                 provider=provider_name,
                 trigger=trigger,
                 branch=branch_snapshot,
-                parent_id=checkpoint_id,
+                parent_id=parent_id_snapshot,
                 removed_count=removed_count,
                 max_checkpoints=cfg.max_checkpoints,
                 **context,

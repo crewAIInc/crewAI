@@ -34,7 +34,6 @@ from crewai.events.types.checkpoint_events import (
     CheckpointCompletedEvent,
     CheckpointFailedEvent,
     CheckpointForkCompletedEvent,
-    CheckpointForkFailedEvent,
     CheckpointForkStartedEvent,
     CheckpointPrunedEvent,
     CheckpointRestoreCompletedEvent,
@@ -200,7 +199,6 @@ EventTypes = (
     | CheckpointFailedEvent
     | CheckpointForkStartedEvent
     | CheckpointForkCompletedEvent
-    | CheckpointForkFailedEvent
     | CheckpointRestoreStartedEvent
     | CheckpointRestoreCompletedEvent
     | CheckpointRestoreFailedEvent
