@@ -2425,7 +2425,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         nodes = sorted(
             (
                 n
-                for n in list(record.nodes.values())
+                for n in record.all_nodes()
                 if isinstance(n.event, replayable)
                 and n.event.method_name in self._completed_methods
             ),
