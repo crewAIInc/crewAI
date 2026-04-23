@@ -9,7 +9,7 @@ The `TavilyGetResearchTool` provides an interface to Tavily's research status en
 To use the `TavilyGetResearchTool`, you need to install the `tavily-python` library:
 
 ```shell
-pip install 'crewai[tools]' tavily-python
+uv add 'crewai[tools]' tavily-python
 ```
 
 ## Environment Variables

@@ -9,7 +9,7 @@ The `TavilyResearchTool` provides an interface to Tavily Research through the Ta
 To use the `TavilyResearchTool`, you need to install the `tavily-python` library:
 
 ```shell
-pip install 'crewai[tools]' tavily-python
+uv add 'crewai[tools]' tavily-python
 ```
 
 ## Environment Variables
