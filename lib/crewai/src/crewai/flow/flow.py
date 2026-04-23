@@ -45,6 +45,7 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
+    PlainSerializer,
     PrivateAttr,
     SerializeAsAny,
     ValidationError,
@@ -58,6 +59,7 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_context import (
     get_current_parent_id,
     reset_last_event_id,
+    restore_event_scope,
     triggered_by_scope,
 )
 from crewai.events.listeners.tracing.trace_listener import (
@@ -154,6 +156,37 @@ def _resolve_persistence(value: Any) -> Any:
         cls = _persistence_registry.get(type_name)
         if cls is not None:
             return cls.model_validate(value)
+    return value
+
+
+_INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
+
+
+def _serialize_initial_state(value: Any) -> Any:
+    """Make ``initial_state`` safe for JSON checkpoint serialization.
+
+    ``BaseModel`` class refs are emitted as their JSON schema under a sentinel
+    marker key so deserialization can round-trip them back to a class.
+    ``BaseModel`` instances are dumped to JSON (round-trip as plain dicts,
+    which ``_create_initial_state`` accepts). Bare ``type`` values that are
+    not ``BaseModel`` subclasses (e.g. ``dict``) are dropped since they
+    can't be represented in JSON.
+    """
+    if isinstance(value, type):
+        if issubclass(value, BaseModel):
+            return {_INITIAL_STATE_CLASS_MARKER: value.model_json_schema()}
+        return None
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    return value
+
+
+def _deserialize_initial_state(value: Any) -> Any:
+    """Rehydrate a class ref serialized by :func:`_serialize_initial_state`."""
+    if isinstance(value, dict) and _INITIAL_STATE_CLASS_MARKER in value:
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        return create_model_from_schema(value[_INITIAL_STATE_CLASS_MARKER])
     return value
 
 
@@ -908,7 +941,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     entity_type: Literal["flow"] = "flow"
 
-    initial_state: Any = Field(default=None)
+    initial_state: Annotated[  # type: ignore[type-arg]
+        type[BaseModel] | type[dict] | dict[str, Any] | BaseModel | None,
+        BeforeValidator(_deserialize_initial_state),
+        PlainSerializer(_serialize_initial_state, return_type=Any, when_used="json"),
+    ] = Field(default=None)
     name: str | None = Field(default=None)
     tracing: bool | None = Field(default=None)
     stream: bool = Field(default=False)
@@ -980,13 +1017,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             A Flow instance on the new branch. Call kickoff() to run.
         """
         flow = cls.from_checkpoint(config)
-        state = crewai_event_bus._runtime_state
+        state = crewai_event_bus.runtime_state
         if state is None:
             raise RuntimeError(
                 "Cannot fork: no runtime state on the event bus. "
                 "Ensure from_checkpoint() succeeded before calling fork()."
             )
         state.fork(branch)
+        new_id = str(uuid4())
+        if isinstance(flow._state, dict):
+            flow._state["id"] = new_id
+        else:
+            object.__setattr__(flow._state, "id", new_id)
         return flow
 
     checkpoint_completed_methods: set[str] | None = Field(default=None)
@@ -1008,6 +1050,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
         if self.checkpoint_state is not None:
             self._restore_state(self.checkpoint_state)
+        restore_event_scope(())
+        reset_last_event_id()
 
     _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
         default_factory=dict
@@ -1030,6 +1074,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
+    _execution_id: str = PrivateAttr(default_factory=lambda: str(uuid4()))
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1503,6 +1548,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 except Exception:
                     logger.warning("FlowStartedEvent handler failed", exc_info=True)
 
+        get_env_context()
+
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
@@ -1818,6 +1865,27 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
 
+    @property
+    def execution_id(self) -> str:
+        """Stable identifier for this flow execution.
+
+        Separate from ``flow_id`` / ``state.id``, which consumers may
+        override via ``kickoff(inputs={"id": ...})`` to resume a persisted
+        flow. ``execution_id`` is never affected by ``inputs`` and stays
+        stable for the lifetime of a single run, so it is the correct key
+        for telemetry, tracing, and any external correlation that must
+        uniquely identify a single execution even when callers pass an
+        ``id`` in ``inputs``.
+
+        Defaults to a fresh ``uuid4`` per ``Flow`` instance; assign to
+        override when an outer system already has an execution identity.
+        """
+        return self._execution_id
+
+    @execution_id.setter
+    def execution_id(self, value: str) -> None:
+        self._execution_id = value
+
     def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
@@ -2004,7 +2072,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
-        get_env_context()
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2132,13 +2199,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow_id_token = None
         request_id_token = None
         if current_flow_id.get() is None:
-            flow_id_token = current_flow_id.set(self.flow_id)
+            flow_id_token = current_flow_id.set(self.execution_id)
         if current_flow_request_id.get() is None:
-            request_id_token = current_flow_request_id.set(self.flow_id)
+            request_id_token = current_flow_request_id.set(self.execution_id)
 
         try:
             # Reset flow state for fresh execution unless restoring from persistence
-            is_restoring = inputs and "id" in inputs and self.persistence is not None
+            is_restoring = (
+                inputs and "id" in inputs and self.persistence is not None
+            ) or self.checkpoint_completed_methods is not None
             if not is_restoring:
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
@@ -2204,8 +2273,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
                 )
 
+            # After FlowStarted (when not suppressed): env events must not pre-empt
+            # trace batch init with implicit "crew" execution_type.
+            get_env_context()
+
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
+
+            if self._is_execution_resuming:
+                await self._replay_recorded_events()
 
             try:
                 # Determine which start methods to execute at kickoff
@@ -2353,6 +2429,44 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             The final output from the flow, which is the result of the last executed method.
         """
         return await self.kickoff_async(inputs, input_files, from_checkpoint)
+
+    async def _replay_recorded_events(self) -> None:
+        """Dispatch recorded ``MethodExecution*`` events from the event record."""
+        state = crewai_event_bus.runtime_state
+        if state is None:
+            return
+        record = state.event_record
+        if len(record) == 0:
+            return
+
+        replayable = (
+            MethodExecutionStartedEvent,
+            MethodExecutionFinishedEvent,
+            MethodExecutionFailedEvent,
+        )
+        flow_name = self.name or self.__class__.__name__
+        nodes = sorted(
+            (
+                n
+                for n in record.all_nodes()
+                if isinstance(n.event, replayable)
+                and n.event.flow_name == flow_name
+                and n.event.method_name in self._completed_methods
+            ),
+            key=lambda n: n.event.emission_sequence or 0,
+        )
+
+        for node in nodes:
+            future = crewai_event_bus.replay(self, node.event)
+            if future is not None:
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning(
+                        "Replayed event handler failed: %s",
+                        node.event.type,
+                        exc_info=True,
+                    )
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.

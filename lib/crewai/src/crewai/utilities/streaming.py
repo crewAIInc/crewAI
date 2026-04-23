@@ -7,6 +7,7 @@ import logging
 import queue
 import threading
 from typing import Any, NamedTuple
+import uuid
 
 from typing_extensions import TypedDict
 
@@ -24,6 +25,10 @@ from crewai.utilities.string_utils import sanitize_tool_name
 
 
 logger = logging.getLogger(__name__)
+
+_current_stream_ids: contextvars.ContextVar[tuple[str, ...]] = contextvars.ContextVar(
+    "_current_stream_ids", default=()
+)
 
 
 class TaskInfo(TypedDict):
@@ -45,6 +50,7 @@ class StreamingState(NamedTuple):
     async_queue: asyncio.Queue[StreamChunk | None | Exception] | None
     loop: asyncio.AbstractEventLoop | None
     handler: Callable[[Any, BaseEvent], None]
+    stream_id: str | None = None
 
 
 def _extract_tool_call_info(
@@ -106,6 +112,7 @@ def _create_stream_handler(
     sync_queue: queue.Queue[StreamChunk | None | Exception],
     async_queue: asyncio.Queue[StreamChunk | None | Exception] | None = None,
     loop: asyncio.AbstractEventLoop | None = None,
+    stream_id: str | None = None,
 ) -> Callable[[Any, BaseEvent], None]:
     """Create a stream handler function.
 
@@ -114,19 +121,17 @@ def _create_stream_handler(
         sync_queue: Synchronous queue for chunks.
         async_queue: Optional async queue for chunks.
         loop: Optional event loop for async operations.
+        stream_id: Stream scope ID for concurrent isolation.
 
     Returns:
         Handler function that can be registered with the event bus.
     """
 
     def stream_handler(_: Any, event: BaseEvent) -> None:
-        """Handle LLM stream chunk events and enqueue them.
-
-        Args:
-            _: Event source (unused).
-            event: The event to process.
-        """
         if not isinstance(event, LLMStreamChunkEvent):
+            return
+
+        if stream_id is not None and stream_id not in _current_stream_ids.get():
             return
 
         chunk = _create_stream_chunk(event, current_task_info)
@@ -203,7 +208,11 @@ def create_streaming_state(
         async_queue = asyncio.Queue()
         loop = asyncio.get_event_loop()
 
-    handler = _create_stream_handler(current_task_info, sync_queue, async_queue, loop)
+    stream_id = str(uuid.uuid4())
+
+    handler = _create_stream_handler(
+        current_task_info, sync_queue, async_queue, loop, stream_id=stream_id
+    )
     crewai_event_bus.register_handler(LLMStreamChunkEvent, handler)
 
     return StreamingState(
@@ -213,6 +222,7 @@ def create_streaming_state(
         async_queue=async_queue,
         loop=loop,
         handler=handler,
+        stream_id=stream_id,
     )
 
 
@@ -260,7 +270,12 @@ def create_chunk_generator(
     Yields:
         StreamChunk objects as they arrive.
     """
-    ctx = contextvars.copy_context()
+    if state.stream_id is not None:
+        token = _current_stream_ids.set((*_current_stream_ids.get(), state.stream_id))
+        ctx = contextvars.copy_context()
+        _current_stream_ids.reset(token)
+    else:
+        ctx = contextvars.copy_context()
     thread = threading.Thread(target=ctx.run, args=(run_func,), daemon=True)
     thread.start()
 
@@ -300,7 +315,12 @@ async def create_async_chunk_generator(
             "Async queue not initialized. Use create_streaming_state(use_async=True)."
         )
 
-    task = asyncio.create_task(run_coro())
+    if state.stream_id is not None:
+        token = _current_stream_ids.set((*_current_stream_ids.get(), state.stream_id))
+        task = asyncio.create_task(run_coro())
+        _current_stream_ids.reset(token)
+    else:
+        task = asyncio.create_task(run_coro())
 
     try:
         while True:

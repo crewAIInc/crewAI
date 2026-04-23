@@ -419,10 +419,32 @@ class Crew(FlowTrackable, BaseModel):
 
     def _restore_runtime(self) -> None:
         """Re-create runtime objects after restoring from a checkpoint."""
+        from crewai.events.event_bus import crewai_event_bus
+
+        started_task_ids: set[str] = set()
+        state = crewai_event_bus._runtime_state
+        if state is not None:
+            for node in state.event_record.nodes.values():
+                if node.event.type == "task_started" and node.event.task_id:
+                    started_task_ids.add(node.event.task_id)
+
+        resuming_task_agent_roles: set[str] = set()
+        for task in self.tasks:
+            if (
+                task.output is None
+                and task.agent is not None
+                and str(task.id) in started_task_ids
+            ):
+                resuming_task_agent_roles.add(task.agent.role)
+
         for agent in self.agents:
             agent.crew = self
             executor = agent.agent_executor
-            if executor and executor.messages:
+            if (
+                executor
+                and executor.messages
+                and agent.role in resuming_task_agent_roles
+            ):
                 executor.crew = self
                 executor.agent = agent
                 executor._resuming = True

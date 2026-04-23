@@ -11,11 +11,12 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
-from crewai.flow.flow import Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -310,6 +311,65 @@ class TestRuntimeStateLineage:
         assert state._branch != first
 
 
+class TestFlowInitialStateSerialization:
+    """Regression tests for checkpoint serialization of ``Flow.initial_state``."""
+
+    def test_class_ref_serializes_as_schema(self) -> None:
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState)
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        wrapped = entity["initial_state"]
+        assert isinstance(wrapped, dict)
+        assert _INITIAL_STATE_CLASS_MARKER in wrapped
+        assert wrapped[_INITIAL_STATE_CLASS_MARKER].get("title") == "MyState"
+
+    def test_class_ref_round_trips_to_basemodel_subclass(self) -> None:
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState)
+        raw = RuntimeState(root=[flow]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+        rehydrated = restored.root[0].initial_state
+        assert isinstance(rehydrated, type)
+        assert issubclass(rehydrated, BaseModel)
+        assert set(rehydrated.model_fields.keys()) == {"id", "foo"}
+
+    def test_instance_serializes_as_values(self) -> None:
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState(foo="baz"))
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        assert entity["initial_state"] == {"id": "x", "foo": "baz"}
+
+    def test_dict_passthrough(self) -> None:
+        flow = Flow(initial_state={"id": "x", "foo": "bar"})
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        assert entity["initial_state"] == {"id": "x", "foo": "bar"}
+
+    def test_dict_round_trips_as_dict(self) -> None:
+        flow = Flow(initial_state={"id": "x", "foo": "bar"})
+        raw = RuntimeState(root=[flow]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+        assert restored.root[0].initial_state == {"id": "x", "foo": "bar"}
+
+
 # ---------- JsonProvider forking ----------
 
 
@@ -523,6 +583,31 @@ class TestKickoffFromCheckpoint:
         assert isinstance(crew.checkpoint, CheckpointConfig)
         assert crew.checkpoint.on_events == ["task_completed"]
 
+    def test_agent_kickoff_delegates_to_from_checkpoint(self) -> None:
+        mock_restored = MagicMock(spec=Agent)
+        mock_restored.kickoff.return_value = "agent_result"
+
+        cfg = CheckpointConfig(restore_from="/path/to/agent_cp.json")
+        with patch.object(Agent, "from_checkpoint", return_value=mock_restored):
+            agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+            result = agent.kickoff(messages="hello", from_checkpoint=cfg)
+
+        mock_restored.kickoff.assert_called_once_with(
+            messages="hello", response_format=None, input_files=None
+        )
+        assert mock_restored.checkpoint.restore_from is None
+        assert result == "agent_result"
+
+    def test_agent_kickoff_config_only_sets_checkpoint(self) -> None:
+        cfg = CheckpointConfig(on_events=["lite_agent_execution_completed"])
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        assert agent.checkpoint is None
+        with patch.object(Agent, "_prepare_kickoff", side_effect=RuntimeError("stop")):
+            with pytest.raises(RuntimeError, match="stop"):
+                agent.kickoff(messages="hello", from_checkpoint=cfg)
+        assert isinstance(agent.checkpoint, CheckpointConfig)
+        assert agent.checkpoint.on_events == ["lite_agent_execution_completed"]
+
     def test_flow_kickoff_delegates_to_from_checkpoint(self) -> None:
         mock_restored = MagicMock(spec=Flow)
         mock_restored.kickoff.return_value = "flow_result"
@@ -537,3 +622,75 @@ class TestKickoffFromCheckpoint:
         )
         assert mock_restored.checkpoint.restore_from is None
         assert result == "flow_result"
+
+
+# ---------- Agent checkpoint/fork ----------
+
+
+class TestAgentCheckpoint:
+    def _make_agent_state(self) -> RuntimeState:
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        return RuntimeState(root=[agent])
+
+    def test_agent_from_checkpoint_sets_runtime_state(self) -> None:
+        state = self._make_agent_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            crewai_event_bus._runtime_state = None
+            Agent.from_checkpoint(cfg)
+            assert crewai_event_bus._runtime_state is not None
+
+    def test_agent_fork_sets_branch(self) -> None:
+        state = self._make_agent_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            Agent.fork(cfg, branch="agent-experiment")
+            rt = crewai_event_bus._runtime_state
+            assert rt is not None
+            assert rt._branch == "agent-experiment"
+
+    def test_agent_fork_auto_branch(self) -> None:
+        state = self._make_agent_state()
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            Agent.fork(cfg)
+            rt = crewai_event_bus._runtime_state
+            assert rt is not None
+            assert rt._branch.startswith("fork/")
+
+    def test_sync_checkpoint_fields_agent(self) -> None:
+        from crewai.state.runtime import _sync_checkpoint_fields
+
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        agent._kickoff_event_id = "evt-123"
+        _sync_checkpoint_fields(agent)
+        assert agent.checkpoint_kickoff_event_id == "evt-123"
+
+    def test_agent_restore_kickoff_event_id(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        agent._kickoff_event_id = "evt-456"
+        state = RuntimeState(root=[agent])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            from crewai.state.runtime import _prepare_entities
+
+            _prepare_entities(state.root)
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Agent.from_checkpoint(cfg)
+            assert restored._kickoff_event_id == "evt-456"
