@@ -78,9 +78,7 @@ class InternalInstructor(Generic[T]):
                 if _base:
                     self._litellm_api_base = str(_base)
                 # Litellm uses the provider-prefixed model string for routing.
-                if isinstance(self.llm, str):
-                    self._instructor_model_name = self.llm
-                elif hasattr(self.llm, "model"):
+                if hasattr(self.llm, "model"):
                     self._instructor_model_name = str(self.llm.model)
             else:
                 self._client = self._create_instructor_client()
@@ -119,9 +117,6 @@ class InternalInstructor(Generic[T]):
         else:
             raise ValueError("LLM must be a string or have a model attribute")
 
-        # Cache for to_pydantic so the bare model id reaches direct SDK clients.
-        self._instructor_model_name = model_string
-
         if isinstance(self.llm, str):
             provider = self._extract_provider()
         elif self.llm is not None and hasattr(self.llm, "provider"):
@@ -150,6 +145,7 @@ class InternalInstructor(Generic[T]):
                         "Install it with: pip install anthropic"
                     ) from exc
 
+                self._instructor_model_name = model_string
                 client_kwargs: dict[str, Any] = {"base_url": base_url}
                 if api_key is not None:
                     client_kwargs["api_key"] = api_key
@@ -158,13 +154,14 @@ class InternalInstructor(Generic[T]):
             if provider_lower in ("azure", "azure_openai"):
                 from openai import AzureOpenAI
 
+                self._instructor_model_name = model_string
                 client_kwargs = {"azure_endpoint": base_url}
                 if api_key is not None:
                     client_kwargs["api_key"] = api_key
-                api_version: str | None = getattr(self.llm, "api_version", None)
+                api_version: str | None = getattr(self.llm, "api_version", None) or None
                 if api_version is not None:
                     client_kwargs["api_version"] = api_version
-                azure_deployment: str | None = getattr(self.llm, "azure_deployment", None)
+                azure_deployment: str | None = getattr(self.llm, "azure_deployment", None) or None
                 if azure_deployment is not None:
                     client_kwargs["azure_deployment"] = azure_deployment
                 return instructor.from_openai(AzureOpenAI(**client_kwargs))
@@ -172,11 +169,14 @@ class InternalInstructor(Generic[T]):
             # OpenAI and all other OpenAI-compatible providers (vLLM, Ollama, Groq, …)
             from openai import OpenAI
 
+            self._instructor_model_name = model_string
             client_kwargs = {"base_url": base_url}
             if api_key is not None:
                 client_kwargs["api_key"] = api_key
             return instructor.from_openai(OpenAI(**client_kwargs))
 
+        # from_provider requires the full "provider/model" routing string.
+        self._instructor_model_name = f"{provider}/{model_string}"
         return instructor.from_provider(f"{provider}/{model_string}")
 
     def _extract_provider(self) -> str:

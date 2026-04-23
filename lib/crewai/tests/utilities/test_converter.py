@@ -787,6 +787,30 @@ class TestInternalInstructorBaseUrl:
         assert call_kwargs["model"] == "claude-3-5-sonnet-20241022"
         assert "anthropic/" not in call_kwargs["model"]
 
+    @patch("instructor.from_provider")
+    def test_from_provider_path_sets_full_prefixed_model_name(
+        self, mock_from_provider: Mock
+    ) -> None:
+        """_instructor_model_name must include provider prefix for the from_provider path.
+
+        Regression guard: an early assignment of the stripped model_string was
+        incorrectly shared by both the direct-SDK and from_provider paths, causing
+        to_pydantic to send a bare 'gpt-4o' to a from_provider client that routes
+        on 'openai/gpt-4o'.
+        """
+        llm = _make_llm("openai", model="gpt-4o")
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._litellm_api_base = None
+        inst._instructor_model_name = ""
+
+        inst._create_instructor_client()
+
+        assert inst._instructor_model_name == "openai/gpt-4o"
+
 
 # Tests for error handling
 def test_converter_error_handling() -> None:
