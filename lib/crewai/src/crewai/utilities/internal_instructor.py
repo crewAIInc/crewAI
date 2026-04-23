@@ -80,6 +80,10 @@ class InternalInstructor(Generic[T]):
                 # Litellm uses the provider-prefixed model string for routing.
                 if hasattr(self.llm, "model"):
                     self._instructor_model_name = str(self.llm.model)
+                else:
+                    raise ValueError(
+                        "LLM must have a model attribute when used with litellm"
+                    )
             else:
                 self._client = self._create_instructor_client()
                 # _instructor_model_name is set inside _create_instructor_client()
@@ -167,12 +171,12 @@ class InternalInstructor(Generic[T]):
                 return instructor.from_openai(AzureOpenAI(**client_kwargs))
 
             # OpenAI and all other OpenAI-compatible providers (vLLM, Ollama, Groq, …)
+            # Keyless local servers (Ollama, vLLM) still require a non-empty api_key
+            # for the openai SDK constructor; use a placeholder when none is provided.
             from openai import OpenAI
 
             self._instructor_model_name = model_string
-            client_kwargs = {"base_url": base_url}
-            if api_key is not None:
-                client_kwargs["api_key"] = api_key
+            client_kwargs = {"base_url": base_url, "api_key": api_key or "not-needed"}
             return instructor.from_openai(OpenAI(**client_kwargs))
 
         # from_provider requires the full "provider/model" routing string.

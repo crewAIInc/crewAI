@@ -649,7 +649,30 @@ class TestInternalInstructorBaseUrl:
         inst.agent = None
         inst._create_instructor_client()
 
-        mock_openai_cls.assert_called_once_with(base_url="http://primary:8000/v1")
+        mock_openai_cls.assert_called_once_with(base_url="http://primary:8000/v1", api_key="not-needed")
+
+    @patch("openai.OpenAI")
+    @patch("instructor.from_openai")
+    def test_keyless_openai_compatible_endpoint(
+        self, mock_from_openai: Mock, mock_openai_cls: Mock
+    ) -> None:
+        """Ollama/vLLM with base_url but no api_key must use 'not-needed' sentinel.
+
+        The openai SDK raises OpenAIError when api_key is None and OPENAI_API_KEY
+        is not set. A placeholder key allows keyless local servers to work.
+        """
+        llm = _make_llm("openai", model="llama3", base_url="http://localhost:11434/v1")
+        inst = object.__new__(InternalInstructor)
+        inst.llm = llm
+        inst.content = "test"
+        inst.model = SimpleModel
+        inst.agent = None
+        inst._create_instructor_client()
+
+        mock_openai_cls.assert_called_once_with(
+            base_url="http://localhost:11434/v1", api_key="not-needed"
+        )
+        mock_from_openai.assert_called_once_with(mock_openai_cls.return_value)
 
     @patch("instructor.from_provider")
     def test_string_llm_strips_provider_prefix(
