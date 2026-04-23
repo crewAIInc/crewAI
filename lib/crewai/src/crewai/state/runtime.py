@@ -183,13 +183,15 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             A location identifier for the saved checkpoint.
         """
         provider_name: str = type(self._provider).__name__
+        parent_id_snapshot: str | None = self._parent_id
+        branch_snapshot: str = self._branch
         crewai_event_bus.emit(
             self,
             CheckpointStartedEvent(
                 location=location,
                 provider=provider_name,
-                branch=self._branch,
-                parent_id=self._parent_id,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
             ),
         )
         start: float = time.perf_counter()
@@ -198,8 +200,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             result = self._provider.checkpoint(
                 self.model_dump_json(),
                 location,
-                parent_id=self._parent_id,
-                branch=self._branch,
+                parent_id=parent_id_snapshot,
+                branch=branch_snapshot,
             )
             self._chain_lineage(self._provider, result)
         except Exception as exc:
@@ -208,8 +210,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
                 CheckpointFailedEvent(
                     location=location,
                     provider=provider_name,
-                    branch=self._branch,
-                    parent_id=self._parent_id,
+                    branch=branch_snapshot,
+                    parent_id=parent_id_snapshot,
                     error=str(exc),
                 ),
             )
@@ -220,8 +222,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             CheckpointCompletedEvent(
                 location=result,
                 provider=provider_name,
-                branch=self._branch,
-                parent_id=self._parent_id,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
                 checkpoint_id=self._provider.extract_id(result),
                 duration_ms=(time.perf_counter() - start) * 1000.0,
             ),
@@ -239,13 +241,15 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             A location identifier for the saved checkpoint.
         """
         provider_name: str = type(self._provider).__name__
+        parent_id_snapshot: str | None = self._parent_id
+        branch_snapshot: str = self._branch
         crewai_event_bus.emit(
             self,
             CheckpointStartedEvent(
                 location=location,
                 provider=provider_name,
-                branch=self._branch,
-                parent_id=self._parent_id,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
             ),
         )
         start: float = time.perf_counter()
@@ -254,8 +258,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             result = await self._provider.acheckpoint(
                 self.model_dump_json(),
                 location,
-                parent_id=self._parent_id,
-                branch=self._branch,
+                parent_id=parent_id_snapshot,
+                branch=branch_snapshot,
             )
             self._chain_lineage(self._provider, result)
         except Exception as exc:
@@ -264,8 +268,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
                 CheckpointFailedEvent(
                     location=location,
                     provider=provider_name,
-                    branch=self._branch,
-                    parent_id=self._parent_id,
+                    branch=branch_snapshot,
+                    parent_id=parent_id_snapshot,
                     error=str(exc),
                 ),
             )
@@ -276,8 +280,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
             CheckpointCompletedEvent(
                 location=result,
                 provider=provider_name,
-                branch=self._branch,
-                parent_id=self._parent_id,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
                 checkpoint_id=self._provider.extract_id(result),
                 duration_ms=(time.perf_counter() - start) * 1000.0,
             ),

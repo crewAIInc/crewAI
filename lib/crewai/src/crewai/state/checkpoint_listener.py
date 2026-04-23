@@ -126,14 +126,17 @@ def _do_checkpoint(
         "agent_role": event.agent_role if event is not None else None,
     }
 
+    parent_id_snapshot: str | None = state._parent_id
+    branch_snapshot: str = state._branch
+
     crewai_event_bus.emit(
         cfg,
         CheckpointStartedEvent(
             location=cfg.location,
             provider=provider_name,
             trigger=trigger,
-            branch=state._branch,
-            parent_id=state._parent_id,
+            branch=branch_snapshot,
+            parent_id=parent_id_snapshot,
             **context,
         ),
     )
@@ -148,8 +151,8 @@ def _do_checkpoint(
         location = cfg.provider.checkpoint(
             data,
             cfg.location,
-            parent_id=state._parent_id,
-            branch=state._branch,
+            parent_id=parent_id_snapshot,
+            branch=branch_snapshot,
         )
         state._chain_lineage(cfg.provider, location)
         checkpoint_id: str = cfg.provider.extract_id(location)
@@ -160,8 +163,8 @@ def _do_checkpoint(
                 location=cfg.location,
                 provider=provider_name,
                 trigger=trigger,
-                branch=state._branch,
-                parent_id=state._parent_id,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
                 error=str(exc),
                 **context,
             ),
@@ -174,37 +177,46 @@ def _do_checkpoint(
     )
     logger.info(msg)
 
-    if cfg.max_checkpoints is not None:
-        removed_count: int = cfg.provider.prune(
-            cfg.location, cfg.max_checkpoints, branch=state._branch
-        )
-        crewai_event_bus.emit(
-            cfg,
-            CheckpointPrunedEvent(
-                location=cfg.location,
-                provider=provider_name,
-                trigger=trigger,
-                branch=state._branch,
-                parent_id=state._parent_id,
-                removed_count=removed_count,
-                max_checkpoints=cfg.max_checkpoints,
-                **context,
-            ),
-        )
-
     crewai_event_bus.emit(
         cfg,
         CheckpointCompletedEvent(
             location=location,
             provider=provider_name,
             trigger=trigger,
-            branch=state._branch,
-            parent_id=state._parent_id,
+            branch=branch_snapshot,
+            parent_id=parent_id_snapshot,
             checkpoint_id=checkpoint_id,
             duration_ms=duration_ms,
             **context,
         ),
     )
+
+    if cfg.max_checkpoints is not None:
+        try:
+            removed_count: int = cfg.provider.prune(
+                cfg.location, cfg.max_checkpoints, branch=branch_snapshot
+            )
+        except Exception:
+            logger.warning(
+                "Checkpoint prune failed for %s (branch=%s)",
+                cfg.location,
+                branch_snapshot,
+                exc_info=True,
+            )
+            return
+        crewai_event_bus.emit(
+            cfg,
+            CheckpointPrunedEvent(
+                location=cfg.location,
+                provider=provider_name,
+                trigger=trigger,
+                branch=branch_snapshot,
+                parent_id=checkpoint_id,
+                removed_count=removed_count,
+                max_checkpoints=cfg.max_checkpoints,
+                **context,
+            ),
+        )
 
 
 def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None:
