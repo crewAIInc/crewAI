@@ -2415,7 +2415,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             MethodExecutionFailedEvent,
         )
         nodes = sorted(
-            (n for n in list(record.nodes.values()) if isinstance(n.event, replayable)),
+            (
+                n
+                for n in list(record.nodes.values())
+                if isinstance(n.event, replayable)
+                and n.event.method_name in self._completed_methods
+            ),
             key=lambda n: n.event.emission_sequence or 0,
         )
 

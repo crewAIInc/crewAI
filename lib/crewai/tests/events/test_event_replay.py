@@ -154,9 +154,9 @@ class TestFlowResumeReplaysEvents:
 
             flow2.kickoff(inputs={"id": flow_id})
 
-        assert "step_a" in captured_started
-        assert "step_b" in captured_started
-        assert "step_c" in captured_started
-        assert "step_a" in captured_finished
-        assert "step_b" in captured_finished
-        assert "step_c" in captured_finished
+        assert captured_started.count("step_a") == 1
+        assert captured_started.count("step_b") == 1
+        assert captured_started.count("step_c") == 1
+        assert captured_finished.count("step_a") == 1
+        assert captured_finished.count("step_b") == 1
+        assert captured_finished.count("step_c") == 1
