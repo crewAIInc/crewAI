@@ -111,22 +111,19 @@ class InternalInstructor(Generic[T]):
         """
         import instructor
 
+        # Resolve model_string and provider in a single dispatch to avoid
+        # redundant isinstance checks.  model_string strips any provider prefix
+        # (e.g. "anthropic/claude-3-5-sonnet" → "claude-3-5-sonnet") so that
+        # direct SDK clients receive a bare model id while from_provider can
+        # reconstruct the full routing string.
         if isinstance(self.llm, str):
-            # Strip provider prefix so "anthropic/claude-3-5-sonnet" → "claude-3-5-sonnet"
             model_string = self.llm.partition("/")[2] or self.llm
+            provider = self._extract_provider()
         elif self.llm is not None and hasattr(self.llm, "model"):
-            # Strip provider prefix to avoid double-prefix in from_provider()
-            # and to send bare model ids to direct Anthropic/OpenAI SDK clients.
             model_string = self.llm.model.partition("/")[2] or self.llm.model
+            provider = getattr(self.llm, "provider", None) or "openai"
         else:
             raise ValueError("LLM must be a string or have a model attribute")
-
-        if isinstance(self.llm, str):
-            provider = self._extract_provider()
-        elif self.llm is not None and hasattr(self.llm, "provider"):
-            provider = self.llm.provider
-        else:
-            provider = "openai"
 
         # Normalise api_base → base_url; base_url takes precedence when both are set.
         # Empty strings are treated the same as absent (normalised to None).
