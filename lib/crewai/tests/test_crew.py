@@ -4519,8 +4519,8 @@ def test_sets_flow_context_when_using_crewbase_pattern_inside_flow():
     flow.kickoff()
 
     assert captured_crew is not None
-    assert captured_crew._flow_id == flow.flow_id  # type: ignore[attr-defined]
-    assert captured_crew._request_id == flow.flow_id  # type: ignore[attr-defined]
+    assert captured_crew._flow_id == flow.execution_id  # type: ignore[attr-defined]
+    assert captured_crew._request_id == flow.execution_id  # type: ignore[attr-defined]
 
 
 def test_sets_flow_context_when_outside_flow(researcher, writer):
@@ -4554,8 +4554,8 @@ def test_sets_flow_context_when_inside_flow(researcher, writer):
 
     flow = MyFlow()
     result = flow.kickoff()
-    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
-    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._flow_id == flow.execution_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.execution_id  # type: ignore[attr-defined]
 
 
 def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
