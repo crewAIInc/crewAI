@@ -45,6 +45,7 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
+    PlainSerializer,
     PrivateAttr,
     SerializeAsAny,
     ValidationError,
@@ -154,6 +155,23 @@ def _resolve_persistence(value: Any) -> Any:
         cls = _persistence_registry.get(type_name)
         if cls is not None:
             return cls.model_validate(value)
+    return value
+
+
+def _serialize_initial_state(value: Any) -> Any:
+    """Make ``initial_state`` safe for JSON checkpoint serialization.
+
+    ``BaseModel`` class refs are emitted as their JSON schema (same pattern
+    as ``Task.output_pydantic``); ``BaseModel`` instances are dumped to JSON.
+    Bare ``type`` values that are not ``BaseModel`` subclasses (e.g. ``dict``)
+    are dropped since they can't be represented in JSON.
+    """
+    if isinstance(value, type):
+        if issubclass(value, BaseModel):
+            return value.model_json_schema()
+        return None
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
     return value
 
 
@@ -908,7 +926,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     entity_type: Literal["flow"] = "flow"
 
-    initial_state: Any = Field(default=None)
+    initial_state: Annotated[
+        Any,
+        PlainSerializer(_serialize_initial_state, return_type=Any, when_used="json"),
+    ] = Field(default=None)
     name: str | None = Field(default=None)
     tracing: bool | None = Field(default=None)
     stream: bool = Field(default=False)

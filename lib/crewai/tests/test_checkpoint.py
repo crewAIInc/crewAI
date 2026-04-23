@@ -310,6 +310,44 @@ class TestRuntimeStateLineage:
         assert state._branch != first
 
 
+class TestFlowInitialStateSerialization:
+    """Regression tests for checkpoint serialization of ``Flow.initial_state``."""
+
+    def test_class_ref_serializes_as_schema(self) -> None:
+        from pydantic import BaseModel
+
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState)
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        assert isinstance(entity["initial_state"], dict)
+        assert entity["initial_state"].get("title") == "MyState"
+
+    def test_instance_serializes_as_values(self) -> None:
+        from pydantic import BaseModel
+
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState(foo="baz"))
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        assert entity["initial_state"] == {"id": "x", "foo": "baz"}
+
+    def test_dict_passthrough(self) -> None:
+        flow = Flow(initial_state={"id": "x", "foo": "bar"})
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        assert entity["initial_state"] == {"id": "x", "foo": "bar"}
+
+
 # ---------- JsonProvider forking ----------
 
 
