@@ -10,6 +10,7 @@ via ``RuntimeState.model_rebuild()``.
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 import uuid
 
@@ -23,6 +24,18 @@ from pydantic import (
 )
 
 from crewai.context import capture_execution_context
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.checkpoint_events import (
+    CheckpointCompletedEvent,
+    CheckpointFailedEvent,
+    CheckpointForkCompletedEvent,
+    CheckpointForkFailedEvent,
+    CheckpointForkStartedEvent,
+    CheckpointRestoreCompletedEvent,
+    CheckpointRestoreFailedEvent,
+    CheckpointRestoreStartedEvent,
+    CheckpointStartedEvent,
+)
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.event_record import EventRecord
 from crewai.state.provider.core import BaseProvider
@@ -169,14 +182,50 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         Returns:
             A location identifier for the saved checkpoint.
         """
-        _prepare_entities(self.root)
-        result = self._provider.checkpoint(
-            self.model_dump_json(),
-            location,
-            parent_id=self._parent_id,
-            branch=self._branch,
+        provider_name: str = type(self._provider).__name__
+        crewai_event_bus.emit(
+            self,
+            CheckpointStartedEvent(
+                location=location,
+                provider=provider_name,
+                branch=self._branch,
+                parent_id=self._parent_id,
+            ),
         )
-        self._chain_lineage(self._provider, result)
+        start: float = time.perf_counter()
+        try:
+            _prepare_entities(self.root)
+            result = self._provider.checkpoint(
+                self.model_dump_json(),
+                location,
+                parent_id=self._parent_id,
+                branch=self._branch,
+            )
+            self._chain_lineage(self._provider, result)
+        except Exception as exc:
+            crewai_event_bus.emit(
+                self,
+                CheckpointFailedEvent(
+                    location=location,
+                    provider=provider_name,
+                    branch=self._branch,
+                    parent_id=self._parent_id,
+                    error=str(exc),
+                ),
+            )
+            raise
+
+        crewai_event_bus.emit(
+            self,
+            CheckpointCompletedEvent(
+                location=result,
+                provider=provider_name,
+                branch=self._branch,
+                parent_id=self._parent_id,
+                checkpoint_id=self._provider.extract_id(result),
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
         return result
 
     async def acheckpoint(self, location: str) -> str:
@@ -189,14 +238,50 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         Returns:
             A location identifier for the saved checkpoint.
         """
-        _prepare_entities(self.root)
-        result = await self._provider.acheckpoint(
-            self.model_dump_json(),
-            location,
-            parent_id=self._parent_id,
-            branch=self._branch,
+        provider_name: str = type(self._provider).__name__
+        crewai_event_bus.emit(
+            self,
+            CheckpointStartedEvent(
+                location=location,
+                provider=provider_name,
+                branch=self._branch,
+                parent_id=self._parent_id,
+            ),
         )
-        self._chain_lineage(self._provider, result)
+        start: float = time.perf_counter()
+        try:
+            _prepare_entities(self.root)
+            result = await self._provider.acheckpoint(
+                self.model_dump_json(),
+                location,
+                parent_id=self._parent_id,
+                branch=self._branch,
+            )
+            self._chain_lineage(self._provider, result)
+        except Exception as exc:
+            crewai_event_bus.emit(
+                self,
+                CheckpointFailedEvent(
+                    location=location,
+                    provider=provider_name,
+                    branch=self._branch,
+                    parent_id=self._parent_id,
+                    error=str(exc),
+                ),
+            )
+            raise
+
+        crewai_event_bus.emit(
+            self,
+            CheckpointCompletedEvent(
+                location=result,
+                provider=provider_name,
+                branch=self._branch,
+                parent_id=self._parent_id,
+                checkpoint_id=self._provider.extract_id(result),
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
         return result
 
     def fork(self, branch: str | None = None) -> None:
@@ -211,11 +296,48 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
                 times without collisions.
         """
         if branch:
-            self._branch = branch
+            new_branch = branch
         elif self._checkpoint_id:
-            self._branch = f"fork/{self._checkpoint_id}_{uuid.uuid4().hex[:6]}"
+            new_branch = f"fork/{self._checkpoint_id}_{uuid.uuid4().hex[:6]}"
         else:
-            self._branch = f"fork/{uuid.uuid4().hex[:8]}"
+            new_branch = f"fork/{uuid.uuid4().hex[:8]}"
+
+        parent_branch: str | None = self._branch
+        parent_checkpoint_id: str | None = self._checkpoint_id
+
+        crewai_event_bus.emit(
+            self,
+            CheckpointForkStartedEvent(
+                branch=new_branch,
+                parent_branch=parent_branch,
+                parent_checkpoint_id=parent_checkpoint_id,
+            ),
+        )
+
+        start: float = time.perf_counter()
+        try:
+            self._branch = new_branch
+        except Exception as exc:
+            crewai_event_bus.emit(
+                self,
+                CheckpointForkFailedEvent(
+                    branch=new_branch,
+                    parent_branch=parent_branch,
+                    parent_checkpoint_id=parent_checkpoint_id,
+                    error=str(exc),
+                ),
+            )
+            raise
+
+        crewai_event_bus.emit(
+            self,
+            CheckpointForkCompletedEvent(
+                branch=new_branch,
+                parent_branch=parent_branch,
+                parent_checkpoint_id=parent_checkpoint_id,
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
 
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig, **kwargs: Any) -> RuntimeState:
@@ -233,13 +355,41 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if config.restore_from is None:
             raise ValueError("CheckpointConfig.restore_from must be set")
         location = str(config.restore_from)
-        provider = detect_provider(location)
-        raw = provider.from_checkpoint(location)
-        state = cls.model_validate_json(raw, **kwargs)
-        state._provider = provider
-        checkpoint_id = provider.extract_id(location)
-        state._checkpoint_id = checkpoint_id
-        state._parent_id = checkpoint_id
+
+        crewai_event_bus.emit(config, CheckpointRestoreStartedEvent(location=location))
+        start: float = time.perf_counter()
+        provider_name: str | None = None
+        try:
+            provider = detect_provider(location)
+            provider_name = type(provider).__name__
+            raw = provider.from_checkpoint(location)
+            state = cls.model_validate_json(raw, **kwargs)
+            state._provider = provider
+            checkpoint_id = provider.extract_id(location)
+            state._checkpoint_id = checkpoint_id
+            state._parent_id = checkpoint_id
+        except Exception as exc:
+            crewai_event_bus.emit(
+                config,
+                CheckpointRestoreFailedEvent(
+                    location=location,
+                    provider=provider_name,
+                    error=str(exc),
+                ),
+            )
+            raise
+
+        crewai_event_bus.emit(
+            config,
+            CheckpointRestoreCompletedEvent(
+                location=location,
+                provider=provider_name,
+                checkpoint_id=checkpoint_id,
+                branch=state._branch,
+                parent_id=state._parent_id,
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
         return state
 
     @classmethod
@@ -260,13 +410,41 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if config.restore_from is None:
             raise ValueError("CheckpointConfig.restore_from must be set")
         location = str(config.restore_from)
-        provider = detect_provider(location)
-        raw = await provider.afrom_checkpoint(location)
-        state = cls.model_validate_json(raw, **kwargs)
-        state._provider = provider
-        checkpoint_id = provider.extract_id(location)
-        state._checkpoint_id = checkpoint_id
-        state._parent_id = checkpoint_id
+
+        crewai_event_bus.emit(config, CheckpointRestoreStartedEvent(location=location))
+        start: float = time.perf_counter()
+        provider_name: str | None = None
+        try:
+            provider = detect_provider(location)
+            provider_name = type(provider).__name__
+            raw = await provider.afrom_checkpoint(location)
+            state = cls.model_validate_json(raw, **kwargs)
+            state._provider = provider
+            checkpoint_id = provider.extract_id(location)
+            state._checkpoint_id = checkpoint_id
+            state._parent_id = checkpoint_id
+        except Exception as exc:
+            crewai_event_bus.emit(
+                config,
+                CheckpointRestoreFailedEvent(
+                    location=location,
+                    provider=provider_name,
+                    error=str(exc),
+                ),
+            )
+            raise
+
+        crewai_event_bus.emit(
+            config,
+            CheckpointRestoreCompletedEvent(
+                location=location,
+                provider=provider_name,
+                checkpoint_id=checkpoint_id,
+                branch=state._branch,
+                parent_id=state._parent_id,
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
         return state
 
 

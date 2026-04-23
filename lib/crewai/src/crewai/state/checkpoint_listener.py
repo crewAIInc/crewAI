@@ -10,12 +10,22 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from typing import Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
+from crewai.events.types.checkpoint_events import (
+    CheckpointBaseEvent,
+    CheckpointCompletedEvent,
+    CheckpointFailedEvent,
+    CheckpointForkBaseEvent,
+    CheckpointPrunedEvent,
+    CheckpointRestoreBaseEvent,
+    CheckpointStartedEvent,
+)
 from crewai.flow.flow import Flow
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.runtime import RuntimeState, _prepare_entities
@@ -107,27 +117,94 @@ def _do_checkpoint(
     state: RuntimeState, cfg: CheckpointConfig, event: BaseEvent | None = None
 ) -> None:
     """Write a checkpoint and prune old ones if configured."""
-    _prepare_entities(state.root)
-    payload = state.model_dump(mode="json")
-    if event is not None:
-        payload["trigger"] = event.type
-    data = json.dumps(payload)
-    location = cfg.provider.checkpoint(
-        data,
-        cfg.location,
-        parent_id=state._parent_id,
-        branch=state._branch,
-    )
-    state._chain_lineage(cfg.provider, location)
+    provider_name: str = type(cfg.provider).__name__
+    trigger: str | None = event.type if event is not None else None
+    context: dict[str, Any] = {
+        "task_id": event.task_id if event is not None else None,
+        "task_name": event.task_name if event is not None else None,
+        "agent_id": event.agent_id if event is not None else None,
+        "agent_role": event.agent_role if event is not None else None,
+    }
 
-    checkpoint_id: str = cfg.provider.extract_id(location)
+    crewai_event_bus.emit(
+        cfg,
+        CheckpointStartedEvent(
+            location=cfg.location,
+            provider=provider_name,
+            trigger=trigger,
+            branch=state._branch,
+            parent_id=state._parent_id,
+            **context,
+        ),
+    )
+
+    start: float = time.perf_counter()
+    try:
+        _prepare_entities(state.root)
+        payload = state.model_dump(mode="json")
+        if event is not None:
+            payload["trigger"] = event.type
+        data = json.dumps(payload)
+        location = cfg.provider.checkpoint(
+            data,
+            cfg.location,
+            parent_id=state._parent_id,
+            branch=state._branch,
+        )
+        state._chain_lineage(cfg.provider, location)
+        checkpoint_id: str = cfg.provider.extract_id(location)
+    except Exception as exc:
+        crewai_event_bus.emit(
+            cfg,
+            CheckpointFailedEvent(
+                location=cfg.location,
+                provider=provider_name,
+                trigger=trigger,
+                branch=state._branch,
+                parent_id=state._parent_id,
+                error=str(exc),
+                **context,
+            ),
+        )
+        raise
+
+    duration_ms: float = (time.perf_counter() - start) * 1000.0
     msg: str = (
         f"Checkpoint saved. Resume with: crewai checkpoint resume {checkpoint_id}"
     )
     logger.info(msg)
 
     if cfg.max_checkpoints is not None:
-        cfg.provider.prune(cfg.location, cfg.max_checkpoints, branch=state._branch)
+        removed_count: int = cfg.provider.prune(
+            cfg.location, cfg.max_checkpoints, branch=state._branch
+        )
+        crewai_event_bus.emit(
+            cfg,
+            CheckpointPrunedEvent(
+                location=cfg.location,
+                provider=provider_name,
+                trigger=trigger,
+                branch=state._branch,
+                parent_id=state._parent_id,
+                removed_count=removed_count,
+                max_checkpoints=cfg.max_checkpoints,
+                **context,
+            ),
+        )
+
+    crewai_event_bus.emit(
+        cfg,
+        CheckpointCompletedEvent(
+            location=location,
+            provider=provider_name,
+            trigger=trigger,
+            branch=state._branch,
+            parent_id=state._parent_id,
+            checkpoint_id=checkpoint_id,
+            duration_ms=duration_ms,
+            **context,
+        ),
+    )
 
 
 def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None:
@@ -142,6 +219,11 @@ def _should_checkpoint(source: Any, event: BaseEvent) -> CheckpointConfig | None
 
 def _on_any_event(source: Any, event: BaseEvent, state: Any) -> None:
     """Sync handler registered on every event class."""
+    if isinstance(
+        event,
+        (CheckpointBaseEvent, CheckpointForkBaseEvent, CheckpointRestoreBaseEvent),
+    ):
+        return
     cfg = _should_checkpoint(source, event)
     if cfg is None:
         return

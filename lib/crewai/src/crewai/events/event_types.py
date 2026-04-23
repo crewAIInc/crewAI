@@ -30,6 +30,18 @@ from crewai.events.types.agent_events import (
     AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
 )
+from crewai.events.types.checkpoint_events import (
+    CheckpointCompletedEvent,
+    CheckpointFailedEvent,
+    CheckpointForkCompletedEvent,
+    CheckpointForkFailedEvent,
+    CheckpointForkStartedEvent,
+    CheckpointPrunedEvent,
+    CheckpointRestoreCompletedEvent,
+    CheckpointRestoreFailedEvent,
+    CheckpointRestoreStartedEvent,
+    CheckpointStartedEvent,
+)
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -183,4 +195,14 @@ EventTypes = (
     | MCPToolExecutionCompletedEvent
     | MCPToolExecutionFailedEvent
     | MCPConfigFetchFailedEvent
+    | CheckpointStartedEvent
+    | CheckpointCompletedEvent
+    | CheckpointFailedEvent
+    | CheckpointForkStartedEvent
+    | CheckpointForkCompletedEvent
+    | CheckpointForkFailedEvent
+    | CheckpointRestoreStartedEvent
+    | CheckpointRestoreCompletedEvent
+    | CheckpointRestoreFailedEvent
+    | CheckpointPrunedEvent
 )
