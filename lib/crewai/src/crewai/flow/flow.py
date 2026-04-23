@@ -2422,11 +2422,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             MethodExecutionFinishedEvent,
             MethodExecutionFailedEvent,
         )
+        flow_name = self.name or self.__class__.__name__
         nodes = sorted(
             (
                 n
                 for n in record.all_nodes()
                 if isinstance(n.event, replayable)
+                and n.event.flow_name == flow_name
                 and n.event.method_name in self._completed_methods
             ),
             key=lambda n: n.event.emission_sequence or 0,
