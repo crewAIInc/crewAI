@@ -132,6 +132,9 @@ class TestFlowResumeReplaysEvents:
             def step_c(self) -> str:
                 return "c"
 
+        if crewai_event_bus.runtime_state is not None:
+            crewai_event_bus.runtime_state.event_record.nodes.clear()
+
         flow1 = ThreeStepFlow(persistence=persistence)
         flow1.kickoff()
         flow_id = flow1.state["id"]
