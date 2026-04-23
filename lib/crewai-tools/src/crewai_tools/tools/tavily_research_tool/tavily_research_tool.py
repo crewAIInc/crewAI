@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Generator
 import json
 import os
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from crewai.tools import BaseTool, EnvVar
 from dotenv import load_dotenv
@@ -12,7 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 load_dotenv()
 try:
-    from tavily import AsyncTavilyClient, TavilyClient  # type: ignore[import-untyped]
+    from tavily import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
+        AsyncTavilyClient,
+        TavilyClient,
+    )
 
     TAVILY_AVAILABLE = True
 except ImportError:
@@ -149,17 +152,17 @@ class TavilyResearchTool(BaseTool):
         result = self._client.research(
             input=input,
             model=self.model if model is None else model,
-            output_schema=self.output_schema if output_schema is None else output_schema,
+            output_schema=self.output_schema
+            if output_schema is None
+            else output_schema,
             stream=use_stream,
             citation_format=(
-                self.citation_format
-                if citation_format is None
-                else citation_format
+                self.citation_format if citation_format is None else citation_format
             ),
         )
 
         if use_stream:
-            return result
+            return cast(Generator[bytes, None, None], result)
 
         return self._stringify_response(result)
 
@@ -182,16 +185,16 @@ class TavilyResearchTool(BaseTool):
         result = await self._async_client.research(
             input=input,
             model=self.model if model is None else model,
-            output_schema=self.output_schema if output_schema is None else output_schema,
+            output_schema=self.output_schema
+            if output_schema is None
+            else output_schema,
             stream=use_stream,
             citation_format=(
-                self.citation_format
-                if citation_format is None
-                else citation_format
+                self.citation_format if citation_format is None else citation_format
             ),
         )
 
         if use_stream:
-            return result
+            return cast(AsyncGenerator[bytes, None], result)
 
         return self._stringify_response(result)
