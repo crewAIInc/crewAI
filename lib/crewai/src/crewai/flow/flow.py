@@ -2250,6 +2250,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
 
+            if self._is_execution_resuming:
+                await self._replay_recorded_events()
+
             try:
                 # Determine which start methods to execute at kickoff
                 # Conditional start methods (with __trigger_methods__) are only triggered by their conditions
@@ -2396,6 +2399,37 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             The final output from the flow, which is the result of the last executed method.
         """
         return await self.kickoff_async(inputs, input_files, from_checkpoint)
+
+    async def _replay_recorded_events(self) -> None:
+        """Dispatch recorded ``MethodExecution*`` events from the event record."""
+        state = crewai_event_bus.runtime_state
+        if state is None:
+            return
+        record = state.event_record
+        if len(record) == 0:
+            return
+
+        replayable = (
+            MethodExecutionStartedEvent,
+            MethodExecutionFinishedEvent,
+            MethodExecutionFailedEvent,
+        )
+        nodes = sorted(
+            (n for n in list(record.nodes.values()) if isinstance(n.event, replayable)),
+            key=lambda n: n.event.emission_sequence or 0,
+        )
+
+        for node in nodes:
+            future = crewai_event_bus.replay(self, node.event)
+            if future is not None:
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning(
+                        "Replayed event handler failed: %s",
+                        node.event.type,
+                        exc_info=True,
+                    )
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.
