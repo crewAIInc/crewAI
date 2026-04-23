@@ -123,4 +123,5 @@ def _reset_flow_context_vars():
         try:
             var.set(None)
         except LookupError:
+            # ContextVar was never set in this context; nothing to reset.
             pass
