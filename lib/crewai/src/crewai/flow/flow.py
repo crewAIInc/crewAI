@@ -59,6 +59,7 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_context import (
     get_current_parent_id,
     reset_last_event_id,
+    restore_event_scope,
     triggered_by_scope,
 )
 from crewai.events.listeners.tracing.trace_listener import (
@@ -1016,13 +1017,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             A Flow instance on the new branch. Call kickoff() to run.
         """
         flow = cls.from_checkpoint(config)
-        state = crewai_event_bus._runtime_state
+        state = crewai_event_bus.runtime_state
         if state is None:
             raise RuntimeError(
                 "Cannot fork: no runtime state on the event bus. "
                 "Ensure from_checkpoint() succeeded before calling fork()."
             )
         state.fork(branch)
+        new_id = str(uuid4())
+        if isinstance(flow._state, dict):
+            flow._state["id"] = new_id
+        else:
+            object.__setattr__(flow._state, "id", new_id)
         return flow
 
     checkpoint_completed_methods: set[str] | None = Field(default=None)
@@ -1044,6 +1050,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
         if self.checkpoint_state is not None:
             self._restore_state(self.checkpoint_state)
+        restore_event_scope(())
+        reset_last_event_id()
 
     _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
         default_factory=dict
