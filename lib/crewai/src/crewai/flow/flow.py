@@ -158,20 +158,34 @@ def _resolve_persistence(value: Any) -> Any:
     return value
 
 
+_INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
+
+
 def _serialize_initial_state(value: Any) -> Any:
     """Make ``initial_state`` safe for JSON checkpoint serialization.
 
-    ``BaseModel`` class refs are emitted as their JSON schema (same pattern
-    as ``Task.output_pydantic``); ``BaseModel`` instances are dumped to JSON.
-    Bare ``type`` values that are not ``BaseModel`` subclasses (e.g. ``dict``)
-    are dropped since they can't be represented in JSON.
+    ``BaseModel`` class refs are emitted as their JSON schema under a sentinel
+    marker key so deserialization can round-trip them back to a class.
+    ``BaseModel`` instances are dumped to JSON (round-trip as plain dicts,
+    which ``_create_initial_state`` accepts). Bare ``type`` values that are
+    not ``BaseModel`` subclasses (e.g. ``dict``) are dropped since they
+    can't be represented in JSON.
     """
     if isinstance(value, type):
         if issubclass(value, BaseModel):
-            return value.model_json_schema()
+            return {_INITIAL_STATE_CLASS_MARKER: value.model_json_schema()}
         return None
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json")
+    return value
+
+
+def _deserialize_initial_state(value: Any) -> Any:
+    """Rehydrate a class ref serialized by :func:`_serialize_initial_state`."""
+    if isinstance(value, dict) and _INITIAL_STATE_CLASS_MARKER in value:
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        return create_model_from_schema(value[_INITIAL_STATE_CLASS_MARKER])
     return value
 
 
@@ -928,6 +942,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     initial_state: Annotated[  # type: ignore[type-arg]
         type[BaseModel] | type[dict] | dict[str, Any] | BaseModel | None,
+        BeforeValidator(_deserialize_initial_state),
         PlainSerializer(_serialize_initial_state, return_type=Any, when_used="json"),
     ] = Field(default=None)
     name: str | None = Field(default=None)
