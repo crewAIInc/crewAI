@@ -149,6 +149,7 @@ A common pattern: search with `you-search` via DSL, then extract content with `y
 ```python Code
 from crewai import Agent, Task, Crew
 from crewai.mcp import MCPServerHTTP
+from crewai.mcp.filters import create_static_tool_filter
 from crewai_tools import MCPServerAdapter
 import os
 from typing import Any
@@ -171,6 +172,9 @@ searcher = Agent(
             url="https://api.you.com/mcp",
             headers={"Authorization": f"Bearer {ydc_key}"},
             streamable=True,
+            tool_filter=create_static_tool_filter(
+                allowed_tool_names=["you-search"]
+            ),
         )
     ],
     verbose=True
