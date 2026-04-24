@@ -976,6 +976,7 @@ class GeminiCompletion(BaseLLM):
                             "id": call_id,
                             "name": part.function_call.name,
                             "args": args_dict,
+                            "raw_part": part,
                         }
 
                         self._emit_stream_chunk_event(
@@ -1060,29 +1061,20 @@ class GeminiCompletion(BaseLLM):
             if call_data.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
         }
 
-        # If there are function calls but no available_functions,
-        # return them for the executor to handle
         if non_structured_output_calls and not available_functions:
-            formatted_function_calls = [
-                {
-                    "id": call_data["id"],
-                    "function": {
-                        "name": call_data["name"],
-                        "arguments": json.dumps(call_data["args"]),
-                    },
-                    "type": "function",
-                }
+            raw_parts = [
+                call_data["raw_part"]
                 for call_data in non_structured_output_calls.values()
             ]
             self._emit_call_completed_event(
-                response=formatted_function_calls,
+                response=raw_parts,
                 call_type=LLMCallType.TOOL_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=self._convert_contents_to_dict(contents),
                 usage=usage_data,
             )
-            return formatted_function_calls
+            return raw_parts
 
         # Handle completed function calls (excluding structured_output)
         if non_structured_output_calls and available_functions:

@@ -1,4 +1,4 @@
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 from unittest.mock import Mock, create_autospec, patch
 
 import pytest
@@ -259,6 +259,55 @@ def test_multiple_before_after_kickoff():
 def test_crew_name():
     crew = InternalCrew()
     assert crew._crew_name == "InternalCrew"
+
+
+def test_crew_decorator_propagates_class_name_to_instance():
+    """@crew-decorated factory method should set Crew.name to the decorated class name."""
+    sample_agent = Agent(role="r", goal="g", backstory="b")
+    sample_task = Task(description="d", expected_output="o", agent=sample_agent)
+
+    @CrewBase
+    class ImplicitNameCrewFactory:
+        agents_config = None
+        tasks_config = None
+        agents: list[BaseAgent] = [sample_agent]
+        tasks: list[Task] = [sample_task]
+
+        @crew
+        def crew(self):
+            return Crew(
+                agents=[sample_agent],
+                tasks=[sample_task],
+            )
+
+    factory_cls = cast(type[Any], ImplicitNameCrewFactory)
+    crew_instance: Crew = cast(Any, factory_cls()).crew()
+    assert crew_instance.name == "ImplicitNameCrewFactory"
+
+
+def test_crew_decorator_preserves_explicit_name():
+    """Explicit Crew(name=...) inside @crew should win over the @CrewBase class name."""
+    sample_agent = Agent(role="r", goal="g", backstory="b")
+    sample_task = Task(description="d", expected_output="o", agent=sample_agent)
+
+    @CrewBase
+    class NamedCrewFactory:
+        agents_config = None
+        tasks_config = None
+        agents: list[BaseAgent] = [sample_agent]
+        tasks: list[Task] = [sample_task]
+
+        @crew
+        def crew(self):
+            return Crew(
+                name="My Explicit Name",
+                agents=[sample_agent],
+                tasks=[sample_task],
+            )
+
+    factory_cls = cast(type[Any], NamedCrewFactory)
+    crew_instance: Crew = cast(Any, factory_cls()).crew()
+    assert crew_instance.name == "My Explicit Name"
 
 
 @tool

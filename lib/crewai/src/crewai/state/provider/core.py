@@ -61,13 +61,16 @@ class BaseProvider(BaseModel, ABC):
         ...
 
     @abstractmethod
-    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> None:
+    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
         """Remove old checkpoints, keeping at most *max_keep* per branch.
 
         Args:
             location: The storage destination passed to ``checkpoint``.
             max_keep: Maximum number of checkpoints to retain.
             branch: Only prune checkpoints on this branch.
+
+        Returns:
+            The number of checkpoints removed.
         """
         ...
 

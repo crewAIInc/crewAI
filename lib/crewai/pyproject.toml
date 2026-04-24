@@ -24,7 +24,7 @@ dependencies = [
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
-    "python-dotenv~=1.1.1",
+    "python-dotenv>=1.2.2,<2",
     "pyjwt>=2.9.0,<3",
     # TUI
     "textual>=7.5.0",
@@ -55,7 +55,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.14.2a3",
+    "crewai-tools==1.14.3a3",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -94,6 +94,7 @@ google-genai = [
 ]
 azure-ai-inference = [
     "azure-ai-inference~=1.0.0b9",
+    "azure-identity>=1.17.0,<2",
 ]
 anthropic = [
     "anthropic~=0.73.0",
