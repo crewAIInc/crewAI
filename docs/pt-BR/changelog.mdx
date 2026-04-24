@@ -4,6 +4,54 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="25 abr 2026">
+  ## v1.14.3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar eventos de ciclo de vida para operações de checkpoint
+  - Adicionar suporte para e2b
+  - Reverter para DefaultAzureCredential quando nenhuma chave de API for fornecida na integração com o Azure
+  - Adicionar suporte ao Bedrock V4
+  - Adicionar ferramentas de sandbox Daytona para funcionalidade aprimorada
+  - Adicionar suporte a checkpoint e fork para agentes autônomos
+
+  ### Correções de Bugs
+  - Corrigir execution_id para ser separado de state.id
+  - Resolver a reprodução de eventos de método gravados na retomada do checkpoint
+  - Corrigir a serialização de referências de classe initial_state como esquema JSON
+  - Preservar habilidades de agente somente de metadados
+  - Propagar nomes implícitos @CrewBase para eventos da equipe
+  - Mesclar metadados de execução na inicialização de lote duplicado
+  - Corrigir a serialização de campos de referência de classe Task para checkpointing
+  - Lidar com o resultado BaseModel no loop de retry do guardrail
+  - Preservar thought_signature em chamadas de ferramentas de streaming Gemini
+  - Emitir task_started na retomada do fork e redesenhar TUI de checkpoint
+  - Usar datas futuras em testes de poda de checkpoint para evitar falhas dependentes do tempo
+  - Corrigir a ordem de dry-run e lidar com branch obsoleta verificada na liberação do devtools
+  - Atualizar lxml para >=6.1.0 para patch de segurança
+  - Aumentar python-dotenv para >=1.2.2 para patch de segurança
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.3
+  - Adicionar página 'Construir com IA' e atualizar navegação para todos os idiomas
+  - Remover FAQ de preços da página construir-com-ia em todos os locais
+
+  ### Desempenho
+  - Otimizar MCP SDK e tipos de eventos para reduzir o tempo de inicialização a frio em ~29%
+
+  ### Refatoração
+  - Refatorar auxiliares de checkpoint para eliminar duplicação e apertar dicas de tipo de estado
+
+  ## Contribuidores
+
+  @MatthiasHowellYopp, @akaKuruma, @alex-clawd, @github-actions[bot], @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha, @renatonitta
+
+</Update>
+
 <Update label="23 abr 2026">
   ## v1.14.3a3
 
