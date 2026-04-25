@@ -1,0 +1,132 @@
+---
+title: "Superlinked"
+description: "Use Superlinked (SIE) reranking, extraction, and sparse embeddings in CrewAI agents and hybrid search workflows."
+icon: "diamond"
+---
+
+# `SuperlinkedTool`
+
+[Superlinked](https://superlinked.com) is a self-hosted inference engine (SIE) for embedding, reranking, and extraction. The `sie-crewai` package provides:
+
+- `SIERerankerTool` - a CrewAI `BaseTool` that reranks documents by relevance to a query
+- `SIEExtractorTool` - a CrewAI `BaseTool` for zero-shot entity, relation, classification, and object detection
+- `SIESparseEmbedder` - sparse vectors (SPLADE / BGE-M3) for hybrid search workflows
+- Dense embeddings via SIE's OpenAI-compatible endpoint (no wrapper needed, uses the built-in `openai` embedder config)
+
+## Installation
+
+```bash
+pip install sie-crewai
+```
+
+This installs `sie-sdk` and `crewai`. You also need a running SIE instance; see the [Superlinked quickstart](https://superlinked.com/docs).
+
+## Dense embeddings via OpenAI-compatible API
+
+SIE exposes an OpenAI-compatible `/v1/embeddings` endpoint, so you can use CrewAI's built-in `openai` embedder config without any CrewAI-specific wrapper:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_base": "http://localhost:8080/v1",
+            "model": "BAAI/bge-m3",
+        },
+    },
+)
+```
+
+This gives you access to any of the 85+ models SIE supports (Stella, Nomic, E5, BGE-M3, and more). See the [Model Catalog](https://superlinked.com/models).
+
+## Reranker tool
+
+`SIERerankerTool` gives a CrewAI agent a cross-encoder reranker it can call to rerank candidate documents:
+
+```python
+from crewai import Agent, Crew, Task
+from sie_crewai import SIERerankerTool
+
+reranker = SIERerankerTool(
+    base_url="http://localhost:8080",
+    model="jinaai/jina-reranker-v2-base-multilingual",
+)
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find the most relevant information",
+    tools=[reranker],
+)
+
+task = Task(
+    description="Rerank these documents for the query 'What is deep learning?'",
+    expected_output="The most relevant documents.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## Extractor tool
+
+`SIEExtractorTool` runs zero-shot extraction for entities (GLiNER), relations (GLiREL), classifications (GLiClass), and object detection (GroundingDINO / OWL-v2):
+
+```python
+from crewai import Agent, Crew, Task
+from sie_crewai import SIEExtractorTool
+
+extractor = SIEExtractorTool(
+    base_url="http://localhost:8080",
+    model="urchade/gliner_multi-v2.1",
+    labels=["person", "organization", "location"],
+)
+
+analyst = Agent(
+    role="Data Analyst",
+    goal="Extract key entities from documents",
+    tools=[extractor],
+)
+
+task = Task(
+    description="Extract all people, organizations, and locations from: 'Tim Cook announced new products at Apple Park in Cupertino.'",
+    expected_output="A list of extracted entities.",
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[task])
+result = crew.kickoff()
+```
+
+Swap the `model` and `labels` for relations, classifications, or object detection.
+
+## Sparse embeddings for hybrid search
+
+`SIESparseEmbedder` produces learned sparse vectors (SPLADE / BGE-M3) that can be stored in any vector database supporting sparse vectors (Qdrant, Weaviate, etc.) alongside dense embeddings for hybrid search:
+
+```python
+from sie_crewai import SIESparseEmbedder
+
+sparse_embedder = SIESparseEmbedder(
+    base_url="http://localhost:8080",
+    model="BAAI/bge-m3",
+)
+
+sparse_vectors = sparse_embedder.embed_documents([
+    "Machine learning uses algorithms to learn from data.",
+    "The weather is sunny today.",
+])
+print(sparse_vectors[0].keys())  # dict_keys(['indices', 'values'])
+
+query_vector = sparse_embedder.embed_query("What is machine learning?")
+```
+
+## Resources
+
+- [Superlinked docs](https://superlinked.com/docs)
+- [Superlinked on GitHub](https://github.com/superlinked/sie)
+- [`sie-crewai` on PyPI](https://pypi.org/project/sie-crewai/)
