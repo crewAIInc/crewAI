@@ -1,0 +1,157 @@
+---
+title: "Tavily Map Tool"
+description: "Map website structure and discover pages using the Tavily API"
+icon: "sitemap"
+mode: "wide"
+---
+
+The `TavilyMapTool` allows CrewAI agents to map the structure of websites starting from a base URL using the Tavily API. It discovers pages, links, and site hierarchy without extracting full content, making it ideal for understanding site architecture.
+
+## Installation
+
+To use the `TavilyMapTool`, you need to install the `tavily-python` library:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+You also need to set your Tavily API key as an environment variable:
+
+```bash
+export TAVILY_API_KEY='your-tavily-api-key'
+```
+
+Get an API key at https://app.tavily.com/ (sign up, then create a key).
+
+## Example Usage
+
+Here's how to initialize and use the `TavilyMapTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilyMapTool
+
+# Ensure TAVILY_API_KEY is set in your environment
+# os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
+
+# Initialize the tool
+map_tool = TavilyMapTool()
+
+# Create an agent that uses the tool
+mapper_agent = Agent(
+    role='Site Mapper',
+    goal='Map website structures and discover all pages',
+    backstory='You are an expert at mapping website structures using the Tavily API.',
+    tools=[map_tool],
+    verbose=True
+)
+
+# Define a task for the agent
+map_task = Task(
+    description='Map the structure of https://docs.example.com to understand the site hierarchy.',
+    expected_output='A JSON string containing the site structure and discovered URLs.',
+    agent=mapper_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[mapper_agent],
+    tasks=[map_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `TavilyMapTool` accepts the following arguments:
+
+- `url` (str): **Required**. The base URL to start mapping from.
+- `max_depth` (int, 1-5, optional): Maximum depth to map (number of link hops from the base URL).
+- `max_breadth` (int, optional): Maximum number of links to follow per page.
+- `limit` (int, optional): Total number of links to process before stopping.
+- `instructions` (str, optional): Natural language instructions to guide the mapping.
+- `select_paths` (Sequence[str], optional): Regex patterns to select specific paths.
+- `select_domains` (Sequence[str], optional): Regex patterns to select specific domains.
+- `exclude_paths` (Sequence[str], optional): Regex patterns to exclude specific paths.
+- `exclude_domains` (Sequence[str], optional): Regex patterns to exclude specific domains.
+- `allow_external` (bool, optional): Whether to allow mapping external domains.
+- `include_images` (bool, optional): Whether to include images in the map results.
+- `timeout` (float, optional): The timeout for the map request in seconds. Defaults to `150`.
+
+## Advanced Usage
+
+### Mapping with Path Filters
+
+```python
+# Configure the tool to map only specific sections
+custom_mapper = TavilyMapTool(
+    max_breadth=15,
+    limit=200,
+    select_paths=[r'/docs/.*', r'/guides/.*'],
+    exclude_paths=[r'/api/.*', r'/internal/.*'],
+    timeout=120
+)
+
+agent_with_custom_tool = Agent(
+    role="Documentation Mapper",
+    goal="Map documentation site structure",
+    tools=[custom_mapper]
+)
+```
+
+### Using Natural Language Instructions
+
+The agent can provide instructions to guide the mapping:
+
+```python
+# Task with specific mapping instructions
+map_task = Task(
+    description='''Map https://example.com with instructions to focus on 
+    documentation and blog sections. Use max_depth of 3.''',
+    expected_output='A JSON string containing the site map.',
+    agent=mapper_agent
+)
+```
+
+## Features
+
+- **Site Structure Discovery**: Automatically discovers pages and links starting from a base URL
+- **Depth Control**: Configure how deep the mapper should explore
+- **Breadth Control**: Limit the number of links followed per page
+- **Path Filtering**: Select or exclude URLs based on path patterns
+- **Domain Filtering**: Control which domains can be mapped
+- **Natural Language Instructions**: Guide the mapper with plain English instructions
+- **Lightweight Operation**: Discovers structure without extracting full content
+- **Fast Execution**: Optimized for quick site structure analysis
+
+## Response Format
+
+The tool returns a JSON string containing the site map with discovered URLs and their relationships. The response includes:
+- List of discovered URLs
+- Link structure and hierarchy
+- Metadata for each page
+
+Refer to the [Tavily API documentation](https://docs.tavily.com/documentation/api-reference/endpoint/map) for detailed information about the response structure.
+
+## Use Cases
+
+- **Site Audit**: Understand the structure of large websites
+- **Content Planning**: Discover all pages before content migration
+- **SEO Analysis**: Map site structure for SEO optimization
+- **Documentation Discovery**: Find all documentation pages for indexing
+- **Link Analysis**: Understand internal linking structure
+- **Pre-Crawl Planning**: Map a site before performing full content extraction
+
+## Difference from TavilyCrawlTool
+
+| Feature | TavilyMapTool | TavilyCrawlTool |
+|---------|---------------|-----------------|
+| Purpose | Discover structure | Extract content |
+| Speed | Faster | Slower (full extraction) |
+| Output | URLs and links | Full page content |
+| Use Case | Site audits, planning | Content extraction, RAG |
+

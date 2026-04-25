@@ -1,0 +1,166 @@
+---
+title: "Tavily 맵 도구"
+description: "Tavily API를 사용하여 웹사이트 구조 매핑 및 페이지 발견"
+icon: "sitemap"
+mode: "wide"
+---
+
+`TavilyMapTool`은 CrewAI 에이전트가 Tavily API를 사용하여 기본 URL에서 시작하여 웹사이트의 구조를 매핑할 수 있도록 합니다. 전체 콘텐츠를 추출하지 않고 페이지, 링크 및 사이트 계층 구조를 발견하여 사이트 아키텍처를 이해하는 데 이상적입니다.
+
+## 설치
+
+`TavilyMapTool`을 사용하려면 `tavily-python` 라이브러리를 설치해야 합니다:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+또한 환경 변수로 Tavily API 키를 설정해야 합니다:
+
+```bash
+export TAVILY_API_KEY='your-tavily-api-key'
+```
+
+https://app.tavily.com/에서 API 키를 발급받으세요(회원가입 후 키를 생성하면 됩니다).
+
+## 예제 사용법
+
+다음은 CrewAI 에이전트에서 `TavilyMapTool`을 초기화하고 사용하는 방법입니다:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilyMapTool
+
+# Ensure TAVILY_API_KEY is set in your environment
+# os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
+
+# Initialize the tool
+map_tool = TavilyMapTool()
+
+# Create an agent that uses the tool
+mapper_agent = Agent(
+    role='Site Mapper',
+    goal='Map website structures and discover all pages',
+    backstory='You are an expert at mapping website structures using the Tavily API.',
+    tools=[map_tool],
+    verbose=True
+)
+
+# Define a task for the agent
+map_task = Task(
+    description='Map the structure of https://docs.example.com to understand the site hierarchy.',
+    expected_output='A JSON string containing the site structure and discovered URLs.',
+    agent=mapper_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[mapper_agent],
+    tasks=[map_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## 구성 옵션
+
+### 에이전트 설정 가능 매개변수 (런타임)
+
+이 매개변수들은 에이전트가 런타임에 제공할 수 있습니다:
+
+- `url` (str): **필수**. 매핑을 시작할 기본 URL.
+- `max_depth` (int, 1-5, 선택): 매핑할 최대 깊이 (기본 URL에서의 링크 홉 수).
+- `instructions` (str, 선택): 매핑을 안내하는 자연어 지시사항 (예: 'focus on documentation pages', 'skip API references').
+- `allow_external` (bool, 선택): 외부 도메인 매핑을 허용할지 여부.
+
+### 사용자 설정 가능 매개변수 (초기화)
+
+이 매개변수들은 도구를 생성할 때 구성됩니다:
+
+- `max_breadth` (int, 선택): 페이지당 팔로우할 최대 링크 수.
+- `limit` (int, 선택): 중지하기 전에 처리할 총 링크 수.
+- `select_paths` (Sequence[str], 선택): 특정 경로 패턴을 가진 URL만 선택하는 정규식 패턴.
+- `select_domains` (Sequence[str], 선택): 특정 도메인 또는 서브도메인에 매핑을 선택하는 정규식 패턴.
+- `exclude_paths` (Sequence[str], 선택): 특정 경로 패턴을 가진 URL을 제외하는 정규식 패턴.
+- `exclude_domains` (Sequence[str], 선택): 특정 도메인 또는 서브도메인을 제외하는 정규식 패턴.
+- `include_images` (bool, 선택): 맵 결과에 이미지를 포함할지 여부.
+- `timeout` (float, 선택): 맵 요청의 타임아웃(초). 기본값은 `150`.
+- `include_usage` (bool, 선택): 응답에 크레딧 사용 정보를 포함할지 여부.
+- `extra_kwargs` (dict, 선택): tavily-python에 전달할 추가 키워드 인자.
+
+## 고급 사용법
+
+### 경로 필터를 사용한 매핑
+
+```python
+# Configure the tool to map only specific sections
+custom_mapper = TavilyMapTool(
+    max_breadth=15,
+    limit=200,
+    select_paths=[r'/docs/.*', r'/guides/.*'],
+    exclude_paths=[r'/api/.*', r'/internal/.*'],
+    timeout=120
+)
+
+agent_with_custom_tool = Agent(
+    role="Documentation Mapper",
+    goal="Map documentation site structure",
+    tools=[custom_mapper]
+)
+```
+
+### 자연어 지시사항 사용
+
+에이전트는 매핑을 안내하는 지시사항을 제공할 수 있습니다:
+
+```python
+# Task with specific mapping instructions
+map_task = Task(
+    description='''Map https://example.com with instructions to focus on 
+    documentation and blog sections. Use max_depth of 3.''',
+    expected_output='A JSON string containing the site map.',
+    agent=mapper_agent
+)
+```
+
+## 기능
+
+- **사이트 구조 발견**: 기본 URL에서 시작하여 자동으로 페이지 및 링크 발견
+- **깊이 제어**: 매퍼가 탐색할 깊이 구성
+- **너비 제어**: 페이지당 팔로우하는 링크 수 제한
+- **경로 필터링**: 경로 패턴에 따라 URL 선택 또는 제외
+- **도메인 필터링**: 매핑할 수 있는 도메인 제어
+- **자연어 지시사항**: 일반 영어로 매퍼 안내
+- **경량 작업**: 전체 콘텐츠를 추출하지 않고 구조 발견
+- **빠른 실행**: 빠른 사이트 구조 분석에 최적화
+
+## 응답 형식
+
+도구는 발견된 URL과 그 관계가 포함된 사이트 맵을 나타내는 JSON 문자열을 반환합니다. 응답에는 다음이 포함됩니다:
+- 발견된 URL 목록
+- 링크 구조 및 계층
+- 각 페이지의 메타데이터
+
+응답 구조에 대한 자세한 정보는 [Tavily API 문서](https://docs.tavily.com/documentation/api-reference/endpoint/map)를 참조하세요.
+
+## 사용 사례
+
+- **사이트 감사**: 대규모 웹사이트의 구조 이해
+- **콘텐츠 계획**: 콘텐츠 마이그레이션 전 모든 페이지 발견
+- **SEO 분석**: SEO 최적화를 위한 사이트 구조 매핑
+- **문서 발견**: 인덱싱을 위한 모든 문서 페이지 찾기
+- **링크 분석**: 내부 링크 구조 이해
+- **크롤 전 계획**: 전체 콘텐츠 추출 전 사이트 매핑
+
+## TavilyCrawlTool과의 차이점
+
+| 기능 | TavilyMapTool | TavilyCrawlTool |
+|---------|---------------|-----------------|
+| 목적 | 구조 발견 | 콘텐츠 추출 |
+| 속도 | 더 빠름 | 더 느림 (전체 추출) |
+| 출력 | URL 및 링크 | 전체 페이지 콘텐츠 |
+| 사용 사례 | 사이트 감사, 계획 | 콘텐츠 추출, RAG |
+
